@@ -20,3 +20,7 @@ unix {
 
 INCLUDEPATH += $$PWD/../core
 DEPENDPATH += $$PWD/../core
+
+!win32 {
+	QMAKE_CXXFLAGS += -std=c++11
+}

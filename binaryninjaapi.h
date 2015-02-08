@@ -9,6 +9,12 @@
 #include <exception>
 #include "binaryninjacore.h"
 
+#ifdef _MSC_VER
+#define NOEXCEPT
+#else
+#define NOEXCEPT noexcept
+#endif
+
 
 namespace BinaryNinja
 {
@@ -361,7 +367,7 @@ namespace BinaryNinja
 	{
 	public:
 		ReadException(): std::exception() {}
-		virtual const char* what() const noexcept { return "read out of bounds"; }
+		virtual const char* what() const NOEXCEPT { return "read out of bounds"; }
 	};
 
 	class BinaryReader
@@ -411,7 +417,7 @@ namespace BinaryNinja
 	{
 	public:
 		WriteException(): std::exception() {}
-		virtual const char* what() const noexcept { return "write out of bounds"; }
+		virtual const char* what() const NOEXCEPT { return "write out of bounds"; }
 	};
 
 	class BinaryWriter

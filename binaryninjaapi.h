@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+#include <exception>
 #include "binaryninjacore.h"
 
 
@@ -303,32 +304,9 @@ namespace BinaryNinja
 		uint64_t GetCurrentOffset();
 		bool Navigate(const std::string& view, uint64_t offset);
 
-		BNDefaultEndianness GetDefaultEndianness() const;
-		void SetDefaultEndianness(BNDefaultEndianness endian);
-
-		uint8_t Read8(uint64_t offset);
-		uint16_t Read16(uint64_t offset);
-		uint32_t Read32(uint64_t offset);
-		uint64_t Read64(uint64_t offset);
-		uint16_t ReadLE16(uint64_t offset);
-		uint32_t ReadLE32(uint64_t offset);
-		uint64_t ReadLE64(uint64_t offset);
-		uint16_t ReadBE16(uint64_t offset);
-		uint32_t ReadBE32(uint64_t offset);
-		uint64_t ReadBE64(uint64_t offset);
 		virtual size_t Read(void* dest, uint64_t offset, size_t len) = 0;
 		DataBuffer ReadBuffer(uint64_t offset, size_t len);
 
-		bool Write8(uint64_t offset, uint8_t val);
-		bool Write16(uint64_t offset, uint16_t val);
-		bool Write32(uint64_t offset, uint32_t val);
-		bool Write64(uint64_t offset, uint64_t val);
-		bool WriteLE16(uint64_t offset, uint16_t val);
-		bool WriteLE32(uint64_t offset, uint32_t val);
-		bool WriteLE64(uint64_t offset, uint64_t val);
-		bool WriteBE16(uint64_t offset, uint16_t val);
-		bool WriteBE32(uint64_t offset, uint32_t val);
-		bool WriteBE64(uint64_t offset, uint64_t val);
 		virtual size_t Write(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
 		size_t WriteBuffer(uint64_t offset, const DataBuffer& data);
 
@@ -377,5 +355,103 @@ namespace BinaryNinja
 		BinaryData(FileMetadata* file, const void* data, size_t len);
 		BinaryData(FileMetadata* file, const std::string& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
+	};
+
+	class ReadException: public std::exception
+	{
+	public:
+		ReadException(): std::exception() {}
+		virtual const char* what() const noexcept { return "read out of bounds"; }
+	};
+
+	class BinaryReader
+	{
+		Ref<BinaryView> m_view;
+		BNBinaryReader* m_stream;
+
+	public:
+		BinaryReader(BinaryView* data, BNEndianness endian = LittleEndian);
+		~BinaryReader();
+
+		BNEndianness GetEndianness() const;
+		void SetEndianness(BNEndianness endian);
+
+		void Read(void* dest, size_t len);
+		uint8_t Read8();
+		uint16_t Read16();
+		uint32_t Read32();
+		uint64_t Read64();
+		uint16_t ReadLE16();
+		uint32_t ReadLE32();
+		uint64_t ReadLE64();
+		uint16_t ReadBE16();
+		uint32_t ReadBE32();
+		uint64_t ReadBE64();
+
+		bool TryRead(void* dest, size_t len);
+		bool TryRead8(uint8_t& result);
+		bool TryRead16(uint16_t& result);
+		bool TryRead32(uint32_t& result);
+		bool TryRead64(uint64_t& result);
+		bool TryReadLE16(uint16_t& result);
+		bool TryReadLE32(uint32_t& result);
+		bool TryReadLE64(uint64_t& result);
+		bool TryReadBE16(uint16_t& result);
+		bool TryReadBE32(uint32_t& result);
+		bool TryReadBE64(uint64_t& result);
+
+		uint64_t GetOffset() const;
+		void Seek(uint64_t offset);
+		void SeekRelative(int64_t offset);
+
+		bool IsEndOfFile() const;
+	};
+
+	class WriteException: public std::exception
+	{
+	public:
+		WriteException(): std::exception() {}
+		virtual const char* what() const noexcept { return "write out of bounds"; }
+	};
+
+	class BinaryWriter
+	{
+		Ref<BinaryView> m_view;
+		BNBinaryWriter* m_stream;
+
+	public:
+		BinaryWriter(BinaryView* data, BNEndianness endian = LittleEndian);
+		~BinaryWriter();
+
+		BNEndianness GetEndianness() const;
+		void SetEndianness(BNEndianness endian);
+
+		void Write(const void* src, size_t len);
+		void Write8(uint8_t val);
+		void Write16(uint16_t val);
+		void Write32(uint32_t val);
+		void Write64(uint64_t val);
+		void WriteLE16(uint16_t val);
+		void WriteLE32(uint32_t val);
+		void WriteLE64(uint64_t val);
+		void WriteBE16(uint16_t val);
+		void WriteBE32(uint32_t val);
+		void WriteBE64(uint64_t val);
+
+		bool TryWrite(const void* src, size_t len);
+		bool TryWrite8(uint8_t val);
+		bool TryWrite16(uint16_t val);
+		bool TryWrite32(uint32_t val);
+		bool TryWrite64(uint64_t val);
+		bool TryWriteLE16(uint16_t val);
+		bool TryWriteLE32(uint32_t val);
+		bool TryWriteLE64(uint64_t val);
+		bool TryWriteBE16(uint16_t val);
+		bool TryWriteBE32(uint32_t val);
+		bool TryWriteBE64(uint64_t val);
+
+		uint64_t GetOffset() const;
+		void Seek(uint64_t offset);
+		void SeekRelative(int64_t offset);
 	};
 }

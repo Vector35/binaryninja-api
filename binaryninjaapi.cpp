@@ -480,154 +480,22 @@ bool BinaryView::Navigate(const string& view, uint64_t offset)
 }
 
 
-BNDefaultEndianness BinaryView::GetDefaultEndianness() const
-{
-	return BNGetDefaultEndianness(m_view);
-}
-
-
-void BinaryView::SetDefaultEndianness(BNDefaultEndianness endian)
-{
-	BNSetDefaultEndianness(m_view, endian);
-}
-
-
-uint8_t BinaryView::Read8(uint64_t offset)
-{
-	return BNRead8(m_view, offset);
-}
-
-
-uint16_t BinaryView::Read16(uint64_t offset)
-{
-	return BNRead16(m_view, offset);
-}
-
-
-uint32_t BinaryView::Read32(uint64_t offset)
-{
-	return BNRead32(m_view, offset);
-}
-
-
-uint64_t BinaryView::Read64(uint64_t offset)
-{
-	return BNRead64(m_view, offset);
-}
-
-
-uint16_t BinaryView::ReadLE16(uint64_t offset)
-{
-	return BNReadLE16(m_view, offset);
-}
-
-
-uint32_t BinaryView::ReadLE32(uint64_t offset)
-{
-	return BNReadLE32(m_view, offset);
-}
-
-
-uint64_t BinaryView::ReadLE64(uint64_t offset)
-{
-	return BNReadLE64(m_view, offset);
-}
-
-
-uint16_t BinaryView::ReadBE16(uint64_t offset)
-{
-	return BNReadBE16(m_view, offset);
-}
-
-
-uint32_t BinaryView::ReadBE32(uint64_t offset)
-{
-	return BNReadBE32(m_view, offset);
-}
-
-
-uint64_t BinaryView::ReadBE64(uint64_t offset)
-{
-	return BNReadBE64(m_view, offset);
-}
-
-
 DataBuffer BinaryView::ReadBuffer(uint64_t offset, size_t len)
 {
-	BNDataBuffer* result = BNReadBuffer(m_view, offset, len);
+	BNDataBuffer* result = BNReadViewBuffer(m_view, offset, len);
 	return DataBuffer(result);
-}
-
-
-bool BinaryView::Write8(uint64_t offset, uint8_t val)
-{
-	return BNWrite8(m_view, offset, val);
-}
-
-
-bool BinaryView::Write16(uint64_t offset, uint16_t val)
-{
-	return BNWrite16(m_view, offset, val);
-}
-
-
-bool BinaryView::Write32(uint64_t offset, uint32_t val)
-{
-	return BNWrite32(m_view, offset, val);
-}
-
-
-bool BinaryView::Write64(uint64_t offset, uint64_t val)
-{
-	return BNWrite64(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteLE16(uint64_t offset, uint16_t val)
-{
-	return BNWriteLE16(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteLE32(uint64_t offset, uint32_t val)
-{
-	return BNWriteLE32(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteLE64(uint64_t offset, uint64_t val)
-{
-	return BNWriteLE64(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteBE16(uint64_t offset, uint16_t val)
-{
-	return BNWriteBE16(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteBE32(uint64_t offset, uint32_t val)
-{
-	return BNWriteBE32(m_view, offset, val);
-}
-
-
-bool BinaryView::WriteBE64(uint64_t offset, uint64_t val)
-{
-	return BNWriteBE64(m_view, offset, val);
 }
 
 
 size_t BinaryView::WriteBuffer(uint64_t offset, const DataBuffer& data)
 {
-	return BNWriteBuffer(m_view, offset, data.GetBufferObject());
+	return BNWriteViewBuffer(m_view, offset, data.GetBufferObject());
 }
 
 
 size_t BinaryView::InsertBuffer(uint64_t offset, const DataBuffer& data)
 {
-	return BNInsertBuffer(m_view, offset, data.GetBufferObject());
+	return BNInsertViewBuffer(m_view, offset, data.GetBufferObject());
 }
 
 
@@ -676,25 +544,25 @@ CoreBinaryView::CoreBinaryView(BNBinaryView* view): BinaryView(view)
 
 size_t CoreBinaryView::Read(void* dest, uint64_t offset, size_t len)
 {
-	return BNReadData(m_view, dest, offset, len);
+	return BNReadViewData(m_view, dest, offset, len);
 }
 
 
 size_t CoreBinaryView::Write(uint64_t offset, const void* data, size_t len)
 {
-	return BNWriteData(m_view, offset, data, len);
+	return BNWriteViewData(m_view, offset, data, len);
 }
 
 
 size_t CoreBinaryView::Insert(uint64_t offset, const void* data, size_t len)
 {
-	return BNInsertData(m_view, offset, data, len);
+	return BNInsertViewData(m_view, offset, data, len);
 }
 
 
 size_t CoreBinaryView::Remove(uint64_t offset, uint64_t len)
 {
-	return BNRemoveData(m_view, offset, len);
+	return BNRemoveViewData(m_view, offset, len);
 }
 
 
@@ -748,4 +616,402 @@ BinaryData::BinaryData(FileMetadata* file, const string& path):
 BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor):
 	CoreBinaryView(BNCreateBinaryDataViewFromFile(file->GetFileObject(), accessor->GetCallbacks()))
 {
+}
+
+
+BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian): m_view(data)
+{
+	m_stream = BNCreateBinaryReader(data->GetViewObject());
+	BNSetBinaryReaderEndianness(m_stream, endian);
+}
+
+
+BinaryReader::~BinaryReader()
+{
+	BNFreeBinaryReader(m_stream);
+}
+
+
+BNEndianness BinaryReader::GetEndianness() const
+{
+	return BNGetBinaryReaderEndianness(m_stream);
+}
+
+
+void BinaryReader::SetEndianness(BNEndianness endian)
+{
+	BNSetBinaryReaderEndianness(m_stream, endian);
+}
+
+
+void BinaryReader::Read(void* dest, size_t len)
+{
+	if (!BNReadData(m_stream, dest, len))
+		throw ReadException();
+}
+
+
+uint8_t BinaryReader::Read8()
+{
+	uint8_t result;
+	if (!BNRead8(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint16_t BinaryReader::Read16()
+{
+	uint16_t result;
+	if (!BNRead16(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint32_t BinaryReader::Read32()
+{
+	uint32_t result;
+	if (!BNRead32(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint64_t BinaryReader::Read64()
+{
+	uint64_t result;
+	if (!BNRead64(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint16_t BinaryReader::ReadLE16()
+{
+	uint16_t result;
+	if (!BNReadLE16(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint32_t BinaryReader::ReadLE32()
+{
+	uint32_t result;
+	if (!BNReadLE32(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint64_t BinaryReader::ReadLE64()
+{
+	uint64_t result;
+	if (!BNReadLE64(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint16_t BinaryReader::ReadBE16()
+{
+	uint16_t result;
+	if (!BNReadBE16(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint32_t BinaryReader::ReadBE32()
+{
+	uint32_t result;
+	if (!BNReadBE32(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+uint64_t BinaryReader::ReadBE64()
+{
+	uint64_t result;
+	if (!BNReadBE64(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+bool BinaryReader::TryRead(void* dest, size_t len)
+{
+	return BNReadData(m_stream, dest, len);
+}
+
+
+bool BinaryReader::TryRead8(uint8_t& result)
+{
+	return BNRead8(m_stream, &result);
+}
+
+
+bool BinaryReader::TryRead16(uint16_t& result)
+{
+	return BNRead16(m_stream, &result);
+}
+
+
+bool BinaryReader::TryRead32(uint32_t& result)
+{
+	return BNRead32(m_stream, &result);
+}
+
+
+bool BinaryReader::TryRead64(uint64_t& result)
+{
+	return BNRead64(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadLE16(uint16_t& result)
+{
+	return BNReadLE16(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadLE32(uint32_t& result)
+{
+	return BNReadLE32(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadLE64(uint64_t& result)
+{
+	return BNReadLE64(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadBE16(uint16_t& result)
+{
+	return BNReadBE16(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadBE32(uint32_t& result)
+{
+	return BNReadBE32(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadBE64(uint64_t& result)
+{
+	return BNReadBE64(m_stream, &result);
+}
+
+
+uint64_t BinaryReader::GetOffset() const
+{
+	return BNGetReaderPosition(m_stream);
+}
+
+
+void BinaryReader::Seek(uint64_t offset)
+{
+	BNSeekBinaryReader(m_stream, offset);
+}
+
+
+void BinaryReader::SeekRelative(int64_t offset)
+{
+	BNSeekBinaryReaderRelative(m_stream, offset);
+}
+
+
+bool BinaryReader::IsEndOfFile() const
+{
+	return BNIsEndOfFile(m_stream);
+}
+
+
+BinaryWriter::BinaryWriter(BinaryView* data, BNEndianness endian): m_view(data)
+{
+	m_stream = BNCreateBinaryWriter(data->GetViewObject());
+	BNSetBinaryWriterEndianness(m_stream, endian);
+}
+
+
+BinaryWriter::~BinaryWriter()
+{
+	BNFreeBinaryWriter(m_stream);
+}
+
+
+BNEndianness BinaryWriter::GetEndianness() const
+{
+	return BNGetBinaryWriterEndianness(m_stream);
+}
+
+
+void BinaryWriter::SetEndianness(BNEndianness endian)
+{
+	BNSetBinaryWriterEndianness(m_stream, endian);
+}
+
+
+void BinaryWriter::Write(const void* src, size_t len)
+{
+	if (!BNWriteData(m_stream, src, len))
+		throw WriteException();
+}
+
+
+void BinaryWriter::Write8(uint8_t val)
+{
+	if (!BNWrite8(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::Write16(uint16_t val)
+{
+	if (!BNWrite16(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::Write32(uint32_t val)
+{
+	if (!BNWrite32(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::Write64(uint64_t val)
+{
+	if (!BNWrite64(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteLE16(uint16_t val)
+{
+	if (!BNWriteLE16(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteLE32(uint32_t val)
+{
+	if (!BNWriteLE32(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteLE64(uint64_t val)
+{
+	if (!BNWriteLE64(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteBE16(uint16_t val)
+{
+	if (!BNWriteBE16(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteBE32(uint32_t val)
+{
+	if (!BNWriteBE32(m_stream, val))
+		throw WriteException();
+}
+
+
+void BinaryWriter::WriteBE64(uint64_t val)
+{
+	if (!BNWriteBE64(m_stream, val))
+		throw WriteException();
+}
+
+
+bool BinaryWriter::TryWrite(const void* src, size_t len)
+{
+	return BNWriteData(m_stream, src, len);
+}
+
+
+bool BinaryWriter::TryWrite8(uint8_t val)
+{
+	return BNWrite8(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWrite16(uint16_t val)
+{
+	return BNWrite16(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWrite32(uint32_t val)
+{
+	return BNWrite32(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWrite64(uint64_t val)
+{
+	return BNWrite64(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteLE16(uint16_t val)
+{
+	return BNWriteLE16(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteLE32(uint32_t val)
+{
+	return BNWriteLE32(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteLE64(uint64_t val)
+{
+	return BNWriteLE64(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteBE16(uint16_t val)
+{
+	return BNWriteBE16(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteBE32(uint32_t val)
+{
+	return BNWriteBE32(m_stream, val);
+}
+
+
+bool BinaryWriter::TryWriteBE64(uint64_t val)
+{
+	return BNWriteBE64(m_stream, val);
+}
+
+
+uint64_t BinaryWriter::GetOffset() const
+{
+	return BNGetWriterPosition(m_stream);
+}
+
+
+void BinaryWriter::Seek(uint64_t offset)
+{
+	BNSeekBinaryWriter(m_stream, offset);
+}
+
+
+void BinaryWriter::SeekRelative(int64_t offset)
+{
+	BNSeekBinaryWriterRelative(m_stream, offset);
 }

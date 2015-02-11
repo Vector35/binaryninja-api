@@ -363,6 +363,39 @@ namespace BinaryNinja
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
 	};
 
+	class BinaryViewType: public RefCountObject
+	{
+	protected:
+		BNBinaryViewType* m_type;
+		std::string m_nameForRegister;
+
+		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
+		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
+
+		BinaryViewType(BNBinaryViewType* type);
+
+	public:
+		BinaryViewType(const std::string& name);
+		virtual ~BinaryViewType();
+
+		static void Register(BinaryViewType* type);
+		static Ref<BinaryViewType> GetByName(const std::string& name);
+		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryData* data);
+
+		std::string GetName();
+
+		virtual BinaryView* Create(BinaryView* data) = 0;
+		virtual bool IsTypeValidForData(BinaryView* data) = 0;
+	};
+
+	class CoreBinaryViewType: public BinaryViewType
+	{
+	public:
+		CoreBinaryViewType(BNBinaryViewType* type);
+		virtual BinaryView* Create(BinaryView* data) override;
+		virtual bool IsTypeValidForData(BinaryView* data) override;
+	};
+
 	class ReadException: public std::exception
 	{
 	public:

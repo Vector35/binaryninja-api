@@ -619,6 +619,103 @@ BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor):
 }
 
 
+BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
+{
+	BinaryViewType* type = (BinaryViewType*)ctxt;
+	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(data));
+	Ref<BinaryView> result = type->Create(view);
+	return BNNewViewReference(result->GetViewObject());
+}
+
+
+bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
+{
+	BinaryViewType* type = (BinaryViewType*)ctxt;
+	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(data));
+	return type->IsTypeValidForData(view);
+}
+
+
+BinaryViewType::BinaryViewType(BNBinaryViewType* type): m_type(type)
+{
+}
+
+
+BinaryViewType::BinaryViewType(const string& name): m_type(nullptr), m_nameForRegister(name)
+{
+}
+
+
+BinaryViewType::~BinaryViewType()
+{
+	BNFreeBinaryViewType(m_type);
+}
+
+
+void BinaryViewType::Register(BinaryViewType* type)
+{
+	BNCustomBinaryViewType callbacks;
+	callbacks.context = type;
+	callbacks.create = CreateCallback;
+	callbacks.isValidForData = IsValidCallback;
+
+	type->m_type = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(), &callbacks);
+}
+
+
+Ref<BinaryViewType> BinaryViewType::GetByName(const string& name)
+{
+	BNBinaryViewType* type = BNGetBinaryViewTypeByName(name.c_str());
+	if (!type)
+		return nullptr;
+	return new CoreBinaryViewType(type);
+}
+
+
+vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryData* data)
+{
+	BNBinaryViewType** types;
+	size_t count;
+	types = BNGetBinaryViewTypesForData(data->GetViewObject(), &count);
+
+	vector<Ref<BinaryViewType>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new CoreBinaryViewType(BNNewViewTypeReference(types[i])));
+
+	BNFreeBinaryViewTypeList(types, count);
+	return result;
+}
+
+
+string BinaryViewType::GetName()
+{
+	char* contents = BNGetBinaryViewTypeName(m_type);
+	string result = contents;
+	BNFreeString(contents);
+	return result;
+}
+
+
+CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(type)
+{
+}
+
+
+BinaryView* CoreBinaryViewType::Create(BinaryView* data)
+{
+	BNBinaryView* view = BNCreateBinaryViewOfType(m_type, data->GetViewObject());
+	if (!view)
+		return nullptr;
+	return new CoreBinaryView(view);
+}
+
+
+bool CoreBinaryViewType::IsTypeValidForData(BinaryView* data)
+{
+	return BNIsBinaryViewTypeValidForData(m_type, data->GetViewObject());
+}
+
+
 BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian): m_view(data)
 {
 	m_stream = BNCreateBinaryReader(data->GetViewObject());

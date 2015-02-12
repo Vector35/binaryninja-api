@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <exception>
 #include "binaryninjacore.h"
 
@@ -422,6 +423,8 @@ namespace BinaryNinja
 		void SetEndianness(BNEndianness endian);
 
 		void Read(void* dest, size_t len);
+		DataBuffer Read(size_t len);
+		std::string ReadString(size_t len);
 		uint8_t Read8();
 		uint16_t Read16();
 		uint32_t Read32();
@@ -434,6 +437,8 @@ namespace BinaryNinja
 		uint64_t ReadBE64();
 
 		bool TryRead(void* dest, size_t len);
+		bool TryRead(DataBuffer& dest, size_t len);
+		bool TryReadString(std::string& dest, size_t len);
 		bool TryRead8(uint8_t& result);
 		bool TryRead16(uint16_t& result);
 		bool TryRead32(uint32_t& result);
@@ -472,6 +477,8 @@ namespace BinaryNinja
 		void SetEndianness(BNEndianness endian);
 
 		void Write(const void* src, size_t len);
+		void Write(const DataBuffer& buf);
+		void Write(const std::string& str);
 		void Write8(uint8_t val);
 		void Write16(uint16_t val);
 		void Write32(uint32_t val);
@@ -484,6 +491,8 @@ namespace BinaryNinja
 		void WriteBE64(uint64_t val);
 
 		bool TryWrite(const void* src, size_t len);
+		bool TryWrite(const DataBuffer& buf);
+		bool TryWrite(const std::string& str);
 		bool TryWrite8(uint8_t val);
 		bool TryWrite16(uint16_t val);
 		bool TryWrite32(uint32_t val);
@@ -498,5 +507,59 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		void Seek(uint64_t offset);
 		void SeekRelative(int64_t offset);
+	};
+
+	struct TransformParameter
+	{
+		std::string name, longName;
+		size_t fixedLength; // Variable length if zero
+	};
+
+	class Transform: public RefCountObject
+	{
+	protected:
+		BNTransform* m_xform;
+		BNTransformType m_typeForRegister;
+		std::string m_nameForRegister, m_longNameForRegister;
+
+		Transform(BNTransform* xform);
+
+		static BNTransformParameterInfo* GetParametersCallback(void* ctxt, size_t* count);
+		static void FreeParametersCallback(BNTransformParameterInfo* params, size_t count);
+		static bool DecodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
+		static bool EncodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
+
+		static std::vector<TransformParameter> EncryptionKeyParameters(size_t fixedKeyLength = 0);
+		static std::vector<TransformParameter> EncryptionKeyAndIVParameters(size_t fixedKeyLength = 0, size_t fixedIVLength = 0);
+
+	public:
+		Transform(BNTransformType type, const std::string& name, const std::string& longName);
+
+		static void Register(Transform* xform);
+		static Ref<Transform> GetByName(const std::string& name);
+		static std::vector<Ref<Transform>> GetTransformTypes();
+
+		BNTransformType GetType() const;
+		std::string GetName() const;
+		std::string GetLongName() const;
+
+		virtual std::vector<TransformParameter> GetParameters() const;
+
+		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
+			std::map<std::string, DataBuffer>());
+		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
+			std::map<std::string, DataBuffer>());
+	};
+
+	class CoreTransform: public Transform
+	{
+	public:
+		CoreTransform(BNTransform* xform);
+		virtual std::vector<TransformParameter> GetParameters() const override;
+
+		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
+			std::map<std::string, DataBuffer>()) override;
+		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
+			std::map<std::string, DataBuffer>()) override;
 	};
 }

@@ -10,7 +10,15 @@ TARGET = binaryninjaapi
 TEMPLATE = lib
 CONFIG += staticlib
 
-SOURCES += binaryninjaapi.cpp
+SOURCES += \
+    databuffer.cpp \
+    filemetadata.cpp \
+    fileaccessor.cpp \
+    binaryview.cpp \
+    binaryviewtype.cpp \
+    binaryreader.cpp \
+    binarywriter.cpp \
+    transform.cpp
 
 HEADERS += binaryninjaapi.h
 unix {

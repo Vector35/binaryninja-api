@@ -349,6 +349,7 @@ BinaryView::BinaryView(FileMetadata* file)
 	view.getModification = GetModificationCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
+	view.isExecutable = IsExecutableCallback;
 	view.save = SaveCallback;
 
 	m_file = file;
@@ -415,6 +416,13 @@ uint64_t BinaryView::GetLengthCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
 	return view->GetLength();
+}
+
+
+bool BinaryView::IsExecutableCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->IsExecutable();
 }
 
 
@@ -584,6 +592,12 @@ uint64_t CoreBinaryView::GetLength() const
 }
 
 
+bool CoreBinaryView::IsExecutable() const
+{
+	return BNIsExecutableView(m_view);
+}
+
+
 bool CoreBinaryView::Save(FileAccessor* file)
 {
 	return BNSaveToFile(m_view, file->GetCallbacks());
@@ -641,7 +655,8 @@ BinaryViewType::BinaryViewType(BNBinaryViewType* type): m_type(type)
 }
 
 
-BinaryViewType::BinaryViewType(const string& name): m_type(nullptr), m_nameForRegister(name)
+BinaryViewType::BinaryViewType(const string& name, const string& longName):
+	m_type(nullptr), m_nameForRegister(name), m_longNameForRegister(longName)
 {
 }
 
@@ -659,7 +674,8 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.create = CreateCallback;
 	callbacks.isValidForData = IsValidCallback;
 
-	type->m_type = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(), &callbacks);
+	type->m_type = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(),
+		type->m_longNameForRegister.c_str(), &callbacks);
 }
 
 
@@ -672,7 +688,7 @@ Ref<BinaryViewType> BinaryViewType::GetByName(const string& name)
 }
 
 
-vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryData* data)
+vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data)
 {
 	BNBinaryViewType** types;
 	size_t count;
@@ -690,6 +706,15 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryData* data
 string BinaryViewType::GetName()
 {
 	char* contents = BNGetBinaryViewTypeName(m_type);
+	string result = contents;
+	BNFreeString(contents);
+	return result;
+}
+
+
+string BinaryViewType::GetLongName()
+{
+	char* contents = BNGetBinaryViewTypeLongName(m_type);
 	string result = contents;
 	BNFreeString(contents);
 	return result;

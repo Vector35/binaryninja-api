@@ -289,6 +289,7 @@ namespace BinaryNinja
 		static BNModificationStatus GetModificationCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
+		static bool IsExecutableCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
 	public:
@@ -328,6 +329,8 @@ namespace BinaryNinja
 		uint64_t GetEnd() const;
 		virtual uint64_t GetLength() const = 0;
 
+		virtual bool IsExecutable() const { return false; }
+
 		virtual bool Save(FileAccessor* file) { (void)file; return false; }
 		bool Save(const std::string& path);
 
@@ -350,6 +353,8 @@ namespace BinaryNinja
 		virtual uint64_t GetStart() const override;
 		virtual uint64_t GetLength() const override;
 
+		virtual bool IsExecutable() const override;
+
 		virtual bool Save(FileAccessor* file) override;
 	};
 
@@ -367,7 +372,7 @@ namespace BinaryNinja
 	{
 	protected:
 		BNBinaryViewType* m_type;
-		std::string m_nameForRegister;
+		std::string m_nameForRegister, m_longNameForRegister;
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
@@ -375,14 +380,15 @@ namespace BinaryNinja
 		BinaryViewType(BNBinaryViewType* type);
 
 	public:
-		BinaryViewType(const std::string& name);
+		BinaryViewType(const std::string& name, const std::string& longName);
 		virtual ~BinaryViewType();
 
 		static void Register(BinaryViewType* type);
 		static Ref<BinaryViewType> GetByName(const std::string& name);
-		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryData* data);
+		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
 
 		std::string GetName();
+		std::string GetLongName();
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;

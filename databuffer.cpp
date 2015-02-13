@@ -16,6 +16,12 @@ DataBuffer::DataBuffer(size_t len)
 }
 
 
+DataBuffer::DataBuffer(const void* data, size_t len)
+{
+	m_buffer = BNCreateDataBuffer(data, len);
+}
+
+
 DataBuffer::DataBuffer(const DataBuffer& buf)
 {
 	m_buffer = BNDuplicateDataBuffer(buf.m_buffer);
@@ -84,6 +90,12 @@ void DataBuffer::Append(const DataBuffer& buf)
 }
 
 
+void DataBuffer::AppendByte(uint8_t val)
+{
+	Append(&val, 1);
+}
+
+
 DataBuffer DataBuffer::GetSlice(size_t start, size_t len)
 {
 	BNDataBuffer* result = BNGetDataBufferSlice(m_buffer, start, len);
@@ -100,4 +112,19 @@ uint8_t& DataBuffer::operator[](size_t offset)
 const uint8_t& DataBuffer::operator[](size_t offset) const
 {
 	return ((const uint8_t*)GetData())[offset];
+}
+
+
+string DataBuffer::ToEscapedString() const
+{
+	char* str = BNDataBufferToEscapedString(m_buffer);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+DataBuffer DataBuffer::FromEscapedString(const string& src)
+{
+	return DataBuffer(BNDecodeEscapedString(src.c_str()));
 }

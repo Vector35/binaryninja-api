@@ -130,6 +130,7 @@ namespace BinaryNinja
 	public:
 		DataBuffer();
 		DataBuffer(size_t len);
+		DataBuffer(const void* data, size_t len);
 		DataBuffer(const DataBuffer& buf);
 		DataBuffer(BNDataBuffer* buf);
 		~DataBuffer();
@@ -146,11 +147,15 @@ namespace BinaryNinja
 		void SetSize(size_t len);
 		void Append(const void* data, size_t len);
 		void Append(const DataBuffer& buf);
+		void AppendByte(uint8_t val);
 
 		DataBuffer GetSlice(size_t start, size_t len);
 
 		uint8_t& operator[](size_t offset);
 		const uint8_t& operator[](size_t offset) const;
+
+		std::string ToEscapedString() const;
+		static DataBuffer FromEscapedString(const std::string& src);
 	};
 
 	class NavigationHandler

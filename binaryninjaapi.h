@@ -525,7 +525,7 @@ namespace BinaryNinja
 	protected:
 		BNTransform* m_xform;
 		BNTransformType m_typeForRegister;
-		std::string m_nameForRegister, m_longNameForRegister;
+		std::string m_nameForRegister, m_longNameForRegister, m_groupForRegister;
 
 		Transform(BNTransform* xform);
 
@@ -538,7 +538,7 @@ namespace BinaryNinja
 		static std::vector<TransformParameter> EncryptionKeyAndIVParameters(size_t fixedKeyLength = 0, size_t fixedIVLength = 0);
 
 	public:
-		Transform(BNTransformType type, const std::string& name, const std::string& longName);
+		Transform(BNTransformType type, const std::string& name, const std::string& longName, const std::string& group);
 
 		static void Register(Transform* xform);
 		static Ref<Transform> GetByName(const std::string& name);
@@ -547,6 +547,7 @@ namespace BinaryNinja
 		BNTransformType GetType() const;
 		std::string GetName() const;
 		std::string GetLongName() const;
+		std::string GetGroup() const;
 
 		virtual std::vector<TransformParameter> GetParameters() const;
 

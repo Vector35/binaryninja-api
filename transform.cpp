@@ -9,8 +9,9 @@ Transform::Transform(BNTransform* xform): m_xform(xform)
 }
 
 
-Transform::Transform(BNTransformType type, const string& name, const string& longName):
-	m_xform(nullptr), m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName)
+Transform::Transform(BNTransformType type, const string& name, const string& longName, const string& group):
+	m_xform(nullptr), m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName),
+	m_groupForRegister(group)
 {
 }
 
@@ -113,7 +114,7 @@ void Transform::Register(Transform* xform)
 	callbacks.decode = DecodeCallback;
 	callbacks.encode = EncodeCallback;
 	xform->m_xform = BNRegisterTransformType(xform->m_typeForRegister, xform->m_nameForRegister.c_str(),
-		xform->m_longNameForRegister.c_str(), &callbacks);
+		xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(), &callbacks);
 }
 
 
@@ -158,6 +159,15 @@ string Transform::GetName() const
 string Transform::GetLongName() const
 {
 	char* name = BNGetTransformLongName(m_xform);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string Transform::GetGroup() const
+{
+	char* name = BNGetTransformGroup(m_xform);
 	string result = name;
 	BNFreeString(name);
 	return result;

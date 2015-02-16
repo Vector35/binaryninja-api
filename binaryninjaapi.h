@@ -28,22 +28,22 @@ namespace BinaryNinja
 
 		void AddRef()
 		{
-	#ifdef WIN32
+#ifdef WIN32
 			InterlockedIncrement((LONG*)&m_refs);
-	#else
+#else
 			__sync_fetch_and_add(&m_refs, 1);
-	#endif
+#endif
 		}
 
 		void Release()
 		{
-	#ifdef WIN32
+#ifdef WIN32
 			if (InterlockedDecrement((LONG*)&m_refs) == 0)
 				delete this;
-	#else
+#else
 			if (__sync_fetch_and_add(&m_refs, -1) == 1)
 				delete this;
-	#endif
+#endif
 		}
 	};
 
@@ -552,9 +552,9 @@ namespace BinaryNinja
 		virtual std::vector<TransformParameter> GetParameters() const;
 
 		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-			std::map<std::string, DataBuffer>());
+		                    std::map<std::string, DataBuffer>());
 		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-			std::map<std::string, DataBuffer>());
+		                    std::map<std::string, DataBuffer>());
 	};
 
 	class CoreTransform: public Transform
@@ -564,8 +564,8 @@ namespace BinaryNinja
 		virtual std::vector<TransformParameter> GetParameters() const override;
 
 		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-			std::map<std::string, DataBuffer>()) override;
+		                    std::map<std::string, DataBuffer>()) override;
 		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-			std::map<std::string, DataBuffer>()) override;
+		                    std::map<std::string, DataBuffer>()) override;
 	};
 }

@@ -114,7 +114,8 @@ void Transform::Register(Transform* xform)
 	callbacks.decode = DecodeCallback;
 	callbacks.encode = EncodeCallback;
 	xform->m_xform = BNRegisterTransformType(xform->m_typeForRegister, xform->m_nameForRegister.c_str(),
-		xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(), &callbacks);
+	                                         xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(),
+	                                         &callbacks);
 }
 
 

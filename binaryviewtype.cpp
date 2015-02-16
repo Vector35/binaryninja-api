@@ -46,7 +46,7 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.isValidForData = IsValidCallback;
 
 	type->m_type = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(),
-		type->m_longNameForRegister.c_str(), &callbacks);
+	                                        type->m_longNameForRegister.c_str(), &callbacks);
 }
 
 

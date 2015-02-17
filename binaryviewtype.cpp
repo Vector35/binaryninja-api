@@ -7,7 +7,7 @@ using namespace std;
 BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Create(view);
 	return BNNewViewReference(result->GetViewObject());
 }
@@ -16,7 +16,7 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	return type->IsTypeValidForData(view);
 }
 
@@ -74,6 +74,30 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 }
 
 
+void BinaryViewType::RegisterArchitecture(const string& name, uint32_t id, Architecture* arch)
+{
+	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);
+	if (!type)
+		return;
+	type->RegisterArchitecture(id, arch);
+}
+
+
+void BinaryViewType::RegisterArchitecture(uint32_t id, Architecture* arch)
+{
+	BNRegisterArchitectureForViewType(m_type, id, arch->GetArchitectureObject());
+}
+
+
+Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id)
+{
+	BNArchitecture* arch = BNGetArchitectureForViewType(m_type, id);
+	if (!arch)
+		return nullptr;
+	return new CoreArchitecture(arch);
+}
+
+
 string BinaryViewType::GetName()
 {
 	char* contents = BNGetBinaryViewTypeName(m_type);
@@ -102,7 +126,7 @@ BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 	BNBinaryView* view = BNCreateBinaryViewOfType(m_type, data->GetViewObject());
 	if (!view)
 		return nullptr;
-	return new CoreBinaryView(view);
+	return new BinaryView(view);
 }
 
 

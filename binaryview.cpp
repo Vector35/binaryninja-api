@@ -7,7 +7,7 @@ using namespace std;
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	notify->OnBinaryDataWritten(view, offset, len);
 }
 
@@ -15,7 +15,7 @@ void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* objec
 void BinaryDataNotification::DataInsertedCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	notify->OnBinaryDataInserted(view, offset, len);
 }
 
@@ -23,7 +23,7 @@ void BinaryDataNotification::DataInsertedCallback(void* ctxt, BNBinaryView* obje
 void BinaryDataNotification::DataRemovedCallback(void* ctxt, BNBinaryView* object, uint64_t offset, uint64_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
-	Ref<BinaryView> view = new CoreBinaryView(BNNewViewReference(object));
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	notify->OnBinaryDataRemoved(view, offset, len);
 }
 
@@ -72,56 +72,56 @@ BinaryView::~BinaryView()
 size_t BinaryView::ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->Read(dest, offset, len);
+	return view->PerformRead(dest, offset, len);
 }
 
 
 size_t BinaryView::WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->Write(offset, src, len);
+	return view->PerformWrite(offset, src, len);
 }
 
 
 size_t BinaryView::InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->Insert(offset, src, len);
+	return view->PerformInsert(offset, src, len);
 }
 
 
 size_t BinaryView::RemoveCallback(void* ctxt, uint64_t offset, uint64_t len)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->Remove(offset, len);
+	return view->PerformRemove(offset, len);
 }
 
 
 BNModificationStatus BinaryView::GetModificationCallback(void* ctxt, uint64_t offset)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->GetModification(offset);
+	return view->PerformGetModification(offset);
 }
 
 
 uint64_t BinaryView::GetStartCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->GetStart();
+	return view->PerformGetStart();
 }
 
 
 uint64_t BinaryView::GetLengthCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->GetLength();
+	return view->PerformGetLength();
 }
 
 
 bool BinaryView::IsExecutableCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->IsExecutable();
+	return view->PerformIsExecutable();
 }
 
 
@@ -129,13 +129,13 @@ bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 {
 	BinaryView* view = (BinaryView*)ctxt;
 	CoreFileAccessor accessor(file);
-	return view->Save(&accessor);
+	return view->PerformSave(&accessor);
 }
 
 
 bool BinaryView::IsModified() const
 {
-	return m_file->IsModified();
+	return BNIsViewModified(m_view);
 }
 
 
@@ -244,89 +244,84 @@ void BinaryView::UnregisterNotification(BinaryDataNotification* notify)
 }
 
 
-CoreBinaryView::CoreBinaryView(BNBinaryView* view): BinaryView(view)
-{
-}
-
-
-size_t CoreBinaryView::Read(void* dest, uint64_t offset, size_t len)
+size_t BinaryView::Read(void* dest, uint64_t offset, size_t len)
 {
 	return BNReadViewData(m_view, dest, offset, len);
 }
 
 
-size_t CoreBinaryView::Write(uint64_t offset, const void* data, size_t len)
+size_t BinaryView::Write(uint64_t offset, const void* data, size_t len)
 {
 	return BNWriteViewData(m_view, offset, data, len);
 }
 
 
-size_t CoreBinaryView::Insert(uint64_t offset, const void* data, size_t len)
+size_t BinaryView::Insert(uint64_t offset, const void* data, size_t len)
 {
 	return BNInsertViewData(m_view, offset, data, len);
 }
 
 
-size_t CoreBinaryView::Remove(uint64_t offset, uint64_t len)
+size_t BinaryView::Remove(uint64_t offset, uint64_t len)
 {
 	return BNRemoveViewData(m_view, offset, len);
 }
 
 
-BNModificationStatus CoreBinaryView::GetModification(uint64_t offset)
+BNModificationStatus BinaryView::GetModification(uint64_t offset)
 {
 	return BNGetModification(m_view, offset);
 }
 
 
-uint64_t CoreBinaryView::GetStart() const
+uint64_t BinaryView::GetStart() const
 {
 	return BNGetStartOffset(m_view);
 }
 
 
-uint64_t CoreBinaryView::GetLength() const
+uint64_t BinaryView::GetLength() const
 {
 	return BNGetViewLength(m_view);
 }
 
 
-bool CoreBinaryView::IsExecutable() const
+bool BinaryView::IsExecutable() const
 {
 	return BNIsExecutableView(m_view);
 }
 
 
-bool CoreBinaryView::Save(FileAccessor* file)
+bool BinaryView::Save(FileAccessor* file)
 {
 	return BNSaveToFile(m_view, file->GetCallbacks());
 }
 
 
-BinaryData::BinaryData(FileMetadata* file): CoreBinaryView(BNCreateBinaryDataView(file->GetFileObject()))
+BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetFileObject()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const DataBuffer& data):
-	CoreBinaryView(BNCreateBinaryDataViewFromBuffer(file->GetFileObject(), data.GetBufferObject()))
+	BinaryView(BNCreateBinaryDataViewFromBuffer(file->GetFileObject(), data.GetBufferObject()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const void* data, size_t len):
-	CoreBinaryView(BNCreateBinaryDataViewFromData(file->GetFileObject(), data, len))
+	BinaryView(BNCreateBinaryDataViewFromData(file->GetFileObject(), data, len))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const string& path):
-	CoreBinaryView(BNCreateBinaryDataViewFromFilename(file->GetFileObject(), path.c_str()))
+	BinaryView(BNCreateBinaryDataViewFromFilename(file->GetFileObject(), path.c_str()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor):
-	CoreBinaryView(BNCreateBinaryDataViewFromFile(file->GetFileObject(), accessor->GetCallbacks()))
+	BinaryView(BNCreateBinaryDataViewFromFile(file->GetFileObject(), accessor->GetCallbacks()))
 {
 }

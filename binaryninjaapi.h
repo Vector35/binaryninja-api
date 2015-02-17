@@ -285,7 +285,6 @@ namespace BinaryNinja
 		Ref<FileMetadata> m_file;
 
 		BinaryView(FileMetadata* file);
-		BinaryView(BNBinaryView* view);
 
 	private:
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
@@ -298,7 +297,20 @@ namespace BinaryNinja
 		static bool IsExecutableCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
+		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
+		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
+		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
+		virtual size_t PerformRemove(uint64_t offset, uint64_t len) { (void)offset; (void)len; return 0; }
+
+		virtual BNModificationStatus PerformGetModification(uint64_t offset) { (void)offset; return Original; }
+		virtual uint64_t PerformGetStart() const { return 0; }
+		virtual uint64_t PerformGetLength() const { return 0; }
+		virtual bool PerformIsExecutable() const { return false; }
+
+		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
+
 	public:
+		BinaryView(BNBinaryView* view);
 		virtual ~BinaryView();
 
 		FileMetadata* GetFile() const { return m_file; }
@@ -317,54 +329,34 @@ namespace BinaryNinja
 		uint64_t GetCurrentOffset();
 		bool Navigate(const std::string& view, uint64_t offset);
 
-		virtual size_t Read(void* dest, uint64_t offset, size_t len) = 0;
+		size_t Read(void* dest, uint64_t offset, size_t len);
 		DataBuffer ReadBuffer(uint64_t offset, size_t len);
 
-		virtual size_t Write(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
+		size_t Write(uint64_t offset, const void* data, size_t len);
 		size_t WriteBuffer(uint64_t offset, const DataBuffer& data);
 
-		virtual size_t Insert(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
+		size_t Insert(uint64_t offset, const void* data, size_t len);
 		size_t InsertBuffer(uint64_t offset, const DataBuffer& data);
 
-		virtual size_t Remove(uint64_t offset, uint64_t len) { (void)offset; (void)len; return 0; }
+		size_t Remove(uint64_t offset, uint64_t len);
 
-		virtual BNModificationStatus GetModification(uint64_t offset) { (void)offset; return Original; }
+		BNModificationStatus GetModification(uint64_t offset);
 		std::vector<BNModificationStatus> GetModification(uint64_t offset, size_t len);
 
-		virtual uint64_t GetStart() const { return 0; }
+		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
-		virtual uint64_t GetLength() const = 0;
+		uint64_t GetLength() const;
 
-		virtual bool IsExecutable() const { return false; }
+		bool IsExecutable() const;
 
-		virtual bool Save(FileAccessor* file) { (void)file; return false; }
+		bool Save(FileAccessor* file);
 		bool Save(const std::string& path);
 
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 	};
 
-	class CoreBinaryView: public BinaryView
-	{
-	public:
-		CoreBinaryView(BNBinaryView* view);
-
-		virtual size_t Read(void* dest, uint64_t offset, size_t len) override;
-		virtual size_t Write(uint64_t offset, const void* data, size_t len) override;
-		virtual size_t Insert(uint64_t offset, const void* data, size_t len) override;
-		virtual size_t Remove(uint64_t offset, uint64_t len) override;
-
-		virtual BNModificationStatus GetModification(uint64_t offset) override;
-
-		virtual uint64_t GetStart() const override;
-		virtual uint64_t GetLength() const override;
-
-		virtual bool IsExecutable() const override;
-
-		virtual bool Save(FileAccessor* file) override;
-	};
-
-	class BinaryData: public CoreBinaryView
+	class BinaryData: public BinaryView
 	{
 	public:
 		BinaryData(FileMetadata* file);
@@ -373,6 +365,8 @@ namespace BinaryNinja
 		BinaryData(FileMetadata* file, const std::string& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
 	};
+
+	class Architecture;
 
 	class BinaryViewType: public RefCountObject
 	{
@@ -392,6 +386,10 @@ namespace BinaryNinja
 		static void Register(BinaryViewType* type);
 		static Ref<BinaryViewType> GetByName(const std::string& name);
 		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
+
+		static void RegisterArchitecture(const std::string& name, uint32_t id, Architecture* arch);
+		void RegisterArchitecture(uint32_t id, Architecture* arch);
+		Ref<Architecture> GetArchitecture(uint32_t id);
 
 		std::string GetName();
 		std::string GetLongName();
@@ -567,5 +565,42 @@ namespace BinaryNinja
 		                    std::map<std::string, DataBuffer>()) override;
 		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
 		                    std::map<std::string, DataBuffer>()) override;
+	};
+
+	struct InstructionInfo: public BNInstructionInfo
+	{
+		InstructionInfo();
+		void AddBranch(BNBranchType type, uint64_t target = 0);
+	};
+
+	class Architecture: public RefCountObject
+	{
+	protected:
+		BNArchitecture* m_arch;
+		std::string m_nameForRegister;
+
+		Architecture(BNArchitecture* arch);
+
+		static bool GetInstructionInfoCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNInstructionInfo* result);
+
+	public:
+		Architecture(const std::string& name);
+
+		BNArchitecture* GetArchitectureObject() const { return m_arch; }
+
+		static void Register(Architecture* arch);
+		static Ref<Architecture> GetByName(const std::string& name);
+		static std::vector<Ref<Architecture>> GetList();
+
+		std::string GetName() const;
+
+		virtual bool GetInstructionInfo(BinaryView* data, uint64_t addr, InstructionInfo& result) = 0;
+	};
+
+	class CoreArchitecture: public Architecture
+	{
+	public:
+		CoreArchitecture(BNArchitecture* arch);
+		virtual bool GetInstructionInfo(BinaryView* view, uint64_t addr, InstructionInfo& result) override;
 	};
 }

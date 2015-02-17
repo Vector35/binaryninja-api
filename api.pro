@@ -18,7 +18,8 @@ SOURCES += \
     binaryviewtype.cpp \
     binaryreader.cpp \
     binarywriter.cpp \
-    transform.cpp
+    transform.cpp \
+	architecture.cpp
 
 HEADERS += binaryninjaapi.h
 unix {

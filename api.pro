@@ -9,6 +9,7 @@ QT       -= core gui
 TARGET = binaryninjaapi
 TEMPLATE = lib
 CONFIG += staticlib
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 SOURCES += \
     databuffer.cpp \

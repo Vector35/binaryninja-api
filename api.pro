@@ -9,7 +9,7 @@ QT       -= core gui
 TARGET = binaryninjaapi
 TEMPLATE = lib
 CONFIG += staticlib
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
+CONFIG += c++11
 
 SOURCES += \
     databuffer.cpp \
@@ -30,7 +30,3 @@ unix {
 
 INCLUDEPATH += $$PWD/../core
 DEPENDPATH += $$PWD/../core
-
-!win32 {
-	QMAKE_CXXFLAGS += -std=c++11
-}

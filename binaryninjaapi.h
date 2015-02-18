@@ -278,6 +278,8 @@ namespace BinaryNinja
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) override;
 	};
 
+	class Architecture;
+
 	class BinaryView: public RefCountObject
 	{
 	protected:
@@ -294,6 +296,7 @@ namespace BinaryNinja
 		static BNModificationStatus GetModificationCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
+		static uint64_t GetEntryPointCallback(void* ctxt);
 		static bool IsExecutableCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
@@ -305,6 +308,7 @@ namespace BinaryNinja
 		virtual BNModificationStatus PerformGetModification(uint64_t offset) { (void)offset; return Original; }
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
+		virtual uint64_t PerformGetEntryPoint() const { return 0; }
 		virtual bool PerformIsExecutable() const { return false; }
 
 		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
@@ -346,6 +350,7 @@ namespace BinaryNinja
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;
+		uint64_t GetEntryPoint() const;
 
 		bool IsExecutable() const;
 
@@ -354,6 +359,9 @@ namespace BinaryNinja
 
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
+
+		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
+		void UpdateAnalysis();
 	};
 
 	class BinaryData: public BinaryView

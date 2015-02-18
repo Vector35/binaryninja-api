@@ -48,6 +48,7 @@ BinaryView::BinaryView(FileMetadata* file)
 	view.getModification = GetModificationCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
+	view.getEntryPoint = GetEntryPointCallback;
 	view.isExecutable = IsExecutableCallback;
 	view.save = SaveCallback;
 
@@ -115,6 +116,13 @@ uint64_t BinaryView::GetLengthCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
 	return view->PerformGetLength();
+}
+
+
+uint64_t BinaryView::GetEntryPointCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformGetEntryPoint();
 }
 
 
@@ -286,6 +294,12 @@ uint64_t BinaryView::GetLength() const
 }
 
 
+uint64_t BinaryView::GetEntryPoint() const
+{
+	return BNGetEntryPoint(m_view);
+}
+
+
 bool BinaryView::IsExecutable() const
 {
 	return BNIsExecutableView(m_view);
@@ -295,6 +309,18 @@ bool BinaryView::IsExecutable() const
 bool BinaryView::Save(FileAccessor* file)
 {
 	return BNSaveToFile(m_view, file->GetCallbacks());
+}
+
+
+void BinaryView::AddFunctionForAnalysis(Architecture* arch, uint64_t addr)
+{
+	BNAddFunctionForAnalysis(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+void BinaryView::UpdateAnalysis()
+{
+	BNUpdateAnalysis(m_view);
 }
 
 

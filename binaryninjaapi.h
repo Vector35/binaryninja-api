@@ -611,4 +611,41 @@ namespace BinaryNinja
 		CoreArchitecture(BNArchitecture* arch);
 		virtual bool GetInstructionInfo(BinaryView* view, uint64_t addr, InstructionInfo& result) override;
 	};
+
+	class Function;
+
+	class BasicBlock: public RefCountObject
+	{
+		BNBasicBlock* m_block;
+
+	public:
+		BasicBlock(BNBasicBlock* block);
+		~BasicBlock();
+
+		Ref<Function> GetFunction() const;
+		Ref<Architecture> GetArchitecture() const;
+
+		uint64_t GetStart() const;
+		uint64_t GetEnd() const;
+		uint64_t GetLength() const;
+
+		std::vector<uint8_t> GetInstructionSizes() const;
+		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
+	};
+
+	class Function: public RefCountObject
+	{
+		BNFunction* m_func;
+
+	public:
+		Function(BNFunction* func);
+		~Function();
+
+		BNFunction* GetFunctionObject() const { return m_func; }
+		
+		Ref<Architecture> GetArchitecture() const;
+		uint64_t GetStart() const;
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+	};
 }

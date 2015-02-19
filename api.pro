@@ -20,7 +20,9 @@ SOURCES += \
     binaryreader.cpp \
     binarywriter.cpp \
     transform.cpp \
-	architecture.cpp
+	architecture.cpp \
+	basicblock.cpp \
+	function.cpp
 
 HEADERS += binaryninjaapi.h
 unix {

@@ -22,7 +22,9 @@ SOURCES += \
     transform.cpp \
 	architecture.cpp \
 	basicblock.cpp \
-	function.cpp
+	function.cpp \
+	functiongraph.cpp \
+	functiongraphblock.cpp
 
 HEADERS += binaryninjaapi.h
 unix {

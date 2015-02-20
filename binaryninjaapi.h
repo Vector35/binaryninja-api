@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <exception>
+#include <functional>
 #include "binaryninjacore.h"
 
 #ifdef _MSC_VER
@@ -581,6 +582,16 @@ namespace BinaryNinja
 		void AddBranch(BNBranchType type, uint64_t target = 0);
 	};
 
+	struct InstructionTextToken
+	{
+		BNInstructionTextTokenType type;
+		std::string text;
+		uint64_t value;
+
+		InstructionTextToken();
+		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
+	};
+
 	class Architecture: public RefCountObject
 	{
 	protected:
@@ -590,6 +601,9 @@ namespace BinaryNinja
 		Architecture(BNArchitecture* arch);
 
 		static bool GetInstructionInfoCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNInstructionInfo* result);
+		static bool GetInstructionTextCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
+		                                       BNInstructionTextToken** result, size_t* count);
+		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 
 	public:
 		Architecture(const std::string& name);
@@ -603,6 +617,7 @@ namespace BinaryNinja
 		std::string GetName() const;
 
 		virtual bool GetInstructionInfo(BinaryView* data, uint64_t addr, InstructionInfo& result) = 0;
+		virtual bool GetInstructionText(BinaryView* data, uint64_t addr, std::vector<InstructionTextToken>& result) = 0;
 	};
 
 	class CoreArchitecture: public Architecture
@@ -610,6 +625,7 @@ namespace BinaryNinja
 	public:
 		CoreArchitecture(BNArchitecture* arch);
 		virtual bool GetInstructionInfo(BinaryView* view, uint64_t addr, InstructionInfo& result) override;
+		virtual bool GetInstructionText(BinaryView* view, uint64_t addr, std::vector<InstructionTextToken>& result) override;
 	};
 
 	class Function;
@@ -647,5 +663,62 @@ namespace BinaryNinja
 		uint64_t GetStart() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+	};
+
+	struct FunctionGraphTextLine
+	{
+		uint64_t addr;
+		std::vector<InstructionTextToken> tokens;
+	};
+
+	class FunctionGraphBlock: public RefCountObject
+	{
+		BNFunctionGraphBlock* m_block;
+
+	public:
+		FunctionGraphBlock(BNFunctionGraphBlock* block);
+		~FunctionGraphBlock();
+
+		BNFunctionGraphBlock* GetBlockObject() const { return m_block; }
+
+		int GetX() const;
+		int GetY() const;
+		int GetWidth() const;
+		int GetHeight() const;
+
+		std::vector<FunctionGraphTextLine> GetLines() const;
+		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
+	};
+
+	class FunctionGraph: public RefCountObject
+	{
+		BNFunctionGraph* m_graph;
+		std::function<void()> m_completeFunc;
+
+		static void CompleteCallback(void* ctxt);
+
+	public:
+		FunctionGraph(BNFunctionGraph* graph);
+		~FunctionGraph();
+
+		BNFunctionGraph* GetGraphObject() const { return m_graph; }
+
+		Ref<Function> GetFunction() const;
+
+		int GetHorizontalBlockMargin() const;
+		int GetVerticalBlockMargin() const;
+		void SetBlockMargins(int horiz, int vert);
+
+		void StartLayout();
+		bool IsLayoutComplete();
+		void OnComplete(const std::function<void()>& func);
+
+		std::vector<Ref<FunctionGraphBlock>> GetBlocks() const;
+
+		int GetLeftExtent() const;
+		int GetTopExtent() const;
+		int GetRightExtent() const;
+		int GetBottomExtent() const;
+		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
 	};
 }

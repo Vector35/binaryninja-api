@@ -20,6 +20,11 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target)
 }
 
 
+InstructionTextToken::InstructionTextToken(): type(TextToken), value(0)
+{
+}
+
+
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val) :
 	type(t), text(txt), value(val)
 {

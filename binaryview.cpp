@@ -318,9 +318,47 @@ void BinaryView::AddFunctionForAnalysis(Architecture* arch, uint64_t addr)
 }
 
 
+void BinaryView::AddEntryPointForAnalysis(Architecture* arch, uint64_t addr)
+{
+	BNAddEntryPointForAnalysis(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_view);
+}
+
+
+vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
+{
+	size_t count;
+	BNFunction** list = BNGetAnalysisFunctionList(m_view, &count);
+
+	vector<Ref<Function>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Function(BNNewFunctionReference(list[i])));
+
+	BNFreeFunctionList(list, count);
+	return result;
+}
+
+
+Ref<Function> BinaryView::GetAnalysisFunction(Architecture* arch, uint64_t addr)
+{
+	BNFunction* func = BNGetAnalysisFunction(m_view, arch->GetArchitectureObject(), addr);
+	if (!func)
+		return nullptr;
+	return new Function(func);
+}
+
+
+Ref<Function> BinaryView::GetAnalysisEntryPoint()
+{
+	BNFunction* func = BNGetAnalysisEntryPoint(m_view);
+	if (!func)
+		return nullptr;
+	return new Function(func);
 }
 
 

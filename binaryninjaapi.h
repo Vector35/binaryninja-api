@@ -280,6 +280,7 @@ namespace BinaryNinja
 	};
 
 	class Architecture;
+	class Function;
 
 	class BinaryView: public RefCountObject
 	{
@@ -362,7 +363,12 @@ namespace BinaryNinja
 		void UnregisterNotification(BinaryDataNotification* notify);
 
 		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
+		void AddEntryPointForAnalysis(Architecture* arch, uint64_t start);
 		void UpdateAnalysis();
+
+		std::vector<Ref<Function>> GetAnalysisFunctionList();
+		Ref<Function> GetAnalysisFunction(Architecture* arch, uint64_t addr);
+		Ref<Function> GetAnalysisEntryPoint();
 	};
 
 	class BinaryData: public BinaryView
@@ -649,6 +655,8 @@ namespace BinaryNinja
 		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
 	};
 
+	class FunctionGraph;
+
 	class Function: public RefCountObject
 	{
 		BNFunction* m_func;
@@ -663,6 +671,8 @@ namespace BinaryNinja
 		uint64_t GetStart() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		Ref<FunctionGraph> CreateFunctionGraph();
 	};
 
 	struct FunctionGraphTextLine

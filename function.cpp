@@ -39,3 +39,10 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 	BNFreeBasicBlockList(blocks, count);
 	return result;
 }
+
+
+Ref<FunctionGraph> Function::CreateFunctionGraph()
+{
+	BNFunctionGraph* graph = BNCreateFunctionGraph(m_func);
+	return new FunctionGraph(graph);
+}

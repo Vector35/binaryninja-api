@@ -65,6 +65,15 @@ void FunctionGraph::OnComplete(const std::function<void()>& func)
 }
 
 
+void FunctionGraph::ClearOnComplete()
+{
+	// Must clear the callback with the core before clearing our own function object, as until it
+	// is cleared in the core it can be called at any time from a different thread.
+	BNClearFunctionGraphCompleteCallback(m_graph);
+	m_completeFunc = []() {};
+}
+
+
 vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks() const
 {
 	size_t count;
@@ -79,27 +88,15 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks() const
 }
 
 
-int FunctionGraph::GetLeftExtent() const
+int FunctionGraph::GetWidth() const
 {
-	return BNGetFunctionGraphLeftExtent(m_graph);
+	return BNGetFunctionGraphWidth(m_graph);
 }
 
 
-int FunctionGraph::GetTopExtent() const
+int FunctionGraph::GetHeight() const
 {
-	return BNGetFunctionGraphTopExtent(m_graph);
-}
-
-
-int FunctionGraph::GetRightExtent() const
-{
-	return BNGetFunctionGraphRightExtent(m_graph);
-}
-
-
-int FunctionGraph::GetBottomExtent() const
-{
-	return BNGetFunctionGraphBottomExtent(m_graph);
+	return BNGetFunctionGraphHeight(m_graph);
 }
 
 

@@ -722,13 +722,12 @@ namespace BinaryNinja
 		void StartLayout();
 		bool IsLayoutComplete();
 		void OnComplete(const std::function<void()>& func);
+		void ClearOnComplete();
 
 		std::vector<Ref<FunctionGraphBlock>> GetBlocks() const;
 
-		int GetLeftExtent() const;
-		int GetTopExtent() const;
-		int GetRightExtent() const;
-		int GetBottomExtent() const;
+		int GetWidth() const;
+		int GetHeight() const;
 		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
 	};
 }

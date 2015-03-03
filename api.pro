@@ -24,7 +24,8 @@ SOURCES += \
 	basicblock.cpp \
 	function.cpp \
 	functiongraph.cpp \
-	functiongraphblock.cpp
+	functiongraphblock.cpp \
+	log.cpp
 
 HEADERS += binaryninjaapi.h
 unix {

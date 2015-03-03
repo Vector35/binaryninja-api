@@ -124,6 +124,33 @@ namespace BinaryNinja
 		}
 	};
 
+	class LogListener
+	{
+		static void LogMessageCallback(void* ctxt, BNLogLevel level, const char* msg);
+		static void CloseLogCallback(void* ctxt);
+
+	public:
+		virtual ~LogListener() {}
+
+		static void RegisterLogListener(LogListener* listener);
+		static void UnregisterLogListener(LogListener* listener);
+
+		virtual void LogMessage(BNLogLevel level, const std::string& msg) = 0;
+		virtual void CloseLog() {}
+	};
+
+	void Log(BNLogLevel level, const char* fmt, ...);
+	void LogDebug(const char* fmt, ...);
+	void LogInfo(const char* fmt, ...);
+	void LogWarn(const char* fmt, ...);
+	void LogError(const char* fmt, ...);
+	void LogAlert(const char* fmt, ...);
+
+	void LogToStdout(BNLogLevel minimumLevel);
+	void LogToStderr(BNLogLevel minimumLevel);
+	bool LogToFile(BNLogLevel minimumLevel, const std::string& path, bool append = false);
+	void CloseLogs();
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

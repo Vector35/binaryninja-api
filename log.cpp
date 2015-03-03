@@ -47,7 +47,7 @@ static void PerformLog(BNLogLevel level, const char* fmt, va_list args)
 	int len = _vscprintf(fmt, args);
 	if (len < 0)
 		return;
-	char* msg = malloc(len + 1);
+	char* msg = (char*)malloc(len + 1);
 	if (!msg)
 		return;
 	if (vsnprintf(msg, len + 1, fmt, args) >= 0)

@@ -45,19 +45,6 @@ uint64_t BasicBlock::GetLength() const
 }
 
 
-vector<uint8_t> BasicBlock::GetInstructionSizes() const
-{
-	size_t count;
-	uint8_t* array = BNGetBasicBlockInstructionSizes(m_block, &count);
-
-	vector<uint8_t> result;
-	result.insert(result.end(), &array[0], &array[count]);
-
-	BNFreeBasicBlockInstructionSizeList(array);
-	return result;
-}
-
-
 vector<BNBasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 {
 	size_t count;

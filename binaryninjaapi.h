@@ -652,7 +652,6 @@ namespace BinaryNinja
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;
 
-		std::vector<uint8_t> GetInstructionSizes() const;
 		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
 	};
 

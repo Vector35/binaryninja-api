@@ -365,6 +365,7 @@ namespace BinaryNinja
 		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
 		void AddEntryPointForAnalysis(Architecture* arch, uint64_t start);
 		void UpdateAnalysis();
+		void AbortAnalysis();
 
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
 		Ref<Function> GetAnalysisFunction(Architecture* arch, uint64_t addr);

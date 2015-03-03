@@ -330,6 +330,12 @@ void BinaryView::UpdateAnalysis()
 }
 
 
+void BinaryView::AbortAnalysis()
+{
+	BNAbortAnalysis(m_view);
+}
+
+
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;

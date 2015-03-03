@@ -11,6 +11,10 @@ FunctionGraph::FunctionGraph(BNFunctionGraph* graph): m_graph(graph)
 
 FunctionGraph::~FunctionGraph()
 {
+	// This object is going away, so ensure that any pending completion routines are
+	// no longer called
+	ClearOnComplete();
+
 	BNFreeFunctionGraph(m_graph);
 }
 

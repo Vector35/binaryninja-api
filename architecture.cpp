@@ -11,12 +11,13 @@ InstructionInfo::InstructionInfo()
 }
 
 
-void InstructionInfo::AddBranch(BNBranchType type, uint64_t target)
+void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture* arch)
 {
 	if (branchCount >= BN_MAX_INSTRUCTION_BRANCHES)
 		return;
 	branchType[branchCount] = type;
-	branchTarget[branchCount++] = target;
+	branchTarget[branchCount] = target;
+	branchArch[branchCount++] = arch ? arch->GetArchitectureObject() : nullptr;
 }
 
 
@@ -116,9 +117,9 @@ vector<Ref<Architecture>> Architecture::GetList()
 
 	vector<Ref<Architecture>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new CoreArchitecture(BNNewArchitectureReference(archs[i])));
+		result.push_back(new CoreArchitecture(archs[i]));
 
-	BNFreeArchitectureList(archs, count);
+	BNFreeArchitectureList(archs);
 	return result;
 }
 

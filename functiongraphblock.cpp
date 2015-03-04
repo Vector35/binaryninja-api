@@ -65,14 +65,22 @@ vector<FunctionGraphTextLine> FunctionGraphBlock::GetLines() const
 }
 
 
-vector<BNBasicBlockEdge> FunctionGraphBlock::GetOutgoingEdges() const
+vector<FunctionGraphEdge> FunctionGraphBlock::GetOutgoingEdges() const
 {
 	size_t count;
-	BNBasicBlockEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_block, &count);
+	BNFunctionGraphEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_block, &count);
 
-	vector<BNBasicBlockEdge> result;
-	result.insert(result.begin(), &edges[0], &edges[count]);
+	vector<FunctionGraphEdge> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		FunctionGraphEdge edge;
+		edge.type = edges[i].type;
+		edge.target = edges[i].target;
+		edge.arch = edges[i].arch ? new CoreArchitecture(edges[i].arch) : nullptr;
+		edge.points.insert(edge.points.begin(), &edges[i].points[0], &edges[i].points[edges[i].pointCount]);
+		result.push_back(edge);
+	}
 
-	BNFreeFunctionGraphBlockOutgoingEdgeList(edges);
+	BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count);
 	return result;
 }

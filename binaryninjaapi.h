@@ -424,7 +424,7 @@ namespace BinaryNinja
 
 	public:
 		BinaryViewType(const std::string& name, const std::string& longName);
-		virtual ~BinaryViewType();
+		virtual ~BinaryViewType() {}
 
 		static void Register(BinaryViewType* type);
 		static Ref<BinaryViewType> GetByName(const std::string& name);
@@ -613,7 +613,7 @@ namespace BinaryNinja
 	struct InstructionInfo: public BNInstructionInfo
 	{
 		InstructionInfo();
-		void AddBranch(BNBranchType type, uint64_t target = 0);
+		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr);
 	};
 
 	struct InstructionTextToken
@@ -664,6 +664,13 @@ namespace BinaryNinja
 
 	class Function;
 
+	struct BasicBlockEdge
+	{
+		BNBranchType type;
+		uint64_t target;
+		Ref<Architecture> arch;
+	};
+
 	class BasicBlock: public RefCountObject
 	{
 		BNBasicBlock* m_block;
@@ -679,7 +686,7 @@ namespace BinaryNinja
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;
 
-		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
+		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
 	};
 
 	class FunctionGraph;
@@ -693,7 +700,7 @@ namespace BinaryNinja
 		~Function();
 
 		BNFunction* GetFunctionObject() const { return m_func; }
-		
+
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
 
@@ -706,6 +713,14 @@ namespace BinaryNinja
 	{
 		uint64_t addr;
 		std::vector<InstructionTextToken> tokens;
+	};
+
+	struct FunctionGraphEdge
+	{
+		BNBranchType type;
+		uint64_t target;
+		Ref<Architecture> arch;
+		std::vector<BNPoint> points;
 	};
 
 	class FunctionGraphBlock: public RefCountObject
@@ -724,7 +739,7 @@ namespace BinaryNinja
 		int GetHeight() const;
 
 		std::vector<FunctionGraphTextLine> GetLines() const;
-		std::vector<BNBasicBlockEdge> GetOutgoingEdges() const;
+		std::vector<FunctionGraphEdge> GetOutgoingEdges() const;
 	};
 
 	class FunctionGraph: public RefCountObject

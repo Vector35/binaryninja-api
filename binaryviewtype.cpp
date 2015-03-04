@@ -32,12 +32,6 @@ BinaryViewType::BinaryViewType(const string& name, const string& longName):
 }
 
 
-BinaryViewType::~BinaryViewType()
-{
-	BNFreeBinaryViewType(m_type);
-}
-
-
 void BinaryViewType::Register(BinaryViewType* type)
 {
 	BNCustomBinaryViewType callbacks;
@@ -67,9 +61,9 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 
 	vector<Ref<BinaryViewType>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new CoreBinaryViewType(BNNewViewTypeReference(types[i])));
+		result.push_back(new CoreBinaryViewType(types[i]));
 
-	BNFreeBinaryViewTypeList(types, count);
+	BNFreeBinaryViewTypeList(types);
 	return result;
 }
 

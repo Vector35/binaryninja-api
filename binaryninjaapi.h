@@ -634,9 +634,10 @@ namespace BinaryNinja
 
 		Architecture(BNArchitecture* arch);
 
-		static bool GetInstructionInfoCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNInstructionInfo* result);
-		static bool GetInstructionTextCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
-		                                       BNInstructionTextToken** result, size_t* count);
+		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+		                                       size_t maxLen, BNInstructionInfo* result);
+		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+		                                       size_t* len, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 
 	public:
@@ -650,16 +651,18 @@ namespace BinaryNinja
 
 		std::string GetName() const;
 
-		virtual bool GetInstructionInfo(BinaryView* data, uint64_t addr, InstructionInfo& result) = 0;
-		virtual bool GetInstructionText(BinaryView* data, uint64_t addr, std::vector<InstructionTextToken>& result) = 0;
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
+		                                std::vector<InstructionTextToken>& result) = 0;
 	};
 
 	class CoreArchitecture: public Architecture
 	{
 	public:
 		CoreArchitecture(BNArchitecture* arch);
-		virtual bool GetInstructionInfo(BinaryView* view, uint64_t addr, InstructionInfo& result) override;
-		virtual bool GetInstructionText(BinaryView* view, uint64_t addr, std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
+		                                std::vector<InstructionTextToken>& result) override;
 	};
 
 	class Function;

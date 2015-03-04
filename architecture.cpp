@@ -42,26 +42,25 @@ Architecture::Architecture(const string& name): m_nameForRegister(name)
 }
 
 
-bool Architecture::GetInstructionInfoCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNInstructionInfo* result)
+bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+                                              size_t maxLen, BNInstructionInfo* result)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 
 	InstructionInfo info;
-	bool ok = arch->GetInstructionInfo(view, addr, info);
+	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
 	*result = info;
 	return ok;
 }
 
 
-bool Architecture::GetInstructionTextCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
-                                              BNInstructionTextToken** result, size_t* count)
+bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+                                              size_t* len, BNInstructionTextToken** result, size_t* count)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 
 	vector<InstructionTextToken> tokens;
-	bool ok = arch->GetInstructionText(view, addr, tokens);
+	bool ok = arch->GetInstructionText(data, addr, *len, tokens);
 	if (!ok)
 	{
 		*result = nullptr;
@@ -138,17 +137,17 @@ CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 }
 
 
-bool CoreArchitecture::GetInstructionInfo(BinaryView* view, uint64_t addr, InstructionInfo& result)
+bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
 {
-	return BNGetInstructionInfo(m_arch, view->GetViewObject(), addr, &result);
+	return BNGetInstructionInfo(m_arch, data, addr, maxLen, &result);
 }
 
 
-bool CoreArchitecture::GetInstructionText(BinaryView* view, uint64_t addr, std::vector<InstructionTextToken>& result)
+bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result)
 {
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
-	if (!BNGetInstructionText(m_arch, view->GetViewObject(), addr, &tokens, &count))
+	if (!BNGetInstructionText(m_arch, data, addr, &len, &tokens, &count))
 		return false;
 
 	for (size_t i = 0; i < count; i++)

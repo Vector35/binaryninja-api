@@ -308,6 +308,7 @@ namespace BinaryNinja
 
 	class Architecture;
 	class Function;
+	class BasicBlock;
 
 	class BinaryView: public RefCountObject
 	{
@@ -381,6 +382,9 @@ namespace BinaryNinja
 		uint64_t GetLength() const;
 		uint64_t GetEntryPoint() const;
 
+		Ref<Architecture> GetDefaultArchitecture() const;
+		void SetDefaultArchitecture(Architecture* arch);
+
 		bool IsExecutable() const;
 
 		bool Save(FileAccessor* file);
@@ -396,7 +400,12 @@ namespace BinaryNinja
 
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
 		Ref<Function> GetAnalysisFunction(Architecture* arch, uint64_t addr);
+		Ref<Function> GetRecentAnalysisFunctionForAddress(uint64_t addr);
+		std::vector<Ref<Function>> GetAnalysisFunctionsForAddress(uint64_t addr);
 		Ref<Function> GetAnalysisEntryPoint();
+
+		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
+		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
 	};
 
 	class BinaryData: public BinaryView
@@ -690,6 +699,8 @@ namespace BinaryNinja
 		uint64_t GetLength() const;
 
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
+
+		void MarkRecentUse();
 	};
 
 	class FunctionGraph;
@@ -708,6 +719,7 @@ namespace BinaryNinja
 		uint64_t GetStart() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		void MarkRecentUse();
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 	};
@@ -736,6 +748,8 @@ namespace BinaryNinja
 
 		BNFunctionGraphBlock* GetBlockObject() const { return m_block; }
 
+		uint64_t GetStart() const;
+		uint64_t GetEnd() const;
 		int GetX() const;
 		int GetY() const;
 		int GetWidth() const;

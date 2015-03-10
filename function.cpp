@@ -41,6 +41,12 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 }
 
 
+void Function::MarkRecentUse()
+{
+	BNMarkFunctionAsRecentlyUsed(m_func);
+}
+
+
 Ref<FunctionGraph> Function::CreateFunctionGraph()
 {
 	BNFunctionGraph* graph = BNCreateFunctionGraph(m_func);

@@ -15,6 +15,18 @@ FunctionGraphBlock::~FunctionGraphBlock()
 }
 
 
+uint64_t FunctionGraphBlock::GetStart() const
+{
+	return BNGetFunctionGraphBlockStart(m_block);
+}
+
+
+uint64_t FunctionGraphBlock::GetEnd() const
+{
+	return BNGetFunctionGraphBlockEnd(m_block);
+}
+
+
 int FunctionGraphBlock::GetX() const
 {
 	return BNGetFunctionGraphBlockX(m_block);

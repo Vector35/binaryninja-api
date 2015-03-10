@@ -300,6 +300,24 @@ uint64_t BinaryView::GetEntryPoint() const
 }
 
 
+Ref<Architecture> BinaryView::GetDefaultArchitecture() const
+{
+	BNArchitecture* arch = BNGetDefaultArchitecture(m_view);
+	if (!arch)
+		return nullptr;
+	return new CoreArchitecture(arch);
+}
+
+
+void BinaryView::SetDefaultArchitecture(Architecture* arch)
+{
+	if (arch)
+		BNSetDefaultArchitecture(m_view, arch->GetArchitectureObject());
+	else
+		BNSetDefaultArchitecture(m_view, nullptr);
+}
+
+
 bool BinaryView::IsExecutable() const
 {
 	return BNIsExecutableView(m_view);
@@ -359,12 +377,58 @@ Ref<Function> BinaryView::GetAnalysisFunction(Architecture* arch, uint64_t addr)
 }
 
 
+Ref<Function> BinaryView::GetRecentAnalysisFunctionForAddress(uint64_t addr)
+{
+	BNFunction* func = BNGetRecentAnalysisFunctionForAddress(m_view, addr);
+	if (!func)
+		return nullptr;
+	return new Function(func);
+}
+
+
+vector<Ref<Function>> BinaryView::GetAnalysisFunctionsForAddress(uint64_t addr)
+{
+	size_t count;
+	BNFunction** list = BNGetAnalysisFunctionsForAddress(m_view, addr, &count);
+
+	vector<Ref<Function>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Function(BNNewFunctionReference(list[i])));
+
+	BNFreeFunctionList(list, count);
+	return result;
+}
+
+
 Ref<Function> BinaryView::GetAnalysisEntryPoint()
 {
 	BNFunction* func = BNGetAnalysisEntryPoint(m_view);
 	if (!func)
 		return nullptr;
 	return new Function(func);
+}
+
+
+Ref<BasicBlock> BinaryView::GetRecentBasicBlockForAddress(uint64_t addr)
+{
+	BNBasicBlock* block = BNGetRecentBasicBlockForAddress(m_view, addr);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
+}
+
+
+vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlocksForAddress(m_view, addr, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
 }
 
 

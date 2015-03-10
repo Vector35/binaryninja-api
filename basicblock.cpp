@@ -63,3 +63,9 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	BNFreeBasicBlockOutgoingEdgeList(array);
 	return result;
 }
+
+
+void BasicBlock::MarkRecentUse()
+{
+	BNMarkBasicBlockAsRecentlyUsed(m_block);
+}

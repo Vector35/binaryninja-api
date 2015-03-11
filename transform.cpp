@@ -135,9 +135,9 @@ vector<Ref<Transform>> Transform::GetTransformTypes()
 
 	vector<Ref<Transform>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new CoreTransform(BNNewTransformReference(list[i])));
+		result.push_back(new CoreTransform(list[i]));
 
-	BNFreeTransformTypeList(list, count);
+	BNFreeTransformTypeList(list);
 	return result;
 }
 

@@ -781,7 +781,7 @@ namespace BinaryNinja
 		void StartLayout();
 		bool IsLayoutComplete();
 		void OnComplete(const std::function<void()>& func);
-		void ClearOnComplete();
+		void Abort();
 
 		std::vector<Ref<FunctionGraphBlock>> GetBlocks() const;
 

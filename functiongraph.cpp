@@ -13,7 +13,7 @@ FunctionGraph::~FunctionGraph()
 {
 	// This object is going away, so ensure that any pending completion routines are
 	// no longer called
-	ClearOnComplete();
+	Abort();
 
 	BNFreeFunctionGraph(m_graph);
 }
@@ -69,11 +69,11 @@ void FunctionGraph::OnComplete(const std::function<void()>& func)
 }
 
 
-void FunctionGraph::ClearOnComplete()
+void FunctionGraph::Abort()
 {
 	// Must clear the callback with the core before clearing our own function object, as until it
 	// is cleared in the core it can be called at any time from a different thread.
-	BNClearFunctionGraphCompleteCallback(m_graph);
+	BNAbortFunctionGraph(m_graph);
 	m_completeFunc = []() {};
 }
 

@@ -317,6 +317,7 @@ namespace BinaryNinja
 	public:
 		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName,
 		       const std::string& rawName, uint64_t addr);
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr);
 		Symbol(BNSymbol* sym);
 		virtual ~Symbol();
 

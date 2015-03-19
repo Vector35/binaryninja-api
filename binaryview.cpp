@@ -43,6 +43,12 @@ Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullNam
 }
 
 
+Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr)
+{
+	m_sym = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr);
+}
+
+
 Symbol::Symbol(BNSymbol* sym)
 {
 	m_sym = sym;

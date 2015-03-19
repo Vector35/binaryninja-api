@@ -37,6 +37,63 @@ BinaryDataNotification::BinaryDataNotification()
 }
 
 
+Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr)
+{
+	m_sym = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr);
+}
+
+
+Symbol::Symbol(BNSymbol* sym)
+{
+	m_sym = sym;
+}
+
+
+Symbol::~Symbol()
+{
+	BNFreeSymbol(m_sym);
+}
+
+
+BNSymbolType Symbol::GetType() const
+{
+	return BNGetSymbolType(m_sym);
+}
+
+
+string Symbol::GetShortName() const
+{
+	char* name = BNGetSymbolShortName(m_sym);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string Symbol::GetFullName() const
+{
+	char* name = BNGetSymbolFullName(m_sym);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string Symbol::GetRawName() const
+{
+	char* name = BNGetSymbolRawName(m_sym);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+uint64_t Symbol::GetAddress() const
+{
+	return BNGetSymbolAddress(m_sym);
+}
+
+
 BinaryView::BinaryView(FileMetadata* file)
 {
 	BNCustomBinaryView view;
@@ -429,6 +486,90 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 
 	BNFreeBasicBlockList(blocks, count);
 	return result;
+}
+
+
+Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr)
+{
+	BNSymbol* sym = BNGetSymbolByAddress(m_view, addr);
+	if (!sym)
+		return nullptr;
+	return new Symbol(sym);
+}
+
+
+Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name)
+{
+	BNSymbol* sym = BNGetSymbolByRawName(m_view, name.c_str());
+	if (!sym)
+		return nullptr;
+	return new Symbol(sym);
+}
+
+
+vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
+{
+	size_t count;
+	BNSymbol** syms = BNGetSymbolsByName(m_view, name.c_str(), &count);
+
+	vector<Ref<Symbol>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
+vector<Ref<Symbol>> BinaryView::GetSymbols()
+{
+	size_t count;
+	BNSymbol** syms = BNGetSymbols(m_view, &count);
+
+	vector<Ref<Symbol>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
+vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
+{
+	size_t count;
+	BNSymbol** syms = BNGetSymbolsOfType(m_view, type, &count);
+
+	vector<Ref<Symbol>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
+void BinaryView::DefineAutoSymbol(Symbol* sym)
+{
+	BNDefineAutoSymbol(m_view, sym->GetSymbolObject());
+}
+
+
+void BinaryView::UndefineAutoSymbol(Symbol* sym)
+{
+	BNUndefineAutoSymbol(m_view, sym->GetSymbolObject());
+}
+
+
+void BinaryView::DefineSymbol(Symbol* sym)
+{
+	BNDefineSymbol(m_view, sym->GetSymbolObject());
+}
+
+
+void BinaryView::UndefineSymbol(Symbol* sym)
+{
+	BNUndefineSymbol(m_view, sym->GetSymbolObject());
 }
 
 

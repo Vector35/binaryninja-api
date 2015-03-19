@@ -310,6 +310,25 @@ namespace BinaryNinja
 	class Function;
 	class BasicBlock;
 
+	class Symbol: public RefCountObject
+	{
+		BNSymbol* m_sym;
+
+	public:
+		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName,
+		       const std::string& rawName, uint64_t addr);
+		Symbol(BNSymbol* sym);
+		virtual ~Symbol();
+
+		BNSymbol* GetSymbolObject() const { return m_sym; }
+
+		BNSymbolType GetType() const;
+		std::string GetShortName() const;
+		std::string GetFullName() const;
+		std::string GetRawName() const;
+		uint64_t GetAddress() const;
+	};
+
 	class BinaryView: public RefCountObject
 	{
 	protected:
@@ -406,6 +425,18 @@ namespace BinaryNinja
 
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
+
+		Ref<Symbol> GetSymbolByAddress(uint64_t addr);
+		Ref<Symbol> GetSymbolByRawName(const std::string& name);
+		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name);
+		std::vector<Ref<Symbol>> GetSymbols();
+		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type);
+
+		void DefineAutoSymbol(Symbol* sym);
+		void UndefineAutoSymbol(Symbol* sym);
+
+		void DefineSymbol(Symbol* sym);
+		void UndefineSymbol(Symbol* sym);
 	};
 
 	class BinaryData: public BinaryView

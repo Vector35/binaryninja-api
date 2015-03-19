@@ -128,15 +128,18 @@ namespace BinaryNinja
 	{
 		static void LogMessageCallback(void* ctxt, BNLogLevel level, const char* msg);
 		static void CloseLogCallback(void* ctxt);
+		static BNLogLevel GetLogLevelCallback(void* ctxt);
 
 	public:
 		virtual ~LogListener() {}
 
 		static void RegisterLogListener(LogListener* listener);
 		static void UnregisterLogListener(LogListener* listener);
+		static void UpdateLogListeners();
 
 		virtual void LogMessage(BNLogLevel level, const std::string& msg) = 0;
 		virtual void CloseLog() {}
+		virtual BNLogLevel GetLogLevel() { return WarningLog; }
 	};
 
 	void Log(BNLogLevel level, const char* fmt, ...);

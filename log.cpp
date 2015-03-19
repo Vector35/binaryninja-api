@@ -21,12 +21,20 @@ void LogListener::CloseLogCallback(void* ctxt)
 }
 
 
+BNLogLevel LogListener::GetLogLevelCallback(void* ctxt)
+{
+	LogListener* listener = (LogListener*)ctxt;
+	return listener->GetLogLevel();
+}
+
+
 void LogListener::RegisterLogListener(LogListener* listener)
 {
 	BNLogListener callbacks;
 	callbacks.context = listener;
 	callbacks.log = LogMessageCallback;
 	callbacks.close = CloseLogCallback;
+	callbacks.getLogLevel = GetLogLevelCallback;
 	BNRegisterLogListener(&callbacks);
 }
 
@@ -38,6 +46,12 @@ void LogListener::UnregisterLogListener(LogListener* listener)
 	callbacks.log = LogMessageCallback;
 	callbacks.close = CloseLogCallback;
 	BNUnregisterLogListener(&callbacks);
+}
+
+
+void LogListener::UpdateLogListeners()
+{
+	BNUpdateLogListeners();
 }
 
 

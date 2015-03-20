@@ -27,6 +27,12 @@ uint64_t Function::GetStart() const
 }
 
 
+Ref<Symbol> Function::GetSymbol() const
+{
+	return new Symbol(BNNewSymbolReference(BNGetFunctionSymbol(m_func)));
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;

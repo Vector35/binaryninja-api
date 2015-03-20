@@ -769,6 +769,7 @@ namespace BinaryNinja
 
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
+		Ref<Symbol> GetSymbol() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();

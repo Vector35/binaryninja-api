@@ -28,12 +28,32 @@ void BinaryDataNotification::DataRemovedCallback(void* ctxt, BNBinaryView* objec
 }
 
 
+void BinaryDataNotification::FunctionAddedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	notify->OnAnalysisFunctionAdded(view, funcObj);
+}
+
+
+void BinaryDataNotification::FunctionRemovedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	notify->OnAnalysisFunctionRemoved(view, funcObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
 	m_callbacks.dataWritten = DataWrittenCallback;
 	m_callbacks.dataInserted = DataInsertedCallback;
 	m_callbacks.dataRemoved = DataRemovedCallback;
+	m_callbacks.functionAdded = FunctionAddedCallback;
+	m_callbacks.functionRemoved = FunctionRemovedCallback;
 }
 
 

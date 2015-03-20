@@ -254,6 +254,7 @@ namespace BinaryNinja
 	};
 
 	class BinaryView;
+	class Function;
 
 	class BinaryDataNotification
 	{
@@ -263,6 +264,8 @@ namespace BinaryNinja
 		static void DataWrittenCallback(void* ctxt, BNBinaryView* data, uint64_t offset, size_t len);
 		static void DataInsertedCallback(void* ctxt, BNBinaryView* data, uint64_t offset, size_t len);
 		static void DataRemovedCallback(void* ctxt, BNBinaryView* data, uint64_t offset, uint64_t len);
+		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 
 	public:
 		BinaryDataNotification();
@@ -270,9 +273,11 @@ namespace BinaryNinja
 
 		BNBinaryDataNotification* GetCallbacks() { return &m_callbacks; }
 
-		virtual void OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len) = 0;
-		virtual void OnBinaryDataInserted(BinaryView* view, uint64_t offset, size_t len) = 0;
-		virtual void OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len) = 0;
+		virtual void OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len) { (void)view; (void)offset; (void)len; }
+		virtual void OnBinaryDataInserted(BinaryView* view, uint64_t offset, size_t len) { (void)view; (void)offset; (void)len; }
+		virtual void OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len) { (void)view; (void)offset; (void)len; }
+		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 	};
 
 	class FileAccessor

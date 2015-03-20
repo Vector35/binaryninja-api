@@ -338,6 +338,13 @@ namespace BinaryNinja
 		uint64_t GetAddress() const;
 	};
 
+	struct ReferenceSource
+	{
+		Ref<Function> func;
+		Ref<Architecture> arch;
+		uint64_t addr;
+	};
+
 	class BinaryView: public RefCountObject
 	{
 	protected:
@@ -352,6 +359,7 @@ namespace BinaryNinja
 		static size_t InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
 		static size_t RemoveCallback(void* ctxt, uint64_t offset, uint64_t len);
 		static BNModificationStatus GetModificationCallback(void* ctxt, uint64_t offset);
+		static bool IsValidOffsetCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
 		static uint64_t GetEntryPointCallback(void* ctxt);
@@ -364,6 +372,7 @@ namespace BinaryNinja
 		virtual size_t PerformRemove(uint64_t offset, uint64_t len) { (void)offset; (void)len; return 0; }
 
 		virtual BNModificationStatus PerformGetModification(uint64_t offset) { (void)offset; return Original; }
+		virtual bool PerformIsValidOffset(uint64_t offset);
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
@@ -423,6 +432,7 @@ namespace BinaryNinja
 
 		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
 		void AddEntryPointForAnalysis(Architecture* arch, uint64_t start);
+		void RemoveAnalysisFunction(Function* func);
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
@@ -434,6 +444,8 @@ namespace BinaryNinja
 
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
+
+		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr);
 		Ref<Symbol> GetSymbolByRawName(const std::string& name);

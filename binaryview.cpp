@@ -188,6 +188,13 @@ BNModificationStatus BinaryView::GetModificationCallback(void* ctxt, uint64_t of
 }
 
 
+bool BinaryView::IsValidOffsetCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsValidOffset(offset);
+}
+
+
 uint64_t BinaryView::GetStartCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -221,6 +228,13 @@ bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 	BinaryView* view = (BinaryView*)ctxt;
 	CoreFileAccessor accessor(file);
 	return view->PerformSave(&accessor);
+}
+
+
+bool BinaryView::PerformIsValidOffset(uint64_t offset)
+{
+	uint8_t val;
+	return PerformRead(&val, offset, 1) == 1;
 }
 
 
@@ -425,6 +439,12 @@ void BinaryView::AddEntryPointForAnalysis(Architecture* arch, uint64_t addr)
 }
 
 
+void BinaryView::RemoveAnalysisFunction(Function* func)
+{
+	BNRemoveAnalysisFunction(m_view, func->GetFunctionObject());
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_view);
@@ -511,6 +531,25 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
 	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
+{
+	size_t count;
+	BNReferenceSource* refs = BNGetCodeReferences(m_view, addr, &count);
+
+	vector<ReferenceSource> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		ReferenceSource src;
+		src.func = new Function(BNNewFunctionReference(refs[i].func));
+		src.arch = new CoreArchitecture(refs[i].arch);
+		src.addr = refs[i].addr;
+	}
+
+	BNFreeCodeReferences(refs, count);
 	return result;
 }
 

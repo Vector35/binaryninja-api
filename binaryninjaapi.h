@@ -230,12 +230,16 @@ namespace BinaryNinja
 
 	public:
 		FileMetadata();
+		FileMetadata(const std::string& filename);
 		FileMetadata(BNFileMetadata* file);
 		~FileMetadata();
 
 		BNFileMetadata* GetFileObject() const { return m_file; }
 
 		void SetNavigationHandler(NavigationHandler* handler);
+
+		const std::string& GetFilename() const;
+		void SetFilename(const std::string& name);
 
 		bool IsModified() const;
 		void MarkFileModified();

@@ -61,6 +61,13 @@ FileMetadata::FileMetadata()
 }
 
 
+FileMetadata::FileMetadata(const string& filename)
+{
+	m_file = BNCreateFileMetadata();
+	BNSetFilename(m_file, filename.c_str());
+}
+
+
 FileMetadata::FileMetadata(BNFileMetadata* file)
 {
 	m_file = file;
@@ -76,6 +83,21 @@ FileMetadata::~FileMetadata()
 void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 {
 	BNSetFileMetadataNavigationHandler(m_file, handler->GetCallbacks());
+}
+
+
+const string& FileMetadata::GetFilename() const
+{
+	char* str = BNGetFilename(m_file);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+void FileMetadata::SetFilename(const string& name)
+{
+	BNSetFilename(m_file, name.c_str());
 }
 
 

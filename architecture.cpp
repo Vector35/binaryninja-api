@@ -88,6 +88,19 @@ void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, s
 }
 
 
+bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	DataBuffer buf;
+	string errorStr;
+	bool ok = arch->Assemble(code, addr, buf, errorStr);
+
+	BNSetDataBufferContents(result, buf.GetData(), buf.GetLength());
+	*errors = BNAllocString(errorStr.c_str());
+	return ok;
+}
+
+
 void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
@@ -95,6 +108,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
+	callbacks.assemble = AssembleCallback;
 	arch->m_arch = BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
 }
 
@@ -155,4 +169,17 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 	BNFreeInstructionText(tokens, count);
 	return true;
+}
+
+
+bool CoreArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
+{
+	char* errorStr = nullptr;
+	bool ok = BNAssemble(m_arch, code.c_str(), addr, result.GetBufferObject(), &errorStr);
+	if (errorStr)
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+	}
+	return ok;
 }

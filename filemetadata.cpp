@@ -86,7 +86,7 @@ void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 }
 
 
-const string& FileMetadata::GetFilename() const
+string FileMetadata::GetFilename() const
 {
 	char* str = BNGetFilename(m_file);
 	string result = str;

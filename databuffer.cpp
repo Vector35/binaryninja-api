@@ -66,6 +66,12 @@ void* DataBuffer::GetDataAt(size_t offset)
 }
 
 
+const void* DataBuffer::GetDataAt(size_t offset) const
+{
+	return BNGetDataBufferContentsAt(m_buffer, offset);
+}
+
+
 size_t DataBuffer::GetLength() const
 {
 	return BNGetDataBufferLength(m_buffer);

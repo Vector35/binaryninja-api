@@ -173,6 +173,7 @@ namespace BinaryNinja
 		void* GetData();
 		const void* GetData() const;
 		void* GetDataAt(size_t offset);
+		const void* GetDataAt(size_t offset) const;
 		size_t GetLength() const;
 
 		void SetSize(size_t len);
@@ -187,6 +188,22 @@ namespace BinaryNinja
 
 		std::string ToEscapedString() const;
 		static DataBuffer FromEscapedString(const std::string& src);
+	};
+
+	class TemporaryFile: public RefCountObject
+	{
+		BNTemporaryFile* m_file;
+
+	public:
+		TemporaryFile();
+		TemporaryFile(const DataBuffer& contents);
+		TemporaryFile(const std::string& contents);
+		TemporaryFile(BNTemporaryFile* file);
+		~TemporaryFile();
+
+		bool IsValid() const { return m_file != nullptr; }
+		std::string GetPath() const;
+		DataBuffer GetContents();
 	};
 
 	class NavigationHandler
@@ -238,7 +255,7 @@ namespace BinaryNinja
 
 		void SetNavigationHandler(NavigationHandler* handler);
 
-		const std::string& GetFilename() const;
+		std::string GetFilename() const;
 		void SetFilename(const std::string& name);
 
 		bool IsModified() const;
@@ -704,6 +721,7 @@ namespace BinaryNinja
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t* len, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
+		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
 	public:
 		Architecture(const std::string& name);
@@ -719,6 +737,8 @@ namespace BinaryNinja
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) = 0;
+
+		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) = 0;
 	};
 
 	class CoreArchitecture: public Architecture
@@ -728,6 +748,7 @@ namespace BinaryNinja
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
+		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 	};
 
 	class Function;

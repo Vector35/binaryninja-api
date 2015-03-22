@@ -287,6 +287,7 @@ namespace BinaryNinja
 		static void DataRemovedCallback(void* ctxt, BNBinaryView* data, uint64_t offset, uint64_t len);
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 
 	public:
 		BinaryDataNotification();
@@ -299,6 +300,7 @@ namespace BinaryNinja
 		virtual void OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len) { (void)view; (void)offset; (void)len; }
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
 	};
 
 	class FileAccessor
@@ -374,19 +376,6 @@ namespace BinaryNinja
 
 		BinaryView(FileMetadata* file);
 
-	private:
-		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
-		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
-		static size_t InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
-		static size_t RemoveCallback(void* ctxt, uint64_t offset, uint64_t len);
-		static BNModificationStatus GetModificationCallback(void* ctxt, uint64_t offset);
-		static bool IsValidOffsetCallback(void* ctxt, uint64_t offset);
-		static uint64_t GetStartCallback(void* ctxt);
-		static uint64_t GetLengthCallback(void* ctxt);
-		static uint64_t GetEntryPointCallback(void* ctxt);
-		static bool IsExecutableCallback(void* ctxt);
-		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
-
 		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
 		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
@@ -400,6 +389,23 @@ namespace BinaryNinja
 		virtual bool PerformIsExecutable() const { return false; }
 
 		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
+
+		void NotifyDataWritten(uint64_t offset, size_t len);
+		void NotifyDataInserted(uint64_t offset, size_t len);
+		void NotifyDataRemoved(uint64_t offset, uint64_t len);
+
+	private:
+		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
+		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
+		static size_t InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
+		static size_t RemoveCallback(void* ctxt, uint64_t offset, uint64_t len);
+		static BNModificationStatus GetModificationCallback(void* ctxt, uint64_t offset);
+		static bool IsValidOffsetCallback(void* ctxt, uint64_t offset);
+		static uint64_t GetStartCallback(void* ctxt);
+		static uint64_t GetLengthCallback(void* ctxt);
+		static uint64_t GetEntryPointCallback(void* ctxt);
+		static bool IsExecutableCallback(void* ctxt);
+		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
 	public:
 		BinaryView(BNBinaryView* view);

@@ -46,6 +46,15 @@ void BinaryDataNotification::FunctionRemovedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	notify->OnAnalysisFunctionUpdated(view, funcObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -54,6 +63,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataRemoved = DataRemovedCallback;
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
+	m_callbacks.functionUpdated = FunctionUpdatedCallback;
 }
 
 
@@ -235,6 +245,24 @@ bool BinaryView::PerformIsValidOffset(uint64_t offset)
 {
 	uint8_t val;
 	return PerformRead(&val, offset, 1) == 1;
+}
+
+
+void BinaryView::NotifyDataWritten(uint64_t offset, size_t len)
+{
+	BNNotifyDataWritten(m_view, offset, len);
+}
+
+
+void BinaryView::NotifyDataInserted(uint64_t offset, size_t len)
+{
+	BNNotifyDataInserted(m_view, offset, len);
+}
+
+
+void BinaryView::NotifyDataRemoved(uint64_t offset, uint64_t len)
+{
+	BNNotifyDataRemoved(m_view, offset, len);
 }
 
 

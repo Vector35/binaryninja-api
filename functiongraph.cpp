@@ -50,6 +50,18 @@ void FunctionGraph::SetBlockMargins(int horiz, int vert)
 }
 
 
+size_t FunctionGraph::GetMaximumSymbolWidth() const
+{
+	return BNGetFunctionGraphMaximumSymbolWidth(m_graph);
+}
+
+
+void FunctionGraph::SetMaximumSymbolWidth(size_t width)
+{
+	BNSetFunctionGraphMaximumSymbolWidth(m_graph, width);
+}
+
+
 void FunctionGraph::StartLayout()
 {
 	BNStartFunctionGraphLayout(m_graph);

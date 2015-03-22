@@ -862,6 +862,9 @@ namespace BinaryNinja
 		int GetVerticalBlockMargin() const;
 		void SetBlockMargins(int horiz, int vert);
 
+		size_t GetMaximumSymbolWidth() const;
+		void SetMaximumSymbolWidth(size_t width);
+
 		void StartLayout();
 		bool IsLayoutComplete();
 		void OnComplete(const std::function<void()>& func);

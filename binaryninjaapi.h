@@ -832,6 +832,7 @@ namespace BinaryNinja
 
 		BNFunctionGraphBlock* GetBlockObject() const { return m_block; }
 
+		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
 		int GetX() const;

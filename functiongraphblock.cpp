@@ -15,6 +15,12 @@ FunctionGraphBlock::~FunctionGraphBlock()
 }
 
 
+Ref<Architecture> FunctionGraphBlock::GetArchitecture() const
+{
+	return new CoreArchitecture(BNGetFunctionGraphBlockArchitecture(m_block));
+}
+
+
 uint64_t FunctionGraphBlock::GetStart() const
 {
 	return BNGetFunctionGraphBlockStart(m_block);

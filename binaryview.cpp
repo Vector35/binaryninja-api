@@ -143,6 +143,8 @@ BinaryView::BinaryView(FileMetadata* file)
 	view.getLength = GetLengthCallback;
 	view.getEntryPoint = GetEntryPointCallback;
 	view.isExecutable = IsExecutableCallback;
+	view.getDefaultEndianness = GetDefaultEndiannessCallback;
+	view.getAddressSize = GetAddressSizeCallback;
 	view.save = SaveCallback;
 
 	m_file = file;
@@ -233,6 +235,20 @@ bool BinaryView::IsExecutableCallback(void* ctxt)
 }
 
 
+BNEndianness BinaryView::GetDefaultEndiannessCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->GetDefaultEndianness();
+}
+
+
+size_t BinaryView::GetAddressSizeCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->GetAddressSize();
+}
+
+
 bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -245,6 +261,26 @@ bool BinaryView::PerformIsValidOffset(uint64_t offset)
 {
 	uint8_t val;
 	return PerformRead(&val, offset, 1) == 1;
+}
+
+
+BNEndianness BinaryView::PerformGetDefaultEndianness() const
+{
+	Ref<Architecture> arch = GetDefaultArchitecture();
+	if (arch)
+		return arch->GetEndianness();
+	return LittleEndian;
+}
+
+
+size_t BinaryView::PerformGetAddressSize() const
+{
+	Ref<Architecture> arch = GetDefaultArchitecture();
+	if (arch)
+		return arch->GetAddressSize();
+	if (GetEnd() > (1LL << 32))
+		return 8;
+	return 4;
 }
 
 
@@ -440,6 +476,18 @@ void BinaryView::SetDefaultArchitecture(Architecture* arch)
 		BNSetDefaultArchitecture(m_view, arch->GetArchitectureObject());
 	else
 		BNSetDefaultArchitecture(m_view, nullptr);
+}
+
+
+BNEndianness BinaryView::GetDefaultEndianness() const
+{
+	return BNGetDefaultEndianness(m_view);
+}
+
+
+size_t BinaryView::GetAddressSize() const
+{
+	return BNGetViewAddressSize(m_view);
 }
 
 

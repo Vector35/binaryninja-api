@@ -42,6 +42,20 @@ Architecture::Architecture(const string& name): m_nameForRegister(name)
 }
 
 
+BNEndianness Architecture::GetEndiannessCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetEndianness();
+}
+
+
+size_t Architecture::GetAddressSizeCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetAddressSize();
+}
+
+
 bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
                                               size_t maxLen, BNInstructionInfo* result)
 {
@@ -105,6 +119,8 @@ void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
 	callbacks.context = arch;
+	callbacks.getEndianness = GetEndiannessCallback;
+	callbacks.getAddressSize = GetAddressSizeCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
@@ -148,6 +164,18 @@ string Architecture::GetName() const
 
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
+}
+
+
+BNEndianness CoreArchitecture::GetEndianness() const
+{
+	return BNGetArchitectureEndianness(m_arch);
+}
+
+
+size_t CoreArchitecture::GetAddressSize() const
+{
+	return BNGetArchitectureAddressSize(m_arch);
 }
 
 

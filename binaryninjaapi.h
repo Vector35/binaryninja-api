@@ -387,6 +387,8 @@ namespace BinaryNinja
 		virtual uint64_t PerformGetLength() const { return 0; }
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
 		virtual bool PerformIsExecutable() const { return false; }
+		virtual BNEndianness PerformGetDefaultEndianness() const;
+		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
 
@@ -405,6 +407,8 @@ namespace BinaryNinja
 		static uint64_t GetLengthCallback(void* ctxt);
 		static uint64_t GetEntryPointCallback(void* ctxt);
 		static bool IsExecutableCallback(void* ctxt);
+		static BNEndianness GetDefaultEndiannessCallback(void* ctxt);
+		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
 	public:
@@ -448,6 +452,9 @@ namespace BinaryNinja
 
 		Ref<Architecture> GetDefaultArchitecture() const;
 		void SetDefaultArchitecture(Architecture* arch);
+
+		BNEndianness GetDefaultEndianness() const;
+		size_t GetAddressSize() const;
 
 		bool IsExecutable() const;
 
@@ -722,6 +729,8 @@ namespace BinaryNinja
 
 		Architecture(BNArchitecture* arch);
 
+		static BNEndianness GetEndiannessCallback(void* ctxt);
+		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
@@ -740,6 +749,9 @@ namespace BinaryNinja
 
 		std::string GetName() const;
 
+		virtual BNEndianness GetEndianness() const = 0;
+		virtual size_t GetAddressSize() const = 0;
+
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) = 0;
@@ -751,6 +763,8 @@ namespace BinaryNinja
 	{
 	public:
 		CoreArchitecture(BNArchitecture* arch);
+		virtual BNEndianness GetEndianness() const override;
+		virtual size_t GetAddressSize() const override;
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;

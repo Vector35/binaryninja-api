@@ -70,7 +70,7 @@ char* UndoAction::SerializeCallback(void* ctxt)
 }
 
 
-UndoAction::UndoAction(const string& name): m_name(name)
+UndoAction::UndoAction(const string& name, BNActionType action): m_typeName(name), m_actionType(action)
 {
 }
 
@@ -78,6 +78,7 @@ UndoAction::UndoAction(const string& name): m_name(name)
 BNUndoAction UndoAction::GetCallbacks()
 {
 	BNUndoAction action;
+	action.type = m_actionType;
 	action.context = this;
 	action.undo = UndoCallback;
 	action.redo = RedoCallback;
@@ -89,7 +90,7 @@ BNUndoAction UndoAction::GetCallbacks()
 void UndoAction::Add(BNBinaryView* view)
 {
 	BNUndoAction action = GetCallbacks();
-	BNAddUndoAction(view, GetName().c_str(), &action);
+	BNAddUndoAction(view, m_typeName.c_str(), &action);
 }
 
 
@@ -184,6 +185,12 @@ bool FileMetadata::IsModified() const
 }
 
 
+bool FileMetadata::IsAnalysisChanged() const
+{
+	return BNIsAnalysisChanged(m_file);
+}
+
+
 void FileMetadata::MarkFileModified()
 {
 	BNMarkFileModified(m_file);
@@ -193,6 +200,33 @@ void FileMetadata::MarkFileModified()
 void FileMetadata::MarkFileSaved()
 {
 	BNMarkFileSaved(m_file);
+}
+
+
+bool FileMetadata::IsBackedByDatabase() const
+{
+	return BNIsBackedByDatabase(m_file);
+}
+
+
+bool FileMetadata::CreateDatabase(const string& name, BinaryView* data)
+{
+	return BNCreateDatabase(data->GetViewObject(), name.c_str());
+}
+
+
+Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
+{
+	BNBinaryView* data = BNOpenExistingDatabase(m_file, path.c_str());
+	if (!data)
+		return nullptr;
+	return new BinaryView(data);
+}
+
+
+bool FileMetadata::SaveAutoSnapshot(BinaryView* data)
+{
+	return BNSaveAutoSnapshot(data->GetViewObject());
 }
 
 

@@ -232,17 +232,19 @@ namespace BinaryNinja
 	class UndoAction
 	{
 	private:
-		std::string m_name;
+		std::string m_typeName;
+		BNActionType m_actionType;
 
 		static void UndoCallback(void* ctxt, BNBinaryView* data);
 		static void RedoCallback(void* ctxt, BNBinaryView* data);
 		static char* SerializeCallback(void* ctxt);
 
 	public:
-		UndoAction(const std::string& name);
+		UndoAction(const std::string& name, BNActionType action);
 		virtual ~UndoAction() {}
 
-		const std::string& GetName() const { return m_name; }
+		const std::string& GetTypeName() const { return m_typeName; }
+		BNActionType GetActionType() const { return m_actionType; }
 		BNUndoAction GetCallbacks();
 
 		void Add(BNBinaryView* view);
@@ -286,8 +288,14 @@ namespace BinaryNinja
 		void SetFilename(const std::string& name);
 
 		bool IsModified() const;
+		bool IsAnalysisChanged() const;
 		void MarkFileModified();
 		void MarkFileSaved();
+
+		bool IsBackedByDatabase() const;
+		bool CreateDatabase(const std::string& name, BinaryView* data);
+		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
+		bool SaveAutoSnapshot(BinaryView* data);
 
 		void BeginUndoActions();
 		void CommitUndoActions();
@@ -445,6 +453,10 @@ namespace BinaryNinja
 		BNBinaryView* GetViewObject() const { return m_view; }
 
 		bool IsModified() const;
+		bool IsAnalysisChanged() const;
+		bool IsBackedByDatabase() const;
+		bool CreateDatabase(const std::string& path);
+		bool SaveAutoSnapshot();
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);

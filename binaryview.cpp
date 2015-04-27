@@ -308,6 +308,30 @@ bool BinaryView::IsModified() const
 }
 
 
+bool BinaryView::IsAnalysisChanged() const
+{
+	return m_file->IsAnalysisChanged();
+}
+
+
+bool BinaryView::IsBackedByDatabase() const
+{
+	return m_file->IsBackedByDatabase();
+}
+
+
+bool BinaryView::CreateDatabase(const string& path)
+{
+	return m_file->CreateDatabase(path, this);
+}
+
+
+bool BinaryView::SaveAutoSnapshot()
+{
+	return m_file->SaveAutoSnapshot(this);
+}
+
+
 void BinaryView::BeginUndoActions()
 {
 	m_file->BeginUndoActions();

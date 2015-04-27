@@ -158,6 +158,12 @@ FileMetadata::~FileMetadata()
 }
 
 
+void FileMetadata::Close()
+{
+	BNCloseFile(m_file);
+}
+
+
 void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 {
 	BNSetFileMetadataNavigationHandler(m_file, handler->GetCallbacks());
@@ -272,4 +278,13 @@ uint64_t FileMetadata::GetCurrentOffset()
 bool FileMetadata::Navigate(const string& view, uint64_t offset)
 {
 	return BNNavigate(m_file, view.c_str(), offset);
+}
+
+
+Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
+{
+	BNBinaryView* view = BNGetFileViewOfType(m_file, name.c_str());
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
 }

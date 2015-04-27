@@ -282,6 +282,8 @@ namespace BinaryNinja
 
 		BNFileMetadata* GetFileObject() const { return m_file; }
 
+		void Close();
+
 		void SetNavigationHandler(NavigationHandler* handler);
 
 		std::string GetFilename() const;
@@ -306,6 +308,8 @@ namespace BinaryNinja
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();
 		bool Navigate(const std::string& view, uint64_t offset);
+
+		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
 	};
 
 	class BinaryView;

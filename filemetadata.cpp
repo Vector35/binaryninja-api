@@ -1,6 +1,7 @@
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
+using namespace Json;
 using namespace std;
 
 
@@ -35,23 +36,99 @@ NavigationHandler::NavigationHandler()
 }
 
 
-void UndoAction::UndoCallback(void* ctxt)
+void UndoAction::UndoCallback(void* ctxt, BNBinaryView* data)
 {
 	UndoAction* action = (UndoAction*)ctxt;
-	action->Undo();
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	action->Undo(view);
 }
 
 
-void UndoAction::RedoCallback(void* ctxt)
+void UndoAction::RedoCallback(void* ctxt, BNBinaryView* data)
 {
 	UndoAction* action = (UndoAction*)ctxt;
-	action->Redo();
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	action->Redo(view);
 }
 
 
-void UndoAction::Add(BNFileMetadata* file)
+char* UndoAction::SerializeCallback(void* ctxt)
 {
-	BNAddUndoAction(file, this, UndoCallback, RedoCallback);
+	try
+	{
+		UndoAction* action = (UndoAction*)ctxt;
+		Value data = action->Serialize();
+		FastWriter writer;
+		string json = writer.write(data);
+		return BNAllocString(json.c_str());
+	}
+	catch (exception& e)
+	{
+		LogError("Undo action failed to serialize: %s", e.what());
+		return nullptr;
+	}
+}
+
+
+UndoAction::UndoAction(const string& name): m_name(name)
+{
+}
+
+
+BNUndoAction UndoAction::GetCallbacks()
+{
+	BNUndoAction action;
+	action.context = this;
+	action.undo = UndoCallback;
+	action.redo = RedoCallback;
+	action.serialize = SerializeCallback;
+	return action;
+}
+
+
+void UndoAction::Add(BNBinaryView* view)
+{
+	BNUndoAction action = GetCallbacks();
+	BNAddUndoAction(view, GetName().c_str(), &action);
+}
+
+
+bool UndoActionType::DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result)
+{
+	try
+	{
+		UndoActionType* type = (UndoActionType*)ctxt;
+		Reader reader;
+		Value val;
+		if (!reader.parse(data, val, false))
+		{
+			LogError("Invalid JSON while deserializing undo action");
+			return false;
+		}
+
+		UndoAction* action = type->Deserialize(val);
+		if (!action)
+			return false;
+
+		*result = action->GetCallbacks();
+		return true;
+	}
+	catch (exception& e)
+	{
+		LogError("Error while deserializing undo action: %s", e.what());
+		return false;
+	}
+}
+
+
+UndoActionType::UndoActionType(const string& name): m_nameForRegister(name)
+{
+}
+
+
+void UndoActionType::Register(UndoActionType* type)
+{
+	BNRegisterUndoActionType(type->m_nameForRegister.c_str(), type, DeserializeCallback);
 }
 
 
@@ -122,12 +199,6 @@ void FileMetadata::MarkFileSaved()
 void FileMetadata::BeginUndoActions()
 {
 	BNBeginUndoActions(m_file);
-}
-
-
-void FileMetadata::AddUndoAction(UndoAction* action)
-{
-	action->Add(m_file);
 }
 
 

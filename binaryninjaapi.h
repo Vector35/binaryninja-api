@@ -10,6 +10,7 @@
 #include <exception>
 #include <functional>
 #include "binaryninjacore.h"
+#include "json/json.h"
 
 #ifdef _MSC_VER
 #define NOEXCEPT
@@ -226,19 +227,45 @@ namespace BinaryNinja
 		virtual bool Navigate(const std::string& view, uint64_t offset) = 0;
 	};
 
+	class BinaryView;
+
 	class UndoAction
 	{
 	private:
-		static void UndoCallback(void* ctxt);
-		static void RedoCallback(void* ctxt);
+		std::string m_name;
+
+		static void UndoCallback(void* ctxt, BNBinaryView* data);
+		static void RedoCallback(void* ctxt, BNBinaryView* data);
+		static char* SerializeCallback(void* ctxt);
 
 	public:
+		UndoAction(const std::string& name);
 		virtual ~UndoAction() {}
 
-		void Add(BNFileMetadata* file);
+		const std::string& GetName() const { return m_name; }
+		BNUndoAction GetCallbacks();
 
-		virtual void Undo() = 0;
-		virtual void Redo() = 0;
+		void Add(BNBinaryView* view);
+
+		virtual void Undo(BinaryView* data) = 0;
+		virtual void Redo(BinaryView* data) = 0;
+		virtual Json::Value Serialize() = 0;
+	};
+
+	class UndoActionType
+	{
+	protected:
+		std::string m_nameForRegister;
+
+		static bool DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result);
+
+	public:
+		UndoActionType(const std::string& name);
+		virtual ~UndoActionType() {}
+
+		static void Register(UndoActionType* type);
+
+		virtual UndoAction* Deserialize(const Json::Value& data) = 0;
 	};
 
 	class FileMetadata: public RefCountObject
@@ -263,7 +290,6 @@ namespace BinaryNinja
 		void MarkFileSaved();
 
 		void BeginUndoActions();
-		void AddUndoAction(UndoAction* action);
 		void CommitUndoActions();
 
 		bool Undo();
@@ -374,7 +400,7 @@ namespace BinaryNinja
 		BNBinaryView* m_view;
 		Ref<FileMetadata> m_file;
 
-		BinaryView(FileMetadata* file);
+		BinaryView(const std::string& typeName, FileMetadata* file);
 
 		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }

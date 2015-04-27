@@ -130,7 +130,7 @@ uint64_t Symbol::GetAddress() const
 }
 
 
-BinaryView::BinaryView(FileMetadata* file)
+BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 {
 	BNCustomBinaryView view;
 	view.context = this;
@@ -148,7 +148,7 @@ BinaryView::BinaryView(FileMetadata* file)
 	view.save = SaveCallback;
 
 	m_file = file;
-	m_view = BNCreateCustomBinaryView(m_file->GetFileObject(), &view);
+	m_view = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetFileObject(), &view);
 }
 
 
@@ -316,7 +316,7 @@ void BinaryView::BeginUndoActions()
 
 void BinaryView::AddUndoAction(UndoAction* action)
 {
-	m_file->AddUndoAction(action);
+	action->Add(m_view);
 }
 
 

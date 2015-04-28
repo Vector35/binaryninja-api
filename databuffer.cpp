@@ -134,3 +134,17 @@ DataBuffer DataBuffer::FromEscapedString(const string& src)
 {
 	return DataBuffer(BNDecodeEscapedString(src.c_str()));
 }
+
+
+string BinaryNinja::EscapeString(const string& s)
+{
+	DataBuffer buffer(s.c_str(), s.size());
+	return buffer.ToEscapedString();
+}
+
+
+string BinaryNinja::UnescapeString(const string& s)
+{
+	DataBuffer buffer = DataBuffer::FromEscapedString(s);
+	return string((const char*)buffer.GetData(), buffer.GetLength());
+}

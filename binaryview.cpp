@@ -130,6 +130,18 @@ uint64_t Symbol::GetAddress() const
 }
 
 
+bool Symbol::IsAutoDefined() const
+{
+	return BNIsSymbolAutoDefined(m_sym);
+}
+
+
+void Symbol::SetAutoDefined(bool val)
+{
+	BNSetSymbolAutoDefined(m_sym, val);
+}
+
+
 BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 {
 	BNCustomBinaryView view;

@@ -155,6 +155,9 @@ namespace BinaryNinja
 	bool LogToFile(BNLogLevel minimumLevel, const std::string& path, bool append = false);
 	void CloseLogs();
 
+	std::string EscapeString(const std::string& s);
+	std::string UnescapeString(const std::string& s);
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;
@@ -397,6 +400,8 @@ namespace BinaryNinja
 		std::string GetFullName() const;
 		std::string GetRawName() const;
 		uint64_t GetAddress() const;
+		bool IsAutoDefined() const;
+		void SetAutoDefined(bool val);
 	};
 
 	struct ReferenceSource

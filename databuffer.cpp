@@ -136,6 +136,21 @@ DataBuffer DataBuffer::FromEscapedString(const string& src)
 }
 
 
+string DataBuffer::ToBase64() const
+{
+	char* str = BNDataBufferToBase64(m_buffer);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+DataBuffer DataBuffer::FromBase64(const string& src)
+{
+	return DataBuffer(BNDecodeBase64(src.c_str()));
+}
+
+
 string BinaryNinja::EscapeString(const string& s)
 {
 	DataBuffer buffer(s.c_str(), s.size());

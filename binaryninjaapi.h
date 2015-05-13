@@ -192,6 +192,8 @@ namespace BinaryNinja
 
 		std::string ToEscapedString() const;
 		static DataBuffer FromEscapedString(const std::string& src);
+		std::string ToBase64() const;
+		static DataBuffer FromBase64(const std::string& src);
 	};
 
 	class TemporaryFile: public RefCountObject

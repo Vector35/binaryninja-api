@@ -151,6 +151,26 @@ DataBuffer DataBuffer::FromBase64(const string& src)
 }
 
 
+bool DataBuffer::ZlibCompress(DataBuffer& output) const
+{
+	BNDataBuffer* result = BNZlibCompress(output.m_buffer);
+	if (!result)
+		return false;
+	output = DataBuffer(result);
+	return true;
+}
+
+
+bool DataBuffer::ZlibDecompress(DataBuffer& output) const
+{
+	BNDataBuffer* result = BNZlibDecompress(output.m_buffer);
+	if (!result)
+		return false;
+	output = DataBuffer(result);
+	return true;
+}
+
+
 string BinaryNinja::EscapeString(const string& s)
 {
 	DataBuffer buffer(s.c_str(), s.size());

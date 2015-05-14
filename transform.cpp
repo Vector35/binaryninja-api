@@ -212,6 +212,7 @@ vector<TransformParameter> CoreTransform::GetParameters() const
 		param.name = list[i].name;
 		param.longName = list[i].longName;
 		param.fixedLength = list[i].fixedLength;
+		result.push_back(param);
 	}
 
 	BNFreeTransformParameterList(list, count);
@@ -223,10 +224,10 @@ bool CoreTransform::Decode(const DataBuffer& input, DataBuffer& output, const ma
 {
 	BNTransformParameter* list = new BNTransformParameter[params.size()];
 	size_t idx = 0;
-	for (auto i : params)
+	for (auto& i : params)
 	{
 		list[idx].name = i.first.c_str();
-		list[idx].value = i.second.GetBufferObject();
+		list[idx++].value = i.second.GetBufferObject();
 	}
 
 	bool result = BNDecode(m_xform, input.GetBufferObject(), output.GetBufferObject(), list, idx);
@@ -240,10 +241,10 @@ bool CoreTransform::Encode(const DataBuffer& input, DataBuffer& output, const ma
 {
 	BNTransformParameter* list = new BNTransformParameter[params.size()];
 	size_t idx = 0;
-	for (auto i : params)
+	for (auto& i : params)
 	{
 		list[idx].name = i.first.c_str();
-		list[idx].value = i.second.GetBufferObject();
+		list[idx++].value = i.second.GetBufferObject();
 	}
 
 	bool result = BNEncode(m_xform, input.GetBufferObject(), output.GetBufferObject(), list, idx);

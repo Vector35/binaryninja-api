@@ -115,6 +115,69 @@ bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr,
 }
 
 
+bool Architecture::IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->IsNeverBranchPatchAvailable(data, addr, len);
+}
+
+
+bool Architecture::IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->IsAlwaysBranchPatchAvailable(data, addr, len);
+}
+
+
+bool Architecture::IsInvertBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->IsInvertBranchPatchAvailable(data, addr, len);
+}
+
+
+bool Architecture::IsSkipAndReturnZeroPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->IsSkipAndReturnZeroPatchAvailable(data, addr, len);
+}
+
+
+bool Architecture::IsSkipAndReturnValuePatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->IsSkipAndReturnValuePatchAvailable(data, addr, len);
+}
+
+
+bool Architecture::ConvertToNopCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->ConvertToNop(data, addr, len);
+}
+
+
+bool Architecture::AlwaysBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->AlwaysBranch(data, addr, len);
+}
+
+
+bool Architecture::InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->InvertBranch(data, addr, len);
+}
+
+
+bool Architecture::SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->SkipAndReturnValue(data, addr, len, value);
+}
+
+
 void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
@@ -125,6 +188,15 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
 	callbacks.assemble = AssembleCallback;
+	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
+	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
+	callbacks.isInvertBranchPatchAvailable = IsInvertBranchPatchAvailableCallback;
+	callbacks.isSkipAndReturnZeroPatchAvailable = IsSkipAndReturnZeroPatchAvailableCallback;
+	callbacks.isSkipAndReturnValuePatchAvailable = IsSkipAndReturnValuePatchAvailableCallback;
+	callbacks.convertToNop = ConvertToNopCallback;
+	callbacks.alwaysBranch = AlwaysBranchCallback;
+	callbacks.invertBranch = InvertBranchCallback;
+	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
 	arch->m_arch = BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
 }
 
@@ -159,6 +231,67 @@ string Architecture::GetName() const
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+bool Architecture::Assemble(const std::string&, uint64_t, DataBuffer&, std::string& errors)
+{
+	errors = "Architecture does not implement an assembler.\n";
+	return false;
+}
+
+
+bool Architecture::IsNeverBranchPatchAvailable(const uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::IsAlwaysBranchPatchAvailable(const uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::IsInvertBranchPatchAvailable(const uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::IsSkipAndReturnZeroPatchAvailable(const uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::IsSkipAndReturnValuePatchAvailable(const uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::ConvertToNop(uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::AlwaysBranch(uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::InvertBranch(uint8_t*, uint64_t, size_t)
+{
+	return false;
+}
+
+
+bool Architecture::SkipAndReturnValue(uint8_t*, uint64_t, size_t, uint64_t)
+{
+	return false;
 }
 
 
@@ -210,4 +343,58 @@ bool CoreArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& r
 		BNFreeString(errorStr);
 	}
 	return ok;
+}
+
+
+bool CoreArchitecture::IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNIsArchitectureNeverBranchPatchAvailable(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNIsArchitectureAlwaysBranchPatchAvailable(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNIsArchitectureInvertBranchPatchAvailable(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNIsArchitectureSkipAndReturnZeroPatchAvailable(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNIsArchitectureSkipAndReturnValuePatchAvailable(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::ConvertToNop(uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNArchitectureConvertToNop(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::AlwaysBranch(uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNArchitectureAlwaysBranch(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::InvertBranch(uint8_t* data, uint64_t addr, size_t len)
+{
+	return BNArchitectureInvertBranch(m_arch, data, addr, len);
+}
+
+
+bool CoreArchitecture::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value)
+{
+	return BNArchitectureSkipAndReturnValue(m_arch, data, addr, len, value);
 }

@@ -750,6 +750,60 @@ void BinaryView::UndefineSymbol(Symbol* sym)
 }
 
 
+bool BinaryView::IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr)
+{
+	return BNIsNeverBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr)
+{
+	return BNIsAlwaysBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr)
+{
+	return BNIsInvertBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::IsSkipAndReturnZeroPatchAvailable(Architecture* arch, uint64_t addr)
+{
+	return BNIsSkipAndReturnZeroPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr)
+{
+	return BNIsSkipAndReturnValuePatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::ConvertToNop(Architecture* arch, uint64_t addr)
+{
+	return BNConvertToNop(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::AlwaysBranch(Architecture* arch, uint64_t addr)
+{
+	return BNAlwaysBranch(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::InvertBranch(Architecture* arch, uint64_t addr)
+{
+	return BNInvertBranch(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+bool BinaryView::SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value)
+{
+	return BNSkipAndReturnValue(m_view, arch->GetArchitectureObject(), addr, value);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetFileObject()))
 {
 }

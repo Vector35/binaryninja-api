@@ -544,6 +544,17 @@ namespace BinaryNinja
 
 		void DefineSymbol(Symbol* sym);
 		void UndefineSymbol(Symbol* sym);
+
+		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
+		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
+		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
+		bool IsSkipAndReturnZeroPatchAvailable(Architecture* arch, uint64_t addr);
+		bool IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr);
+
+		bool ConvertToNop(Architecture* arch, uint64_t addr);
+		bool AlwaysBranch(Architecture* arch, uint64_t addr);
+		bool InvertBranch(Architecture* arch, uint64_t addr);
+		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
 	};
 
 	class BinaryData: public BinaryView
@@ -790,6 +801,17 @@ namespace BinaryNinja
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
+		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsInvertBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsSkipAndReturnZeroPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsSkipAndReturnValuePatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+
+		static bool ConvertToNopCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
+		static bool AlwaysBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
+		static bool InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
+		static bool SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
+
 	public:
 		Architecture(const std::string& name);
 
@@ -808,7 +830,18 @@ namespace BinaryNinja
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) = 0;
 
-		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) = 0;
+		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
+
+		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+		virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+		virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+		virtual bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+		virtual bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+
+		virtual bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len);
+		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len);
+		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len);
+		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 	};
 
 	class CoreArchitecture: public Architecture
@@ -821,6 +854,17 @@ namespace BinaryNinja
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
+
+		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+
+		virtual bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
 	class Function;

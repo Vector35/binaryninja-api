@@ -84,6 +84,12 @@ void DataBuffer::SetSize(size_t len)
 }
 
 
+void DataBuffer::Clear()
+{
+	BNClearDataBuffer(m_buffer);
+}
+
+
 void DataBuffer::Append(const void* data, size_t len)
 {
 	BNAppendDataBufferContents(m_buffer, data, len);

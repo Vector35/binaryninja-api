@@ -181,6 +181,7 @@ namespace BinaryNinja
 		size_t GetLength() const;
 
 		void SetSize(size_t len);
+		void Clear();
 		void Append(const void* data, size_t len);
 		void Append(const DataBuffer& buf);
 		void AppendByte(uint8_t val);

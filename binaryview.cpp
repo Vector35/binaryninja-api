@@ -659,6 +659,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 		src.func = new Function(BNNewFunctionReference(refs[i].func));
 		src.arch = new CoreArchitecture(refs[i].arch);
 		src.addr = refs[i].addr;
+		result.push_back(src);
 	}
 
 	BNFreeCodeReferences(refs, count);

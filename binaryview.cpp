@@ -557,6 +557,12 @@ void BinaryView::RemoveAnalysisFunction(Function* func)
 }
 
 
+void BinaryView::CreateUserFunction(Architecture* arch, uint64_t start)
+{
+	BNCreateUserFunction(m_view, arch->GetArchitectureObject(), start);
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_view);
@@ -748,6 +754,18 @@ void BinaryView::DefineSymbol(Symbol* sym)
 void BinaryView::UndefineSymbol(Symbol* sym)
 {
 	BNUndefineSymbol(m_view, sym->GetSymbolObject());
+}
+
+
+void BinaryView::DefineUserSymbol(Symbol* sym)
+{
+	BNDefineUserSymbol(m_view, sym->GetSymbolObject());
+}
+
+
+void BinaryView::UndefineUserSymbol(Symbol* sym)
+{
+	BNUndefineUserSymbol(m_view, sym->GetSymbolObject());
 }
 
 

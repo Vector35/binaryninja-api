@@ -520,6 +520,7 @@ namespace BinaryNinja
 		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
 		void AddEntryPointForAnalysis(Architecture* arch, uint64_t start);
 		void RemoveAnalysisFunction(Function* func);
+		void CreateUserFunction(Architecture* arch, uint64_t start);
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
@@ -545,6 +546,9 @@ namespace BinaryNinja
 
 		void DefineSymbol(Symbol* sym);
 		void UndefineSymbol(Symbol* sym);
+
+		void DefineUserSymbol(Symbol* sym);
+		void UndefineUserSymbol(Symbol* sym);
 
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);

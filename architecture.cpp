@@ -1,3 +1,6 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <inttypes.h>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -102,6 +105,39 @@ void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, s
 }
 
 
+bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+                                                    size_t* len, BNLowLevelILFunction* il)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	return arch->GetInstructionLowLevelIL(data, addr, *len, func);
+}
+
+
+char* Architecture::GetRegisterNameCallback(void* ctxt, uint32_t reg)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetRegisterName(reg);
+	return BNAllocString(result.c_str());
+}
+
+
+char* Architecture::GetFlagNameCallback(void* ctxt, uint32_t flag)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetFlagName(flag);
+	return BNAllocString(result.c_str());
+}
+
+
+char* Architecture::GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetFlagWriteTypeName(flags);
+	return BNAllocString(result.c_str());
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -187,6 +223,10 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
+	callbacks.getInstructionLowLevelIL = GetInstructionLowLevelILCallback;
+	callbacks.getRegisterName = GetRegisterNameCallback;
+	callbacks.getFlagName = GetFlagNameCallback;
+	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -231,6 +271,37 @@ string Architecture::GetName() const
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, LowLevelILFunction& il)
+{
+	il.AddInstruction(il.Unimplemented());
+	return false;
+}
+
+
+string Architecture::GetRegisterName(uint32_t reg)
+{
+	char regStr[32];
+	sprintf(regStr, "r%" PRIu32, reg);
+	return regStr;
+}
+
+
+string Architecture::GetFlagName(uint32_t flag)
+{
+	char flagStr[32];
+	sprintf(flagStr, "flag%" PRIu32, flag);
+	return flagStr;
+}
+
+
+string Architecture::GetFlagWriteTypeName(uint32_t flags)
+{
+	char flagStr[32];
+	sprintf(flagStr, "update%" PRIu32, flags);
+	return flagStr;
 }
 
 
@@ -330,6 +401,39 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 	BNFreeInstructionText(tokens, count);
 	return true;
+}
+
+
+bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
+{
+	return BNGetInstructionLowLevelIL(m_arch, data, addr, &len, il.GetFunctionObject());
+}
+
+
+string CoreArchitecture::GetRegisterName(uint32_t reg)
+{
+	char* name = BNGetArchitectureRegisterName(m_arch, reg);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string CoreArchitecture::GetFlagName(uint32_t flag)
+{
+	char* name = BNGetArchitectureFlagName(m_arch, flag);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string CoreArchitecture::GetFlagWriteTypeName(uint32_t flags)
+{
+	char* name = BNGetArchitectureFlagWriteTypeName(m_arch, flags);
+	string result = name;
+	BNFreeString(name);
+	return result;
 }
 
 

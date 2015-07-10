@@ -62,9 +62,9 @@ void FunctionGraph::SetMaximumSymbolWidth(size_t width)
 }
 
 
-void FunctionGraph::StartLayout()
+void FunctionGraph::StartLayout(BNFunctionGraphType type)
 {
-	BNStartFunctionGraphLayout(m_graph);
+	BNStartFunctionGraphLayout(m_graph, type);
 }
 
 

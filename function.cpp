@@ -29,7 +29,7 @@ uint64_t Function::GetStart() const
 
 Ref<Symbol> Function::GetSymbol() const
 {
-	return new Symbol(BNNewSymbolReference(BNGetFunctionSymbol(m_func)));
+	return new Symbol(BNGetFunctionSymbol(m_func));
 }
 
 
@@ -50,6 +50,26 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 void Function::MarkRecentUse()
 {
 	BNMarkFunctionAsRecentlyUsed(m_func);
+}
+
+
+Ref<LowLevelILFunction> Function::GetLowLevelIL() const
+{
+	return new LowLevelILFunction(BNGetFunctionLowLevelIL(m_func));
+}
+
+
+vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetFunctionLowLevelILBasicBlockList(m_func, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
 }
 
 

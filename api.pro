@@ -27,6 +27,7 @@ SOURCES += \
 	functiongraphblock.cpp \
 	log.cpp \
 	tempfile.cpp \
+	lowlevelil.cpp \
 	../core/json/jsoncpp.cpp
 
 HEADERS += binaryninjaapi.h

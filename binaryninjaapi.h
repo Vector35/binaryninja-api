@@ -789,6 +789,8 @@ namespace BinaryNinja
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
 	};
 
+	class LowLevelILFunction;
+
 	class Architecture: public RefCountObject
 	{
 	protected:
@@ -804,6 +806,11 @@ namespace BinaryNinja
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t* len, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
+		static bool GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+		                                             size_t* len, BNLowLevelILFunction* il);
+		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
+		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
+		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -835,6 +842,11 @@ namespace BinaryNinja
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) = 0;
 
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
+		virtual std::string GetRegisterName(uint32_t reg);
+		virtual std::string GetFlagName(uint32_t flag);
+		virtual std::string GetFlagWriteTypeName(uint32_t flags);
+
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
@@ -858,6 +870,10 @@ namespace BinaryNinja
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+		virtual std::string GetRegisterName(uint32_t reg) override;
+		virtual std::string GetFlagName(uint32_t flag) override;
+		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
@@ -920,6 +936,9 @@ namespace BinaryNinja
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();
 
+		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		std::vector<Ref<BasicBlock>> GetLowLevelILBasicBlocks() const;
+
 		Ref<FunctionGraph> CreateFunctionGraph();
 	};
 
@@ -981,7 +1000,7 @@ namespace BinaryNinja
 		size_t GetMaximumSymbolWidth() const;
 		void SetMaximumSymbolWidth(size_t width);
 
-		void StartLayout();
+		void StartLayout(BNFunctionGraphType = NormalFunctionGraph);
 		bool IsLayoutComplete();
 		void OnComplete(const std::function<void()>& func);
 		void Abort();
@@ -991,5 +1010,101 @@ namespace BinaryNinja
 		int GetWidth() const;
 		int GetHeight() const;
 		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
+	};
+
+	struct LowLevelILLabel: public BNLowLevelILLabel
+	{
+		LowLevelILLabel();
+	};
+
+	class LowLevelILFunction: public RefCountObject
+	{
+		BNLowLevelILFunction* m_func;
+
+	public:
+		LowLevelILFunction();
+		LowLevelILFunction(BNLowLevelILFunction* func);
+		~LowLevelILFunction();
+
+		BNLowLevelILFunction* GetFunctionObject() const { return m_func; }
+
+		uint64_t GetCurrentAddress() const;
+		void SetCurrentAddress(uint64_t addr);
+
+		size_t AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
+		               uint64_t a = 0, uint64_t b = 0, uint64_t c = 0, uint64_t d = 0);
+		size_t AddInstruction(size_t expr);
+
+		size_t Nop();
+		size_t SetRegister(size_t size, uint32_t reg, uint64_t val);
+		size_t SetRegisterSplit(size_t size, uint32_t high, uint32_t low, uint64_t val);
+		size_t SetFlag(uint32_t flag, uint64_t val);
+		size_t Load(size_t size, uint64_t addr);
+		size_t Store(size_t size, uint64_t addr, uint64_t val);
+		size_t Push(size_t size, uint64_t val);
+		size_t Pop(size_t size);
+		size_t Register(size_t size, uint32_t reg);
+		size_t Const(size_t size, uint64_t val);
+		size_t Flag(uint32_t reg);
+		size_t Add(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t AddCarry(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t Sub(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t SubBorrow(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t And(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t Or(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t Xor(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t ShiftLeft(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t LogicalShiftRight(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t ArithShiftRight(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t RotateLeft(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t RotateLeftCarry(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t RotateRight(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t RotateRightCarry(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t Mult(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t MultDoublePrecUnsigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t MultDoublePrecSigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t DivUnsigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t DivDoublePrecUnsigned(size_t size, uint64_t high, uint64_t low, uint64_t div, uint32_t flags = 0);
+		size_t DivSigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t DivDoublePrecSigned(size_t size, uint64_t high, uint64_t low, uint64_t div, uint32_t flags = 0);
+		size_t ModUnsigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t ModDoublePrecUnsigned(size_t size, uint64_t high, uint64_t low, uint64_t div, uint32_t flags = 0);
+		size_t ModSigned(size_t size, uint64_t a, uint64_t b, uint32_t flags = 0);
+		size_t ModDoublePrecSigned(size_t size, uint64_t high, uint64_t low, uint64_t div, uint32_t flags = 0);
+		size_t Neg(size_t size, uint64_t a, uint32_t flags = 0);
+		size_t Not(size_t size, uint64_t a, uint32_t flags = 0);
+		size_t SignExtend(size_t size, uint64_t a);
+		size_t ZeroExtend(size_t size, uint64_t a);
+		size_t Jump(uint64_t dest);
+		size_t Call(uint64_t dest);
+		size_t Return(size_t dest);
+		size_t FlagCondition(BNLowLevelILFlagCondition cond);
+		size_t CompareEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareNotEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareSignedLessThan(size_t size, uint64_t a, uint64_t b);
+		size_t CompareUnsignedLessThan(size_t size, uint64_t a, uint64_t b);
+		size_t CompareSignedLessEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareUnsignedLessEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareSignedGreaterEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareUnsignedGreaterEqual(size_t size, uint64_t a, uint64_t b);
+		size_t CompareSignedGreaterThan(size_t size, uint64_t a, uint64_t b);
+		size_t CompareUnsignedGreaterThan(size_t size, uint64_t a, uint64_t b);
+		size_t SystemCall();
+		size_t Undefined();
+		size_t Unimplemented();
+		size_t UnimplementedMemoryRef(size_t size, uint64_t addr);
+
+		size_t Goto(BNLowLevelILLabel& label);
+		size_t If(uint64_t operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f);
+		void MarkLabel(BNLowLevelILLabel& label);
+
+		BNLowLevelILInstruction operator[](size_t i) const;
+		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionCount() const;
+
+		void AddLabelForAddress(Architecture* arch, uint64_t addr);
+		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, uint64_t addr);
+
+		void Finalize();
 	};
 }

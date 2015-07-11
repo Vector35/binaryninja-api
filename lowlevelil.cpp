@@ -381,6 +381,12 @@ size_t LowLevelILFunction::SystemCall()
 }
 
 
+size_t LowLevelILFunction::Breakpoint()
+{
+	return AddExpr(LLIL_BP, 0, 0);
+}
+
+
 size_t LowLevelILFunction::Undefined()
 {
 	return AddExpr(LLIL_UNDEF, 0, 0);

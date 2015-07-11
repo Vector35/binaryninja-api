@@ -1090,6 +1090,7 @@ namespace BinaryNinja
 		size_t CompareSignedGreaterThan(size_t size, uint64_t a, uint64_t b);
 		size_t CompareUnsignedGreaterThan(size_t size, uint64_t a, uint64_t b);
 		size_t SystemCall();
+		size_t Breakpoint();
 		size_t Undefined();
 		size_t Unimplemented();
 		size_t UnimplementedMemoryRef(size_t size, uint64_t addr);

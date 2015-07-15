@@ -811,6 +811,12 @@ namespace BinaryNinja
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
+		static uint32_t* GetFullWidthRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
+		static BNRegisterInfo GetRegisterInfoCallback(void* ctxt, uint32_t reg);
+		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
+
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -846,6 +852,11 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
+		virtual std::vector<uint32_t> GetFullWidthRegisters();
+		virtual std::vector<uint32_t> GetAllRegisters();
+		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
+		virtual uint32_t GetStackPointerRegister();
+		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
@@ -874,6 +885,11 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
+		virtual std::vector<uint32_t> GetFullWidthRegisters() override;
+		virtual std::vector<uint32_t> GetAllRegisters() override;
+		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
+		virtual uint32_t GetStackPointerRegister() override;
+
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;

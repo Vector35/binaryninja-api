@@ -138,6 +138,52 @@ char* Architecture::GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags)
 }
 
 
+uint32_t* Architecture::GetFullWidthRegistersCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetFullWidthRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* Architecture::GetAllRegistersCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
+{
+	delete[] regs;
+}
+
+
+BNRegisterInfo Architecture::GetRegisterInfoCallback(void* ctxt, uint32_t reg)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetRegisterInfo(reg);
+}
+
+
+uint32_t Architecture::GetStackPointerRegisterCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetStackPointerRegister();
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -227,6 +273,11 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterName = GetRegisterNameCallback;
 	callbacks.getFlagName = GetFlagNameCallback;
 	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
+	callbacks.getFullWidthRegisters = GetFullWidthRegistersCallback;
+	callbacks.getAllRegisters = GetAllRegistersCallback;
+	callbacks.freeRegisterList = FreeRegisterListCallback;
+	callbacks.getRegisterInfo = GetRegisterInfoCallback;
+	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -302,6 +353,49 @@ string Architecture::GetFlagWriteTypeName(uint32_t flags)
 	char flagStr[32];
 	sprintf(flagStr, "update%" PRIu32, flags);
 	return flagStr;
+}
+
+
+vector<uint32_t> Architecture::GetFullWidthRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetAllRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+BNRegisterInfo Architecture::GetRegisterInfo(uint32_t)
+{
+	BNRegisterInfo result;
+	result.fullWidthRegister = 0;
+	result.offset = 0;
+	result.size = 0;
+	result.extend = NoExtend;
+	return result;
+}
+
+
+uint32_t Architecture::GetStackPointerRegister()
+{
+	return 0;
+}
+
+
+vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
+{
+	size_t count;
+	uint32_t* regs = BNGetModifiedArchitectureRegistersOnWrite(m_arch, reg, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
 }
 
 
@@ -434,6 +528,46 @@ string CoreArchitecture::GetFlagWriteTypeName(uint32_t flags)
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetFullWidthRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetFullWidthArchitectureRegisters(m_arch, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureRegisters(m_arch, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+BNRegisterInfo CoreArchitecture::GetRegisterInfo(uint32_t reg)
+{
+	return BNGetArchitectureRegisterInfo(m_arch, reg);
+}
+
+
+uint32_t CoreArchitecture::GetStackPointerRegister()
+{
+	return BNGetArchitectureStackPointerRegister(m_arch);
 }
 
 

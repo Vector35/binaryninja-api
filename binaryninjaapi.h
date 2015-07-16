@@ -1026,6 +1026,9 @@ namespace BinaryNinja
 		int GetWidth() const;
 		int GetHeight() const;
 		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
+
+		bool IsOptionSet(BNFunctionGraphOption option) const;
+		void SetOption(BNFunctionGraphOption option, bool state = true);
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel

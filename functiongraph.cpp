@@ -128,3 +128,15 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocksInRegion(int left, int t
 	BNFreeFunctionGraphBlockList(blocks, count);
 	return result;
 }
+
+
+bool FunctionGraph::IsOptionSet(BNFunctionGraphOption option) const
+{
+	return BNIsFunctionGraphOptionSet(m_graph, option);
+}
+
+
+void FunctionGraph::SetOption(BNFunctionGraphOption option, bool state)
+{
+	BNSetFunctionGraphOption(m_graph, option, state);
+}

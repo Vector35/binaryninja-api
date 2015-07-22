@@ -952,6 +952,10 @@ namespace BinaryNinja
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();
 
+		std::string GetCommentForAddress(uint64_t addr) const;
+		std::vector<uint64_t> GetCommentedAddresses() const;
+		void SetCommentForAddress(uint64_t addr, const std::string& comment);
+
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		std::vector<Ref<BasicBlock>> GetLowLevelILBasicBlocks() const;
 

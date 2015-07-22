@@ -53,6 +53,32 @@ void Function::MarkRecentUse()
 }
 
 
+string Function::GetCommentForAddress(uint64_t addr) const
+{
+	char* comment = BNGetCommentForAddress(m_func, addr);
+	string result = comment;
+	BNFreeString(comment);
+	return result;
+}
+
+
+vector<uint64_t> Function::GetCommentedAddresses() const
+{
+	size_t count;
+	uint64_t* addrs = BNGetCommentedAddresses(m_func, &count);
+	vector<uint64_t> result;
+	result.insert(result.end(), addrs, &addrs[count]);
+	BNFreeAddressList(addrs);
+	return result;
+}
+
+
+void Function::SetCommentForAddress(uint64_t addr, const string& comment)
+{
+	BNSetCommentForAddress(m_func, addr, comment.c_str());
+}
+
+
 Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 {
 	return new LowLevelILFunction(BNGetFunctionLowLevelIL(m_func));

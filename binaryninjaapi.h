@@ -776,7 +776,7 @@ namespace BinaryNinja
 	struct InstructionInfo: public BNInstructionInfo
 	{
 		InstructionInfo();
-		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr);
+		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
 	};
 
 	struct InstructionTextToken

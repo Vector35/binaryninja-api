@@ -14,10 +14,11 @@ InstructionInfo::InstructionInfo()
 }
 
 
-void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture* arch)
+void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture* arch, bool hasDelaySlot)
 {
 	if (branchCount >= BN_MAX_INSTRUCTION_BRANCHES)
 		return;
+	branchDelay = hasDelaySlot;
 	branchType[branchCount] = type;
 	branchTarget[branchCount] = target;
 	branchArch[branchCount++] = arch ? arch->GetArchitectureObject() : nullptr;

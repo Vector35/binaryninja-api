@@ -60,6 +60,13 @@ size_t Architecture::GetAddressSizeCallback(void* ctxt)
 }
 
 
+size_t Architecture::GetDefaultIntegerSizeCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetDefaultIntegerSize();
+}
+
+
 bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
                                               size_t maxLen, BNInstructionInfo* result)
 {
@@ -267,6 +274,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.context = arch;
 	callbacks.getEndianness = GetEndiannessCallback;
 	callbacks.getAddressSize = GetAddressSizeCallback;
+	callbacks.getDefaultIntegerSize = GetDefaultIntegerSizeCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
@@ -323,6 +331,14 @@ string Architecture::GetName() const
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+size_t Architecture::GetDefaultIntegerSize() const
+{
+	if (GetAddressSize() < 4)
+		return GetAddressSize();
+	return 4;
 }
 
 
@@ -475,6 +491,12 @@ BNEndianness CoreArchitecture::GetEndianness() const
 size_t CoreArchitecture::GetAddressSize() const
 {
 	return BNGetArchitectureAddressSize(m_arch);
+}
+
+
+size_t CoreArchitecture::GetDefaultIntegerSize() const
+{
+	return BNGetArchitectureDefaultIntegerSize(m_arch);
 }
 
 

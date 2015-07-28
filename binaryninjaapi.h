@@ -801,6 +801,7 @@ namespace BinaryNinja
 
 		static BNEndianness GetEndiannessCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
+		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
@@ -843,6 +844,7 @@ namespace BinaryNinja
 
 		virtual BNEndianness GetEndianness() const = 0;
 		virtual size_t GetAddressSize() const = 0;
+		virtual size_t GetDefaultIntegerSize() const;
 
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
@@ -878,6 +880,7 @@ namespace BinaryNinja
 		CoreArchitecture(BNArchitecture* arch);
 		virtual BNEndianness GetEndianness() const override;
 		virtual size_t GetAddressSize() const override;
+		virtual size_t GetDefaultIntegerSize() const override;
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
@@ -902,6 +905,112 @@ namespace BinaryNinja
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
+	};
+
+	class Type;
+	class Structure;
+	class Enumeration;
+
+	struct NameAndType
+	{
+		std::string name;
+		Ref<Type> type;
+	};
+
+	class Type: public RefCountObject
+	{
+		BNType* m_type;
+
+	public:
+		Type(BNType* type);
+		~Type();
+
+		BNType* GetTypeObject() const { return m_type; }
+
+		BNTypeClass GetClass() const;
+		uint64_t GetWidth() const;
+		size_t GetAlignment() const;
+		bool IsSigned() const;
+		bool IsConst() const;
+		bool IsFloat() const;
+		Ref<Type> GetChildType() const;
+		std::vector<NameAndType> GetParameters() const;
+		bool HasVariableArguments() const;
+		Ref<Structure> GetStructure() const;
+		Ref<Enumeration> GetEnumeration() const;
+		uint64_t GetElementCount() const;
+
+		std::string GetString() const;
+		std::string GetStringBeforeName() const;
+		std::string GetStringAfterName() const;
+
+		static Ref<Type> VoidType();
+		static Ref<Type> BoolType();
+		static Ref<Type> IntegerType(size_t width, bool sign);
+		static Ref<Type> FloatType(size_t width);
+		static Ref<Type> StructureType(Structure* strct);
+		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0);
+		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false);
+		static Ref<Type> ArrayType(Type* type, uint64_t elem);
+		static Ref<Type> FunctionType(Type* returnValue, const std::vector<NameAndType>& params, bool varArg = false);
+	};
+
+	struct StructureMember
+	{
+		Ref<Type> type;
+		std::string name;
+		uint64_t offset;
+	};
+
+	class Structure: public RefCountObject
+	{
+		BNStructure* m_struct;
+
+	public:
+		Structure(BNStructure* s);
+		~Structure();
+
+		BNStructure* GetStructureObject() const { return m_struct; }
+
+		std::string GetName() const;
+		void SetName(const std::string& name);
+		std::vector<StructureMember> GetMembers() const;
+		uint64_t GetWidth() const;
+		size_t GetAlignment() const;
+		bool IsPacked() const;
+		void SetPacked(bool packed);
+		bool IsUnion() const;
+		void SetUnion(bool u);
+
+		void AddMember(Type* type, const std::string& name);
+		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
+		void RemoveMember(size_t idx);
+	};
+
+	struct EnumerationMember
+	{
+		std::string name;
+		uint64_t value;
+		bool isDefault;
+	};
+
+	class Enumeration: public RefCountObject
+	{
+		BNEnumeration* m_enum;
+
+	public:
+		Enumeration(BNEnumeration* e);
+		~Enumeration();
+
+		BNEnumeration* GetEnumerationObject() const { return m_enum; }
+
+		std::string GetName() const;
+		void SetName(const std::string& name);
+
+		std::vector<EnumerationMember> GetMembers() const;
+
+		void AddMember(const std::string& name);
+		void AddMemberWithValue(const std::string& name, uint64_t value);
 	};
 
 	class Function;
@@ -958,6 +1067,8 @@ namespace BinaryNinja
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		std::vector<Ref<BasicBlock>> GetLowLevelILBasicBlocks() const;
+
+		Ref<Type> GetType() const;
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 	};

@@ -28,6 +28,7 @@ SOURCES += \
 	log.cpp \
 	tempfile.cpp \
 	lowlevelil.cpp \
+	type.cpp \
 	../core/json/jsoncpp.cpp
 
 HEADERS += binaryninjaapi.h

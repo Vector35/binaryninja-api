@@ -99,6 +99,12 @@ vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
 }
 
 
+Ref<Type> Function::GetType() const
+{
+	return new Type(BNGetFunctionType(m_func));
+}
+
+
 Ref<FunctionGraph> Function::CreateFunctionGraph()
 {
 	BNFunctionGraph* graph = BNCreateFunctionGraph(m_func);

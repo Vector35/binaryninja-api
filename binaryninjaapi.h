@@ -498,6 +498,8 @@ namespace BinaryNinja
 		BNModificationStatus GetModification(uint64_t offset);
 		std::vector<BNModificationStatus> GetModification(uint64_t offset, size_t len);
 
+		bool IsValidOffset(uint64_t offset) const;
+
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;

@@ -479,6 +479,12 @@ BNModificationStatus BinaryView::GetModification(uint64_t offset)
 }
 
 
+bool BinaryView::IsValidOffset(uint64_t offset) const
+{
+	return BNIsValidOffset(m_view, offset);
+}
+
+
 uint64_t BinaryView::GetStart() const
 {
 	return BNGetStartOffset(m_view);

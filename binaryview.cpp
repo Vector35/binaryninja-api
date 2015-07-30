@@ -829,6 +829,12 @@ bool BinaryView::SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t 
 }
 
 
+size_t BinaryView::GetInstructionLength(Architecture* arch, uint64_t addr)
+{
+	return BNGetInstructionLength(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetFileObject()))
 {
 }

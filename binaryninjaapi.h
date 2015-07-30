@@ -562,6 +562,8 @@ namespace BinaryNinja
 		bool AlwaysBranch(Architecture* arch, uint64_t addr);
 		bool InvertBranch(Architecture* arch, uint64_t addr);
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
+
+		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
 	};
 
 	class BinaryData: public BinaryView
@@ -861,6 +863,7 @@ namespace BinaryNinja
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
+		uint32_t GetRegisterByName(const std::string& name);
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
@@ -1069,6 +1072,14 @@ namespace BinaryNinja
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		std::vector<Ref<BasicBlock>> GetLowLevelILBasicBlocks() const;
+		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
+		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
+		BNRegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
+		BNRegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
+		BNRegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
+		BNRegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
+		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<Type> GetType() const;
 

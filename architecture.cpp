@@ -416,6 +416,12 @@ vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
 }
 
 
+uint32_t Architecture::GetRegisterByName(const string& name)
+{
+	return BNGetArchitectureRegisterByName(m_arch, name.c_str());
+}
+
+
 bool Architecture::Assemble(const std::string&, uint64_t, DataBuffer&, std::string& errors)
 {
 	errors = "Architecture does not implement an assembler.\n";

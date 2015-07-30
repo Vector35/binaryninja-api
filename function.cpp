@@ -99,6 +99,75 @@ vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
 }
 
 
+size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNGetLowLevelILForInstruction(m_func, arch->GetArchitectureObject(), addr);
+}
+
+
+vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	size_t* exits = BNGetLowLevelILExitsForInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+
+	vector<size_t> result;
+	result.insert(result.end(), exits, &exits[count]);
+
+	BNFreeLowLevelILInstructionList(exits);
+	return result;
+}
+
+
+BNRegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
+{
+	return BNGetRegisterValueAtInstruction(m_func, arch->GetArchitectureObject(), addr, reg);
+}
+
+
+BNRegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
+{
+	return BNGetRegisterValueAfterInstruction(m_func, arch->GetArchitectureObject(), addr, reg);
+}
+
+
+BNRegisterValue Function::GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg)
+{
+	return BNGetRegisterValueAtLowLevelILInstruction(m_func, i, reg);
+}
+
+
+BNRegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg)
+{
+	return BNGetRegisterValueAfterLowLevelILInstruction(m_func, i, reg);
+}
+
+
+vector<uint32_t> Function::GetRegistersReadByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	uint32_t* regs = BNGetRegistersReadByInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> Function::GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	uint32_t* regs = BNGetRegistersWrittenByInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_func));

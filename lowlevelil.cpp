@@ -309,6 +309,12 @@ size_t LowLevelILFunction::Return(size_t dest)
 }
 
 
+size_t LowLevelILFunction::NoReturn()
+{
+	return AddExpr(LLIL_NORET, 0, 0);
+}
+
+
 size_t LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond)
 {
 	return AddExpr(LLIL_FLAG_COND, 0, 0, (uint64_t)cond);
@@ -384,6 +390,12 @@ size_t LowLevelILFunction::SystemCall()
 size_t LowLevelILFunction::Breakpoint()
 {
 	return AddExpr(LLIL_BP, 0, 0);
+}
+
+
+size_t LowLevelILFunction::Trap(uint32_t num)
+{
+	return AddExpr(LLIL_TRAP, 0, 0, num);
 }
 
 

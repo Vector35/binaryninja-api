@@ -344,7 +344,7 @@ size_t Architecture::GetDefaultIntegerSize() const
 
 bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, LowLevelILFunction& il)
 {
-	il.AddInstruction(il.Unimplemented());
+	il.AddInstruction(il.Undefined());
 	return false;
 }
 

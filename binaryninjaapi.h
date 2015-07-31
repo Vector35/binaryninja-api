@@ -1043,6 +1043,7 @@ namespace BinaryNinja
 		uint64_t GetLength() const;
 
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
+		bool HasUndeterminedOutgoingEdges() const;
 
 		void MarkRecentUse();
 	};
@@ -1062,6 +1063,8 @@ namespace BinaryNinja
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
 		Ref<Symbol> GetSymbol() const;
+		bool WasAutomaticallyDiscovered() const;
+		bool CanReturn() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();
@@ -1225,6 +1228,7 @@ namespace BinaryNinja
 		size_t Jump(uint64_t dest);
 		size_t Call(uint64_t dest);
 		size_t Return(size_t dest);
+		size_t NoReturn();
 		size_t FlagCondition(BNLowLevelILFlagCondition cond);
 		size_t CompareEqual(size_t size, uint64_t a, uint64_t b);
 		size_t CompareNotEqual(size_t size, uint64_t a, uint64_t b);
@@ -1238,6 +1242,7 @@ namespace BinaryNinja
 		size_t CompareUnsignedGreaterThan(size_t size, uint64_t a, uint64_t b);
 		size_t SystemCall();
 		size_t Breakpoint();
+		size_t Trap(uint32_t num);
 		size_t Undefined();
 		size_t Unimplemented();
 		size_t UnimplementedMemoryRef(size_t size, uint64_t addr);

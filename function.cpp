@@ -33,6 +33,18 @@ Ref<Symbol> Function::GetSymbol() const
 }
 
 
+bool Function::WasAutomaticallyDiscovered() const
+{
+	return BNWasFunctionAutomaticallyDiscovered(m_func);
+}
+
+
+bool Function::CanReturn() const
+{
+	return BNCanFunctionReturn(m_func);
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;

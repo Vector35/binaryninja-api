@@ -65,6 +65,12 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 }
 
 
+bool BasicBlock::HasUndeterminedOutgoingEdges() const
+{
+	return BNBasicBlockHasUndeterminedOutgoingEdges(m_block);
+}
+
+
 void BasicBlock::MarkRecentUse()
 {
 	BNMarkBasicBlockAsRecentlyUsed(m_block);

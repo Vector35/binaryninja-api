@@ -11,6 +11,7 @@ InstructionInfo::InstructionInfo()
 {
 	length = 0;
 	branchCount = 0;
+	branchDelay = false;
 }
 
 

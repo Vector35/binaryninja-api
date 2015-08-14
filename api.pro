@@ -29,6 +29,7 @@ SOURCES += \
 	tempfile.cpp \
 	lowlevelil.cpp \
 	type.cpp \
+	functionrecognizer.cpp \
 	../core/json/jsoncpp.cpp
 
 HEADERS += binaryninjaapi.h

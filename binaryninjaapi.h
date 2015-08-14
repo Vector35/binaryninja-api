@@ -1260,4 +1260,16 @@ namespace BinaryNinja
 
 		void Finalize();
 	};
+
+	class FunctionRecognizer
+	{
+		static bool RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
+
+	public:
+		FunctionRecognizer();
+
+		static void RegisterGlobalRecognizer(FunctionRecognizer* recog);
+
+		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
+	};
 }

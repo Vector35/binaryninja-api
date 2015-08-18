@@ -1,5 +1,4 @@
 #include "binaryninjaapi.h"
-#include "binaryview.h"
 
 using namespace BinaryNinja;
 using namespace std;

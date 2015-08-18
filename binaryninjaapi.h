@@ -887,6 +887,11 @@ namespace BinaryNinja
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
 		void RegisterFunctionRecognizer(FunctionRecognizer* recog);
+
+		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
+		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name,
+		                                   uint64_t defaultValue = 0);
+		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 	};
 
 	class CoreArchitecture: public Architecture

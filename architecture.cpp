@@ -490,6 +490,24 @@ void Architecture::RegisterFunctionRecognizer(FunctionRecognizer* recog)
 }
 
 
+bool Architecture::IsBinaryViewTypeConstantDefined(const string& type, const string& name)
+{
+	return BNIsBinaryViewTypeArchitectureConstantDefined(m_arch, type.c_str(), name.c_str());
+}
+
+
+uint64_t Architecture::GetBinaryViewTypeConstant(const string& type, const string& name, uint64_t defaultValue)
+{
+	return BNGetBinaryViewTypeArchitectureConstant(m_arch, type.c_str(), name.c_str(), defaultValue);
+}
+
+
+void Architecture::SetBinaryViewTypeConstant(const string& type, const string& name, uint64_t value)
+{
+	BNSetBinaryViewTypeArchitectureConstant(m_arch, type.c_str(), name.c_str(), value);
+}
+
+
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
 }

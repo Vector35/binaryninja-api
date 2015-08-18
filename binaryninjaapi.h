@@ -446,6 +446,7 @@ namespace BinaryNinja
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
 
 	private:
+		static bool InitCallback(void* ctxt);
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
 		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
 		static size_t InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
@@ -463,6 +464,8 @@ namespace BinaryNinja
 	public:
 		BinaryView(BNBinaryView* view);
 		virtual ~BinaryView();
+
+		virtual bool Init() { return true; }
 
 		FileMetadata* GetFile() const { return m_file; }
 		BNBinaryView* GetViewObject() const { return m_view; }

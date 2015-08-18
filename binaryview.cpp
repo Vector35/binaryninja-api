@@ -177,6 +177,13 @@ BinaryView::~BinaryView()
 }
 
 
+bool BinaryView::InitCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->Init();
+}
+
+
 size_t BinaryView::ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len)
 {
 	BinaryView* view = (BinaryView*)ctxt;

@@ -27,6 +27,15 @@ void FunctionRecognizer::RegisterGlobalRecognizer(FunctionRecognizer* recog)
 }
 
 
+void FunctionRecognizer::RegisterArchitectureFunctionRecognizer(Architecture* arch, FunctionRecognizer* recog)
+{
+	BNFunctionRecognizer reg;
+	reg.context = recog;
+	reg.recognizeLowLevelIL = RecognizeLowLevelILCallback;
+	BNRegisterArchitectureFunctionRecognizer(arch->GetArchitectureObject(), &reg);
+}
+
+
 bool FunctionRecognizer::RecognizeLowLevelIL(BinaryView*, Function*, LowLevelILFunction*)
 {
 	return false;

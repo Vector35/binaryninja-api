@@ -408,6 +408,8 @@ namespace BinaryNinja
 		uint64_t GetAddress() const;
 		bool IsAutoDefined() const;
 		void SetAutoDefined(bool val);
+
+		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};
 
 	struct ReferenceSource
@@ -797,6 +799,7 @@ namespace BinaryNinja
 	};
 
 	class LowLevelILFunction;
+	class FunctionRecognizer;
 	
 	typedef size_t ExprId;
 
@@ -882,6 +885,8 @@ namespace BinaryNinja
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len);
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len);
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
+
+		void RegisterFunctionRecognizer(FunctionRecognizer* recog);
 	};
 
 	class CoreArchitecture: public Architecture
@@ -1274,6 +1279,7 @@ namespace BinaryNinja
 		FunctionRecognizer();
 
 		static void RegisterGlobalRecognizer(FunctionRecognizer* recog);
+		static void RegisterArchitectureFunctionRecognizer(Architecture* arch, FunctionRecognizer* recog);
 
 		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
 	};

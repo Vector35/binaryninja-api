@@ -484,6 +484,12 @@ bool Architecture::SkipAndReturnValue(uint8_t*, uint64_t, size_t, uint64_t)
 }
 
 
+void Architecture::RegisterFunctionRecognizer(FunctionRecognizer* recog)
+{
+	FunctionRecognizer::RegisterArchitectureFunctionRecognizer(this, recog);
+}
+
+
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
 }

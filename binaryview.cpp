@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "binaryview.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -139,6 +140,12 @@ bool Symbol::IsAutoDefined() const
 void Symbol::SetAutoDefined(bool val)
 {
 	BNSetSymbolAutoDefined(m_sym, val);
+}
+
+
+Ref<Symbol> Symbol::ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr)
+{
+	return new Symbol(BNImportedFunctionFromImportAddressSymbol(sym->GetSymbolObject(), addr));
 }
 
 

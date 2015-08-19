@@ -232,6 +232,27 @@ bool BinaryView::IsValidOffsetCallback(void* ctxt, uint64_t offset)
 }
 
 
+bool BinaryView::IsOffsetReadableCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsOffsetReadable(offset);
+}
+
+
+bool BinaryView::IsOffsetWritableCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsOffsetWritable(offset);
+}
+
+
+bool BinaryView::IsOffsetExecutableCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsOffsetExecutable(offset);
+}
+
+
 uint64_t BinaryView::GetStartCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -286,6 +307,24 @@ bool BinaryView::PerformIsValidOffset(uint64_t offset)
 {
 	uint8_t val;
 	return PerformRead(&val, offset, 1) == 1;
+}
+
+
+bool BinaryView::PerformIsOffsetReadable(uint64_t offset)
+{
+	return PerformIsValidOffset(offset);
+}
+
+
+bool BinaryView::PerformIsOffsetWritable(uint64_t offset)
+{
+	return PerformIsValidOffset(offset);
+}
+
+
+bool BinaryView::PerformIsOffsetExecutable(uint64_t offset)
+{
+	return PerformIsValidOffset(offset);
 }
 
 
@@ -495,6 +534,24 @@ BNModificationStatus BinaryView::GetModification(uint64_t offset)
 bool BinaryView::IsValidOffset(uint64_t offset) const
 {
 	return BNIsValidOffset(m_view, offset);
+}
+
+
+bool BinaryView::IsOffsetReadable(uint64_t offset) const
+{
+	return BNIsOffsetReadable(m_view, offset);
+}
+
+
+bool BinaryView::IsOffsetWritable(uint64_t offset) const
+{
+	return BNIsOffsetWritable(m_view, offset);
+}
+
+
+bool BinaryView::IsOffsetExecutable(uint64_t offset) const
+{
+	return BNIsOffsetExecutable(m_view, offset);
 }
 
 

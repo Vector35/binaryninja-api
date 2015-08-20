@@ -158,6 +158,10 @@ namespace BinaryNinja
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
+	bool PreprocessSource(const std::string& source, const std::string& fileName,
+	                      std::string& output, std::string& errors,
+	                      const std::vector<std::string>& includeDirs = std::vector<std::string>());
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

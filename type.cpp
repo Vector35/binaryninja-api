@@ -85,6 +85,12 @@ bool Type::HasVariableArguments() const
 }
 
 
+bool Type::CanReturn() const
+{
+	return BNFunctionTypeCanReturn(m_type);
+}
+
+
 Ref<Structure> Type::GetStructure() const
 {
 	BNStructure* s = BNGetTypeStructure(m_type);
@@ -184,7 +190,8 @@ Ref<Type> Type::ArrayType(Type* type, uint64_t elem)
 }
 
 
-Ref<Type> Type::FunctionType(Type* returnValue, const std::vector<NameAndType>& params, bool varArg)
+Ref<Type> Type::FunctionType(Type* returnValue, BNCallingConvention callingConvention,
+                             const std::vector<NameAndType>& params, bool varArg)
 {
 	BNNameAndType* paramArray = new BNNameAndType[params.size()];
 	for (size_t i = 0; i < params.size(); i++)
@@ -193,7 +200,8 @@ Ref<Type> Type::FunctionType(Type* returnValue, const std::vector<NameAndType>& 
 		paramArray[i].type = params[i].type->GetTypeObject();
 	}
 
-	Type* type = new Type(BNCreateFunctionType(returnValue->GetTypeObject(), paramArray, params.size(), varArg));
+	Type* type = new Type(BNCreateFunctionType(returnValue->GetTypeObject(), callingConvention,
+	                      paramArray, params.size(), varArg));
 	delete[] paramArray;
 	return type;
 }
@@ -377,4 +385,72 @@ bool BinaryNinja::PreprocessSource(const string& source, const string& fileName,
 	BNFreeString(errorStr);
 	delete[] includeDirList;
 	return result;
+}
+
+
+bool BinaryNinja::ParseTypesFromSource(Architecture* arch, const string& source, const string& fileName,
+                                       map<string, Ref<Type>>& types, map<string, Ref<Type>>& variables,
+                                       map<string, Ref<Type>>& functions, string& errors,
+                                       const vector<string>& includeDirs)
+{
+	BNTypeParserResult result;
+	char* errorStr;
+	const char** includeDirList = new const char*[includeDirs.size()];
+
+	for (size_t i = 0; i < includeDirs.size(); i++)
+		includeDirList[i] = includeDirs[i].c_str();
+
+	types.clear();
+	variables.clear();
+	functions.clear();
+
+	bool ok = BNParseTypesFromSource(arch->GetArchitectureObject(), source.c_str(), fileName.c_str(), &result,
+	                                 &errorStr, includeDirList, includeDirs.size());
+	errors = errorStr;
+	BNFreeString(errorStr);
+	if (!ok)
+		return false;
+
+	for (size_t i = 0; i < result.typeCount; i++)
+		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	for (size_t i = 0; i < result.variableCount; i++)
+		types[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	for (size_t i = 0; i < result.functionCount; i++)
+		types[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	BNFreeTypeParserResult(&result);
+	return true;
+}
+
+
+bool BinaryNinja::ParseTypesFromSourceFile(Architecture* arch, const string& fileName,
+                                           map<string, Ref<Type>>& types, map<string, Ref<Type>>& variables,
+                                           map<string, Ref<Type>>& functions, string& errors,
+                                           const vector<string>& includeDirs)
+{
+	BNTypeParserResult result;
+	char* errorStr;
+	const char** includeDirList = new const char*[includeDirs.size()];
+
+	for (size_t i = 0; i < includeDirs.size(); i++)
+		includeDirList[i] = includeDirs[i].c_str();
+
+	types.clear();
+	variables.clear();
+	functions.clear();
+
+	bool ok = BNParseTypesFromSourceFile(arch->GetArchitectureObject(), fileName.c_str(), &result,
+	                                     &errorStr, includeDirList, includeDirs.size());
+	errors = errorStr;
+	BNFreeString(errorStr);
+	if (!ok)
+		return false;
+
+	for (size_t i = 0; i < result.typeCount; i++)
+		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	for (size_t i = 0; i < result.variableCount; i++)
+		variables[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	for (size_t i = 0; i < result.functionCount; i++)
+		functions[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	BNFreeTypeParserResult(&result);
+	return true;
 }

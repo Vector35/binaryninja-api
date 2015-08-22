@@ -143,6 +143,9 @@ namespace BinaryNinja
 		virtual BNLogLevel GetLogLevel() { return WarningLog; }
 	};
 
+	class Architecture;
+	class Type;
+
 	void Log(BNLogLevel level, const char* fmt, ...);
 	void LogDebug(const char* fmt, ...);
 	void LogInfo(const char* fmt, ...);
@@ -161,6 +164,14 @@ namespace BinaryNinja
 	bool PreprocessSource(const std::string& source, const std::string& fileName,
 	                      std::string& output, std::string& errors,
 	                      const std::vector<std::string>& includeDirs = std::vector<std::string>());
+	bool ParseTypesFromSource(Architecture* arch, const std::string& source, const std::string& fileName,
+	                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
+	                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
+	                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
+	bool ParseTypesFromSourceFile(Architecture* arch, const std::string& fileName,
+	                              std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
+	                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
+	                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 	class DataBuffer
 	{
@@ -388,7 +399,6 @@ namespace BinaryNinja
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) override;
 	};
 
-	class Architecture;
 	class Function;
 	class BasicBlock;
 
@@ -593,8 +603,6 @@ namespace BinaryNinja
 		BinaryData(FileMetadata* file, const std::string& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
 	};
-
-	class Architecture;
 
 	class BinaryViewType: public RefCountObject
 	{
@@ -940,7 +948,6 @@ namespace BinaryNinja
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
-	class Type;
 	class Structure;
 	class Enumeration;
 
@@ -969,6 +976,7 @@ namespace BinaryNinja
 		Ref<Type> GetChildType() const;
 		std::vector<NameAndType> GetParameters() const;
 		bool HasVariableArguments() const;
+		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
 		uint64_t GetElementCount() const;
@@ -985,7 +993,8 @@ namespace BinaryNinja
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
-		static Ref<Type> FunctionType(Type* returnValue, const std::vector<NameAndType>& params, bool varArg = false);
+		static Ref<Type> FunctionType(Type* returnValue, BNCallingConvention callingConvention,
+		                              const std::vector<NameAndType>& params, bool varArg = false);
 	};
 
 	struct StructureMember

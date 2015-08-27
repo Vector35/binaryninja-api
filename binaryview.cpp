@@ -152,11 +152,16 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 {
 	BNCustomBinaryView view;
 	view.context = this;
+	view.init = InitCallback;
 	view.read = ReadCallback;
 	view.write = WriteCallback;
 	view.insert = InsertCallback;
 	view.remove = RemoveCallback;
 	view.getModification = GetModificationCallback;
+	view.isValidOffset = IsValidOffsetCallback;
+	view.isOffsetReadable = IsOffsetReadableCallback;
+	view.isOffsetWritable = IsOffsetWritableCallback;
+	view.isOffsetExecutable = IsOffsetExecutableCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
 	view.getEntryPoint = GetEntryPointCallback;

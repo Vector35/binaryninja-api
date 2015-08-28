@@ -574,9 +574,6 @@ namespace BinaryNinja
 		void DefineAutoSymbol(Symbol* sym);
 		void UndefineAutoSymbol(Symbol* sym);
 
-		void DefineSymbol(Symbol* sym);
-		void UndefineSymbol(Symbol* sym);
-
 		void DefineUserSymbol(Symbol* sym);
 		void UndefineUserSymbol(Symbol* sym);
 

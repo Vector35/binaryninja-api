@@ -826,18 +826,6 @@ void BinaryView::UndefineAutoSymbol(Symbol* sym)
 }
 
 
-void BinaryView::DefineSymbol(Symbol* sym)
-{
-	BNDefineSymbol(m_view, sym->GetSymbolObject());
-}
-
-
-void BinaryView::UndefineSymbol(Symbol* sym)
-{
-	BNUndefineSymbol(m_view, sym->GetSymbolObject());
-}
-
-
 void BinaryView::DefineUserSymbol(Symbol* sym)
 {
 	BNDefineUserSymbol(m_view, sym->GetSymbolObject());

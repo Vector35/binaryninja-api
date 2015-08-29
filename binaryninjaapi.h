@@ -491,6 +491,7 @@ namespace BinaryNinja
 
 		FileMetadata* GetFile() const { return m_file; }
 		BNBinaryView* GetViewObject() const { return m_view; }
+		std::string GetTypeName() const;
 
 		bool IsModified() const;
 		bool IsAnalysisChanged() const;
@@ -618,6 +619,7 @@ namespace BinaryNinja
 
 		static void Register(BinaryViewType* type);
 		static Ref<BinaryViewType> GetByName(const std::string& name);
+		static std::vector<Ref<BinaryViewType>> GetViewTypes();
 		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
 
 		static void RegisterArchitecture(const std::string& name, uint32_t id, Architecture* arch);

@@ -371,6 +371,15 @@ void BinaryView::NotifyDataRemoved(uint64_t offset, uint64_t len)
 }
 
 
+string BinaryView::GetTypeName() const
+{
+	char* str = BNGetViewType(m_view);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
 bool BinaryView::IsModified() const
 {
 	return BNIsViewModified(m_view);

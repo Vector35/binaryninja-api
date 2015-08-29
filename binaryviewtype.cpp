@@ -53,6 +53,21 @@ Ref<BinaryViewType> BinaryViewType::GetByName(const string& name)
 }
 
 
+vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypes()
+{
+	BNBinaryViewType** types;
+	size_t count;
+	types = BNGetBinaryViewTypes(&count);
+
+	vector<Ref<BinaryViewType>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new CoreBinaryViewType(types[i]));
+
+	BNFreeBinaryViewTypeList(types);
+	return result;
+}
+
+
 vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data)
 {
 	BNBinaryViewType** types;

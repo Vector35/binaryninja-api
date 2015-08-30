@@ -47,6 +47,13 @@ Architecture::Architecture(const string& name): m_nameForRegister(name)
 }
 
 
+void Architecture::InitCallback(void* ctxt, BNArchitecture* obj)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	arch->m_arch = obj;
+}
+
+
 BNEndianness Architecture::GetEndiannessCallback(void* ctxt)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -179,10 +186,10 @@ void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
 }
 
 
-BNRegisterInfo Architecture::GetRegisterInfoCallback(void* ctxt, uint32_t reg)
+void Architecture::GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	return arch->GetRegisterInfo(reg);
+	*result = arch->GetRegisterInfo(reg);
 }
 
 
@@ -273,6 +280,7 @@ void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
 	callbacks.context = arch;
+	callbacks.init = InitCallback;
 	callbacks.getEndianness = GetEndiannessCallback;
 	callbacks.getAddressSize = GetAddressSizeCallback;
 	callbacks.getDefaultIntegerSize = GetDefaultIntegerSizeCallback;
@@ -298,7 +306,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
-	arch->m_arch = BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
+	BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
 }
 
 

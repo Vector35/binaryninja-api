@@ -831,6 +831,7 @@ namespace BinaryNinja
 
 		Architecture(BNArchitecture* arch);
 
+		static void InitCallback(void* ctxt, BNArchitecture* obj);
 		static BNEndianness GetEndiannessCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
@@ -847,7 +848,7 @@ namespace BinaryNinja
 		static uint32_t* GetFullWidthRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
-		static BNRegisterInfo GetRegisterInfoCallback(void* ctxt, uint32_t reg);
+		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);

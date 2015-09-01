@@ -145,6 +145,7 @@ namespace BinaryNinja
 
 	class Architecture;
 	class Type;
+	class DataBuffer;
 
 	void Log(BNLogLevel level, const char* fmt, ...);
 	void LogDebug(const char* fmt, ...);
@@ -172,6 +173,18 @@ namespace BinaryNinja
 	                              std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
 	                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
 	                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
+
+	void InitCorePlugins();
+	void InitUserPlugins();
+	std::string GetBundledPluginDirectory();
+	void SetBundledPluginDirectory(const std::string& path);
+	std::string GetUserPluginDirectory();
+
+	std::string GetPathRelativeToBundledPluginDirectory(const std::string& path);
+	std::string GetPathRelativeToUserPluginDirectory(const std::string& path);
+
+	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
+	                          std::string& output, std::string& errors);
 
 	class DataBuffer
 	{

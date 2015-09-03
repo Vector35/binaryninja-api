@@ -860,6 +860,8 @@ namespace BinaryNinja
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
 		static uint32_t* GetFullWidthRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllFlagsCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllFlagWriteTypesCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
@@ -902,6 +904,8 @@ namespace BinaryNinja
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
 		virtual std::vector<uint32_t> GetFullWidthRegisters();
 		virtual std::vector<uint32_t> GetAllRegisters();
+		virtual std::vector<uint32_t> GetAllFlags();
+		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
@@ -944,6 +948,8 @@ namespace BinaryNinja
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
 		virtual std::vector<uint32_t> GetFullWidthRegisters() override;
 		virtual std::vector<uint32_t> GetAllRegisters() override;
+		virtual std::vector<uint32_t> GetAllFlags() override;
+		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
 
@@ -1246,6 +1252,7 @@ namespace BinaryNinja
 		ExprId Register(size_t size, uint32_t reg);
 		ExprId Const(size_t size, uint64_t val);
 		ExprId Flag(uint32_t reg);
+		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex);
 		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId AddCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId Sub(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
@@ -1290,6 +1297,7 @@ namespace BinaryNinja
 		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId a, ExprId b);
 		ExprId CompareSignedGreaterThan(size_t size, ExprId a, ExprId b);
 		ExprId CompareUnsignedGreaterThan(size_t size, ExprId a, ExprId b);
+		ExprId TestBit(size_t size, ExprId a, ExprId b);
 		ExprId SystemCall();
 		ExprId Breakpoint();
 		ExprId Trap(uint32_t num);
@@ -1309,6 +1317,9 @@ namespace BinaryNinja
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
 
 		void Finalize();
+
+		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
+		bool GetInstructionText(Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens);
 	};
 
 	class FunctionRecognizer

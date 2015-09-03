@@ -1,6 +1,7 @@
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
+using namespace std;
 
 
 LowLevelILLabel::LowLevelILLabel()
@@ -114,6 +115,12 @@ ExprId LowLevelILFunction::Const(size_t size, uint64_t val)
 ExprId LowLevelILFunction::Flag(uint32_t reg)
 {
 	return AddExpr(LLIL_FLAG, 0, 0, reg);
+}
+
+
+ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, uint32_t bitIndex)
+{
+	return AddExpr(LLIL_FLAG_BIT, size, 0, flag, bitIndex);
 }
 
 
@@ -381,6 +388,12 @@ ExprId LowLevelILFunction::CompareUnsignedGreaterThan(size_t size, ExprId a, Exp
 }
 
 
+ExprId LowLevelILFunction::TestBit(size_t size, ExprId a, ExprId b)
+{
+	return AddExpr(LLIL_TEST_BIT, size, 0, a, b);
+}
+
+
 ExprId LowLevelILFunction::SystemCall()
 {
 	return AddExpr(LLIL_SYSCALL, 0, 0);
@@ -468,4 +481,48 @@ BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, Ex
 void LowLevelILFunction::Finalize()
 {
 	BNFinalizeLowLevelILFunction(m_func);
+}
+
+
+bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens)
+{
+	size_t count;
+	BNInstructionTextToken* list;
+	if (!BNGetLowLevelILExprText(m_func, arch->GetArchitectureObject(), expr, &list, &count))
+		return false;
+
+	tokens.clear();
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = list[i].type;
+		token.text = list[i].text;
+		token.value = list[i].value;
+		tokens.push_back(token);
+	}
+
+	BNFreeInstructionText(list, count);
+	return true;
+}
+
+
+bool LowLevelILFunction::GetInstructionText(Architecture* arch, size_t instr, vector<InstructionTextToken>& tokens)
+{
+	size_t count;
+	BNInstructionTextToken* list;
+	if (!BNGetLowLevelILInstructionText(m_func, arch->GetArchitectureObject(), instr, &list, &count))
+		return false;
+
+	tokens.clear();
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = list[i].type;
+		token.text = list[i].text;
+		token.value = list[i].value;
+		tokens.push_back(token);
+	}
+
+	BNFreeInstructionText(list, count);
+	return true;
 }

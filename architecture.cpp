@@ -180,6 +180,32 @@ uint32_t* Architecture::GetAllRegistersCallback(void* ctxt, size_t* count)
 }
 
 
+uint32_t* Architecture::GetAllFlagsCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllFlags();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* Architecture::GetAllFlagWriteTypesCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllFlagWriteTypes();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
 void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
 {
 	delete[] regs;
@@ -293,6 +319,8 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
 	callbacks.getFullWidthRegisters = GetFullWidthRegistersCallback;
 	callbacks.getAllRegisters = GetAllRegistersCallback;
+	callbacks.getAllFlags = GetAllFlagsCallback;
+	callbacks.getAllFlagWriteTypes = GetAllFlagWriteTypesCallback;
 	callbacks.freeRegisterList = FreeRegisterListCallback;
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
@@ -389,6 +417,18 @@ vector<uint32_t> Architecture::GetFullWidthRegisters()
 
 
 vector<uint32_t> Architecture::GetAllRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetAllFlags()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetAllFlagWriteTypes()
 {
 	return vector<uint32_t>();
 }
@@ -611,6 +651,34 @@ vector<uint32_t> CoreArchitecture::GetAllRegisters()
 {
 	size_t count;
 	uint32_t* regs = BNGetAllArchitectureRegisters(m_arch, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllFlags()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureFlags(m_arch, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureFlagWriteTypes(m_arch, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)

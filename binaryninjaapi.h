@@ -165,14 +165,6 @@ namespace BinaryNinja
 	bool PreprocessSource(const std::string& source, const std::string& fileName,
 	                      std::string& output, std::string& errors,
 	                      const std::vector<std::string>& includeDirs = std::vector<std::string>());
-	bool ParseTypesFromSource(Architecture* arch, const std::string& source, const std::string& fileName,
-	                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
-	                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
-	                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
-	bool ParseTypesFromSourceFile(Architecture* arch, const std::string& fileName,
-	                              std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
-	                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
-	                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 	void InitCorePlugins();
 	void InitUserPlugins();
@@ -930,6 +922,15 @@ namespace BinaryNinja
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name,
 		                                   uint64_t defaultValue = 0);
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
+
+		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
+		                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
+		                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
+		                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
+		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<std::string, Ref<Type>>& types,
+		                              std::map<std::string, Ref<Type>>& variables,
+		                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
+		                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
 	};
 
 	class CoreArchitecture: public Architecture
@@ -993,6 +994,7 @@ namespace BinaryNinja
 		bool IsConst() const;
 		bool IsFloat() const;
 		Ref<Type> GetChildType() const;
+		BNCallingConvention GetCallingConvention() const;
 		std::vector<NameAndType> GetParameters() const;
 		bool HasVariableArguments() const;
 		bool CanReturn() const;

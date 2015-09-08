@@ -166,7 +166,10 @@ void FileMetadata::Close()
 
 void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 {
-	BNSetFileMetadataNavigationHandler(m_file, handler->GetCallbacks());
+	if (handler)
+		BNSetFileMetadataNavigationHandler(m_file, handler->GetCallbacks());
+	else
+		BNSetFileMetadataNavigationHandler(m_file, nullptr);
 }
 
 

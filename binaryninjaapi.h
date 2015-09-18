@@ -178,6 +178,9 @@ namespace BinaryNinja
 	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
 	                          std::string& output, std::string& errors);
 
+	std::string GetVersionString();
+	uint32_t GetBuildId();
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

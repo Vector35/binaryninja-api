@@ -85,3 +85,18 @@ bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>&
 	delete[] argArray;
 	return result;
 }
+
+
+string BinaryNinja::GetVersionString()
+{
+	char* str = BNGetVersionString();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+uint32_t BinaryNinja::GetBuildId()
+{
+	return BNGetBuildId();
+}

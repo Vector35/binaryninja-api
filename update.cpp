@@ -30,3 +30,31 @@ vector<UpdateChannel> UpdateChannel::GetList()
 	BNFreeUpdateChannelList(channels, count);
 	return result;
 }
+
+
+vector<UpdateVersion> UpdateVersion::GetChannelVersions(const string& channel)
+{
+	size_t count;
+	char* errors;
+	BNUpdateVersion* versions = BNGetUpdateChannelVersions(channel.c_str(), &count, &errors);
+
+	if (errors)
+	{
+		string errorStr = errors;
+		BNFreeString(errors);
+		throw UpdateException(errorStr);
+	}
+
+	vector<UpdateVersion> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		UpdateVersion version;
+		version.version = versions[i].version;
+		version.notes = versions[i].notes;
+		version.time = (time_t)versions[i].time;
+		result.push_back(version);
+	}
+
+	BNFreeUpdateChannelVersionList(versions, count);
+	return result;
+}

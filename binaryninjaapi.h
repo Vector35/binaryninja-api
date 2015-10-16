@@ -1356,4 +1356,13 @@ namespace BinaryNinja
 
 		static std::vector<UpdateChannel> GetList();
 	};
+
+	struct UpdateVersion
+	{
+		std::string version;
+		std::string notes;
+		time_t time;
+
+		static std::vector<UpdateVersion> GetChannelVersions(const std::string& channel);
+	};
 }

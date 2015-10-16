@@ -1339,4 +1339,21 @@ namespace BinaryNinja
 
 		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
 	};
+
+	class UpdateException: public std::exception
+	{
+		const std::string m_desc;
+	public:
+		UpdateException(const std::string& desc): std::exception(), m_desc(desc) {}
+		virtual const char* what() const NOEXCEPT { return m_desc.c_str(); }
+	};
+
+	struct UpdateChannel
+	{
+		std::string name;
+		std::string description;
+		std::string latestVersion;
+
+		static std::vector<UpdateChannel> GetList();
+	};
 }

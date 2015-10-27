@@ -1355,6 +1355,14 @@ namespace BinaryNinja
 		std::string latestVersion;
 
 		static std::vector<UpdateChannel> GetList();
+
+		bool AreUpdatesAvailable();
+
+		BNUpdateResult UpdateToVersion(const std::string& version);
+		BNUpdateResult UpdateToVersion(const std::string& version,
+		                               const std::function<void(uint64_t progress, uint64_t total)>& progress);
+		BNUpdateResult UpdateToLatestVersion();
+		BNUpdateResult UpdateToLatestVersion(const std::function<void(uint64_t progress, uint64_t total)>& progress);
 	};
 
 	struct UpdateVersion

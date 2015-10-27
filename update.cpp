@@ -4,6 +4,21 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+namespace BinaryNinja
+{
+	struct UpdateProgress
+	{
+		function<void(uint64_t progress, uint64_t total)> func;
+
+		static void UpdateCallback(void* ctxt, uint64_t progress, uint64_t total)
+		{
+			UpdateProgress* self = (UpdateProgress*)ctxt;
+			self->func(progress, total);
+		}
+	};
+}
+
+
 vector<UpdateChannel> UpdateChannel::GetList()
 {
 	size_t count;
@@ -28,6 +43,74 @@ vector<UpdateChannel> UpdateChannel::GetList()
 	}
 
 	BNFreeUpdateChannelList(channels, count);
+	return result;
+}
+
+
+bool UpdateChannel::AreUpdatesAvailable()
+{
+	char* errors;
+	bool result = BNAreUpdatesAvailable(name.c_str(), &errors);
+
+	if (errors)
+	{
+		string errorStr = errors;
+		BNFreeString(errors);
+		throw UpdateException(errorStr);
+	}
+
+	return result;
+}
+
+
+BNUpdateResult UpdateChannel::UpdateToVersion(const string& version)
+{
+	return UpdateToVersion(version, [](uint64_t, uint64_t){});
+}
+
+
+BNUpdateResult UpdateChannel::UpdateToVersion(const string& version,
+                                              const function<void(uint64_t progress, uint64_t total)>& progress)
+{
+	UpdateProgress up;
+	up.func = progress;
+
+	char* errors;
+	BNUpdateResult result = BNUpdateToVersion(name.c_str(), version.c_str(), &errors,
+	                                          UpdateProgress::UpdateCallback, &up);
+
+	if (errors)
+	{
+		string errorStr = errors;
+		BNFreeString(errors);
+		throw UpdateException(errorStr);
+	}
+
+	return result;
+}
+
+
+BNUpdateResult UpdateChannel::UpdateToLatestVersion()
+{
+	return UpdateToLatestVersion([](uint64_t, uint64_t){});
+}
+
+
+BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<void(uint64_t progress, uint64_t total)>& progress)
+{
+	UpdateProgress up;
+	up.func = progress;
+
+	char* errors;
+	BNUpdateResult result = BNUpdateToLatestVersion(name.c_str(), &errors, UpdateProgress::UpdateCallback, &up);
+
+	if (errors)
+	{
+		string errorStr = errors;
+		BNFreeString(errors);
+		throw UpdateException(errorStr);
+	}
+
 	return result;
 }
 

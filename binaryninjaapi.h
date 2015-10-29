@@ -181,6 +181,14 @@ namespace BinaryNinja
 	std::string GetVersionString();
 	uint32_t GetBuildId();
 
+	bool AreAutoUpdatesEnabled();
+	void SetAutoUpdatesEnabled(bool enabled);
+	uint64_t GetTimeSinceLastUpdateCheck();
+	void UpdatesChecked();
+
+	std::string GetActiveUpdateChannel();
+	void SetActiveUpdateChannel(const std::string& channel);
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

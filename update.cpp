@@ -141,3 +141,42 @@ vector<UpdateVersion> UpdateVersion::GetChannelVersions(const string& channel)
 	BNFreeUpdateChannelVersionList(versions, count);
 	return result;
 }
+
+
+bool BinaryNinja::AreAutoUpdatesEnabled()
+{
+	return BNAreAutoUpdatesEnabled();
+}
+
+
+void BinaryNinja::SetAutoUpdatesEnabled(bool enabled)
+{
+	BNSetAutoUpdatesEnabled(enabled);
+}
+
+
+uint64_t BinaryNinja::GetTimeSinceLastUpdateCheck()
+{
+	return BNGetTimeSinceLastUpdateCheck();
+}
+
+
+void BinaryNinja::UpdatesChecked()
+{
+	BNUpdatesChecked();
+}
+
+
+string BinaryNinja::GetActiveUpdateChannel()
+{
+	char* channel = BNGetActiveUpdateChannel();
+	string result = channel;
+	BNFreeString(channel);
+	return result;
+}
+
+
+void BinaryNinja::SetActiveUpdateChannel(const string& channel)
+{
+	BNSetActiveUpdateChannel(channel.c_str());
+}

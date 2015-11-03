@@ -8,12 +8,12 @@ namespace BinaryNinja
 {
 	struct UpdateProgress
 	{
-		function<void(uint64_t progress, uint64_t total)> func;
+		function<bool(uint64_t progress, uint64_t total)> func;
 
-		static void UpdateCallback(void* ctxt, uint64_t progress, uint64_t total)
+		static bool UpdateCallback(void* ctxt, uint64_t progress, uint64_t total)
 		{
 			UpdateProgress* self = (UpdateProgress*)ctxt;
-			self->func(progress, total);
+			return self->func(progress, total);
 		}
 	};
 }
@@ -65,12 +65,12 @@ bool UpdateChannel::AreUpdatesAvailable()
 
 BNUpdateResult UpdateChannel::UpdateToVersion(const string& version)
 {
-	return UpdateToVersion(version, [](uint64_t, uint64_t){});
+	return UpdateToVersion(version, [](uint64_t, uint64_t){ return true; });
 }
 
 
 BNUpdateResult UpdateChannel::UpdateToVersion(const string& version,
-                                              const function<void(uint64_t progress, uint64_t total)>& progress)
+                                              const function<bool(uint64_t progress, uint64_t total)>& progress)
 {
 	UpdateProgress up;
 	up.func = progress;
@@ -92,11 +92,11 @@ BNUpdateResult UpdateChannel::UpdateToVersion(const string& version,
 
 BNUpdateResult UpdateChannel::UpdateToLatestVersion()
 {
-	return UpdateToLatestVersion([](uint64_t, uint64_t){});
+	return UpdateToLatestVersion([](uint64_t, uint64_t){ return true; });
 }
 
 
-BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<void(uint64_t progress, uint64_t total)>& progress)
+BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<bool(uint64_t progress, uint64_t total)>& progress)
 {
 	UpdateProgress up;
 	up.func = progress;

@@ -366,6 +366,8 @@ namespace BinaryNinja
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 
 	public:
 		BinaryDataNotification();
@@ -379,6 +381,8 @@ namespace BinaryNinja
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
+		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 	};
 
 	class FileAccessor
@@ -467,6 +471,7 @@ namespace BinaryNinja
 		virtual bool PerformIsOffsetReadable(uint64_t offset);
 		virtual bool PerformIsOffsetWritable(uint64_t offset);
 		virtual bool PerformIsOffsetExecutable(uint64_t offset);
+		virtual uint64_t PerformGetNextValidOffset(uint64_t offset);
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
@@ -491,6 +496,7 @@ namespace BinaryNinja
 		static bool IsOffsetReadableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetWritableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetExecutableCallback(void* ctxt, uint64_t offset);
+		static uint64_t GetNextValidOffsetCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
 		static uint64_t GetEntryPointCallback(void* ctxt);
@@ -544,6 +550,7 @@ namespace BinaryNinja
 		bool IsOffsetReadable(uint64_t offset) const;
 		bool IsOffsetWritable(uint64_t offset) const;
 		bool IsOffsetExecutable(uint64_t offset) const;
+		uint64_t GetNextValidOffset(uint64_t offset) const;
 
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
@@ -586,7 +593,9 @@ namespace BinaryNinja
 		Ref<Symbol> GetSymbolByRawName(const std::string& name);
 		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name);
 		std::vector<Ref<Symbol>> GetSymbols();
+		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len);
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type);
+		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
 
 		void DefineAutoSymbol(Symbol* sym);
 		void UndefineAutoSymbol(Symbol* sym);
@@ -606,6 +615,9 @@ namespace BinaryNinja
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
 
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
+
+		std::vector<BNStringReference> GetStrings();
+		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
 	};
 
 	class BinaryData: public BinaryView

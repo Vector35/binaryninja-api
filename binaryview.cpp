@@ -55,6 +55,22 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::StringFoundCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnStringFound(view, type, offset, len);
+}
+
+
+void BinaryDataNotification::StringRemovedCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnStringRemoved(view, type, offset, len);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -64,6 +80,8 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
 	m_callbacks.functionUpdated = FunctionUpdatedCallback;
+	m_callbacks.stringFound = StringFoundCallback;
+	m_callbacks.stringRemoved = StringRemovedCallback;
 }
 
 
@@ -162,6 +180,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 	view.isOffsetReadable = IsOffsetReadableCallback;
 	view.isOffsetWritable = IsOffsetWritableCallback;
 	view.isOffsetExecutable = IsOffsetExecutableCallback;
+	view.getNextValidOffset = GetNextValidOffsetCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
 	view.getEntryPoint = GetEntryPointCallback;
@@ -258,6 +277,13 @@ bool BinaryView::IsOffsetExecutableCallback(void* ctxt, uint64_t offset)
 }
 
 
+uint64_t BinaryView::GetNextValidOffsetCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformGetNextValidOffset(offset);
+}
+
+
 uint64_t BinaryView::GetStartCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -330,6 +356,14 @@ bool BinaryView::PerformIsOffsetWritable(uint64_t offset)
 bool BinaryView::PerformIsOffsetExecutable(uint64_t offset)
 {
 	return PerformIsValidOffset(offset);
+}
+
+
+uint64_t BinaryView::PerformGetNextValidOffset(uint64_t offset)
+{
+	if (offset < PerformGetStart())
+		return PerformGetStart();
+	return offset;
 }
 
 
@@ -566,6 +600,12 @@ bool BinaryView::IsOffsetWritable(uint64_t offset) const
 bool BinaryView::IsOffsetExecutable(uint64_t offset) const
 {
 	return BNIsOffsetExecutable(m_view, offset);
+}
+
+
+uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
+{
+	return BNGetNextValidOffset(m_view, offset);
 }
 
 
@@ -809,10 +849,38 @@ vector<Ref<Symbol>> BinaryView::GetSymbols()
 }
 
 
+vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
+{
+	size_t count;
+	BNSymbol** syms = BNGetSymbolsInRange(m_view, start, len, &count);
+
+	vector<Ref<Symbol>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
 vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
 {
 	size_t count;
 	BNSymbol** syms = BNGetSymbolsOfType(m_view, type, &count);
+
+	vector<Ref<Symbol>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
+vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len)
+{
+	size_t count;
+	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_view, type, start, len, &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -904,6 +972,28 @@ bool BinaryView::SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t 
 size_t BinaryView::GetInstructionLength(Architecture* arch, uint64_t addr)
 {
 	return BNGetInstructionLength(m_view, arch->GetArchitectureObject(), addr);
+}
+
+
+vector<BNStringReference> BinaryView::GetStrings()
+{
+	size_t count;
+	BNStringReference* strings = BNGetStrings(m_view, &count);
+	vector<BNStringReference> result;
+	result.insert(result.end(), strings, strings + count);
+	BNFreeStringList(strings);
+	return result;
+}
+
+
+vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
+{
+	size_t count;
+	BNStringReference* strings = BNGetStringsInRange(m_view, start, len, &count);
+	vector<BNStringReference> result;
+	result.insert(result.end(), strings, strings + count);
+	BNFreeStringList(strings);
+	return result;
 }
 
 

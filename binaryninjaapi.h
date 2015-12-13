@@ -1393,4 +1393,87 @@ namespace BinaryNinja
 
 		static std::vector<UpdateVersion> GetChannelVersions(const std::string& channel);
 	};
+
+	struct PluginCommandContext
+	{
+		Ref<BinaryView> view;
+		uint64_t address, length;
+		Ref<Function> function;
+
+		PluginCommandContext();
+	};
+
+	class PluginCommand
+	{
+		BNPluginCommand m_command;
+
+		struct RegisteredDefaultCommand
+		{
+			std::function<void(BinaryView*)> action;
+			std::function<bool(BinaryView*)> isValid;
+		};
+
+		struct RegisteredAddressCommand
+		{
+			std::function<void(BinaryView*, uint64_t)> action;
+			std::function<bool(BinaryView*, uint64_t)> isValid;
+		};
+
+		struct RegisteredRangeCommand
+		{
+			std::function<void(BinaryView*, uint64_t, uint64_t)> action;
+			std::function<bool(BinaryView*, uint64_t, uint64_t)> isValid;
+		};
+
+		struct RegisteredFunctionCommand
+		{
+			std::function<void(BinaryView*, Function*)> action;
+			std::function<bool(BinaryView*, Function*)> isValid;
+		};
+
+		static void DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view);
+		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
+		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
+		static void FunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
+
+		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
+		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
+		static bool RangePluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
+		static bool FunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
+
+	public:
+		PluginCommand(const BNPluginCommand& cmd);
+		PluginCommand(const PluginCommand& cmd);
+		~PluginCommand();
+
+		static void Register(const std::string& name, const std::string& description,
+		                     const std::function<void(BinaryView* view)>& action);
+		static void Register(const std::string& name, const std::string& description,
+		                     const std::function<void(BinaryView* view)>& action,
+		                     const std::function<bool(BinaryView* view)>& isValid);
+		static void RegisterForAddress(const std::string& name, const std::string& description,
+		                               const std::function<void(BinaryView* view, uint64_t addr)>& action);
+		static void RegisterForAddress(const std::string& name, const std::string& description,
+		                               const std::function<void(BinaryView* view, uint64_t addr)>& action,
+		                               const std::function<bool(BinaryView* view, uint64_t addr)>& isValid);
+		static void RegisterForRange(const std::string& name, const std::string& description,
+		                             const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action);
+		static void RegisterForRange(const std::string& name, const std::string& description,
+		                             const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action,
+		                             const std::function<bool(BinaryView* view, uint64_t addr, uint64_t len)>& isValid);
+		static void RegisterForFunction(const std::string& name, const std::string& description,
+		                                const std::function<void(BinaryView* view, Function* func)>& action);
+		static void RegisterForFunction(const std::string& name, const std::string& description,
+		                                const std::function<void(BinaryView* view, Function* func)>& action,
+		                                const std::function<bool(BinaryView* view, Function* func)>& isValid);
+
+		static std::vector<PluginCommand> GetList();
+		static std::vector<PluginCommand> GetValidList(const PluginCommandContext& ctxt);
+
+		std::string GetName() const { return m_command.name; }
+		std::string GetDescription() const { return m_command.description; }
+
+		bool IsValid(const PluginCommandContext& ctxt);
+		void Execute(const PluginCommandContext& ctxt);
+	};
 }

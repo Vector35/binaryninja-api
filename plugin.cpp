@@ -200,7 +200,7 @@ vector<PluginCommand> PluginCommand::GetValidList(const PluginCommandContext& ct
 }
 
 
-bool PluginCommand::IsValid(const PluginCommandContext& ctxt)
+bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 {
 	if (!ctxt.view)
 		return false;
@@ -234,7 +234,7 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt)
 }
 
 
-void PluginCommand::Execute(const PluginCommandContext& ctxt)
+void PluginCommand::Execute(const PluginCommandContext& ctxt) const
 {
 	if (!IsValid(ctxt))
 		return;

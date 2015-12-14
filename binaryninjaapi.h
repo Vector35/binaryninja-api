@@ -1473,7 +1473,7 @@ namespace BinaryNinja
 		std::string GetName() const { return m_command.name; }
 		std::string GetDescription() const { return m_command.description; }
 
-		bool IsValid(const PluginCommandContext& ctxt);
-		void Execute(const PluginCommandContext& ctxt);
+		bool IsValid(const PluginCommandContext& ctxt) const;
+		void Execute(const PluginCommandContext& ctxt) const;
 	};
 }

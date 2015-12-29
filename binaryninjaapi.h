@@ -588,6 +588,7 @@ namespace BinaryNinja
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
+		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
 
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr);
 		Ref<Symbol> GetSymbolByRawName(const std::string& name);

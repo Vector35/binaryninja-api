@@ -803,6 +803,26 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 }
 
 
+vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t len)
+{
+	size_t count;
+	BNReferenceSource* refs = BNGetCodeReferencesInRange(m_view, addr, len, &count);
+
+	vector<ReferenceSource> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		ReferenceSource src;
+		src.func = new Function(BNNewFunctionReference(refs[i].func));
+		src.arch = new CoreArchitecture(refs[i].arch);
+		src.addr = refs[i].addr;
+		result.push_back(src);
+	}
+
+	BNFreeCodeReferences(refs, count);
+	return result;
+}
+
+
 Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr)
 {
 	BNSymbol* sym = BNGetSymbolByAddress(m_view, addr);

@@ -579,6 +579,7 @@ namespace BinaryNinja
 		void AbortAnalysis();
 
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
+		bool HasFunctions() const;
 		Ref<Function> GetAnalysisFunction(Architecture* arch, uint64_t addr);
 		Ref<Function> GetRecentAnalysisFunctionForAddress(uint64_t addr);
 		std::vector<Ref<Function>> GetAnalysisFunctionsForAddress(uint64_t addr);

@@ -719,6 +719,12 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 }
 
 
+bool BinaryView::HasFunctions() const
+{
+	return BNHasFunctions(m_view);
+}
+
+
 Ref<Function> BinaryView::GetAnalysisFunction(Architecture* arch, uint64_t addr)
 {
 	BNFunction* func = BNGetAnalysisFunction(m_view, arch->GetArchitectureObject(), addr);

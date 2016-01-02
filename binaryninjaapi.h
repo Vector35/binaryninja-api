@@ -1269,7 +1269,7 @@ namespace BinaryNinja
 		ExprId AddInstruction(ExprId expr);
 
 		ExprId Nop();
-		ExprId SetRegister(size_t size, uint32_t reg, ExprId val);
+		ExprId SetRegister(size_t size, uint32_t reg, ExprId val, uint32_t flags = 0);
 		ExprId SetRegisterSplit(size_t size, uint32_t high, uint32_t low, ExprId val);
 		ExprId SetFlag(uint32_t flag, ExprId val);
 		ExprId Load(size_t size, ExprId addr);

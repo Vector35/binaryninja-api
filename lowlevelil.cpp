@@ -58,9 +58,9 @@ ExprId LowLevelILFunction::Nop()
 }
 
 
-ExprId LowLevelILFunction::SetRegister(size_t size, uint32_t reg, ExprId val)
+ExprId LowLevelILFunction::SetRegister(size_t size, uint32_t reg, ExprId val, uint32_t flags)
 {
-	return AddExpr(LLIL_SET_REG, size, 0, reg, val);
+	return AddExpr(LLIL_SET_REG, size, flags, reg, val);
 }
 
 

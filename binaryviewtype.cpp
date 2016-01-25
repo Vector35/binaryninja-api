@@ -107,6 +107,45 @@ Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id)
 }
 
 
+void BinaryViewType::RegisterPlatform(const string& name, uint32_t id, Architecture* arch, Platform* platform)
+{
+	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);
+	if (!type)
+		return;
+	type->RegisterPlatform(id, arch, platform);
+}
+
+
+void BinaryViewType::RegisterDefaultPlatform(const string& name, Architecture* arch, Platform* platform)
+{
+	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);
+	if (!type)
+		return;
+	type->RegisterDefaultPlatform(arch, platform);
+}
+
+
+void BinaryViewType::RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform)
+{
+	BNRegisterPlatformForViewType(m_type, id, arch->GetArchitectureObject(), platform->GetPlatformObject());
+}
+
+
+void BinaryViewType::RegisterDefaultPlatform(Architecture* arch, Platform* platform)
+{
+	BNRegisterDefaultPlatformForViewType(m_type, arch->GetArchitectureObject(), platform->GetPlatformObject());
+}
+
+
+Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
+{
+	BNPlatform* platform = BNGetPlatformForViewType(m_type, id, arch->GetArchitectureObject());
+	if (!platform)
+		return nullptr;
+	return new Platform(platform);
+}
+
+
 string BinaryViewType::GetName()
 {
 	char* contents = BNGetBinaryViewTypeName(m_type);

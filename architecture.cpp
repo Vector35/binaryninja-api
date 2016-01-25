@@ -226,6 +226,13 @@ uint32_t Architecture::GetStackPointerRegisterCallback(void* ctxt)
 }
 
 
+uint32_t Architecture::GetLinkRegisterCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetLinkRegister();
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -324,6 +331,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.freeRegisterList = FreeRegisterListCallback;
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
+	callbacks.getLinkRegister = GetLinkRegisterCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -448,6 +456,12 @@ BNRegisterInfo Architecture::GetRegisterInfo(uint32_t)
 uint32_t Architecture::GetStackPointerRegister()
 {
 	return 0;
+}
+
+
+uint32_t Architecture::GetLinkRegister()
+{
+	return BN_INVALID_REGISTER;
 }
 
 
@@ -623,6 +637,101 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, 
 }
 
 
+void Architecture::RegisterCallingConvention(CallingConvention* cc)
+{
+	BNRegisterCallingConvention(m_arch, cc->GetCallingConventionObject());
+}
+
+
+vector<Ref<CallingConvention>> Architecture::GetCallingConventions()
+{
+	size_t count;
+	BNCallingConvention** list = BNGetArchitectureCallingConventions(m_arch, &count);
+
+	vector<Ref<CallingConvention>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new CoreCallingConvention(BNNewCallingConventionReference(list[i])));
+
+	BNFreeCallingConventionList(list, count);
+	return result;
+}
+
+
+Ref<CallingConvention> Architecture::GetCallingConventionByName(const string& name)
+{
+	BNCallingConvention* cc = BNGetArchitectureCallingConventionByName(m_arch, name.c_str());
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
+void Architecture::SetDefaultCallingConvention(CallingConvention* cc)
+{
+	BNSetArchitectureDefaultCallingConvention(m_arch, cc->GetCallingConventionObject());
+}
+
+
+void Architecture::SetCdeclCallingConvention(CallingConvention* cc)
+{
+	BNSetArchitectureCdeclCallingConvention(m_arch, cc->GetCallingConventionObject());
+}
+
+
+void Architecture::SetStdcallCallingConvention(CallingConvention* cc)
+{
+	BNSetArchitectureStdcallCallingConvention(m_arch, cc->GetCallingConventionObject());
+}
+
+
+void Architecture::SetFastcallCallingConvention(CallingConvention* cc)
+{
+	BNSetArchitectureFastcallCallingConvention(m_arch, cc->GetCallingConventionObject());
+}
+
+
+Ref<CallingConvention> Architecture::GetDefaultCallingConvention()
+{
+	BNCallingConvention* cc = BNGetArchitectureDefaultCallingConvention(m_arch);
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
+Ref<CallingConvention> Architecture::GetCdeclCallingConvention()
+{
+	BNCallingConvention* cc = BNGetArchitectureCdeclCallingConvention(m_arch);
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
+Ref<CallingConvention> Architecture::GetStdcallCallingConvention()
+{
+	BNCallingConvention* cc = BNGetArchitectureStdcallCallingConvention(m_arch);
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
+Ref<CallingConvention> Architecture::GetFastcallCallingConvention()
+{
+	BNCallingConvention* cc = BNGetArchitectureFastcallCallingConvention(m_arch);
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
+Ref<Platform> Architecture::GetStandalonePlatform()
+{
+	return new Platform(BNGetArchitectureStandalonePlatform(m_arch));
+}
+
+
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
 }
@@ -765,6 +874,12 @@ BNRegisterInfo CoreArchitecture::GetRegisterInfo(uint32_t reg)
 uint32_t CoreArchitecture::GetStackPointerRegister()
 {
 	return BNGetArchitectureStackPointerRegister(m_arch);
+}
+
+
+uint32_t CoreArchitecture::GetLinkRegister()
+{
+	return BNGetArchitectureLinkRegister(m_arch);
 }
 
 

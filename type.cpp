@@ -60,9 +60,12 @@ Ref<Type> Type::GetChildType() const
 }
 
 
-BNCallingConvention Type::GetCallingConvention() const
+Ref<CallingConvention> Type::GetCallingConvention() const
 {
-	return BNGetTypeCallingConvention(m_type);
+	BNCallingConvention* cc = BNGetTypeCallingConvention(m_type);
+	if (cc)
+		return new CoreCallingConvention(cc);
+	return nullptr;
 }
 
 
@@ -196,7 +199,7 @@ Ref<Type> Type::ArrayType(Type* type, uint64_t elem)
 }
 
 
-Ref<Type> Type::FunctionType(Type* returnValue, BNCallingConvention callingConvention,
+Ref<Type> Type::FunctionType(Type* returnValue, CallingConvention* callingConvention,
                              const std::vector<NameAndType>& params, bool varArg)
 {
 	BNNameAndType* paramArray = new BNNameAndType[params.size()];
@@ -206,7 +209,8 @@ Ref<Type> Type::FunctionType(Type* returnValue, BNCallingConvention callingConve
 		paramArray[i].type = params[i].type->GetTypeObject();
 	}
 
-	Type* type = new Type(BNCreateFunctionType(returnValue->GetTypeObject(), callingConvention,
+	Type* type = new Type(BNCreateFunctionType(returnValue->GetTypeObject(),
+	                      callingConvention ? callingConvention->GetCallingConventionObject() : nullptr,
 	                      paramArray, params.size(), varArg));
 	delete[] paramArray;
 	return type;

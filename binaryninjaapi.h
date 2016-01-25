@@ -144,6 +144,7 @@ namespace BinaryNinja
 	};
 
 	class Architecture;
+	class Platform;
 	class Type;
 	class DataBuffer;
 
@@ -188,6 +189,10 @@ namespace BinaryNinja
 
 	std::string GetActiveUpdateChannel();
 	void SetActiveUpdateChannel(const std::string& channel);
+
+	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
+	void AddRequiredPluginDependency(const std::string& name);
+	void AddOptionalPluginDependency(const std::string& name);
 
 	class DataBuffer
 	{
@@ -559,6 +564,8 @@ namespace BinaryNinja
 
 		Ref<Architecture> GetDefaultArchitecture() const;
 		void SetDefaultArchitecture(Architecture* arch);
+		Ref<Platform> GetDefaultPlatform() const;
+		void SetDefaultPlatform(Platform* platform);
 
 		BNEndianness GetDefaultEndianness() const;
 		size_t GetAddressSize() const;
@@ -571,16 +578,16 @@ namespace BinaryNinja
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 
-		void AddFunctionForAnalysis(Architecture* arch, uint64_t addr);
-		void AddEntryPointForAnalysis(Architecture* arch, uint64_t start);
+		void AddFunctionForAnalysis(Platform* platform, uint64_t addr);
+		void AddEntryPointForAnalysis(Platform* platform, uint64_t start);
 		void RemoveAnalysisFunction(Function* func);
-		void CreateUserFunction(Architecture* arch, uint64_t start);
+		void CreateUserFunction(Platform* platform, uint64_t start);
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
 		bool HasFunctions() const;
-		Ref<Function> GetAnalysisFunction(Architecture* arch, uint64_t addr);
+		Ref<Function> GetAnalysisFunction(Platform* platform, uint64_t addr);
 		Ref<Function> GetRecentAnalysisFunctionForAddress(uint64_t addr);
 		std::vector<Ref<Function>> GetAnalysisFunctionsForAddress(uint64_t addr);
 		Ref<Function> GetAnalysisEntryPoint();
@@ -632,6 +639,8 @@ namespace BinaryNinja
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
 	};
 
+	class Platform;
+
 	class BinaryViewType: public RefCountObject
 	{
 	protected:
@@ -655,6 +664,12 @@ namespace BinaryNinja
 		static void RegisterArchitecture(const std::string& name, uint32_t id, Architecture* arch);
 		void RegisterArchitecture(uint32_t id, Architecture* arch);
 		Ref<Architecture> GetArchitecture(uint32_t id);
+
+		static void RegisterPlatform(const std::string& name, uint32_t id, Architecture* arch, Platform* platform);
+		static void RegisterDefaultPlatform(const std::string& name, Architecture* arch, Platform* platform);
+		void RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform);
+		void RegisterDefaultPlatform(Architecture* arch, Platform* platform);
+		Ref<Platform> GetPlatform(uint32_t id, Architecture* arch);
 
 		std::string GetName();
 		std::string GetLongName();
@@ -850,7 +865,8 @@ namespace BinaryNinja
 
 	class LowLevelILFunction;
 	class FunctionRecognizer;
-	
+	class CallingConvention;
+
 	typedef size_t ExprId;
 
 	class Architecture: public RefCountObject
@@ -882,6 +898,7 @@ namespace BinaryNinja
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
+		static uint32_t GetLinkRegisterCallback(void* ctxt);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
@@ -925,6 +942,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
+		virtual uint32_t GetLinkRegister();
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
 
@@ -956,6 +974,20 @@ namespace BinaryNinja
 		                              std::map<std::string, Ref<Type>>& variables,
 		                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
 		                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
+
+		void RegisterCallingConvention(CallingConvention* cc);
+		std::vector<Ref<CallingConvention>> GetCallingConventions();
+		Ref<CallingConvention> GetCallingConventionByName(const std::string& name);
+
+		void SetDefaultCallingConvention(CallingConvention* cc);
+		void SetCdeclCallingConvention(CallingConvention* cc);
+		void SetStdcallCallingConvention(CallingConvention* cc);
+		void SetFastcallCallingConvention(CallingConvention* cc);
+		Ref<CallingConvention> GetDefaultCallingConvention();
+		Ref<CallingConvention> GetCdeclCallingConvention();
+		Ref<CallingConvention> GetStdcallCallingConvention();
+		Ref<CallingConvention> GetFastcallCallingConvention();
+		Ref<Platform> GetStandalonePlatform();
 	};
 
 	class CoreArchitecture: public Architecture
@@ -978,6 +1010,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
+		virtual uint32_t GetLinkRegister() override;
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
@@ -1019,7 +1052,7 @@ namespace BinaryNinja
 		bool IsConst() const;
 		bool IsFloat() const;
 		Ref<Type> GetChildType() const;
-		BNCallingConvention GetCallingConvention() const;
+		Ref<CallingConvention> GetCallingConvention() const;
 		std::vector<NameAndType> GetParameters() const;
 		bool HasVariableArguments() const;
 		bool CanReturn() const;
@@ -1039,7 +1072,7 @@ namespace BinaryNinja
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
-		static Ref<Type> FunctionType(Type* returnValue, BNCallingConvention callingConvention,
+		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 	};
 
@@ -1144,6 +1177,7 @@ namespace BinaryNinja
 		BNFunction* GetFunctionObject() const { return m_func; }
 
 		Ref<Architecture> GetArchitecture() const;
+		Ref<Platform> GetPlatform() const;
 		uint64_t GetStart() const;
 		Ref<Symbol> GetSymbol() const;
 		bool WasAutomaticallyDiscovered() const;
@@ -1477,5 +1511,101 @@ namespace BinaryNinja
 
 		bool IsValid(const PluginCommandContext& ctxt) const;
 		void Execute(const PluginCommandContext& ctxt) const;
+	};
+
+	class CallingConvention: public RefCountObject
+	{
+	protected:
+		BNCallingConvention* m_callingConvention;
+
+		CallingConvention(BNCallingConvention* cc);
+		CallingConvention(Architecture* arch, const std::string& name);
+
+		static uint32_t* GetCallerSavedRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetFloatArgumentRegistersCallback(void* ctxt, size_t* count);
+		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
+
+		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
+		static bool IsStackReservedForArgumentRegistersCallback(void* ctxt);
+
+		static uint32_t GetIntegerReturnValueRegisterCallback(void* ctxt);
+		static uint32_t GetHighIntegerReturnValueRegisterCallback(void* ctxt);
+		static uint32_t GetFloatReturnValueRegisterCallback(void* ctxt);
+
+	public:
+		virtual ~CallingConvention();
+
+		BNCallingConvention* GetCallingConventionObject() const { return m_callingConvention; }
+		Ref<Architecture> GetArchitecture() const;
+		std::string GetName() const;
+
+		virtual std::vector<uint32_t> GetCallerSavedRegisters();
+
+		virtual std::vector<uint32_t> GetIntegerArgumentRegisters();
+		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
+		virtual bool AreArgumentRegistersSharedIndex();
+		virtual bool IsStackReservedForArgumentRegisters();
+
+		virtual uint32_t GetIntegerReturnValueRegister() = 0;
+		virtual uint32_t GetHighIntegerReturnValueRegister();
+		virtual uint32_t GetFloatReturnValueRegister();
+	};
+
+	class CoreCallingConvention: public CallingConvention
+	{
+	public:
+		CoreCallingConvention(BNCallingConvention* cc);
+
+		virtual std::vector<uint32_t> GetCallerSavedRegisters() override;
+
+		virtual std::vector<uint32_t> GetIntegerArgumentRegisters() override;
+		virtual std::vector<uint32_t> GetFloatArgumentRegisters() override;
+		virtual bool AreArgumentRegistersSharedIndex() override;
+		virtual bool IsStackReservedForArgumentRegisters() override;
+
+		virtual uint32_t GetIntegerReturnValueRegister() override;
+		virtual uint32_t GetHighIntegerReturnValueRegister() override;
+		virtual uint32_t GetFloatReturnValueRegister() override;
+	};
+
+	class Platform: public RefCountObject
+	{
+	protected:
+		BNPlatform* m_platform;
+
+		Platform(Architecture* arch, const std::string& name);
+
+	public:
+		Platform(BNPlatform* platform);
+		virtual ~Platform();
+
+		BNPlatform* GetPlatformObject() const { return m_platform; }
+
+		Ref<Architecture> GetArchitecture() const;
+		std::string GetName() const;
+
+		static void Register(const std::string& os, Platform* platform);
+		static Ref<Platform> GetByName(const std::string& name);
+		static std::vector<Ref<Platform>> GetList();
+		static std::vector<Ref<Platform>> GetList(Architecture* arch);
+		static std::vector<Ref<Platform>> GetList(const std::string& os);
+		static std::vector<Ref<Platform>> GetList(const std::string& os, Architecture* arch);
+		static std::vector<std::string> GetOSList();
+
+		Ref<CallingConvention> GetDefaultCallingConvention() const;
+		Ref<CallingConvention> GetCdeclCallingConvention() const;
+		Ref<CallingConvention> GetStdcallCallingConvention() const;
+		Ref<CallingConvention> GetFastcallCallingConvention() const;
+		std::vector<Ref<CallingConvention>> GetCallingConventions() const;
+
+		void RegisterCallingConvention(CallingConvention* cc);
+		void RegisterDefaultCallingConvention(CallingConvention* cc);
+		void RegisterCdeclCallingConvention(CallingConvention* cc);
+		void RegisterStdcallCallingConvention(CallingConvention* cc);
+		void RegisterFastcallCallingConvention(CallingConvention* cc);
+
+		Ref<Platform> GetRelatedPlatform(Architecture* arch);
+		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 	};
 }

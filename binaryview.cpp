@@ -645,6 +645,24 @@ void BinaryView::SetDefaultArchitecture(Architecture* arch)
 }
 
 
+Ref<Platform> BinaryView::GetDefaultPlatform() const
+{
+	BNPlatform* platform = BNGetDefaultPlatform(m_view);
+	if (!platform)
+		return nullptr;
+	return new Platform(platform);
+}
+
+
+void BinaryView::SetDefaultPlatform(Platform* platform)
+{
+	if (platform)
+		BNSetDefaultPlatform(m_view, platform->GetPlatformObject());
+	else
+		BNSetDefaultPlatform(m_view, nullptr);
+}
+
+
 BNEndianness BinaryView::GetDefaultEndianness() const
 {
 	return BNGetDefaultEndianness(m_view);
@@ -669,15 +687,15 @@ bool BinaryView::Save(FileAccessor* file)
 }
 
 
-void BinaryView::AddFunctionForAnalysis(Architecture* arch, uint64_t addr)
+void BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr)
 {
-	BNAddFunctionForAnalysis(m_view, arch->GetArchitectureObject(), addr);
+	BNAddFunctionForAnalysis(m_view, platform->GetPlatformObject(), addr);
 }
 
 
-void BinaryView::AddEntryPointForAnalysis(Architecture* arch, uint64_t addr)
+void BinaryView::AddEntryPointForAnalysis(Platform* platform, uint64_t addr)
 {
-	BNAddEntryPointForAnalysis(m_view, arch->GetArchitectureObject(), addr);
+	BNAddEntryPointForAnalysis(m_view, platform->GetPlatformObject(), addr);
 }
 
 
@@ -687,9 +705,9 @@ void BinaryView::RemoveAnalysisFunction(Function* func)
 }
 
 
-void BinaryView::CreateUserFunction(Architecture* arch, uint64_t start)
+void BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
 {
-	BNCreateUserFunction(m_view, arch->GetArchitectureObject(), start);
+	BNCreateUserFunction(m_view, platform->GetPlatformObject(), start);
 }
 
 
@@ -725,9 +743,9 @@ bool BinaryView::HasFunctions() const
 }
 
 
-Ref<Function> BinaryView::GetAnalysisFunction(Architecture* arch, uint64_t addr)
+Ref<Function> BinaryView::GetAnalysisFunction(Platform* platform, uint64_t addr)
 {
-	BNFunction* func = BNGetAnalysisFunction(m_view, arch->GetArchitectureObject(), addr);
+	BNFunction* func = BNGetAnalysisFunction(m_view, platform->GetPlatformObject(), addr);
 	if (!func)
 		return nullptr;
 	return new Function(func);

@@ -15,6 +15,12 @@ Function::~Function()
 }
 
 
+Ref<Platform> Function::GetPlatform() const
+{
+	return new Platform(BNGetFunctionPlatform(m_func));
+}
+
+
 Ref<Architecture> Function::GetArchitecture() const
 {
 	return new CoreArchitecture(BNGetFunctionArchitecture(m_func));

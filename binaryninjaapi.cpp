@@ -100,3 +100,21 @@ uint32_t BinaryNinja::GetBuildId()
 {
 	return BNGetBuildId();
 }
+
+
+void BinaryNinja::SetCurrentPluginLoadOrder(BNPluginLoadOrder order)
+{
+	BNSetCurrentPluginLoadOrder(order);
+}
+
+
+void BinaryNinja::AddRequiredPluginDependency(const string& name)
+{
+	BNAddRequiredPluginDependency(name.c_str());
+}
+
+
+void BinaryNinja::AddOptionalPluginDependency(const string& name)
+{
+	BNAddOptionalPluginDependency(name.c_str());
+}

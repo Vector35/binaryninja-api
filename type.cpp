@@ -151,6 +151,12 @@ string Type::GetStringAfterName() const
 }
 
 
+Ref<Type> Type::Duplicate() const
+{
+	return new Type(BNDuplicateType(m_type));
+}
+
+
 Ref<Type> Type::VoidType()
 {
 	return new Type(BNCreateVoidType());

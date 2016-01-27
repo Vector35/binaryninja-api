@@ -1064,6 +1064,8 @@ namespace BinaryNinja
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
 
+		Ref<Type> Duplicate() const;
+
 		static Ref<Type> VoidType();
 		static Ref<Type> BoolType();
 		static Ref<Type> IntegerType(size_t width, bool sign);
@@ -1202,6 +1204,7 @@ namespace BinaryNinja
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<Type> GetType() const;
+		void ApplyImportedTypes(Symbol* sym);
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 	};

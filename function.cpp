@@ -192,6 +192,12 @@ Ref<Type> Function::GetType() const
 }
 
 
+void Function::ApplyImportedTypes(Symbol* sym)
+{
+	BNApplyImportedTypes(m_func, sym->GetSymbolObject());
+}
+
+
 Ref<FunctionGraph> Function::CreateFunctionGraph()
 {
 	BNFunctionGraph* graph = BNCreateFunctionGraph(m_func);

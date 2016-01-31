@@ -4,63 +4,58 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-FunctionGraphBlock::FunctionGraphBlock(BNFunctionGraphBlock* block): m_block(block)
+FunctionGraphBlock::FunctionGraphBlock(BNFunctionGraphBlock* block)
 {
-}
-
-
-FunctionGraphBlock::~FunctionGraphBlock()
-{
-	BNFreeFunctionGraphBlock(m_block);
+	m_object = block;
 }
 
 
 Ref<Architecture> FunctionGraphBlock::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetFunctionGraphBlockArchitecture(m_block));
+	return new CoreArchitecture(BNGetFunctionGraphBlockArchitecture(m_object));
 }
 
 
 uint64_t FunctionGraphBlock::GetStart() const
 {
-	return BNGetFunctionGraphBlockStart(m_block);
+	return BNGetFunctionGraphBlockStart(m_object);
 }
 
 
 uint64_t FunctionGraphBlock::GetEnd() const
 {
-	return BNGetFunctionGraphBlockEnd(m_block);
+	return BNGetFunctionGraphBlockEnd(m_object);
 }
 
 
 int FunctionGraphBlock::GetX() const
 {
-	return BNGetFunctionGraphBlockX(m_block);
+	return BNGetFunctionGraphBlockX(m_object);
 }
 
 
 int FunctionGraphBlock::GetY() const
 {
-	return BNGetFunctionGraphBlockY(m_block);
+	return BNGetFunctionGraphBlockY(m_object);
 }
 
 
 int FunctionGraphBlock::GetWidth() const
 {
-	return BNGetFunctionGraphBlockWidth(m_block);
+	return BNGetFunctionGraphBlockWidth(m_object);
 }
 
 
 int FunctionGraphBlock::GetHeight() const
 {
-	return BNGetFunctionGraphBlockHeight(m_block);
+	return BNGetFunctionGraphBlockHeight(m_object);
 }
 
 
 vector<FunctionGraphTextLine> FunctionGraphBlock::GetLines() const
 {
 	size_t count;
-	BNFunctionGraphTextLine* lines = BNGetFunctionGraphBlockLines(m_block, &count);
+	BNFunctionGraphTextLine* lines = BNGetFunctionGraphBlockLines(m_object, &count);
 
 	vector<FunctionGraphTextLine> result;
 	for (size_t i = 0; i < count; i++)
@@ -86,7 +81,7 @@ vector<FunctionGraphTextLine> FunctionGraphBlock::GetLines() const
 vector<FunctionGraphEdge> FunctionGraphBlock::GetOutgoingEdges() const
 {
 	size_t count;
-	BNFunctionGraphEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_block, &count);
+	BNFunctionGraphEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_object, &count);
 
 	vector<FunctionGraphEdge> result;
 	for (size_t i = 0; i < count; i++)

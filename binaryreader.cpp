@@ -6,7 +6,7 @@ using namespace std;
 
 BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian): m_view(data)
 {
-	m_stream = BNCreateBinaryReader(data->GetViewObject());
+	m_stream = BNCreateBinaryReader(data->GetObject());
 	BNSetBinaryReaderEndianness(m_stream, endian);
 }
 

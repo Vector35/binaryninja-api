@@ -6,41 +6,35 @@ using namespace std;
 
 TemporaryFile::TemporaryFile()
 {
-	m_file = BNCreateTemporaryFile();
+	m_object = BNCreateTemporaryFile();
 }
 
 
 TemporaryFile::TemporaryFile(const DataBuffer& contents)
 {
-	m_file = BNCreateTemporaryFileWithContents(contents.GetBufferObject());
+	m_object = BNCreateTemporaryFileWithContents(contents.GetBufferObject());
 }
 
 
 TemporaryFile::TemporaryFile(const string& contents)
 {
 	DataBuffer buf(contents.c_str(), contents.size());
-	m_file = BNCreateTemporaryFileWithContents(buf.GetBufferObject());
+	m_object = BNCreateTemporaryFileWithContents(buf.GetBufferObject());
 }
 
 
-TemporaryFile::TemporaryFile(BNTemporaryFile* file): m_file(file)
+TemporaryFile::TemporaryFile(BNTemporaryFile* file)
 {
-}
-
-
-TemporaryFile::~TemporaryFile()
-{
-	if (m_file)
-		BNFreeTemporaryFile(m_file);
+	m_object = file;
 }
 
 
 string TemporaryFile::GetPath() const
 {
-	if (!m_file)
+	if (!m_object)
 		return string();
 
-	char* str = BNGetTemporaryFilePath(m_file);
+	char* str = BNGetTemporaryFilePath(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -49,7 +43,7 @@ string TemporaryFile::GetPath() const
 
 DataBuffer TemporaryFile::GetContents()
 {
-	if (!m_file)
+	if (!m_object)
 		return DataBuffer();
-	return DataBuffer(BNGetTemporaryFileContents(m_file));
+	return DataBuffer(BNGetTemporaryFileContents(m_object));
 }

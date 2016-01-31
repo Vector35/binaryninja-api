@@ -36,6 +36,13 @@ NavigationHandler::NavigationHandler()
 }
 
 
+void UndoAction::FreeCallback(void* ctxt)
+{
+	UndoAction* action = (UndoAction*)ctxt;
+	delete action;
+}
+
+
 void UndoAction::UndoCallback(void* ctxt, BNBinaryView* data)
 {
 	UndoAction* action = (UndoAction*)ctxt;
@@ -80,6 +87,7 @@ BNUndoAction UndoAction::GetCallbacks()
 	BNUndoAction action;
 	action.type = m_actionType;
 	action.context = this;
+	action.freeObject = FreeCallback;
 	action.undo = UndoCallback;
 	action.redo = RedoCallback;
 	action.serialize = SerializeCallback;
@@ -135,47 +143,41 @@ void UndoActionType::Register(UndoActionType* type)
 
 FileMetadata::FileMetadata()
 {
-	m_file = BNCreateFileMetadata();
+	m_object = BNCreateFileMetadata();
 }
 
 
 FileMetadata::FileMetadata(const string& filename)
 {
-	m_file = BNCreateFileMetadata();
-	BNSetFilename(m_file, filename.c_str());
+	m_object = BNCreateFileMetadata();
+	BNSetFilename(m_object, filename.c_str());
 }
 
 
 FileMetadata::FileMetadata(BNFileMetadata* file)
 {
-	m_file = file;
-}
-
-
-FileMetadata::~FileMetadata()
-{
-	BNFreeFileMetadata(m_file);
+	m_object = file;
 }
 
 
 void FileMetadata::Close()
 {
-	BNCloseFile(m_file);
+	BNCloseFile(m_object);
 }
 
 
 void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 {
 	if (handler)
-		BNSetFileMetadataNavigationHandler(m_file, handler->GetCallbacks());
+		BNSetFileMetadataNavigationHandler(m_object, handler->GetCallbacks());
 	else
-		BNSetFileMetadataNavigationHandler(m_file, nullptr);
+		BNSetFileMetadataNavigationHandler(m_object, nullptr);
 }
 
 
 string FileMetadata::GetFilename() const
 {
-	char* str = BNGetFilename(m_file);
+	char* str = BNGetFilename(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -184,49 +186,49 @@ string FileMetadata::GetFilename() const
 
 void FileMetadata::SetFilename(const string& name)
 {
-	BNSetFilename(m_file, name.c_str());
+	BNSetFilename(m_object, name.c_str());
 }
 
 
 bool FileMetadata::IsModified() const
 {
-	return BNIsFileModified(m_file);
+	return BNIsFileModified(m_object);
 }
 
 
 bool FileMetadata::IsAnalysisChanged() const
 {
-	return BNIsAnalysisChanged(m_file);
+	return BNIsAnalysisChanged(m_object);
 }
 
 
 void FileMetadata::MarkFileModified()
 {
-	BNMarkFileModified(m_file);
+	BNMarkFileModified(m_object);
 }
 
 
 void FileMetadata::MarkFileSaved()
 {
-	BNMarkFileSaved(m_file);
+	BNMarkFileSaved(m_object);
 }
 
 
 bool FileMetadata::IsBackedByDatabase() const
 {
-	return BNIsBackedByDatabase(m_file);
+	return BNIsBackedByDatabase(m_object);
 }
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data)
 {
-	return BNCreateDatabase(data->GetViewObject(), name.c_str());
+	return BNCreateDatabase(data->GetObject(), name.c_str());
 }
 
 
 Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 {
-	BNBinaryView* data = BNOpenExistingDatabase(m_file, path.c_str());
+	BNBinaryView* data = BNOpenExistingDatabase(m_object, path.c_str());
 	if (!data)
 		return nullptr;
 	return new BinaryView(data);
@@ -235,37 +237,37 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data)
 {
-	return BNSaveAutoSnapshot(data->GetViewObject());
+	return BNSaveAutoSnapshot(data->GetObject());
 }
 
 
 void FileMetadata::BeginUndoActions()
 {
-	BNBeginUndoActions(m_file);
+	BNBeginUndoActions(m_object);
 }
 
 
 void FileMetadata::CommitUndoActions()
 {
-	BNCommitUndoActions(m_file);
+	BNCommitUndoActions(m_object);
 }
 
 
 bool FileMetadata::Undo()
 {
-	return BNUndo(m_file);
+	return BNUndo(m_object);
 }
 
 
 bool FileMetadata::Redo()
 {
-	return BNRedo(m_file);
+	return BNRedo(m_object);
 }
 
 
 string FileMetadata::GetCurrentView()
 {
-	char* view = BNGetCurrentView(m_file);
+	char* view = BNGetCurrentView(m_object);
 	string result = view;
 	BNFreeString(view);
 	return result;
@@ -274,19 +276,19 @@ string FileMetadata::GetCurrentView()
 
 uint64_t FileMetadata::GetCurrentOffset()
 {
-	return BNGetCurrentOffset(m_file);
+	return BNGetCurrentOffset(m_object);
 }
 
 
 bool FileMetadata::Navigate(const string& view, uint64_t offset)
 {
-	return BNNavigate(m_file, view.c_str(), offset);
+	return BNNavigate(m_object, view.c_str(), offset);
 }
 
 
 Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
 {
-	BNBinaryView* view = BNGetFileViewOfType(m_file, name.c_str());
+	BNBinaryView* view = BNGetFileViewOfType(m_object, name.c_str());
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);

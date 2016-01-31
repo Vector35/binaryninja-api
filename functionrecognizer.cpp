@@ -32,7 +32,7 @@ void FunctionRecognizer::RegisterArchitectureFunctionRecognizer(Architecture* ar
 	BNFunctionRecognizer reg;
 	reg.context = recog;
 	reg.recognizeLowLevelIL = RecognizeLowLevelILCallback;
-	BNRegisterArchitectureFunctionRecognizer(arch->GetArchitectureObject(), &reg);
+	BNRegisterArchitectureFunctionRecognizer(arch->GetObject(), &reg);
 }
 
 

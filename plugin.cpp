@@ -210,24 +210,23 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 	case DefaultPluginCommand:
 		if (!m_command.defaultIsValid)
 			return true;
-		return m_command.defaultIsValid(m_command.context, ctxt.view->GetViewObject());
+		return m_command.defaultIsValid(m_command.context, ctxt.view->GetObject());
 	case AddressPluginCommand:
 		if (!m_command.addressIsValid)
 			return true;
-		return m_command.addressIsValid(m_command.context, ctxt.view->GetViewObject(), ctxt.address);
+		return m_command.addressIsValid(m_command.context, ctxt.view->GetObject(), ctxt.address);
 	case RangePluginCommand:
 		if (ctxt.length == 0)
 			return false;
 		if (!m_command.rangeIsValid)
 			return true;
-		return m_command.rangeIsValid(m_command.context, ctxt.view->GetViewObject(), ctxt.address, ctxt.length);
+		return m_command.rangeIsValid(m_command.context, ctxt.view->GetObject(), ctxt.address, ctxt.length);
 	case FunctionPluginCommand:
 		if (!ctxt.function)
 			return false;
 		if (!m_command.functionIsValid)
 			return true;
-		return m_command.functionIsValid(m_command.context, ctxt.view->GetViewObject(),
-		                                 ctxt.function->GetFunctionObject());
+		return m_command.functionIsValid(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
 	default:
 		return false;
 	}
@@ -242,16 +241,16 @@ void PluginCommand::Execute(const PluginCommandContext& ctxt) const
 	switch (m_command.type)
 	{
 	case DefaultPluginCommand:
-		m_command.defaultCommand(m_command.context, ctxt.view->GetViewObject());
+		m_command.defaultCommand(m_command.context, ctxt.view->GetObject());
 		break;
 	case AddressPluginCommand:
-		m_command.addressCommand(m_command.context, ctxt.view->GetViewObject(), ctxt.address);
+		m_command.addressCommand(m_command.context, ctxt.view->GetObject(), ctxt.address);
 		break;
 	case RangePluginCommand:
-		m_command.rangeCommand(m_command.context, ctxt.view->GetViewObject(), ctxt.address, ctxt.length);
+		m_command.rangeCommand(m_command.context, ctxt.view->GetObject(), ctxt.address, ctxt.length);
 		break;
 	case FunctionPluginCommand:
-		m_command.functionCommand(m_command.context, ctxt.view->GetViewObject(), ctxt.function->GetFunctionObject());
+		m_command.functionCommand(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
 		break;
 	default:
 		break;

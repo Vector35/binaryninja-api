@@ -4,56 +4,51 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-Type::Type(BNType* type): m_type(type)
+Type::Type(BNType* type)
 {
-}
-
-
-Type::~Type()
-{
-	BNFreeType(m_type);
+	m_object = type;
 }
 
 
 BNTypeClass Type::GetClass() const
 {
-	return BNGetTypeClass(m_type);
+	return BNGetTypeClass(m_object);
 }
 
 
 uint64_t Type::GetWidth() const
 {
-	return BNGetTypeWidth(m_type);
+	return BNGetTypeWidth(m_object);
 }
 
 
 size_t Type::GetAlignment() const
 {
-	return BNGetTypeAlignment(m_type);
+	return BNGetTypeAlignment(m_object);
 }
 
 
 bool Type::IsSigned() const
 {
-	return BNIsTypeSigned(m_type);
+	return BNIsTypeSigned(m_object);
 }
 
 
 bool Type::IsConst() const
 {
-	return BNIsTypeConst(m_type);
+	return BNIsTypeConst(m_object);
 }
 
 
 bool Type::IsFloat() const
 {
-	return BNIsTypeFloatingPoint(m_type);
+	return BNIsTypeFloatingPoint(m_object);
 }
 
 
 Ref<Type> Type::GetChildType() const
 {
-	BNType* type = BNGetChildType(m_type);
+	BNType* type = BNGetChildType(m_object);
 	if (type)
 		return new Type(type);
 	return nullptr;
@@ -62,7 +57,7 @@ Ref<Type> Type::GetChildType() const
 
 Ref<CallingConvention> Type::GetCallingConvention() const
 {
-	BNCallingConvention* cc = BNGetTypeCallingConvention(m_type);
+	BNCallingConvention* cc = BNGetTypeCallingConvention(m_object);
 	if (cc)
 		return new CoreCallingConvention(cc);
 	return nullptr;
@@ -72,7 +67,7 @@ Ref<CallingConvention> Type::GetCallingConvention() const
 vector<NameAndType> Type::GetParameters() const
 {
 	size_t count;
-	BNNameAndType* types = BNGetTypeParameters(m_type, &count);
+	BNNameAndType* types = BNGetTypeParameters(m_object, &count);
 
 	vector<NameAndType> result;
 	for (size_t i = 0; i < count; i++)
@@ -90,19 +85,19 @@ vector<NameAndType> Type::GetParameters() const
 
 bool Type::HasVariableArguments() const
 {
-	return BNTypeHasVariableArguments(m_type);
+	return BNTypeHasVariableArguments(m_object);
 }
 
 
 bool Type::CanReturn() const
 {
-	return BNFunctionTypeCanReturn(m_type);
+	return BNFunctionTypeCanReturn(m_object);
 }
 
 
 Ref<Structure> Type::GetStructure() const
 {
-	BNStructure* s = BNGetTypeStructure(m_type);
+	BNStructure* s = BNGetTypeStructure(m_object);
 	if (s)
 		return new Structure(s);
 	return nullptr;
@@ -111,7 +106,7 @@ Ref<Structure> Type::GetStructure() const
 
 Ref<Enumeration> Type::GetEnumeration() const
 {
-	BNEnumeration* e = BNGetTypeEnumeration(m_type);
+	BNEnumeration* e = BNGetTypeEnumeration(m_object);
 	if (e)
 		return new Enumeration(e);
 	return nullptr;
@@ -120,13 +115,13 @@ Ref<Enumeration> Type::GetEnumeration() const
 
 uint64_t Type::GetElementCount() const
 {
-	return BNGetTypeElementCount(m_type);
+	return BNGetTypeElementCount(m_object);
 }
 
 
 string Type::GetString() const
 {
-	char* str = BNGetTypeString(m_type);
+	char* str = BNGetTypeString(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -135,7 +130,7 @@ string Type::GetString() const
 
 string Type::GetStringBeforeName() const
 {
-	char* str = BNGetTypeStringBeforeName(m_type);
+	char* str = BNGetTypeStringBeforeName(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -144,7 +139,7 @@ string Type::GetStringBeforeName() const
 
 string Type::GetStringAfterName() const
 {
-	char* str = BNGetTypeStringAfterName(m_type);
+	char* str = BNGetTypeStringAfterName(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -153,7 +148,7 @@ string Type::GetStringAfterName() const
 
 Ref<Type> Type::Duplicate() const
 {
-	return new Type(BNDuplicateType(m_type));
+	return new Type(BNDuplicateType(m_object));
 }
 
 
@@ -183,25 +178,25 @@ Ref<Type> Type::FloatType(size_t width)
 
 Ref<Type> Type::StructureType(Structure* strct)
 {
-	return new Type(BNCreateStructureType(strct->GetStructureObject()));
+	return new Type(BNCreateStructureType(strct->GetObject()));
 }
 
 
 Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t width)
 {
-	return new Type(BNCreateEnumerationType(arch->GetArchitectureObject(), enm->GetEnumerationObject(), width));
+	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width));
 }
 
 
 Ref<Type> Type::PointerType(Architecture* arch, Type* type, bool cnst)
 {
-	return new Type(BNCreatePointerType(arch->GetArchitectureObject(), type->GetTypeObject(), cnst));
+	return new Type(BNCreatePointerType(arch->GetObject(), type->GetObject(), cnst));
 }
 
 
 Ref<Type> Type::ArrayType(Type* type, uint64_t elem)
 {
-	return new Type(BNCreateArrayType(type->GetTypeObject(), elem));
+	return new Type(BNCreateArrayType(type->GetObject(), elem));
 }
 
 
@@ -212,31 +207,26 @@ Ref<Type> Type::FunctionType(Type* returnValue, CallingConvention* callingConven
 	for (size_t i = 0; i < params.size(); i++)
 	{
 		paramArray[i].name = (char*)params[i].name.c_str();
-		paramArray[i].type = params[i].type->GetTypeObject();
+		paramArray[i].type = params[i].type->GetObject();
 	}
 
-	Type* type = new Type(BNCreateFunctionType(returnValue->GetTypeObject(),
-	                      callingConvention ? callingConvention->GetCallingConventionObject() : nullptr,
+	Type* type = new Type(BNCreateFunctionType(returnValue->GetObject(),
+	                      callingConvention ? callingConvention->GetObject() : nullptr,
 	                      paramArray, params.size(), varArg));
 	delete[] paramArray;
 	return type;
 }
 
 
-Structure::Structure(BNStructure* s): m_struct(s)
+Structure::Structure(BNStructure* s)
 {
-}
-
-
-Structure::~Structure()
-{
-	BNFreeStructure(m_struct);
+	m_object = s;
 }
 
 
 string Structure::GetName() const
 {
-	char* name = BNGetStructureName(m_struct);
+	char* name = BNGetStructureName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -245,14 +235,14 @@ string Structure::GetName() const
 
 void Structure::SetName(const string& name)
 {
-	BNSetStructureName(m_struct, name.c_str());
+	BNSetStructureName(m_object, name.c_str());
 }
 
 
 vector<StructureMember> Structure::GetMembers() const
 {
 	size_t count;
-	BNStructureMember* members = BNGetStructureMembers(m_struct, &count);
+	BNStructureMember* members = BNGetStructureMembers(m_object, &count);
 
 	vector<StructureMember> result;
 	for (size_t i = 0; i < count; i++)
@@ -271,72 +261,67 @@ vector<StructureMember> Structure::GetMembers() const
 
 uint64_t Structure::GetWidth() const
 {
-	return BNGetStructureWidth(m_struct);
+	return BNGetStructureWidth(m_object);
 }
 
 
 size_t Structure::GetAlignment() const
 {
-	return BNGetStructureAlignment(m_struct);
+	return BNGetStructureAlignment(m_object);
 }
 
 
 bool Structure::IsPacked() const
 {
-	return BNIsStructurePacked(m_struct);
+	return BNIsStructurePacked(m_object);
 }
 
 
 void Structure::SetPacked(bool packed)
 {
-	BNSetStructurePacked(m_struct, packed);
+	BNSetStructurePacked(m_object, packed);
 }
 
 
 bool Structure::IsUnion() const
 {
-	return BNIsStructureUnion(m_struct);
+	return BNIsStructureUnion(m_object);
 }
 
 
 void Structure::SetUnion(bool u)
 {
-	BNSetStructureUnion(m_struct, u);
+	BNSetStructureUnion(m_object, u);
 }
 
 
 void Structure::AddMember(Type* type, const string& name)
 {
-	BNAddStructureMember(m_struct, type->GetTypeObject(), name.c_str());
+	BNAddStructureMember(m_object, type->GetObject(), name.c_str());
 }
 
 
 void Structure::AddMemberAtOffset(Type* type, const string& name, uint64_t offset)
 {
-	BNAddStructureMemberAtOffset(m_struct, type->GetTypeObject(), name.c_str(), offset);
+	BNAddStructureMemberAtOffset(m_object, type->GetObject(), name.c_str(), offset);
 }
 
 
 void Structure::RemoveMember(size_t idx)
 {
-	BNRemoveStructureMember(m_struct, idx);
+	BNRemoveStructureMember(m_object, idx);
 }
 
 
-Enumeration::Enumeration(BNEnumeration* e): m_enum(e)
+Enumeration::Enumeration(BNEnumeration* e)
 {
-}
-
-
-Enumeration::~Enumeration()
-{
-	BNFreeEnumeration(m_enum);
+	m_object = e;
 }
 
 
 string Enumeration::GetName() const
 {
-	char* name = BNGetEnumerationName(m_enum);
+	char* name = BNGetEnumerationName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -345,14 +330,14 @@ string Enumeration::GetName() const
 
 void Enumeration::SetName(const string& name)
 {
-	BNSetEnumerationName(m_enum, name.c_str());
+	BNSetEnumerationName(m_object, name.c_str());
 }
 
 
 vector<EnumerationMember> Enumeration::GetMembers() const
 {
 	size_t count;
-	BNEnumerationMember* members = BNGetEnumerationMembers(m_enum, &count);
+	BNEnumerationMember* members = BNGetEnumerationMembers(m_object, &count);
 
 	vector<EnumerationMember> result;
 	for (size_t i = 0; i < count; i++)
@@ -371,13 +356,13 @@ vector<EnumerationMember> Enumeration::GetMembers() const
 
 void Enumeration::AddMember(const string& name)
 {
-	BNAddEnumerationMember(m_enum, name.c_str());
+	BNAddEnumerationMember(m_object, name.c_str());
 }
 
 
 void Enumeration::AddMemberWithValue(const string& name, uint64_t value)
 {
-	BNAddEnumerationMemberWithValue(m_enum, name.c_str(), value);
+	BNAddEnumerationMemberWithValue(m_object, name.c_str(), value);
 }
 
 

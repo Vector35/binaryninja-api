@@ -4,51 +4,46 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-BasicBlock::BasicBlock(BNBasicBlock* block): m_block(block)
+BasicBlock::BasicBlock(BNBasicBlock* block)
 {
-}
-
-
-BasicBlock::~BasicBlock()
-{
-	BNFreeBasicBlock(m_block);
+	m_object = block;
 }
 
 
 Ref<Function> BasicBlock::GetFunction() const
 {
-	return new Function(BNGetBasicBlockFunction(m_block));
+	return new Function(BNGetBasicBlockFunction(m_object));
 }
 
 
 Ref<Architecture> BasicBlock::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetBasicBlockArchitecture(m_block));
+	return new CoreArchitecture(BNGetBasicBlockArchitecture(m_object));
 }
 
 
 uint64_t BasicBlock::GetStart() const
 {
-	return BNGetBasicBlockStart(m_block);
+	return BNGetBasicBlockStart(m_object);
 }
 
 
 uint64_t BasicBlock::GetEnd() const
 {
-	return BNGetBasicBlockEnd(m_block);
+	return BNGetBasicBlockEnd(m_object);
 }
 
 
 uint64_t BasicBlock::GetLength() const
 {
-	return BNGetBasicBlockLength(m_block);
+	return BNGetBasicBlockLength(m_object);
 }
 
 
 vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 {
 	size_t count;
-	BNBasicBlockEdge* array = BNGetBasicBlockOutgoingEdges(m_block, &count);
+	BNBasicBlockEdge* array = BNGetBasicBlockOutgoingEdges(m_object, &count);
 
 	vector<BasicBlockEdge> result;
 	for (size_t i = 0; i < count; i++)
@@ -67,11 +62,11 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 
 bool BasicBlock::HasUndeterminedOutgoingEdges() const
 {
-	return BNBasicBlockHasUndeterminedOutgoingEdges(m_block);
+	return BNBasicBlockHasUndeterminedOutgoingEdges(m_object);
 }
 
 
 void BasicBlock::MarkRecentUse()
 {
-	BNMarkBasicBlockAsRecentlyUsed(m_block);
+	BNMarkBasicBlockAsRecentlyUsed(m_object);
 }

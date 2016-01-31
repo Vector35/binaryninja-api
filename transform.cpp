@@ -4,15 +4,17 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-Transform::Transform(BNTransform* xform): m_xform(xform)
+Transform::Transform(BNTransform* xform)
 {
+	m_object = xform;
 }
 
 
 Transform::Transform(BNTransformType type, const string& name, const string& longName, const string& group):
-	m_xform(nullptr), m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName),
+	m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName),
 	m_groupForRegister(group)
 {
+	m_object = nullptr;
 }
 
 
@@ -113,9 +115,10 @@ void Transform::Register(Transform* xform)
 	callbacks.freeParameters = FreeParametersCallback;
 	callbacks.decode = DecodeCallback;
 	callbacks.encode = EncodeCallback;
-	xform->m_xform = BNRegisterTransformType(xform->m_typeForRegister, xform->m_nameForRegister.c_str(),
-	                                         xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(),
-	                                         &callbacks);
+	xform->AddRefForRegistration();
+	xform->m_object = BNRegisterTransformType(xform->m_typeForRegister, xform->m_nameForRegister.c_str(),
+	                                          xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(),
+	                                          &callbacks);
 }
 
 
@@ -144,13 +147,13 @@ vector<Ref<Transform>> Transform::GetTransformTypes()
 
 BNTransformType Transform::GetType() const
 {
-	return BNGetTransformType(m_xform);
+	return BNGetTransformType(m_object);
 }
 
 
 string Transform::GetName() const
 {
-	char* name = BNGetTransformName(m_xform);
+	char* name = BNGetTransformName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -159,7 +162,7 @@ string Transform::GetName() const
 
 string Transform::GetLongName() const
 {
-	char* name = BNGetTransformLongName(m_xform);
+	char* name = BNGetTransformLongName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -168,7 +171,7 @@ string Transform::GetLongName() const
 
 string Transform::GetGroup() const
 {
-	char* name = BNGetTransformGroup(m_xform);
+	char* name = BNGetTransformGroup(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -203,7 +206,7 @@ CoreTransform::CoreTransform(BNTransform* xform): Transform(xform)
 vector<TransformParameter> CoreTransform::GetParameters() const
 {
 	size_t count;
-	BNTransformParameterInfo* list = BNGetTransformParameterList(m_xform, &count);
+	BNTransformParameterInfo* list = BNGetTransformParameterList(m_object, &count);
 
 	vector<TransformParameter> result;
 	for (size_t i = 0; i < count; i++)
@@ -230,7 +233,7 @@ bool CoreTransform::Decode(const DataBuffer& input, DataBuffer& output, const ma
 		list[idx++].value = i.second.GetBufferObject();
 	}
 
-	bool result = BNDecode(m_xform, input.GetBufferObject(), output.GetBufferObject(), list, idx);
+	bool result = BNDecode(m_object, input.GetBufferObject(), output.GetBufferObject(), list, idx);
 
 	delete[] list;
 	return result;
@@ -247,7 +250,7 @@ bool CoreTransform::Encode(const DataBuffer& input, DataBuffer& output, const ma
 		list[idx++].value = i.second.GetBufferObject();
 	}
 
-	bool result = BNEncode(m_xform, input.GetBufferObject(), output.GetBufferObject(), list, idx);
+	bool result = BNEncode(m_object, input.GetBufferObject(), output.GetBufferObject(), list, idx);
 
 	delete[] list;
 	return result;

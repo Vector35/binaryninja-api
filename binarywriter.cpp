@@ -6,7 +6,7 @@ using namespace std;
 
 BinaryWriter::BinaryWriter(BinaryView* data, BNEndianness endian): m_view(data)
 {
-	m_stream = BNCreateBinaryWriter(data->GetViewObject());
+	m_stream = BNCreateBinaryWriter(data->GetObject());
 	BNSetBinaryWriterEndianness(m_stream, endian);
 }
 

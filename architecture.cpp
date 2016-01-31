@@ -22,7 +22,7 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture
 	branchDelay = hasDelaySlot;
 	branchType[branchCount] = type;
 	branchTarget[branchCount] = target;
-	branchArch[branchCount++] = arch ? arch->GetArchitectureObject() : nullptr;
+	branchArch[branchCount++] = arch ? arch->GetObject() : nullptr;
 }
 
 
@@ -37,20 +37,22 @@ InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const s
 }
 
 
-Architecture::Architecture(BNArchitecture* arch): m_arch(arch)
+Architecture::Architecture(BNArchitecture* arch)
 {
+	m_object = arch;
 }
 
 
 Architecture::Architecture(const string& name): m_nameForRegister(name)
 {
+	m_object = nullptr;
 }
 
 
 void Architecture::InitCallback(void* ctxt, BNArchitecture* obj)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	arch->m_arch = obj;
+	arch->m_object = obj;
 }
 
 
@@ -342,6 +344,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
+	arch->AddRefForRegistration();
 	BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
 }
 
@@ -372,7 +375,7 @@ vector<Ref<Architecture>> Architecture::GetList()
 
 string Architecture::GetName() const
 {
-	char* name = BNGetArchitectureName(m_arch);
+	char* name = BNGetArchitectureName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -468,7 +471,7 @@ uint32_t Architecture::GetLinkRegister()
 vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
 {
 	size_t count;
-	uint32_t* regs = BNGetModifiedArchitectureRegistersOnWrite(m_arch, reg, &count);
+	uint32_t* regs = BNGetModifiedArchitectureRegistersOnWrite(m_object, reg, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -481,7 +484,7 @@ vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
 
 uint32_t Architecture::GetRegisterByName(const string& name)
 {
-	return BNGetArchitectureRegisterByName(m_arch, name.c_str());
+	return BNGetArchitectureRegisterByName(m_object, name.c_str());
 }
 
 
@@ -554,19 +557,19 @@ void Architecture::RegisterFunctionRecognizer(FunctionRecognizer* recog)
 
 bool Architecture::IsBinaryViewTypeConstantDefined(const string& type, const string& name)
 {
-	return BNIsBinaryViewTypeArchitectureConstantDefined(m_arch, type.c_str(), name.c_str());
+	return BNIsBinaryViewTypeArchitectureConstantDefined(m_object, type.c_str(), name.c_str());
 }
 
 
 uint64_t Architecture::GetBinaryViewTypeConstant(const string& type, const string& name, uint64_t defaultValue)
 {
-	return BNGetBinaryViewTypeArchitectureConstant(m_arch, type.c_str(), name.c_str(), defaultValue);
+	return BNGetBinaryViewTypeArchitectureConstant(m_object, type.c_str(), name.c_str(), defaultValue);
 }
 
 
 void Architecture::SetBinaryViewTypeConstant(const string& type, const string& name, uint64_t value)
 {
-	BNSetBinaryViewTypeArchitectureConstant(m_arch, type.c_str(), name.c_str(), value);
+	BNSetBinaryViewTypeArchitectureConstant(m_object, type.c_str(), name.c_str(), value);
 }
 
 
@@ -586,7 +589,7 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesFromSource(m_arch, source.c_str(), fileName.c_str(), &result,
+	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
 	                                 &errorStr, includeDirList, includeDirs.size());
 	errors = errorStr;
 	BNFreeString(errorStr);
@@ -619,7 +622,7 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, 
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesFromSourceFile(m_arch, fileName.c_str(), &result, &errorStr,
+	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
 	                                     includeDirList, includeDirs.size());
 	errors = errorStr;
 	BNFreeString(errorStr);
@@ -639,14 +642,14 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, 
 
 void Architecture::RegisterCallingConvention(CallingConvention* cc)
 {
-	BNRegisterCallingConvention(m_arch, cc->GetCallingConventionObject());
+	BNRegisterCallingConvention(m_object, cc->GetObject());
 }
 
 
 vector<Ref<CallingConvention>> Architecture::GetCallingConventions()
 {
 	size_t count;
-	BNCallingConvention** list = BNGetArchitectureCallingConventions(m_arch, &count);
+	BNCallingConvention** list = BNGetArchitectureCallingConventions(m_object, &count);
 
 	vector<Ref<CallingConvention>> result;
 	for (size_t i = 0; i < count; i++)
@@ -659,7 +662,7 @@ vector<Ref<CallingConvention>> Architecture::GetCallingConventions()
 
 Ref<CallingConvention> Architecture::GetCallingConventionByName(const string& name)
 {
-	BNCallingConvention* cc = BNGetArchitectureCallingConventionByName(m_arch, name.c_str());
+	BNCallingConvention* cc = BNGetArchitectureCallingConventionByName(m_object, name.c_str());
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -668,31 +671,31 @@ Ref<CallingConvention> Architecture::GetCallingConventionByName(const string& na
 
 void Architecture::SetDefaultCallingConvention(CallingConvention* cc)
 {
-	BNSetArchitectureDefaultCallingConvention(m_arch, cc->GetCallingConventionObject());
+	BNSetArchitectureDefaultCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Architecture::SetCdeclCallingConvention(CallingConvention* cc)
 {
-	BNSetArchitectureCdeclCallingConvention(m_arch, cc->GetCallingConventionObject());
+	BNSetArchitectureCdeclCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Architecture::SetStdcallCallingConvention(CallingConvention* cc)
 {
-	BNSetArchitectureStdcallCallingConvention(m_arch, cc->GetCallingConventionObject());
+	BNSetArchitectureStdcallCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Architecture::SetFastcallCallingConvention(CallingConvention* cc)
 {
-	BNSetArchitectureFastcallCallingConvention(m_arch, cc->GetCallingConventionObject());
+	BNSetArchitectureFastcallCallingConvention(m_object, cc->GetObject());
 }
 
 
 Ref<CallingConvention> Architecture::GetDefaultCallingConvention()
 {
-	BNCallingConvention* cc = BNGetArchitectureDefaultCallingConvention(m_arch);
+	BNCallingConvention* cc = BNGetArchitectureDefaultCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -701,7 +704,7 @@ Ref<CallingConvention> Architecture::GetDefaultCallingConvention()
 
 Ref<CallingConvention> Architecture::GetCdeclCallingConvention()
 {
-	BNCallingConvention* cc = BNGetArchitectureCdeclCallingConvention(m_arch);
+	BNCallingConvention* cc = BNGetArchitectureCdeclCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -710,7 +713,7 @@ Ref<CallingConvention> Architecture::GetCdeclCallingConvention()
 
 Ref<CallingConvention> Architecture::GetStdcallCallingConvention()
 {
-	BNCallingConvention* cc = BNGetArchitectureStdcallCallingConvention(m_arch);
+	BNCallingConvention* cc = BNGetArchitectureStdcallCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -719,7 +722,7 @@ Ref<CallingConvention> Architecture::GetStdcallCallingConvention()
 
 Ref<CallingConvention> Architecture::GetFastcallCallingConvention()
 {
-	BNCallingConvention* cc = BNGetArchitectureFastcallCallingConvention(m_arch);
+	BNCallingConvention* cc = BNGetArchitectureFastcallCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -728,7 +731,7 @@ Ref<CallingConvention> Architecture::GetFastcallCallingConvention()
 
 Ref<Platform> Architecture::GetStandalonePlatform()
 {
-	return new Platform(BNGetArchitectureStandalonePlatform(m_arch));
+	return new Platform(BNGetArchitectureStandalonePlatform(m_object));
 }
 
 
@@ -739,25 +742,25 @@ CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 
 BNEndianness CoreArchitecture::GetEndianness() const
 {
-	return BNGetArchitectureEndianness(m_arch);
+	return BNGetArchitectureEndianness(m_object);
 }
 
 
 size_t CoreArchitecture::GetAddressSize() const
 {
-	return BNGetArchitectureAddressSize(m_arch);
+	return BNGetArchitectureAddressSize(m_object);
 }
 
 
 size_t CoreArchitecture::GetDefaultIntegerSize() const
 {
-	return BNGetArchitectureDefaultIntegerSize(m_arch);
+	return BNGetArchitectureDefaultIntegerSize(m_object);
 }
 
 
 bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
 {
-	return BNGetInstructionInfo(m_arch, data, addr, maxLen, &result);
+	return BNGetInstructionInfo(m_object, data, addr, maxLen, &result);
 }
 
 
@@ -765,7 +768,7 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 {
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
-	if (!BNGetInstructionText(m_arch, data, addr, &len, &tokens, &count))
+	if (!BNGetInstructionText(m_object, data, addr, &len, &tokens, &count))
 		return false;
 
 	for (size_t i = 0; i < count; i++)
@@ -778,13 +781,13 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
 {
-	return BNGetInstructionLowLevelIL(m_arch, data, addr, &len, il.GetFunctionObject());
+	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, il.GetObject());
 }
 
 
 string CoreArchitecture::GetRegisterName(uint32_t reg)
 {
-	char* name = BNGetArchitectureRegisterName(m_arch, reg);
+	char* name = BNGetArchitectureRegisterName(m_object, reg);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -793,7 +796,7 @@ string CoreArchitecture::GetRegisterName(uint32_t reg)
 
 string CoreArchitecture::GetFlagName(uint32_t flag)
 {
-	char* name = BNGetArchitectureFlagName(m_arch, flag);
+	char* name = BNGetArchitectureFlagName(m_object, flag);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -802,7 +805,7 @@ string CoreArchitecture::GetFlagName(uint32_t flag)
 
 string CoreArchitecture::GetFlagWriteTypeName(uint32_t flags)
 {
-	char* name = BNGetArchitectureFlagWriteTypeName(m_arch, flags);
+	char* name = BNGetArchitectureFlagWriteTypeName(m_object, flags);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -812,7 +815,7 @@ string CoreArchitecture::GetFlagWriteTypeName(uint32_t flags)
 vector<uint32_t> CoreArchitecture::GetFullWidthRegisters()
 {
 	size_t count;
-	uint32_t* regs = BNGetFullWidthArchitectureRegisters(m_arch, &count);
+	uint32_t* regs = BNGetFullWidthArchitectureRegisters(m_object, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -826,7 +829,7 @@ vector<uint32_t> CoreArchitecture::GetFullWidthRegisters()
 vector<uint32_t> CoreArchitecture::GetAllRegisters()
 {
 	size_t count;
-	uint32_t* regs = BNGetAllArchitectureRegisters(m_arch, &count);
+	uint32_t* regs = BNGetAllArchitectureRegisters(m_object, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -840,7 +843,7 @@ vector<uint32_t> CoreArchitecture::GetAllRegisters()
 vector<uint32_t> CoreArchitecture::GetAllFlags()
 {
 	size_t count;
-	uint32_t* regs = BNGetAllArchitectureFlags(m_arch, &count);
+	uint32_t* regs = BNGetAllArchitectureFlags(m_object, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -854,7 +857,7 @@ vector<uint32_t> CoreArchitecture::GetAllFlags()
 vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
 {
 	size_t count;
-	uint32_t* regs = BNGetAllArchitectureFlagWriteTypes(m_arch, &count);
+	uint32_t* regs = BNGetAllArchitectureFlagWriteTypes(m_object, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -867,26 +870,26 @@ vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
 
 BNRegisterInfo CoreArchitecture::GetRegisterInfo(uint32_t reg)
 {
-	return BNGetArchitectureRegisterInfo(m_arch, reg);
+	return BNGetArchitectureRegisterInfo(m_object, reg);
 }
 
 
 uint32_t CoreArchitecture::GetStackPointerRegister()
 {
-	return BNGetArchitectureStackPointerRegister(m_arch);
+	return BNGetArchitectureStackPointerRegister(m_object);
 }
 
 
 uint32_t CoreArchitecture::GetLinkRegister()
 {
-	return BNGetArchitectureLinkRegister(m_arch);
+	return BNGetArchitectureLinkRegister(m_object);
 }
 
 
 bool CoreArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
 {
 	char* errorStr = nullptr;
-	bool ok = BNAssemble(m_arch, code.c_str(), addr, result.GetBufferObject(), &errorStr);
+	bool ok = BNAssemble(m_object, code.c_str(), addr, result.GetBufferObject(), &errorStr);
 	if (errorStr)
 	{
 		errors = errorStr;
@@ -898,53 +901,53 @@ bool CoreArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& r
 
 bool CoreArchitecture::IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNIsArchitectureNeverBranchPatchAvailable(m_arch, data, addr, len);
+	return BNIsArchitectureNeverBranchPatchAvailable(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNIsArchitectureAlwaysBranchPatchAvailable(m_arch, data, addr, len);
+	return BNIsArchitectureAlwaysBranchPatchAvailable(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNIsArchitectureInvertBranchPatchAvailable(m_arch, data, addr, len);
+	return BNIsArchitectureInvertBranchPatchAvailable(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNIsArchitectureSkipAndReturnZeroPatchAvailable(m_arch, data, addr, len);
+	return BNIsArchitectureSkipAndReturnZeroPatchAvailable(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNIsArchitectureSkipAndReturnValuePatchAvailable(m_arch, data, addr, len);
+	return BNIsArchitectureSkipAndReturnValuePatchAvailable(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::ConvertToNop(uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNArchitectureConvertToNop(m_arch, data, addr, len);
+	return BNArchitectureConvertToNop(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::AlwaysBranch(uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNArchitectureAlwaysBranch(m_arch, data, addr, len);
+	return BNArchitectureAlwaysBranch(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::InvertBranch(uint8_t* data, uint64_t addr, size_t len)
 {
-	return BNArchitectureInvertBranch(m_arch, data, addr, len);
+	return BNArchitectureInvertBranch(m_object, data, addr, len);
 }
 
 
 bool CoreArchitecture::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value)
 {
-	return BNArchitectureSkipAndReturnValue(m_arch, data, addr, len, value);
+	return BNArchitectureSkipAndReturnValue(m_object, data, addr, len, value);
 }

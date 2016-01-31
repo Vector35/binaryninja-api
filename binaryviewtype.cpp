@@ -9,7 +9,7 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 	BinaryViewType* type = (BinaryViewType*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Create(view);
-	return BNNewViewReference(result->GetViewObject());
+	return BNNewViewReference(result->GetObject());
 }
 
 
@@ -21,14 +21,16 @@ bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 }
 
 
-BinaryViewType::BinaryViewType(BNBinaryViewType* type): m_type(type)
+BinaryViewType::BinaryViewType(BNBinaryViewType* type)
 {
+	m_object = type;
 }
 
 
 BinaryViewType::BinaryViewType(const string& name, const string& longName):
-	m_type(nullptr), m_nameForRegister(name), m_longNameForRegister(longName)
+	m_nameForRegister(name), m_longNameForRegister(longName)
 {
+	m_object = nullptr;
 }
 
 
@@ -39,8 +41,9 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.create = CreateCallback;
 	callbacks.isValidForData = IsValidCallback;
 
-	type->m_type = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(),
-	                                        type->m_longNameForRegister.c_str(), &callbacks);
+	type->AddRefForRegistration();
+	type->m_object = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(),
+	                                          type->m_longNameForRegister.c_str(), &callbacks);
 }
 
 
@@ -72,7 +75,7 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 {
 	BNBinaryViewType** types;
 	size_t count;
-	types = BNGetBinaryViewTypesForData(data->GetViewObject(), &count);
+	types = BNGetBinaryViewTypesForData(data->GetObject(), &count);
 
 	vector<Ref<BinaryViewType>> result;
 	for (size_t i = 0; i < count; i++)
@@ -94,13 +97,13 @@ void BinaryViewType::RegisterArchitecture(const string& name, uint32_t id, Archi
 
 void BinaryViewType::RegisterArchitecture(uint32_t id, Architecture* arch)
 {
-	BNRegisterArchitectureForViewType(m_type, id, arch->GetArchitectureObject());
+	BNRegisterArchitectureForViewType(m_object, id, arch->GetObject());
 }
 
 
 Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id)
 {
-	BNArchitecture* arch = BNGetArchitectureForViewType(m_type, id);
+	BNArchitecture* arch = BNGetArchitectureForViewType(m_object, id);
 	if (!arch)
 		return nullptr;
 	return new CoreArchitecture(arch);
@@ -127,19 +130,19 @@ void BinaryViewType::RegisterDefaultPlatform(const string& name, Architecture* a
 
 void BinaryViewType::RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform)
 {
-	BNRegisterPlatformForViewType(m_type, id, arch->GetArchitectureObject(), platform->GetPlatformObject());
+	BNRegisterPlatformForViewType(m_object, id, arch->GetObject(), platform->GetObject());
 }
 
 
 void BinaryViewType::RegisterDefaultPlatform(Architecture* arch, Platform* platform)
 {
-	BNRegisterDefaultPlatformForViewType(m_type, arch->GetArchitectureObject(), platform->GetPlatformObject());
+	BNRegisterDefaultPlatformForViewType(m_object, arch->GetObject(), platform->GetObject());
 }
 
 
 Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
 {
-	BNPlatform* platform = BNGetPlatformForViewType(m_type, id, arch->GetArchitectureObject());
+	BNPlatform* platform = BNGetPlatformForViewType(m_object, id, arch->GetObject());
 	if (!platform)
 		return nullptr;
 	return new Platform(platform);
@@ -148,7 +151,7 @@ Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
 
 string BinaryViewType::GetName()
 {
-	char* contents = BNGetBinaryViewTypeName(m_type);
+	char* contents = BNGetBinaryViewTypeName(m_object);
 	string result = contents;
 	BNFreeString(contents);
 	return result;
@@ -157,7 +160,7 @@ string BinaryViewType::GetName()
 
 string BinaryViewType::GetLongName()
 {
-	char* contents = BNGetBinaryViewTypeLongName(m_type);
+	char* contents = BNGetBinaryViewTypeLongName(m_object);
 	string result = contents;
 	BNFreeString(contents);
 	return result;
@@ -171,7 +174,7 @@ CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(t
 
 BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 {
-	BNBinaryView* view = BNCreateBinaryViewOfType(m_type, data->GetViewObject());
+	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);
@@ -180,5 +183,5 @@ BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 
 bool CoreBinaryViewType::IsTypeValidForData(BinaryView* data)
 {
-	return BNIsBinaryViewTypeValidForData(m_type, data->GetViewObject());
+	return BNIsBinaryViewTypeValidForData(m_object, data->GetObject());
 }

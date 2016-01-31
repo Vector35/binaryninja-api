@@ -12,43 +12,38 @@ LowLevelILLabel::LowLevelILLabel()
 
 LowLevelILFunction::LowLevelILFunction()
 {
-	m_func = BNCreateLowLevelILFunction();
+	m_object = BNCreateLowLevelILFunction();
 }
 
 
-LowLevelILFunction::LowLevelILFunction(BNLowLevelILFunction* func): m_func(func)
+LowLevelILFunction::LowLevelILFunction(BNLowLevelILFunction* func)
 {
-}
-
-
-LowLevelILFunction::~LowLevelILFunction()
-{
-	BNFreeLowLevelILFunction(m_func);
+	m_object = func;
 }
 
 
 uint64_t LowLevelILFunction::GetCurrentAddress() const
 {
-	return BNLowLevelILGetCurrentAddress(m_func);
+	return BNLowLevelILGetCurrentAddress(m_object);
 }
 
 
 void LowLevelILFunction::SetCurrentAddress(uint64_t addr)
 {
-	BNLowLevelILSetCurrentAddress(m_func, addr);
+	BNLowLevelILSetCurrentAddress(m_object, addr);
 }
 
 
 ExprId LowLevelILFunction::AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
                                    ExprId a, ExprId b, ExprId c, ExprId d)
 {
-	return BNLowLevelILAddExpr(m_func, operation, size, flags, a, b, c, d);
+	return BNLowLevelILAddExpr(m_object, operation, size, flags, a, b, c, d);
 }
 
 
 ExprId LowLevelILFunction::AddInstruction(size_t expr)
 {
-	return BNLowLevelILAddInstruction(m_func, expr);
+	return BNLowLevelILAddInstruction(m_object, expr);
 }
 
 
@@ -432,55 +427,55 @@ ExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId addr)
 
 ExprId LowLevelILFunction::Goto(BNLowLevelILLabel& label)
 {
-	return BNLowLevelILGoto(m_func, &label);
+	return BNLowLevelILGoto(m_object, &label);
 }
 
 
 ExprId LowLevelILFunction::If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f)
 {
-	return BNLowLevelILIf(m_func, operand, &t, &f);
+	return BNLowLevelILIf(m_object, operand, &t, &f);
 }
 
 
 void LowLevelILFunction::MarkLabel(BNLowLevelILLabel& label)
 {
-	BNLowLevelILMarkLabel(m_func, &label);
+	BNLowLevelILMarkLabel(m_object, &label);
 }
 
 
 BNLowLevelILInstruction LowLevelILFunction::operator[](size_t i) const
 {
-	return BNGetLowLevelILByIndex(m_func, i);
+	return BNGetLowLevelILByIndex(m_object, i);
 }
 
 
 size_t LowLevelILFunction::GetIndexForInstruction(size_t i) const
 {
-	return BNGetLowLevelILIndexForInstruction(m_func, i);
+	return BNGetLowLevelILIndexForInstruction(m_object, i);
 }
 
 
 size_t LowLevelILFunction::GetInstructionCount() const
 {
-	return BNGetLowLevelILInstructionCount(m_func);
+	return BNGetLowLevelILInstructionCount(m_object);
 }
 
 
 void LowLevelILFunction::AddLabelForAddress(Architecture* arch, ExprId addr)
 {
-	BNAddLowLevelILLabelForAddress(m_func, arch->GetArchitectureObject(), addr);
+	BNAddLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
 }
 
 
 BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, ExprId addr)
 {
-	return BNGetLowLevelILLabelForAddress(m_func, arch->GetArchitectureObject(), addr);
+	return BNGetLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
 }
 
 
 void LowLevelILFunction::Finalize()
 {
-	BNFinalizeLowLevelILFunction(m_func);
+	BNFinalizeLowLevelILFunction(m_object);
 }
 
 
@@ -488,7 +483,7 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetLowLevelILExprText(m_func, arch->GetArchitectureObject(), expr, &list, &count))
+	if (!BNGetLowLevelILExprText(m_object, arch->GetObject(), expr, &list, &count))
 		return false;
 
 	tokens.clear();
@@ -510,7 +505,7 @@ bool LowLevelILFunction::GetInstructionText(Architecture* arch, size_t instr, ve
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetLowLevelILInstructionText(m_func, arch->GetArchitectureObject(), instr, &list, &count))
+	if (!BNGetLowLevelILInstructionText(m_object, arch->GetObject(), instr, &list, &count))
 		return false;
 
 	tokens.clear();

@@ -4,8 +4,9 @@ using namespace std;
 using namespace BinaryNinja;
 
 
-CallingConvention::CallingConvention(BNCallingConvention* cc): m_callingConvention(cc)
+CallingConvention::CallingConvention(BNCallingConvention* cc)
 {
+	m_object = cc;
 }
 
 
@@ -13,6 +14,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 {
 	BNCustomCallingConvention cc;
 	cc.context = this;
+	cc.freeObject = FreeCallback;
 	cc.getCallerSavedRegisters = GetCallerSavedRegistersCallback;
 	cc.getIntegerArgumentRegisters = GetIntegerArgumentRegistersCallback;
 	cc.getFloatArgumentRegisters = GetFloatArgumentRegistersCallback;
@@ -23,13 +25,15 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getHighIntegerReturnValueRegister = GetHighIntegerReturnValueRegisterCallback;
 	cc.getFloatReturnValueRegister = GetFloatReturnValueRegisterCallback;
 
-	m_callingConvention = BNCreateCallingConvention(arch->GetArchitectureObject(), name.c_str(), &cc);
+	AddRefForRegistration();
+	m_object = BNCreateCallingConvention(arch->GetObject(), name.c_str(), &cc);
 }
 
 
-CallingConvention::~CallingConvention()
+void CallingConvention::FreeCallback(void* ctxt)
 {
-	BNFreeCallingConvention(m_callingConvention);
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	cc->ReleaseForRegistration();
 }
 
 
@@ -115,13 +119,13 @@ uint32_t CallingConvention::GetFloatReturnValueRegisterCallback(void* ctxt)
 
 Ref<Architecture> CallingConvention::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetCallingConventionArchitecture(m_callingConvention));
+	return new CoreArchitecture(BNGetCallingConventionArchitecture(m_object));
 }
 
 
 string CallingConvention::GetName() const
 {
-	char* str = BNGetCallingConventionName(m_callingConvention);
+	char* str = BNGetCallingConventionName(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -178,7 +182,7 @@ CoreCallingConvention::CoreCallingConvention(BNCallingConvention* cc): CallingCo
 vector<uint32_t> CoreCallingConvention::GetCallerSavedRegisters()
 {
 	size_t count;
-	uint32_t* regs = BNGetCallerSavedRegisters(m_callingConvention, &count);
+	uint32_t* regs = BNGetCallerSavedRegisters(m_object, &count);
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
 	BNFreeRegisterList(regs);
@@ -189,7 +193,7 @@ vector<uint32_t> CoreCallingConvention::GetCallerSavedRegisters()
 vector<uint32_t> CoreCallingConvention::GetIntegerArgumentRegisters()
 {
 	size_t count;
-	uint32_t* regs = BNGetIntegerArgumentRegisters(m_callingConvention, &count);
+	uint32_t* regs = BNGetIntegerArgumentRegisters(m_object, &count);
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
 	BNFreeRegisterList(regs);
@@ -200,7 +204,7 @@ vector<uint32_t> CoreCallingConvention::GetIntegerArgumentRegisters()
 vector<uint32_t> CoreCallingConvention::GetFloatArgumentRegisters()
 {
 	size_t count;
-	uint32_t* regs = BNGetFloatArgumentRegisters(m_callingConvention, &count);
+	uint32_t* regs = BNGetFloatArgumentRegisters(m_object, &count);
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
 	BNFreeRegisterList(regs);
@@ -210,29 +214,29 @@ vector<uint32_t> CoreCallingConvention::GetFloatArgumentRegisters()
 
 bool CoreCallingConvention::AreArgumentRegistersSharedIndex()
 {
-	return BNAreArgumentRegistersSharedIndex(m_callingConvention);
+	return BNAreArgumentRegistersSharedIndex(m_object);
 }
 
 
 bool CoreCallingConvention::IsStackReservedForArgumentRegisters()
 {
-	return BNIsStackReservedForArgumentRegisters(m_callingConvention);
+	return BNIsStackReservedForArgumentRegisters(m_object);
 }
 
 
 uint32_t CoreCallingConvention::GetIntegerReturnValueRegister()
 {
-	return BNGetIntegerReturnValueRegister(m_callingConvention);
+	return BNGetIntegerReturnValueRegister(m_object);
 }
 
 
 uint32_t CoreCallingConvention::GetHighIntegerReturnValueRegister()
 {
-	return BNGetHighIntegerReturnValueRegister(m_callingConvention);
+	return BNGetHighIntegerReturnValueRegister(m_object);
 }
 
 
 uint32_t CoreCallingConvention::GetFloatReturnValueRegister()
 {
-	return BNGetFloatReturnValueRegister(m_callingConvention);
+	return BNGetFloatReturnValueRegister(m_object);
 }

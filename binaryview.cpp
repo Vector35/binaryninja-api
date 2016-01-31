@@ -87,37 +87,31 @@ BinaryDataNotification::BinaryDataNotification()
 
 Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr)
 {
-	m_sym = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr);
+	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr);
 }
 
 
 Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr)
 {
-	m_sym = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr);
+	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr);
 }
 
 
 Symbol::Symbol(BNSymbol* sym)
 {
-	m_sym = sym;
-}
-
-
-Symbol::~Symbol()
-{
-	BNFreeSymbol(m_sym);
+	m_object = sym;
 }
 
 
 BNSymbolType Symbol::GetType() const
 {
-	return BNGetSymbolType(m_sym);
+	return BNGetSymbolType(m_object);
 }
 
 
 string Symbol::GetShortName() const
 {
-	char* name = BNGetSymbolShortName(m_sym);
+	char* name = BNGetSymbolShortName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -126,7 +120,7 @@ string Symbol::GetShortName() const
 
 string Symbol::GetFullName() const
 {
-	char* name = BNGetSymbolFullName(m_sym);
+	char* name = BNGetSymbolFullName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -135,7 +129,7 @@ string Symbol::GetFullName() const
 
 string Symbol::GetRawName() const
 {
-	char* name = BNGetSymbolRawName(m_sym);
+	char* name = BNGetSymbolRawName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
@@ -144,25 +138,25 @@ string Symbol::GetRawName() const
 
 uint64_t Symbol::GetAddress() const
 {
-	return BNGetSymbolAddress(m_sym);
+	return BNGetSymbolAddress(m_object);
 }
 
 
 bool Symbol::IsAutoDefined() const
 {
-	return BNIsSymbolAutoDefined(m_sym);
+	return BNIsSymbolAutoDefined(m_object);
 }
 
 
 void Symbol::SetAutoDefined(bool val)
 {
-	BNSetSymbolAutoDefined(m_sym, val);
+	BNSetSymbolAutoDefined(m_object, val);
 }
 
 
 Ref<Symbol> Symbol::ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr)
 {
-	return new Symbol(BNImportedFunctionFromImportAddressSymbol(sym->GetSymbolObject(), addr));
+	return new Symbol(BNImportedFunctionFromImportAddressSymbol(sym->GetObject(), addr));
 }
 
 
@@ -171,6 +165,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 	BNCustomBinaryView view;
 	view.context = this;
 	view.init = InitCallback;
+	view.freeObject = FreeCallback;
 	view.read = ReadCallback;
 	view.write = WriteCallback;
 	view.insert = InsertCallback;
@@ -190,20 +185,15 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 	view.save = SaveCallback;
 
 	m_file = file;
-	m_view = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetFileObject(), &view);
+	AddRefForRegistration();
+	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(), &view);
 }
 
 
 BinaryView::BinaryView(BNBinaryView* view)
 {
-	m_view = view;
-	m_file = new FileMetadata(BNNewFileReference(BNGetFileForView(m_view)));
-}
-
-
-BinaryView::~BinaryView()
-{
-	BNFreeBinaryView(m_view);
+	m_object = view;
+	m_file = new FileMetadata(BNNewFileReference(BNGetFileForView(m_object)));
 }
 
 
@@ -211,6 +201,13 @@ bool BinaryView::InitCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
 	return view->Init();
+}
+
+
+void BinaryView::FreeCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	view->ReleaseForRegistration();
 }
 
 
@@ -389,25 +386,25 @@ size_t BinaryView::PerformGetAddressSize() const
 
 void BinaryView::NotifyDataWritten(uint64_t offset, size_t len)
 {
-	BNNotifyDataWritten(m_view, offset, len);
+	BNNotifyDataWritten(m_object, offset, len);
 }
 
 
 void BinaryView::NotifyDataInserted(uint64_t offset, size_t len)
 {
-	BNNotifyDataInserted(m_view, offset, len);
+	BNNotifyDataInserted(m_object, offset, len);
 }
 
 
 void BinaryView::NotifyDataRemoved(uint64_t offset, uint64_t len)
 {
-	BNNotifyDataRemoved(m_view, offset, len);
+	BNNotifyDataRemoved(m_object, offset, len);
 }
 
 
 string BinaryView::GetTypeName() const
 {
-	char* str = BNGetViewType(m_view);
+	char* str = BNGetViewType(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -416,7 +413,7 @@ string BinaryView::GetTypeName() const
 
 bool BinaryView::IsModified() const
 {
-	return BNIsViewModified(m_view);
+	return BNIsViewModified(m_object);
 }
 
 
@@ -452,7 +449,7 @@ void BinaryView::BeginUndoActions()
 
 void BinaryView::AddUndoAction(UndoAction* action)
 {
-	action->Add(m_view);
+	action->Add(m_object);
 }
 
 
@@ -494,27 +491,27 @@ bool BinaryView::Navigate(const string& view, uint64_t offset)
 
 DataBuffer BinaryView::ReadBuffer(uint64_t offset, size_t len)
 {
-	BNDataBuffer* result = BNReadViewBuffer(m_view, offset, len);
+	BNDataBuffer* result = BNReadViewBuffer(m_object, offset, len);
 	return DataBuffer(result);
 }
 
 
 size_t BinaryView::WriteBuffer(uint64_t offset, const DataBuffer& data)
 {
-	return BNWriteViewBuffer(m_view, offset, data.GetBufferObject());
+	return BNWriteViewBuffer(m_object, offset, data.GetBufferObject());
 }
 
 
 size_t BinaryView::InsertBuffer(uint64_t offset, const DataBuffer& data)
 {
-	return BNInsertViewBuffer(m_view, offset, data.GetBufferObject());
+	return BNInsertViewBuffer(m_object, offset, data.GetBufferObject());
 }
 
 
 vector<BNModificationStatus> BinaryView::GetModification(uint64_t offset, size_t len)
 {
 	BNModificationStatus* mod = new BNModificationStatus[len];
-	len = BNGetModificationArray(m_view, offset, mod, len);
+	len = BNGetModificationArray(m_object, offset, mod, len);
 
 	vector<BNModificationStatus> result;
 	for (size_t i = 0; i < len; i++)
@@ -527,109 +524,109 @@ vector<BNModificationStatus> BinaryView::GetModification(uint64_t offset, size_t
 
 uint64_t BinaryView::GetEnd() const
 {
-	return BNGetEndOffset(m_view);
+	return BNGetEndOffset(m_object);
 }
 
 
 bool BinaryView::Save(const string& path)
 {
-	return BNSaveToFilename(m_view, path.c_str());
+	return BNSaveToFilename(m_object, path.c_str());
 }
 
 
 void BinaryView::RegisterNotification(BinaryDataNotification* notify)
 {
-	BNRegisterDataNotification(m_view, notify->GetCallbacks());
+	BNRegisterDataNotification(m_object, notify->GetCallbacks());
 }
 
 
 void BinaryView::UnregisterNotification(BinaryDataNotification* notify)
 {
-	BNUnregisterDataNotification(m_view, notify->GetCallbacks());
+	BNUnregisterDataNotification(m_object, notify->GetCallbacks());
 }
 
 
 size_t BinaryView::Read(void* dest, uint64_t offset, size_t len)
 {
-	return BNReadViewData(m_view, dest, offset, len);
+	return BNReadViewData(m_object, dest, offset, len);
 }
 
 
 size_t BinaryView::Write(uint64_t offset, const void* data, size_t len)
 {
-	return BNWriteViewData(m_view, offset, data, len);
+	return BNWriteViewData(m_object, offset, data, len);
 }
 
 
 size_t BinaryView::Insert(uint64_t offset, const void* data, size_t len)
 {
-	return BNInsertViewData(m_view, offset, data, len);
+	return BNInsertViewData(m_object, offset, data, len);
 }
 
 
 size_t BinaryView::Remove(uint64_t offset, uint64_t len)
 {
-	return BNRemoveViewData(m_view, offset, len);
+	return BNRemoveViewData(m_object, offset, len);
 }
 
 
 BNModificationStatus BinaryView::GetModification(uint64_t offset)
 {
-	return BNGetModification(m_view, offset);
+	return BNGetModification(m_object, offset);
 }
 
 
 bool BinaryView::IsValidOffset(uint64_t offset) const
 {
-	return BNIsValidOffset(m_view, offset);
+	return BNIsValidOffset(m_object, offset);
 }
 
 
 bool BinaryView::IsOffsetReadable(uint64_t offset) const
 {
-	return BNIsOffsetReadable(m_view, offset);
+	return BNIsOffsetReadable(m_object, offset);
 }
 
 
 bool BinaryView::IsOffsetWritable(uint64_t offset) const
 {
-	return BNIsOffsetWritable(m_view, offset);
+	return BNIsOffsetWritable(m_object, offset);
 }
 
 
 bool BinaryView::IsOffsetExecutable(uint64_t offset) const
 {
-	return BNIsOffsetExecutable(m_view, offset);
+	return BNIsOffsetExecutable(m_object, offset);
 }
 
 
 uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
 {
-	return BNGetNextValidOffset(m_view, offset);
+	return BNGetNextValidOffset(m_object, offset);
 }
 
 
 uint64_t BinaryView::GetStart() const
 {
-	return BNGetStartOffset(m_view);
+	return BNGetStartOffset(m_object);
 }
 
 
 uint64_t BinaryView::GetLength() const
 {
-	return BNGetViewLength(m_view);
+	return BNGetViewLength(m_object);
 }
 
 
 uint64_t BinaryView::GetEntryPoint() const
 {
-	return BNGetEntryPoint(m_view);
+	return BNGetEntryPoint(m_object);
 }
 
 
 Ref<Architecture> BinaryView::GetDefaultArchitecture() const
 {
-	BNArchitecture* arch = BNGetDefaultArchitecture(m_view);
+	BNArchitecture* arch = BNGetDefaultArchitecture(m_object);
 	if (!arch)
 		return nullptr;
 	return new CoreArchitecture(arch);
@@ -639,15 +636,15 @@ Ref<Architecture> BinaryView::GetDefaultArchitecture() const
 void BinaryView::SetDefaultArchitecture(Architecture* arch)
 {
 	if (arch)
-		BNSetDefaultArchitecture(m_view, arch->GetArchitectureObject());
+		BNSetDefaultArchitecture(m_object, arch->GetObject());
 	else
-		BNSetDefaultArchitecture(m_view, nullptr);
+		BNSetDefaultArchitecture(m_object, nullptr);
 }
 
 
 Ref<Platform> BinaryView::GetDefaultPlatform() const
 {
-	BNPlatform* platform = BNGetDefaultPlatform(m_view);
+	BNPlatform* platform = BNGetDefaultPlatform(m_object);
 	if (!platform)
 		return nullptr;
 	return new Platform(platform);
@@ -657,76 +654,76 @@ Ref<Platform> BinaryView::GetDefaultPlatform() const
 void BinaryView::SetDefaultPlatform(Platform* platform)
 {
 	if (platform)
-		BNSetDefaultPlatform(m_view, platform->GetPlatformObject());
+		BNSetDefaultPlatform(m_object, platform->GetObject());
 	else
-		BNSetDefaultPlatform(m_view, nullptr);
+		BNSetDefaultPlatform(m_object, nullptr);
 }
 
 
 BNEndianness BinaryView::GetDefaultEndianness() const
 {
-	return BNGetDefaultEndianness(m_view);
+	return BNGetDefaultEndianness(m_object);
 }
 
 
 size_t BinaryView::GetAddressSize() const
 {
-	return BNGetViewAddressSize(m_view);
+	return BNGetViewAddressSize(m_object);
 }
 
 
 bool BinaryView::IsExecutable() const
 {
-	return BNIsExecutableView(m_view);
+	return BNIsExecutableView(m_object);
 }
 
 
 bool BinaryView::Save(FileAccessor* file)
 {
-	return BNSaveToFile(m_view, file->GetCallbacks());
+	return BNSaveToFile(m_object, file->GetCallbacks());
 }
 
 
 void BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr)
 {
-	BNAddFunctionForAnalysis(m_view, platform->GetPlatformObject(), addr);
+	BNAddFunctionForAnalysis(m_object, platform->GetObject(), addr);
 }
 
 
 void BinaryView::AddEntryPointForAnalysis(Platform* platform, uint64_t addr)
 {
-	BNAddEntryPointForAnalysis(m_view, platform->GetPlatformObject(), addr);
+	BNAddEntryPointForAnalysis(m_object, platform->GetObject(), addr);
 }
 
 
 void BinaryView::RemoveAnalysisFunction(Function* func)
 {
-	BNRemoveAnalysisFunction(m_view, func->GetFunctionObject());
+	BNRemoveAnalysisFunction(m_object, func->GetObject());
 }
 
 
 void BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
 {
-	BNCreateUserFunction(m_view, platform->GetPlatformObject(), start);
+	BNCreateUserFunction(m_object, platform->GetObject(), start);
 }
 
 
 void BinaryView::UpdateAnalysis()
 {
-	BNUpdateAnalysis(m_view);
+	BNUpdateAnalysis(m_object);
 }
 
 
 void BinaryView::AbortAnalysis()
 {
-	BNAbortAnalysis(m_view);
+	BNAbortAnalysis(m_object);
 }
 
 
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;
-	BNFunction** list = BNGetAnalysisFunctionList(m_view, &count);
+	BNFunction** list = BNGetAnalysisFunctionList(m_object, &count);
 
 	vector<Ref<Function>> result;
 	for (size_t i = 0; i < count; i++)
@@ -739,13 +736,13 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 
 bool BinaryView::HasFunctions() const
 {
-	return BNHasFunctions(m_view);
+	return BNHasFunctions(m_object);
 }
 
 
 Ref<Function> BinaryView::GetAnalysisFunction(Platform* platform, uint64_t addr)
 {
-	BNFunction* func = BNGetAnalysisFunction(m_view, platform->GetPlatformObject(), addr);
+	BNFunction* func = BNGetAnalysisFunction(m_object, platform->GetObject(), addr);
 	if (!func)
 		return nullptr;
 	return new Function(func);
@@ -754,7 +751,7 @@ Ref<Function> BinaryView::GetAnalysisFunction(Platform* platform, uint64_t addr)
 
 Ref<Function> BinaryView::GetRecentAnalysisFunctionForAddress(uint64_t addr)
 {
-	BNFunction* func = BNGetRecentAnalysisFunctionForAddress(m_view, addr);
+	BNFunction* func = BNGetRecentAnalysisFunctionForAddress(m_object, addr);
 	if (!func)
 		return nullptr;
 	return new Function(func);
@@ -764,7 +761,7 @@ Ref<Function> BinaryView::GetRecentAnalysisFunctionForAddress(uint64_t addr)
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionsForAddress(uint64_t addr)
 {
 	size_t count;
-	BNFunction** list = BNGetAnalysisFunctionsForAddress(m_view, addr, &count);
+	BNFunction** list = BNGetAnalysisFunctionsForAddress(m_object, addr, &count);
 
 	vector<Ref<Function>> result;
 	for (size_t i = 0; i < count; i++)
@@ -777,7 +774,7 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionsForAddress(uint64_t addr)
 
 Ref<Function> BinaryView::GetAnalysisEntryPoint()
 {
-	BNFunction* func = BNGetAnalysisEntryPoint(m_view);
+	BNFunction* func = BNGetAnalysisEntryPoint(m_object);
 	if (!func)
 		return nullptr;
 	return new Function(func);
@@ -786,7 +783,7 @@ Ref<Function> BinaryView::GetAnalysisEntryPoint()
 
 Ref<BasicBlock> BinaryView::GetRecentBasicBlockForAddress(uint64_t addr)
 {
-	BNBasicBlock* block = BNGetRecentBasicBlockForAddress(m_view, addr);
+	BNBasicBlock* block = BNGetRecentBasicBlockForAddress(m_object, addr);
 	if (!block)
 		return nullptr;
 	return new BasicBlock(block);
@@ -796,7 +793,7 @@ Ref<BasicBlock> BinaryView::GetRecentBasicBlockForAddress(uint64_t addr)
 vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetBasicBlocksForAddress(m_view, addr, &count);
+	BNBasicBlock** blocks = BNGetBasicBlocksForAddress(m_object, addr, &count);
 
 	vector<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -810,7 +807,7 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 {
 	size_t count;
-	BNReferenceSource* refs = BNGetCodeReferences(m_view, addr, &count);
+	BNReferenceSource* refs = BNGetCodeReferences(m_object, addr, &count);
 
 	vector<ReferenceSource> result;
 	for (size_t i = 0; i < count; i++)
@@ -830,7 +827,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t len)
 {
 	size_t count;
-	BNReferenceSource* refs = BNGetCodeReferencesInRange(m_view, addr, len, &count);
+	BNReferenceSource* refs = BNGetCodeReferencesInRange(m_object, addr, len, &count);
 
 	vector<ReferenceSource> result;
 	for (size_t i = 0; i < count; i++)
@@ -849,7 +846,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t le
 
 Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr)
 {
-	BNSymbol* sym = BNGetSymbolByAddress(m_view, addr);
+	BNSymbol* sym = BNGetSymbolByAddress(m_object, addr);
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);
@@ -858,7 +855,7 @@ Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr)
 
 Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name)
 {
-	BNSymbol* sym = BNGetSymbolByRawName(m_view, name.c_str());
+	BNSymbol* sym = BNGetSymbolByRawName(m_object, name.c_str());
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);
@@ -868,7 +865,7 @@ Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name)
 vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsByName(m_view, name.c_str(), &count);
+	BNSymbol** syms = BNGetSymbolsByName(m_object, name.c_str(), &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -882,7 +879,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
 vector<Ref<Symbol>> BinaryView::GetSymbols()
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbols(m_view, &count);
+	BNSymbol** syms = BNGetSymbols(m_object, &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -896,7 +893,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols()
 vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsInRange(m_view, start, len, &count);
+	BNSymbol** syms = BNGetSymbolsInRange(m_object, start, len, &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -910,7 +907,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
 vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsOfType(m_view, type, &count);
+	BNSymbol** syms = BNGetSymbolsOfType(m_object, type, &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -924,7 +921,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
 vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_view, type, start, len, &count);
+	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_object, type, start, len, &count);
 
 	vector<Ref<Symbol>> result;
 	for (size_t i = 0; i < count; i++)
@@ -937,92 +934,92 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 
 void BinaryView::DefineAutoSymbol(Symbol* sym)
 {
-	BNDefineAutoSymbol(m_view, sym->GetSymbolObject());
+	BNDefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
 void BinaryView::UndefineAutoSymbol(Symbol* sym)
 {
-	BNUndefineAutoSymbol(m_view, sym->GetSymbolObject());
+	BNUndefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
 void BinaryView::DefineUserSymbol(Symbol* sym)
 {
-	BNDefineUserSymbol(m_view, sym->GetSymbolObject());
+	BNDefineUserSymbol(m_object, sym->GetObject());
 }
 
 
 void BinaryView::UndefineUserSymbol(Symbol* sym)
 {
-	BNUndefineUserSymbol(m_view, sym->GetSymbolObject());
+	BNUndefineUserSymbol(m_object, sym->GetObject());
 }
 
 
 bool BinaryView::IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {
-	return BNIsNeverBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+	return BNIsNeverBranchPatchAvailable(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {
-	return BNIsAlwaysBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+	return BNIsAlwaysBranchPatchAvailable(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {
-	return BNIsInvertBranchPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+	return BNIsInvertBranchPatchAvailable(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::IsSkipAndReturnZeroPatchAvailable(Architecture* arch, uint64_t addr)
 {
-	return BNIsSkipAndReturnZeroPatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+	return BNIsSkipAndReturnZeroPatchAvailable(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr)
 {
-	return BNIsSkipAndReturnValuePatchAvailable(m_view, arch->GetArchitectureObject(), addr);
+	return BNIsSkipAndReturnValuePatchAvailable(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::ConvertToNop(Architecture* arch, uint64_t addr)
 {
-	return BNConvertToNop(m_view, arch->GetArchitectureObject(), addr);
+	return BNConvertToNop(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::AlwaysBranch(Architecture* arch, uint64_t addr)
 {
-	return BNAlwaysBranch(m_view, arch->GetArchitectureObject(), addr);
+	return BNAlwaysBranch(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::InvertBranch(Architecture* arch, uint64_t addr)
 {
-	return BNInvertBranch(m_view, arch->GetArchitectureObject(), addr);
+	return BNInvertBranch(m_object, arch->GetObject(), addr);
 }
 
 
 bool BinaryView::SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value)
 {
-	return BNSkipAndReturnValue(m_view, arch->GetArchitectureObject(), addr, value);
+	return BNSkipAndReturnValue(m_object, arch->GetObject(), addr, value);
 }
 
 
 size_t BinaryView::GetInstructionLength(Architecture* arch, uint64_t addr)
 {
-	return BNGetInstructionLength(m_view, arch->GetArchitectureObject(), addr);
+	return BNGetInstructionLength(m_object, arch->GetObject(), addr);
 }
 
 
 vector<BNStringReference> BinaryView::GetStrings()
 {
 	size_t count;
-	BNStringReference* strings = BNGetStrings(m_view, &count);
+	BNStringReference* strings = BNGetStrings(m_object, &count);
 	vector<BNStringReference> result;
 	result.insert(result.end(), strings, strings + count);
 	BNFreeStringList(strings);
@@ -1033,7 +1030,7 @@ vector<BNStringReference> BinaryView::GetStrings()
 vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 {
 	size_t count;
-	BNStringReference* strings = BNGetStringsInRange(m_view, start, len, &count);
+	BNStringReference* strings = BNGetStringsInRange(m_object, start, len, &count);
 	vector<BNStringReference> result;
 	result.insert(result.end(), strings, strings + count);
 	BNFreeStringList(strings);
@@ -1041,30 +1038,30 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 }
 
 
-BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetFileObject()))
+BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const DataBuffer& data):
-	BinaryView(BNCreateBinaryDataViewFromBuffer(file->GetFileObject(), data.GetBufferObject()))
+	BinaryView(BNCreateBinaryDataViewFromBuffer(file->GetObject(), data.GetBufferObject()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const void* data, size_t len):
-	BinaryView(BNCreateBinaryDataViewFromData(file->GetFileObject(), data, len))
+	BinaryView(BNCreateBinaryDataViewFromData(file->GetObject(), data, len))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, const string& path):
-	BinaryView(BNCreateBinaryDataViewFromFilename(file->GetFileObject(), path.c_str()))
+	BinaryView(BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str()))
 {
 }
 
 
 BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor):
-	BinaryView(BNCreateBinaryDataViewFromFile(file->GetFileObject(), accessor->GetCallbacks()))
+	BinaryView(BNCreateBinaryDataViewFromFile(file->GetObject(), accessor->GetCallbacks()))
 {
 }

@@ -4,57 +4,52 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-Function::Function(BNFunction* func): m_func(func)
+Function::Function(BNFunction* func)
 {
-}
-
-
-Function::~Function()
-{
-	BNFreeFunction(m_func);
+	m_object = func;
 }
 
 
 Ref<Platform> Function::GetPlatform() const
 {
-	return new Platform(BNGetFunctionPlatform(m_func));
+	return new Platform(BNGetFunctionPlatform(m_object));
 }
 
 
 Ref<Architecture> Function::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetFunctionArchitecture(m_func));
+	return new CoreArchitecture(BNGetFunctionArchitecture(m_object));
 }
 
 
 uint64_t Function::GetStart() const
 {
-	return BNGetFunctionStart(m_func);
+	return BNGetFunctionStart(m_object);
 }
 
 
 Ref<Symbol> Function::GetSymbol() const
 {
-	return new Symbol(BNGetFunctionSymbol(m_func));
+	return new Symbol(BNGetFunctionSymbol(m_object));
 }
 
 
 bool Function::WasAutomaticallyDiscovered() const
 {
-	return BNWasFunctionAutomaticallyDiscovered(m_func);
+	return BNWasFunctionAutomaticallyDiscovered(m_object);
 }
 
 
 bool Function::CanReturn() const
 {
-	return BNCanFunctionReturn(m_func);
+	return BNCanFunctionReturn(m_object);
 }
 
 
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetFunctionBasicBlockList(m_func, &count);
+	BNBasicBlock** blocks = BNGetFunctionBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -67,13 +62,13 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 
 void Function::MarkRecentUse()
 {
-	BNMarkFunctionAsRecentlyUsed(m_func);
+	BNMarkFunctionAsRecentlyUsed(m_object);
 }
 
 
 string Function::GetCommentForAddress(uint64_t addr) const
 {
-	char* comment = BNGetCommentForAddress(m_func, addr);
+	char* comment = BNGetCommentForAddress(m_object, addr);
 	string result = comment;
 	BNFreeString(comment);
 	return result;
@@ -83,7 +78,7 @@ string Function::GetCommentForAddress(uint64_t addr) const
 vector<uint64_t> Function::GetCommentedAddresses() const
 {
 	size_t count;
-	uint64_t* addrs = BNGetCommentedAddresses(m_func, &count);
+	uint64_t* addrs = BNGetCommentedAddresses(m_object, &count);
 	vector<uint64_t> result;
 	result.insert(result.end(), addrs, &addrs[count]);
 	BNFreeAddressList(addrs);
@@ -93,20 +88,20 @@ vector<uint64_t> Function::GetCommentedAddresses() const
 
 void Function::SetCommentForAddress(uint64_t addr, const string& comment)
 {
-	BNSetCommentForAddress(m_func, addr, comment.c_str());
+	BNSetCommentForAddress(m_object, addr, comment.c_str());
 }
 
 
 Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 {
-	return new LowLevelILFunction(BNGetFunctionLowLevelIL(m_func));
+	return new LowLevelILFunction(BNGetFunctionLowLevelIL(m_object));
 }
 
 
 vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetFunctionLowLevelILBasicBlockList(m_func, &count);
+	BNBasicBlock** blocks = BNGetFunctionLowLevelILBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -119,14 +114,14 @@ vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
 
 size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
-	return BNGetLowLevelILForInstruction(m_func, arch->GetArchitectureObject(), addr);
+	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
 }
 
 
 vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	size_t* exits = BNGetLowLevelILExitsForInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+	size_t* exits = BNGetLowLevelILExitsForInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<size_t> result;
 	result.insert(result.end(), exits, &exits[count]);
@@ -138,32 +133,32 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 
 BNRegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
-	return BNGetRegisterValueAtInstruction(m_func, arch->GetArchitectureObject(), addr, reg);
+	return BNGetRegisterValueAtInstruction(m_object, arch->GetObject(), addr, reg);
 }
 
 
 BNRegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
-	return BNGetRegisterValueAfterInstruction(m_func, arch->GetArchitectureObject(), addr, reg);
+	return BNGetRegisterValueAfterInstruction(m_object, arch->GetObject(), addr, reg);
 }
 
 
 BNRegisterValue Function::GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg)
 {
-	return BNGetRegisterValueAtLowLevelILInstruction(m_func, i, reg);
+	return BNGetRegisterValueAtLowLevelILInstruction(m_object, i, reg);
 }
 
 
 BNRegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg)
 {
-	return BNGetRegisterValueAfterLowLevelILInstruction(m_func, i, reg);
+	return BNGetRegisterValueAfterLowLevelILInstruction(m_object, i, reg);
 }
 
 
 vector<uint32_t> Function::GetRegistersReadByInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	uint32_t* regs = BNGetRegistersReadByInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+	uint32_t* regs = BNGetRegistersReadByInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
@@ -176,7 +171,7 @@ vector<uint32_t> Function::GetRegistersReadByInstruction(Architecture* arch, uin
 vector<uint32_t> Function::GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	uint32_t* regs = BNGetRegistersWrittenByInstruction(m_func, arch->GetArchitectureObject(), addr, &count);
+	uint32_t* regs = BNGetRegistersWrittenByInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
@@ -188,18 +183,18 @@ vector<uint32_t> Function::GetRegistersWrittenByInstruction(Architecture* arch, 
 
 Ref<Type> Function::GetType() const
 {
-	return new Type(BNGetFunctionType(m_func));
+	return new Type(BNGetFunctionType(m_object));
 }
 
 
 void Function::ApplyImportedTypes(Symbol* sym)
 {
-	BNApplyImportedTypes(m_func, sym->GetSymbolObject());
+	BNApplyImportedTypes(m_object, sym->GetObject());
 }
 
 
 Ref<FunctionGraph> Function::CreateFunctionGraph()
 {
-	BNFunctionGraph* graph = BNCreateFunctionGraph(m_func);
+	BNFunctionGraph* graph = BNCreateFunctionGraph(m_object);
 	return new FunctionGraph(graph);
 }

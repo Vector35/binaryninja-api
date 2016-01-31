@@ -4,32 +4,27 @@ using namespace std;
 using namespace BinaryNinja;
 
 
-Platform::Platform(BNPlatform* platform): m_platform(platform)
+Platform::Platform(BNPlatform* platform)
 {
+	m_object = platform;
 }
 
 
 Platform::Platform(Architecture* arch, const string& name)
 {
-	m_platform = BNCreatePlatform(arch->GetArchitectureObject(), name.c_str());
-}
-
-
-Platform::~Platform()
-{
-	BNFreePlatform(m_platform);
+	m_object = BNCreatePlatform(arch->GetObject(), name.c_str());
 }
 
 
 Ref<Architecture> Platform::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetPlatformArchitecture(m_platform));
+	return new CoreArchitecture(BNGetPlatformArchitecture(m_object));
 }
 
 
 string Platform::GetName() const
 {
-	char* str = BNGetPlatformName(m_platform);
+	char* str = BNGetPlatformName(m_object);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -38,7 +33,7 @@ string Platform::GetName() const
 
 void Platform::Register(const string& os, Platform* platform)
 {
-	BNRegisterPlatform(os.c_str(), platform->GetPlatformObject());
+	BNRegisterPlatform(os.c_str(), platform->GetObject());
 }
 
 
@@ -68,7 +63,7 @@ vector<Ref<Platform>> Platform::GetList()
 vector<Ref<Platform>> Platform::GetList(Architecture* arch)
 {
 	size_t count;
-	BNPlatform** list = BNGetPlatformListByArchitecture(arch->GetArchitectureObject(), &count);
+	BNPlatform** list = BNGetPlatformListByArchitecture(arch->GetObject(), &count);
 
 	vector<Ref<Platform>> result;
 	for (size_t i = 0; i < count; i++)
@@ -96,7 +91,7 @@ vector<Ref<Platform>> Platform::GetList(const string& os)
 vector<Ref<Platform>> Platform::GetList(const string& os, Architecture* arch)
 {
 	size_t count;
-	BNPlatform** list = BNGetPlatformListByOSAndArchitecture(os.c_str(), arch->GetArchitectureObject(), &count);
+	BNPlatform** list = BNGetPlatformListByOSAndArchitecture(os.c_str(), arch->GetObject(), &count);
 
 	vector<Ref<Platform>> result;
 	for (size_t i = 0; i < count; i++)
@@ -123,7 +118,7 @@ vector<std::string> Platform::GetOSList()
 
 Ref<CallingConvention> Platform::GetDefaultCallingConvention() const
 {
-	BNCallingConvention* cc = BNGetPlatformDefaultCallingConvention(m_platform);
+	BNCallingConvention* cc = BNGetPlatformDefaultCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -132,7 +127,7 @@ Ref<CallingConvention> Platform::GetDefaultCallingConvention() const
 
 Ref<CallingConvention> Platform::GetCdeclCallingConvention() const
 {
-	BNCallingConvention* cc = BNGetPlatformCdeclCallingConvention(m_platform);
+	BNCallingConvention* cc = BNGetPlatformCdeclCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -141,7 +136,7 @@ Ref<CallingConvention> Platform::GetCdeclCallingConvention() const
 
 Ref<CallingConvention> Platform::GetStdcallCallingConvention() const
 {
-	BNCallingConvention* cc = BNGetPlatformStdcallCallingConvention(m_platform);
+	BNCallingConvention* cc = BNGetPlatformStdcallCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -150,7 +145,7 @@ Ref<CallingConvention> Platform::GetStdcallCallingConvention() const
 
 Ref<CallingConvention> Platform::GetFastcallCallingConvention() const
 {
-	BNCallingConvention* cc = BNGetPlatformFastcallCallingConvention(m_platform);
+	BNCallingConvention* cc = BNGetPlatformFastcallCallingConvention(m_object);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
@@ -160,7 +155,7 @@ Ref<CallingConvention> Platform::GetFastcallCallingConvention() const
 vector<Ref<CallingConvention>> Platform::GetCallingConventions() const
 {
 	size_t count;
-	BNCallingConvention** list = BNGetPlatformCallingConventions(m_platform, &count);
+	BNCallingConvention** list = BNGetPlatformCallingConventions(m_object, &count);
 
 	vector<Ref<CallingConvention>> result;
 	for (size_t i = 0; i < count; i++)
@@ -173,37 +168,37 @@ vector<Ref<CallingConvention>> Platform::GetCallingConventions() const
 
 void Platform::RegisterCallingConvention(CallingConvention* cc)
 {
-	BNRegisterPlatformCallingConvention(m_platform, cc->GetCallingConventionObject());
+	BNRegisterPlatformCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Platform::RegisterDefaultCallingConvention(CallingConvention* cc)
 {
-	BNRegisterPlatformDefaultCallingConvention(m_platform, cc->GetCallingConventionObject());
+	BNRegisterPlatformDefaultCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Platform::RegisterCdeclCallingConvention(CallingConvention* cc)
 {
-	BNRegisterPlatformCdeclCallingConvention(m_platform, cc->GetCallingConventionObject());
+	BNRegisterPlatformCdeclCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Platform::RegisterStdcallCallingConvention(CallingConvention* cc)
 {
-	BNRegisterPlatformStdcallCallingConvention(m_platform, cc->GetCallingConventionObject());
+	BNRegisterPlatformStdcallCallingConvention(m_object, cc->GetObject());
 }
 
 
 void Platform::RegisterFastcallCallingConvention(CallingConvention* cc)
 {
-	BNRegisterPlatformFastcallCallingConvention(m_platform, cc->GetCallingConventionObject());
+	BNRegisterPlatformFastcallCallingConvention(m_object, cc->GetObject());
 }
 
 
 Ref<Platform> Platform::GetRelatedPlatform(Architecture* arch)
 {
-	BNPlatform* platform = BNGetRelatedPlatform(m_platform, arch->GetArchitectureObject());
+	BNPlatform* platform = BNGetRelatedPlatform(m_object, arch->GetObject());
 	if (!platform)
 		return nullptr;
 	return new Platform(platform);
@@ -212,5 +207,5 @@ Ref<Platform> Platform::GetRelatedPlatform(Architecture* arch)
 
 void Platform::AddRelatedPlatform(Architecture* arch, Platform* platform)
 {
-	BNAddRelatedPlatform(m_platform, arch->GetArchitectureObject(), platform->GetPlatformObject());
+	BNAddRelatedPlatform(m_object, arch->GetObject(), platform->GetObject());
 }

@@ -49,6 +49,110 @@ namespace BinaryNinja
 		}
 	};
 
+	template <class T, T* (*AddObjectReference)(T*), void (*FreeObjectReference)(T*)>
+	class CoreRefCountObject
+	{
+		void AddRefInternal()
+		{
+#ifdef WIN32
+			InterlockedIncrement((LONG*)&m_refs);
+#else
+			__sync_fetch_and_add(&m_refs, 1);
+#endif
+		}
+
+		void ReleaseInternal()
+		{
+#ifdef WIN32
+			if (InterlockedDecrement((LONG*)&m_refs) == 0)
+				delete this;
+#else
+			if (__sync_fetch_and_add(&m_refs, -1) == 1)
+				delete this;
+#endif
+		}
+
+	public:
+		int m_refs;
+		T* m_object;
+		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
+		virtual ~CoreRefCountObject() {}
+
+		T* GetObject() { return m_object; }
+
+		void AddRef()
+		{
+			if (m_object && (m_refs != 0))
+				AddObjectReference(m_object);
+			AddRefInternal();
+		}
+
+		void Release()
+		{
+			if (m_object)
+				FreeObjectReference(m_object);
+			ReleaseInternal();
+		}
+
+		void AddRefForRegistration()
+		{
+			AddRefInternal();
+		}
+
+		void ReleaseForRegistration()
+		{
+			m_object = nullptr;
+			ReleaseInternal();
+		}
+	};
+
+	template <class T>
+	class StaticCoreRefCountObject
+	{
+		void AddRefInternal()
+		{
+#ifdef WIN32
+			InterlockedIncrement((LONG*)&m_refs);
+#else
+			__sync_fetch_and_add(&m_refs, 1);
+#endif
+		}
+
+		void ReleaseInternal()
+		{
+#ifdef WIN32
+			if (InterlockedDecrement((LONG*)&m_refs) == 0)
+				delete this;
+#else
+			if (__sync_fetch_and_add(&m_refs, -1) == 1)
+				delete this;
+#endif
+		}
+
+	public:
+		int m_refs;
+		T* m_object;
+		StaticCoreRefCountObject(): m_refs(0), m_object(nullptr) {}
+		virtual ~StaticCoreRefCountObject() {}
+
+		T* GetObject() { return m_object; }
+
+		void AddRef()
+		{
+			AddRefInternal();
+		}
+
+		void Release()
+		{
+			ReleaseInternal();
+		}
+
+		void AddRefForRegistration()
+		{
+			AddRefInternal();
+		}
+	};
+
 	template <class T>
 	class Ref
 	{
@@ -236,18 +340,15 @@ namespace BinaryNinja
 		bool ZlibDecompress(DataBuffer& output) const;
 	};
 
-	class TemporaryFile: public RefCountObject
+	class TemporaryFile: public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
 	{
-		BNTemporaryFile* m_file;
-
 	public:
 		TemporaryFile();
 		TemporaryFile(const DataBuffer& contents);
 		TemporaryFile(const std::string& contents);
 		TemporaryFile(BNTemporaryFile* file);
-		~TemporaryFile();
 
-		bool IsValid() const { return m_file != nullptr; }
+		bool IsValid() const { return m_object != nullptr; }
 		std::string GetPath() const;
 		DataBuffer GetContents();
 	};
@@ -280,6 +381,7 @@ namespace BinaryNinja
 		std::string m_typeName;
 		BNActionType m_actionType;
 
+		static void FreeCallback(void* ctxt);
 		static void UndoCallback(void* ctxt, BNBinaryView* data);
 		static void RedoCallback(void* ctxt, BNBinaryView* data);
 		static char* SerializeCallback(void* ctxt);
@@ -315,17 +417,12 @@ namespace BinaryNinja
 		virtual UndoAction* Deserialize(const Json::Value& data) = 0;
 	};
 
-	class FileMetadata: public RefCountObject
+	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
 	{
-		BNFileMetadata* m_file;
-
 	public:
 		FileMetadata();
 		FileMetadata(const std::string& filename);
 		FileMetadata(BNFileMetadata* file);
-		~FileMetadata();
-
-		BNFileMetadata* GetFileObject() const { return m_file; }
 
 		void Close();
 
@@ -427,18 +524,13 @@ namespace BinaryNinja
 	class Function;
 	class BasicBlock;
 
-	class Symbol: public RefCountObject
+	class Symbol: public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
 	{
-		BNSymbol* m_sym;
-
 	public:
 		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName,
 		       const std::string& rawName, uint64_t addr);
 		Symbol(BNSymbolType type, const std::string& name, uint64_t addr);
 		Symbol(BNSymbol* sym);
-		virtual ~Symbol();
-
-		BNSymbol* GetSymbolObject() const { return m_sym; }
 
 		BNSymbolType GetType() const;
 		std::string GetShortName() const;
@@ -458,10 +550,9 @@ namespace BinaryNinja
 		uint64_t addr;
 	};
 
-	class BinaryView: public RefCountObject
+	class BinaryView: public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
 	protected:
-		BNBinaryView* m_view;
 		Ref<FileMetadata> m_file;
 
 		BinaryView(const std::string& typeName, FileMetadata* file);
@@ -492,6 +583,7 @@ namespace BinaryNinja
 
 	private:
 		static bool InitCallback(void* ctxt);
+		static void FreeCallback(void* ctxt);
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
 		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
 		static size_t InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
@@ -512,12 +604,10 @@ namespace BinaryNinja
 
 	public:
 		BinaryView(BNBinaryView* view);
-		virtual ~BinaryView();
 
 		virtual bool Init() { return true; }
 
 		FileMetadata* GetFile() const { return m_file; }
-		BNBinaryView* GetViewObject() const { return m_view; }
 		std::string GetTypeName() const;
 
 		bool IsModified() const;
@@ -641,10 +731,9 @@ namespace BinaryNinja
 
 	class Platform;
 
-	class BinaryViewType: public RefCountObject
+	class BinaryViewType: public StaticCoreRefCountObject<BNBinaryViewType>
 	{
 	protected:
-		BNBinaryViewType* m_type;
 		std::string m_nameForRegister, m_longNameForRegister;
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
@@ -798,10 +887,9 @@ namespace BinaryNinja
 		size_t fixedLength; // Variable length if zero
 	};
 
-	class Transform: public RefCountObject
+	class Transform: public StaticCoreRefCountObject<BNTransform>
 	{
 	protected:
-		BNTransform* m_xform;
 		BNTransformType m_typeForRegister;
 		std::string m_nameForRegister, m_longNameForRegister, m_groupForRegister;
 
@@ -869,10 +957,9 @@ namespace BinaryNinja
 
 	typedef size_t ExprId;
 
-	class Architecture: public RefCountObject
+	class Architecture: public StaticCoreRefCountObject<BNArchitecture>
 	{
 	protected:
-		BNArchitecture* m_arch;
 		std::string m_nameForRegister;
 
 		Architecture(BNArchitecture* arch);
@@ -915,8 +1002,6 @@ namespace BinaryNinja
 
 	public:
 		Architecture(const std::string& name);
-
-		BNArchitecture* GetArchitectureObject() const { return m_arch; }
 
 		static void Register(Architecture* arch);
 		static Ref<Architecture> GetByName(const std::string& name);
@@ -1035,15 +1120,10 @@ namespace BinaryNinja
 		Ref<Type> type;
 	};
 
-	class Type: public RefCountObject
+	class Type: public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
 	{
-		BNType* m_type;
-
 	public:
 		Type(BNType* type);
-		~Type();
-
-		BNType* GetTypeObject() const { return m_type; }
 
 		BNTypeClass GetClass() const;
 		uint64_t GetWidth() const;
@@ -1085,15 +1165,10 @@ namespace BinaryNinja
 		uint64_t offset;
 	};
 
-	class Structure: public RefCountObject
+	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
-		BNStructure* m_struct;
-
 	public:
 		Structure(BNStructure* s);
-		~Structure();
-
-		BNStructure* GetStructureObject() const { return m_struct; }
 
 		std::string GetName() const;
 		void SetName(const std::string& name);
@@ -1117,15 +1192,10 @@ namespace BinaryNinja
 		bool isDefault;
 	};
 
-	class Enumeration: public RefCountObject
+	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
-		BNEnumeration* m_enum;
-
 	public:
 		Enumeration(BNEnumeration* e);
-		~Enumeration();
-
-		BNEnumeration* GetEnumerationObject() const { return m_enum; }
 
 		std::string GetName() const;
 		void SetName(const std::string& name);
@@ -1145,13 +1215,10 @@ namespace BinaryNinja
 		Ref<Architecture> arch;
 	};
 
-	class BasicBlock: public RefCountObject
+	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
 	{
-		BNBasicBlock* m_block;
-
 	public:
 		BasicBlock(BNBasicBlock* block);
-		~BasicBlock();
 
 		Ref<Function> GetFunction() const;
 		Ref<Architecture> GetArchitecture() const;
@@ -1168,15 +1235,10 @@ namespace BinaryNinja
 
 	class FunctionGraph;
 
-	class Function: public RefCountObject
+	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
-		BNFunction* m_func;
-
 	public:
 		Function(BNFunction* func);
-		~Function();
-
-		BNFunction* GetFunctionObject() const { return m_func; }
 
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Platform> GetPlatform() const;
@@ -1223,15 +1285,11 @@ namespace BinaryNinja
 		std::vector<BNPoint> points;
 	};
 
-	class FunctionGraphBlock: public RefCountObject
+	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,
+		BNNewFunctionGraphBlockReference, BNFreeFunctionGraphBlock>
 	{
-		BNFunctionGraphBlock* m_block;
-
 	public:
 		FunctionGraphBlock(BNFunctionGraphBlock* block);
-		~FunctionGraphBlock();
-
-		BNFunctionGraphBlock* GetBlockObject() const { return m_block; }
 
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
@@ -1287,16 +1345,12 @@ namespace BinaryNinja
 		LowLevelILLabel();
 	};
 
-	class LowLevelILFunction: public RefCountObject
+	class LowLevelILFunction: public CoreRefCountObject<BNLowLevelILFunction,
+		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
-		BNLowLevelILFunction* m_func;
-
 	public:
 		LowLevelILFunction();
 		LowLevelILFunction(BNLowLevelILFunction* func);
-		~LowLevelILFunction();
-
-		BNLowLevelILFunction* GetFunctionObject() const { return m_func; }
 
 		uint64_t GetCurrentAddress() const;
 		void SetCurrentAddress(uint64_t addr);
@@ -1516,13 +1570,14 @@ namespace BinaryNinja
 		void Execute(const PluginCommandContext& ctxt) const;
 	};
 
-	class CallingConvention: public RefCountObject
+	class CallingConvention: public CoreRefCountObject<BNCallingConvention,
+		BNNewCallingConventionReference, BNFreeCallingConvention>
 	{
 	protected:
-		BNCallingConvention* m_callingConvention;
-
 		CallingConvention(BNCallingConvention* cc);
 		CallingConvention(Architecture* arch, const std::string& name);
+
+		static void FreeCallback(void* ctxt);
 
 		static uint32_t* GetCallerSavedRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count);
@@ -1537,9 +1592,6 @@ namespace BinaryNinja
 		static uint32_t GetFloatReturnValueRegisterCallback(void* ctxt);
 
 	public:
-		virtual ~CallingConvention();
-
-		BNCallingConvention* GetCallingConventionObject() const { return m_callingConvention; }
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;
 
@@ -1572,18 +1624,13 @@ namespace BinaryNinja
 		virtual uint32_t GetFloatReturnValueRegister() override;
 	};
 
-	class Platform: public RefCountObject
+	class Platform: public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>
 	{
 	protected:
-		BNPlatform* m_platform;
-
 		Platform(Architecture* arch, const std::string& name);
 
 	public:
 		Platform(BNPlatform* platform);
-		virtual ~Platform();
-
-		BNPlatform* GetPlatformObject() const { return m_platform; }
 
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;

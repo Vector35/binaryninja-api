@@ -1246,6 +1246,7 @@ namespace BinaryNinja
 		Ref<Symbol> GetSymbol() const;
 		bool WasAutomaticallyDiscovered() const;
 		bool CanReturn() const;
+		bool HasExplicitlyDefinedType() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();
@@ -1267,6 +1268,7 @@ namespace BinaryNinja
 
 		Ref<Type> GetType() const;
 		void ApplyImportedTypes(Symbol* sym);
+		void ApplyAutoDiscoveredType(Type* type);
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 	};

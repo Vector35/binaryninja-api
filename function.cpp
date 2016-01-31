@@ -46,6 +46,12 @@ bool Function::CanReturn() const
 }
 
 
+bool Function::HasExplicitlyDefinedType() const
+{
+	return BNFunctionHasExplicitlyDefinedType(m_object);
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;
@@ -190,6 +196,12 @@ Ref<Type> Function::GetType() const
 void Function::ApplyImportedTypes(Symbol* sym)
 {
 	BNApplyImportedTypes(m_object, sym->GetObject());
+}
+
+
+void Function::ApplyAutoDiscoveredType(Type* type)
+{
+	BNApplyAutoDiscoveredFunctionType(m_object, type->GetObject());
 }
 
 

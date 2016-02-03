@@ -702,6 +702,8 @@ namespace BinaryNinja
 		void DefineUserSymbol(Symbol* sym);
 		void UndefineUserSymbol(Symbol* sym);
 
+		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
+
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);

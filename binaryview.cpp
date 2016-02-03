@@ -956,6 +956,12 @@ void BinaryView::UndefineUserSymbol(Symbol* sym)
 }
 
 
+void BinaryView::DefineImportedFunction(Symbol* importAddressSym, Function* func)
+{
+	BNDefineImportedFunction(m_object, importAddressSym->GetObject(), func->GetObject());
+}
+
+
 bool BinaryView::IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {
 	return BNIsNeverBranchPatchAvailable(m_object, arch->GetObject(), addr);

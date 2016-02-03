@@ -166,6 +166,15 @@ vector<Ref<CallingConvention>> Platform::GetCallingConventions() const
 }
 
 
+Ref<CallingConvention> Platform::GetSystemCallConvention() const
+{
+	BNCallingConvention* cc = BNGetPlatformSystemCallConvention(m_object);
+	if (!cc)
+		return nullptr;
+	return new CoreCallingConvention(cc);
+}
+
+
 void Platform::RegisterCallingConvention(CallingConvention* cc)
 {
 	BNRegisterPlatformCallingConvention(m_object, cc->GetObject());
@@ -193,6 +202,12 @@ void Platform::RegisterStdcallCallingConvention(CallingConvention* cc)
 void Platform::RegisterFastcallCallingConvention(CallingConvention* cc)
 {
 	BNRegisterPlatformFastcallCallingConvention(m_object, cc->GetObject());
+}
+
+
+void Platform::SetSystemCallConvention(CallingConvention* cc)
+{
+	BNSetPlatformSystemCallConvention(m_object, cc ? cc->GetObject() : nullptr);
 }
 
 

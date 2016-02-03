@@ -1650,12 +1650,14 @@ namespace BinaryNinja
 		Ref<CallingConvention> GetStdcallCallingConvention() const;
 		Ref<CallingConvention> GetFastcallCallingConvention() const;
 		std::vector<Ref<CallingConvention>> GetCallingConventions() const;
+		Ref<CallingConvention> GetSystemCallConvention() const;
 
 		void RegisterCallingConvention(CallingConvention* cc);
 		void RegisterDefaultCallingConvention(CallingConvention* cc);
 		void RegisterCdeclCallingConvention(CallingConvention* cc);
 		void RegisterStdcallCallingConvention(CallingConvention* cc);
 		void RegisterFastcallCallingConvention(CallingConvention* cc);
+		void SetSystemCallConvention(CallingConvention* cc);
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);

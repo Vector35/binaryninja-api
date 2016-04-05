@@ -193,7 +193,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 BinaryView::BinaryView(BNBinaryView* view)
 {
 	m_object = view;
-	m_file = new FileMetadata(BNNewFileReference(BNGetFileForView(m_object)));
+	m_file = new FileMetadata(BNGetFileForView(m_object));
 }
 
 

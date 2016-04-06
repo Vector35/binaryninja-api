@@ -1273,6 +1273,12 @@ namespace BinaryNinja
 		void ApplyAutoDiscoveredType(Type* type);
 
 		Ref<FunctionGraph> CreateFunctionGraph();
+
+		std::map<int64_t, NameAndType> GetStackLayout();
+		void CreateAutoStackVariable(int64_t offset, Type* type, const std::string& name);
+		void CreateUserStackVariable(int64_t offset, Type* type, const std::string& name);
+		void DeleteAutoStackVariable(int64_t offset);
+		void DeleteUserStackVariable(int64_t offset);
 	};
 
 	struct FunctionGraphTextLine

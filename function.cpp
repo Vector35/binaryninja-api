@@ -210,3 +210,46 @@ Ref<FunctionGraph> Function::CreateFunctionGraph()
 	BNFunctionGraph* graph = BNCreateFunctionGraph(m_object);
 	return new FunctionGraph(graph);
 }
+
+
+map<int64_t, NameAndType> Function::GetStackLayout()
+{
+	size_t count;
+	BNStackVariable* vars = BNGetStackLayout(m_object, &count);
+
+	map<int64_t, NameAndType> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		NameAndType nt;
+		nt.name = vars[i].name;
+		nt.type = new Type(BNNewTypeReference(vars[i].type));
+		result[vars[i].offset] = nt;
+	}
+
+	BNFreeStackLayout(vars, count);
+	return result;
+}
+
+
+void Function::CreateAutoStackVariable(int64_t offset, Type* type, const string& name)
+{
+	BNCreateAutoStackVariable(m_object, offset, type->GetObject(), name.c_str());
+}
+
+
+void Function::CreateUserStackVariable(int64_t offset, Type* type, const string& name)
+{
+	BNCreateUserStackVariable(m_object, offset, type->GetObject(), name.c_str());
+}
+
+
+void Function::DeleteAutoStackVariable(int64_t offset)
+{
+	BNDeleteAutoStackVariable(m_object, offset);
+}
+
+
+void Function::DeleteUserStackVariable(int64_t offset)
+{
+	BNDeleteUserStackVariable(m_object, offset);
+}

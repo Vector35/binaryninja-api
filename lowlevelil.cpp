@@ -443,6 +443,13 @@ void LowLevelILFunction::MarkLabel(BNLowLevelILLabel& label)
 }
 
 
+ExprId LowLevelILFunction::Operand(uint32_t n, ExprId expr)
+{
+	BNLowLevelILSetExprSourceOperand(m_object, expr, n);
+	return expr;
+}
+
+
 BNLowLevelILInstruction LowLevelILFunction::operator[](size_t i) const
 {
 	return BNGetLowLevelILByIndex(m_object, i);

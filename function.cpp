@@ -187,6 +187,28 @@ vector<uint32_t> Function::GetRegistersWrittenByInstruction(Architecture* arch, 
 }
 
 
+vector<StackVariableReference> Function::GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNStackVariableReference* refs = BNGetStackVariablesReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+
+	vector<StackVariableReference> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		StackVariableReference ref;
+		ref.sourceOperand = refs[i].sourceOperand;
+		ref.type = refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr;
+		ref.name = refs[i].name;
+		ref.startingOffset = refs[i].startingOffset;
+		ref.referencedOffset = refs[i].referencedOffset;
+		result.push_back(ref);
+	}
+
+	BNFreeStackVariableReferenceList(refs, count);
+	return result;
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_object));
@@ -212,18 +234,20 @@ Ref<FunctionGraph> Function::CreateFunctionGraph()
 }
 
 
-map<int64_t, NameAndType> Function::GetStackLayout()
+map<int64_t, StackVariable> Function::GetStackLayout()
 {
 	size_t count;
 	BNStackVariable* vars = BNGetStackLayout(m_object, &count);
 
-	map<int64_t, NameAndType> result;
+	map<int64_t, StackVariable> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		NameAndType nt;
-		nt.name = vars[i].name;
-		nt.type = new Type(BNNewTypeReference(vars[i].type));
-		result[vars[i].offset] = nt;
+		StackVariable var;
+		var.name = vars[i].name;
+		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.offset = vars[i].offset;
+		var.autoDefined = vars[i].autoDefined;
+		result[vars[i].offset] = var;
 	}
 
 	BNFreeStackLayout(vars, count);
@@ -252,4 +276,20 @@ void Function::DeleteAutoStackVariable(int64_t offset)
 void Function::DeleteUserStackVariable(int64_t offset)
 {
 	BNDeleteUserStackVariable(m_object, offset);
+}
+
+
+bool Function::GetStackVariableAtFrameOffset(int64_t offset, StackVariable& result)
+{
+	BNStackVariable var;
+	if (!BNGetStackVariableAtFrameOffset(m_object, offset, &var))
+		return false;
+
+	result.type = new Type(BNNewTypeReference(var.type));
+	result.name = var.name;
+	result.offset = var.offset;
+	result.autoDefined = var.autoDefined;
+
+	BNFreeStackVariable(&var);
+	return true;
 }

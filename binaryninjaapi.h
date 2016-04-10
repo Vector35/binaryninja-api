@@ -1235,6 +1235,23 @@ namespace BinaryNinja
 		void MarkRecentUse();
 	};
 
+	struct StackVariable
+	{
+		Ref<Type> type;
+		std::string name;
+		int64_t offset;
+		bool autoDefined;
+	};
+
+	struct StackVariableReference
+	{
+		uint32_t sourceOperand;
+		Ref<Type> type;
+		std::string name;
+		int64_t startingOffset;
+		int64_t referencedOffset;
+	};
+
 	class FunctionGraph;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -1267,6 +1284,7 @@ namespace BinaryNinja
 		BNRegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<Type> GetType() const;
 		void ApplyImportedTypes(Symbol* sym);
@@ -1274,11 +1292,12 @@ namespace BinaryNinja
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 
-		std::map<int64_t, NameAndType> GetStackLayout();
+		std::map<int64_t, StackVariable> GetStackLayout();
 		void CreateAutoStackVariable(int64_t offset, Type* type, const std::string& name);
 		void CreateUserStackVariable(int64_t offset, Type* type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
+		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
 	};
 
 	struct FunctionGraphTextLine
@@ -1436,6 +1455,8 @@ namespace BinaryNinja
 		ExprId Goto(BNLowLevelILLabel& label);
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f);
 		void MarkLabel(BNLowLevelILLabel& label);
+
+		ExprId Operand(uint32_t n, ExprId expr);
 
 		BNLowLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;

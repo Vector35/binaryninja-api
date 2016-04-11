@@ -4663,9 +4663,6 @@ def get_time_since_last_update_check():
 def updates_checked():
 	core.BNUpdatesChecked()
 
-if not core.BNIsLicenseValidated():
-	raise ImportError, "License is not valid. Please supply a valid license."
-
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()
 

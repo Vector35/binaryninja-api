@@ -6,7 +6,7 @@ This repository contains documentation and source code for the [Binary Ninja](ht
 
 Public contributions are welcome to this repository. All the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja).
 
-If interested in contributing, first please read and sign the [Contribution License Agreement](https://binary.ninja/). Next, email a your signed copy of the license to info@binary.ninja along with your github username. Once that email is confirmed, any pending pull requests will be evaluated for inclusion.
+If interested in contributing, first please read and sign the [Contribution License Agreement](https://binary.ninja/cla.pdf). Next, email a your signed copy of the license to info@binary.ninja along with your github username. Once that email is confirmed, any pending pull requests will be evaluated for inclusion.
 
 ## Issues
 

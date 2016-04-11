@@ -1,0 +1,15 @@
+Thumbs.db
+.DS_Store
+*.o
+*.obj
+*.pdb
+*.ilk
+*.exp
+libbinaryninja*
+binaryninjacore.lib
+binaryninjacore.dll
+binaryninjaapi.lib
+python/_binaryninjacore.py
+python/generator
+python/generator.exe
+.vs

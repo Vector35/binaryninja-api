@@ -1932,7 +1932,7 @@ class Function:
 			return result
 		elif name == "low_level_il":
 			return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-						core.BNGetFunctionLowLevelIL(self.handle)))
+						core.BNGetFunctionLowLevelIL(self.handle)), self)
 		elif name == "low_level_il_basic_blocks":
 			count = ctypes.c_ulonglong()
 			blocks = core.BNGetFunctionLowLevelILBasicBlockList(self.handle, count)
@@ -1953,6 +1953,14 @@ class Function:
 			core.BNFreeStackLayout(v, count.value)
 			return result
 		raise AttributeError, "no attribute '%s'" % name
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		for i in xrange(0, count.value):
+			yield BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+	    	core.BNFreeBasicBlockList(blocks, count.value)
+		raise StopIteration
 
 	def __setattr__(self, name, value):
 		if ((name == "view") or (name == "arch") or (name == "start") or (name == "symbol") or (name == "auto") or
@@ -2042,7 +2050,7 @@ class Function:
 		result = []
 		for i in xrange(0, count.value):
 			result.append(StackVariableReference(refs[i].sourceOperand, Type(core.BNNewTypeReference(refs[i].type)),
-			                                     refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
+							     refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -2131,8 +2139,35 @@ class BasicBlock:
 		else:
 			return "<block: 0x%x-0x%x>" % (self.start, self.end)
 
+	def __iter__(self):
+		func = getattr(self, "function")
+		start = getattr(self, "start")
+		end = getattr(self, "end")
+
+		idx = start
+		while idx < end:
+			data = self.view.read(idx, 16)
+			inst_info = self.view.arch.get_instruction_info(data, idx)
+			inst_text = self.view.arch.get_instruction_text(data, idx)
+			
+			yield inst_text
+			idx += inst_info.length
+		raise StopIteration
+
 	def mark_recent_use():
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
+
+class ILBasicBlock(BasicBlock):
+	def __iter__(self):
+		func = getattr(self, "function")
+		low_level_il_function = func.low_level_il
+		start = getattr(self, "start")
+		end = getattr(self, "end")
+
+		for idx in xrange(start, end):
+			yield low_level_il_function[idx]
+
+		raise StopIteration
 
 class FunctionGraphTextLine:
 	def __init__(self, addr, tokens):
@@ -3390,8 +3425,9 @@ class LowLevelILExpr:
 		self.index = index
 
 class LowLevelILFunction:
-	def __init__(self, arch, handle = None):
+	def __init__(self, arch, handle = None, mcfunc = None):
 		self.arch = arch
+		self.mcfunc = mcfunc
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
@@ -3428,6 +3464,14 @@ class LowLevelILFunction:
 
 	def __setitem__(self, i):
 		raise IndexError, "instruction modification not implemented"
+
+	def __iter__(self):
+	    count = ctypes.c_ulonglong()
+	    blocks = core.BNGetFunctionLowLevelILBasicBlockList(self.mcfunc.handle, count)
+	    for i in xrange(0, count.value):
+		yield ILBasicBlock(self.mcfunc._view, core.BNNewBasicBlockReference(blocks[i]))
+	    core.BNFreeBasicBlockList(blocks, count.value)
+	    raise StopIteration
 
 	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, size = 0, flags = None):
 		if isinstance(operation, str):

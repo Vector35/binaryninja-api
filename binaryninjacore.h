@@ -154,6 +154,7 @@ extern "C"
 		EndMemoryOperandToken = 7,
 		FloatingPointToken = 8,
 		AnnotationToken = 9,
+		CodeRelativeAddressToken = 10,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins

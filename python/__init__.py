@@ -2093,6 +2093,8 @@ class BasicBlock:
 			return core.BNGetBasicBlockStart(self.handle)
 		elif name == "end":
 			return core.BNGetBasicBlockEnd(self.handle)
+		elif name == "length":
+			return core.BNGetBasicBlockLength(self.handle)
 		elif name == "outgoing_edges":
 			count = ctypes.c_ulonglong(0)
 			edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
@@ -2113,13 +2115,13 @@ class BasicBlock:
 
 	def __setattr__(self, name, value):
 		if ((name == "function") or (name == "arch") or (name == "start") or (name == "end") or
-			(name == "outgoing_edges") or (name == "has_undetermined_outgoing_edges")):
+			(name == "length") (name == "outgoing_edges") or (name == "has_undetermined_outgoing_edges")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			self.__dict__[name] = value
 
 	def __dir__(self):
-		return dir(self.__class__) + ["function", "arch", "start", "end", "outgoing_edges", "has_undetermined_outgoing_edges"]
+		return dir(self.__class__) + ["function", "arch", "start", "end", "length", "outgoing_edges", "has_undetermined_outgoing_edges"]
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))

@@ -2115,7 +2115,7 @@ class BasicBlock:
 
 	def __setattr__(self, name, value):
 		if ((name == "function") or (name == "arch") or (name == "start") or (name == "end") or
-			(name == "length") (name == "outgoing_edges") or (name == "has_undetermined_outgoing_edges")):
+			(name == "length") or (name == "outgoing_edges") or (name == "has_undetermined_outgoing_edges")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			self.__dict__[name] = value

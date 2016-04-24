@@ -1885,6 +1885,17 @@ class StackVariableReference:
 			return "<operand %d ref to %s%+x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
+class IndirectBranchInfo:
+	def __init__(self, source_arch, source_addr, dest_arch, dest_addr, auto_defined):
+		self.source_arch = source_arch
+		self.source_addr = source_addr
+		self.dest_arch = dest_arch
+		self.dest_addr = dest_addr
+		self.auto_defined = auto_defined
+
+	def __repr__(self):
+		return "<branch %s:0x%x -> %s:0x%x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
+
 class Function:
 	def __init__(self, view, handle):
 		self._view = view
@@ -1952,13 +1963,21 @@ class Function:
 			result.sort(key = lambda x: x.offset)
 			core.BNFreeStackLayout(v, count.value)
 			return result
+		elif name == "indirect_branches":
+			count = ctypes.c_ulonglong()
+			branches = core.BNGetIndirectBranches(self.handle, count)
+			result = []
+			for i in xrange(0, count.value):
+				result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			core.BNFreeIndirectBranchList(branches)
+			return result
 		raise AttributeError, "no attribute '%s'" % name
 
 	def __setattr__(self, name, value):
 		if ((name == "view") or (name == "arch") or (name == "start") or (name == "symbol") or (name == "auto") or
 		(name == "can_return") or (name == "basic_blocks") or (name == "comments") or (name == "low_level_il") or
 		(name == "low_level_il_basic_blocks") or (name == "type") or (name == "explicitly_defined_type") or
-		(name == "stack_layout")):
+		(name == "stack_layout") or (name == "indirect_branches")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			self.__dict__[name] = value
@@ -2054,6 +2073,29 @@ class Function:
 
 	def apply_auto_discovered_type(self, func_type):
 		core.BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle)
+
+	def set_auto_indirect_branches(self, source_arch, source, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNSetAutoIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
+
+	def set_user_indirect_branches(self, source_arch, source, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNSetUserIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
+
+	def get_indirect_branches_at(self, arch, addr):
+		count = ctypes.c_ulonglong()
+		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		core.BNFreeIndirectBranchList(branches)
+		return result
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):
@@ -3289,6 +3331,7 @@ class LowLevelILInstruction:
 		core.LLIL_SX: [("src", "expr")],
 		core.LLIL_ZX: [("src", "expr")],
 		core.LLIL_JUMP: [("dest", "expr")],
+		core.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		core.LLIL_CALL: [("dest", "expr")],
 		core.LLIL_RET: [("dest", "expr")],
 		core.LLIL_NORET: [],
@@ -3346,6 +3389,13 @@ class LowLevelILInstruction:
 				value = func.arch.get_flag_name(instr.operands[i])
 			elif operand_type == "cond":
 				value = core.BNLowLevelILFlagCondition_names[instr.operands[i]]
+			elif operand_type == "int_list":
+				count = ctypes.c_ulonglong()
+				operands = core.BNLowLevelILGetOperandList(func.handle, self.index, i, count)
+				value = []
+				for i in xrange(count.value):
+					value.append(operands[i])
+				core.BNLowLevelILFreeOperandList(operands)
 			self.operands.append(value)
 			self.__dict__[name] = value
 
@@ -3430,6 +3480,16 @@ class LowLevelILFunction:
 
 	def __setitem__(self, i):
 		raise IndexError, "instruction modification not implemented"
+
+	def clear_indirect_branches(self):
+		core.BNLowLevelILClearIndirectBranches(self.handle)
+
+	def set_indirect_branches(self, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
 
 	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, size = 0, flags = None):
 		if isinstance(operation, str):
@@ -3650,6 +3710,18 @@ class LowLevelILFunction:
 
 	def mark_label(self, label):
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
+
+	def add_label_list(self, labels):
+		label_list = (ctypes.POINTER(BNLowLevelILLabel) * len(labels))()
+		for i in xrange(len(labels)):
+			label_list[i] = labels[i].handle
+		return LowLevelILExpr(core.BNLowLevelILAddLabelList(self.handle, label_list, len(labels)))
+
+	def add_operand_list(self, operands):
+		operand_list = (ctypes.c_ulonglong * len(operands))()
+		for i in xrange(len(operands)):
+			operand_list[i] = operands[i]
+		return LowLevelILExpr(core.BNLowLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
 	def operand(self, n, expr):
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)

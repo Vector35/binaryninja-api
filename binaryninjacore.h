@@ -139,6 +139,7 @@ extern "C"
 		CallDestination = 3,
 		FunctionReturn = 4,
 		SystemCall = 5,
+		IndirectBranch = 6,
 		UnresolvedBranch = 127
 	};
 
@@ -226,6 +227,7 @@ extern "C"
 		LLIL_SX,
 		LLIL_ZX,
 		LLIL_JUMP,
+		LLIL_JUMP_TO,
 		LLIL_CALL,
 		LLIL_RET,
 		LLIL_NORET,
@@ -667,6 +669,21 @@ extern "C"
 		int64_t referencedOffset;
 	};
 
+	struct BNIndirectBranchInfo
+	{
+		BNArchitecture* sourceArch;
+		uint64_t sourceAddr;
+		BNArchitecture* destArch;
+		uint64_t destAddr;
+		bool autoDefined;
+	};
+
+	struct BNArchitectureAndAddress
+	{
+		BNArchitecture* arch;
+		uint64_t address;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1091,6 +1108,16 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetStackVariableAtFrameOffset(BNFunction* func, int64_t offset, BNStackVariable* var);
 	BINARYNINJACOREAPI void BNFreeStackVariable(BNStackVariable* var);
 
+	BINARYNINJACOREAPI void BNSetAutoIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
+	                                                  BNArchitectureAndAddress* branches, size_t count);
+	BINARYNINJACOREAPI void BNSetUserIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
+	                                                  BNArchitectureAndAddress* branches, size_t count);
+
+	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranches(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranchesAt(BNFunction* func, BNArchitecture* arch,
+	                                                                 uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
+
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);
 	BINARYNINJACOREAPI BNFunctionGraph* BNNewFunctionGraphReference(BNFunctionGraph* graph);
@@ -1174,6 +1201,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeLowLevelILFunction(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI uint64_t BNLowLevelILGetCurrentAddress(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI void BNLowLevelILSetCurrentAddress(BNLowLevelILFunction* func, uint64_t addr);
+	BINARYNINJACOREAPI void BNLowLevelILClearIndirectBranches(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI void BNLowLevelILSetIndirectBranches(BNLowLevelILFunction* func, BNArchitectureAndAddress* branches,
+	                                                        size_t count);
 	BINARYNINJACOREAPI size_t BNLowLevelILAddExpr(BNLowLevelILFunction* func, BNLowLevelILOperation operation, size_t size,
 	                                              uint32_t flags, uint64_t a, uint64_t b, uint64_t c, uint64_t d);
 	BINARYNINJACOREAPI void BNLowLevelILSetExprSourceOperand(BNLowLevelILFunction* func, size_t expr, uint32_t operand);
@@ -1183,6 +1213,12 @@ extern "C"
 	BINARYNINJACOREAPI void BNLowLevelILInitLabel(BNLowLevelILLabel* label);
 	BINARYNINJACOREAPI void BNLowLevelILMarkLabel(BNLowLevelILFunction* func, BNLowLevelILLabel* label);
 	BINARYNINJACOREAPI void BNFinalizeLowLevelILFunction(BNLowLevelILFunction* func);
+
+	BINARYNINJACOREAPI size_t BNLowLevelILAddLabelList(BNLowLevelILFunction* func, BNLowLevelILLabel** labels, size_t count);
+	BINARYNINJACOREAPI size_t BNLowLevelILAddOperandList(BNLowLevelILFunction* func, uint64_t* operands, size_t count);
+	BINARYNINJACOREAPI uint64_t* BNLowLevelILGetOperandList(BNLowLevelILFunction* func, size_t expr, size_t operand,
+	                                                        size_t* count);
+	BINARYNINJACOREAPI void BNLowLevelILFreeOperandList(uint64_t* operands);
 
 	BINARYNINJACOREAPI BNLowLevelILInstruction BNGetLowLevelILByIndex(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILIndexForInstruction(BNLowLevelILFunction* func, size_t i);

@@ -1272,6 +1272,24 @@ namespace BinaryNinja
 		int64_t referencedOffset;
 	};
 
+	struct IndirectBranchInfo
+	{
+		Ref<Architecture> sourceArch;
+		uint64_t sourceAddr;
+		Ref<Architecture> destArch;
+		uint64_t destAddr;
+		bool autoDefined;
+	};
+
+	struct ArchAndAddr
+	{
+		Ref<Architecture> arch;
+		uint64_t address;
+
+		ArchAndAddr(): arch(nullptr), address(0) {}
+		ArchAndAddr(Architecture* a, uint64_t addr): arch(a), address(addr) {}
+	};
+
 	class FunctionGraph;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -1318,6 +1336,12 @@ namespace BinaryNinja
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
+
+		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+		void SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+
+		std::vector<IndirectBranchInfo> GetIndirectBranches();
+		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 	};
 
 	struct FunctionGraphTextLine
@@ -1404,6 +1428,9 @@ namespace BinaryNinja
 		uint64_t GetCurrentAddress() const;
 		void SetCurrentAddress(uint64_t addr);
 
+		void ClearIndirectBranches();
+		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
+
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
 		               ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
 		ExprId AddInstruction(ExprId expr);
@@ -1475,6 +1502,10 @@ namespace BinaryNinja
 		ExprId Goto(BNLowLevelILLabel& label);
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f);
 		void MarkLabel(BNLowLevelILLabel& label);
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
+		ExprId AddOperandList(const std::vector<ExprId> operands);
 
 		ExprId Operand(uint32_t n, ExprId expr);
 

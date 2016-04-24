@@ -54,6 +54,25 @@ void LowLevelILFunction::SetCurrentAddress(uint64_t addr)
 }
 
 
+void LowLevelILFunction::ClearIndirectBranches()
+{
+	BNLowLevelILClearIndirectBranches(m_object);
+}
+
+
+void LowLevelILFunction::SetIndirectBranches(const vector<ArchAndAddr>& branches)
+{
+	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
+	for (size_t i = 0; i < branches.size(); i++)
+	{
+		branchList[i].arch = branches[i].arch->GetObject();
+		branchList[i].address = branches[i].address;
+	}
+	BNLowLevelILSetIndirectBranches(m_object, branchList, branches.size());
+	delete[] branchList;
+}
+
+
 ExprId LowLevelILFunction::AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
                                    ExprId a, ExprId b, ExprId c, ExprId d)
 {
@@ -460,6 +479,40 @@ ExprId LowLevelILFunction::If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelIL
 void LowLevelILFunction::MarkLabel(BNLowLevelILLabel& label)
 {
 	BNLowLevelILMarkLabel(m_object, &label);
+}
+
+
+vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId i, size_t listOperand)
+{
+	size_t count;
+	uint64_t* operands = BNLowLevelILGetOperandList(m_object, i, listOperand, &count);
+	vector<uint64_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(operands[i]);
+	BNLowLevelILFreeOperandList(operands);
+	return result;
+}
+
+
+ExprId LowLevelILFunction::AddLabelList(const vector<BNLowLevelILLabel*>& labels)
+{
+	BNLowLevelILLabel** labelList = new BNLowLevelILLabel*[labels.size()];
+	for (size_t i = 0; i < labels.size(); i++)
+		labelList[i] = labels[i];
+	ExprId result = (ExprId)BNLowLevelILAddLabelList(m_object, labelList, labels.size());
+	delete[] labelList;
+	return result;
+}
+
+
+ExprId LowLevelILFunction::AddOperandList(const vector<ExprId> operands)
+{
+	uint64_t* operandList = new uint64_t[operands.size()];
+	for (size_t i = 0; i < operands.size(); i++)
+		operandList[i] = operands[i];
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, operands.size());
+	delete[] operandList;
+	return result;
 }
 
 

@@ -313,3 +313,73 @@ bool Function::GetStackVariableAtFrameOffset(int64_t offset, StackVariable& resu
 	BNFreeStackVariable(&var);
 	return true;
 }
+
+
+void Function::SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+{
+	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
+	for (size_t i = 0; i < branches.size(); i++)
+	{
+		branchList[i].arch = branches[i].arch->GetObject();
+		branchList[i].address = branches[i].address;
+	}
+	BNSetAutoIndirectBranches(m_object, sourceArch->GetObject(), source, branchList, branches.size());
+	delete[] branchList;
+}
+
+
+void Function::SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+{
+	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
+	for (size_t i = 0; i < branches.size(); i++)
+	{
+		branchList[i].arch = branches[i].arch->GetObject();
+		branchList[i].address = branches[i].address;
+	}
+	BNSetUserIndirectBranches(m_object, sourceArch->GetObject(), source, branchList, branches.size());
+	delete[] branchList;
+}
+
+
+vector<IndirectBranchInfo> Function::GetIndirectBranches()
+{
+	size_t count;
+	BNIndirectBranchInfo* branches = BNGetIndirectBranches(m_object, &count);
+
+	vector<IndirectBranchInfo> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		IndirectBranchInfo b;
+		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
+		b.sourceAddr = branches[i].sourceAddr;
+		b.destArch = new CoreArchitecture(branches[i].destArch);
+		b.destAddr = branches[i].destAddr;
+		b.autoDefined = branches[i].autoDefined;
+		result.push_back(b);
+	}
+
+	BNFreeIndirectBranchList(branches);
+	return result;
+}
+
+
+vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNIndirectBranchInfo* branches = BNGetIndirectBranchesAt(m_object, arch->GetObject(), addr, &count);
+
+	vector<IndirectBranchInfo> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		IndirectBranchInfo b;
+		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
+		b.sourceAddr = branches[i].sourceAddr;
+		b.destArch = new CoreArchitecture(branches[i].destArch);
+		b.destAddr = branches[i].destAddr;
+		b.autoDefined = branches[i].autoDefined;
+		result.push_back(b);
+	}
+
+	BNFreeIndirectBranchList(branches);
+	return result;
+}

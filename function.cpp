@@ -229,6 +229,54 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
+set<size_t> Function::GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag)
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILFlagUsesForDefinition(m_object, i, flag, &count);
+
+	set<size_t> result;
+	result.insert(&instrs[0], &instrs[count]);
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> Function::GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag)
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILFlagDefinitionsForUse(m_object, i, flag, &count);
+
+	set<size_t> result;
+	result.insert(&instrs[0], &instrs[count]);
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<uint32_t> Function::GetFlagsReadByLowLevelILInstruction(size_t i)
+{
+	size_t count;
+	uint32_t* flags = BNGetFlagsReadByLowLevelILInstruction(m_object, i, &count);
+
+	set<uint32_t> result;
+	result.insert(&flags[0], &flags[count]);
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+set<uint32_t> Function::GetFlagsWrittenByLowLevelILInstruction(size_t i)
+{
+	size_t count;
+	uint32_t* flags = BNGetFlagsWrittenByLowLevelILInstruction(m_object, i, &count);
+
+	set<uint32_t> result;
+	result.insert(&flags[0], &flags[count]);
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_object));

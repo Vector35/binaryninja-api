@@ -228,6 +228,57 @@ uint32_t* Architecture::GetAllFlagWriteTypesCallback(void* ctxt, size_t* count)
 }
 
 
+BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetFlagRole(flag);
+}
+
+
+uint32_t* Architecture::GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> flags = arch->GetFlagsRequiredForFlagCondition(cond);
+	*count = flags.size();
+
+	uint32_t* result = new uint32_t[flags.size()];
+	for (size_t i = 0; i < flags.size(); i++)
+		result[i] = flags[i];
+	return result;
+}
+
+
+uint32_t* Architecture::GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> flags = arch->GetFlagsWrittenByFlagWriteType(writeType);
+	*count = flags.size();
+
+	uint32_t* result = new uint32_t[flags.size()];
+	for (size_t i = 0; i < flags.size(); i++)
+		result[i] = flags[i];
+	return result;
+}
+
+
+bool Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, operands, operandCount, func);
+}
+
+
+size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+	BNLowLevelILFunction* il)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	return arch->GetFlagConditionLowLevelIL(cond, func);
+}
+
+
 void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
 {
 	delete[] regs;
@@ -350,6 +401,11 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getAllRegisters = GetAllRegistersCallback;
 	callbacks.getAllFlags = GetAllFlagsCallback;
 	callbacks.getAllFlagWriteTypes = GetAllFlagWriteTypesCallback;
+	callbacks.getFlagRole = GetFlagRoleCallback;
+	callbacks.getFlagsRequiredForFlagCondition = GetFlagsRequiredForFlagConditionCallback;
+	callbacks.getFlagsWrittenByFlagWriteType = GetFlagsWrittenByFlagWriteTypeCallback;
+	callbacks.getFlagWriteLowLevelIL = GetFlagWriteLowLevelILCallback;
+	callbacks.getFlagConditionLowLevelIL = GetFlagConditionLowLevelILCallback;
 	callbacks.freeRegisterList = FreeRegisterListCallback;
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
@@ -462,6 +518,38 @@ vector<uint32_t> Architecture::GetAllFlags()
 vector<uint32_t> Architecture::GetAllFlagWriteTypes()
 {
 	return vector<uint32_t>();
+}
+
+
+BNFlagRole Architecture::GetFlagRole(uint32_t)
+{
+	return SpecialFlagRole;
+}
+
+
+vector<uint32_t> Architecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition)
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetFlagsWrittenByFlagWriteType(uint32_t)
+{
+	return vector<uint32_t>();
+}
+
+
+bool Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
+{
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, operands,
+		operandCount, il.GetObject());
+}
+
+
+ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition, LowLevelILFunction& il)
+{
+	return il.Unimplemented();
 }
 
 
@@ -885,6 +973,54 @@ vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
 
 	BNFreeRegisterList(regs);
 	return result;
+}
+
+
+BNFlagRole CoreArchitecture::GetFlagRole(uint32_t flag)
+{
+	return BNGetArchitectureFlagRole(m_object, flag);
+}
+
+
+vector<uint32_t> CoreArchitecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond)
+{
+	size_t count;
+	uint32_t* flags = BNGetArchitectureFlagsRequiredForFlagCondition(m_object, cond, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(flags[i]);
+
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t writeType)
+{
+	size_t count;
+	uint32_t* flags = BNGetArchitectureFlagsWrittenByFlagWriteType(m_object, writeType, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(flags[i]);
+
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+bool CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
+{
+	return BNGetArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, operands,
+		operandCount, il.GetObject());
+}
+
+
+ExprId CoreArchitecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+{
+	return (ExprId)BNGetArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
 }
 
 

@@ -231,8 +231,8 @@ OperandIL = [
 
 def cond_branch(il, cond, dest):
 	t = None
-	if il[dest].operation == "LLIL_CONST":
-		t = il.get_label_for_address(Architecture['6502'].standalone_platform, il[dest].value)
+	if il[dest].operation == LLIL_CONST:
+		t = il.get_label_for_address(Architecture['6502'], il[dest].value)
 	if t is None:
 		t = LowLevelILLabel()
 		indirect = True
@@ -248,8 +248,8 @@ def cond_branch(il, cond, dest):
 
 def jump(il, dest):
 	label = None
-	if il[dest].operation == "LLIL_CONST":
-		label = il.get_label_for_address(Architecture['6502'].standalone_platform, il[dest].value)
+	if il[dest].operation == LLIL_CONST:
+		label = il.get_label_for_address(Architecture['6502'], il[dest].value)
 	if label is None:
 		il.append(il.jump(dest))
 	else:
@@ -358,6 +358,24 @@ class M6502(Architecture):
 	stack_pointer = "s"
 	flags = ["c", "z", "i", "d", "b", "v", "s"]
 	flag_write_types = ["*", "czs", "zvs", "zs"]
+	flag_roles = {
+		"c": SpecialFlagRole, # Not a normal carry flag, subtract result is inverted
+		"z": ZeroFlagRole,
+		"v": OverflowFlagRole,
+		"s": NegativeSignFlagRole
+	}
+	flags_required_for_flag_condition = {
+		LLFC_UGE: ["c"],
+		LLFC_ULT: ["c"],
+		LLFC_E: ["z"],
+		LLFC_NE: ["z"]
+	}
+	flags_written_by_flag_write_type = {
+		"*": ["c", "z", "v", "s"],
+		"czs": ["c", "z", "s"],
+		"zvs": ["z", "v", "s"],
+		"zs": ["z", "s"]
+	}
 
 	def decode_instruction(self, data, addr):
 		if len(data) < 1:
@@ -678,4 +696,3 @@ for i in xrange(0, 32):
 	NESViewBank.register()
 
 M6502.register()
-

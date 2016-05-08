@@ -29,6 +29,7 @@
 #include <map>
 #include <exception>
 #include <functional>
+#include <set>
 #include "binaryninjacore.h"
 #include "json/json.h"
 
@@ -1004,6 +1005,13 @@ namespace BinaryNinja
 		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagsCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagWriteTypesCallback(void* ctxt, size_t* count);
+		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag);
+		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
+		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
+		static bool GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
+		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+			BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
@@ -1047,6 +1055,12 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllRegisters();
 		virtual std::vector<uint32_t> GetAllFlags();
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
+		virtual BNFlagRole GetFlagRole(uint32_t flag);
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond);
+		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
+		virtual bool GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
@@ -1115,6 +1129,12 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllRegisters() override;
 		virtual std::vector<uint32_t> GetAllFlags() override;
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
+		virtual BNFlagRole GetFlagRole(uint32_t flag) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond) override;
+		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
+		virtual bool GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
@@ -1272,6 +1292,24 @@ namespace BinaryNinja
 		int64_t referencedOffset;
 	};
 
+	struct IndirectBranchInfo
+	{
+		Ref<Architecture> sourceArch;
+		uint64_t sourceAddr;
+		Ref<Architecture> destArch;
+		uint64_t destAddr;
+		bool autoDefined;
+	};
+
+	struct ArchAndAddr
+	{
+		Ref<Architecture> arch;
+		uint64_t address;
+
+		ArchAndAddr(): arch(nullptr), address(0) {}
+		ArchAndAddr(Architecture* a, uint64_t addr): arch(a), address(addr) {}
+	};
+
 	class FunctionGraph;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -1306,6 +1344,11 @@ namespace BinaryNinja
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
 
+		std::set<size_t> GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag);
+		std::set<size_t> GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag);
+		std::set<uint32_t> GetFlagsReadByLowLevelILInstruction(size_t i);
+		std::set<uint32_t> GetFlagsWrittenByLowLevelILInstruction(size_t i);
+
 		Ref<Type> GetType() const;
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
@@ -1318,6 +1361,12 @@ namespace BinaryNinja
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
+
+		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+		void SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+
+		std::vector<IndirectBranchInfo> GetIndirectBranches();
+		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 	};
 
 	struct FunctionGraphTextLine
@@ -1404,6 +1453,9 @@ namespace BinaryNinja
 		uint64_t GetCurrentAddress() const;
 		void SetCurrentAddress(uint64_t addr);
 
+		void ClearIndirectBranches();
+		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
+
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
 		               ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
 		ExprId AddInstruction(ExprId expr);
@@ -1475,6 +1527,10 @@ namespace BinaryNinja
 		ExprId Goto(BNLowLevelILLabel& label);
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f);
 		void MarkLabel(BNLowLevelILLabel& label);
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
+		ExprId AddOperandList(const std::vector<ExprId> operands);
 
 		ExprId Operand(uint32_t n, ExprId expr);
 

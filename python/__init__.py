@@ -2199,7 +2199,6 @@ class Function(object):
 		try:
 			object.__setattr__(self,name,value)
 		except AttributeError:
->>>>>>> Stashed changes
 			raise AttributeError, "attribute '%s' is read only" % name
 
 	def __repr__(self):
@@ -2280,6 +2279,46 @@ class Function(object):
 			result.append(StackVariableReference(refs[i].sourceOperand, Type(core.BNNewTypeReference(refs[i].type)),
 			                                     refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
+		return result
+
+	def get_low_level_il_flag_uses_for_definition(self, i, flag):
+		if isinstance(flag, str):
+			flag = self.arch._flags[flag]
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILFlagUsesForDefinition(self.handle, i, flag, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeLowLevelILInstructionList(instrs)
+		return result
+
+	def get_low_level_il_flag_definitions_for_use(self, i, flag):
+		if isinstance(flag, str):
+			flag = self.arch._flags[flag]
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILFlagDefinitionsForUse(self.handle, i, flag, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeLowLevelILInstructionList(instrs)
+		return result
+
+	def get_flags_read_by_low_level_il_instruction(self, i):
+		count = ctypes.c_ulonglong()
+		flags = core.BNGetFlagsReadByLowLevelILInstruction(self.handle, i, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(self.arch._flags_by_index[flags[i]])
+		core.BNFreeRegisterList(flags)
+		return result
+
+	def get_flags_written_by_low_level_il_instruction(self, i):
+		count = ctypes.c_ulonglong()
+		flags = core.BNGetFlagsWrittenByLowLevelILInstruction(self.handle, i, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(self.arch._flags_by_index[flags[i]])
+		core.BNFreeRegisterList(flags)
 		return result
 
 	def create_graph(self):
@@ -2768,6 +2807,9 @@ class Architecture(object):
 	link_reg = None
 	flags = []
 	flag_write_types = []
+	flag_roles = {}
+	flags_required_for_flag_condition = {}
+	flags_written_by_flag_write_type = {}
 	__metaclass__ = _ArchitectureMetaClass
 
 	def __init__(self, handle = None):
@@ -2816,6 +2858,42 @@ class Architecture(object):
 				self._flag_write_types_by_index[types[i]] = name
 				self.flag_write_types.append(name)
 			core.BNFreeRegisterList(types)
+
+			self._flag_roles = {}
+			self.__dict__["flag_roles"] = {}
+			for flag in self.__dict__["flags"]:
+				role = core.BNGetArchitectureFlagRole(self.handle, self._flags[flag])
+				self.__dict__["flag_roles"][flag] = role
+				self._flag_roles[self._flags[flag]] = role
+
+			self._flags_required_for_flag_condition = {}
+			self.__dict__["flags_required_for_flag_condition"] = {}
+			for cond in core.BNLowLevelILFlagCondition_names.keys():
+				count = ctypes.c_ulonglong()
+				flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, count)
+				flag_indexes = []
+				flag_names = []
+				for i in xrange(0, count.value):
+					flag_indexes.append(flags[i])
+					flag_names.append(self._flags_by_index[flags[i]])
+				core.BNFreeRegisterList(flags)
+				self._flags_required_for_flag_condition[cond] = flag_indexes
+				self.__dict__["flags_required_for_flag_condition"][cond] = flag_names
+
+			self._flags_written_by_flag_write_type = {}
+			self.__dict__["flags_written_by_flag_write_type"] = {}
+			for write_type in self.flag_write_types:
+				count = ctypes.c_ulonglong()
+				flags = core.BNGetArchitectureFlagsWrittenByFlagWriteType(self.handle,
+					self._flag_write_types[write_type], count)
+				flag_indexes = []
+				flag_names = []
+				for i in xrange(0, count.value):
+					flag_indexes.append(flags[i])
+					flag_names.append(self._flags_by_index[flags[i]])
+				core.BNFreeRegisterList(flags)
+				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flag_indexes
+				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
 		else:
 			_init_plugins()
 			self._cb = core.BNCustomArchitecture()
@@ -2836,6 +2914,15 @@ class Architecture(object):
 			self._cb.getAllRegisters = self._cb.getAllRegisters.__class__(self._get_all_registers)
 			self._cb.getAllFlags = self._cb.getAllRegisters.__class__(self._get_all_flags)
 			self._cb.getAllFlagWriteTypes = self._cb.getAllRegisters.__class__(self._get_all_flag_write_types)
+			self._cb.getFlagRole = self._cb.getFlagRole.__class__(self._get_flag_role)
+			self._cb.getFlagsRequiredForFlagCondition = self._cb.getFlagsRequiredForFlagCondition.__class__(
+				self._get_flags_required_for_flag_condition)
+			self._cb.getFlagsWrittenByFlagWriteType = self._cb.getFlagsWrittenByFlagWriteType.__class__(
+				self._get_flags_written_by_flag_write_type)
+			self._cb.getFlagWriteLowLevelIL = self._cb.getFlagWriteLowLevelIL.__class__(
+				self._get_flag_write_low_level_il)
+			self._cb.getFlagConditionLowLevelIL = self._cb.getFlagConditionLowLevelIL.__class__(
+				self._get_flag_condition_low_level_il)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.getRegisterInfo = self._cb.getRegisterInfo.__class__(self._get_register_info)
 			self._cb.getStackPointerRegister = self._cb.getStackPointerRegister.__class__(
@@ -2896,6 +2983,30 @@ class Architecture(object):
 					self._flag_write_types[write_type] = write_type_index
 					self._flag_write_types_by_index[write_type_index] = write_type
 					write_type_index += 1
+
+			self._flag_roles = {}
+			self.__dict__["flag_roles"] = self.__class__.flag_roles
+			for flag in self.__class__.flag_roles.keys():
+				role = self.__class__.flag_roles[flag]
+				if isinstance(role, str):
+					role = core.BNFlagRole_by_name[role]
+				self._flag_roles[self._flags[flag]] = role
+
+			self._flags_required_for_flag_condition = {}
+			self.__dict__["flags_required_for_flag_condition"] = self.__class__.flags_required_for_flag_condition
+			for cond in self.__class__.flags_required_for_flag_condition.keys():
+				flags = []
+				for flag in self.__class__.flags_required_for_flag_condition[cond]:
+					flags.append(self._flags[flag])
+				self._flags_required_for_flag_condition[cond] = flags
+
+			self._flags_written_by_flag_write_type = {}
+			self.__dict__["flags_written_by_flag_write_type"] = self.__class__.flags_written_by_flag_write_type
+			for write_type in self.__class__.flags_written_by_flag_write_type.keys():
+				flags = []
+				for flag in self.__class__.flags_written_by_flag_write_type[write_type]:
+					flags.append(self._flags[flag])
+				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flags
 
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
@@ -3127,6 +3238,76 @@ class Architecture(object):
 			count[0] = 0
 			return None
 
+	def _get_flag_role(self, ctxt, flag):
+		try:
+			if flag in self._flag_roles:
+				return self._flag_roles[flag]
+			return core.SpecialFlagRole
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	def _get_flags_required_for_flag_condition(self, ctxt, cond, count):
+		try:
+			if cond in self._flags_required_for_flag_condition:
+				flags = self._flags_required_for_flag_condition[cond]
+			else:
+				flags = []
+			count[0] = len(flags)
+			flag_buf = (ctypes.c_uint * len(flags))()
+			for i in xrange(0, len(flags)):
+				flag_buf[i] = flags[i]
+			result = ctypes.cast(flag_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, flag_buf)
+			return result.value
+		except:
+			log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_flags_written_by_flag_write_type(self, ctxt, write_type, count):
+		try:
+			if write_type in self._flags_written_by_flag_write_type:
+				flags = self._flags_written_by_flag_write_type[write_type]
+			else:
+				flags = []
+			count[0] = len(flags)
+			flag_buf = (ctypes.c_uint * len(flags))()
+			for i in xrange(0, len(flags)):
+				flag_buf[i] = flags[i]
+			result = ctypes.cast(flag_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, flag_buf)
+			return result.value
+		except:
+			log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_flag_write_low_level_il(self, ctxt, op, size, write_type, operands, operand_count, il):
+		try:
+			write_type_name = None
+			if write_type != 0:
+				write_type_name = self._flag_write_types_by_index[write_type]
+			operand_list = []
+			for i in xrange(operand_count):
+				if operands[i].constant:
+					operand_list.append(operands[i].value)
+				else:
+					operand_list.append(self._regs_by_index[operands[i].reg])
+			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, operand_list,
+				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	def _get_flag_condition_low_level_il(self, ctxt, cond, il):
+		try:
+			return self.perform_get_flag_condition_low_level_il(cond,
+				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+		except:
+			log_error(traceback.format_exc())
+			return 0
+
 	def _free_register_list(self, ctxt, regs):
 		try:
 			buf = ctypes.cast(regs, ctypes.c_void_p)
@@ -3303,6 +3484,12 @@ class Architecture(object):
 	def perform_get_instruction_low_level_il(self, data, addr, il):
 		return None
 
+	def perform_get_flag_write_low_level_il(self, op, size, write_type, operands, il):
+		return False
+
+	def perform_get_flag_condition_low_level_il(self, cond, il):
+		return il.unimplemented()
+
 	def perform_assemble(self, code, addr):
 		return None, "Architecture does not implement an assembler.\n"
 
@@ -3373,7 +3560,6 @@ class Architecture(object):
 		return result, length.value
 
 	def get_instruction_low_level_il(self, data, addr, il):
-		info = core.BNInstructionInfo()
 		data = str(data)
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
@@ -3396,6 +3582,33 @@ class Architecture(object):
 
 	def get_flag_write_type_by_name(self, write_type):
 		return self._flag_write_types[write_type]
+
+	def get_flag_write_low_level_il(self, op, size, write_type, operands, il):
+		operand_list = (core.BNRegisterOrConstant * len(operands))()
+		for i in xrange(len(operands)):
+			if isinstance(operands[i], str):
+				operand_list[i].constant = False
+				operand_list[i].reg = self._flags[operands[i]]
+			else:
+				operand_list[i].constant = True
+				operand_list[i].value = operands[i]
+		return core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size, self._flag_write_types[write_type],
+			operand_list, len(operand_list), il.handle)
+
+	def get_default_flag_write_low_level_il(self, op, size, write_type, operands, il):
+		operand_list = (core.BNRegisterOrConstant * len(operands))()
+		for i in xrange(len(operands)):
+			if isinstance(operands[i], str):
+				operand_list[i].constant = False
+				operand_list[i].reg = self._flags[operands[i]]
+			else:
+				operand_list[i].constant = True
+				operand_list[i].value = operands[i]
+		return core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size, self._flag_write_types[write_type],
+			operand_list, len(operand_list), il.handle)
+
+	def get_flag_condition_low_level_il(self, cond, il):
+		return core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle)
 
 	def get_modified_regs_on_write(self, reg):
 		reg = core.BNGetArchitectureRegisterByName(self.handle, str(reg))

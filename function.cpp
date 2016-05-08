@@ -229,6 +229,54 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
+set<size_t> Function::GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag)
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILFlagUsesForDefinition(m_object, i, flag, &count);
+
+	set<size_t> result;
+	result.insert(&instrs[0], &instrs[count]);
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> Function::GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag)
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILFlagDefinitionsForUse(m_object, i, flag, &count);
+
+	set<size_t> result;
+	result.insert(&instrs[0], &instrs[count]);
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<uint32_t> Function::GetFlagsReadByLowLevelILInstruction(size_t i)
+{
+	size_t count;
+	uint32_t* flags = BNGetFlagsReadByLowLevelILInstruction(m_object, i, &count);
+
+	set<uint32_t> result;
+	result.insert(&flags[0], &flags[count]);
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+set<uint32_t> Function::GetFlagsWrittenByLowLevelILInstruction(size_t i)
+{
+	size_t count;
+	uint32_t* flags = BNGetFlagsWrittenByLowLevelILInstruction(m_object, i, &count);
+
+	set<uint32_t> result;
+	result.insert(&flags[0], &flags[count]);
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_object));
@@ -312,4 +360,74 @@ bool Function::GetStackVariableAtFrameOffset(int64_t offset, StackVariable& resu
 
 	BNFreeStackVariable(&var);
 	return true;
+}
+
+
+void Function::SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+{
+	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
+	for (size_t i = 0; i < branches.size(); i++)
+	{
+		branchList[i].arch = branches[i].arch->GetObject();
+		branchList[i].address = branches[i].address;
+	}
+	BNSetAutoIndirectBranches(m_object, sourceArch->GetObject(), source, branchList, branches.size());
+	delete[] branchList;
+}
+
+
+void Function::SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+{
+	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
+	for (size_t i = 0; i < branches.size(); i++)
+	{
+		branchList[i].arch = branches[i].arch->GetObject();
+		branchList[i].address = branches[i].address;
+	}
+	BNSetUserIndirectBranches(m_object, sourceArch->GetObject(), source, branchList, branches.size());
+	delete[] branchList;
+}
+
+
+vector<IndirectBranchInfo> Function::GetIndirectBranches()
+{
+	size_t count;
+	BNIndirectBranchInfo* branches = BNGetIndirectBranches(m_object, &count);
+
+	vector<IndirectBranchInfo> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		IndirectBranchInfo b;
+		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
+		b.sourceAddr = branches[i].sourceAddr;
+		b.destArch = new CoreArchitecture(branches[i].destArch);
+		b.destAddr = branches[i].destAddr;
+		b.autoDefined = branches[i].autoDefined;
+		result.push_back(b);
+	}
+
+	BNFreeIndirectBranchList(branches);
+	return result;
+}
+
+
+vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNIndirectBranchInfo* branches = BNGetIndirectBranchesAt(m_object, arch->GetObject(), addr, &count);
+
+	vector<IndirectBranchInfo> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		IndirectBranchInfo b;
+		b.sourceArch = new CoreArchitecture(branches[i].sourceArch);
+		b.sourceAddr = branches[i].sourceAddr;
+		b.destArch = new CoreArchitecture(branches[i].destArch);
+		b.destAddr = branches[i].destAddr;
+		b.autoDefined = branches[i].autoDefined;
+		result.push_back(b);
+	}
+
+	BNFreeIndirectBranchList(branches);
+	return result;
 }

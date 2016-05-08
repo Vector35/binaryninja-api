@@ -143,7 +143,7 @@ class DataBuffer:
 			return None
 		return DataBuffer(handle = buf)
 
-class NavigationHandler:
+class NavigationHandler(object):
 	def _register(self, handle):
 		self._cb = core.BNNavigationHandler()
 		self._cb.context = 0
@@ -174,7 +174,7 @@ class NavigationHandler:
 			log_error(traceback.format_exc())
 			return False
 
-class FileMetadata:
+class FileMetadata(object):
 	def __init__(self, filename = None, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNFileMetadata)
@@ -190,53 +190,72 @@ class FileMetadata:
 			core.BNSetFileMetadataNavigationHandler(self.handle, None)
 		core.BNFreeFileMetadata(self.handle)
 
-	def __getattr__(self, name):
-		if name == "filename":
-			return core.BNGetFilename(self.handle)
-		elif name == "modified":
-			return core.BNIsFileModified(self.handle)
-		elif name == "analysis_changed":
-			return core.BNIsAnalysisChanged(self.handle)
-		elif name == "has_database":
-			return core.BNIsBackedByDatabase(self.handle)
-		elif name == "view":
-			return core.BNGetCurrentView(self.handle)
-		elif name == "offset":
-			return core.BNGetCurrentOffset(self.handle)
-		elif name == "raw":
-			view = core.BNGetFileViewOfType(self.handle, "Raw")
-			if view is None:
-				return None
-			return BinaryView(self, handle = view)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def filename(self):
+		"""Backing filename"""
+		return core.BNGetFilename(self.handle)
 
-	def __setattr__(self, name, value):
-		if name == "filename":
-			core.BNSetFilename(self.handle, str(value))
-		elif name == "navigation":
-			value._register(self.handle)
-			self.__dict__[name] = value
-		elif name == "modified":
-			if value:
-				core.BNMarkFileModified(self.handle)
-			else:
-				core.BNMarkFileSaved(self.handle)
-		elif name == "saved":
-			if value:
-				core.BNMarkFileSaved(self.handle)
-			else:
-				core.BNMarkFileModified(self.handle)
-		elif name == "view":
-			core.BNNavigate(self.handle, str(value), core.BNGetCurrentOffset(self.handle))
-		elif name == "offset":
-			core.BNNavigate(self.handle, core.BNGetCurrentView(self.handle), value)
-		elif (name == "analysis_changed") or (name == "has_database"):
-			raise AttributeError, "attribute '%s' is read only" % name
+	@filename.setter
+	def filename(self, value):
+		core.BNSetFilename(self.handle, str(value))
+
+	@property
+	def modified(self):
+		"""Boolean result of whether the file is modified"""
+		return core.BNIsFileModified(self.handle)
+
+	@modified.setter
+	def modified(self, value):
+		if value:
+			core.BNMarkFileModified(self.handle)
 		else:
-			self.__dict__[name] = value
+			core.BNMarkFileSaved(self.handle)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["filename", "modified", "analysis_changed", "has_database", "view", "offset"]
+	@property
+	def analysis_changed(self):
+		"""Boolean result of whether the auto-analysis results have changed (read-only)"""
+		return core.BNIsAnalysisChanged(self.handle)
+
+	@property
+	def has_database(self):
+		"""Whether the FileMetadata is backed by a database"""
+		return core.BNIsBackedByDatabase(self.handle)
+
+	@property
+	def view(self):
+		return core.BNGetCurrentView(self.handle)
+
+	@view.setter
+	def view(self, value):
+		core.BNNavigate(self.handle, str(value), core.BNGetCurrentOffset(self.handle))
+
+	@property
+	def offset(self):
+		"""Current offset into the file"""
+		return core.BNGetCurrentOffset(self.handle)
+
+	@offset.setter
+	def offset(self, value):
+		core.BNNavigate(self.handle, core.BNGetCurrentView(self.handle), value)
+
+	@property
+	def raw(self):
+		view = core.BNGetFileViewOfType(self.handle, "Raw")
+		if view is None:
+			return None
+		return BinaryView(self, handle = view)
+
+	@property
+	def saved(self):
+		"""Set to mark file as saved"""
+		return not core.BNIsFileModified(self.handle)
+
+	@saved.setter
+	def saved(self, value):
+		if value:
+			core.BNMarkFileSaved(self.handle)
+		else:
+			core.BNMarkFileModified(self.handle)
 
 	def close(self):
 		core.BNCloseFile(self.handle)
@@ -278,6 +297,16 @@ class FileMetadata:
 			if view is None:
 				return None
 		return BinaryView(self, handle = view)
+
+	def __setattr__(self, name, value):
+		if name == "navigation":
+			value._register(self.handle)
+			self.__dict__["navigation"] = value
+		else:
+			try:
+				object.__setattr__(self,name,value)
+			except AttributeError:
+				raise AttributeError, "attribute '%s' is read only" % name
 
 class FileAccessor:
 	def __init__(self):
@@ -512,26 +541,17 @@ class BinaryDataNotificationCallbacks:
 			log_error(traceback.format_exc())
 
 class _BinaryViewTypeMetaclass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			types = core.BNGetBinaryViewTypes(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(BinaryViewType(types[i]))
-			core.BNFreeBinaryViewTypeList(types)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
-
-	def __setattr__(self, name, value):
-		if name == "list":
-			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list"]
+	@property
+	def list(self):
+		"""List all BinaryView types (read-only)"""
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		types = core.BNGetBinaryViewTypes(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BinaryViewType(types[i]))
+		core.BNFreeBinaryViewTypeList(types)
+		return result
 
 	def __getitem__(self, value):
 		_init_plugins()
@@ -540,27 +560,27 @@ class _BinaryViewTypeMetaclass(type):
 			raise KeyError, "'%s' is not a valid view type" % str(value)
 		return BinaryViewType(view_type)
 
-class BinaryViewType:
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class BinaryViewType(object):
 	__metaclass__ = _BinaryViewTypeMetaclass
 
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
 
-	def __getattr__(self, name):
-		if name == "name":
-			return core.BNGetBinaryViewTypeName(self.handle)
-		elif name == "long_name":
-			return core.BNGetBinaryViewTypeLongName(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def name(self):
+		"""Binary View name (read-only)"""
+		return core.BNGetBinaryViewTypeName(self.handle)
 
-	def __setattr__(self, name, value):
-		if (name == "name") or (name == "long_name"):
-			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["name","long_name"]
+	@property
+	def long_name(self):
+		""" Binary VIew long name (read-only)"""
+		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
 		return "<view type: '%s'>" % self.name
@@ -601,12 +621,21 @@ class BinaryViewType:
 			return None
 		return Platform(None, platform)
 
-class BinaryView:
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class BinaryView(object):
 	name = None
+	"""Binary View name"""
 	long_name = None
+	"""Binary View long name"""
 	_registered = False
 	_registered_cb = None
 	view_type = None
+	"""Binary View type"""
 
 	def __init__(self, file_metadata = None, handle = None):
 		if handle is not None:
@@ -719,107 +748,162 @@ class BinaryView:
 			i._unregister()
 		core.BNFreeBinaryView(self.handle)
 
-	def __getattr__(self, name):
-		if name == "modified":
-			return self.file.modified
-		elif name == "analysis_changed":
-			return self.file.analysis_changed
-		elif name == "has_database":
-			return self.file.has_database
-		elif name == "view":
-			return self.file.view
-		elif name == "offset":
-			return self.file.offset
-		elif name == "start":
-			return core.BNGetStartOffset(self.handle)
-		elif name == "end":
-			return core.BNGetEndOffset(self.handle)
-		elif name == "entry_point":
-			return core.BNGetEntryPoint(self.handle)
-		elif name == "arch":
-			arch = core.BNGetDefaultArchitecture(self.handle)
-			if arch is None:
-				return None
-			return Architecture(handle = arch)
-		elif name == "platform":
-			platform = core.BNGetDefaultPlatform(self.handle)
-			if platform is None:
-				return None
-			return Platform(self.arch, handle = platform)
-		elif name == "endianness":
-			return core.BNGetDefaultEndianness(self.handle)
-		elif name == "address_size":
-			return core.BNGetViewAddressSize(self.handle)
-		elif name == "executable":
-			return core.BNIsExecutableView(self.handle)
-		elif name == "functions":
-			count = ctypes.c_ulonglong(0)
-			funcs = core.BNGetAnalysisFunctionList(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(Function(self, core.BNNewFunctionReference(funcs[i])))
-			core.BNFreeFunctionList(funcs, count.value)
-			return result
-		elif name == "has_functions":
-			return core.BNHasFunctions(self.handle)
-		elif name == "entry_function":
-			func = core.BNGetAnalysisEntryPoint(self.handle)
-			if func is None:
-				return None
-			return Function(self, func)
-		elif name == "symbols":
-			count = ctypes.c_ulonglong(0)
-			syms = core.BNGetSymbols(self.handle, count)
-			result = {}
-			for i in xrange(0, count.value):
-				sym = Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i]))
-				result[sym.raw_name] = sym
-			core.BNFreeSymbolList(syms, count.value)
-			return result
-		elif name == "type":
-			return core.BNGetViewType(self.handle)
-		elif name == "available_types":
-			count = ctypes.c_ulonglong(0)
-			types = core.BNGetBinaryViewTypesForData(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(BinaryViewType(types[i]))
-			core.BNFreeBinaryViewTypeList(types)
-			return result
-		elif name == "strings":
-			return self.get_strings()
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def modified(self):
+		return self.file.modified
 
-	def __setattr__(self, name, value):
-		if name == "modified":
-			self.file.modified = value
-		elif name == "saved":
-			self.file.saved = value
-		elif name == "view":
-			self.file.view = value
-		elif name == "offset":
-			self.file.offset = value
-		elif name == "arch":
-			if value is None:
-				core.BNSetDefaultArchitecture(self.handle, None)
-			else:
-				core.BNSetDefaultArchitecture(self.handle, value.handle)
-		elif name == "platform":
-			  if value is None:
-				core.BNSetDefaultPlatform(self.handle, None)
-			  else:
-				core.BNSetDefaultPlatform(self.handle, value.handle)
-		elif ((name == "analysis_changed") or (name == "has_database") or (name == "start") or (name == "end") or
-		  (name == "entry_point") or (name == "endianness") or (name == "address_size") or
-		  (name == "executable") or (name == "functions") or (name == "has_functions") or
-		  (name == "entry_function") or (name == "symbols") or (name == "type") or (name == "available_types") or
-		  (name == "strings")):
-			raise AttributeError, "attribute '%s' is read only" % name
+	@modified.setter
+	def modified(self, value):
+		self.file.modified = value
+
+	@property
+	def analysis_changed(self):
+		"""Whether analysis has changed (read-only)"""
+		return self.file.analysis_changed
+
+	@property
+	def has_database(self):
+		"""Whether the BinaryView has a database (read-only)"""
+		return self.file.has_database
+
+	@property
+	def view(self):
+		return self.file.view
+
+	@view.setter
+	def view(self, value):
+		self.file.view = value
+
+	@property
+	def offset(self):
+		return self.file.offset
+
+	@offset.setter
+	def offset(self, value):
+		self.file.offset = value
+
+	@property
+	def start(self):
+		"""Start offset of the binary (read-only)"""
+		return core.BNGetStartOffset(self.handle)
+
+	@property
+	def end(self):
+		"""End offset of the binary (read-only)"""
+		return core.BNGetEndOffset(self.handle)
+
+	@property
+	def entry_point(self):
+		"""Entry point of the binary (read-only)"""
+		return core.BNGetEntryPoint(self.handle)
+
+	@property
+	def arch(self):
+		arch = core.BNGetDefaultArchitecture(self.handle)
+		if arch is None:
+			return None
+		return Architecture(handle = arch)
+
+	@arch.setter
+	def arch(self, value):
+		if value is None:
+			core.BNSetDefaultArchitecture(self.handle, None)
 		else:
-			self.__dict__[name] = value
+			core.BNSetDefaultArchitecture(self.handle, value.handle)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["modified", "analysis_changed", "has_database", "view", "offset", "start", "end", "entry_point", "arch", "platform", "endianness", "address_size", "executable", "functions", "has_functions", "entry_function", "symbols", "type", "available_types", "strings"]
+	@property
+	def platform(self):
+		platform = core.BNGetDefaultPlatform(self.handle)
+		if platform is None:
+			return None
+		return Platform(self.arch, handle = platform)
+
+	@platform.setter
+	def platform(self, value):
+		  if value is None:
+			core.BNSetDefaultPlatform(self.handle, None)
+		  else:
+			core.BNSetDefaultPlatform(self.handle, value.handle)
+
+	@property
+	def endianness(self):
+		"""Endianness of the binary (read-only)"""
+		return core.BNGetDefaultEndianness(self.handle)
+
+	@property
+	def address_size(self):
+		"""Address size of the binary (read-only)"""
+		return core.BNGetViewAddressSize(self.handle)
+
+	@property
+	def executable(self):
+		"""Whether the binary is an executable (read-only)"""
+		return core.BNIsExecutableView(self.handle)
+
+	@property
+	def functions(self):
+		"""List of functions (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Function(self, core.BNNewFunctionReference(funcs[i])))
+		core.BNFreeFunctionList(funcs, count.value)
+		return result
+
+	@property
+	def has_functions(self):
+		"""Boolean whether the binary has functions (read-only)"""
+		return core.BNHasFunctions(self.handle)
+
+	@property
+	def entry_function(self):
+		"""Entry function (read-only)"""
+		func = core.BNGetAnalysisEntryPoint(self.handle)
+		if func is None:
+			return None
+		return Function(self, func)
+
+	@property
+	def symbols(self):
+		"""Dict of symbols (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		syms = core.BNGetSymbols(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			sym = Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i]))
+			result[sym.raw_name] = sym
+		core.BNFreeSymbolList(syms, count.value)
+		return result
+
+	@property
+	def type(self):
+		"""View type (read-only)"""
+		return core.BNGetViewType(self.handle)
+
+	@property
+	def available_types(self):
+		"""Available types (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		types = core.BNGetBinaryViewTypesForData(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BinaryViewType(types[i]))
+		core.BNFreeBinaryViewTypeList(types)
+		return result
+
+	@property
+	def strings(self):
+		"""List of strings (read-only)"""
+		return self.get_strings()
+
+	@property
+	def saved(self):
+		return self.file.saved
+
+	@saved.setter
+	def saved(self, value):
+		self.file.saved = value
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1344,7 +1428,13 @@ class BinaryView:
 		core.BNFreeStringList(strings)
 		return result
 
-class BinaryReader:
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class BinaryReader(object):
 	def __init__(self, data, endian = None):
 		self.handle = core.BNCreateBinaryReader(data.handle)
 		if endian is None:
@@ -1355,27 +1445,26 @@ class BinaryReader:
 	def __del__(self):
 		core.BNFreeBinaryReader(self.handle)
 
-	def __getattr__(self, name):
-		if name == "endianness":
-			return core.BNGetBinaryReaderEndianness(self.handle)
-		elif name == "offset":
-			return core.BNGetReaderPosition(self.handle)
-		elif name == "eof":
-			return core.BNIsEndOfFile(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def endianness(self):
+		return core.BNGetBinaryReaderEndianness(self.handle)
 
-	def __setattr__(self, name, value):
-		if (name == "eof"):
-			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "endianness":
-			core.BNSetBinaryReaderEndianness(self.handle, value)
-		elif name == "offset":
-			core.BNSeekBinaryReader(self.handle, value)
-		else:
-			self.__dict__[name] = value
+	@endianness.setter
+	def endianness(self, value):
+		core.BNSetBinaryReaderEndianness(self.handle, value)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["endianness","offset", "eof"]
+	@property
+	def offset(self):
+		return core.BNGetReaderPosition(self.handle)
+
+	@offset.setter
+	def offset(self, value):
+		core.BNSeekBinaryReader(self.handle, value)
+
+	@property
+	def eof(self):
+		"""Boolean, is end of file (read-only)"""
+		return core.BNIsEndOfFile(self.handle)
 
 	def read(self, length):
 		dest = ctypes.create_string_buffer(length)
@@ -1449,6 +1538,12 @@ class BinaryReader:
 	def seek_relative(self, offset):
 		core.BNSeekBinaryReaderRelative(self.handle, offset)
 
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
 class BinaryWriter:
 	def __init__(self, data, endian = None):
 		self.handle = core.BNCreateBinaryWriter(data.handle)
@@ -1460,23 +1555,21 @@ class BinaryWriter:
 	def __del__(self):
 		core.BNFreeBinaryWriter(self.handle)
 
-	def __getattr__(self, name):
-		if name == "endianness":
-			return core.BNGetBinaryWriterEndianness(self.handle)
-		elif name == "offset":
-			return core.BNGetWriterPosition(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def endianness(self):
+		return core.BNGetBinaryWriterEndianness(self.handle)
 
-	def __setattr__(self, name, value):
-		if name == "endianness":
-			core.BNSetBinaryWriterEndianness(self.handle, value)
-		elif name == "offset":
-			core.BNSeekBinaryWriter(self.handle, value)
-		else:
-			self.__dict__[name] = value
+	@endianness.setter
+	def endianness(self, value):
+		core.BNSetBinaryWriterEndianness(self.handle, value)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["endianness","offset"]
+	@property
+	def offset(self):
+		return core.BNGetWriterPosition(self.handle)
+
+	@offset.setter
+	def offset(self, value):
+		core.BNSeekBinaryWriter(self.handle, value)
 
 	def write(self, value):
 		value = str(value)
@@ -1526,7 +1619,7 @@ class BinaryWriter:
 	def seek_relative(self, offset):
 		core.BNSeekBinaryWriterRelative(self.handle, offset)
 
-class Symbol:
+class Symbol(object):
 	def __init__(self, sym_type, addr, short_name, full_name = None, raw_name = None, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
@@ -1542,105 +1635,163 @@ class Symbol:
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
 
-	def __getattr__(self, name):
-		if name == "type":
-			return core.BNSymbolType_names[core.BNGetSymbolType(self.handle)]
-		elif name == "name":
-			return core.BNGetSymbolRawName(self.handle)
-		elif name == "short_name":
-			return core.BNGetSymbolShortName(self.handle)
-		elif name == "full_name":
-			return core.BNGetSymbolFullName(self.handle)
-		elif name == "raw_name":
-			return core.BNGetSymbolRawName(self.handle)
-		elif name == "address":
-			return core.BNGetSymbolAddress(self.handle)
-		elif name == "auto":
-			return core.BNIsSymbolAutoDefined(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def type(self):
+		"""Symbol type (read-only)"""
+		return core.BNSymbolType_names[core.BNGetSymbolType(self.handle)]
 
-	def __setattr__(self, name, value):
-		if ((name == "type") or (name == "name") or (name == "short_name") or (name == "full_name") or
-			(name == "raw_name") or (name == "address")):
-			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "auto":
-			core.BNSetSymbolAutoDefined(self.handle, value)
-		else:
-			self.__dict__[name] = value
+	@property
+	def name(self):
+		"""Symbol name (read-only)"""
+		return core.BNGetSymbolRawName(self.handle)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["type","name", "short_name", "full_name", "raw_name", "address", "auto"]
+	@property
+	def short_name(self):
+		"""Symbol short name (read-only)"""
+		return core.BNGetSymbolShortName(self.handle)
+
+	@property
+	def full_name(self):
+		"""Symbol full name (read-only)"""
+		return core.BNGetSymbolFullName(self.handle)
+
+	@property
+	def raw_name(self):
+		"""Symbol raw name (read-only)"""
+		return core.BNGetSymbolRawName(self.handle)
+
+	@property
+	def address(self):
+		"""Symbol address (read-only)"""
+		return core.BNGetSymbolAddress(self.handle)
+
+	@property
+	def auto(self):
+		return core.BNIsSymbolAutoDefined(self.handle)
+
+	@auto.setter
+	def auto(self, value):
+		core.BNSetSymbolAutoDefined(self.handle, value)
 
 	def __repr__(self):
 		return "<%s: \"%s\" @ 0x%x>" % (self.type, self.full_name, self.address)
 
-class Type:
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class Type(object):
 	def __init__(self, handle):
 		self.handle = handle
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
 
-	def __getattr__(self, name):
-		if name == "type_class":
-			return BNTypeClass_names[core.BNGetTypeClass(self.handle)]
-		elif name == "width":
-			return core.BNGetTypeWidth(self.handle)
-		elif name == "alignment":
-			return core.BNGetTypeAlignment(self.handle)
-		elif name == "signed":
-			return core.BNIsTypeSigned(self.handle)
-		elif name == "const":
-			return core.BNIsTypeConst(self.handle)
-		elif name == "float":
-			return core.BNIsTypeFloatingPoint(self.handle)
-		elif (name == "target") or (name == "element_type") or (name == "return_value"):
-			result = core.BNGetChildType(self.handle)
-			if result is None:
-				return None
-			return Type(result)
-		elif name == "calling_convention":
-			result = core.BNGetTypeCallingConvention(self.handle)
-			if result is None:
-				return None
-			return CallingConvention(None, result)
-		elif name == "parameters":
-			count = ctypes.c_ulonglong()
-			params = core.BNGetTypeParameters(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append((Type(core.BNNewTypeReference(params[i].type)), params[i].name))
-			core.BNFreeTypeParameterList(params, count.value)
-			return result
-		elif name == "has_variable_arguments":
-			return core.BNTypeHasVariableArguments(self.handle)
-		elif name == "can_return":
-			return core.BNFunctionTypeCanReturn(self.handle)
-		elif name == "structure":
-			result = core.BNGetTypeStructure(self.handle)
-			if result is None:
-				return None
-			return Structure(result)
-		elif name == "enumeration":
-			result = core.BNGetTypeEnumeration(self.handle)
-			if result is None:
-				return None
-			return Enumeration(result)
-		elif name == "count":
-			return core.BNGetTypeElementCount(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def type_class(self):
+		"""Type class (read-only)"""
+		return BNTypeClass_names[core.BNGetTypeClass(self.handle)]
 
-	def __setattr__(self, name, value):
-		if ((name == "type_class") or (name == "width") or (name == "alignment") or (name == "signed") or
-			(name == "const") or (name == "float") or (name == "target") or (name == "element_type") or
-			(name == "return_value") or (name == "parameters") or (name == "has_variable_arguments") or
-			(name == "can_return") or (name == "structure") or (name == "enumeration") or (name == "count")):
-			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
+	@property
+	def width(self):
+		"""Type width (read-only)"""
+		return core.BNGetTypeWidth(self.handle)
 
-	def __dir__(self):
-		return dir(self.__class__) + ["type_class", "width", "alignment", "signed", "const", "float", "target", "element_type", "return_value", "calling_convention", "parameters", "has_variable_arguments", "can_return", "structure", "enumeration", "count"]
+	@property
+	def alignment(self):
+		"""Type alignment (read-only)"""
+		return core.BNGetTypeAlignment(self.handle)
+
+	@property
+	def signed(self):
+		"""Wether type is signed (read-only)"""
+		return core.BNIsTypeSigned(self.handle)
+
+	@property
+	def const(self):
+		"""Whether type is const (read-only)"""
+		return core.BNIsTypeConst(self.handle)
+
+	@property
+	def modified(self):
+		"""Whether type is modified (read-only)"""
+		return core.BNIsTypeFloatingPoint(self.handle)
+
+	@property
+	def target(self):
+		"""Target (read-only)"""
+		result = core.BNGetChildType(self.handle)
+		if result is None:
+			return None
+		return Type(result)
+
+	@property
+	def element_type(self):
+		"""Target (read-only)"""
+		result = core.BNGetChildType(self.handle)
+		if result is None:
+			return None
+		return Type(result)
+
+	@property
+	def return_value(self):
+		"""Return value (read-only)"""
+		result = core.BNGetChildType(self.handle)
+		if result is None:
+			return None
+		return Type(result)
+
+	@property
+	def calling_convention(self):
+		"""Calling convention (read-only)"""
+		result = core.BNGetTypeCallingConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@property
+	def parameters(self):
+		"""Type parameters list (read-only)"""
+		count = ctypes.c_ulonglong()
+		params = core.BNGetTypeParameters(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append((Type(core.BNNewTypeReference(params[i].type)), params[i].name))
+		core.BNFreeTypeParameterList(params, count.value)
+		return result
+
+	@property
+	def has_variable_arguments(self):
+		"""Whether type has variable arguments (read-only)"""
+		return core.BNTypeHasVariableArguments(self.handle)
+
+	@property
+	def can_return(self):
+		"""Whether type can return (read-only)"""
+		return core.BNFunctionTypeCanReturn(self.handle)
+
+	@property
+	def structure(self):
+		"""Structure of the type (read-only)"""
+		result = core.BNGetTypeStructure(self.handle)
+		if result is None:
+			return None
+		return Structure(result)
+
+	@property
+	def enumeration(self):
+		"""Type enumeration (read-only)"""
+		result = core.BNGetTypeEnumeration(self.handle)
+		if result is None:
+			return None
+		return Enumeration(result)
+
+	@property
+	def count(self):
+		"""Type count (read-only)"""
+		return core.BNGetTypeElementCount(self.handle)
 
 	def __str__(self):
 		return core.BNGetTypeString(self.handle)
@@ -1703,6 +1854,12 @@ class Type:
 		return Type(core.BNCreateFunctionType(ret.handle, calling_convention, param_buf, len(params),
 			  variable_arguments))
 
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
 class StructureMember:
 	def __init__(self, t, name, offset):
 		self.type = t
@@ -1715,7 +1872,7 @@ class StructureMember:
 		return "<%s %s%s, offset 0x%x>" % (self.type.get_string_before_name(), self.name,
 							 self.type.get_string_after_name(), self.offset)
 
-class Structure:
+class Structure(object):
 	def __init__(self, handle = None):
 		if handle is None:
 			self.handle = core.BNCreateStructure()
@@ -1725,42 +1882,57 @@ class Structure:
 	def __del__(self):
 		core.BNFreeStructure(self.handle)
 
-	def __getattr__(self, name):
-		if name == "name":
-			return core.BNGetStructureName(self.handle)
-		elif name == "members":
-			count = ctypes.c_ulonglong()
-			members = core.BNGetStructureMembers(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type)),
-					members[i].name, members[i].offset))
-			core.BNFreeStructureMemberList(members, count.value)
-			return result
-		elif name == "width":
-			return core.BNGetStructureWidth(self.handle)
-		elif name == "alignment":
-			return core.BNGetStructureAlignment(self.handle)
-		elif name == "packed":
-			return core.BNIsStructurePacked(self.handle)
-		elif name == "union":
-			return core.BNIsStructureUnion(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def name(self):
+		return core.BNGetStructureName(self.handle)
+
+	@name.setter
+	def name(self, value):
+		core.BNSetStructureName(self.handle, value)
+
+	@property
+	def members(self):
+		"""Structure member list (read-only)"""
+		count = ctypes.c_ulonglong()
+		members = core.BNGetStructureMembers(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type)),
+				members[i].name, members[i].offset))
+		core.BNFreeStructureMemberList(members, count.value)
+		return result
+
+	@property
+	def width(self):
+		"""Structure width (read-only)"""
+		return core.BNGetStructureWidth(self.handle)
+
+	@property
+	def alignment(self):
+		"""Structure alignment (read-only)"""
+		return core.BNGetStructureAlignment(self.handle)
+
+	@property
+	def packed(self):
+		return core.BNIsStructurePacked(self.handle)
+
+	@packed.setter
+	def packed(self, value):
+		core.BNSetStructurePacked(self.handle, value)
+
+	@property
+	def union(self):
+		return core.BNIsStructureUnion(self.handle)
+
+	@union.setter
+	def union(self, value):
+		core.BNSetStructureUnion(self.handle, value)
 
 	def __setattr__(self, name, value):
-		if (name == "members") or (name == "width") or (name == "alignment"):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "name":
-			core.BNSetStructureName(self.handle, value)
-		elif name == "packed":
-			core.BNSetStructurePacked(self.handle, value)
-		elif name == "union":
-			core.BNSetStructureUnion(self.handle, value)
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["name","members", "width", "alignment", "packed", "union"]
 
 	def __repr__(self):
 		if len(self.name) > 0:
@@ -1785,7 +1957,7 @@ class EnumerationMember:
 	def __repr__(self):
 		return "<%s = 0x%x>" % (self.name, self.value)
 
-class Enumeration:
+class Enumeration(object):
 	def __init__(self, handle = None):
 		if handle is None:
 			self.handle = core.BNCreateEnumeration()
@@ -1795,29 +1967,30 @@ class Enumeration:
 	def __del__(self):
 		core.BNFreeEnumeration(self.handle)
 
-	def __getattr__(self, name):
-		if name == "name":
-			return core.BNGetEnumerationName(self.handle)
-		elif name == "members":
-			count = ctypes.c_ulonglong()
-			members = core.BNGetEnumerationMembers(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(EnumerationMember(members[i].name, members[i].value, members[i].isDefault))
-			core.BNFreeEnumerationMemberList(members, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def name(self):
+		return core.BNGetEnumerationName(self.handle)
+
+	@name.setter
+	def name(self, value):
+		core.BNSetEnumerationName(self.handle, value)
+
+	@property
+	def members(self):
+		"""Enumeration member list (read-only)"""
+		count = ctypes.c_ulonglong()
+		members = core.BNGetEnumerationMembers(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(EnumerationMember(members[i].name, members[i].value, members[i].isDefault))
+		core.BNFreeEnumerationMemberList(members, count.value)
+		return result
 
 	def __setattr__(self, name, value):
-		if name == "members":
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "name":
-			core.BNSetEnumerationName(self.handle, value)
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["name", "members"]
 
 	def __repr__(self):
 		if len(self.name) > 0:
@@ -1885,7 +2058,18 @@ class StackVariableReference:
 			return "<operand %d ref to %s%+x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
-class Function:
+class IndirectBranchInfo:
+	def __init__(self, source_arch, source_addr, dest_arch, dest_addr, auto_defined):
+		self.source_arch = source_arch
+		self.source_addr = source_addr
+		self.dest_arch = dest_arch
+		self.dest_addr = dest_addr
+		self.auto_defined = auto_defined
+
+	def __repr__(self):
+		return "<branch %s:0x%x -> %s:0x%x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
+
+class Function(object):
 	def __init__(self, view, handle):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
@@ -1893,78 +2077,130 @@ class Function:
 	def __del__(self):
 		core.BNFreeFunction(self.handle)
 
-	def __getattr__(self, name):
-		if name == "view":
-			return self._view
-		elif name == "arch":
-			arch = core.BNGetFunctionArchitecture(self.handle)
-			if arch is None:
-				return None
-			return Architecture(arch)
-		elif name == "start":
-			return core.BNGetFunctionStart(self.handle)
-		elif name == "symbol":
-			sym = core.BNGetFunctionSymbol(self.handle)
-			if sym is None:
-				return None
-			return Symbol(None, None, None, handle = sym)
-		elif name == "auto":
-			return core.BNWasFunctionAutomaticallyDiscovered(self.handle)
-		elif name == "can_return":
-			return core.BNCanFunctionReturn(self.handle)
-		elif name == "explicitly_defined_type":
-			return core.BNHasExplicitlyDefinedType(self.handle)
-		elif name == "basic_blocks":
-			count = ctypes.c_ulonglong()
-			blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
-			core.BNFreeBasicBlockList(blocks, count.value)
-			return result
-		elif name == "comments":
-			count = ctypes.c_ulonglong()
-			addrs = core.BNGetCommentedAddresses(self.handle, count)
-			result = {}
-			for i in xrange(0, count.value):
-				result[addrs[i]] = self.get_comment_at(addrs[i])
-			core.BNFreeAddressList(addrs)
-			return result
-		elif name == "low_level_il":
-			return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-						core.BNGetFunctionLowLevelIL(self.handle)))
-		elif name == "low_level_il_basic_blocks":
-			count = ctypes.c_ulonglong()
-			blocks = core.BNGetFunctionLowLevelILBasicBlockList(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
-			core.BNFreeBasicBlockList(blocks, count.value)
-			return result
-		elif name == "type":
-			return Type(core.BNGetFunctionType(self.handle))
-		elif name == "stack_layout":
-			count = ctypes.c_ulonglong()
-			v = core.BNGetStackLayout(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(StackVariable(v[i].offset, v[i].name, Type(handle = core.BNNewTypeReference(v[i].type))))
-			result.sort(key = lambda x: x.offset)
-			core.BNFreeStackLayout(v, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def view(self):
+		"""Function view (read-only)"""
+		return self._view
+
+	@property
+	def arch(self):
+		"""Function architecture (read-only)"""
+		arch = core.BNGetFunctionArchitecture(self.handle)
+		if arch is None:
+			return None
+		return Architecture(arch)
+
+	@property
+	def start(self):
+		"""Function start (read-only)"""
+		return core.BNGetFunctionStart(self.handle)
+
+	@property
+	def symbol(self):
+		"""Function symbol(read-only)"""
+		sym = core.BNGetFunctionSymbol(self.handle)
+		if sym is None:
+			return None
+		return Symbol(None, None, None, handle = sym)
+
+	@property
+	def auto(self):
+		"""Whether function was automatically discovered (read-only)"""
+		return core.BNWasFunctionAutomaticallyDiscovered(self.handle)
+
+	@property
+	def can_return(self):
+		"""Whether function can return (read-only)"""
+		return core.BNCanFunctionReturn(self.handle)
+
+	@property
+	def explicitly_defined_type(self):
+		"""Whether function has explicitly defined types (read-only)"""
+		return core.BNHasExplicitlyDefinedType(self.handle)
+
+	@property
+	def basic_blocks(self):
+		"""List of basic blocks (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def comments(self):
+		"""Dict of comments (read-only)"""
+		count = ctypes.c_ulonglong()
+		addrs = core.BNGetCommentedAddresses(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[addrs[i]] = self.get_comment_at(addrs[i])
+		core.BNFreeAddressList(addrs)
+		return result
+
+	@property
+	def indirect_branches(self):
+		count = ctypes.c_ulonglong()
+		branches = core.BNGetIndirectBranches(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		core.BNFreeIndirectBranchList(branches)
+		return result
+
+	@property
+	def low_level_il(self):
+		"""Function low level IL (read-only)"""
+		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
+					core.BNGetFunctionLowLevelIL(self.handle)))
+
+	@property
+	def low_level_il_basic_blocks(self):
+		"""Function low level IL basic blocks (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionLowLevelILBasicBlockList(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def type(self):
+		"""Function type (read-only)"""
+		return Type(core.BNGetFunctionType(self.handle))
+
+	@property
+	def stack_layout(self):
+		"""List of function stack (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetStackLayout(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(StackVariable(v[i].offset, v[i].name, Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.offset)
+		core.BNFreeStackLayout(v, count.value)
+		return result
+
+	@property
+	def indirect_branches(self):
+		"""List of indirect branches (read-only)"""
+		count = ctypes.c_ulonglong()
+		branches = core.BNGetIndirectBranches(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		core.BNFreeIndirectBranchList(branches)
+		return result
 
 	def __setattr__(self, name, value):
-		if ((name == "view") or (name == "arch") or (name == "start") or (name == "symbol") or (name == "auto") or
-		(name == "can_return") or (name == "basic_blocks") or (name == "comments") or (name == "low_level_il") or
-		(name == "low_level_il_basic_blocks") or (name == "type") or (name == "explicitly_defined_type") or
-		(name == "stack_layout")):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+>>>>>>> Stashed changes
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["view", "arch", "start", "symbol", "auto", "can_return", "explicitly_defined_type", "basic_blocks", "comments", "low_level_il", "low_level_il_basic_blocks", "type", "stack_layout"]
 
 	def __repr__(self):
 		arch = self.arch
@@ -2055,6 +2291,29 @@ class Function:
 	def apply_auto_discovered_type(self, func_type):
 		core.BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle)
 
+	def set_auto_indirect_branches(self, source_arch, source, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNSetAutoIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
+
+	def set_user_indirect_branches(self, source_arch, source, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNSetUserIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
+
+	def get_indirect_branches_at(self, arch, addr):
+		count = ctypes.c_ulonglong()
+		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		core.BNFreeIndirectBranchList(branches)
+		return result
+
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):
 		self.type = core.BNBranchType_names[branch_type]
@@ -2070,7 +2329,7 @@ class BasicBlockEdge:
 		else:
 			return "<%s: 0x%x>" % (self.type, self.target)
 
-class BasicBlock:
+class BasicBlock(object):
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
@@ -2078,50 +2337,64 @@ class BasicBlock:
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
 
-	def __getattr__(self, name):
-		if name == "function":
-			func = core.BNGetBasicBlockFunction(self.handle)
-			if func is None:
-				return None
-			return Function(self.view, func)
-		elif name == "arch":
-			arch = core.BNGetBasicBlockArchitecture(self.handle)
-			if arch is None:
-				return None
-			return Architecture(arch)
-		elif name == "start":
-			return core.BNGetBasicBlockStart(self.handle)
-		elif name == "end":
-			return core.BNGetBasicBlockEnd(self.handle)
-		elif name == "length":
-			return core.BNGetBasicBlockLength(self.handle)
-		elif name == "outgoing_edges":
-			count = ctypes.c_ulonglong(0)
-			edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				branch_type = edges[i].type
-				target = edges[i].target
-				if edges[i].arch:
-					arch = Architecture(edges[i].arch)
-				else:
-					arch = None
-				result.append(BasicBlockEdge(branch_type, target, arch))
-			core.BNFreeBasicBlockOutgoingEdgeList(edges)
-			return result
-		elif name == "has_undetermined_outgoing_edges":
-			return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def function(self):
+		"""Basic block function (read-only)"""
+		func = core.BNGetBasicBlockFunction(self.handle)
+		if func is None:
+			return None
+		return Function(self.view, func)
+
+	@property
+	def arch(self):
+		"""Basic block architecture (read-only)"""
+		arch = core.BNGetBasicBlockArchitecture(self.handle)
+		if arch is None:
+			return None
+		return Architecture(arch)
+
+	@property
+	def start(self):
+		"""Basic block start (read-only)"""
+		return core.BNGetBasicBlockStart(self.handle)
+
+	@property
+	def end(self):
+		"""Basic block end (read-only)"""
+		return core.BNGetBasicBlockEnd(self.handle)
+
+	@property
+	def length(self):
+		"""Basic block length (read-only)"""
+		return core.BNGetBasicBlockLength(self.handle)
+
+	@property
+	def outgoing_edges(self):
+		"""List of basic block outgoing edges (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			branch_type = edges[i].type
+			target = edges[i].target
+			if edges[i].arch:
+				arch = Architecture(edges[i].arch)
+			else:
+				arch = None
+			result.append(BasicBlockEdge(branch_type, target, arch))
+		core.BNFreeBasicBlockOutgoingEdgeList(edges)
+		return result
+
+	@property
+	def has_undetermined_outgoing_edges(self):
+		"""Whether basic block has undetermined outgoing edges (read-only)"""
+		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
 	def __setattr__(self, name, value):
-		if ((name == "function") or (name == "arch") or (name == "start") or (name == "end") or
-			(name == "length") or (name == "outgoing_edges") or (name == "has_undetermined_outgoing_edges")):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["function", "arch", "start", "end", "length", "outgoing_edges", "has_undetermined_outgoing_edges"]
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))
@@ -2162,73 +2435,93 @@ class FunctionGraphEdge:
 			return "<%s: %s@0x%x>" % (self.type, self.arch.name, self.target)
 		return "<%s: 0x%x>" % (self.type, self.target)
 
-class FunctionGraphBlock:
+class FunctionGraphBlock(object):
 	def __init__(self, handle):
 		self.handle = handle
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
 
-	def __getattr__(self, name):
-		if name == "arch":
-			arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
-			if arch is None:
-				return None
-			return Architecture(arch)
-		elif name == "start":
-			return core.BNGetFunctionGraphBlockStart(self.handle)
-		elif name == "end":
-			return core.BNGetFunctionGraphBlockEnd(self.handle)
-		elif name == "x":
-			return core.BNGetFunctionGraphBlockX(self.handle)
-		elif name == "y":
-			return core.BNGetFunctionGraphBlockY(self.handle)
-		elif name == "width":
-			return core.BNGetFunctionGraphBlockWidth(self.handle)
-		elif name == "height":
-			return core.BNGetFunctionGraphBlockHeight(self.handle)
-		elif name == "lines":
-			count = ctypes.c_ulonglong()
-			lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				addr = lines[i].addr
-				tokens = []
-				for j in xrange(0, lines[i].count):
-					token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
-					text = lines[i].tokens[j].text
-					value = lines[i].tokens[j].value
-					tokens.append(InstructionTextToken(token_type, text, value))
-				result.append(FunctionGraphTextLine(addr, tokens))
-			core.BNFreeFunctionGraphBlockLines(lines, count.value)
-			return result
-		elif name == "outgoing_edges":
-			count = ctypes.c_ulonglong()
-			edges = core.BNGetFunctionGraphBlockOutgoingEdges(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				branch_type = core.BNBranchType_names[edges[i].type]
-				target = edges[i].target
-				arch = None
-				if edges[i].arch is not None:
-					arch = Architecture(edges[i].arch)
-				points = []
-				for j in xrange(0, edges[i].pointCount):
-					points.append((edges[i].points[j].x, edges[i].points[j].y))
-				result.append(FunctionGraphEdge(branch_type, arch, target, points))
-			core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def arch(self):
+		"""Function graph block architecture (read-only)"""
+		arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
+		if arch is None:
+			return None
+		return Architecture(arch)
+
+	@property
+	def start(self):
+		"""Function graph block start (read-only)"""
+		return core.BNGetFunctionGraphBlockStart(self.handle)
+
+	@property
+	def end(self):
+		"""Function graph block end (read-only)"""
+		return core.BNGetFunctionGraphBlockEnd(self.handle)
+
+	@property
+	def x(self):
+		"""Function graph block X (read-only)"""
+		return core.BNGetFunctionGraphBlockX(self.handle)
+
+	@property
+	def y(self):
+		"""Function graph block Y (read-only)"""
+		return core.BNGetFunctionGraphBlockY(self.handle)
+
+	@property
+	def width(self):
+		"""Function graph block width (read-only)"""
+		return core.BNGetFunctionGraphBlockWidth(self.handle)
+
+	@property
+	def height(self):
+		"""Function graph block height (read-only)"""
+		return core.BNGetFunctionGraphBlockHeight(self.handle)
+
+	@property
+	def lines(self):
+		"""Function graph block list of lines (read-only)"""
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			addr = lines[i].addr
+			tokens = []
+			for j in xrange(0, lines[i].count):
+				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
+				text = lines[i].tokens[j].text
+				value = lines[i].tokens[j].value
+				tokens.append(InstructionTextToken(token_type, text, value))
+			result.append(FunctionGraphTextLine(addr, tokens))
+		core.BNFreeFunctionGraphBlockLines(lines, count.value)
+		return result
+
+	@property
+	def outgoing_edges(self):
+		"""Function graph block list of outgoing edges (read-only)"""
+		count = ctypes.c_ulonglong()
+		edges = core.BNGetFunctionGraphBlockOutgoingEdges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			branch_type = core.BNBranchType_names[edges[i].type]
+			target = edges[i].target
+			arch = None
+			if edges[i].arch is not None:
+				arch = Architecture(edges[i].arch)
+			points = []
+			for j in xrange(0, edges[i].pointCount):
+				points.append((edges[i].points[j].x, edges[i].points[j].y))
+			result.append(FunctionGraphEdge(branch_type, arch, target, points))
+		core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
+		return result
 
 	def __setattr__(self, name, value):
-		if ((name == "arch") or (name == "start") or (name == "end") or (name == "x") or (name == "y") or
-			(name == "width") or (name == "height") or (name == "lines") or (name == "outgoing_edges")):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["arch", "start", "end", "x", "y", "width", "height", "lines", "outgoing_edges"]
 
 	def __repr__(self):
 		arch = self.arch
@@ -2237,7 +2530,7 @@ class FunctionGraphBlock:
 		else:
 			return "<graph block: 0x%x-0x%x>" % (self.start, self.end)
 
-class FunctionGraph:
+class FunctionGraph(object):
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = handle
@@ -2248,51 +2541,74 @@ class FunctionGraph:
 		self.abort()
 		core.BNFreeFunctionGraph(self.handle)
 
-	def __getattr__(self, name):
-		if name == "function":
-			func = core.BNGetFunctionForFunctionGraph(self.handle)
-			if func is None:
-				return None
-			return Function(self.view, func)
-		elif name == "horizontal_block_margin":
-			return core.BNGetHorizontalFunctionGraphBlockMargin(self.handle)
-		elif name == "vertical_block_margin":
-			return core.BNGetVerticalFunctionGraphBlockMargin(self.handle)
-		elif name == "max_symbol_width":
-			return core.BNGetFunctionGraphMaximumSymbolWidth(self.handle)
-		elif name == "complete":
-			return core.BNIsFunctionGraphLayoutComplete(self.handle)
-		elif name == "type":
-			return core.BNFunctionGraphType_names[core.BNGetFunctionGraphType(self.handle)]
-		elif name == "blocks":
-			count = ctypes.c_ulonglong()
-			blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
-			core.BNFreeFunctionGraphBlockList(blocks, count.value)
-			return result
-		elif name == "width":
-			return core.BNGetFunctionGraphWidth(self.handle)
-		elif name == "height":
-			return core.BNGetFunctionGraphHeight(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def function(self):
+		"""Function for a function graph(read-only)"""
+		func = core.BNGetFunctionForFunctionGraph(self.handle)
+		if func is None:
+			return None
+		return Function(self.view, func)
+
+	@property
+	def complete(self):
+		"""Whether function graph layout is complete (read-only)"""
+		return core.BNIsFunctionGraphLayoutComplete(self.handle)
+
+	@property
+	def type(self):
+		"""Function graph type (read-only)"""
+		return core.BNFunctionGraphType_names[core.BNGetFunctionGraphType(self.handle)]
+
+	@property
+	def blocks(self):
+		"""List of basic blocks in function (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
+		core.BNFreeFunctionGraphBlockList(blocks, count.value)
+		return result
+
+	@property
+	def width(self):
+		"""Function graph width (read-only)"""
+		return core.BNGetFunctionGraphWidth(self.handle)
+
+	@property
+	def height(self):
+		"""Function graph height (read-only)"""
+		return core.BNGetFunctionGraphHeight(self.handle)
+
+	@property
+	def horizontal_block_margin(self):
+		return core.BNGetHorizontalFunctionGraphBlockMargin(self.handle)
+
+	@horizontal_block_margin.setter
+	def horizontal_block_margin(self, value):
+		core.BNSetFunctionGraphBlockMargins(self.handle, value, self.vertical_block_margin)
+
+	@property
+	def vertical_block_margin(self):
+		return core.BNGetVerticalFunctionGraphBlockMargin(self.handle)
+
+	@vertical_block_margin.setter
+	def vertical_block_margin(self, value):
+		core.BNSetFunctionGraphBlockMargins(self.handle, self.horizontal_block_margin, value)
+
+	@property
+	def max_symbol_width(self):
+		return core.BNGetFunctionGraphMaximumSymbolWidth(self.handle)
+
+	@max_symbol_width.setter
+	def max_symbol_width(self, value):
+		core.BNSetFunctionGraphMaximumSymbolWidth(self.handle, value)
 
 	def __setattr__(self, name, value):
-		if ((name == "function") or (name == "complete") or (name == "type") or (name == "blocks") or
-			(name == "width") or (name == "height")):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "horizontal_block_margin":
-			core.BNSetFunctionGraphBlockMargins(self.handle, value, self.vertical_block_margin)
-		elif name == "vertical_block_margin":
-			core.BNSetFunctionGraphBlockMargins(self.handle, self.horizontal_block_margin, value)
-		elif name == "max_symbol_width":
-			core.BNSetFunctionGraphMaximumSymbolWidth(self.handle, value)
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["function", "horizontal_block_margin", "vertical_block_margin", "max_symbol_width", "complete", "type", "blocks", "width", "height"]
 
 	def __repr__(self):
 		return "<graph of %s>" % repr(self.function)
@@ -2409,26 +2725,17 @@ class InstructionTextToken:
 		return repr(self.text)
 
 class _ArchitectureMetaClass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			archs = core.BNGetArchitectureList(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(Architecture(archs[i]))
-			core.BNFreeArchitectureList(archs)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
-
-	def __setattr__(cls, name, value):
-		if (name == "list"):
-			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			type.__setattr__(cls, name, value)
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list"]
+	@property
+	def list(self):
+		"""Architecture list (read-only)"""
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		archs = core.BNGetArchitectureList(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Architecture(archs[i]))
+		core.BNFreeArchitectureList(archs)
+		return result
 
 	def __getitem__(cls, name):
 		_init_plugins()
@@ -2445,7 +2752,13 @@ class _ArchitectureMetaClass(type):
 		cls._registered_cb = arch._cb
 		arch.handle = core.BNRegisterArchitecture(cls.name, arch._cb)
 
-class Architecture:
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class Architecture(object):
 	name = None
 	endianness = core.LittleEndian
 	address_size = 8
@@ -2587,40 +2900,44 @@ class Architecture:
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 
+	@property
+	def full_width_regs(self):
+		"""List of full width registers (read-only)"""
+		count = ctypes.c_ulonglong()
+		regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+		core.BNFreeRegisterList(regs)
+		return result
 
-	def __getattr__(self, name):
-		if name == "full_width_regs":
-			count = ctypes.c_ulonglong()
-			regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
-			core.BNFreeRegisterList(regs)
-			return result
-		elif name == "calling_conventions":
-			count = ctypes.c_ulonglong()
-			cc = core.BNGetArchitectureCallingConventions(self.handle, count)
-			result = {}
-			for i in xrange(0, count.value):
-				obj = CallingConvention(None, core.BNNewCallingConventionReference(cc[i]))
-				result[obj.name] = obj
-			core.BNFreeCallingConventionList(cc, count)
-			return result
-		elif name == "standalone_platform":
-			pl = core.BNGetArchitectureStandalonePlatform(self.handle)
-			return Platform(self, pl)
+	@property
+	def calling_conventions(self):
+		"""Dict of calling conventions (read-only)"""
+		count = ctypes.c_ulonglong()
+		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			obj = CallingConvention(None, core.BNNewCallingConventionReference(cc[i]))
+			result[obj.name] = obj
+		core.BNFreeCallingConventionList(cc, count)
+		return result
 
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def standalone_platform(self):
+		"""Architecture standalone platform (read-only)"""
+		pl = core.BNGetArchitectureStandalonePlatform(self.handle)
+		return Platform(self, pl)
 
 	def __setattr__(self, name, value):
 		if ((name == "name") or (name == "endianness") or (name == "address_size") or (name == "default_int_size") or
-			(name == "regs") or (name == "full_width_regs") or (name == "calling_conventions")):
+			(name == "regs")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["full_width_regs","calling_conventions"]
+			try:
+				object.__setattr__(self,name,value)
+			except AttributeError:
+				raise AttributeError, "attribute '%s' is read only" % name
 
 	def __repr__(self):
 		return "<arch: %s>" % self.name
@@ -3245,7 +3562,7 @@ class LowLevelILLabel:
 		else:
 			self.handle = handle
 
-class LowLevelILInstruction:
+class LowLevelILInstruction(object):
 	ILOperations = {
 		core.LLIL_NOP: [],
 		core.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
@@ -3289,6 +3606,7 @@ class LowLevelILInstruction:
 		core.LLIL_SX: [("src", "expr")],
 		core.LLIL_ZX: [("src", "expr")],
 		core.LLIL_JUMP: [("dest", "expr")],
+		core.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		core.LLIL_CALL: [("dest", "expr")],
 		core.LLIL_RET: [("dest", "expr")],
 		core.LLIL_NORET: [],
@@ -3346,6 +3664,13 @@ class LowLevelILInstruction:
 				value = func.arch.get_flag_name(instr.operands[i])
 			elif operand_type == "cond":
 				value = core.BNLowLevelILFlagCondition_names[instr.operands[i]]
+			elif operand_type == "int_list":
+				count = ctypes.c_ulonglong()
+				operands = core.BNLowLevelILGetOperandList(func.handle, self.index, i, count)
+				value = []
+				for i in xrange(count.value):
+					value.append(operands[i])
+				core.BNLowLevelILFreeOperandList(operands)
 			self.operands.append(value)
 			self.__dict__[name] = value
 
@@ -3361,37 +3686,34 @@ class LowLevelILInstruction:
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
-	def __getattr__(self, name):
-		if name == "tokens":
-			count = ctypes.c_ulonglong()
-			tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-			if not core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
-								  self.index, tokens, count):
-				return None
-			result = []
-			for i in xrange(0, count.value):
-				token_type = core.BNInstructionTextTokenType_names[tokens[i].type]
-				text = tokens[i].text
-				value = tokens[i].value
-				result.append(InstructionTextToken(token_type, text, value))
-			core.BNFreeInstructionText(tokens, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def tokens(self):
+		"""LLIL tokens (read-only)"""
+		count = ctypes.c_ulonglong()
+		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
+		if not core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
+							  self.index, tokens, count):
+			return None
+		result = []
+		for i in xrange(0, count.value):
+			token_type = core.BNInstructionTextTokenType_names[tokens[i].type]
+			text = tokens[i].text
+			value = tokens[i].value
+			result.append(InstructionTextToken(token_type, text, value))
+		core.BNFreeInstructionText(tokens, count.value)
+		return result
 
 	def __setattr__(self, name, value):
-		if name == "tokens":
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["tokens"]
 
 class LowLevelILExpr:
 	def __init__(self, index):
 		self.index = index
 
-class LowLevelILFunction:
+class LowLevelILFunction(object):
 	def __init__(self, arch, handle = None):
 		self.arch = arch
 		if handle is not None:
@@ -3402,19 +3724,19 @@ class LowLevelILFunction:
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
 
-	def __getattr__(self, name):
-		if name == "current_address":
-			return core.BNLowLevelILGetCurrentAddress(self.handle)
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def current_address(self):
+		return core.BNLowLevelILGetCurrentAddress(self.handle)
+
+	@current_address.setter
+	def current_address(self, value):
+		core.BNLowLevelILSetCurrentAddress(self.handle, value)
 
 	def __setattr__(self, name, value):
-		if name == "current_address":
-			core.BNLowLevelILSetCurrentAddress(self.handle, value)
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["current_address"]
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
 
 	def __len__(self):
 		return int(core.BNGetLowLevelILInstructionCount(self.handle))
@@ -3430,6 +3752,16 @@ class LowLevelILFunction:
 
 	def __setitem__(self, i):
 		raise IndexError, "instruction modification not implemented"
+
+	def clear_indirect_branches(self):
+		core.BNLowLevelILClearIndirectBranches(self.handle)
+
+	def set_indirect_branches(self, branches):
+		branch_list = (core.BNArchitectureAndAddress * len(branches))()
+		for i in xrange(len(branches)):
+			branch_list[i].arch = branches[i][0].handle
+			branch_list[i].address = branches[i][1]
+		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
 
 	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, size = 0, flags = None):
 		if isinstance(operation, str):
@@ -3651,6 +3983,18 @@ class LowLevelILFunction:
 	def mark_label(self, label):
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
 
+	def add_label_list(self, labels):
+		label_list = (ctypes.POINTER(BNLowLevelILLabel) * len(labels))()
+		for i in xrange(len(labels)):
+			label_list[i] = labels[i].handle
+		return LowLevelILExpr(core.BNLowLevelILAddLabelList(self.handle, label_list, len(labels)))
+
+	def add_operand_list(self, operands):
+		operand_list = (ctypes.c_ulonglong * len(operands))()
+		for i in xrange(len(operands)):
+			operand_list[i] = operands[i]
+		return LowLevelILExpr(core.BNLowLevelILAddOperandList(self.handle, operand_list, len(operands)))
+
 	def operand(self, n, expr):
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)
 		return expr
@@ -3681,26 +4025,22 @@ class TypeParserResult:
 		return "{types: %s, variables: %s, functions: %s}" % (self.types, self.variables, self.functions)
 
 class _TransformMetaClass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			xforms = core.BNGetTransformTypeList(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(Transform(xforms[i]))
-			core.BNFreeTransformTypeList(xforms)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def list(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		xforms = core.BNGetTransformTypeList(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Transform(xforms[i]))
+		core.BNFreeTransformTypeList(xforms)
+		return result
 
-	def __setattr__(cls, name, value):
-		if (name == "list"):
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			type.__setattr__(cls, name, value)
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list"]
 
 	def __getitem__(cls, name):
 		_init_plugins()
@@ -3903,35 +4243,35 @@ class FunctionRecognizer:
 		return False
 
 class _UpdateChannelMetaClass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			errors = ctypes.c_char_p()
-			channels = core.BNGetUpdateChannels(count, errors)
-			if errors:
-				error_str = errors.value
-				core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-				raise IOError, error_str
-			result = []
-			for i in xrange(0, count.value):
-				result.append(UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion))
-			core.BNFreeUpdateChannelList(channels, count.value)
-			return result
-		elif name == "active":
-			return core.BNGetActiveUpdateChannel()
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def list(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		errors = ctypes.c_char_p()
+		channels = core.BNGetUpdateChannels(count, errors)
+		if errors:
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise IOError, error_str
+		result = []
+		for i in xrange(0, count.value):
+			result.append(UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion))
+		core.BNFreeUpdateChannelList(channels, count.value)
+		return result
 
-	def __setattr__(cls, name, value):
-		if (name == "list"):
+	@property
+	def active(self):
+		return core.BNGetActiveUpdateChannel()
+
+	@active.setter
+	def active(self, value):
+		return core.BNSetActiveUpdateChannel(value)
+
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		elif name == "active":
-			return core.BNSetActiveUpdateChannel(value)
-		else:
-			type.__setattr__(cls, name, value)
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list","active"]
 
 	def __getitem__(cls, name):
 		_init_plugins()
@@ -3965,7 +4305,7 @@ class UpdateProgressCallback:
 		except:
 			log_error(traceback.format_exc())
 
-class UpdateChannel:
+class UpdateChannel(object):
 	__metaclass__ = _UpdateChannelMetaClass
 
 	def __init__(self, name, desc, ver):
@@ -3973,53 +4313,56 @@ class UpdateChannel:
 		self.description = desc
 		self.latest_version_num = ver
 
-	def __getattr__(self, name):
-		if name == "versions":
-			count = ctypes.c_ulonglong()
-			errors = ctypes.c_char_p()
-			versions = core.BNGetUpdateChannelVersions(self.name, count, errors)
-			if errors:
-				error_str = errors.value
-				core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-				raise IOError, error_str
-			result = []
-			for i in xrange(0, count.value):
-				result.append(UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time))
-			core.BNFreeUpdateChannelVersionList(versions, count.value)
-			return result
-		elif name == "latest_version":
-			count = ctypes.c_ulonglong()
-			errors = ctypes.c_char_p()
-			versions = core.BNGetUpdateChannelVersions(self.name, count, errors)
-			if errors:
-				error_str = errors.value
-				core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-				raise IOError, error_str
-			result = None
-			for i in xrange(0, count.value):
-				if versions[i].version == self.latest_version_num:
-					result = UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time)
-					break
-			core.BNFreeUpdateChannelVersionList(versions, count.value)
-			return result
-		elif name == "updates_available":
-			errors = ctypes.c_char_p()
-			result = core.BNAreUpdatesAvailable(self.name, errors)
-			if errors:
-				error_str = errors.value
-				core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-				raise IOError, error_str
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def versions(self):
+		"""List of versions (read-only)"""
+		count = ctypes.c_ulonglong()
+		errors = ctypes.c_char_p()
+		versions = core.BNGetUpdateChannelVersions(self.name, count, errors)
+		if errors:
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise IOError, error_str
+		result = []
+		for i in xrange(0, count.value):
+			result.append(UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time))
+		core.BNFreeUpdateChannelVersionList(versions, count.value)
+		return result
+
+	@property
+	def latest_version(self):
+		"""Latest version (read-only)"""
+		count = ctypes.c_ulonglong()
+		errors = ctypes.c_char_p()
+		versions = core.BNGetUpdateChannelVersions(self.name, count, errors)
+		if errors:
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise IOError, error_str
+		result = None
+		for i in xrange(0, count.value):
+			if versions[i].version == self.latest_version_num:
+				result = UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time)
+				break
+		core.BNFreeUpdateChannelVersionList(versions, count.value)
+		return result
+
+	@property
+	def updates_available(self):
+		"""Whether updates are available (read-only)"""
+		errors = ctypes.c_char_p()
+		result = core.BNAreUpdatesAvailable(self.name, errors)
+		if errors:
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise IOError, error_str
+		return result
 
 	def __setattr__(self, name, value):
-		if (name == "versions") or (name == "latest_version"):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["versions","latest_version", "updates_available"]
 
 	def __repr__(self):
 		return "<channel: %s>" % self.name
@@ -4068,26 +4411,22 @@ class PluginCommandContext:
 		self.function = None
 
 class _PluginCommandMetaClass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			commands = core.BNGetAllPluginCommands(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(PluginCommand(commands[i]))
-			core.BNFreePluginCommandList(commands)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def list(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		commands = core.BNGetAllPluginCommands(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(PluginCommand(commands[i]))
+		core.BNFreePluginCommandList(commands)
+		return result
 
-	def __setattr__(cls, name, value):
-		if (name == "list"):
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			type.__setattr__(cls, name, value)
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list"]
 
 class PluginCommand:
 	_registered_commands = []
@@ -4452,35 +4791,33 @@ class CallingConvention:
 		return self.name
 
 class _PlatformMetaClass(type):
-	def __getattr__(cls, name):
-		if name == "list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			platforms = core.BNGetPlatformList(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
-			core.BNFreePlatformList(platforms, count.value)
-			return result
-		elif name == "os_list":
-			_init_plugins()
-			count = ctypes.c_ulonglong()
-			platforms = core.BNGetPlatformOSList(count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(str(platforms[i]))
-			core.BNFreePlatformOSList(platforms, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def list(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		platforms = core.BNGetPlatformList(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
+		core.BNFreePlatformList(platforms, count.value)
+		return result
 
-	def __setattr__(cls, name, value):
-		if (name == "list") or (name == "os_list"):
+	@property
+	def os_list(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		platforms = core.BNGetPlatformOSList(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(str(platforms[i]))
+		core.BNFreePlatformOSList(platforms, count.value)
+		return result
+
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			type.__setattr__(cls, name, value)
-
-	def __dir__(self):
-		return dir(self.__class__) + ["list","os_list"]
 
 	def __getitem__(cls, value):
 		_init_plugins()
@@ -4520,61 +4857,77 @@ class Platform:
 	def __del__(self):
 		core.BNFreePlatform(self.handle)
 
-	def __getattr__(self, name):
-		if name == "default_calling_convention":
-			result = core.BNGetPlatformDefaultCallingConvention(self.handle)
-			if result is None:
-				return None
-			return CallingConvention(None, result)
-		elif name == "cdecl_calling_convention":
-			result = core.BNGetPlatformCdeclCallingConvention(self.handle)
-			if result is None:
-				return None
-			return CallingConvention(None, result)
-		elif name == "stdcall_calling_convention":
-			result = core.BNGetPlatformStdcallCallingConvention(self.handle)
-			if result is None:
-				return None
-			return CallingConvention(None, result)
-		elif name == "fastcall_calling_convention":
-			result = core.BNGetPlatformFastcallCallingConvention(self.handle)
-			if result is None:
-				return None
-			return CallingConvention(None, result)
-		elif name == "system_call_convention":
-			  result = core.BNGetPlatformSystemCallConvention(self.handle)
-			  if result is None:
-				return None
-			  return CallingConvention(None, result)
-		elif name == "calling_conventions":
-			count = ctypes.c_ulonglong()
-			cc = core.BNGetPlatformCallingConventions(self.handle, count)
-			result = []
-			for i in xrange(0, count.value):
-				result.append(CallingConvention(None, core.BNNewCallingConventionReference(cc[i])))
-			core.BNFreeCallingConventionList(cc, count.value)
-			return result
-		raise AttributeError, "no attribute '%s'" % name
+	@property
+	def default_calling_convention(self):
+		result = core.BNGetPlatformDefaultCallingConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@default_calling_convention.setter
+	def default_calling_convention(self, value):
+		core.BNRegisterPlatformDefaultCallingConvention(self.handle, value.handle)
+
+	@property
+	def cdecl_calling_convention(self):
+		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@cdecl_calling_convention.setter
+	def cdecl_calling_convention(self, value):
+		core.BNRegisterPlatformCdeclCallingConvention(self.handle, value.handle)
+
+	@property
+	def stdcall_calling_convention(self):
+		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@stdcall_calling_convention.setter
+	def stdcall_calling_convention(self, value):
+		core.BNRegisterPlatformStdcallCallingConvention(self.handle, value.handle)
+
+	@property
+	def fastcall_calling_convention(self):
+		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@fastcall_calling_convention.setter
+	def fastcall_calling_convention(self, value):
+		core.BNRegisterPlatformFastcallCallingConvention(self.handle, value.handle)
+
+	@property
+	def system_call_convention(self):
+		result = core.BNGetPlatformSystemCallConvention(self.handle)
+		if result is None:
+			return None
+		return CallingConvention(None, result)
+
+	@system_call_convention.setter
+	def system_call_convention(self, value):
+		core.BNSetPlatformSystemCallConvention(self.handle, value.handle)
+
+	@property
+	def calling_conventions(self):
+		"""List of platform calling conventions (read-only)"""
+		count = ctypes.c_ulonglong()
+		cc = core.BNGetPlatformCallingConventions(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(CallingConvention(None, core.BNNewCallingConventionReference(cc[i])))
+		core.BNFreeCallingConventionList(cc, count.value)
+		return result
 
 	def __setattr__(self, name, value):
-		if name == "default_calling_convention":
-			core.BNRegisterPlatformDefaultCallingConvention(self.handle, value.handle)
-		elif name == "cdecl_calling_convention":
-			core.BNRegisterPlatformCdeclCallingConvention(self.handle, value.handle)
-		elif name == "stdcall_calling_convention":
-			core.BNRegisterPlatformStdcallCallingConvention(self.handle, value.handle)
-		elif name == "fastcall_calling_convention":
-			core.BNRegisterPlatformFastcallCallingConvention(self.handle, value.handle)
-		elif name == "system_call_convention":
-			  core.BNSetPlatformSystemCallConvention(self.handle, value.handle)
-		elif (name == "calling_conventions"):
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
-		else:
-			self.__dict__[name] = value
-
-	def __dir__(self):
-		return dir(self.__class__) + ["default_calling_convention", "cdecl_calling_convention", 
-				"stdcall_calling_convention", "fastcall_calling_convention", "system_call_convention", "calling_conventions"]
 
 	def __repr__(self):
 		return "<platform: %s>" % self.name

@@ -1,4 +1,4 @@
-# This plugin will attempt to resolve simple jump tables (an array of code pointers) and add the desintations
+# This plugin will attempt to resolve simple jump tables (an array of code pointers) and add the destinations
 # as indirect branch targets so that the flow graph reflects the jump table's control flow.
 from binaryninja import *
 import struct

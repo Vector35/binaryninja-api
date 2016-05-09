@@ -482,10 +482,10 @@ void LowLevelILFunction::MarkLabel(BNLowLevelILLabel& label)
 }
 
 
-vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId i, size_t listOperand)
+vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOperand)
 {
 	size_t count;
-	uint64_t* operands = BNLowLevelILGetOperandList(m_object, i, listOperand, &count);
+	uint64_t* operands = BNLowLevelILGetOperandList(m_object, expr, listOperand, &count);
 	vector<uint64_t> result;
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
@@ -600,4 +600,16 @@ bool LowLevelILFunction::GetInstructionText(Architecture* arch, size_t instr, ve
 
 	BNFreeInstructionText(list, count);
 	return true;
+}
+
+
+uint32_t LowLevelILFunction::GetTemporaryRegisterCount()
+{
+	return BNGetLowLevelILTemporaryRegisterCount(m_object);
+}
+
+
+uint32_t LowLevelILFunction::GetTemporaryFlagCount()
+{
+	return BNGetLowLevelILTemporaryFlagCount(m_object);
 }

@@ -291,9 +291,9 @@ InstructionIL = {
 	"bcs": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_ULT), operand),
 	"beq": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_E), operand),
 	"bit": lambda il, operand: il.and_expr(1, il.reg(1, "a"), operand, flags = "czs"),
-	"bmi": lambda il, operand: cond_branch(il, il.flag("s"), operand),
+	"bmi": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_NEG), operand),
 	"bne": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_NE), operand),
-	"bpl": lambda il, operand: cond_branch(il, il.not_expr(0, il.flag("s")), operand),
+	"bpl": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_POS), operand),
 	"brk": lambda il, operand: il.system_call(),
 	"bvc": lambda il, operand: cond_branch(il, il.not_expr(0, il.flag("v")), operand),
 	"bvs": lambda il, operand: cond_branch(il, il.flag("v"), operand),
@@ -368,7 +368,9 @@ class M6502(Architecture):
 		LLFC_UGE: ["c"],
 		LLFC_ULT: ["c"],
 		LLFC_E: ["z"],
-		LLFC_NE: ["z"]
+		LLFC_NE: ["z"],
+		LLFC_NEG: ["s"],
+		LLFC_POS: ["s"]
 	}
 	flags_written_by_flag_write_type = {
 		"*": ["c", "z", "v", "s"],

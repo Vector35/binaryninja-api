@@ -287,7 +287,8 @@ extern "C"
 	enum BNFunctionGraphType
 	{
 		NormalFunctionGraph = 0,
-		LowLevelILFunctionGraph = 1
+		LowLevelILFunctionGraph = 1,
+		LiftedILFunctionGraph = 2
 	};
 
 	enum BNFunctionGraphOption
@@ -370,11 +371,8 @@ extern "C"
 	struct BNRegisterOrConstant
 	{
 		bool constant;
-		union
-		{
-			uint32_t reg;
-			uint64_t value;
-		};
+		uint32_t reg;
+		uint64_t value;
 	};
 
 	// Callbacks
@@ -507,8 +505,8 @@ extern "C"
 		BNFlagRole (*getFlagRole)(void* ctxt, uint32_t flag);
 		uint32_t* (*getFlagsRequiredForFlagCondition)(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
 		uint32_t* (*getFlagsWrittenByFlagWriteType)(void* ctxt, uint32_t writeType, size_t* count);
-		bool (*getFlagWriteLowLevelIL)(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
+		size_t (*getFlagWriteLowLevelIL)(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 		size_t (*getFlagConditionLowLevelIL)(void* ctxt, BNLowLevelILFlagCondition cond, BNLowLevelILFunction* il);
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs);
 		void (*getRegisterInfo)(void* ctxt, uint32_t reg, BNRegisterInfo* result);
@@ -1012,10 +1010,12 @@ extern "C"
 		size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetArchitectureFlagsWrittenByFlagWriteType(BNArchitecture* arch, uint32_t writeType,
 		size_t* count);
-	BINARYNINJACOREAPI bool BNGetArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
-		size_t size, uint32_t flagWriteType, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
-	BINARYNINJACOREAPI bool BNGetDefaultArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
-		size_t size, uint32_t flagWriteType, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
+	BINARYNINJACOREAPI size_t BNGetArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
+		size_t size, uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
+		BNLowLevelILFunction* il);
+	BINARYNINJACOREAPI size_t BNGetDefaultArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
+		size_t size, uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
+		BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetArchitectureFlagConditionLowLevelIL(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
 		BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI uint32_t* BNGetModifiedArchitectureRegistersOnWrite(BNArchitecture* arch, uint32_t reg, size_t* count);
@@ -1111,10 +1111,13 @@ extern "C"
 	                                                                                        uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStackVariableReferenceList(BNStackVariableReference* refs, size_t count);
 
-	BINARYNINJACOREAPI size_t* BNGetLowLevelILFlagUsesForDefinition(BNFunction* func, size_t i, uint32_t flag, size_t* count);
-	BINARYNINJACOREAPI size_t* BNGetLowLevelILFlagDefinitionsForUse(BNFunction* func, size_t i, uint32_t flag, size_t* count);
-	BINARYNINJACOREAPI uint32_t* BNGetFlagsReadByLowLevelILInstruction(BNFunction* func, size_t i, size_t* count);
-	BINARYNINJACOREAPI uint32_t* BNGetFlagsWrittenByLowLevelILInstruction(BNFunction* func, size_t i, size_t* count);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLiftedIL(BNFunction* func);
+	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionLiftedILBasicBlockList(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI size_t BNGetLiftedILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI size_t* BNGetLiftedILFlagUsesForDefinition(BNFunction* func, size_t i, uint32_t flag, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetLiftedILFlagDefinitionsForUse(BNFunction* func, size_t i, uint32_t flag, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetFlagsReadByLiftedILInstruction(BNFunction* func, size_t i, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetFlagsWrittenByLiftedILInstruction(BNFunction* func, size_t i, size_t* count);
 
 	BINARYNINJACOREAPI BNType* BNGetFunctionType(BNFunction* func);
 	BINARYNINJACOREAPI void BNApplyImportedTypes(BNFunction* func, BNSymbol* sym);
@@ -1278,6 +1281,9 @@ extern "C"
 	                                                BNInstructionTextToken** tokens, size_t* count);
 	BINARYNINJACOREAPI bool BNGetLowLevelILInstructionText(BNLowLevelILFunction* func, BNArchitecture* arch, size_t i,
 	                                                       BNInstructionTextToken** tokens, size_t* count);
+
+	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryRegisterCount(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryFlagCount(BNLowLevelILFunction* func);
 
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);

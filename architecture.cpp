@@ -261,12 +261,12 @@ uint32_t* Architecture::GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint3
 }
 
 
-bool Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-	BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
+size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
 	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
-	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, operands, operandCount, func);
+	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, func);
 }
 
 
@@ -539,10 +539,18 @@ vector<uint32_t> Architecture::GetFlagsWrittenByFlagWriteType(uint32_t)
 }
 
 
-bool Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-	BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
+size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, operands,
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
+		operandCount, il.GetObject());
+}
+
+
+size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
+{
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
 		operandCount, il.GetObject());
 }
 
@@ -1010,10 +1018,10 @@ vector<uint32_t> CoreArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t write
 }
 
 
-bool CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-	BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
+size_t CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
 {
-	return BNGetArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, operands,
+	return BNGetArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
 		operandCount, il.GetObject());
 }
 

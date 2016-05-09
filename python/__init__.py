@@ -1952,6 +1952,17 @@ class Function:
 				result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
 			core.BNFreeBasicBlockList(blocks, count.value)
 			return result
+		elif name == "lifted_il":
+			return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
+						core.BNGetFunctionLiftedIL(self.handle)))
+		elif name == "lifted_il_basic_blocks":
+			count = ctypes.c_ulonglong()
+			blocks = core.BNGetFunctionLiftedILBasicBlockList(self.handle, count)
+			result = []
+			for i in xrange(0, count.value):
+				result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+			core.BNFreeBasicBlockList(blocks, count.value)
+			return result
 		elif name == "type":
 			return Type(core.BNGetFunctionType(self.handle))
 		elif name == "stack_layout":
@@ -1976,14 +1987,15 @@ class Function:
 	def __setattr__(self, name, value):
 		if ((name == "view") or (name == "arch") or (name == "start") or (name == "symbol") or (name == "auto") or
 		(name == "can_return") or (name == "basic_blocks") or (name == "comments") or (name == "low_level_il") or
-		(name == "low_level_il_basic_blocks") or (name == "type") or (name == "explicitly_defined_type") or
-		(name == "stack_layout") or (name == "indirect_branches")):
+		(name == "low_level_il_basic_blocks") or (name == "lifted_il") or (name == "lifted_il_basic_blocks") or
+		(name == "type") or (name == "explicitly_defined_type") or (name == "stack_layout") or
+		(name == "indirect_branches")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			self.__dict__[name] = value
 
 	def __dir__(self):
-		return dir(self.__class__) + ["view", "arch", "start", "symbol", "auto", "can_return", "explicitly_defined_type", "basic_blocks", "comments", "low_level_il", "low_level_il_basic_blocks", "type", "stack_layout"]
+		return dir(self.__class__) + ["view", "arch", "start", "symbol", "auto", "can_return", "explicitly_defined_type", "basic_blocks", "comments", "low_level_il", "low_level_il_basic_blocks", "lifted_il", "lifted_il_basic_blocks", "type", "stack_layout"]
 
 	def __repr__(self):
 		arch = self.arch
@@ -2065,40 +2077,43 @@ class Function:
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
-	def get_low_level_il_flag_uses_for_definition(self, i, flag):
+	def get_lifted_il_at(self, arch, addr):
+		return core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
+
+	def get_lifted_il_flag_uses_for_definition(self, i, flag):
 		if isinstance(flag, str):
 			flag = self.arch._flags[flag]
 		count = ctypes.c_ulonglong()
-		instrs = core.BNGetLowLevelILFlagUsesForDefinition(self.handle, i, flag, count)
+		instrs = core.BNGetLiftedILFlagUsesForDefinition(self.handle, i, flag, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeLowLevelILInstructionList(instrs)
 		return result
 
-	def get_low_level_il_flag_definitions_for_use(self, i, flag):
+	def get_lifted_il_flag_definitions_for_use(self, i, flag):
 		if isinstance(flag, str):
 			flag = self.arch._flags[flag]
 		count = ctypes.c_ulonglong()
-		instrs = core.BNGetLowLevelILFlagDefinitionsForUse(self.handle, i, flag, count)
+		instrs = core.BNGetLiftedILFlagDefinitionsForUse(self.handle, i, flag, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeLowLevelILInstructionList(instrs)
 		return result
 
-	def get_flags_read_by_low_level_il_instruction(self, i):
+	def get_flags_read_by_lifted_il_instruction(self, i):
 		count = ctypes.c_ulonglong()
-		flags = core.BNGetFlagsReadByLowLevelILInstruction(self.handle, i, count)
+		flags = core.BNGetFlagsReadByLiftedILInstruction(self.handle, i, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(self.arch._flags_by_index[flags[i]])
 		core.BNFreeRegisterList(flags)
 		return result
 
-	def get_flags_written_by_low_level_il_instruction(self, i):
+	def get_flags_written_by_lifted_il_instruction(self, i):
 		count = ctypes.c_ulonglong()
-		flags = core.BNGetFlagsWrittenByLowLevelILInstruction(self.handle, i, count)
+		flags = core.BNGetFlagsWrittenByLiftedILInstruction(self.handle, i, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(self.arch._flags_by_index[flags[i]])
@@ -3009,19 +3024,22 @@ class Architecture:
 			count[0] = 0
 			return None
 
-	def _get_flag_write_low_level_il(self, ctxt, op, size, write_type, operands, operand_count, il):
+	def _get_flag_write_low_level_il(self, ctxt, op, size, write_type, flag, operands, operand_count, il):
 		try:
 			write_type_name = None
 			if write_type != 0:
 				write_type_name = self._flag_write_types_by_index[write_type]
+			flag_name = self._flags_by_index[flag]
 			operand_list = []
 			for i in xrange(operand_count):
 				if operands[i].constant:
-					operand_list.append(operands[i].value)
+					operand_list.append(("const", operands[i].value))
+				elif LLIL_REG_IS_TEMP(operands[i].reg):
+					operand_list.append(("reg", operands[i].reg))
 				else:
-					operand_list.append(self._regs_by_index[operands[i].reg])
-			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, operand_list,
-				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+					operand_list.append(("reg", self._regs_by_index[operands[i].reg]))
+			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
+				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -3029,7 +3047,7 @@ class Architecture:
 	def _get_flag_condition_low_level_il(self, ctxt, cond, il):
 		try:
 			return self.perform_get_flag_condition_low_level_il(cond,
-				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
 		except:
 			log_error(traceback.format_exc())
 			return 0
@@ -3210,8 +3228,8 @@ class Architecture:
 	def perform_get_instruction_low_level_il(self, data, addr, il):
 		return None
 
-	def perform_get_flag_write_low_level_il(self, op, size, write_type, operands, il):
-		return False
+	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
+		return il.unimplemented()
 
 	def perform_get_flag_condition_low_level_il(self, cond, il):
 		return il.unimplemented()
@@ -3669,16 +3687,22 @@ class LowLevelILFunction:
 	def __getattr__(self, name):
 		if name == "current_address":
 			return core.BNLowLevelILGetCurrentAddress(self.handle)
+		elif name == "temp_reg_count":
+			return core.BNGetLowLevelILTemporaryRegisterCount(self.handle)
+		elif name == "temp_flag_count":
+			return core.BNGetLowLevelILTemporaryFlagCount(self.handle)
 		raise AttributeError, "no attribute '%s'" % name
 
 	def __setattr__(self, name, value):
 		if name == "current_address":
 			core.BNLowLevelILSetCurrentAddress(self.handle, value)
+		elif (name == "temp_reg_count") or (name == "temp_flag_count"):
+			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			self.__dict__[name] = value
 
 	def __dir__(self):
-		return dir(self.__class__) + ["current_address"]
+		return dir(self.__class__) + ["current_address", "temp_reg_count", "temp_flag_count"]
 
 	def __len__(self):
 		return int(core.BNGetLowLevelILInstructionCount(self.handle))

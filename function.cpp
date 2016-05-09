@@ -229,10 +229,36 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
-set<size_t> Function::GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag)
+Ref<LowLevelILFunction> Function::GetLiftedIL() const
+{
+	return new LowLevelILFunction(BNGetFunctionLiftedIL(m_object));
+}
+
+
+vector<Ref<BasicBlock>> Function::GetLiftedILBasicBlocks() const
 {
 	size_t count;
-	size_t* instrs = BNGetLowLevelILFlagUsesForDefinition(m_object, i, flag, &count);
+	BNBasicBlock** blocks = BNGetFunctionLiftedILBasicBlockList(m_object, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNGetLiftedILForInstruction(m_object, arch->GetObject(), addr);
+}
+
+
+set<size_t> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
+{
+	size_t count;
+	size_t* instrs = BNGetLiftedILFlagUsesForDefinition(m_object, i, flag, &count);
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
@@ -241,10 +267,10 @@ set<size_t> Function::GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag
 }
 
 
-set<size_t> Function::GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag)
+set<size_t> Function::GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag)
 {
 	size_t count;
-	size_t* instrs = BNGetLowLevelILFlagDefinitionsForUse(m_object, i, flag, &count);
+	size_t* instrs = BNGetLiftedILFlagDefinitionsForUse(m_object, i, flag, &count);
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
@@ -253,10 +279,10 @@ set<size_t> Function::GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag
 }
 
 
-set<uint32_t> Function::GetFlagsReadByLowLevelILInstruction(size_t i)
+set<uint32_t> Function::GetFlagsReadByLiftedILInstruction(size_t i)
 {
 	size_t count;
-	uint32_t* flags = BNGetFlagsReadByLowLevelILInstruction(m_object, i, &count);
+	uint32_t* flags = BNGetFlagsReadByLiftedILInstruction(m_object, i, &count);
 
 	set<uint32_t> result;
 	result.insert(&flags[0], &flags[count]);
@@ -265,10 +291,10 @@ set<uint32_t> Function::GetFlagsReadByLowLevelILInstruction(size_t i)
 }
 
 
-set<uint32_t> Function::GetFlagsWrittenByLowLevelILInstruction(size_t i)
+set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 {
 	size_t count;
-	uint32_t* flags = BNGetFlagsWrittenByLowLevelILInstruction(m_object, i, &count);
+	uint32_t* flags = BNGetFlagsWrittenByLiftedILInstruction(m_object, i, &count);
 
 	set<uint32_t> result;
 	result.insert(&flags[0], &flags[count]);

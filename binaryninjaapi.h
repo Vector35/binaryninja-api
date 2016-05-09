@@ -1008,8 +1008,8 @@ namespace BinaryNinja
 		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag);
 		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
-		static bool GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
+		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
 			BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
@@ -1058,8 +1058,10 @@ namespace BinaryNinja
 		virtual BNFlagRole GetFlagRole(uint32_t flag);
 		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond);
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
-		virtual bool GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
@@ -1132,8 +1134,8 @@ namespace BinaryNinja
 		virtual BNFlagRole GetFlagRole(uint32_t flag) override;
 		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond) override;
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
-		virtual bool GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
 		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
@@ -1344,10 +1346,13 @@ namespace BinaryNinja
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
 
-		std::set<size_t> GetLowLevelILFlagUsesForDefinition(size_t i, uint32_t flag);
-		std::set<size_t> GetLowLevelILFlagDefinitionsForUse(size_t i, uint32_t flag);
-		std::set<uint32_t> GetFlagsReadByLowLevelILInstruction(size_t i);
-		std::set<uint32_t> GetFlagsWrittenByLowLevelILInstruction(size_t i);
+		Ref<LowLevelILFunction> GetLiftedIL() const;
+		std::vector<Ref<BasicBlock>> GetLiftedILBasicBlocks() const;
+		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
+		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
+		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
+		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);
+		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
 		Ref<Type> GetType() const;
 		void ApplyImportedTypes(Symbol* sym);
@@ -1545,6 +1550,9 @@ namespace BinaryNinja
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
 		bool GetInstructionText(Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens);
+
+		uint32_t GetTemporaryRegisterCount();
+		uint32_t GetTemporaryFlagCount();
 	};
 
 	class FunctionRecognizer

@@ -2154,7 +2154,7 @@ class Function(object):
 	def low_level_il(self):
 		"""Function low level IL (read-only)"""
 		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLowLevelIL(self.handle)))
+					core.BNGetFunctionLowLevelIL(self.handle)), self)
 
 	@property
 	def low_level_il_basic_blocks(self):
@@ -2171,7 +2171,7 @@ class Function(object):
 	def lifted_il(self):
 		"""Function lifted IL (read-only)"""
 		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLiftedIL(self.handle)))
+					core.BNGetFunctionLiftedIL(self.handle)), self)
 
 	@property
 	def lifted_il_basic_blocks(self):
@@ -3868,10 +3868,11 @@ class LowLevelILInstruction(object):
 		core.LLIL_UNIMPL_MEM: [("src", "expr")]
 	}
 
-	def __init__(self, func, i):
-		instr = core.BNGetLowLevelILByIndex(func.handle, i)
+	def __init__(self, func, expr_index, instr_index = None):
+		instr = core.BNGetLowLevelILByIndex(func.handle, expr_index)
 		self.function = func
-		self.index = i
+		self.expr_index = expr_index
+		self.instr_index = instr_index
 		self.operation = instr.operation
 		self.operation_name = core.BNLowLevelILOperation_names[instr.operation]
 		self.size = instr.size
@@ -3902,7 +3903,7 @@ class LowLevelILInstruction(object):
 				value = core.BNLowLevelILFlagCondition_names[instr.operands[i]]
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
-				operands = core.BNLowLevelILGetOperandList(func.handle, self.index, i, count)
+				operands = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				value = []
 				for i in xrange(count.value):
 					value.append(operands[i])
@@ -3927,9 +3928,14 @@ class LowLevelILInstruction(object):
 		"""LLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if not core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
-							  self.index, tokens, count):
-			return None
+		if (self.instr_index is not None) and (self.function.source_function is not None):
+			if not core.BNGetLowLevelILInstructionText(self.function.handle, self.function.source_function.handle,
+				self.function.arch.handle, self.instr_index, tokens, count):
+				return None
+		else:
+			if not core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
+				self.expr_index, tokens, count):
+				return None
 		result = []
 		for i in xrange(0, count.value):
 			token_type = core.BNInstructionTextTokenType_names[tokens[i].type]
@@ -3950,8 +3956,9 @@ class LowLevelILExpr:
 		self.index = index
 
 class LowLevelILFunction(object):
-	def __init__(self, arch, handle = None):
+	def __init__(self, arch, handle = None, source_func = None):
 		self.arch = arch
+		self.source_function = source_func
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
@@ -3994,7 +4001,7 @@ class LowLevelILFunction(object):
 			return LowLevelILInstruction(self, i.index)
 		if (i < 0) or (i >= len(self)):
 			raise IndexError, "index out of range"
-		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i))
+		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
 
 	def __setitem__(self, i):
 		raise IndexError, "instruction modification not implemented"

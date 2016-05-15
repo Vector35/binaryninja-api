@@ -1549,7 +1549,8 @@ namespace BinaryNinja
 		void Finalize();
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
-		bool GetInstructionText(Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens);
+		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
+			std::vector<InstructionTextToken>& tokens);
 
 		uint32_t GetTemporaryRegisterCount();
 		uint32_t GetTemporaryFlagCount();

@@ -581,11 +581,13 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 }
 
 
-bool LowLevelILFunction::GetInstructionText(Architecture* arch, size_t instr, vector<InstructionTextToken>& tokens)
+bool LowLevelILFunction::GetInstructionText(Function* func, Architecture* arch, size_t instr,
+	vector<InstructionTextToken>& tokens)
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetLowLevelILInstructionText(m_object, arch->GetObject(), instr, &list, &count))
+	if (!BNGetLowLevelILInstructionText(m_object, func ? func->GetObject() : nullptr, arch->GetObject(),
+		instr, &list, &count))
 		return false;
 
 	tokens.clear();

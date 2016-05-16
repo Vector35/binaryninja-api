@@ -1278,9 +1278,9 @@ extern "C"
 	                                                                     BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNGetLowLevelILExprText(BNLowLevelILFunction* func, BNArchitecture* arch, size_t i,
-	                                                BNInstructionTextToken** tokens, size_t* count);
-	BINARYNINJACOREAPI bool BNGetLowLevelILInstructionText(BNLowLevelILFunction* func, BNArchitecture* arch, size_t i,
-	                                                       BNInstructionTextToken** tokens, size_t* count);
+		BNInstructionTextToken** tokens, size_t* count);
+	BINARYNINJACOREAPI bool BNGetLowLevelILInstructionText(BNLowLevelILFunction* il, BNFunction* func,
+		BNArchitecture* arch, size_t i, BNInstructionTextToken** tokens, size_t* count);
 
 	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryRegisterCount(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryFlagCount(BNLowLevelILFunction* func);

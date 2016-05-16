@@ -32,11 +32,11 @@ def select(version):
 	while not done:
 		print "Version:\t%s" % version.version
 		print "Updated:\t%s" % date
-		print "Notes:\t%s" % version.notes
+		print "Notes:\n\n%s" % version.notes
 		print "-----"
 		print "\t1)\tSwitch to version"	
 		print "\t2)\tMain Menu"
-		selection = int(input('Choice: '))
+		selection = int("0" + raw_input('Choice: '))
 		if (selection == 2):
 			done = True
 		elif (selection == 1):
@@ -54,37 +54,37 @@ def list_channels():
 		for index, item in enumerate(channel_list):
 			print "\t%d)\t%s" % (index+1, item.name)
 		print "\t%d)\t%s" % (len(channel_list)+1, "Main Menu")
-		selection = input('Choice: ')
-		if (int(selection) <= 0 or int(selection) > len(channel_list)+1):
-			print "%s is an invalid choice.\n\n" % selection
+		selection = int("0" + raw_input('Choice: '))
+		if (selection <= 0 or selection > len(channel_list)+1):
+			print "%s is an invalid choice." % selection
 		else:
 			selection = int(selection)
 			done = True
 			if (selection != len(channel_list) + 1):
-				load_channel(channel_list[selection-1].name)
+				load_channel(channel_list[selection - 1].name)
 
 def main():
 	done = False
 	load_channel(chandefault)
 	while not done:
-		print "Binary Ninja Version Switcher"
-		print "Current Channel: %s " % channel
+		print "\n\tBinary Ninja Version Switcher"
+		print "\t\tCurrent Channel: %s" % channel
+		print "\t\tCurrent Version: %s\n" % binaryninja.core_version
 		for index, version in enumerate(versions):
 			date = datetime.datetime.fromtimestamp(version.time).strftime('%c')
-			print "\t%d)\t%s (%s)" % (index+1, version.version, date)
-		print "\t%d)\t%s" % (len(versions)+1, "Switch Channel")
-		print "\t%d)\t%s" % (len(versions)+2, "Exit")
-		selection = input('Choice: ')
-		if (int(selection) <= 0 or int(selection) > len(versions)+2):
-			print "%s is an invalid choice.\n\n" % selection
+			print "\t%d)\t%s (%s)" % (index + 1, version.version, date)
+		print "\t%d)\t%s" % (len(versions) + 1, "Switch Channel")
+		print "\t%d)\t%s" % (len(versions) + 2, "Exit")
+		selection = int("0" + raw_input('Choice: '))
+		if (selection <= 0 or selection > len(versions) + 2):
+			print "%d is an invalid choice.\n\n" % selection
 		else:
-			selection = int(selection)
 			if (selection == len(versions) + 2):
 				done = True
 			elif (selection == len(versions) + 1):
 				list_channels()
 			else:
-				select(versions[selection-1])
+				select(versions[selection - 1])
 
 
 if __name__ == "__main__":

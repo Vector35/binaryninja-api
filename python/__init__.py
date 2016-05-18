@@ -2190,6 +2190,14 @@ class Function(object):
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		for i in xrange(0, count.value):
+			yield BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		raise StopIteration
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -2272,7 +2280,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(StackVariableReference(refs[i].sourceOperand, Type(core.BNNewTypeReference(refs[i].type)),
-			                                     refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
+				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -2443,8 +2451,32 @@ class BasicBlock(object):
 		else:
 			return "<block: 0x%x-0x%x>" % (self.start, self.end)
 
+	def __iter__(self):
+		start = self.start
+		end = self.end
+
+		idx = start
+		while idx < end:
+			data = self.view.read(idx, 16)
+			inst_info = self.view.arch.get_instruction_info(data, idx)
+			inst_text = self.view.arch.get_instruction_text(data, idx)
+
+			yield inst_text
+			idx += inst_info.length
+		raise StopIteration
+
 	def mark_recent_use():
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
+
+class LowLevelILBasicBlock(BasicBlock):
+	def __init__(self, view, handle, owner):
+		super(LowLevelILBasicBlock, self).__init__(view, handle)
+		self.il_function = owner
+
+	def __iter__(self):
+		for idx in xrange(self.start, self.end):
+			yield self.il_function[idx]
+		raise StopIteration
 
 class FunctionGraphTextLine:
 	def __init__(self, addr, tokens):
@@ -2830,7 +2862,7 @@ class Architecture(object):
 				info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 				full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
 				self.regs[name] = RegisterInfo(full_width_reg, info.size, info.offset,
-								   core.BNImplicitRegisterExtend_names[info.extend], regs[i])
+					core.BNImplicitRegisterExtend_names[info.extend], regs[i])
 			core.BNFreeRegisterList(regs)
 
 			count = ctypes.c_ulonglong()
@@ -3969,8 +4001,11 @@ class LowLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
 		result = []
+		view = None
+		if self.source_function is not None:
+			view = self.source_function.view
 		for i in xrange(0, count.value):
-			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -3994,6 +4029,18 @@ class LowLevelILFunction(object):
 
 	def __setitem__(self, i):
 		raise IndexError, "instruction modification not implemented"
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
+		result = []
+		view = None
+		if self.source_function is not None:
+			view = self.source_function.view
+		for i in xrange(0, count.value):
+			yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
+		core.BNFreeBasicBlockList(blocks, count.value)
+		raise StopIteration
 
 	def clear_indirect_branches(self):
 		core.BNLowLevelILClearIndirectBranches(self.handle)

@@ -30,9 +30,9 @@ LowLevelILLabel::LowLevelILLabel()
 }
 
 
-LowLevelILFunction::LowLevelILFunction()
+LowLevelILFunction::LowLevelILFunction(Architecture* arch)
 {
-	m_object = BNCreateLowLevelILFunction();
+	m_object = BNCreateLowLevelILFunction(arch->GetObject());
 }
 
 
@@ -553,9 +553,9 @@ BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, Ex
 }
 
 
-void LowLevelILFunction::Finalize()
+void LowLevelILFunction::Finalize(Function* func)
 {
-	BNFinalizeLowLevelILFunction(m_object);
+	BNFinalizeLowLevelILFunction(m_object, func ? func->GetObject() : nullptr);
 }
 
 
@@ -614,4 +614,18 @@ uint32_t LowLevelILFunction::GetTemporaryRegisterCount()
 uint32_t LowLevelILFunction::GetTemporaryFlagCount()
 {
 	return BNGetLowLevelILTemporaryFlagCount(m_object);
+}
+
+
+vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetLowLevelILBasicBlockList(m_object, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
 }

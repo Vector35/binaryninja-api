@@ -124,20 +124,6 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 }
 
 
-vector<Ref<BasicBlock>> Function::GetLowLevelILBasicBlocks() const
-{
-	size_t count;
-	BNBasicBlock** blocks = BNGetFunctionLowLevelILBasicBlockList(m_object, &count);
-
-	vector<Ref<BasicBlock>> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
-
-	BNFreeBasicBlockList(blocks, count);
-	return result;
-}
-
-
 size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
@@ -232,20 +218,6 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 Ref<LowLevelILFunction> Function::GetLiftedIL() const
 {
 	return new LowLevelILFunction(BNGetFunctionLiftedIL(m_object));
-}
-
-
-vector<Ref<BasicBlock>> Function::GetLiftedILBasicBlocks() const
-{
-	size_t count;
-	BNBasicBlock** blocks = BNGetFunctionLiftedILBasicBlockList(m_object, &count);
-
-	vector<Ref<BasicBlock>> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
-
-	BNFreeBasicBlockList(blocks, count);
-	return result;
 }
 
 

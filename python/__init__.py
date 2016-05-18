@@ -2157,32 +2157,10 @@ class Function(object):
 					core.BNGetFunctionLowLevelIL(self.handle)), self)
 
 	@property
-	def low_level_il_basic_blocks(self):
-		"""Function low level IL basic blocks (read-only)"""
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionLowLevelILBasicBlockList(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
-
-	@property
 	def lifted_il(self):
 		"""Function lifted IL (read-only)"""
 		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
 					core.BNGetFunctionLiftedIL(self.handle)), self)
-
-	@property
-	def lifted_il_basic_blocks(self):
-		"""Function lifted IL basic blocks (read-only)"""
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionLiftedILBasicBlockList(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
 
 	@property
 	def type(self):
@@ -3962,7 +3940,7 @@ class LowLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
-			self.handle = core.BNCreateLowLevelILFunction()
+			self.handle = core.BNCreateLowLevelILFunction(arch.handle)
 
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
@@ -3984,6 +3962,17 @@ class LowLevelILFunction(object):
 	def temp_flag_count(self):
 		"""Number of temporary flags (read-only)"""
 		return core.BNGetLowLevelILTemporaryFlagCount(self.handle)
+
+	@property
+	def basic_blocks(self):
+		"""Low level IL basic blocks (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
 
 	def __setattr__(self, name, value):
 		try:
@@ -4252,8 +4241,11 @@ class LowLevelILFunction(object):
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)
 		return expr
 
-	def finalize(self):
-		core.BNFinalizeLowLevelILFunction(self.handle)
+	def finalize(self, func = None):
+		if func is None:
+			core.BNFinalizeLowLevelILFunction(self.handle, None)
+		else:
+			core.BNFinalizeLowLevelILFunction(self.handle, func.handle)
 
 	def add_label_for_address(self, arch, addr):
 		if arch is not None:

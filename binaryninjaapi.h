@@ -1335,7 +1335,6 @@ namespace BinaryNinja
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
-		std::vector<Ref<BasicBlock>> GetLowLevelILBasicBlocks() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		BNRegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
@@ -1347,7 +1346,6 @@ namespace BinaryNinja
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
-		std::vector<Ref<BasicBlock>> GetLiftedILBasicBlocks() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
 		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
@@ -1452,7 +1450,7 @@ namespace BinaryNinja
 		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
 	public:
-		LowLevelILFunction();
+		LowLevelILFunction(Architecture* arch);
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
 		uint64_t GetCurrentAddress() const;
@@ -1546,7 +1544,7 @@ namespace BinaryNinja
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
 
-		void Finalize();
+		void Finalize(Function* func = nullptr);
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
 		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
@@ -1554,6 +1552,8 @@ namespace BinaryNinja
 
 		uint32_t GetTemporaryRegisterCount();
 		uint32_t GetTemporaryFlagCount();
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 	};
 
 	class FunctionRecognizer

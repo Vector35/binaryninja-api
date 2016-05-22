@@ -1655,6 +1655,8 @@ namespace BinaryNinja
 		PluginCommand(const PluginCommand& cmd);
 		~PluginCommand();
 
+		PluginCommand& operator=(const PluginCommand& cmd);
+
 		static void Register(const std::string& name, const std::string& description,
 		                     const std::function<void(BinaryView* view)>& action);
 		static void Register(const std::string& name, const std::string& description,

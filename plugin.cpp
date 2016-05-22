@@ -53,6 +53,17 @@ PluginCommand::~PluginCommand()
 }
 
 
+PluginCommand& PluginCommand::operator=(const PluginCommand& cmd)
+{
+	BNFreeString(m_command.name);
+	BNFreeString(m_command.description);
+	m_command = cmd.m_command;
+	m_command.name = BNAllocString(cmd.m_command.name);
+	m_command.description = BNAllocString(cmd.m_command.description);
+	return *this;
+}
+
+
 void PluginCommand::DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view)
 {
 	RegisteredDefaultCommand* cmd = (RegisteredDefaultCommand*)ctxt;

@@ -1246,8 +1246,8 @@ class BinaryView(object):
 	def remove_function(self, func):
 		core.BNRemoveAnalysisFunction(self.handle, func.handle)
 
-	def create_user_function(self, arch, addr):
-		core.BNCreateUserFunction(self.handle, arch.handle, addr)
+	def create_user_function(self, platform, addr):
+		core.BNCreateUserFunction(self.handle, platform.handle, addr)
 
 	def update_analysis(self):
 		core.BNUpdateAnalysis(self.handle)
@@ -1255,8 +1255,8 @@ class BinaryView(object):
 	def abort_analysis(self):
 		core.BNAbortAnalysis(self.handle)
 
-	def get_function_at(self, arch, addr):
-		func = core.BNGetAnalysisFunction(self.handle, arch.handle, addr)
+	def get_function_at(self, platform, addr):
+		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
 			return None
 		return Function(self, func)

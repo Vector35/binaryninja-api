@@ -2490,7 +2490,7 @@ class FunctionGraphTextLine:
 		return result
 
 	def __repr__(self):
-		result = "<0x%x: %s>" % (self.address, str(self))
+		return "<0x%x: %s>" % (self.address, str(self))
 
 class FunctionGraphEdge:
 	def __init__(self, branch_type, arch, target, points):

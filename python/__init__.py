@@ -469,7 +469,7 @@ class StringReference:
 		self.length = length
 
 	def __repr__(self):
-		return "<%s: 0x%x, len 0x%x>" % (self.type, self.start, self.length)
+		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
 class BinaryDataNotificationCallbacks:
 	def __init__(self, view, notify):
@@ -972,9 +972,9 @@ class BinaryView(object):
 		start = self.start
 		length = len(self)
 		if start != 0:
-			size = "start 0x%x, len 0x%x" % (start, length)
+			size = "start %#x, len %#x" % (start, length)
 		else:
-			size = "len 0x%x" % length
+			size = "len %#x" % length
 		filename = self.file.filename
 		if len(filename) > 0:
 			return "<%s view: '%s', %s>" % (self.type, filename, size)
@@ -1674,7 +1674,7 @@ class Symbol(object):
 		core.BNSetSymbolAutoDefined(self.handle, value)
 
 	def __repr__(self):
-		return "<%s: \"%s\" @ 0x%x>" % (self.type, self.full_name, self.address)
+		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
 
 	def __setattr__(self, name, value):
 		try:
@@ -1868,8 +1868,8 @@ class StructureMember:
 
 	def __repr__(self):
 		if len(name) == 0:
-			return "<member: %s, offset 0x%x>" % (str(self.type), self.offset)
-		return "<%s %s%s, offset 0x%x>" % (self.type.get_string_before_name(), self.name,
+			return "<member: %s, offset %#x>" % (str(self.type), self.offset)
+		return "<%s %s%s, offset %#x>" % (self.type.get_string_before_name(), self.name,
 							 self.type.get_string_after_name(), self.offset)
 
 class Structure(object):
@@ -1937,7 +1937,7 @@ class Structure(object):
 	def __repr__(self):
 		if len(self.name) > 0:
 			return "<struct: %s>" % self.name
-		return "<struct: size 0x%x>" % self.width
+		return "<struct: size %#x>" % self.width
 
 	def append(self, t, name = ""):
 		core.BNAddStructureMember(self.handle, t.handle, name)
@@ -1955,7 +1955,7 @@ class EnumerationMember:
 		self.default = default
 
 	def __repr__(self):
-		return "<%s = 0x%x>" % (self.name, self.value)
+		return "<%s = %#x>" % (self.name, self.value)
 
 class Enumeration(object):
 	def __init__(self, handle = None):
@@ -2009,7 +2009,7 @@ class LookupTableEntry:
 		self.to_value = to_value
 
 	def __repr__(self):
-		return "[%s] -> 0x%x" % (', '.join(["0x%x" % i for i in self.from_values]), self.to_value)
+		return "[%s] -> %#x" % (', '.join(["%#x" % i for i in self.from_values]), self.to_value)
 
 class RegisterValue:
 	def __init__(self, arch, value):
@@ -2053,19 +2053,19 @@ class RegisterValue:
 		if self.type == EntryValue:
 			return "<entry %s>" % self.reg
 		if self.type == OffsetFromEntryValue:
-			return "<entry %s + 0x%x>" % (self.reg, self.offset)
+			return "<entry %s + %#x>" % (self.reg, self.offset)
 		if self.type == ConstantValue:
-			return "<const 0x%x>" % self.value
+			return "<const %#x>" % self.value
 		if self.type == StackFrameOffset:
-			return "<stack frame offset 0x%x>" % self.offset
+			return "<stack frame offset %#x>" % self.offset
 		if (self.type == SignedRangeValue) or (self.type == UnsignedRangeValue):
 			if self.step == 1:
-				return "<range: 0x%x-0x%x>" % (self.start, self.end)
-			return "<range: 0x%x-0x%x, step 0x%x>" % (self.start, self.end, self.step)
+				return "<range: %#x to %#x>" % (self.start, self.end)
+			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
 		if self.type == LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
 		if self.type == OffsetFromUndeterminedValue:
-			return "<undetermined with offset 0x%x>" % self.offset
+			return "<undetermined with offset %#x>" % self.offset
 		return "<undetermined>"
 
 class StackVariable:
@@ -2093,10 +2093,10 @@ class StackVariableReference:
 	def __repr__(self):
 		if self.source_operand is None:
 			if self.referenced_offset != self.starting_offset:
-				return "<ref to %s%+x>" % (self.name, self.referenced_offset - self.starting_offset)
+				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.starting_offset)
 			return "<ref to %s>" % self.name
 		if self.referenced_offset != self.starting_offset:
-			return "<operand %d ref to %s%+x>" % (self.source_operand, self.name, self.referenced_offset)
+			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
 class IndirectBranchInfo:
@@ -2108,7 +2108,7 @@ class IndirectBranchInfo:
 		self.auto_defined = auto_defined
 
 	def __repr__(self):
-		return "<branch %s:0x%x -> %s:0x%x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
+		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
 
 class Function(object):
 	def __init__(self, view, handle):
@@ -2248,9 +2248,9 @@ class Function(object):
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<func: %s@0x%x>" % (arch.name, self.start)
+			return "<func: %s@%#x>" % (arch.name, self.start)
 		else:
-			return "<func: 0x%x>" % self.start
+			return "<func: %#x>" % self.start
 
 	def mark_recent_use(self):
 		core.BNMarkFunctionAsRecentlyUsed(self.handle)
@@ -2419,9 +2419,9 @@ class BasicBlockEdge:
 		if self.type == "UnresolvedBranch":
 			return "<%s>" % self.type
 		elif self.arch:
-			return "<%s: %s@0x%x>" % (self.type, self.arch.name, self.target)
+			return "<%s: %s@%#x>" % (self.type, self.arch.name, self.target)
 		else:
-			return "<%s: 0x%x>" % (self.type, self.target)
+			return "<%s: %#x>" % (self.type, self.target)
 
 class BasicBlock(object):
 	def __init__(self, view, handle):
@@ -2496,9 +2496,9 @@ class BasicBlock(object):
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<block: %s@0x%x-0x%x>" % (arch.name, self.start, self.end)
+			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
-			return "<block: 0x%x-0x%x>" % (self.start, self.end)
+			return "<block: %#x-%#x>" % (self.start, self.end)
 
 	def __iter__(self):
 		start = self.start
@@ -2539,7 +2539,7 @@ class FunctionGraphTextLine:
 		return result
 
 	def __repr__(self):
-		return "<0x%x: %s>" % (self.address, str(self))
+		return "<%#x: %s>" % (self.address, str(self))
 
 class FunctionGraphEdge:
 	def __init__(self, branch_type, arch, target, points):
@@ -2550,8 +2550,8 @@ class FunctionGraphEdge:
 
 	def __repr__(self):
 		if self.arch:
-			return "<%s: %s@0x%x>" % (self.type, self.arch.name, self.target)
-		return "<%s: 0x%x>" % (self.type, self.target)
+			return "<%s: %s@%#x>" % (self.type, self.arch.name, self.target)
+		return "<%s: %#x>" % (self.type, self.target)
 
 class FunctionGraphBlock(object):
 	def __init__(self, handle):
@@ -2644,9 +2644,9 @@ class FunctionGraphBlock(object):
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<graph block: %s@0x%x-0x%x>" % (arch.name, self.start, self.end)
+			return "<graph block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
-			return "<graph block: 0x%x-0x%x>" % (self.start, self.end)
+			return "<graph block: %#x-%#x>" % (self.start, self.end)
 
 class FunctionGraph(object):
 	def __init__(self, view, handle):
@@ -2812,8 +2812,8 @@ class InstructionBranch:
 		if not isinstance(branch_type, str):
 			branch_type = core.BNBranchType_names[branch_type]
 		if self.arch is not None:
-			return "<%s: %s@0x%x>" % (branch_type, self.arch.name, self.target)
-		return "<%s: 0x%x>" % (branch_type, self.target)
+			return "<%s: %s@%#x>" % (branch_type, self.arch.name, self.target)
+		return "<%s: %#x>" % (branch_type, self.target)
 
 class InstructionInfo:
 	def __init__(self):
@@ -3845,9 +3845,9 @@ class ReferenceSource:
 
 	def __repr__(self):
 		if self.arch:
-			return "<ref: %s@0x%x>" % (self.arch.name, self.address)
+			return "<ref: %s@%#x>" % (self.arch.name, self.address)
 		else:
-			return "<ref: 0x%x>" % self.address
+			return "<ref: %#x>" % self.address
 
 class LowLevelILLabel:
 	def __init__(self, handle = None):

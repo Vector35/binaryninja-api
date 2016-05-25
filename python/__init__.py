@@ -2408,6 +2408,21 @@ class Function(object):
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
+	def get_block_annotations(self, arch, addr):
+		count = ctypes.c_ulonglong(0)
+		lines = core.BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			tokens = []
+			for j in xrange(0, lines[i].count):
+				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
+				text = lines[i].tokens[j].text
+				value = lines[i].tokens[j].value
+				tokens.append(InstructionTextToken(token_type, text, value))
+			result.append(tokens)
+		core.BNFreeInstructionTextLines(lines, count.value)
+		return result
+
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):
 		self.type = core.BNBranchType_names[branch_type]
@@ -2483,6 +2498,11 @@ class BasicBlock(object):
 	def has_undetermined_outgoing_edges(self):
 		"""Whether basic block has undetermined outgoing edges (read-only)"""
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
+
+	@property
+	def annotations(self):
+		"""List of automatic annotations for the start of this block (read-only)"""
+		return self.function.get_block_annotations(self.arch, self.start)
 
 	def __setattr__(self, name, value):
 		try:

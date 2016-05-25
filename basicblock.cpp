@@ -90,3 +90,9 @@ void BasicBlock::MarkRecentUse()
 {
 	BNMarkBasicBlockAsRecentlyUsed(m_object);
 }
+
+
+vector<vector<InstructionTextToken>> BasicBlock::GetAnnotations()
+{
+	return GetFunction()->GetBlockAnnotations(GetArchitecture(), GetStart());
+}

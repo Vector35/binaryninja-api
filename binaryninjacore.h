@@ -496,6 +496,12 @@ extern "C"
 		uint64_t value;
 	};
 
+	struct BNInstructionTextLine
+	{
+		BNInstructionTextToken* tokens;
+		size_t count;
+	};
+
 	struct BNCustomArchitecture
 	{
 		void* context;
@@ -1178,6 +1184,10 @@ extern "C"
 	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranchesAt(BNFunction* func, BNArchitecture* arch,
 	                                                                 uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
+
+	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
 
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);

@@ -1275,6 +1275,8 @@ namespace BinaryNinja
 		bool HasUndeterminedOutgoingEdges() const;
 
 		void MarkRecentUse();
+
+		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
 	};
 
 	struct StackVariable
@@ -1385,6 +1387,8 @@ namespace BinaryNinja
 
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
+
+		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 	};
 
 	struct FunctionGraphTextLine

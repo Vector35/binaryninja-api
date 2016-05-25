@@ -458,3 +458,28 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 	BNFreeIndirectBranchList(branches);
 	return result;
 }
+
+
+vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNInstructionTextLine* lines = BNGetFunctionBlockAnnotations(m_object, arch->GetObject(), addr, &count);
+
+	vector<vector<InstructionTextToken>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		vector<InstructionTextToken> line;
+		for (size_t j = 0; j < lines[i].count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].tokens[j].type;
+			token.text = lines[i].tokens[j].text;
+			token.value = lines[i].tokens[j].value;
+			line.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	BNFreeInstructionTextLines(lines, count);
+	return result;
+}

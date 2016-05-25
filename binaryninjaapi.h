@@ -1312,6 +1312,21 @@ namespace BinaryNinja
 		ArchAndAddr(Architecture* a, uint64_t addr): arch(a), address(addr) {}
 	};
 
+	struct LookupTableEntry
+	{
+		std::vector<int64_t> fromValues;
+		int64_t toValue;
+	};
+
+	struct RegisterValue
+	{
+		BNRegisterValueType state;
+		uint32_t reg; // For EntryValue and OffsetFromEntryValue, the original input register
+		int64_t value; // Offset for OffsetFromEntryValue, StackFrameOffset or RangeValue, value of register for ConstantValue
+		uint64_t rangeStart, rangeEnd, rangeStep; // Range of register, inclusive
+		std::vector<LookupTableEntry> table;
+	};
+
 	class FunctionGraph;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -1337,10 +1352,10 @@ namespace BinaryNinja
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
-		BNRegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
-		BNRegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
-		BNRegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
-		BNRegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
+		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
+		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
+		RegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
+		RegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);

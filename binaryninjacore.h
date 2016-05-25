@@ -358,14 +358,27 @@ extern "C"
 		OffsetFromEntryValue,
 		ConstantValue,
 		StackFrameOffset,
-		UndeterminedValue
+		UndeterminedValue,
+		OffsetFromUndeterminedValue,
+		SignedRangeValue,
+		UnsignedRangeValue,
+		LookupTableValue
+	};
+
+	struct BNLookupTableEntry
+	{
+		int64_t* fromValues;
+		size_t fromCount;
+		int64_t toValue;
 	};
 
 	struct BNRegisterValue
 	{
 		BNRegisterValueType state;
 		uint32_t reg; // For EntryValue and OffsetFromEntryValue, the original input register
-		int64_t value; // Offset for OffsetFromEntryValue or StackFrameOffset, value of register for ConstantValue
+		int64_t value; // Offset for OffsetFromEntryValue, StackFrameOffset or RangeValue, value of register for ConstantValue
+		uint64_t rangeStart, rangeEnd, rangeStep; // Range of register, inclusive
+		BNLookupTableEntry* table; // Number of entries in rangeEnd
 	};
 
 	struct BNRegisterOrConstant
@@ -1102,6 +1115,7 @@ extern "C"
 	                                                                      uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
+	BINARYNINJACOREAPI void BNFreeRegisterValue(BNRegisterValue* value);
 	BINARYNINJACOREAPI uint32_t* BNGetRegistersReadByInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                             size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetRegistersWrittenByInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,

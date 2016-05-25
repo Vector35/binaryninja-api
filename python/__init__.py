@@ -2003,28 +2003,69 @@ class Enumeration(object):
 		else:
 			core.BNAddEnumerationMemberWithValue(self.handle, name, value)
 
-class RegisterValue:
-	def __init__(self, arch, value_type, reg, value):
-		self.type = core.BNRegisterValueType_names[value_type]
-		if value_type == EntryValue:
-			self.reg = arch.get_reg_name(reg)
-		elif value_type == OffsetFromEntryValue:
-			self.reg = arch.get_reg_name(reg)
-			self.offset = value
-		elif value_type == ConstantValue:
-			self.value = value
-		elif value_type == StackFrameOffset:
-			self.offset = value
+class LookupTableEntry:
+	def __init__(self, from_values, to_value):
+		self.from_values = from_values
+		self.to_value = to_value
 
 	def __repr__(self):
-		if self.type == "EntryValue":
+		return "[%s] -> 0x%x" % (', '.join(["0x%x" % i for i in self.from_values]), self.to_value)
+
+class RegisterValue:
+	def __init__(self, arch, value):
+		self.type = value.state
+		if value.state == EntryValue:
+			self.reg = arch.get_reg_name(value.reg)
+		elif value.state == OffsetFromEntryValue:
+			self.reg = arch.get_reg_name(value.reg)
+			self.offset = value.value
+		elif value.state == ConstantValue:
+			self.value = value.value
+		elif value.state == StackFrameOffset:
+			self.offset = value.value
+		elif value.state == SignedRangeValue:
+			self.offset = value.value
+			self.start = value.rangeStart
+			self.end = value.rangeEnd
+			self.step = value.rangeStep
+			if self.start & (1 << 63):
+				self.start |= ~((1 << 63) - 1)
+			if self.end & (1 << 63):
+				self.end |= ~((1 << 63) - 1)
+		elif value.state == UnsignedRangeValue:
+			self.offset = value.value
+			self.start = value.rangeStart
+			self.end = value.rangeEnd
+			self.step = value.rangeStep
+		elif value.state == LookupTableValue:
+			self.table = []
+			self.mapping = {}
+			for i in xrange(0, value.rangeEnd):
+				from_list = []
+				for j in xrange(0, value.table[i].fromCount):
+					from_list.append(value.table[i].fromValues[j])
+					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
+				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
+		elif value.state == OffsetFromUndeterminedValue:
+			self.offset = value.value
+
+	def __repr__(self):
+		if self.type == EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == "OffsetFromEntryValue":
+		if self.type == OffsetFromEntryValue:
 			return "<entry %s + 0x%x>" % (self.reg, self.offset)
-		if self.type == "ConstantValue":
+		if self.type == ConstantValue:
 			return "<const 0x%x>" % self.value
-		if self.type == "StackFrameOffset":
+		if self.type == StackFrameOffset:
 			return "<stack frame offset 0x%x>" % self.offset
+		if (self.type == SignedRangeValue) or (self.type == UnsignedRangeValue):
+			if self.step == 1:
+				return "<range: 0x%x-0x%x>" % (self.start, self.end)
+			return "<range: 0x%x-0x%x, step 0x%x>" % (self.start, self.end, self.step)
+		if self.type == LookupTableValue:
+			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
+		if self.type == OffsetFromUndeterminedValue:
+			return "<undetermined with offset 0x%x>" % self.offset
 		return "<undetermined>"
 
 class StackVariable:
@@ -2236,25 +2277,33 @@ class Function(object):
 		if isinstance(reg, str):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
-		return RegisterValue(arch, value.state, value.reg, value.value)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
 
 	def get_reg_value_after(self, arch, addr, reg):
 		if isinstance(reg, str):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
-		return RegisterValue(arch, value.state, value.reg, value.value)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
 
 	def get_reg_value_at_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
 		value = core.BNGetRegisterValueAtInstruction(self.handle, self.arch.handle, i, reg)
-		return RegisterValue(self.arch, value.state, value.reg, value.value)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
 
 	def get_reg_value_after_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, self.arch.handle, i, reg)
-		return RegisterValue(self.arch, value.state, value.reg, value.value)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
 
 	def get_regs_read_by(self, arch, addr):
 		count = ctypes.c_ulonglong()

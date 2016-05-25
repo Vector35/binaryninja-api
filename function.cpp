@@ -143,27 +143,56 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 }
 
 
-BNRegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
+static RegisterValue GetRegisterValueFromAPIObject(BNRegisterValue& value)
 {
-	return BNGetRegisterValueAtInstruction(m_object, arch->GetObject(), addr, reg);
+	RegisterValue result;
+	result.state = value.state;
+	result.reg = value.reg;
+	result.value = value.value;
+	result.rangeStart = value.rangeStart;
+	result.rangeEnd = value.rangeEnd;
+	result.rangeStep = value.rangeStep;
+	if (value.state == LookupTableValue)
+	{
+		for (size_t i = 0; i < (size_t)value.rangeEnd; i++)
+		{
+			LookupTableEntry entry;
+			entry.fromValues.insert(entry.fromValues.end(), &value.table[i].fromValues[0],
+				&value.table[i].fromValues[value.table[i].fromCount]);
+			entry.toValue = value.table[i].toValue;
+			result.table.push_back(entry);
+		}
+	}
+	BNFreeRegisterValue(&value);
+	return result;
 }
 
 
-BNRegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
+RegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
-	return BNGetRegisterValueAfterInstruction(m_object, arch->GetObject(), addr, reg);
+	BNRegisterValue value = BNGetRegisterValueAtInstruction(m_object, arch->GetObject(), addr, reg);
+	return GetRegisterValueFromAPIObject(value);
 }
 
 
-BNRegisterValue Function::GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg)
+RegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
-	return BNGetRegisterValueAtLowLevelILInstruction(m_object, i, reg);
+	BNRegisterValue value = BNGetRegisterValueAfterInstruction(m_object, arch->GetObject(), addr, reg);
+	return GetRegisterValueFromAPIObject(value);
 }
 
 
-BNRegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg)
+RegisterValue Function::GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg)
 {
-	return BNGetRegisterValueAfterLowLevelILInstruction(m_object, i, reg);
+	BNRegisterValue value = BNGetRegisterValueAtLowLevelILInstruction(m_object, i, reg);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg)
+{
+	BNRegisterValue value = BNGetRegisterValueAfterLowLevelILInstruction(m_object, i, reg);
+	return GetRegisterValueFromAPIObject(value);
 }
 
 

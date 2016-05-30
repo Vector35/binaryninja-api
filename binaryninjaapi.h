@@ -1358,6 +1358,12 @@ namespace BinaryNinja
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
 		RegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
+		RegisterValue GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
+		RegisterValue GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
+		RegisterValue GetStackContentsAtLowLevelILInstruction(size_t i, int64_t offset, size_t size);
+		RegisterValue GetStackContentsAfterLowLevelILInstruction(size_t i, int64_t offset, size_t size);
+		RegisterValue GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i);
+		RegisterValue GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);

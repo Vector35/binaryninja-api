@@ -1115,12 +1115,24 @@ extern "C"
 	BINARYNINJACOREAPI size_t* BNGetLowLevelILExitsForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                              size_t* count);
 	BINARYNINJACOREAPI void BNFreeLowLevelILInstructionList(size_t* list);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-	                                                                   uint32_t reg);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-	                                                                      uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtLowLevelILInstruction(BNFunction* func, size_t i,
+		int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterLowLevelILInstruction(BNFunction* func, size_t i,
+		int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, BNType* functionType, size_t i);
+	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtLowLevelILInstruction(BNFunction* func, size_t instr,
+		BNType* functionType, size_t i);
 	BINARYNINJACOREAPI void BNFreeRegisterValue(BNRegisterValue* value);
 	BINARYNINJACOREAPI uint32_t* BNGetRegistersReadByInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                             size_t* count);

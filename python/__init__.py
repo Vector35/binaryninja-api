@@ -2292,7 +2292,7 @@ class Function(object):
 	def get_reg_value_at_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAtInstruction(self.handle, self.arch.handle, i, reg)
+		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
@@ -2300,7 +2300,55 @@ class Function(object):
 	def get_reg_value_after_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAfterInstruction(self.handle, self.arch.handle, i, reg)
+		value = core.BNGetRegisterValueAfterLowLevelILInstruction(self.handle, i, reg)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_at(self, arch, addr, offset, size):
+		if isinstance(reg, str):
+			reg = arch.regs[reg].index
+		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after(self, arch, addr, offset, size):
+		if isinstance(reg, str):
+			reg = arch.regs[reg].index
+		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, reg)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
+		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
+		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_parameter_at(self, arch, addr, func_type, i):
+		if func_type is not None:
+			func_type = func_type.handle
+		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_parameter_at_low_level_il_instruction(self, instr, func_type, i):
+		if func_type is not None:
+			func_type = func_type.handle
+		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type, i)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result

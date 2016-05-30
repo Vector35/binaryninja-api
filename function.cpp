@@ -196,6 +196,50 @@ RegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uin
 }
 
 
+RegisterValue Function::GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
+{
+	BNRegisterValue value = BNGetStackContentsAtInstruction(m_object, arch->GetObject(), addr, offset, size);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
+{
+	BNRegisterValue value = BNGetStackContentsAfterInstruction(m_object, arch->GetObject(), addr, offset, size);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetStackContentsAtLowLevelILInstruction(size_t i, int64_t offset, size_t size)
+{
+	BNRegisterValue value = BNGetStackContentsAtLowLevelILInstruction(m_object, i, offset, size);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetStackContentsAfterLowLevelILInstruction(size_t i, int64_t offset, size_t size)
+{
+	BNRegisterValue value = BNGetStackContentsAfterLowLevelILInstruction(m_object, i, offset, size);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i)
+{
+	BNRegisterValue value = BNGetParameterValueAtInstruction(m_object, arch->GetObject(), addr,
+		functionType ? functionType->GetObject() : nullptr, i);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
+RegisterValue Function::GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i)
+{
+	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(m_object, instr,
+		functionType ? functionType->GetObject() : nullptr, i);
+	return GetRegisterValueFromAPIObject(value);
+}
+
+
 vector<uint32_t> Function::GetRegistersReadByInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;

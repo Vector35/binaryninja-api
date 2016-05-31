@@ -1545,6 +1545,7 @@ namespace BinaryNinja
 		ExprId CompareSignedGreaterThan(size_t size, ExprId a, ExprId b);
 		ExprId CompareUnsignedGreaterThan(size_t size, ExprId a, ExprId b);
 		ExprId TestBit(size_t size, ExprId a, ExprId b);
+		ExprId BoolToInt(size_t size, ExprId a);
 		ExprId SystemCall();
 		ExprId Breakpoint();
 		ExprId Trap(uint32_t num);

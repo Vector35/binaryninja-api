@@ -3987,6 +3987,7 @@ class LowLevelILInstruction(object):
 		core.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
 		core.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
 		core.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		core.LLIL_BOOL_TO_INT: [("src", "expr")],
 		core.LLIL_SYSCALL: [],
 		core.LLIL_BP: [],
 		core.LLIL_TRAP: [("value", "int")],

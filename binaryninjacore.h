@@ -362,7 +362,8 @@ extern "C"
 		OffsetFromUndeterminedValue,
 		SignedRangeValue,
 		UnsignedRangeValue,
-		LookupTableValue
+		LookupTableValue,
+		ComparisonResultValue
 	};
 
 	struct BNLookupTableEntry

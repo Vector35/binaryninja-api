@@ -76,23 +76,26 @@ def render_svg(function):
 				.CodeSymbolToken {{
 					fill: rgb(128, 198, 223);
 				}}
-				.TextToken {{
+				.DataSymbolToken {{
+					fill: rgb(142, 230, 237);
+				}}
+				.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
 					fill: rgb(224, 224, 224);
 				}}
-				.PossibleAddressToken {{
+				.PossibleAddressToken, .IntegerToken {{
 					fill: rgb(162, 217, 175);
 				}}
 				.RegisterToken {{
 					fill: rgb(237, 223, 179);
-				}}
-				.InstructionToken {{
-					fill: rgb(224, 224, 224);
 				}}
 				.AnnotationToken {{
 					fill: rgb(218, 196, 209);
 				}}
 				.ImportToken {{
 					fill: rgb(237, 189, 129);
+				}}
+				.StackVariableToken {{
+					fill: rgb(193, 220, 199);
 				}}
 			]]></style>
 			<marker id="arrow-TrueBranch" class="arrow TrueBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">

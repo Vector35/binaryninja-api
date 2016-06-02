@@ -2,20 +2,21 @@ from binaryninja import *
 import os,sys
 
 escape_table = {
-	"&": "&#38;",
 	"'": "&#39;",
 	">": "&#62;",
 	"<": "&#60;",
 	'"': "&#34;",
-	' ': "&#160;",
+	' ': "&#160;"
 }
 
 def escape(string):
-	return ''.join(escape_table.get(i,i) for i in string)
+	string=string.decode('utf-8').encode('ascii','xmlcharrefreplace') 	#handle extended unicode
+	return ''.join(escape_table.get(i,i) for i in string) 				#still escape the basics
 
 def save_svg(bv,function):
 	filename = bv.file.filename.split(os.sep)[-1]
-	outputfile = os.path.join(os.path.expanduser('~'), 'binaryninja-{filename}-{function}.html'.format(filename=filename,function=function.symbol.name))
+	address = hex(function.start).replace('L','')
+	outputfile = os.path.join(os.path.expanduser('~'), 'binaryninja-{filename}-{function}.html'.format(filename=filename,function=address))
 	content = render_svg(function)
 	output = open(outputfile,'w')
 	output.write(content)
@@ -37,74 +38,82 @@ def render_svg(function):
 	ratio = 0.54
 	widthconst = int(heightconst*ratio)
 
-	output = '''<html><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{width}" height="{height}">
+	output = '''<html>
+	<head>
+		<style type="text/css">
+			@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
+			svg {
+				background-color: rgb(42, 42, 42);
+			}
+			.basicblock {
+				fill: rgb(74, 74, 74);
+				stroke: rgb(224, 224, 224);
+			}
+			.edge {
+				fill: none;
+				stroke-width: 1px;
+			}
+			.UnconditionalBranch, .IndirectBranch {
+				stroke: rgb(128, 198, 233);
+				color: rgb(128, 198, 233);
+			}
+			.FalseBranch {
+				stroke: rgb(222, 143, 151);
+				color: rgb(222, 143, 151);
+			}
+			.TrueBranch {
+				stroke: rgb(162, 217, 175);
+				color: rgb(162, 217, 175);
+			}
+			.arrow {
+				stroke-width: 1;
+				fill: currentColor;
+			}
+			text {
+				font-family: 'Source Code Pro';
+				font-size: 9pt;
+				fill: rgb(224, 224, 224);
+			}
+			.CodeSymbolToken {
+				fill: rgb(128, 198, 223);
+			}
+			.DataSymbolToken {
+				fill: rgb(142, 230, 237);
+			}
+			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {
+				fill: rgb(224, 224, 224);
+			}
+			.PossibleAddressToken, .IntegerToken {
+				fill: rgb(162, 217, 175);
+			}
+			.RegisterToken {
+				fill: rgb(237, 223, 179);
+			}
+			.AnnotationToken {
+				fill: rgb(218, 196, 209);
+			}
+			.ImportToken {
+				fill: rgb(237, 189, 129);
+			}
+			.StackVariableToken {
+				fill: rgb(193, 220, 199);
+			}
+		</style>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+	</head>
+'''
+	output += '''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{width}" height="{height}">
 		<defs>
-			<style type="text/css"><![CDATA[
-				@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
-				svg {{
-					background-color: rgb(42, 42, 42);
-				}}
-				.basicblock {{
-					fill: rgb(74, 74, 74);
-					stroke: rgb(224, 224, 224);
-				}}
-				.edge {{
-					fill: none;
-					stroke-width: 2px;
-				}}
-				.UnconditionalBranch {{
-					stroke: rgb(128, 198, 233);
-					color: rgb(128, 198, 233);
-				}}
-				.FalseBranch {{
-					stroke: rgb(222, 143, 151);
-					color: rgb(222, 143, 151);
-				}}
-				.TrueBranch {{
-					stroke: rgb(162, 217, 175);
-					color: rgb(162, 217, 175);
-				}}
-				.arrow {{
-					stroke-width: 1;
-					fill: currentColor;
-				}}
-				text {{
-					font-family: 'Source Code Pro';
-					font-size: 9pt;
-					fill: rgb(224, 224, 224);
-				}}
-				.CodeSymbolToken {{
-					fill: rgb(128, 198, 223);
-				}}
-				.DataSymbolToken {{
-					fill: rgb(142, 230, 237);
-				}}
-				.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
-					fill: rgb(224, 224, 224);
-				}}
-				.PossibleAddressToken, .IntegerToken {{
-					fill: rgb(162, 217, 175);
-				}}
-				.RegisterToken {{
-					fill: rgb(237, 223, 179);
-				}}
-				.AnnotationToken {{
-					fill: rgb(218, 196, 209);
-				}}
-				.ImportToken {{
-					fill: rgb(237, 189, 129);
-				}}
-				.StackVariableToken {{
-					fill: rgb(193, 220, 199);
-				}}
-			]]></style>
-			<marker id="arrow-TrueBranch" class="arrow TrueBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
+			<marker id="arrow-TrueBranch" class="arrow TrueBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
-			<marker id="arrow-FalseBranch" class="arrow FalseBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
+			<marker id="arrow-FalseBranch" class="arrow FalseBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
-			<marker id="arrow-UnconditionalBranch" class="arrow UnconditionalBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
+			<marker id="arrow-UnconditionalBranch" class="arrow UnconditionalBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
+				<path d="M 0 0 L 10 5 L 0 10 z" />
+			</marker>
+			<marker id="arrow-IndirectBranch" class="arrow IndirectBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
 		</defs>
@@ -131,7 +140,7 @@ def render_svg(function):
 
 		output += '			<text x="{x}" y="{y}">\n'.format(x=x,y=y + (i + 1) * heightconst)
 		for i,line in enumerate(block.lines):
-			output += '				<tspan id="{address}" x="{x}" y="{y}">'.format(x=x,y=y + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
+			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x,y=y + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
 			hover = instruction_data_flow(function, line.address)
 			output += '<title>{hover}</title>'.format(hover=hover)
 			for token in line.tokens:

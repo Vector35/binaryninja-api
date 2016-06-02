@@ -34,8 +34,8 @@ def instruction_data_flow(function,address):
 def render_svg(function):
 	graph = function.create_graph()
 	graph.layout_and_wait()
-	heightconst = 17
-	ratio = 0.44
+	heightconst = 15
+	ratio = 0.48
 	widthconst = heightconst*ratio
 
 	output = '''<html>
@@ -117,7 +117,7 @@ def render_svg(function):
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
 		</defs>
-	'''.format(width=int(graph.width * widthconst + 0.5), height=graph.height * heightconst)
+	'''.format(width=graph.width*widthconst, height=graph.height*heightconst)
 	output += '''	<g id="functiongraph0" class="functiongraph">
 			<title>Function Graph 0</title>
 	'''
@@ -125,10 +125,10 @@ def render_svg(function):
 	for i,block in enumerate(graph.blocks):
 
 		#Calculate basic block location and coordinates
-		x = int(block.x * widthconst + 0.5)
-		y = int((block.y) * heightconst)
-		width = int(block.width * widthconst + 0.5)
-		height = block.height * heightconst
+		x = ((block.x) * widthconst)
+		y = ((block.y) * heightconst)
+		width = ((block.width) * widthconst)
+		height = ((block.height) * heightconst)
 
 		#Render block
 		output += '		<g id="basicblock{i}">\n'.format(i=i)
@@ -138,9 +138,9 @@ def render_svg(function):
 		#Render instructions, unfortunately tspans don't allow copying/pasting more
 		#than one line at a time, need SVG 1.2 textarea tags for that it looks like
 
-		output += '			<text x="{x}" y="{y}">\n'.format(x=x+3,y=y+5 + (i + 1) * (heightconst - 2))
+		output += '			<text x="{x}" y="{y}">\n'.format(x=x,y=y + (i + 1) * heightconst)
 		for i,line in enumerate(block.lines):
-			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x+3,y=y + 5 + (i + 0.7) * (heightconst - 2),address=hex(line.address)[:-1])
+			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x,y=y + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
 			hover = instruction_data_flow(function, line.address)
 			output += '<title>{hover}</title>'.format(hover=hover)
 			for token in line.tokens:

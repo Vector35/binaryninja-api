@@ -2306,32 +2306,24 @@ class Function(object):
 		return result
 
 	def get_stack_contents_at(self, arch, addr, offset, size):
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after(self, arch, addr, offset, size):
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
-		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, reg)
+		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
 		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
 		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)

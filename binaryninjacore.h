@@ -97,13 +97,14 @@ extern "C"
 	struct BNPlatform;
 	struct BNAnalysisCompletionEvent;
 
+	//! Console log levels
 	enum BNLogLevel
 	{
-		DebugLog = 0,
-		InfoLog = 1,
-		WarningLog = 2,
-		ErrorLog = 3,
-		AlertLog = 4
+		DebugLog = 0,   //!< Debug logging level, most verbose logging level
+		InfoLog = 1,    //!< Information logging level, default logging level
+		WarningLog = 2, //!< Warning logging level, messages show with warning icon in the UI
+		ErrorLog = 3,   //!< Error logging level, messages show with error icon in the UI
+		AlertLog = 4    //!< Alert logging level, messages are displayed with popup message box in the UI
 	};
 
 	enum BNEndianness

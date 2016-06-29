@@ -274,11 +274,52 @@ namespace BinaryNinja
 	class Type;
 	class DataBuffer;
 
+	/*! Logs to the error console with the given BNLogLevel.
+
+		\param level BNLogLevel debug log level
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void Log(BNLogLevel level, const char* fmt, ...);
+
+	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
+		Log level DebugLog is the most verbose logging level.
+
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void LogDebug(const char* fmt, ...);
+
+	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
+		Log level InfoLog is the second most verbose logging level.
+
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void LogInfo(const char* fmt, ...);
+
+	/*! LogWarn writes text to the error console including a warning icon,
+		and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void LogWarn(const char* fmt, ...);
+
+	/*! LogError writes text to the error console and pops up the error console. Additionall,
+		Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void LogError(const char* fmt, ...);
+
+	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
+		LogAlert corresponds to the log level: AlertLog.
+
+		\param fmt C-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	 */
 	void LogAlert(const char* fmt, ...);
 
 	void LogToStdout(BNLogLevel minimumLevel);
@@ -571,7 +612,6 @@ namespace BinaryNinja
 		Ref<Architecture> arch;
 		uint64_t addr;
 	};
-
 	class AnalysisCompletionEvent: public CoreRefCountObject<BNAnalysisCompletionEvent,
 		BNNewAnalysisCompletionEventReference, BNFreeAnalysisCompletionEvent>
 	{
@@ -586,13 +626,26 @@ namespace BinaryNinja
 		void Cancel();
 	};
 
+	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
+	    BinaryView should be subclassed to create a new BinaryView
+	*/
 	class BinaryView: public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
 	protected:
-		Ref<FileMetadata> m_file;
+		Ref<FileMetadata> m_file; //!< The underlying file
 
+		/*! BinaryView constructor
+		   \param typeName name of the BinaryView (e.g. ELF, PE, Mach-O, ...)
+		   \param file a file to create a view from
+		 */
 		BinaryView(const std::string& typeName, FileMetadata* file);
 
+		/*! PerformRead provides a mapping between the flat file and virtual offsets in the file.
+
+		    \param dest the address to write len number of bytes.
+		    \param offset the virtual offset to find and read len bytes from
+		....\param len the number of bytes to read from offset and write to dest
+		*/
 		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
 		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
@@ -740,17 +793,16 @@ namespace BinaryNinja
 
 		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
 
+
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsSkipAndReturnZeroPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr);
-
 		bool ConvertToNop(Architecture* arch, uint64_t addr);
 		bool AlwaysBranch(Architecture* arch, uint64_t addr);
 		bool InvertBranch(Architecture* arch, uint64_t addr);
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
-
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
 
 		std::vector<BNStringReference> GetStrings();
@@ -997,6 +1049,7 @@ namespace BinaryNinja
 
 	typedef size_t ExprId;
 
+	//! Architecture is the base class for all architectures
 	class Architecture: public StaticCoreRefCountObject<BNArchitecture>
 	{
 	protected:
@@ -1035,7 +1088,6 @@ namespace BinaryNinja
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
-
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsInvertBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -1064,6 +1116,8 @@ namespace BinaryNinja
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) = 0;
 
+		/*! GetInstructionLowLevelIL
+		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
@@ -1088,15 +1142,72 @@ namespace BinaryNinja
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
+		/*! IsNeverBranchPatchAvailable returns true if the instruction at addr can be patched to never branch.
+		    This is used in the UI to determine if "never branch" should be displayed in the right-click context
+		    menu when right-clicking on an instruction.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+
+		/*! IsAlwaysBranchPatchAvailable returns true if the instruction at addr can be patched to always branch.
+		    This is used in the UI to determine if "always branch" should be displayed in the right-click context
+		    menu when right-clicking on an instruction.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+
+		/*! IsInvertBranchPatchAvailable returns true if the instruction at addr can be patched to invert the branch.
+		    This is used in the UI to determine if "invert branch" should be displayed in the right-click context
+		    menu when right-clicking on an instruction.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+
+		/*! IsSkipAndReturnZeroPatchAvailable returns true if the instruction at addr is a call that can be patched to
+		    return zero. This is used in the UI to determine if "skip and return zero" should be displayed in the
+		    right-click context menu when right-clicking on an instruction.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
+
+		/*! IsSkipAndReturnValuePatchAvailable returns true if the instruction at addr is a call that can be patched to
+		    return a value. This is used in the UI to determine if "skip and return value" should be displayed in the
+		    right-click context menu when right-clicking on an instruction.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
+		/*! ConvertToNop converts the instruction at addr to a no-operation instruction
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len);
+
+		/*! AlwaysBranch converts the conditional branch instruction at addr to an unconditional branch. This is called
+		    when the right-click context menu item "always branch" is selected in the UI.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len);
+
+		/*! InvertBranch converts the conditional branch instruction at addr to its invert. This is called
+		    when the right-click context menu item "invert branch" is selected in the UI.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len);
+
+		/*! SkipAndReturnValue converts the call instruction at addr to an instruction that simulates that call
+		    returning a value. This is called when the right-click context menu item "skip and return value" is selected
+		    in the UI.
+		    \param arch the architecture of the instruction
+		    \param addr the address of the instruction in question
+		*/
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
 		void RegisterFunctionRecognizer(FunctionRecognizer* recog);
@@ -1637,6 +1748,8 @@ namespace BinaryNinja
 		BNUpdateResult UpdateToLatestVersion(const std::function<bool(uint64_t progress, uint64_t total)>& progress);
 	};
 
+	/*! UpdateVersion documentation
+	*/
 	struct UpdateVersion
 	{
 		std::string version;
@@ -1785,6 +1898,9 @@ namespace BinaryNinja
 		virtual uint32_t GetFloatReturnValueRegister() override;
 	};
 
+	/*!
+		Platform base class. This should be subclassed when creating a new platform
+	 */
 	class Platform: public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>
 	{
 	protected:

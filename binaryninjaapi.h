@@ -30,6 +30,7 @@
 #include <exception>
 #include <functional>
 #include <set>
+#include <mutex>
 #include "binaryninjacore.h"
 #include "json/json.h"
 

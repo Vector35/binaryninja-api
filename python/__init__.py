@@ -627,6 +627,29 @@ class BinaryViewType(object):
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
+class AnalysisCompletionEvent(object):
+	def __init__(self, view, callback):
+		self.view = view
+		self.callback = callback
+		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
+		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+
+	def __del__(self):
+		core.BNFreeAnalysisCompletionEvent(self.handle)
+
+	def _notify(self, ctxt):
+		try:
+			self.callback()
+		except:
+			log_error(traceback.format_exc())
+
+	def _empty_callback(self):
+		pass
+
+	def cancel(self):
+		self.callback = self._empty_callback
+		core.BNCancelAnalysisCompletionEvent(self.handle)
+
 class BinaryView(object):
 	name = None
 	"""Binary View name"""
@@ -1252,6 +1275,29 @@ class BinaryView(object):
 	def update_analysis(self):
 		core.BNUpdateAnalysis(self.handle)
 
+	def update_analysis_and_wait(self):
+		class WaitEvent:
+			def __init__(self):
+				self.cond = threading.Condition()
+				self.done = False
+
+			def complete(self):
+				self.cond.acquire()
+				self.done = True
+				self.cond.notify()
+				self.cond.release()
+
+			def wait(self):
+				self.cond.acquire()
+				while not self.done:
+					self.cond.wait()
+				self.cond.release()
+
+		wait = WaitEvent()
+		event = AnalysisCompletionEvent(self, lambda: wait.complete())
+		core.BNUpdateAnalysis(self.handle)
+		wait.wait()
+
 	def abort_analysis(self):
 		core.BNAbortAnalysis(self.handle)
 
@@ -1427,6 +1473,9 @@ class BinaryView(object):
 			result.append(StringReference(core.BNStringType_names[strings[i].type], strings[i].start, strings[i].length))
 		core.BNFreeStringList(strings)
 		return result
+
+	def add_analysis_completion_event(self, callback):
+		return AnalysisCompletionEvent(self, callback)
 
 	def __setattr__(self, name, value):
 		try:

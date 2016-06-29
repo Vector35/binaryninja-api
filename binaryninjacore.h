@@ -95,6 +95,7 @@ extern "C"
 	struct BNEnumeration;
 	struct BNCallingConvention;
 	struct BNPlatform;
+	struct BNAnalysisCompletionEvent;
 
 	enum BNLogLevel
 	{
@@ -1202,6 +1203,12 @@ extern "C"
 	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
+
+	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
+		void (*callback)(void* ctxt));
+	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNNewAnalysisCompletionEventReference(BNAnalysisCompletionEvent* event);
+	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
+	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);

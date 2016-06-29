@@ -571,6 +571,20 @@ namespace BinaryNinja
 		uint64_t addr;
 	};
 
+	class AnalysisCompletionEvent: public CoreRefCountObject<BNAnalysisCompletionEvent,
+		BNNewAnalysisCompletionEventReference, BNFreeAnalysisCompletionEvent>
+	{
+	protected:
+		std::function<void()> m_callback;
+		std::recursive_mutex m_mutex;
+
+		static void CompletionCallback(void* ctxt);
+
+	public:
+		AnalysisCompletionEvent(BinaryView* view, const std::function<void()>& callback);
+		void Cancel();
+	};
+
 	class BinaryView: public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
 	protected:
@@ -740,6 +754,8 @@ namespace BinaryNinja
 
 		std::vector<BNStringReference> GetStrings();
 		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
+
+		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 	};
 
 	class BinaryData: public BinaryView

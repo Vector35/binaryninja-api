@@ -13,3 +13,4 @@ python/_binaryninjacore.py
 python/generator
 python/generator.exe
 .vs
+xml

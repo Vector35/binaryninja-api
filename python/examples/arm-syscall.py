@@ -10,10 +10,7 @@ else:
 	raise ValueError("Missing argument to binary.")
 
 bv = binaryninja.BinaryViewType["Mach-O"].open(target)
-bv.update_analysis()
-
-"""Until update_analysis_and_wait is complete, sleep is necessary as the analysis is multi-threaded."""
-time.sleep(5)
+bv.update_analysis_and_wait()
 
 for func in bv.functions:
 	for il in func.low_level_il:

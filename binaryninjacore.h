@@ -735,6 +735,19 @@ extern "C"
 		uint64_t address;
 	};
 
+	enum BNAnalysisState
+	{
+		IdleState,
+		DisassembleState,
+		AnalyzeState
+	};
+
+	struct BNAnalysisProgress
+	{
+		BNAnalysisState state;
+		size_t count, total;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1210,6 +1223,8 @@ extern "C"
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNNewAnalysisCompletionEventReference(BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
+
+	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);

@@ -650,6 +650,22 @@ class AnalysisCompletionEvent(object):
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 
+class AnalysisProgress(object):
+	def __init__(self, state, count, total):
+		self.state = state
+		self.count = count
+		self.total = total
+
+	def __str__(self):
+		if self.state == core.DisassembleState:
+			return "Disassembling (%d/%d)" % (self.count, self.total)
+		if self.state == core.AnalyzeState:
+			return "Analyzing (%d/%d)" % (self.count, self.total)
+		return "Idle"
+
+	def __repr__(self):
+		return "<progress: %s>" % str(self)
+
 class BinaryView(object):
 	name = None
 	"""Binary View name"""
@@ -927,6 +943,12 @@ class BinaryView(object):
 	@saved.setter
 	def saved(self, value):
 		self.file.saved = value
+
+	@property
+	def analysis_progress(self):
+		"""Status of current analysis (read-only)"""
+		result = core.BNGetAnalysisProgress(self.handle)
+		return AnalysisProgress(result.state, result.count, result.total)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))

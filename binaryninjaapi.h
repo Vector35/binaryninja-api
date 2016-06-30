@@ -809,6 +809,8 @@ namespace BinaryNinja
 		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
 
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
+
+		BNAnalysisProgress GetAnalysisProgress();
 	};
 
 	class BinaryData: public BinaryView

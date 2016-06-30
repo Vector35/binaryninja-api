@@ -1094,6 +1094,12 @@ Ref<AnalysisCompletionEvent> BinaryView::AddAnalysisCompletionEvent(const functi
 }
 
 
+BNAnalysisProgress BinaryView::GetAnalysisProgress()
+{
+	return BNGetAnalysisProgress(m_object);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

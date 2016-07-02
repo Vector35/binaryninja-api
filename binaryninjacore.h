@@ -95,14 +95,16 @@ extern "C"
 	struct BNEnumeration;
 	struct BNCallingConvention;
 	struct BNPlatform;
+	struct BNAnalysisCompletionEvent;
 
+	//! Console log levels
 	enum BNLogLevel
 	{
-		DebugLog = 0,
-		InfoLog = 1,
-		WarningLog = 2,
-		ErrorLog = 3,
-		AlertLog = 4
+		DebugLog = 0,   //!< Debug logging level, most verbose logging level
+		InfoLog = 1,    //!< Information logging level, default logging level
+		WarningLog = 2, //!< Warning logging level, messages show with warning icon in the UI
+		ErrorLog = 3,   //!< Error logging level, messages show with error icon in the UI
+		AlertLog = 4    //!< Alert logging level, messages are displayed with popup message box in the UI
 	};
 
 	enum BNEndianness
@@ -245,6 +247,7 @@ extern "C"
 		LLIL_CMP_SGT,
 		LLIL_CMP_UGT,
 		LLIL_TEST_BIT,
+		LLIL_BOOL_TO_INT,
 		LLIL_SYSCALL,
 		LLIL_BP,
 		LLIL_TRAP,
@@ -362,7 +365,8 @@ extern "C"
 		OffsetFromUndeterminedValue,
 		SignedRangeValue,
 		UnsignedRangeValue,
-		LookupTableValue
+		LookupTableValue,
+		ComparisonResultValue
 	};
 
 	struct BNLookupTableEntry
@@ -729,6 +733,19 @@ extern "C"
 	{
 		BNArchitecture* arch;
 		uint64_t address;
+	};
+
+	enum BNAnalysisState
+	{
+		IdleState,
+		DisassembleState,
+		AnalyzeState
+	};
+
+	struct BNAnalysisProgress
+	{
+		BNAnalysisState state;
+		size_t count, total;
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -1115,12 +1132,24 @@ extern "C"
 	BINARYNINJACOREAPI size_t* BNGetLowLevelILExitsForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                              size_t* count);
 	BINARYNINJACOREAPI void BNFreeLowLevelILInstructionList(size_t* list);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-	                                                                   uint32_t reg);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-	                                                                      uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtLowLevelILInstruction(BNFunction* func, size_t i,
+		int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterLowLevelILInstruction(BNFunction* func, size_t i,
+		int64_t offset, size_t size);
+	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
+		uint64_t addr, BNType* functionType, size_t i);
+	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtLowLevelILInstruction(BNFunction* func, size_t instr,
+		BNType* functionType, size_t i);
 	BINARYNINJACOREAPI void BNFreeRegisterValue(BNRegisterValue* value);
 	BINARYNINJACOREAPI uint32_t* BNGetRegistersReadByInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                             size_t* count);
@@ -1188,6 +1217,14 @@ extern "C"
 	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
+
+	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
+		void (*callback)(void* ctxt));
+	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNNewAnalysisCompletionEventReference(BNAnalysisCompletionEvent* event);
+	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
+	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
+
+	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);

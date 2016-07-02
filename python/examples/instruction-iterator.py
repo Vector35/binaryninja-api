@@ -21,10 +21,7 @@ else:
 	target = "/bin/ls"
 
 bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis()
-
-"""Until update_analysis_and_wait is complete, sleep is necessary as the analysis is multi-threaded."""
-time.sleep(1)
+bv.update_analysis_and_wait()
 
 print "-------- %s --------" % target
 print "START: 0x%x" % bv.start

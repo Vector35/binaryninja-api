@@ -627,6 +627,45 @@ class BinaryViewType(object):
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
+class AnalysisCompletionEvent(object):
+	def __init__(self, view, callback):
+		self.view = view
+		self.callback = callback
+		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
+		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+
+	def __del__(self):
+		core.BNFreeAnalysisCompletionEvent(self.handle)
+
+	def _notify(self, ctxt):
+		try:
+			self.callback()
+		except:
+			log_error(traceback.format_exc())
+
+	def _empty_callback(self):
+		pass
+
+	def cancel(self):
+		self.callback = self._empty_callback
+		core.BNCancelAnalysisCompletionEvent(self.handle)
+
+class AnalysisProgress(object):
+	def __init__(self, state, count, total):
+		self.state = state
+		self.count = count
+		self.total = total
+
+	def __str__(self):
+		if self.state == core.DisassembleState:
+			return "Disassembling (%d/%d)" % (self.count, self.total)
+		if self.state == core.AnalyzeState:
+			return "Analyzing (%d/%d)" % (self.count, self.total)
+		return "Idle"
+
+	def __repr__(self):
+		return "<progress: %s>" % str(self)
+
 class BinaryView(object):
 	name = None
 	"""Binary View name"""
@@ -904,6 +943,12 @@ class BinaryView(object):
 	@saved.setter
 	def saved(self, value):
 		self.file.saved = value
+
+	@property
+	def analysis_progress(self):
+		"""Status of current analysis (read-only)"""
+		result = core.BNGetAnalysisProgress(self.handle)
+		return AnalysisProgress(result.state, result.count, result.total)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1252,6 +1297,29 @@ class BinaryView(object):
 	def update_analysis(self):
 		core.BNUpdateAnalysis(self.handle)
 
+	def update_analysis_and_wait(self):
+		class WaitEvent:
+			def __init__(self):
+				self.cond = threading.Condition()
+				self.done = False
+
+			def complete(self):
+				self.cond.acquire()
+				self.done = True
+				self.cond.notify()
+				self.cond.release()
+
+			def wait(self):
+				self.cond.acquire()
+				while not self.done:
+					self.cond.wait()
+				self.cond.release()
+
+		wait = WaitEvent()
+		event = AnalysisCompletionEvent(self, lambda: wait.complete())
+		core.BNUpdateAnalysis(self.handle)
+		wait.wait()
+
 	def abort_analysis(self):
 		core.BNAbortAnalysis(self.handle)
 
@@ -1427,6 +1495,9 @@ class BinaryView(object):
 			result.append(StringReference(core.BNStringType_names[strings[i].type], strings[i].start, strings[i].length))
 		core.BNFreeStringList(strings)
 		return result
+
+	def add_analysis_completion_event(self, callback):
+		return AnalysisCompletionEvent(self, callback)
 
 	def __setattr__(self, name, value):
 		try:
@@ -2292,7 +2363,7 @@ class Function(object):
 	def get_reg_value_at_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAtInstruction(self.handle, self.arch.handle, i, reg)
+		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
@@ -2300,7 +2371,47 @@ class Function(object):
 	def get_reg_value_after_low_level_il_instruction(self, i, reg):
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAfterInstruction(self.handle, self.arch.handle, i, reg)
+		value = core.BNGetRegisterValueAfterLowLevelILInstruction(self.handle, i, reg)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_at(self, arch, addr, offset, size):
+		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after(self, arch, addr, offset, size):
+		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
+		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
+		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
+		result = RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_parameter_at(self, arch, addr, func_type, i):
+		if func_type is not None:
+			func_type = func_type.handle
+		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
+		result = RegisterValue(arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_parameter_at_low_level_il_instruction(self, instr, func_type, i):
+		if func_type is not None:
+			func_type = func_type.handle
+		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type, i)
 		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
@@ -3939,6 +4050,7 @@ class LowLevelILInstruction(object):
 		core.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
 		core.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
 		core.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		core.LLIL_BOOL_TO_INT: [("src", "expr")],
 		core.LLIL_SYSCALL: [],
 		core.LLIL_BP: [],
 		core.LLIL_TRAP: [("value", "int")],

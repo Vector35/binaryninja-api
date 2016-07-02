@@ -180,6 +180,30 @@ Ref<Symbol> Symbol::ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_
 }
 
 
+AnalysisCompletionEvent::AnalysisCompletionEvent(BinaryView* view, const std::function<void()>& callback):
+	m_callback(callback)
+{
+	m_object = BNAddAnalysisCompletionEvent(view->GetObject(), this, CompletionCallback);
+}
+
+
+void AnalysisCompletionEvent::CompletionCallback(void* ctxt)
+{
+	AnalysisCompletionEvent* event = (AnalysisCompletionEvent*)ctxt;
+
+	unique_lock<recursive_mutex> lock(event->m_mutex);
+	event->m_callback();
+	event->m_callback = []() {};
+}
+
+
+void AnalysisCompletionEvent::Cancel()
+{
+	unique_lock<recursive_mutex> lock(m_mutex);
+	m_callback = []() {};
+}
+
+
 BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 {
 	BNCustomBinaryView view;
@@ -1061,6 +1085,18 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 	result.insert(result.end(), strings, strings + count);
 	BNFreeStringList(strings);
 	return result;
+}
+
+
+Ref<AnalysisCompletionEvent> BinaryView::AddAnalysisCompletionEvent(const function<void()>& callback)
+{
+	return new AnalysisCompletionEvent(this, callback);
+}
+
+
+BNAnalysisProgress BinaryView::GetAnalysisProgress()
+{
+	return BNGetAnalysisProgress(m_object);
 }
 
 

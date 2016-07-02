@@ -428,6 +428,12 @@ ExprId LowLevelILFunction::TestBit(size_t size, ExprId a, ExprId b)
 }
 
 
+ExprId LowLevelILFunction::BoolToInt(size_t size, ExprId a)
+{
+	return AddExpr(LLIL_BOOL_TO_INT, size, 0, a);
+}
+
+
 ExprId LowLevelILFunction::SystemCall()
 {
 	return AddExpr(LLIL_SYSCALL, 0, 0);

@@ -96,6 +96,7 @@ extern "C"
 	struct BNCallingConvention;
 	struct BNPlatform;
 	struct BNAnalysisCompletionEvent;
+	struct BNDisassemblySettings;
 
 	//! Console log levels
 	enum BNLogLevel
@@ -294,7 +295,7 @@ extern "C"
 		LiftedILFunctionGraph = 2
 	};
 
-	enum BNFunctionGraphOption
+	enum BNDisassemblyOption
 	{
 		ShowAddress = 0,
 
@@ -572,7 +573,7 @@ extern "C"
 		size_t pointCount;
 	};
 
-	struct BNFunctionGraphTextLine
+	struct BNDisassemblyTextLine
 	{
 		uint64_t addr;
 		BNInstructionTextToken* tokens;
@@ -1180,6 +1181,10 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlockOutgoingEdgeList(BNBasicBlockEdge* edges);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
 
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
+		BNDisassemblySettings* settings, size_t* count);
+	BINARYNINJACOREAPI void BNFreeDisassemblyTextLines(BNDisassemblyTextLine* lines, size_t count);
+
 	BINARYNINJACOREAPI void BNMarkFunctionAsRecentlyUsed(BNFunction* func);
 	BINARYNINJACOREAPI void BNMarkBasicBlockAsRecentlyUsed(BNBasicBlock* block);
 
@@ -1226,6 +1231,21 @@ extern "C"
 
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 
+	// Disassembly settings
+	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNFreeDisassemblySettings(BNDisassemblySettings* settings);
+
+	BINARYNINJACOREAPI bool BNIsDisassemblySettingsOptionSet(BNDisassemblySettings* settings,
+		BNDisassemblyOption option);
+	BINARYNINJACOREAPI void BNSetDisassemblySettingsOption(BNDisassemblySettings* settings,
+		BNDisassemblyOption option, bool state);
+
+	BINARYNINJACOREAPI size_t BNGetDisassemblyWidth(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyWidth(BNDisassemblySettings* settings, size_t width);
+	BINARYNINJACOREAPI size_t BNGetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings, size_t width);
+
 	// Function graph
 	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);
 	BINARYNINJACOREAPI BNFunctionGraph* BNNewFunctionGraphReference(BNFunctionGraph* graph);
@@ -1236,8 +1256,7 @@ extern "C"
 	BINARYNINJACOREAPI int BNGetVerticalFunctionGraphBlockMargin(BNFunctionGraph* graph);
 	BINARYNINJACOREAPI void BNSetFunctionGraphBlockMargins(BNFunctionGraph* graph, int horiz, int vert);
 
-	BINARYNINJACOREAPI size_t BNGetFunctionGraphMaximumSymbolWidth(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI void BNSetFunctionGraphMaximumSymbolWidth(BNFunctionGraph* graph, size_t width);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNGetFunctionGraphSettings(BNFunctionGraph* graph);
 
 	BINARYNINJACOREAPI void BNStartFunctionGraphLayout(BNFunctionGraph* graph, BNFunctionGraphType type);
 	BINARYNINJACOREAPI bool BNIsFunctionGraphLayoutComplete(BNFunctionGraph* graph);
@@ -1253,8 +1272,8 @@ extern "C"
 	BINARYNINJACOREAPI int BNGetFunctionGraphWidth(BNFunctionGraph* graph);
 	BINARYNINJACOREAPI int BNGetFunctionGraphHeight(BNFunctionGraph* graph);
 
-	BINARYNINJACOREAPI bool BNIsFunctionGraphOptionSet(BNFunctionGraph* graph, BNFunctionGraphOption option);
-	BINARYNINJACOREAPI void BNSetFunctionGraphOption(BNFunctionGraph* graph, BNFunctionGraphOption option, bool state);
+	BINARYNINJACOREAPI bool BNIsFunctionGraphOptionSet(BNFunctionGraph* graph, BNDisassemblyOption option);
+	BINARYNINJACOREAPI void BNSetFunctionGraphOption(BNFunctionGraph* graph, BNDisassemblyOption option, bool state);
 
 	BINARYNINJACOREAPI BNFunctionGraphBlock* BNNewFunctionGraphBlockReference(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlock(BNFunctionGraphBlock* block);
@@ -1267,8 +1286,7 @@ extern "C"
 	BINARYNINJACOREAPI int BNGetFunctionGraphBlockWidth(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI int BNGetFunctionGraphBlockHeight(BNFunctionGraphBlock* block);
 
-	BINARYNINJACOREAPI BNFunctionGraphTextLine* BNGetFunctionGraphBlockLines(BNFunctionGraphBlock* block, size_t* count);
-	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockLines(BNFunctionGraphTextLine* lines, size_t count);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFunctionGraphBlockLines(BNFunctionGraphBlock* block, size_t* count);
 	BINARYNINJACOREAPI BNFunctionGraphEdge* BNGetFunctionGraphBlockOutgoingEdges(BNFunctionGraphBlock* block, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockOutgoingEdgeList(BNFunctionGraphEdge* edges, size_t count);
 

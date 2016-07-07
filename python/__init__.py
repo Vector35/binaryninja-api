@@ -553,6 +553,16 @@ class _BinaryViewTypeMetaclass(type):
 		core.BNFreeBinaryViewTypeList(types)
 		return result
 
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		types = core.BNGetBinaryViewTypes(count)
+		try:
+			for i in xrange(0, count.value):
+				yield BinaryViewType(types[i])
+		finally:
+			core.BNFreeBinaryViewTypeList(types)
+
 	def __getitem__(self, value):
 		_init_plugins()
 		view_type = core.BNGetBinaryViewTypeByName(str(value))
@@ -786,6 +796,15 @@ class BinaryView(object):
 		for i in self.notifications.values():
 			i._unregister()
 		core.BNFreeBinaryView(self.handle)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong(0)
+		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
+		try:
+			for i in xrange(0, count.value):
+				yield Function(self, core.BNNewFunctionReference(funcs[i]))
+		finally:
+			core.BNFreeFunctionList(funcs, count.value)
 
 	@property
 	def modified(self):
@@ -2305,10 +2324,11 @@ class Function(object):
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-		for i in xrange(0, count.value):
-			yield BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		raise StopIteration
+		try:
+			for i in xrange(0, count.value):
+				yield BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	def __setattr__(self, name, value):
 		try:
@@ -2615,6 +2635,10 @@ class BasicBlock(object):
 		"""List of automatic annotations for the start of this block (read-only)"""
 		return self.function.get_block_annotations(self.arch, self.start)
 
+	@property
+	def disassembly_text(self):
+		return self.get_disassembly_text()
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -2643,10 +2667,29 @@ class BasicBlock(object):
 
 			yield inst_text
 			idx += inst_info.length
-		raise StopIteration
 
-	def mark_recent_use():
+	def mark_recent_use(self):
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
+
+	def get_disassembly_text(self, settings = None):
+		settings_obj = None
+		if settings:
+			settings_obj = settings.handle
+
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetBasicBlockDisassemblyText(self.handle, settings_obj, count)
+		result = []
+		for i in xrange(0, count.value):
+			addr = lines[i].addr
+			tokens = []
+			for j in xrange(0, lines[i].count):
+				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
+				text = lines[i].tokens[j].text
+				value = lines[i].tokens[j].value
+				tokens.append(InstructionTextToken(token_type, text, value))
+			result.append(DisassemblyTextLine(addr, tokens))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
+		return result
 
 class LowLevelILBasicBlock(BasicBlock):
 	def __init__(self, view, handle, owner):
@@ -2656,9 +2699,8 @@ class LowLevelILBasicBlock(BasicBlock):
 	def __iter__(self):
 		for idx in xrange(self.start, self.end):
 			yield self.il_function[idx]
-		raise StopIteration
 
-class FunctionGraphTextLine:
+class DisassemblyTextLine:
 	def __init__(self, addr, tokens):
 		self.address = addr
 		self.tokens = tokens
@@ -2743,8 +2785,8 @@ class FunctionGraphBlock(object):
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
 				tokens.append(InstructionTextToken(token_type, text, value))
-			result.append(FunctionGraphTextLine(addr, tokens))
-		core.BNFreeFunctionGraphBlockLines(lines, count.value)
+			result.append(DisassemblyTextLine(addr, tokens))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
 	@property
@@ -2778,6 +2820,58 @@ class FunctionGraphBlock(object):
 			return "<graph block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
 			return "<graph block: %#x-%#x>" % (self.start, self.end)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		try:
+			for i in xrange(0, count.value):
+				addr = lines[i].addr
+				tokens = []
+				for j in xrange(0, lines[i].count):
+					token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
+					text = lines[i].tokens[j].text
+					value = lines[i].tokens[j].value
+					tokens.append(InstructionTextToken(token_type, text, value))
+				yield DisassemblyTextLine(addr, tokens)
+		finally:
+			core.BNFreeDisassemblyTextLines(lines, count.value)
+
+class DisassemblySettings(object):
+	def __init__(self, handle = None):
+		if handle is None:
+			self.handle = core.BNCreateDisassemblySettings()
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeDisassemblySettings(self.handle)
+
+	@property
+	def width(self):
+		return core.BNGetDisassemblyWidth(self.handle)
+
+	@width.setter
+	def width(self, value):
+		core.BNSetDisassemblyWidth(self.handle, value)
+
+	@property
+	def max_symbol_width(self):
+		return core.BNGetDisassemblyMaximumSymbolWidth(self.handle)
+
+	@max_symbol_width.setter
+	def max_symbol_width(self, value):
+		core.BNSetDisassemblyMaximumSymbolWidth(self.handle, value)
+
+	def is_option_set(self, option):
+		if isinstance(option, str):
+			option = core.BNDisassemblyOption_by_name(option)
+		return core.BNIsDisassemblySettingsOptionSet(self.handle, option)
+
+	def set_option(self, option, state = True):
+		if isinstance(option, str):
+			option = core.BNDisassemblyOption_by_name(option)
+		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 class FunctionGraph(object):
 	def __init__(self, view, handle):
@@ -2846,12 +2940,8 @@ class FunctionGraph(object):
 		core.BNSetFunctionGraphBlockMargins(self.handle, self.horizontal_block_margin, value)
 
 	@property
-	def max_symbol_width(self):
-		return core.BNGetFunctionGraphMaximumSymbolWidth(self.handle)
-
-	@max_symbol_width.setter
-	def max_symbol_width(self, value):
-		core.BNSetFunctionGraphMaximumSymbolWidth(self.handle, value)
+	def settings(self):
+		return DisassemblySettings(core.BNGetFunctionGraphSettings(self.handle))
 
 	def __setattr__(self, name, value):
 		try:
@@ -2861,6 +2951,15 @@ class FunctionGraph(object):
 
 	def __repr__(self):
 		return "<graph of %s>" % repr(self.function)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
+		try:
+			for i in xrange(0, count.value):
+				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]))
+		finally:
+			core.BNFreeFunctionGraphBlockList(blocks, count.value)
 
 	def _complete(self, ctxt):
 		try:
@@ -2907,12 +3006,12 @@ class FunctionGraph(object):
 
 	def is_option_set(self, option):
 		if isinstance(option, str):
-			option = core.BNFunctionGraphOption_by_name(option)
+			option = core.BNDisassemblyOption_by_name(option)
 		return core.BNIsFunctionGraphOptionSet(self.handle, option)
 
 	def set_option(self, option, state = True):
 		if isinstance(option, str):
-			option = core.BNFunctionGraphOption_by_name(option)
+			option = core.BNDisassemblyOption_by_name(option)
 		core.BNSetFunctionGraphOption(self.handle, option, state)
 
 class RegisterInfo:
@@ -2985,6 +3084,16 @@ class _ArchitectureMetaClass(type):
 			result.append(Architecture(archs[i]))
 		core.BNFreeArchitectureList(archs)
 		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		archs = core.BNGetArchitectureList(count)
+		try:
+			for i in xrange(0, count.value):
+				yield Architecture(archs[i])
+		finally:
+			core.BNFreeArchitectureList(archs)
 
 	def __getitem__(cls, name):
 		_init_plugins()
@@ -4218,10 +4327,11 @@ class LowLevelILFunction(object):
 		view = None
 		if self.source_function is not None:
 			view = self.source_function.view
-		for i in xrange(0, count.value):
-			yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
-		core.BNFreeBasicBlockList(blocks, count.value)
-		raise StopIteration
+		try:
+			for i in xrange(0, count.value):
+				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	def clear_indirect_branches(self):
 		core.BNLowLevelILClearIndirectBranches(self.handle)
@@ -4509,6 +4619,16 @@ class _TransformMetaClass(type):
 		core.BNFreeTransformTypeList(xforms)
 		return result
 
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		xforms = core.BNGetTransformTypeList(count)
+		try:
+			for i in xrange(0, count.value):
+				yield Transform(xforms[i])
+		finally:
+			core.BNFreeTransformTypeList(xforms)
+
 	def __setattr__(self, name, value):
 		try:
 			type.__setattr__(self,name,value)
@@ -4740,6 +4860,21 @@ class _UpdateChannelMetaClass(type):
 	def active(self, value):
 		return core.BNSetActiveUpdateChannel(value)
 
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		errors = ctypes.c_char_p()
+		channels = core.BNGetUpdateChannels(count, errors)
+		if errors:
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise IOError, error_str
+		try:
+			for i in xrange(0, count.value):
+				yield UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion)
+		finally:
+			core.BNFreeUpdateChannelList(channels, count.value)
+
 	def __setattr__(self, name, value):
 		try:
 			type.__setattr__(self,name,value)
@@ -4894,6 +5029,16 @@ class _PluginCommandMetaClass(type):
 			result.append(PluginCommand(commands[i]))
 		core.BNFreePluginCommandList(commands)
 		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		commands = core.BNGetAllPluginCommands(count)
+		try:
+			for i in xrange(0, count.value):
+				yield PluginCommand(commands[i])
+		finally:
+			core.BNFreePluginCommandList(commands)
 
 	def __setattr__(self, name, value):
 		try:
@@ -5285,6 +5430,16 @@ class _PlatformMetaClass(type):
 			result.append(str(platforms[i]))
 		core.BNFreePlatformOSList(platforms, count.value)
 		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		platforms = core.BNGetPlatformList(count)
+		try:
+			for i in xrange(0, count.value):
+				yield Platform(None, core.BNNewPlatformReference(platforms[i]))
+		finally:
+			core.BNFreePlatformList(platforms, count.value)
 
 	def __setattr__(self, name, value):
 		try:

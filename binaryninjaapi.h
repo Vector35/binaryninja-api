@@ -1380,6 +1380,28 @@ namespace BinaryNinja
 		void AddMemberWithValue(const std::string& name, uint64_t value);
 	};
 
+	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
+		BNNewDisassemblySettingsReference, BNFreeDisassemblySettings>
+	{
+	public:
+		DisassemblySettings();
+		DisassemblySettings(BNDisassemblySettings* settings);
+
+		bool IsOptionSet(BNDisassemblyOption option) const;
+		void SetOption(BNDisassemblyOption option, bool state = true);
+
+		size_t GetWidth() const;
+		void SetWidth(size_t width);
+		size_t GetMaximumSymbolWidth() const;
+		void SetMaximumSymbolWidth(size_t width);
+	};
+
+	struct DisassemblyTextLine
+	{
+		uint64_t addr;
+		std::vector<InstructionTextToken> tokens;
+	};
+
 	class Function;
 
 	struct BasicBlockEdge
@@ -1407,6 +1429,8 @@ namespace BinaryNinja
 		void MarkRecentUse();
 
 		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
+
+		std::vector<DisassemblyTextLine> GetDisassemblyText(DisassemblySettings* settings);
 	};
 
 	struct StackVariable
@@ -1527,12 +1551,6 @@ namespace BinaryNinja
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 	};
 
-	struct FunctionGraphTextLine
-	{
-		uint64_t addr;
-		std::vector<InstructionTextToken> tokens;
-	};
-
 	struct FunctionGraphEdge
 	{
 		BNBranchType type;
@@ -1555,7 +1573,7 @@ namespace BinaryNinja
 		int GetWidth() const;
 		int GetHeight() const;
 
-		std::vector<FunctionGraphTextLine> GetLines() const;
+		std::vector<DisassemblyTextLine> GetLines() const;
 		std::vector<FunctionGraphEdge> GetOutgoingEdges() const;
 	};
 
@@ -1578,8 +1596,7 @@ namespace BinaryNinja
 		int GetVerticalBlockMargin() const;
 		void SetBlockMargins(int horiz, int vert);
 
-		size_t GetMaximumSymbolWidth() const;
-		void SetMaximumSymbolWidth(size_t width);
+		Ref<DisassemblySettings> GetSettings();
 
 		void StartLayout(BNFunctionGraphType = NormalFunctionGraph);
 		bool IsLayoutComplete();
@@ -1592,8 +1609,8 @@ namespace BinaryNinja
 		int GetHeight() const;
 		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
 
-		bool IsOptionSet(BNFunctionGraphOption option) const;
-		void SetOption(BNFunctionGraphOption option, bool state = true);
+		bool IsOptionSet(BNDisassemblyOption option) const;
+		void SetOption(BNDisassemblyOption option, bool state = true);
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel

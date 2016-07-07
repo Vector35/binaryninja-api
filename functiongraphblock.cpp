@@ -72,15 +72,15 @@ int FunctionGraphBlock::GetHeight() const
 }
 
 
-vector<FunctionGraphTextLine> FunctionGraphBlock::GetLines() const
+vector<DisassemblyTextLine> FunctionGraphBlock::GetLines() const
 {
 	size_t count;
-	BNFunctionGraphTextLine* lines = BNGetFunctionGraphBlockLines(m_object, &count);
+	BNDisassemblyTextLine* lines = BNGetFunctionGraphBlockLines(m_object, &count);
 
-	vector<FunctionGraphTextLine> result;
+	vector<DisassemblyTextLine> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		FunctionGraphTextLine line;
+		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
@@ -93,7 +93,7 @@ vector<FunctionGraphTextLine> FunctionGraphBlock::GetLines() const
 		result.push_back(line);
 	}
 
-	BNFreeFunctionGraphBlockLines(lines, count);
+	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
 

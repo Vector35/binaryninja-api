@@ -70,15 +70,9 @@ void FunctionGraph::SetBlockMargins(int horiz, int vert)
 }
 
 
-size_t FunctionGraph::GetMaximumSymbolWidth() const
+Ref<DisassemblySettings> FunctionGraph::GetSettings()
 {
-	return BNGetFunctionGraphMaximumSymbolWidth(m_graph);
-}
-
-
-void FunctionGraph::SetMaximumSymbolWidth(size_t width)
-{
-	BNSetFunctionGraphMaximumSymbolWidth(m_graph, width);
+	return new DisassemblySettings(BNGetFunctionGraphSettings(m_graph));
 }
 
 
@@ -150,13 +144,13 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocksInRegion(int left, int t
 }
 
 
-bool FunctionGraph::IsOptionSet(BNFunctionGraphOption option) const
+bool FunctionGraph::IsOptionSet(BNDisassemblyOption option) const
 {
 	return BNIsFunctionGraphOptionSet(m_graph, option);
 }
 
 
-void FunctionGraph::SetOption(BNFunctionGraphOption option, bool state)
+void FunctionGraph::SetOption(BNDisassemblyOption option, bool state)
 {
 	BNSetFunctionGraphOption(m_graph, option, state);
 }

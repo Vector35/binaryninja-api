@@ -24,6 +24,54 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+DisassemblySettings::DisassemblySettings()
+{
+	m_object = BNCreateDisassemblySettings();
+}
+
+
+DisassemblySettings::DisassemblySettings(BNDisassemblySettings* settings)
+{
+	m_object = settings;
+}
+
+
+bool DisassemblySettings::IsOptionSet(BNDisassemblyOption option) const
+{
+	return BNIsDisassemblySettingsOptionSet(m_object, option);
+}
+
+
+void DisassemblySettings::SetOption(BNDisassemblyOption option, bool state)
+{
+	BNSetDisassemblySettingsOption(m_object, option, state);
+}
+
+
+size_t DisassemblySettings::GetWidth() const
+{
+	return BNGetDisassemblyWidth(m_object);
+}
+
+
+void DisassemblySettings::SetWidth(size_t width)
+{
+	BNSetDisassemblyWidth(m_object, width);
+}
+
+
+size_t DisassemblySettings::GetMaximumSymbolWidth() const
+{
+	return BNGetDisassemblyMaximumSymbolWidth(m_object);
+}
+
+
+void DisassemblySettings::SetMaximumSymbolWidth(size_t width)
+{
+	BNSetDisassemblyMaximumSymbolWidth(m_object, width);
+}
+
+
 BasicBlock::BasicBlock(BNBasicBlock* block)
 {
 	m_object = block;
@@ -95,4 +143,30 @@ void BasicBlock::MarkRecentUse()
 vector<vector<InstructionTextToken>> BasicBlock::GetAnnotations()
 {
 	return GetFunction()->GetBlockAnnotations(GetArchitecture(), GetStart());
+}
+
+
+vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* settings)
+{
+	size_t count;
+	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
+
+	vector<DisassemblyTextLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = lines[i].addr;
+		for (size_t j = 0; j < lines[i].count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].tokens[j].type;
+			token.text = lines[i].tokens[j].text;
+			token.value = lines[i].tokens[j].value;
+			line.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(lines, count);
+	return result;
 }

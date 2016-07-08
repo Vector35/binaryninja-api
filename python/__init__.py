@@ -5646,6 +5646,26 @@ def get_time_since_last_update_check():
 def updates_checked():
 	core.BNUpdatesChecked()
 
+def get_qualified_name(names):
+	out = ""
+	for i,a in enumerate(names):
+		if i == 0:
+			out += a
+		else:
+			out += "::" + a
+	return out
+
+def demangle_ms(arch, mangledName):
+	handle = ctypes.POINTER(core.BNType)()
+	outName = ctypes.POINTER(ctypes.c_char_p)()
+	outSize = ctypes.c_ulonglong()
+	names = []
+	if core.BNDemangleMS(arch.handle, mangledName, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+		for i in xrange(outSize.value):
+			names.append(outName[i])
+		return (Type(handle), names)
+	return (None, mangledName)
+
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()
 

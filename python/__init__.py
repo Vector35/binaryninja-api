@@ -676,6 +676,25 @@ class AnalysisProgress(object):
 	def __repr__(self):
 		return "<progress: %s>" % str(self)
 
+class LinearDisassemblyPosition(object):
+	def __init__(self, func, block, addr):
+		self.function = func
+		self.block = block
+		self.address = addr
+
+class LinearDisassemblyLine(object):
+	def __init__(self, func, block, line_offset, contents):
+		self.function = func
+		self.block = block
+		self.line_offset = line_offset
+		self.contents = contents
+
+	def __str__(self):
+		return str(self.contents)
+
+	def __repr__(self):
+		return repr(self.contents)
+
 class BinaryView(object):
 	name = None
 	"""Binary View name"""
@@ -968,6 +987,11 @@ class BinaryView(object):
 		"""Status of current analysis (read-only)"""
 		result = core.BNGetAnalysisProgress(self.handle)
 		return AnalysisProgress(result.state, result.count, result.total)
+
+	@property
+	def linear_disassembly(self):
+		"""Iterator for all lines in the linear disassembly of the view"""
+		return self.get_linear_disassembly(None)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1517,6 +1541,96 @@ class BinaryView(object):
 
 	def add_analysis_completion_event(self, callback):
 		return AnalysisCompletionEvent(self, callback)
+
+	def get_next_function_start_after(self, addr):
+		return core.BNGetNextFunctionStartAfterAddress(self.handle, addr)
+
+	def get_next_basic_block_start_after(self, addr):
+		return core.BNGetNextBasicBlockStartAfterAddress(self.handle, addr)
+
+	def get_next_data_after(self, addr):
+		return core.BNGetNextDataAfterAddress(self.handle, addr)
+
+	def get_linear_disassembly_position_at(self, addr):
+		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr)
+		func = None
+		block = None
+		if pos.function:
+			func = Function(self, pos.function)
+		if pos.block:
+			block = BasicBlock(self, pos.block)
+		return LinearDisassemblyPosition(func, block, pos.address)
+
+	def _get_linear_disassembly_lines(self, api, pos, settings):
+		pos_obj = core.BNLinearDisassemblyPosition()
+		pos_obj.function = None
+		pos_obj.block = None
+		pos_obj.address = pos.address
+		if pos.function is not None:
+			pos_obj.function = core.BNNewFunctionReference(pos.function.handle)
+		if pos.block is not None:
+			pos_obj.block = core.BNNewBasicBlockReference(pos.block.handle)
+
+		if settings is not None:
+			settings = settings.handle
+
+		count = ctypes.c_ulonglong(0)
+		lines = api(self.handle, pos_obj, settings, count)
+
+		result = []
+		for i in xrange(0, count.value):
+			func = None
+			block = None
+			if lines[i].function:
+				func = Function(self, core.BNNewFunctionReference(lines[i].function))
+			if lines[i].block:
+				block = BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
+			addr = lines[i].contents.addr
+			tokens = []
+			for j in xrange(0, lines[i].contents.count):
+				token_type = core.BNInstructionTextTokenType_names[lines[i].contents.tokens[j].type]
+				text = lines[i].contents.tokens[j].text
+				value = lines[i].contents.tokens[j].value
+				tokens.append(InstructionTextToken(token_type, text, value))
+			contents = DisassemblyTextLine(addr, tokens)
+			result.append(LinearDisassemblyLine(func, block, lines[i].lineOffset, contents))
+
+		func = None
+		block = None
+		if pos_obj.function:
+			func = Function(self, pos_obj.function)
+		if pos_obj.block:
+			block = BasicBlock(self, pos_obj.block)
+		pos.function = func
+		pos.block = block
+		pos.address = pos_obj.address
+
+		core.BNFreeLinearDisassemblyLines(lines, count.value)
+		return result
+
+	def get_previous_linear_disassembly_lines(self, pos, settings):
+		return self._get_linear_disassembly_lines(core.BNGetPreviousLinearDisassemblyLines, pos, settings)
+
+	def get_next_linear_disassembly_lines(self, pos, settings):
+		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
+
+	def get_linear_disassembly(self, settings):
+		"""Gets an iterator for all lines in the linear disassembly of the view for the given disassembly settings"""
+		class LinearDisassemblyIterator(object):
+			def __init__(self, view, settings):
+				self.view = view
+				self.settings = settings
+
+			def __iter__(self):
+				pos = self.view.get_linear_disassembly_position_at(self.view.start)
+				while True:
+					lines = self.view.get_next_linear_disassembly_lines(pos, self.settings)
+					if len(lines) == 0:
+						break
+					for line in lines:
+						yield line
+
+		return iter(LinearDisassemblyIterator(self, settings))
 
 	def __setattr__(self, name, value):
 		try:

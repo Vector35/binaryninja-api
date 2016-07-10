@@ -169,6 +169,16 @@ extern "C"
 		AddressDisplayToken = 68
 	};
 
+	enum BNLinearDisassemblyLineType
+	{
+		CodeDisassemblyLineType,
+		DataVariableLineType,
+		HexDumpLineType,
+		FunctionHeaderLineType,
+		FunctionContinuationLineType,
+		StackVariableLineType
+	};
+
 	enum BNSymbolType
 	{
 		FunctionSymbol = 0,
@@ -298,6 +308,9 @@ extern "C"
 	enum BNDisassemblyOption
 	{
 		ShowAddress = 0,
+
+		// Linear disassembly options
+		GroupLinearDisassemblyFunctions = 64,
 
 		// Debugging options
 		ShowBasicBlockRegisterState = 128,
@@ -578,6 +591,22 @@ extern "C"
 		uint64_t addr;
 		BNInstructionTextToken* tokens;
 		size_t count;
+	};
+
+	struct BNLinearDisassemblyLine
+	{
+		BNLinearDisassemblyLineType type;
+		BNFunction* function;
+		BNBasicBlock* block;
+		size_t lineOffset;
+		BNDisassemblyTextLine contents;
+	};
+
+	struct BNLinearDisassemblyPosition
+	{
+		BNFunction* function;
+		BNBasicBlock* block;
+		uint64_t address;
 	};
 
 	struct BNReferenceSource
@@ -1230,6 +1259,19 @@ extern "C"
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
+
+	BINARYNINJACOREAPI uint64_t BNGetNextFunctionStartAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetNextBasicBlockStartAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetNextDataAfterAddress(BNBinaryView* view, uint64_t addr);
+
+	BINARYNINJACOREAPI BNLinearDisassemblyPosition BNGetLinearDisassemblyPositionForAddress(BNBinaryView* view,
+		uint64_t addr);
+	BINARYNINJACOREAPI void BNFreeLinearDisassemblyPosition(BNLinearDisassemblyPosition* pos);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetPreviousLinearDisassemblyLines(BNBinaryView* view,
+		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetNextLinearDisassemblyLines(BNBinaryView* view,
+		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
+	BINARYNINJACOREAPI void BNFreeLinearDisassemblyLines(BNLinearDisassemblyLine* lines, size_t count);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

@@ -1100,6 +1100,116 @@ BNAnalysisProgress BinaryView::GetAnalysisProgress()
 }
 
 
+uint64_t BinaryView::GetNextFunctionStartAfterAddress(uint64_t addr)
+{
+	return BNGetNextFunctionStartAfterAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetNextBasicBlockStartAfterAddress(uint64_t addr)
+{
+	return BNGetNextBasicBlockStartAfterAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
+{
+	return BNGetNextDataAfterAddress(m_object, addr);
+}
+
+
+LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr)
+{
+	BNLinearDisassemblyPosition pos = BNGetLinearDisassemblyPositionForAddress(m_object, addr);
+
+	LinearDisassemblyPosition result;
+	result.function = pos.function ? new Function(pos.function) : nullptr;
+	result.block = pos.block ? new BasicBlock(pos.block) : nullptr;
+	result.address = pos.address;
+	return result;
+}
+
+
+vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition linearPos;
+	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
+	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
+	linearPos.address = pos.address;
+
+	size_t count;
+	BNLinearDisassemblyLine* lines = BNGetPreviousLinearDisassemblyLines(m_object, &linearPos,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<LinearDisassemblyLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		LinearDisassemblyLine line;
+		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
+		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
+		line.lineOffset = lines[i].lineOffset;
+		line.contents.addr = lines[i].contents.addr;
+		for (size_t j = 0; j < lines[i].contents.count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].contents.tokens[j].type;
+			token.text = lines[i].contents.tokens[j].text;
+			token.value = lines[i].contents.tokens[j].value;
+			line.contents.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
+	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
+	pos.address = linearPos.address;
+
+	BNFreeLinearDisassemblyLines(lines, count);
+	return result;
+}
+
+
+vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition linearPos;
+	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
+	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
+	linearPos.address = pos.address;
+
+	size_t count;
+	BNLinearDisassemblyLine* lines = BNGetNextLinearDisassemblyLines(m_object, &linearPos,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<LinearDisassemblyLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		LinearDisassemblyLine line;
+		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
+		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
+		line.lineOffset = lines[i].lineOffset;
+		line.contents.addr = lines[i].contents.addr;
+		for (size_t j = 0; j < lines[i].contents.count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].contents.tokens[j].type;
+			token.text = lines[i].contents.tokens[j].text;
+			token.value = lines[i].contents.tokens[j].value;
+			line.contents.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
+	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
+	pos.address = linearPos.address;
+
+	BNFreeLinearDisassemblyLines(lines, count);
+	return result;
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

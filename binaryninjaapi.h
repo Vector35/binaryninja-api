@@ -612,6 +612,41 @@ namespace BinaryNinja
 		Ref<Architecture> arch;
 		uint64_t addr;
 	};
+
+	struct InstructionTextToken
+	{
+		BNInstructionTextTokenType type;
+		std::string text;
+		uint64_t value;
+
+		InstructionTextToken();
+		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
+	};
+
+	struct DisassemblyTextLine
+	{
+		uint64_t addr;
+		std::vector<InstructionTextToken> tokens;
+	};
+
+	struct LinearDisassemblyPosition
+	{
+		Ref<Function> function;
+		Ref<BasicBlock> block;
+		uint64_t address;
+	};
+
+	struct LinearDisassemblyLine
+	{
+		BNLinearDisassemblyLineType type;
+		Ref<Function> function;
+		Ref<BasicBlock> block;
+		size_t lineOffset;
+		DisassemblyTextLine contents;
+	};
+
+	class DisassemblySettings;
+
 	class AnalysisCompletionEvent: public CoreRefCountObject<BNAnalysisCompletionEvent,
 		BNNewAnalysisCompletionEventReference, BNFreeAnalysisCompletionEvent>
 	{
@@ -811,6 +846,16 @@ namespace BinaryNinja
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		BNAnalysisProgress GetAnalysisProgress();
+
+		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
+		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
+		uint64_t GetNextDataAfterAddress(uint64_t addr);
+
+		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr);
+		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+			DisassemblySettings* settings);
+		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+			DisassemblySettings* settings);
 	};
 
 	class BinaryData: public BinaryView
@@ -1033,16 +1078,6 @@ namespace BinaryNinja
 	{
 		InstructionInfo();
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
-	};
-
-	struct InstructionTextToken
-	{
-		BNInstructionTextTokenType type;
-		std::string text;
-		uint64_t value;
-
-		InstructionTextToken();
-		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
 	};
 
 	class LowLevelILFunction;
@@ -1394,12 +1429,6 @@ namespace BinaryNinja
 		void SetWidth(size_t width);
 		size_t GetMaximumSymbolWidth() const;
 		void SetMaximumSymbolWidth(size_t width);
-	};
-
-	struct DisassemblyTextLine
-	{
-		uint64_t addr;
-		std::vector<InstructionTextToken> tokens;
 	};
 
 	class Function;

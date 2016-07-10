@@ -101,11 +101,11 @@ extern "C"
 	//! Console log levels
 	enum BNLogLevel
 	{
-		DebugLog = 0,   //!< Debug logging level, most verbose logging level
-		InfoLog = 1,    //!< Information logging level, default logging level
-		WarningLog = 2, //!< Warning logging level, messages show with warning icon in the UI
-		ErrorLog = 3,   //!< Error logging level, messages show with error icon in the UI
-		AlertLog = 4    //!< Alert logging level, messages are displayed with popup message box in the UI
+		DebugLog = 0,   //! Debug logging level, most verbose logging level
+		InfoLog = 1,    //! Information logging level, default logging level
+		WarningLog = 2, //! Warning logging level, messages show with warning icon in the UI
+		ErrorLog = 3,   //! Error logging level, messages show with error icon in the UI
+		AlertLog = 4    //! Alert logging level, messages are displayed with popup message box in the UI
 	};
 
 	enum BNEndianness
@@ -327,7 +327,138 @@ extern "C"
 		EnumerationTypeClass = 5,
 		PointerTypeClass = 6,
 		ArrayTypeClass = 7,
-		FunctionTypeClass = 8
+		FunctionTypeClass = 8,
+		VarArgsTypeClass = 9,
+		ValueTypeClass = 10
+	};
+
+	enum BNStructureType
+	{
+		ClassStructureType = 0,
+		StructStructureType = 1,
+		UnionStructureType = 2
+	};
+
+	enum BNMemberScope {
+		NoScope,
+		StaticScope,
+		VirtualScope,
+		ThunkScope
+	};
+
+	enum BNMemberAccess
+	{
+		NoAccess,
+		PrivateAccess,
+		ProtectedAccess,
+		PublicAccess
+	};
+
+	enum BNReferenceType
+	{
+		PointerReferenceType = 0,
+		ReferenceReferenceType = 1,
+		RValueReferenceType = 2
+	};
+
+	enum BNPointerSuffix
+	{
+		Ptr64Suffix,
+		UnalignedSuffix,
+		RestrictSuffix,
+		ReferenceSuffix,
+		LvalueSuffix
+	};
+
+	enum BNNameType
+	{
+		NoNameType,
+		ConstructorNameType,
+		DestructorNameType,
+		OperatorNewNameType,
+		OperatorDeleteNameType,
+		OperatorAssignNameType,
+		OperatorRightShiftNameType,
+		OperatorLeftShiftNameType,
+		OperatorNotNameType,
+		OperatorEqualNameType,
+		OperatorNotEqualNameType,
+		OperatorArrayNameType,
+		OperatorArrowNameType,
+		OperatorStarNameType,
+		OperatorIncrementNameType,
+		OperatorDecrementNameType,
+		OperatorMinusNameType,
+		OperatorPlusNameType,
+		OperatorBitAndNameType,
+		OperatorArrowStarNameType,
+		OperatorDivideNameType,
+		OperatorModulusNameType,
+		OperatorLessThanNameType,
+		OperatorLessThanEqualNameType,
+		OperatorGreaterThanNameType,
+		OperatorGreaterThanEqualNameType,
+		OperatorCommaNameType,
+		OperatorParenthesesNameType,
+		OperatorTildeNameType,
+		OperatorXorNameType,
+		OperatorBitOrNameType,
+		OperatorLogicalAndNameType,
+		OperatorLogicalOrNameType,
+		OperatorStarEqualNameType,
+		OperatorPlusEqualNameType,
+		OperatorMinusEqualNameType,
+		OperatorDivideEqualNameType,
+		OperatorModulusEqualNameType,
+		OperatorRightShiftEqualNameType,
+		OperatorLeftShiftEqualNameType,
+		OperatorAndEqualNameType,
+		OperatorOrEqualNameType,
+		OperatorXorEqualNameType,
+		VFTableNameType,
+		VBTableNameType,
+		VCallNameType,
+		TypeofNameType,
+		LocalStaticGuardNameType,
+		StringNameType,
+		VBaseDestructorNameType,
+		VectorDeletingDestructorNameType,
+		DefaultConstructorClosureNameType,
+		ScalarDeletingDestructorNameType,
+		VectorConstructorIteratorNameType,
+		VectorDestructorIteratorNameType,
+		VectorVBaseConstructorIteratoreNameType,
+		VirtualDisplacementMapNameType,
+		EHVectorConstructorIteratorNameType,
+		EHVectorDestructorIteratorNameType,
+		EHVectorVBaseConstructorIteratorNameType,
+		CopyConstructorClosureNameType,
+		UDTReturningNameType,
+		LocalVFTableNameType,
+		LocalVFTableConstructorClosureNameType,
+		OperatorNewArrayNameType,
+		OperatorDeleteArrayNameType,
+		PlacementDeleteClosureNameType,
+		PlacementDeleteClosureArrayNameType,
+		OperatorReturnTypeNameType,
+		RttiTypeDescriptor,
+		RttiBaseClassDescriptor,
+		RttiBaseClassArray,
+		RttiClassHeirarchyDescriptor,
+		RttiCompleteObjectLocator
+	};
+
+	enum BNCallingConventionName
+	{
+		NoCallingConvention,
+		CdeclCallingConvention,
+		PascalCallingConvention,
+		ThisCallCallingConvention,
+		STDCallCallingConvention,
+		FastcallCallingConvention,
+		CLRCallCallingConvention,
+		EabiCallCallingConvention,
+		VectorCallCallingConvention
 	};
 
 	enum BNStringType
@@ -1409,16 +1540,18 @@ extern "C"
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);
 	BINARYNINJACOREAPI BNType* BNCreateBoolType(void);
-	BINARYNINJACOREAPI BNType* BNCreateIntegerType(size_t width, bool sign);
-	BINARYNINJACOREAPI BNType* BNCreateFloatType(size_t width);
+	BINARYNINJACOREAPI BNType* BNCreateIntegerType(size_t width, bool sign, const char* altName);
+	BINARYNINJACOREAPI BNType* BNCreateFloatType(size_t width, const char* altName);
 	BINARYNINJACOREAPI BNType* BNCreateStructureType(BNStructure* s);
-	BINARYNINJACOREAPI BNType* BNCreateEnumerationType(BNArchitecture* arch, BNEnumeration* e, size_t width);
-	BINARYNINJACOREAPI BNType* BNCreatePointerType(BNArchitecture* arch, BNType* type, bool cnst);
+	BINARYNINJACOREAPI BNType* BNCreateEnumerationType(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
+	BINARYNINJACOREAPI BNType* BNCreatePointerType(BNArchitecture* arch, BNType* type, bool cnst, bool vltl,
+	                                               BNReferenceType refType);
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNType* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNType* returnValue, BNCallingConvention* callingConvention,
 	                                                BNNameAndType* params, size_t paramCount, bool varArg);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
+	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, const char** nameList, size_t nameCount);
 	BINARYNINJACOREAPI void BNFreeType(BNType* type);
 
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeClass(BNType* type);
@@ -1426,6 +1559,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetTypeAlignment(BNType* type);
 	BINARYNINJACOREAPI bool BNIsTypeSigned(BNType* type);
 	BINARYNINJACOREAPI bool BNIsTypeConst(BNType* type);
+	BINARYNINJACOREAPI bool BNIsTypeVolatile(BNType* type);
 	BINARYNINJACOREAPI bool BNIsTypeFloatingPoint(BNType* type);
 	BINARYNINJACOREAPI BNType* BNGetChildType(BNType* type);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetTypeCallingConvention(BNType* type);
@@ -1436,6 +1570,7 @@ extern "C"
 	BINARYNINJACOREAPI BNStructure* BNGetTypeStructure(BNType* type);
 	BINARYNINJACOREAPI BNEnumeration* BNGetTypeEnumeration(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
+	BINARYNINJACOREAPI void BNSetFunctionCanReturn(BNType* type, bool canReturn);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
@@ -1445,8 +1580,8 @@ extern "C"
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
 
-	BINARYNINJACOREAPI char* BNGetStructureName(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructureName(BNStructure* s, const char* name);
+	BINARYNINJACOREAPI char** BNGetStructureName(BNStructure* s, size_t* size);
+	BINARYNINJACOREAPI void BNSetStructureName(BNStructure* s, const char** names, size_t size);
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
 	BINARYNINJACOREAPI uint64_t BNGetStructureWidth(BNStructure* s);
@@ -1464,8 +1599,8 @@ extern "C"
 	BINARYNINJACOREAPI BNEnumeration* BNNewEnumerationReference(BNEnumeration* e);
 	BINARYNINJACOREAPI void BNFreeEnumeration(BNEnumeration* e);
 
-	BINARYNINJACOREAPI char* BNGetEnumerationName(BNEnumeration* e);
-	BINARYNINJACOREAPI void BNSetEnumerationName(BNEnumeration* e, const char* name);
+	BINARYNINJACOREAPI char** BNGetEnumerationName(BNEnumeration* e, size_t* size);
+	BINARYNINJACOREAPI void BNSetEnumerationName(BNEnumeration* e, const char** name, size_t size);
 	BINARYNINJACOREAPI BNEnumerationMember* BNGetEnumerationMembers(BNEnumeration* e, size_t* count);
 	BINARYNINJACOREAPI void BNFreeEnumerationMemberList(BNEnumerationMember* members, size_t count);
 
@@ -1608,6 +1743,12 @@ extern "C"
 	BINARYNINJACOREAPI BNPlatform* BNGetRelatedPlatform(BNPlatform* platform, BNArchitecture* arch);
 	BINARYNINJACOREAPI void BNAddRelatedPlatform(BNPlatform* platform, BNArchitecture* arch, BNPlatform* related);
 
+	//Demangler
+	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch,
+	                                     const char* mangledName,
+	                                     BNType** outType,
+	                                     char*** outVarName,
+	                                     size_t* outVarNameElements);
 #ifdef __cplusplus
 }
 #endif

@@ -98,10 +98,10 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			fprintf(out, "ctypes.c_double");
 		break;
 	case StructureTypeClass:
-		fprintf(out, "%s", type->GetStructure()->GetName().c_str());
+		fprintf(out, "%s", type->GetQualifiedName(type->GetStructure()->GetName()).c_str());
 		break;
 	case EnumerationTypeClass:
-		fprintf(out, "%s", type->GetEnumeration()->GetName().c_str());
+		fprintf(out, "%s", type->GetQualifiedName(type->GetEnumeration()->GetName()).c_str());
 		break;
 	case PointerTypeClass:
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))

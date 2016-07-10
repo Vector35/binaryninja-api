@@ -360,6 +360,10 @@ namespace BinaryNinja
 	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
+	bool DemangleMS(Architecture* arch,
+	                const std::string& mangledName,
+	                Type** outType,
+	                std::vector<std::string>& outVarName);
 
 	class DataBuffer
 	{
@@ -1086,7 +1090,10 @@ namespace BinaryNinja
 
 	typedef size_t ExprId;
 
-	//! Architecture is the base class for all architectures
+	/*!
+		The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
+		patching, and IL translation lifting for a given architecture.
+	*/
 	class Architecture: public StaticCoreRefCountObject<BNArchitecture>
 	{
 	protected:
@@ -1154,6 +1161,11 @@ namespace BinaryNinja
 		                                std::vector<InstructionTextToken>& result) = 0;
 
 		/*! GetInstructionLowLevelIL
+			Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
+			\param data pointer to the instruction data to be translated
+			\param addr address of the instruction data to be translated
+			\param len length of the instruction data to be translated
+			\param il the LowLevelILFunction which
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 		virtual std::string GetRegisterName(uint32_t reg);
@@ -1339,6 +1351,7 @@ namespace BinaryNinja
 		size_t GetAlignment() const;
 		bool IsSigned() const;
 		bool IsConst() const;
+		bool IsVolatile() const;
 		bool IsFloat() const;
 		Ref<Type> GetChildType() const;
 		Ref<CallingConvention> GetCallingConvention() const;
@@ -1349,7 +1362,10 @@ namespace BinaryNinja
 		Ref<Enumeration> GetEnumeration() const;
 		uint64_t GetElementCount() const;
 
+		void SetFunctionCanReturn(bool canReturn);
+
 		std::string GetString() const;
+		std::string GetTypeAndName(const std::vector<std::string>& name) const;
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
 
@@ -1357,14 +1373,17 @@ namespace BinaryNinja
 
 		static Ref<Type> VoidType();
 		static Ref<Type> BoolType();
-		static Ref<Type> IntegerType(size_t width, bool sign);
-		static Ref<Type> FloatType(size_t width);
+		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
+		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
-		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0);
-		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false);
+		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
+		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
+		                             BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
+
+		static std::string GetQualifiedName(const std::vector<std::string>& names);
 	};
 
 	struct StructureMember
@@ -1379,8 +1398,8 @@ namespace BinaryNinja
 	public:
 		Structure(BNStructure* s);
 
-		std::string GetName() const;
-		void SetName(const std::string& name);
+		std::vector<std::string> GetName() const;
+		void SetName(const std::vector<std::string>& name);
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
@@ -1406,8 +1425,8 @@ namespace BinaryNinja
 	public:
 		Enumeration(BNEnumeration* e);
 
-		std::string GetName() const;
-		void SetName(const std::string& name);
+		std::vector<std::string> GetName() const;
+		void SetName(const std::vector<std::string>& name);
 
 		std::vector<EnumerationMember> GetMembers() const;
 

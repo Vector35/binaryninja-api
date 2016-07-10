@@ -192,7 +192,7 @@ class FileMetadata(object):
 
 	@property
 	def filename(self):
-		"""Backing filename"""
+		"""Backing filename (read-only)"""
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter
@@ -201,7 +201,7 @@ class FileMetadata(object):
 
 	@property
 	def modified(self):
-		"""Boolean result of whether the file is modified"""
+		"""Boolean result of whether the file is modified (read-only)"""
 		return core.BNIsFileModified(self.handle)
 
 	@modified.setter
@@ -218,7 +218,7 @@ class FileMetadata(object):
 
 	@property
 	def has_database(self):
-		"""Whether the FileMetadata is backed by a database"""
+		"""Whether the FileMetadata is backed by a database (read-only)"""
 		return core.BNIsBackedByDatabase(self.handle)
 
 	@property
@@ -231,7 +231,7 @@ class FileMetadata(object):
 
 	@property
 	def offset(self):
-		"""Current offset into the file"""
+		"""Current offset into the file (read-only)"""
 		return core.BNGetCurrentOffset(self.handle)
 
 	@offset.setter
@@ -247,7 +247,7 @@ class FileMetadata(object):
 
 	@property
 	def saved(self):
-		"""Set to mark file as saved"""
+		"""Boolean returns if the file has changed since last save. Set to mark whether the file is saved."""
 		return not core.BNIsFileModified(self.handle)
 
 	@saved.setter
@@ -2323,6 +2323,20 @@ class Function(object):
 		core.BNFreeFunction(self.handle)
 
 	@property
+	def name(self):
+		"""Symbol name for the function"""
+		return self.symbol.name
+
+	@name.setter
+	def name(self,value):
+		if value is None:
+			if self.symbol is not None:
+				self.view.undefine_user_symbol(self.symbol)
+		else:
+			symbol = Symbol(FunctionSymbol,self.start,value)
+			self.view.define_user_symbol(symbol)
+
+	@property
 	def view(self):
 		"""Function view (read-only)"""
 		return self._view
@@ -3000,7 +3014,7 @@ class FunctionGraph(object):
 
 	@property
 	def function(self):
-		"""Function for a function graph(read-only)"""
+		"""Function for a function graph (read-only)"""
 		func = core.BNGetFunctionForFunctionGraph(self.handle)
 		if func is None:
 			return None
@@ -5759,6 +5773,26 @@ def get_time_since_last_update_check():
 
 def updates_checked():
 	core.BNUpdatesChecked()
+
+def get_qualified_name(names):
+	out = ""
+	for i,a in enumerate(names):
+		if i == 0:
+			out += a
+		else:
+			out += "::" + a
+	return out
+
+def demangle_ms(arch, mangledName):
+	handle = ctypes.POINTER(core.BNType)()
+	outName = ctypes.POINTER(ctypes.c_char_p)()
+	outSize = ctypes.c_ulonglong()
+	names = []
+	if core.BNDemangleMS(arch.handle, mangledName, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+		for i in xrange(outSize.value):
+			names.append(outName[i])
+		return (Type(handle), names)
+	return (None, mangledName)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

@@ -1118,9 +1118,29 @@ uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
 }
 
 
-LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr)
+uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
 {
-	BNLinearDisassemblyPosition pos = BNGetLinearDisassemblyPositionForAddress(m_object, addr);
+	return BNGetPreviousFunctionStartBeforeAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousStartOfDataBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousStartOfDataBeforeAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousDataBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousDataBeforeAddress(m_object, addr);
+}
+
+
+LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition pos = BNGetLinearDisassemblyPositionForAddress(m_object, addr,
+		settings ? settings->GetObject() : nullptr);
 
 	LinearDisassemblyPosition result;
 	result.function = pos.function ? new Function(pos.function) : nullptr;

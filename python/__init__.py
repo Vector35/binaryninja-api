@@ -1551,8 +1551,19 @@ class BinaryView(object):
 	def get_next_data_after(self, addr):
 		return core.BNGetNextDataAfterAddress(self.handle, addr)
 
-	def get_linear_disassembly_position_at(self, addr):
-		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr)
+	def get_previous_function_start_before(self, addr):
+		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
+
+	def get_previous_start_of_data_before(self, addr):
+		return core.BNGetPreviousStartOfDataBeforeAddress(self.handle, addr)
+
+	def get_previous_data_before(self, addr):
+		return core.BNGetPreviousDataBeforeAddress(self.handle, addr)
+
+	def get_linear_disassembly_position_at(self, addr, settings):
+		if settings is not None:
+			settings = settings.handle
+		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr, settings)
 		func = None
 		block = None
 		if pos.function:
@@ -1622,7 +1633,7 @@ class BinaryView(object):
 				self.settings = settings
 
 			def __iter__(self):
-				pos = self.view.get_linear_disassembly_position_at(self.view.start)
+				pos = self.view.get_linear_disassembly_position_at(self.view.start, self.settings)
 				while True:
 					lines = self.view.get_next_linear_disassembly_lines(pos, self.settings)
 					if len(lines) == 0:

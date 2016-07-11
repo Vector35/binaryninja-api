@@ -854,8 +854,11 @@ namespace BinaryNinja
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
 		uint64_t GetNextDataAfterAddress(uint64_t addr);
+		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousStartOfDataBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 
-		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr);
+		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
 		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
 			DisassemblySettings* settings);
 		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,

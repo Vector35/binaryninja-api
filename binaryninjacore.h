@@ -1394,9 +1394,12 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetNextFunctionStartAfterAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetNextBasicBlockStartAfterAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetNextDataAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousFunctionStartBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousStartOfDataBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousDataBeforeAddress(BNBinaryView* view, uint64_t addr);
 
 	BINARYNINJACOREAPI BNLinearDisassemblyPosition BNGetLinearDisassemblyPositionForAddress(BNBinaryView* view,
-		uint64_t addr);
+		uint64_t addr, BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNFreeLinearDisassemblyPosition(BNLinearDisassemblyPosition* pos);
 	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetPreviousLinearDisassemblyLines(BNBinaryView* view,
 		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);

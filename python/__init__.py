@@ -683,7 +683,8 @@ class LinearDisassemblyPosition(object):
 		self.address = addr
 
 class LinearDisassemblyLine(object):
-	def __init__(self, func, block, line_offset, contents):
+	def __init__(self, line_type, func, block, line_offset, contents):
+		self.type = line_type
 		self.function = func
 		self.block = block
 		self.line_offset = line_offset
@@ -1604,7 +1605,7 @@ class BinaryView(object):
 				value = lines[i].contents.tokens[j].value
 				tokens.append(InstructionTextToken(token_type, text, value))
 			contents = DisassemblyTextLine(addr, tokens)
-			result.append(LinearDisassemblyLine(func, block, lines[i].lineOffset, contents))
+			result.append(LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
 		func = None
 		block = None

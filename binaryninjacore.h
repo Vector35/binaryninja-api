@@ -159,6 +159,11 @@ extern "C"
 		FloatingPointToken = 8,
 		AnnotationToken = 9,
 		CodeRelativeAddressToken = 10,
+		VariableTypeToken = 11,
+		FunctionReturnTypeToken = 12,
+		FunctionAttributeToken = 13,
+		ArgumentTypeToken = 14,
+		ArgumentNameToken = 15,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -171,12 +176,17 @@ extern "C"
 
 	enum BNLinearDisassemblyLineType
 	{
+		BlankLineType,
 		CodeDisassemblyLineType,
 		DataVariableLineType,
 		HexDumpLineType,
 		FunctionHeaderLineType,
+		FunctionHeaderStartLineType,
+		FunctionHeaderEndLineType,
 		FunctionContinuationLineType,
-		StackVariableLineType
+		StackVariableLineType,
+		StackVariableListEndLineType,
+		FunctionEndLineType
 	};
 
 	enum BNSymbolType

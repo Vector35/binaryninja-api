@@ -1166,6 +1166,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 	for (size_t i = 0; i < count; i++)
 	{
 		LinearDisassemblyLine line;
+		line.type = lines[i].type;
 		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
@@ -1206,6 +1207,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 	for (size_t i = 0; i < count; i++)
 	{
 		LinearDisassemblyLine line;
+		line.type = lines[i].type;
 		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;

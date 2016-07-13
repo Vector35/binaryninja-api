@@ -164,6 +164,10 @@ extern "C"
 		FunctionAttributeToken = 13,
 		ArgumentTypeToken = 14,
 		ArgumentNameToken = 15,
+		HexDumpByteValueToken = 16,
+		HexDumpSkippedByteToken = 17,
+		HexDumpInvalidByteToken = 18,
+		HexDumpTextToken = 19,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins

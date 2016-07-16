@@ -97,6 +97,20 @@ size_t Architecture::GetDefaultIntegerSizeCallback(void* ctxt)
 }
 
 
+size_t Architecture::GetMaxInstructionLengthCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetMaxInstructionLength();
+}
+
+
+size_t Architecture::GetOpcodeDisplayLengthCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetOpcodeDisplayLength();
+}
+
+
 bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
                                               size_t maxLen, BNInstructionInfo* result)
 {
@@ -390,6 +404,8 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getEndianness = GetEndiannessCallback;
 	callbacks.getAddressSize = GetAddressSizeCallback;
 	callbacks.getDefaultIntegerSize = GetDefaultIntegerSizeCallback;
+	callbacks.getMaxInstructionLength = GetMaxInstructionLengthCallback;
+	callbacks.getOpcodeDisplayLength = GetOpcodeDisplayLengthCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
@@ -463,6 +479,21 @@ size_t Architecture::GetDefaultIntegerSize() const
 	if (GetAddressSize() < 4)
 		return GetAddressSize();
 	return 4;
+}
+
+
+size_t Architecture::GetMaxInstructionLength() const
+{
+	return BN_DEFAULT_NSTRUCTION_LENGTH;
+}
+
+
+size_t Architecture::GetOpcodeDisplayLength() const
+{
+	size_t maxLen = GetMaxInstructionLength();
+	if (maxLen < BN_DEFAULT_OPCODE_DISPLAY)
+		return maxLen;
+	return BN_DEFAULT_OPCODE_DISPLAY;
 }
 
 
@@ -871,6 +902,18 @@ size_t CoreArchitecture::GetAddressSize() const
 size_t CoreArchitecture::GetDefaultIntegerSize() const
 {
 	return BNGetArchitectureDefaultIntegerSize(m_object);
+}
+
+
+size_t CoreArchitecture::GetMaxInstructionLength() const
+{
+	return BNGetArchitectureMaxInstructionLength(m_object);
+}
+
+
+size_t CoreArchitecture::GetOpcodeDisplayLength() const
+{
+	return BNGetArchitectureOpcodeDisplayLength(m_object);
 }
 
 

@@ -3261,6 +3261,8 @@ class Architecture(object):
 	endianness = core.LittleEndian
 	address_size = 8
 	default_int_size = 4
+	max_instr_length = 16
+	opcode_display_length = 8
 	regs = {}
 	stack_pointer = None
 	link_reg = None
@@ -3278,6 +3280,8 @@ class Architecture(object):
 			self.__dict__["endianness"] = core.BNEndianness_names[core.BNGetArchitectureEndianness(self.handle)]
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
+			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
+			self.__dict__["opcode_display_length"] = core.BNGetArchitectureOpcodeDisplayLength(self.handle)
 			self.__dict__["stack_pointer"] = core.BNGetArchitectureRegisterName(self.handle,
 				core.BNGetArchitectureStackPointerRegister(self.handle))
 			self.__dict__["link_reg"] = core.BNGetArchitectureRegisterName(self.handle,
@@ -3361,6 +3365,8 @@ class Architecture(object):
 			self._cb.getEndianness = self._cb.getEndianness.__class__(self._get_endianness)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.getDefaultIntegerSize = self._cb.getDefaultIntegerSize.__class__(self._get_default_integer_size)
+			self._cb.getMaxInstructionLength = self._cb.getMaxInstructionLength.__class__(self._get_max_instruction_length)
+			self._cb.getOpcodeDisplayLength = self._cb.getOpcodeDisplayLength.__class__(self._get_opcode_display_length)
 			self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__(self._get_instruction_info)
 			self._cb.getInstructionText = self._cb.getInstructionText.__class__(self._get_instruction_text)
 			self._cb.freeInstructionText = self._cb.freeInstructionText.__class__(self._free_instruction_text)
@@ -3535,6 +3541,20 @@ class Architecture(object):
 		except:
 			log_error(traceback.format_exc())
 			return 4
+
+	def _get_max_instruction_length(self, ctxt):
+		try:
+			return self.__class__.max_instr_length
+		except:
+			log_error(traceback.format_exc())
+			return 16
+
+	def _get_opcode_display_length(self, ctxt):
+		try:
+			return self.__class__.opcode_display_length
+		except:
+			log_error(traceback.format_exc())
+			return 8
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
 		try:

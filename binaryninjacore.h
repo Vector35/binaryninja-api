@@ -45,7 +45,9 @@
 #endif
 #endif
 
-#define BN_MAX_INSTRUCTION_LENGTH   16
+#define BN_MAX_INSTRUCTION_LENGTH   256
+#define BN_DEFAULT_NSTRUCTION_LENGTH 16
+#define BN_DEFAULT_OPCODE_DISPLAY   8
 #define BN_MAX_INSTRUCTION_BRANCHES 3
 
 #define BN_MAX_STORED_DATA_LENGTH   0x3fffffff
@@ -168,6 +170,7 @@ extern "C"
 		HexDumpSkippedByteToken = 17,
 		HexDumpInvalidByteToken = 18,
 		HexDumpTextToken = 19,
+		OpcodeToken = 20,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -322,6 +325,8 @@ extern "C"
 	enum BNDisassemblyOption
 	{
 		ShowAddress = 0,
+		ShowOpcode = 1,
+		ExpandLongOpcode = 2,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,
@@ -672,6 +677,8 @@ extern "C"
 		BNEndianness (*getEndianness)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		size_t (*getDefaultIntegerSize)(void* ctxt);
+		size_t (*getMaxInstructionLength)(void* ctxt);
+		size_t (*getOpcodeDisplayLength)(void* ctxt);
 		bool (*getInstructionInfo)(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		                           BNInstructionTextToken** result, size_t* count);
@@ -1202,6 +1209,8 @@ extern "C"
 	BINARYNINJACOREAPI BNEndianness BNGetArchitectureEndianness(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureAddressSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
 	                                             size_t maxLen, BNInstructionInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr,

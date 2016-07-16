@@ -3359,6 +3359,10 @@ class Architecture(object):
 				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
 		else:
 			_init_plugins()
+
+			if self.__class__.opcode_display_length > self.__class__.max_instr_length:
+				self.__class__.opcode_display_length = self.__class__.max_instr_length
+
 			self._cb = core.BNCustomArchitecture()
 			self._cb.context = 0
 			self._cb.init = self._cb.init.__class__(self._init)

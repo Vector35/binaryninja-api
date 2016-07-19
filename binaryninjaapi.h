@@ -665,6 +665,13 @@ namespace BinaryNinja
 		void Cancel();
 	};
 
+	struct DataVariable
+	{
+		uint64_t address;
+		Ref<Type> type;
+		bool autoDiscovered;
+	};
+
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
 	*/
@@ -803,6 +810,14 @@ namespace BinaryNinja
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
+		void DefineDataVariable(uint64_t addr, Type* type);
+		void DefineUserDataVariable(uint64_t addr, Type* type);
+		void UndefineDataVariable(uint64_t addr);
+		void UndefineUserDataVariable(uint64_t addr);
+
+		std::map<uint64_t, DataVariable> GetDataVariables();
+		bool GetDataVariableAtAddress(uint64_t addr, DataVariable& var);
+
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
 		bool HasFunctions() const;
 		Ref<Function> GetAnalysisFunction(Platform* platform, uint64_t addr);
@@ -832,7 +847,6 @@ namespace BinaryNinja
 
 		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
 
-
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -854,9 +868,11 @@ namespace BinaryNinja
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
 		uint64_t GetNextDataAfterAddress(uint64_t addr);
+		uint64_t GetNextDataVariableAfterAddress(uint64_t addr);
 		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousDataVariableBeforeAddress(uint64_t addr);
 
 		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
 		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,

@@ -764,6 +764,67 @@ void BinaryView::AbortAnalysis()
 }
 
 
+void BinaryView::DefineDataVariable(uint64_t addr, Type* type)
+{
+	BNDefineDataVariable(m_object, addr, type->GetObject());
+}
+
+
+void BinaryView::DefineUserDataVariable(uint64_t addr, Type* type)
+{
+	BNDefineUserDataVariable(m_object, addr, type->GetObject());
+}
+
+
+void BinaryView::UndefineDataVariable(uint64_t addr)
+{
+	BNUndefineDataVariable(m_object, addr);
+}
+
+
+void BinaryView::UndefineUserDataVariable(uint64_t addr)
+{
+	BNUndefineUserDataVariable(m_object, addr);
+}
+
+
+map<uint64_t, DataVariable> BinaryView::GetDataVariables()
+{
+	size_t count;
+	BNDataVariable* vars = BNGetDataVariables(m_object, &count);
+
+	map<uint64_t, DataVariable> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		DataVariable var;
+		var.address = vars[i].address;
+		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.autoDiscovered = vars[i].autoDiscovered;
+		result[var.address] = var;
+	}
+
+	BNFreeDataVariables(vars, count);
+	return result;
+}
+
+
+bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
+{
+	var.address = 0;
+	var.type = nullptr;
+	var.autoDiscovered = false;
+
+	BNDataVariable result;
+	if (!BNGetDataVariableAtAddress(m_object, addr, &result))
+		return false;
+
+	var.address = result.address;
+	var.type = new Type(result.type);
+	var.autoDiscovered = result.autoDiscovered;
+	return true;
+}
+
+
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;

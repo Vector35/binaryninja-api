@@ -696,6 +696,15 @@ class LinearDisassemblyLine(object):
 	def __repr__(self):
 		return repr(self.contents)
 
+class DataVariable(object):
+	def __init__(self, addr, var_type, auto_discovered):
+		self.address = addr
+		self.type = var_type
+		self.auto_discovered = auto_discovered
+
+	def __repr__(self):
+		return "<var 0x%x: %s>" % (self.address, str(self.type))
+
 class BinaryView(object):
 	name = None
 	"""Binary View name"""
@@ -993,6 +1002,20 @@ class BinaryView(object):
 	def linear_disassembly(self):
 		"""Iterator for all lines in the linear disassembly of the view"""
 		return self.get_linear_disassembly(None)
+
+	@property
+	def data_vars(self):
+		"""List of data variables (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		var_list = core.BNGetDataVariables(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			addr = var_list[i].address
+			var_type = Type(core.BNNewTypeReference(var_list[i].type))
+			auto_discovered = var_list[i].autoDiscovered
+			result[addr] = DataVariable(addr, var_type, auto_discovered)
+		core.BNFreeDataVariables(var_list, count.value)
+		return result
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1367,6 +1390,24 @@ class BinaryView(object):
 	def abort_analysis(self):
 		core.BNAbortAnalysis(self.handle)
 
+	def define_data_var(self, addr, var_type):
+		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
+
+	def define_user_data_var(self, addr, var_type):
+		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
+
+	def undefine_data_var(self, addr):
+		core.BNUndefineDataVariable(self.handle, addr)
+
+	def undefine_user_data_var(self, addr):
+		core.BNUndefineUserDataVariable(self.handle, addr)
+
+	def get_data_var_at(self, addr):
+		var = core.BNDataVariable()
+		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
+			return None
+		return DataVariable(var.address, Type(var.type), var.autoDiscovered)
+
 	def get_function_at(self, platform, addr):
 		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
@@ -1552,6 +1593,9 @@ class BinaryView(object):
 	def get_next_data_after(self, addr):
 		return core.BNGetNextDataAfterAddress(self.handle, addr)
 
+	def get_next_data_var_after(self, addr):
+		return core.BNGetNextDataVariableAfterAddress(self.handle, addr)
+
 	def get_previous_function_start_before(self, addr):
 		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
 
@@ -1560,6 +1604,9 @@ class BinaryView(object):
 
 	def get_previous_data_before(self, addr):
 		return core.BNGetPreviousDataBeforeAddress(self.handle, addr)
+
+	def get_previous_data_var_before(self, addr):
+		return core.BNGetPreviousDataVariableBeforeAddress(self.handle, addr)
 
 	def get_linear_disassembly_position_at(self, addr, settings):
 		if settings is not None:

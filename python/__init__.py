@@ -1638,6 +1638,9 @@ class BinaryView(object):
 	def get_previous_function_start_before(self, addr):
 		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
 
+	def get_previous_basic_block_start_before(self, addr):
+		return core.BNGetPreviousBasicBlockStartBeforeAddress(self.handle, addr)
+
 	def get_previous_basic_block_end_before(self, addr):
 		return core.BNGetPreviousBasicBlockEndBeforeAddress(self.handle, addr)
 

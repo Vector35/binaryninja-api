@@ -1224,6 +1224,12 @@ uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
 }
 
 
+uint64_t BinaryView::GetPreviousBasicBlockStartBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousBasicBlockStartBeforeAddress(m_object, addr);
+}
+
+
 uint64_t BinaryView::GetPreviousBasicBlockEndBeforeAddress(uint64_t addr)
 {
 	return BNGetPreviousBasicBlockEndBeforeAddress(m_object, addr);

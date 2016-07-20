@@ -523,6 +523,7 @@ namespace BinaryNinja
 
 	class BinaryView;
 	class Function;
+	struct DataVariable;
 
 	class BinaryDataNotification
 	{
@@ -535,6 +536,9 @@ namespace BinaryNinja
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void DataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
+		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
+		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 
@@ -550,6 +554,9 @@ namespace BinaryNinja
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
+		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
+		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 	};

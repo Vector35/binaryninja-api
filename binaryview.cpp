@@ -75,6 +75,42 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableAdded(view, varObj);
+}
+
+
+void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableRemoved(view, varObj);
+}
+
+
+void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableUpdated(view, varObj);
+}
+
+
 void BinaryDataNotification::StringFoundCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -100,6 +136,9 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
 	m_callbacks.functionUpdated = FunctionUpdatedCallback;
+	m_callbacks.dataVariableAdded = DataVariableAddedCallback;
+	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
+	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
 }

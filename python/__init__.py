@@ -387,6 +387,15 @@ class BinaryDataNotification:
 	def function_updated(self, view, func):
 		pass
 
+	def data_var_added(self, view, var):
+		pass
+
+	def data_var_removed(self, view, var):
+		pass
+
+	def data_var_updated(self, view, var):
+		pass
+
 	def string_found(self, view, string_type, offset, length):
 		pass
 
@@ -483,6 +492,9 @@ class BinaryDataNotificationCallbacks:
 		self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
 		self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
 		self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
+		self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
+		self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
+		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
 		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
 
@@ -525,6 +537,33 @@ class BinaryDataNotificationCallbacks:
 	def _function_updated(self, ctxt, view, func):
 		try:
 			self.notify.function_updated(self.view, Function(self.view, core.BNNewFunctionReference(func)))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_added(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_removed(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_updated(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
 			log_error(traceback.format_exc())
 

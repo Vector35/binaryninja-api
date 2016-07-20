@@ -171,6 +171,7 @@ extern "C"
 		HexDumpInvalidByteToken = 18,
 		HexDumpTextToken = 19,
 		OpcodeToken = 20,
+		StringToken = 21,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -556,6 +557,13 @@ extern "C"
 		uint64_t value;
 	};
 
+	struct BNDataVariable
+	{
+		uint64_t address;
+		BNType* type;
+		bool autoDiscovered;
+	};
+
 	// Callbacks
 	struct BNLogListener
 	{
@@ -582,6 +590,9 @@ extern "C"
 		void (*functionAdded)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionRemoved)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionUpdated)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		void (*dataVariableAdded)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
+		void (*dataVariableRemoved)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
+		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 	};
@@ -928,13 +939,6 @@ extern "C"
 	{
 		BNAnalysisState state;
 		size_t count, total;
-	};
-
-	struct BNDataVariable
-	{
-		uint64_t address;
-		BNType* type;
-		bool autoDiscovered;
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);

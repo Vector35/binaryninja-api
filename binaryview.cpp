@@ -1338,6 +1338,26 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 }
 
 
+bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string& errors)
+{
+	BNNameAndType nt;
+	char* errorStr;
+
+	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr))
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+		return false;
+	}
+
+	result.name = nt.name;
+	result.type = new Type(nt.type);
+	errors = "";
+	BNFreeString(nt.name);
+	return true;
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

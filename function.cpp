@@ -354,6 +354,18 @@ Ref<Type> Function::GetType() const
 }
 
 
+void Function::SetAutoType(Type* type)
+{
+	BNSetFunctionAutoType(m_object, type->GetObject());
+}
+
+
+void Function::SetUserType(Type* type)
+{
+	BNSetFunctionUserType(m_object, type->GetObject());
+}
+
+
 void Function::ApplyImportedTypes(Symbol* sym)
 {
 	BNApplyImportedTypes(m_object, sym->GetObject());

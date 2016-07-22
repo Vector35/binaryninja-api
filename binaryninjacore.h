@@ -161,17 +161,18 @@ extern "C"
 		FloatingPointToken = 8,
 		AnnotationToken = 9,
 		CodeRelativeAddressToken = 10,
-		VariableTypeToken = 11,
-		FunctionReturnTypeToken = 12,
-		FunctionAttributeToken = 13,
-		ArgumentTypeToken = 14,
-		ArgumentNameToken = 15,
-		HexDumpByteValueToken = 16,
-		HexDumpSkippedByteToken = 17,
-		HexDumpInvalidByteToken = 18,
-		HexDumpTextToken = 19,
-		OpcodeToken = 20,
-		StringToken = 21,
+		StackVariableTypeToken = 11,
+		DataVariableTypeToken = 12,
+		FunctionReturnTypeToken = 13,
+		FunctionAttributeToken = 14,
+		ArgumentTypeToken = 15,
+		ArgumentNameToken = 16,
+		HexDumpByteValueToken = 17,
+		HexDumpSkippedByteToken = 18,
+		HexDumpInvalidByteToken = 19,
+		HexDumpTextToken = 20,
+		OpcodeToken = 21,
+		StringToken = 22,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -1309,6 +1310,8 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbol* BNGetFunctionSymbol(BNFunction* func);
 	BINARYNINJACOREAPI bool BNWasFunctionAutomaticallyDiscovered(BNFunction* func);
 	BINARYNINJACOREAPI bool BNCanFunctionReturn(BNFunction* func);
+	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
+	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
 
 	BINARYNINJACOREAPI char* BNGetCommentForAddress(BNFunction* func, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t* BNGetCommentedAddresses(BNFunction* func, size_t* count);
@@ -1451,6 +1454,9 @@ extern "C"
 	BINARYNINJACOREAPI BNDataVariable* BNGetDataVariables(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDataVariables(BNDataVariable* vars, size_t count);
 	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
+
+	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNNameAndType* result, char** errors);
+	BINARYNINJACOREAPI void BNFreeNameAndType(BNNameAndType* obj);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

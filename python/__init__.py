@@ -1733,6 +1733,18 @@ class BinaryView(object):
 
 		return iter(LinearDisassemblyIterator(self, settings))
 
+	def parse_type_string(self, text):
+		result = core.BNNameAndType()
+		errors = ctypes.c_char_p()
+		if not core.BNParseTypeString(self.handle, text, result, errors):
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise SyntaxError, error_str
+		type_obj = Type(core.BNNewTypeReference(result.type))
+		name = result.name
+		core.BNFreeNameAndType(result)
+		return type_obj, name
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -2523,9 +2535,13 @@ class Function(object):
 					core.BNGetFunctionLiftedIL(self.handle)), self)
 
 	@property
-	def type(self):
-		"""Function type (read-only)"""
+	def function_type(self):
+		"""Function type"""
 		return Type(core.BNGetFunctionType(self.handle))
+
+	@function_type.setter
+	def function_type(self, value):
+		self.set_user_type(value)
 
 	@property
 	def stack_layout(self):
@@ -2782,6 +2798,12 @@ class Function(object):
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
+
+	def set_auto_type(self, value):
+		core.BNSetFunctionAutoType(self.handle, value.handle)
+
+	def set_user_type(self, value):
+		core.BNSetFunctionUserType(self.handle, value.handle)
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):

@@ -679,6 +679,8 @@ namespace BinaryNinja
 		bool autoDiscovered;
 	};
 
+	struct NameAndType;
+
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
 	*/
@@ -887,6 +889,8 @@ namespace BinaryNinja
 			DisassemblySettings* settings);
 		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
 			DisassemblySettings* settings);
+
+		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
 	};
 
 	class BinaryData: public BinaryView
@@ -1612,6 +1616,8 @@ namespace BinaryNinja
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
 		Ref<Type> GetType() const;
+		void SetAutoType(Type* type);
+		void SetUserType(Type* type);
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
 

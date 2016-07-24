@@ -14,3 +14,4 @@ python/generator
 python/generator.exe
 .vs
 xml
+site/*

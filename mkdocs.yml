@@ -1,0 +1,41 @@
+site_name: 'Binary Ninja Documentation'
+site_url: 'https://docs.binary.ninja/'
+repo_url: 'https://github.com/vector35/binaryninja-api/'
+repo_name: 'github'
+site_description: 'Documentation for the Binary Ninja reverse engineering platform'
+site_author: 'Vector 35 LLC'
+site_favicon: 'favicon.ico'
+google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
+
+theme_dir: 'mkdocs-material/material'
+theme: 'material'
+copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'
+
+markdown_extensions:
+    - codehilite
+    - admonition
+    - toc:
+        permalink: True
+
+pages:
+    - Home: 'index.md'
+    - Getting Started: 'getting-started.md'
+    - User Guide:
+        - Installing: 'guide/installing.md'
+        - Running: 'guide/running.md'
+        - Interface: 'guide/interface.md'
+        - Types Library: 'guide/type.md'
+        - Using Plugins: 'guide/plugins.md'
+        - Troubleshooting: 'guide/troubleshooting.md'
+    - Developer Guide:
+        - Plugin Design: 'dev/plugins.md'
+        - API: 'dev/api.md'
+    - About:
+        - License: 'about/license.md'
+        - Open Source: 'about/open-source.md'
+
+extra:
+    author:
+        github: 'Vector35'
+        twitter: 'vector_35'
+    logo: 'images/logo.png'

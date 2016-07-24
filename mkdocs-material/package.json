@@ -1,0 +1,80 @@
+{
+  "_args": [
+    [
+      ".",
+      ""
+    ]
+  ],
+  "_from": "../../Users/jwiens/vector35/binaryninja/api/mkdocs-material",
+  "_id": "mkdocs-material@0.2.4",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/mkdocs-material",
+  "_phantomChildren": {},
+  "_requested": {
+    "name": null,
+    "raw": ".",
+    "rawSpec": ".",
+    "scope": null,
+    "spec": "/Users/jwiens/vector35/binaryninja/api/mkdocs-material",
+    "type": "directory"
+  },
+  "_requiredBy": [
+    "#USER"
+  ],
+  "_resolved": "file:../../Users/jwiens/vector35/binaryninja/api/mkdocs-material",
+  "_shasum": "8a9a6bd739e39da2d13d2910c772418f050906a5",
+  "_shrinkwrap": null,
+  "_spec": ".",
+  "_where": "",
+  "authors": [
+    "squidfunk <martin.donath@squidfunk.com>"
+  ],
+  "bugs": {
+    "url": "https://github.com/squidfunk/mkdocs-material/issues"
+  },
+  "dependencies": {},
+  "description": "A material design theme for MkDocs",
+  "devDependencies": {
+    "autoprefixer": "^6.3.2",
+    "css-mqpacker": "^4.0.0",
+    "del": "^2.2.0",
+    "gulp": "^3.9.1",
+    "gulp-add-src": "^0.2.0",
+    "gulp-concat": "^2.6.0",
+    "gulp-cssnano": "^2.1.1",
+    "gulp-htmlmin": "^1.3.0",
+    "gulp-if": "^2.0.0",
+    "gulp-ignore": "^2.0.1",
+    "gulp-image-optimization": "^0.1.3",
+    "gulp-modernizr": "0.0.0",
+    "gulp-plumber": "^1.1.0",
+    "gulp-postcss": "^6.1.0",
+    "gulp-remove-empty-lines": "0.0.2",
+    "gulp-rev": "^7.0.0",
+    "gulp-rev-collector": "^1.0.2",
+    "gulp-sass": "^2.2.0",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-uglify": "^1.5.2",
+    "gulp-util": "^3.0.7",
+    "node-notifier": "^4.5.0",
+    "vinyl-paths": "^2.1.0",
+    "yargs": "^3.32.0"
+  },
+  "homepage": "http://squidfunk.github.io/mkdocs-material/",
+  "license": "MIT",
+  "main": "Gulpfile.js",
+  "name": "mkdocs-material",
+  "optionalDependencies": {},
+  "private": true,
+  "readme": "# Material\n\n[![Travis CI][travis-image]][travis-link]\n[![PyPI Version][pypi-v-image]][pypi-v-link]\n\nA material design theme for [MkDocs](http://www.mkdocs.org).\n\n[![iOS](docs/images/screen.png)](http://squidfunk.github.io/mkdocs-material/)\n\n## Quick start\n\nInstall with `pip`:\n\n``` sh\npip install mkdocs-material\n```\n\nAdd the following line to your `mkdocs.yml`:\n\n``` yaml\ntheme: 'material'\n```\n\nFor detailed installation instructions and a demo, visit\nhttp://squidfunk.github.io/mkdocs-material/\n\n## License\n\n**MIT License**\n\nCopyright (c) 2016 Martin Donath\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to\ndeal in the Software without restriction, including without limitation the\nrights to use, copy, modify, merge, publish, distribute, sublicense, and/or\nsell copies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\nFROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS\nIN THE SOFTWARE.\n\n[travis-image]: https://travis-ci.org/squidfunk/mkdocs-material.svg\n[travis-link]: https://travis-ci.org/squidfunk/mkdocs-material\n[pypi-v-image]: https://img.shields.io/pypi/v/mkdocs-material.png\n[pypi-v-link]: https://pypi.python.org/pypi/mkdocs-material",
+  "readmeFilename": "README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/squidfunk/mkdocs-material.git"
+  },
+  "scripts": {
+    "start": "gulp watch"
+  },
+  "version": "0.2.4"
+}

@@ -349,6 +349,7 @@ class M6502(Architecture):
 	name = "6502"
 	address_size = 2
 	default_int_size = 1
+	max_instr_length = 3
 	regs = {
 		"a": RegisterInfo("a", 1),
 		"x": RegisterInfo("x", 1),

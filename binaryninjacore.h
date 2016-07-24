@@ -45,7 +45,9 @@
 #endif
 #endif
 
-#define BN_MAX_INSTRUCTION_LENGTH   16
+#define BN_MAX_INSTRUCTION_LENGTH   256
+#define BN_DEFAULT_NSTRUCTION_LENGTH 16
+#define BN_DEFAULT_OPCODE_DISPLAY   8
 #define BN_MAX_INSTRUCTION_BRANCHES 3
 
 #define BN_MAX_STORED_DATA_LENGTH   0x3fffffff
@@ -159,6 +161,18 @@ extern "C"
 		FloatingPointToken = 8,
 		AnnotationToken = 9,
 		CodeRelativeAddressToken = 10,
+		StackVariableTypeToken = 11,
+		DataVariableTypeToken = 12,
+		FunctionReturnTypeToken = 13,
+		FunctionAttributeToken = 14,
+		ArgumentTypeToken = 15,
+		ArgumentNameToken = 16,
+		HexDumpByteValueToken = 17,
+		HexDumpSkippedByteToken = 18,
+		HexDumpInvalidByteToken = 19,
+		HexDumpTextToken = 20,
+		OpcodeToken = 21,
+		StringToken = 22,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -167,6 +181,21 @@ extern "C"
 		StackVariableToken = 66,
 		ImportToken = 67,
 		AddressDisplayToken = 68
+	};
+
+	enum BNLinearDisassemblyLineType
+	{
+		BlankLineType,
+		CodeDisassemblyLineType,
+		DataVariableLineType,
+		HexDumpLineType,
+		FunctionHeaderLineType,
+		FunctionHeaderStartLineType,
+		FunctionHeaderEndLineType,
+		FunctionContinuationLineType,
+		StackVariableLineType,
+		StackVariableListEndLineType,
+		FunctionEndLineType
 	};
 
 	enum BNSymbolType
@@ -298,6 +327,11 @@ extern "C"
 	enum BNDisassemblyOption
 	{
 		ShowAddress = 0,
+		ShowOpcode = 1,
+		ExpandLongOpcode = 2,
+
+		// Linear disassembly options
+		GroupLinearDisassemblyFunctions = 64,
 
 		// Debugging options
 		ShowBasicBlockRegisterState = 128,
@@ -524,6 +558,13 @@ extern "C"
 		uint64_t value;
 	};
 
+	struct BNDataVariable
+	{
+		uint64_t address;
+		BNType* type;
+		bool autoDiscovered;
+	};
+
 	// Callbacks
 	struct BNLogListener
 	{
@@ -550,6 +591,9 @@ extern "C"
 		void (*functionAdded)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionRemoved)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionUpdated)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		void (*dataVariableAdded)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
+		void (*dataVariableRemoved)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
+		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 	};
@@ -645,6 +689,8 @@ extern "C"
 		BNEndianness (*getEndianness)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		size_t (*getDefaultIntegerSize)(void* ctxt);
+		size_t (*getMaxInstructionLength)(void* ctxt);
+		size_t (*getOpcodeDisplayLength)(void* ctxt);
 		bool (*getInstructionInfo)(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		                           BNInstructionTextToken** result, size_t* count);
@@ -709,6 +755,22 @@ extern "C"
 		uint64_t addr;
 		BNInstructionTextToken* tokens;
 		size_t count;
+	};
+
+	struct BNLinearDisassemblyLine
+	{
+		BNLinearDisassemblyLineType type;
+		BNFunction* function;
+		BNBasicBlock* block;
+		size_t lineOffset;
+		BNDisassemblyTextLine contents;
+	};
+
+	struct BNLinearDisassemblyPosition
+	{
+		BNFunction* function;
+		BNBasicBlock* block;
+		uint64_t address;
 	};
 
 	struct BNReferenceSource
@@ -1077,8 +1139,10 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryViewType* BNRegisterBinaryViewType(const char* name, const char* longName,
 	                                                              BNCustomBinaryViewType* type);
 
-	BINARYNINJACOREAPI void BNRegisterArchitectureForViewType(BNBinaryViewType* type, uint32_t id, BNArchitecture* arch);
-	BINARYNINJACOREAPI BNArchitecture* BNGetArchitectureForViewType(BNBinaryViewType* type, uint32_t id);
+	BINARYNINJACOREAPI void BNRegisterArchitectureForViewType(BNBinaryViewType* type, uint32_t id,
+		BNEndianness endian, BNArchitecture* arch);
+	BINARYNINJACOREAPI BNArchitecture* BNGetArchitectureForViewType(BNBinaryViewType* type, uint32_t id,
+		BNEndianness endian);
 
 	BINARYNINJACOREAPI void BNRegisterPlatformForViewType(BNBinaryViewType* type, uint32_t id, BNArchitecture* arch,
 	                                                      BNPlatform* platform);
@@ -1159,6 +1223,8 @@ extern "C"
 	BINARYNINJACOREAPI BNEndianness BNGetArchitectureEndianness(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureAddressSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
 	                                             size_t maxLen, BNInstructionInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
@@ -1246,6 +1312,8 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbol* BNGetFunctionSymbol(BNFunction* func);
 	BINARYNINJACOREAPI bool BNWasFunctionAutomaticallyDiscovered(BNFunction* func);
 	BINARYNINJACOREAPI bool BNCanFunctionReturn(BNFunction* func);
+	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
+	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
 
 	BINARYNINJACOREAPI char* BNGetCommentForAddress(BNFunction* func, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t* BNGetCommentedAddresses(BNFunction* func, size_t* count);
@@ -1361,6 +1429,36 @@ extern "C"
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
+
+	BINARYNINJACOREAPI uint64_t BNGetNextFunctionStartAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetNextBasicBlockStartAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetNextDataAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetNextDataVariableAfterAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousFunctionStartBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousBasicBlockStartBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousBasicBlockEndBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousDataBeforeAddress(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI uint64_t BNGetPreviousDataVariableBeforeAddress(BNBinaryView* view, uint64_t addr);
+
+	BINARYNINJACOREAPI BNLinearDisassemblyPosition BNGetLinearDisassemblyPositionForAddress(BNBinaryView* view,
+		uint64_t addr, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNFreeLinearDisassemblyPosition(BNLinearDisassemblyPosition* pos);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetPreviousLinearDisassemblyLines(BNBinaryView* view,
+		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetNextLinearDisassemblyLines(BNBinaryView* view,
+		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
+	BINARYNINJACOREAPI void BNFreeLinearDisassemblyLines(BNLinearDisassemblyLine* lines, size_t count);
+
+	BINARYNINJACOREAPI void BNDefineDataVariable(BNBinaryView* view, uint64_t addr, BNType* type);
+	BINARYNINJACOREAPI void BNDefineUserDataVariable(BNBinaryView* view, uint64_t addr, BNType* type);
+	BINARYNINJACOREAPI void BNUndefineDataVariable(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI void BNUndefineUserDataVariable(BNBinaryView* view, uint64_t addr);
+	BINARYNINJACOREAPI BNDataVariable* BNGetDataVariables(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeDataVariables(BNDataVariable* vars, size_t count);
+	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
+
+	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNNameAndType* result, char** errors);
+	BINARYNINJACOREAPI void BNFreeNameAndType(BNNameAndType* obj);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

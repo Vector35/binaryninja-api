@@ -75,6 +75,42 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableAdded(view, varObj);
+}
+
+
+void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableRemoved(view, varObj);
+}
+
+
+void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	DataVariable varObj;
+	varObj.address = var->address;
+	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.autoDiscovered = var->autoDiscovered;
+	notify->OnDataVariableUpdated(view, varObj);
+}
+
+
 void BinaryDataNotification::StringFoundCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -100,6 +136,9 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
 	m_callbacks.functionUpdated = FunctionUpdatedCallback;
+	m_callbacks.dataVariableAdded = DataVariableAddedCallback;
+	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
+	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
 }
@@ -764,6 +803,67 @@ void BinaryView::AbortAnalysis()
 }
 
 
+void BinaryView::DefineDataVariable(uint64_t addr, Type* type)
+{
+	BNDefineDataVariable(m_object, addr, type->GetObject());
+}
+
+
+void BinaryView::DefineUserDataVariable(uint64_t addr, Type* type)
+{
+	BNDefineUserDataVariable(m_object, addr, type->GetObject());
+}
+
+
+void BinaryView::UndefineDataVariable(uint64_t addr)
+{
+	BNUndefineDataVariable(m_object, addr);
+}
+
+
+void BinaryView::UndefineUserDataVariable(uint64_t addr)
+{
+	BNUndefineUserDataVariable(m_object, addr);
+}
+
+
+map<uint64_t, DataVariable> BinaryView::GetDataVariables()
+{
+	size_t count;
+	BNDataVariable* vars = BNGetDataVariables(m_object, &count);
+
+	map<uint64_t, DataVariable> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		DataVariable var;
+		var.address = vars[i].address;
+		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.autoDiscovered = vars[i].autoDiscovered;
+		result[var.address] = var;
+	}
+
+	BNFreeDataVariables(vars, count);
+	return result;
+}
+
+
+bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
+{
+	var.address = 0;
+	var.type = nullptr;
+	var.autoDiscovered = false;
+
+	BNDataVariable result;
+	if (!BNGetDataVariableAtAddress(m_object, addr, &result))
+		return false;
+
+	var.address = result.address;
+	var.type = new Type(result.type);
+	var.autoDiscovered = result.autoDiscovered;
+	return true;
+}
+
+
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;
@@ -1097,6 +1197,164 @@ Ref<AnalysisCompletionEvent> BinaryView::AddAnalysisCompletionEvent(const functi
 BNAnalysisProgress BinaryView::GetAnalysisProgress()
 {
 	return BNGetAnalysisProgress(m_object);
+}
+
+
+uint64_t BinaryView::GetNextFunctionStartAfterAddress(uint64_t addr)
+{
+	return BNGetNextFunctionStartAfterAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetNextBasicBlockStartAfterAddress(uint64_t addr)
+{
+	return BNGetNextBasicBlockStartAfterAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
+{
+	return BNGetNextDataAfterAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousFunctionStartBeforeAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousBasicBlockStartBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousBasicBlockStartBeforeAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousBasicBlockEndBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousBasicBlockEndBeforeAddress(m_object, addr);
+}
+
+
+uint64_t BinaryView::GetPreviousDataBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousDataBeforeAddress(m_object, addr);
+}
+
+
+LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition pos = BNGetLinearDisassemblyPositionForAddress(m_object, addr,
+		settings ? settings->GetObject() : nullptr);
+
+	LinearDisassemblyPosition result;
+	result.function = pos.function ? new Function(pos.function) : nullptr;
+	result.block = pos.block ? new BasicBlock(pos.block) : nullptr;
+	result.address = pos.address;
+	return result;
+}
+
+
+vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition linearPos;
+	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
+	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
+	linearPos.address = pos.address;
+
+	size_t count;
+	BNLinearDisassemblyLine* lines = BNGetPreviousLinearDisassemblyLines(m_object, &linearPos,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<LinearDisassemblyLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		LinearDisassemblyLine line;
+		line.type = lines[i].type;
+		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
+		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
+		line.lineOffset = lines[i].lineOffset;
+		line.contents.addr = lines[i].contents.addr;
+		for (size_t j = 0; j < lines[i].contents.count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].contents.tokens[j].type;
+			token.text = lines[i].contents.tokens[j].text;
+			token.value = lines[i].contents.tokens[j].value;
+			line.contents.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
+	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
+	pos.address = linearPos.address;
+
+	BNFreeLinearDisassemblyLines(lines, count);
+	return result;
+}
+
+
+vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+	DisassemblySettings* settings)
+{
+	BNLinearDisassemblyPosition linearPos;
+	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
+	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
+	linearPos.address = pos.address;
+
+	size_t count;
+	BNLinearDisassemblyLine* lines = BNGetNextLinearDisassemblyLines(m_object, &linearPos,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<LinearDisassemblyLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		LinearDisassemblyLine line;
+		line.type = lines[i].type;
+		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
+		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
+		line.lineOffset = lines[i].lineOffset;
+		line.contents.addr = lines[i].contents.addr;
+		for (size_t j = 0; j < lines[i].contents.count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].contents.tokens[j].type;
+			token.text = lines[i].contents.tokens[j].text;
+			token.value = lines[i].contents.tokens[j].value;
+			line.contents.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
+	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
+	pos.address = linearPos.address;
+
+	BNFreeLinearDisassemblyLines(lines, count);
+	return result;
+}
+
+
+bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string& errors)
+{
+	BNNameAndType nt;
+	char* errorStr;
+
+	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr))
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+		return false;
+	}
+
+	result.name = nt.name;
+	result.type = new Type(nt.type);
+	errors = "";
+	BNFreeString(nt.name);
+	return true;
 }
 
 

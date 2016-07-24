@@ -523,6 +523,7 @@ namespace BinaryNinja
 
 	class BinaryView;
 	class Function;
+	struct DataVariable;
 
 	class BinaryDataNotification
 	{
@@ -535,6 +536,9 @@ namespace BinaryNinja
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void DataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
+		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
+		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 
@@ -550,6 +554,9 @@ namespace BinaryNinja
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
+		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
+		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 	};
@@ -616,6 +623,41 @@ namespace BinaryNinja
 		Ref<Architecture> arch;
 		uint64_t addr;
 	};
+
+	struct InstructionTextToken
+	{
+		BNInstructionTextTokenType type;
+		std::string text;
+		uint64_t value;
+
+		InstructionTextToken();
+		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
+	};
+
+	struct DisassemblyTextLine
+	{
+		uint64_t addr;
+		std::vector<InstructionTextToken> tokens;
+	};
+
+	struct LinearDisassemblyPosition
+	{
+		Ref<Function> function;
+		Ref<BasicBlock> block;
+		uint64_t address;
+	};
+
+	struct LinearDisassemblyLine
+	{
+		BNLinearDisassemblyLineType type;
+		Ref<Function> function;
+		Ref<BasicBlock> block;
+		size_t lineOffset;
+		DisassemblyTextLine contents;
+	};
+
+	class DisassemblySettings;
+
 	class AnalysisCompletionEvent: public CoreRefCountObject<BNAnalysisCompletionEvent,
 		BNNewAnalysisCompletionEventReference, BNFreeAnalysisCompletionEvent>
 	{
@@ -629,6 +671,15 @@ namespace BinaryNinja
 		AnalysisCompletionEvent(BinaryView* view, const std::function<void()>& callback);
 		void Cancel();
 	};
+
+	struct DataVariable
+	{
+		uint64_t address;
+		Ref<Type> type;
+		bool autoDiscovered;
+	};
+
+	struct NameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -768,6 +819,14 @@ namespace BinaryNinja
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
+		void DefineDataVariable(uint64_t addr, Type* type);
+		void DefineUserDataVariable(uint64_t addr, Type* type);
+		void UndefineDataVariable(uint64_t addr);
+		void UndefineUserDataVariable(uint64_t addr);
+
+		std::map<uint64_t, DataVariable> GetDataVariables();
+		bool GetDataVariableAtAddress(uint64_t addr, DataVariable& var);
+
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
 		bool HasFunctions() const;
 		Ref<Function> GetAnalysisFunction(Platform* platform, uint64_t addr);
@@ -797,7 +856,6 @@ namespace BinaryNinja
 
 		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
 
-
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -815,6 +873,24 @@ namespace BinaryNinja
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		BNAnalysisProgress GetAnalysisProgress();
+
+		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
+		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
+		uint64_t GetNextDataAfterAddress(uint64_t addr);
+		uint64_t GetNextDataVariableAfterAddress(uint64_t addr);
+		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousBasicBlockStartBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousDataVariableBeforeAddress(uint64_t addr);
+
+		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
+		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+			DisassemblySettings* settings);
+		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
+			DisassemblySettings* settings);
+
+		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
 	};
 
 	class BinaryData: public BinaryView
@@ -848,9 +924,9 @@ namespace BinaryNinja
 		static std::vector<Ref<BinaryViewType>> GetViewTypes();
 		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
 
-		static void RegisterArchitecture(const std::string& name, uint32_t id, Architecture* arch);
-		void RegisterArchitecture(uint32_t id, Architecture* arch);
-		Ref<Architecture> GetArchitecture(uint32_t id);
+		static void RegisterArchitecture(const std::string& name, uint32_t id, BNEndianness endian, Architecture* arch);
+		void RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch);
+		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
 
 		static void RegisterPlatform(const std::string& name, uint32_t id, Architecture* arch, Platform* platform);
 		static void RegisterDefaultPlatform(const std::string& name, Architecture* arch, Platform* platform);
@@ -1039,16 +1115,6 @@ namespace BinaryNinja
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
 	};
 
-	struct InstructionTextToken
-	{
-		BNInstructionTextTokenType type;
-		std::string text;
-		uint64_t value;
-
-		InstructionTextToken();
-		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
-	};
-
 	class LowLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
@@ -1070,6 +1136,8 @@ namespace BinaryNinja
 		static BNEndianness GetEndiannessCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
+		static size_t GetMaxInstructionLengthCallback(void* ctxt);
+		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
@@ -1120,6 +1188,9 @@ namespace BinaryNinja
 		virtual BNEndianness GetEndianness() const = 0;
 		virtual size_t GetAddressSize() const = 0;
 		virtual size_t GetDefaultIntegerSize() const;
+
+		virtual size_t GetMaxInstructionLength() const;
+		virtual size_t GetOpcodeDisplayLength() const;
 
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
@@ -1262,6 +1333,8 @@ namespace BinaryNinja
 		virtual BNEndianness GetEndianness() const override;
 		virtual size_t GetAddressSize() const override;
 		virtual size_t GetDefaultIntegerSize() const override;
+		virtual size_t GetMaxInstructionLength() const override;
+		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
@@ -1415,12 +1488,6 @@ namespace BinaryNinja
 		void SetMaximumSymbolWidth(size_t width);
 	};
 
-	struct DisassemblyTextLine
-	{
-		uint64_t addr;
-		std::vector<InstructionTextToken> tokens;
-	};
-
 	class Function;
 
 	struct BasicBlockEdge
@@ -1549,6 +1616,8 @@ namespace BinaryNinja
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
 		Ref<Type> GetType() const;
+		void SetAutoType(Type* type);
+		void SetUserType(Type* type);
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
 

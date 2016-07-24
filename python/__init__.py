@@ -387,6 +387,15 @@ class BinaryDataNotification:
 	def function_updated(self, view, func):
 		pass
 
+	def data_var_added(self, view, var):
+		pass
+
+	def data_var_removed(self, view, var):
+		pass
+
+	def data_var_updated(self, view, var):
+		pass
+
 	def string_found(self, view, string_type, offset, length):
 		pass
 
@@ -483,6 +492,9 @@ class BinaryDataNotificationCallbacks:
 		self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
 		self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
 		self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
+		self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
+		self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
+		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
 		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
 
@@ -525,6 +537,33 @@ class BinaryDataNotificationCallbacks:
 	def _function_updated(self, ctxt, view, func):
 		try:
 			self.notify.function_updated(self.view, Function(self.view, core.BNNewFunctionReference(func)))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_added(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_removed(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
+		except:
+			log_error(traceback.format_exc())
+
+	def _data_var_updated(self, ctxt, view, var):
+		try:
+			address = var.address
+			var_type = Type(core.BNNewTypeReference(var.type))
+			auto_discovered = var.autoDiscovered
+			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
 			log_error(traceback.format_exc())
 
@@ -610,11 +649,11 @@ class BinaryViewType(object):
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
-	def register_arch(self, ident, arch):
-		core.BNRegisterArchitectureForViewType(self.handle, ident, arch.handle)
+	def register_arch(self, ident, endian, arch):
+		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
 
-	def get_arch(self, ident):
-		arch = core.BNGetArchitectureForViewType(self.handle, ident)
+	def get_arch(self, ident, endian):
+		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
 		return Architecture(arch)
@@ -675,6 +714,35 @@ class AnalysisProgress(object):
 
 	def __repr__(self):
 		return "<progress: %s>" % str(self)
+
+class LinearDisassemblyPosition(object):
+	def __init__(self, func, block, addr):
+		self.function = func
+		self.block = block
+		self.address = addr
+
+class LinearDisassemblyLine(object):
+	def __init__(self, line_type, func, block, line_offset, contents):
+		self.type = line_type
+		self.function = func
+		self.block = block
+		self.line_offset = line_offset
+		self.contents = contents
+
+	def __str__(self):
+		return str(self.contents)
+
+	def __repr__(self):
+		return repr(self.contents)
+
+class DataVariable(object):
+	def __init__(self, addr, var_type, auto_discovered):
+		self.address = addr
+		self.type = var_type
+		self.auto_discovered = auto_discovered
+
+	def __repr__(self):
+		return "<var 0x%x: %s>" % (self.address, str(self.type))
 
 class BinaryView(object):
 	name = None
@@ -968,6 +1036,25 @@ class BinaryView(object):
 		"""Status of current analysis (read-only)"""
 		result = core.BNGetAnalysisProgress(self.handle)
 		return AnalysisProgress(result.state, result.count, result.total)
+
+	@property
+	def linear_disassembly(self):
+		"""Iterator for all lines in the linear disassembly of the view"""
+		return self.get_linear_disassembly(None)
+
+	@property
+	def data_vars(self):
+		"""List of data variables (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		var_list = core.BNGetDataVariables(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			addr = var_list[i].address
+			var_type = Type(core.BNNewTypeReference(var_list[i].type))
+			auto_discovered = var_list[i].autoDiscovered
+			result[addr] = DataVariable(addr, var_type, auto_discovered)
+		core.BNFreeDataVariables(var_list, count.value)
+		return result
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1342,6 +1429,24 @@ class BinaryView(object):
 	def abort_analysis(self):
 		core.BNAbortAnalysis(self.handle)
 
+	def define_data_var(self, addr, var_type):
+		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
+
+	def define_user_data_var(self, addr, var_type):
+		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
+
+	def undefine_data_var(self, addr):
+		core.BNUndefineDataVariable(self.handle, addr)
+
+	def undefine_user_data_var(self, addr):
+		core.BNUndefineUserDataVariable(self.handle, addr)
+
+	def get_data_var_at(self, addr):
+		var = core.BNDataVariable()
+		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
+			return None
+		return DataVariable(var.address, Type(var.type), var.autoDiscovered)
+
 	def get_function_at(self, platform, addr):
 		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
@@ -1517,6 +1622,128 @@ class BinaryView(object):
 
 	def add_analysis_completion_event(self, callback):
 		return AnalysisCompletionEvent(self, callback)
+
+	def get_next_function_start_after(self, addr):
+		return core.BNGetNextFunctionStartAfterAddress(self.handle, addr)
+
+	def get_next_basic_block_start_after(self, addr):
+		return core.BNGetNextBasicBlockStartAfterAddress(self.handle, addr)
+
+	def get_next_data_after(self, addr):
+		return core.BNGetNextDataAfterAddress(self.handle, addr)
+
+	def get_next_data_var_after(self, addr):
+		return core.BNGetNextDataVariableAfterAddress(self.handle, addr)
+
+	def get_previous_function_start_before(self, addr):
+		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
+
+	def get_previous_basic_block_start_before(self, addr):
+		return core.BNGetPreviousBasicBlockStartBeforeAddress(self.handle, addr)
+
+	def get_previous_basic_block_end_before(self, addr):
+		return core.BNGetPreviousBasicBlockEndBeforeAddress(self.handle, addr)
+
+	def get_previous_data_before(self, addr):
+		return core.BNGetPreviousDataBeforeAddress(self.handle, addr)
+
+	def get_previous_data_var_before(self, addr):
+		return core.BNGetPreviousDataVariableBeforeAddress(self.handle, addr)
+
+	def get_linear_disassembly_position_at(self, addr, settings):
+		if settings is not None:
+			settings = settings.handle
+		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr, settings)
+		func = None
+		block = None
+		if pos.function:
+			func = Function(self, pos.function)
+		if pos.block:
+			block = BasicBlock(self, pos.block)
+		return LinearDisassemblyPosition(func, block, pos.address)
+
+	def _get_linear_disassembly_lines(self, api, pos, settings):
+		pos_obj = core.BNLinearDisassemblyPosition()
+		pos_obj.function = None
+		pos_obj.block = None
+		pos_obj.address = pos.address
+		if pos.function is not None:
+			pos_obj.function = core.BNNewFunctionReference(pos.function.handle)
+		if pos.block is not None:
+			pos_obj.block = core.BNNewBasicBlockReference(pos.block.handle)
+
+		if settings is not None:
+			settings = settings.handle
+
+		count = ctypes.c_ulonglong(0)
+		lines = api(self.handle, pos_obj, settings, count)
+
+		result = []
+		for i in xrange(0, count.value):
+			func = None
+			block = None
+			if lines[i].function:
+				func = Function(self, core.BNNewFunctionReference(lines[i].function))
+			if lines[i].block:
+				block = BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
+			addr = lines[i].contents.addr
+			tokens = []
+			for j in xrange(0, lines[i].contents.count):
+				token_type = core.BNInstructionTextTokenType_names[lines[i].contents.tokens[j].type]
+				text = lines[i].contents.tokens[j].text
+				value = lines[i].contents.tokens[j].value
+				tokens.append(InstructionTextToken(token_type, text, value))
+			contents = DisassemblyTextLine(addr, tokens)
+			result.append(LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
+
+		func = None
+		block = None
+		if pos_obj.function:
+			func = Function(self, pos_obj.function)
+		if pos_obj.block:
+			block = BasicBlock(self, pos_obj.block)
+		pos.function = func
+		pos.block = block
+		pos.address = pos_obj.address
+
+		core.BNFreeLinearDisassemblyLines(lines, count.value)
+		return result
+
+	def get_previous_linear_disassembly_lines(self, pos, settings):
+		return self._get_linear_disassembly_lines(core.BNGetPreviousLinearDisassemblyLines, pos, settings)
+
+	def get_next_linear_disassembly_lines(self, pos, settings):
+		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
+
+	def get_linear_disassembly(self, settings):
+		"""Gets an iterator for all lines in the linear disassembly of the view for the given disassembly settings"""
+		class LinearDisassemblyIterator(object):
+			def __init__(self, view, settings):
+				self.view = view
+				self.settings = settings
+
+			def __iter__(self):
+				pos = self.view.get_linear_disassembly_position_at(self.view.start, self.settings)
+				while True:
+					lines = self.view.get_next_linear_disassembly_lines(pos, self.settings)
+					if len(lines) == 0:
+						break
+					for line in lines:
+						yield line
+
+		return iter(LinearDisassemblyIterator(self, settings))
+
+	def parse_type_string(self, text):
+		result = core.BNNameAndType()
+		errors = ctypes.c_char_p()
+		if not core.BNParseTypeString(self.handle, text, result, errors):
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise SyntaxError, error_str
+		type_obj = Type(core.BNNewTypeReference(result.type))
+		name = result.name
+		core.BNFreeNameAndType(result)
+		return type_obj, name
 
 	def __setattr__(self, name, value):
 		try:
@@ -2308,9 +2535,13 @@ class Function(object):
 					core.BNGetFunctionLiftedIL(self.handle)), self)
 
 	@property
-	def type(self):
-		"""Function type (read-only)"""
+	def function_type(self):
+		"""Function type"""
 		return Type(core.BNGetFunctionType(self.handle))
+
+	@function_type.setter
+	def function_type(self, value):
+		self.set_user_type(value)
 
 	@property
 	def stack_layout(self):
@@ -2567,6 +2798,12 @@ class Function(object):
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
+
+	def set_auto_type(self, value):
+		core.BNSetFunctionAutoType(self.handle, value.handle)
+
+	def set_user_type(self, value):
+		core.BNSetFunctionUserType(self.handle, value.handle)
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):
@@ -3135,6 +3372,8 @@ class Architecture(object):
 	endianness = core.LittleEndian
 	address_size = 8
 	default_int_size = 4
+	max_instr_length = 16
+	opcode_display_length = 8
 	regs = {}
 	stack_pointer = None
 	link_reg = None
@@ -3152,6 +3391,8 @@ class Architecture(object):
 			self.__dict__["endianness"] = core.BNEndianness_names[core.BNGetArchitectureEndianness(self.handle)]
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
+			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
+			self.__dict__["opcode_display_length"] = core.BNGetArchitectureOpcodeDisplayLength(self.handle)
 			self.__dict__["stack_pointer"] = core.BNGetArchitectureRegisterName(self.handle,
 				core.BNGetArchitectureStackPointerRegister(self.handle))
 			self.__dict__["link_reg"] = core.BNGetArchitectureRegisterName(self.handle,
@@ -3229,12 +3470,18 @@ class Architecture(object):
 				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
 		else:
 			_init_plugins()
+
+			if self.__class__.opcode_display_length > self.__class__.max_instr_length:
+				self.__class__.opcode_display_length = self.__class__.max_instr_length
+
 			self._cb = core.BNCustomArchitecture()
 			self._cb.context = 0
 			self._cb.init = self._cb.init.__class__(self._init)
 			self._cb.getEndianness = self._cb.getEndianness.__class__(self._get_endianness)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.getDefaultIntegerSize = self._cb.getDefaultIntegerSize.__class__(self._get_default_integer_size)
+			self._cb.getMaxInstructionLength = self._cb.getMaxInstructionLength.__class__(self._get_max_instruction_length)
+			self._cb.getOpcodeDisplayLength = self._cb.getOpcodeDisplayLength.__class__(self._get_opcode_display_length)
 			self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__(self._get_instruction_info)
 			self._cb.getInstructionText = self._cb.getInstructionText.__class__(self._get_instruction_text)
 			self._cb.freeInstructionText = self._cb.freeInstructionText.__class__(self._free_instruction_text)
@@ -3409,6 +3656,20 @@ class Architecture(object):
 		except:
 			log_error(traceback.format_exc())
 			return 4
+
+	def _get_max_instruction_length(self, ctxt):
+		try:
+			return self.__class__.max_instr_length
+		except:
+			log_error(traceback.format_exc())
+			return 16
+
+	def _get_opcode_display_length(self, ctxt):
+		try:
+			return self.__class__.opcode_display_length
+		except:
+			log_error(traceback.format_exc())
+			return 8
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
 		try:

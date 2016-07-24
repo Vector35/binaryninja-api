@@ -924,9 +924,9 @@ namespace BinaryNinja
 		static std::vector<Ref<BinaryViewType>> GetViewTypes();
 		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
 
-		static void RegisterArchitecture(const std::string& name, uint32_t id, Architecture* arch);
-		void RegisterArchitecture(uint32_t id, Architecture* arch);
-		Ref<Architecture> GetArchitecture(uint32_t id);
+		static void RegisterArchitecture(const std::string& name, uint32_t id, BNEndianness endian, Architecture* arch);
+		void RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch);
+		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
 
 		static void RegisterPlatform(const std::string& name, uint32_t id, Architecture* arch, Platform* platform);
 		static void RegisterDefaultPlatform(const std::string& name, Architecture* arch, Platform* platform);

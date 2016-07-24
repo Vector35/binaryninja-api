@@ -649,11 +649,11 @@ class BinaryViewType(object):
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
-	def register_arch(self, ident, arch):
-		core.BNRegisterArchitectureForViewType(self.handle, ident, arch.handle)
+	def register_arch(self, ident, endian, arch):
+		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
 
-	def get_arch(self, ident):
-		arch = core.BNGetArchitectureForViewType(self.handle, ident)
+	def get_arch(self, ident, endian):
+		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
 		return Architecture(arch)

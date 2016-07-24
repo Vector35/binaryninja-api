@@ -106,24 +106,24 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 }
 
 
-void BinaryViewType::RegisterArchitecture(const string& name, uint32_t id, Architecture* arch)
+void BinaryViewType::RegisterArchitecture(const string& name, uint32_t id, BNEndianness endian, Architecture* arch)
 {
 	Ref<BinaryViewType> type = BinaryViewType::GetByName(name);
 	if (!type)
 		return;
-	type->RegisterArchitecture(id, arch);
+	type->RegisterArchitecture(id, endian, arch);
 }
 
 
-void BinaryViewType::RegisterArchitecture(uint32_t id, Architecture* arch)
+void BinaryViewType::RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch)
 {
-	BNRegisterArchitectureForViewType(m_object, id, arch->GetObject());
+	BNRegisterArchitectureForViewType(m_object, id, endian, arch->GetObject());
 }
 
 
-Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id)
+Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id, BNEndianness endian)
 {
-	BNArchitecture* arch = BNGetArchitectureForViewType(m_object, id);
+	BNArchitecture* arch = BNGetArchitectureForViewType(m_object, id, endian);
 	if (!arch)
 		return nullptr;
 	return new CoreArchitecture(arch);

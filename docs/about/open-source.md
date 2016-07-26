@@ -11,6 +11,7 @@ The following tools are used in the generation of our documentation, but are not
     - [mkdocs] ([mkdocs license] - BSD)
     - [mkdocs-material] ([mkdocs-material License] - BSD)
     - [breathe] ([breathe license] - BSD)
+    - [breathe-rtd-theme] ([breathe-rtd-theme license] - MIT)
     - [sphinx] ([sphinx license] - BSD and others)
     - [doxygen] ([doxygen license] - GPLv2)
 
@@ -49,6 +50,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [mkdocs-material license]: https://github.com/squidfunk/mkdocs-material/blob/master/LICENSE
 [breathe]: https://github.com/michaeljones/breathe
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE
+[breathe-rtd-theme]: https://github.com/snide/sphinx_rtd_theme/
+[breathe-rtd-theme license]: https://github.com/snide/sphinx_rtd_theme/blob/master/LICENSE
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/

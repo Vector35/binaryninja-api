@@ -18,11 +18,15 @@
 #
 import os
 import sys
-bnpath=os.path.join(os.path.abspath('.'), "..", "..", "python")
-print "PATH: %s" % bnpath
+import platform
+
+if (platform.system() == "Darwin"):
+    bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "binaryninja.app", "Contents", "Resources", "python")
+else:
+    bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "python")
+
 sys.path.insert(0, bnpath)
 import binaryninja
-import sphinx_theme_pd
 
 # -- General configuration ------------------------------------------------
 
@@ -48,9 +52,9 @@ extensions = [
 autosummary_generate = True
 autodoc_member_order = 'groupwise'
 
-breathe_projects = { "BinaryNinja": "../../api/xml/" }
+breathe_projects = { "BinaryNinja": "../../xml/" }
 breathe_projects_source = {
-		"BinaryNinja": ("../../api/", ["binaryninjaapi.h", "binaryninjacore.h"])
+		"BinaryNinja": ("../../", ["binaryninjaapi.h", "binaryninjacore.h"])
 	}
 breathe_default_project = "BinaryNinja"
 
@@ -142,8 +146,8 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_theme_pd'
-html_theme_path = [sphinx_theme_pd.get_html_theme_path()]
+html_theme = 'sphinx_rtd_theme'
+html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

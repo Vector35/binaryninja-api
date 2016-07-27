@@ -1358,6 +1358,59 @@ bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string
 }
 
 
+map<string, Ref<Type>> BinaryView::GetTypes()
+{
+	size_t count;
+	BNNameAndType* types = BNGetAnalysisTypeList(m_object, &count);
+
+	map<string, Ref<Type>> result;
+	for (size_t i = 0; i < count; i++)
+		result[types[i].name] = new Type(BNNewTypeReference(types[i].type));
+
+	BNFreeTypeList(types, count);
+	return result;
+}
+
+
+Ref<Type> BinaryView::GetTypeByName(const string& name)
+{
+	BNType* type = BNGetAnalysisTypeByName(m_object, name.c_str());
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+bool BinaryView::IsTypeAutoDefined(const std::string& name)
+{
+	return BNIsAnalysisTypeAutoDefined(m_object, name.c_str());
+}
+
+
+void BinaryView::DefineType(const std::string& name, Type* type)
+{
+	BNDefineAnalysisType(m_object, name.c_str(), type->GetObject());
+}
+
+
+void BinaryView::DefineUserType(const std::string& name, Type* type)
+{
+	BNDefineUserAnalysisType(m_object, name.c_str(), type->GetObject());
+}
+
+
+void BinaryView::UndefineType(const std::string& name)
+{
+	BNUndefineAnalysisType(m_object, name.c_str());
+}
+
+
+void BinaryView::UndefineUserType(const std::string& name)
+{
+	BNUndefineUserAnalysisType(m_object, name.c_str());
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

@@ -891,6 +891,14 @@ namespace BinaryNinja
 			DisassemblySettings* settings);
 
 		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
+
+		std::map<std::string, Ref<Type>> GetTypes();
+		Ref<Type> GetTypeByName(const std::string& name);
+		bool IsTypeAutoDefined(const std::string& name);
+		void DefineType(const std::string& name, Type* type);
+		void DefineUserType(const std::string& name, Type* type);
+		void UndefineType(const std::string& name);
+		void UndefineUserType(const std::string& name);
 	};
 
 	class BinaryData: public BinaryView

@@ -751,7 +751,7 @@ class BinaryView(object):
 	"""Binary View long name"""
 	_registered = False
 	_registered_cb = None
-	view_type = None
+	registered_view_type = None
 	"""Binary View type"""
 
 	def __init__(self, file_metadata = None, handle = None):
@@ -806,7 +806,7 @@ class BinaryView(object):
 		cls._registered_cb.context = 0
 		cls._registered_cb.create = cls._registered_cb.create.__class__(cls._create)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
-		cls.view_type = BinaryViewType(core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb))
+		cls.registered_view_type = BinaryViewType(core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb))
 		cls._registered = True
 
 	@classmethod
@@ -1003,13 +1003,13 @@ class BinaryView(object):
 		return result
 
 	@property
-	def type(self):
+	def view_type(self):
 		"""View type (read-only)"""
 		return core.BNGetViewType(self.handle)
 
 	@property
-	def available_types(self):
-		"""Available types (read-only)"""
+	def available_view_types(self):
+		"""Available view types (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		types = core.BNGetBinaryViewTypesForData(self.handle, count)
 		result = []
@@ -1054,6 +1054,17 @@ class BinaryView(object):
 			auto_discovered = var_list[i].autoDiscovered
 			result[addr] = DataVariable(addr, var_type, auto_discovered)
 		core.BNFreeDataVariables(var_list, count.value)
+		return result
+
+	@property
+	def types(self):
+		"""List of defined types (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		type_list = core.BNGetAnalysisTypeList(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[type_list[i].name] = Type(core.BNNewTypeReference(type_list[i].type))
+		core.BNFreeTypeList(type_list, count.value)
 		return result
 
 	def __len__(self):
@@ -1744,6 +1755,27 @@ class BinaryView(object):
 		name = result.name
 		core.BNFreeNameAndType(result)
 		return type_obj, name
+
+	def get_type_by_name(self, name):
+		obj = core.BNGetAnalysisTypeByName(self.handle, name)
+		if not obj:
+			return None
+		return Type(obj)
+
+	def is_type_auto_defined(self, name):
+		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
+
+	def define_type(self, name, type_obj):
+		core.BNDefineAnalysisType(self.handle, name, type_obj.handle)
+
+	def define_user_type(self, name, type_obj):
+		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
+
+	def undefine_type(self, name):
+		core.BNUndefineAnalysisType(self.handle, name)
+
+	def undefine_user_type(self, name):
+		core.BNUndefineUserAnalysisType(self.handle, name)
 
 	def __setattr__(self, name, value):
 		try:

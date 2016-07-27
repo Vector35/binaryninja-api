@@ -1460,6 +1460,15 @@ extern "C"
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNNameAndType* result, char** errors);
 	BINARYNINJACOREAPI void BNFreeNameAndType(BNNameAndType* obj);
 
+	BINARYNINJACOREAPI BNNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeList(BNNameAndType* types, size_t count);
+	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeByName(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI bool BNIsAnalysisTypeAutoDefined(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI void BNDefineAnalysisType(BNBinaryView* view, const char* name, BNType* type);
+	BINARYNINJACOREAPI void BNDefineUserAnalysisType(BNBinaryView* view, const char* name, BNType* type);
+	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, const char* name);
+
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);

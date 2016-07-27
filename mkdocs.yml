@@ -8,8 +8,7 @@ site_favicon: 'favicon.ico'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
 
-theme_dir: 'mkdocs-material'
-theme: 'material'
+theme_dir: 'mkdocs-material/material'
 copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'
 
 markdown_extensions:

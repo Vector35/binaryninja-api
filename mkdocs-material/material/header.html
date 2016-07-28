@@ -34,9 +34,12 @@
         <a href="https://github.com/{{ author }}" title="@{{ author }} on GitHub" target="_blank" class="toggle-button icon icon-github"></a>
       </div>
     {% endif %}
+    {% if config.extra.disablesearch %}
+    {% else %}
     <div class="button button-search" role="button" aria-label="Search">
       <label class="toggle-button icon icon-search" title="Search" for="toggle-search"></label>
     </div>
+    {% endif %}
   </div>
   <div class="bar search">
     <div class="button button-close" role="button" aria-label="Close">

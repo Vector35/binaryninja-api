@@ -5,15 +5,14 @@
 Vector 35 is grateful for the following open source packages that are used in Binary Ninja directly or indirectly:
 
 * Documentation
-
-The following tools are used in the generation of our documentation, but are not distributed themselves and are merely listed here in acknowledgement for the value they provide.
-
     - [mkdocs] ([mkdocs license] - BSD)
     - [mkdocs-material] ([mkdocs-material License] - BSD)
     - [breathe] ([breathe license] - BSD)
     - [breathe-rtd-theme] ([breathe-rtd-theme license] - MIT)
     - [sphinx] ([sphinx license] - BSD and others)
     - [doxygen] ([doxygen license] - GPLv2)
+
+The previous tools are used in the generation of our documentation, but are not distributed themselves and are merely listed here in acknowledgement for the value they provide.
 
 * UI
     - [qt] ([qt license] - LGPLv3 / note, please see our [qt build instructions below](open-source.md#building-qt))
@@ -36,7 +35,7 @@ Binary Ninja uses [Qt 5.6] under an LGPLv3 license which requires that we host t
 Please note that we offer no support for running Binary Ninja with modified Qt libraries.
 
 1. Follow the installation requirements on the [Building Qt 5 from Git] page.
-2. Download the Qt 5.6.0 [tarball] from binary.ninja. (Note this is an unmodified 5.6 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.6] terms.
+2. Download the Qt 5.6.0 [tarball] from binary.ninja. (Note this is an unmodified 5.6 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.6] terms.)
 3. Next, build QT using the aforementioned instructions.
 4. On OS X, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
 5. Finally, replace the built libraries:

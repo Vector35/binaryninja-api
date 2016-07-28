@@ -1,0 +1,13 @@
+code {
+	color: #000;
+}
+
+img {
+	display: inline-block;
+	float: right;
+}
+
+.admonition {
+	background: rgb(128, 198, 223);
+	color: #333;
+}

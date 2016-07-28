@@ -1,6 +1,6 @@
 site_name: 'Binary Ninja Documentation'
 site_url: 'https://docs.binary.ninja/'
-repo_url: 'https://github.com/vector35/binaryninja-api/'
+repo_url: 'https://binary.ninja/'
 repo_name: 'github'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 LLC'
@@ -19,15 +19,16 @@ markdown_extensions:
 
 pages:
     - Home: 'index.md'
-    - Getting Started: 'getting-started.md'
-    - User Guide:
-        - Installing: 'guide/installing.md'
-        - Running: 'guide/running.md'
-        - Interface: 'guide/interface.md'
-        - Types Library: 'guide/type.md'
-        - Using Plugins: 'guide/plugins.md'
-        - Troubleshooting: 'guide/troubleshooting.md'
+    - Getting Started Guide: 'getting-started.md'
+    #- User Guide:
+        #- Installing: 'guide/installing.md'
+        #- Running: 'guide/running.md'
+        #- Interface: 'guide/interface.md'
+        #- Types Library: 'guide/type.md'
+        #- Using Plugins: 'guide/plugins.md'
+        #- Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
+        - Contributing Documentation: 'dev/documentation.md'
         - Plugin Design: 'dev/plugins.md'
         - API: 'dev/api.md'
     - About:
@@ -35,7 +36,5 @@ pages:
         - Open Source: 'about/open-source.md'
 
 extra:
-    author:
-        github: 'Vector35'
-        twitter: 'vector_35'
+    disablesearch: True
     logo: 'images/logo.png'

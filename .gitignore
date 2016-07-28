@@ -16,3 +16,4 @@ python/generator.exe
 xml
 site/*
 api-docs/build/*
+.env

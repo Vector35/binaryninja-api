@@ -1,0 +1,16 @@
+s3_id: <%= ENV['S3_ID'] %>
+s3_secret: <%= ENV['S3_SECRET'] %>
+s3_bucket: docs.binary.ninja
+
+site: <%=  File.dirname(__FILE__) + "./site" %>
+
+index_document: index.html
+error_document: index.html
+
+gzip:
+  - .html
+  - .css
+  - .md
+
+s3_endpoint: us-east-1
+s3_reduced_redundancy: true

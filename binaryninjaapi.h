@@ -816,6 +816,7 @@ namespace BinaryNinja
 		void AddEntryPointForAnalysis(Platform* platform, uint64_t start);
 		void RemoveAnalysisFunction(Function* func);
 		void CreateUserFunction(Platform* platform, uint64_t start);
+		void RemoveUserFunction(Function* func);
 		void UpdateAnalysis();
 		void AbortAnalysis();
 

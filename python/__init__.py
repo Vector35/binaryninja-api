@@ -98,7 +98,7 @@ class DataBuffer:
 				if len(value) != 1:
 					raise ValueError, "expected single byte for assignment"
 				value = str(value)
-				buf = ctypes.create_string_buffer(alue)
+				buf = ctypes.create_string_buffer(value)
 				ctypes.memmove(core.BNGetDataBufferContentsAt(self.handle, int(len(self) + i)), buf, 1)
 			else:
 				raise IndexError, "index out of range"

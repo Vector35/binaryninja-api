@@ -791,6 +791,12 @@ void BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
 }
 
 
+void BinaryView::RemoveUserFunction(Function* func)
+{
+	BNRemoveUserFunction(m_object, func->GetObject());
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_object);

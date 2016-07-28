@@ -1411,6 +1411,9 @@ class BinaryView(object):
 	def create_user_function(self, platform, addr):
 		core.BNCreateUserFunction(self.handle, platform.handle, addr)
 
+	def remove_user_function(self, func):
+		core.BNRemoveUserFunction(self.handle, func.handle)
+
 	def update_analysis(self):
 		core.BNUpdateAnalysis(self.handle)
 

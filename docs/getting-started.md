@@ -39,6 +39,24 @@ Errors or warnings during the load of the binary are also shown in the status ba
 
 ## Interacting
 
+### Hotkeys
+
+ - "h" : Switch to hex view
+ - "p" : Create a function
+ - <ESC> : Backup navigation
+ - "g" : Go To Address dialog
+ - "n" : Name a symbol
+ - "u" : Undefine a symbol
+ - "e" : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
+ - "x" : Focuses the cross-reference pane
+ - ";" : Adds a comment
+ - "l" : Switches between disassembly and low-level il in graph view
+ - "y" : Change type
+ - [1248] : Change type directly to a data variable of the indicated widths
+ - "d" : Switches between data variables of various widths
+ - "r" : Change the data type to single ASCII character
+ - "o" : Create a pointer data type
+
 ### Graph View
 
 ![graph view](/images/graphview.png "Graph View")
@@ -66,24 +84,37 @@ Each of the views (Hex, Graph, Linear) have a variety of options configurable in
 Current options include:
 
 - Hex
-    - Raw
-        - Raw: Raw hex view with addresses based on file offsets
-        - ELF: 
-    - Highlight
-        - Background highlight
-            - None
-            - Column
-            - Byte value
-        - Color highlight
-            - None
-            - ASCII and printable
-            - Modification
-        - Contrast
-            - Normal
-            - Medium
-            - Highlight
+    - Background highlight
+        - None
+        - Column
+        - Byte value
+    - Color highlight
+        - None
+        - ASCII and printable
+        - Modification
+    - Contrast
+        - Normal
+        - Medium
+        - Highlight
+- Graph
+    - Show address
+    - Show opcode bytes
+    - Assembly
+    - Lifted IL
+        - Show IL flag usage (if showing Lifted IL)
+    - Low Level IL
+        - Show basic block register state (if showing Low Level IL)
+- Linear
+    - Show address
+    - Show opcode bytes
 
 ### Hex View
+
+![hex](/images/hex.png "hex view")
+
+The hexadecimal view is useful for view raw binary files that may or may not even be executable binaries. The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that `Transform` menu options will transform the data in-place, and that these options will only work when the Hex View is in the `Raw` mode as opposd to any of the binary views (such as "ELF", "Mach-O", or "PE").
+
+Note that any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`.). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
 ### Xrefs View
 
@@ -91,10 +122,15 @@ Current options include:
 
 The xrefs view in the lower-left shows all cross-references to a given location or reference. Note that the cross-references pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected.
 
-One fun trick that the xrefs view has up its sleeve: when in [Hex View](#hexview)
+One fun trick that the xrefs view has up its sleeve: when in [Hex View](#hexview), a large range of memory addresses can be selected and the xrefs pane will show all xrefs to any location within that range of data.
 
 ### Linear View
 
+![linear](/images/linear.png "linear view")
+
+Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
+
+Linear view is most commonly used for identifying and adding type information for unknown data. To this end,
 
 
 ### Function List
@@ -108,20 +144,23 @@ The function list also highlights imports, and functions identified with symbols
 !!! Tip "Tip"
     To search in the function list, just click to make sure it's focused and start typing!
 
-## Updates
+## Preferences/Updates
 
+![preferences](/images/preferences.png "Preferences")
 
-## Preferences
+Binary Ninja automatically updates itself by default. This functionality can be disabled in the preferences by turning off the `Update to latest version automatically` option. Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 
+On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version. On OS X and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
+
+Most preferences are fairly intuitive. There is no advanced preference system at this time, but it is [expected](https://github.com/Vector35/binaryninja-api/issues/126) to be added soon.
 
 ## Troubleshooting
 
 ### Common problems
 
 - If you are having problems finding your license or the installers, you can always [recover] either with a self-service email mechanism.
-- If experiencing problems with Windows UAC permissions, the easiest fix is to
+- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and re-download the latest installer. Preferences are saved outside the installation folder and are preserved.
 - Always check both closed and open [issues](https://github.com/Vector35/binaryninja-api/issues) on the github issues search.
-
 
 ### Getting Support
 

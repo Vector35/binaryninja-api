@@ -24,6 +24,8 @@ pages:
         #- Installing: 'guide/installing.md'
         #- Running: 'guide/running.md'
         #- Interface: 'guide/interface.md'
+        #- Patching: 'guide/patching.md'
+        #- SCC: 'guide/scc.md'
         #- Types Library: 'guide/type.md'
         #- Using Plugins: 'guide/plugins.md'
         #- Troubleshooting: 'guide/troubleshooting.md'

@@ -175,7 +175,16 @@ class NavigationHandler(object):
 			return False
 
 class FileMetadata(object):
+	"""
+	FileMetadata is the base class for opening, reading, and writing the file being manipulated.
+	"""
 	def __init__(self, filename = None, handle = None):
+		"""
+		Instantiates a new FileMetadata class.
+
+		:param filename: The string path to the file to be opened. Defaults to None.
+		:param handle: A handle to the underlying C FileMetadata object. Defaults to None.
+		"""
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNFileMetadata)
 		else:
@@ -192,7 +201,7 @@ class FileMetadata(object):
 
 	@property
 	def filename(self):
-		"""Backing filename (read-only)"""
+		"""The name of the file (read/write)"""
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter
@@ -201,7 +210,7 @@ class FileMetadata(object):
 
 	@property
 	def modified(self):
-		"""Boolean result of whether the file is modified (read-only)"""
+		"""Boolean result of whether the file is modified (Inverse of 'saved' property) (read/write)"""
 		return core.BNIsFileModified(self.handle)
 
 	@modified.setter
@@ -231,7 +240,7 @@ class FileMetadata(object):
 
 	@property
 	def offset(self):
-		"""Current offset into the file (read-only)"""
+		"""The current offset into the file (read/write)"""
 		return core.BNGetCurrentOffset(self.handle)
 
 	@offset.setter
@@ -240,6 +249,7 @@ class FileMetadata(object):
 
 	@property
 	def raw(self):
+		"""Gets the "Raw" BinaryView of the file"""
 		view = core.BNGetFileViewOfType(self.handle, "Raw")
 		if view is None:
 			return None
@@ -247,7 +257,7 @@ class FileMetadata(object):
 
 	@property
 	def saved(self):
-		"""Boolean returns if the file has changed since last save. Set to mark whether the file is saved."""
+		"""Boolean result of whether the file has been saved (Inverse of 'modified' property) (read/write)"""
 		return not core.BNIsFileModified(self.handle)
 
 	@saved.setter
@@ -258,6 +268,10 @@ class FileMetadata(object):
 			core.BNMarkFileModified(self.handle)
 
 	def close(self):
+		"""
+		Closes the underlying file handle. It is recommended that this is done in a
+		`finally` clause to avoid handle leaks.
+		"""
 		core.BNCloseFile(self.handle)
 
 	def begin_undo_actions(self):
@@ -276,6 +290,7 @@ class FileMetadata(object):
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(self, filename):
+
 		return core.BNCreateDatabase(self.raw.handle, str(filename))
 
 	def open_existing_database(self, filename):
@@ -628,7 +643,7 @@ class BinaryViewType(object):
 
 	@property
 	def long_name(self):
-		""" Binary VIew long name (read-only)"""
+		"""BinaryView long name (read-only)"""
 		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
@@ -745,14 +760,55 @@ class DataVariable(object):
 		return "<var 0x%x: %s>" % (self.address, str(self.type))
 
 class BinaryView(object):
+	"""
+	``class BinaryView`` implements a view on binary data, and presents a queryable interface of a binary file. One key
+	job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions
+	of the file given a virtual address. For the purposes of this documentation we define a virtual address as the
+	memory address that the various pieces of the physical file will be loaded at.
+
+	A binary file does not have to have just one BinaryView, thus much of the interface to manipulate disassembly exists
+	within or is accessed through a BinaryView. All files are guaranteed to have at least the ``Raw`` BinaryView. The
+	``Raw`` BinaryView is simply a hex editor, but is helpful for manipulating binary files via their absolute addresses.
+
+	BinaryViews are plugins and thus registered with Binary Ninja at startup, and thus should **never** be instantiated
+	directly as this is already done. The list of available BinaryViews can be seen in the BinaryViewType class which
+	provides an iterator and map of the various installed BinaryViews::
+
+		>>> list(BinaryViewType)
+		[<view type: 'Raw'>, <view type: 'ELF'>, <view type: 'Mach-O'>, <view type: 'PE'>]
+		>>> BinaryViewType['ELF']
+		<view type: 'ELF'>
+
+	To open a file with a given BinaryView the following code can be used::
+
+		>>> bv = BinaryViewType['Mach-O'].open("/bin/ls")
+		>>> bv
+		<BinaryView: '/bin/ls', start 0x100000000, len 0xa000>
+
+	`By convention in the rest of this document we will use bv to mean an open BinaryView of an executable file.`
+	When a BinaryView is open on an executable view, analysis does not automatically run, this can be done by running
+	the ``update_analysis_and_wait()`` method which disassembles the executable and returns when all disassembly is
+	finished::
+
+		>>> bv.update_analysis_and_wait()
+		>>>
+
+	Since BinaryNinja's analysis is multi-threaded (depending on version) this can also be done in the background by
+	using the ``update_analysis()`` method instead.
+
+	By standard python convention methods which start with '_' should be considered private and should not be called
+	externally. Additionanlly, methods which begin with ``perform_`` should not be called either and are
+	used explicitly for subclassing the BinaryView.
+
+	Another important note is the ``*_user_*()`` methods. These methods are reserved for `undo-able` actions, and thus
+	under most circumstances shouldn't be called by plugins, rather methods with the same name without ``_user_`` should
+	be used (e.g. ``remove_function()`` rather than ``remove_user_function()``)
+	"""
 	name = None
-	"""Binary View name"""
 	long_name = None
-	"""Binary View long name"""
 	_registered = False
 	_registered_cb = None
 	registered_view_type = None
-	"""Binary View type"""
 
 	def __init__(self, file_metadata = None, handle = None):
 		if handle is not None:
@@ -876,6 +932,7 @@ class BinaryView(object):
 
 	@property
 	def modified(self):
+		"""boolean modification state of the BinaryView (read/write)"""
 		return self.file.modified
 
 	@modified.setter
@@ -884,12 +941,12 @@ class BinaryView(object):
 
 	@property
 	def analysis_changed(self):
-		"""Whether analysis has changed (read-only)"""
+		"""boolean analysis state changed of the currently running analysis (read-only)"""
 		return self.file.analysis_changed
 
 	@property
 	def has_database(self):
-		"""Whether the BinaryView has a database (read-only)"""
+		"""boolean has a database been written to disk (read-only)"""
 		return self.file.has_database
 
 	@property
@@ -925,6 +982,7 @@ class BinaryView(object):
 
 	@property
 	def arch(self):
+		"""The architecture associated with the current BinaryView (read/write)"""
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
@@ -939,6 +997,7 @@ class BinaryView(object):
 
 	@property
 	def platform(self):
+		"""The platform associated with the current BinaryView (read/write)"""
 		platform = core.BNGetDefaultPlatform(self.handle)
 		if platform is None:
 			return None
@@ -946,9 +1005,9 @@ class BinaryView(object):
 
 	@platform.setter
 	def platform(self, value):
-		  if value is None:
+		if value is None:
 			core.BNSetDefaultPlatform(self.handle, None)
-		  else:
+		else:
 			core.BNSetDefaultPlatform(self.handle, value.handle)
 
 	@property
@@ -1025,6 +1084,7 @@ class BinaryView(object):
 
 	@property
 	def saved(self):
+		"""boolean state of whether or not the file has been saved (read/write)"""
 		return self.file.saved
 
 	@saved.setter
@@ -1139,8 +1199,8 @@ class BinaryView(object):
 			size = "len %#x" % length
 		filename = self.file.filename
 		if len(filename) > 0:
-			return "<%s view: '%s', %s>" % (self.type, filename, size)
-		return "<%s view: %s>" % (self.type, size)
+			return "<BinaryView: '%s', %s>" % (filename, size)
+		return "<BinaryView: %s>" % (size)
 
 	def _init(self, ctxt):
 		try:
@@ -1281,49 +1341,182 @@ class BinaryView(object):
 	def init(self):
 		return True
 
-	def perform_write(self, offset, data):
+	def perform_read(self, addr, length):
+		"""
+		``perform_read`` implements a mapping between a rebased (virtual) address and an absolute file offset, reading
+		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
+		have segments or the virtual address is different from the physical address.  This method **must not** be called
+		directly.
+
+		addr (int): a virtual address to attempt to read from
+		length (int): the number of bytes to be read
+
+		returns (int): length bytes read from addr, should return empty string on error
+		"""
+		return ""
+
+	def perform_write(self, addr, data):
+		"""
+		``perform_write`` implements a mapping between a rebased (virtual) address and an absolute file offset, writing
+		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
+		have segments or the virtual address is different from the physical address.  This method **must not** be called
+		directly.
+
+		addr (int): a virtual address
+		data (str): the data to be written
+
+		returns (int): length of data written, should return 0 on error
+		"""
 		return 0
 
-	def perform_insert(self, offset, data):
+	def perform_insert(self, addr, data):
+		"""
+		``perform_insert`` implements a mapping between a rebased (virtual) address and an absolute file offset, inserting
+		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
+		have segments or the virtual address is different from the physical address.  This method **must not** be
+		called.
+
+		addr (int): a virtual address
+		data (str): the data to be inserted
+
+		returns (int): length of data inserted, should return 0 on error
+		"""
 		return 0
 
-	def perform_remove(self, offset, length):
+	def perform_remove(self, addr, length):
+		"""
+		``perform_remove`` implements a mapping between a rebased (virtual) address and an absolute file offset, removing
+		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
+		have segments or the virtual address is different from the physical address. This method **must not** be called
+		directly.
+
+		addr (int): a virtual address
+		data (str): the data to be removed
+
+		returns (int): length of data removed, should return 0 on error
+		"""
 		return 0
 
-	def perform_get_modification(self, offset):
+	def perform_get_modification(self, addr):
+		"""
+		```perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified. This
+		method **must not** be called.
+
+		addr (int): a virtual address to be checked
+
+		returns (int): One of the following: Original = 0, Changed = 1, Inserted = 2
+		"""
 		return core.Original
 
-	def perform_is_valid_offset(self, offset):
+	def perform_is_valid_offset(self, addr):
+		"""
+		``perform_is_valid_offset`` implements a check if an virtual address ``addr``` is valid. This method **must**
+		be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets. This method
+		**must not** be called.
+
+		addr (int): a virtual address to be checked
+
+		returns (boolean): true if the virtual address is valid, false if the virtual address is invalid or error
+		"""
 		data = self.read(offset, 1)
 		return (data is not None) and (len(data) == 1)
 
 	def perform_is_offset_readable(self, offset):
+		"""
+		``perform_is_offset_readable`` implements a check if an virtual address is readable. This method **must** be
+		implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or if memory
+		protections exist.This method **must not** be called.
+
+		addr (int): a virtual address to be checked
+
+		returns (boolean): true if the virtual address is readable, false if the virtual address is not readable or error
+		"""
 		return self.is_valid_offset(offset)
 
 	def perform_is_offset_writable(self, offset):
+		"""
+		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable. This method
+		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or
+		if memory protections exist. This method **must not** be called.
+
+		addr (int): a virtual address to be checked
+
+		returns (boolean): true if the virtual address is writable, false if the virtual address is not writable or error
+		"""
 		return self.is_valid_offset(offset)
 
 	def perform_is_offset_executable(self, offset):
+		"""
+		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable. This method
+		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets,
+		or if memory protections exist. This method **must not** be called.
+
+		addr (int): a virtual address to be checked
+
+		returns (boolean): true if the virtual address is executable, false if the virtual address is not executable or error
+		"""
 		return self.is_valid_offset(offset)
 
 	def perform_get_next_valid_offset(self, offset):
+		"""
+		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
+		memory address. This method **must not** be called.
+
+		addr (int): a virtual address to start checking from.
+
+		returns (int): the next readable, writable, or executable virtual memory address
+		"""
 		if offset < self.perform_get_start():
 			return self.perform_get_start()
 		return offset
 
 	def perform_get_start(self):
+		"""
+		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
+		the BinaryView. This method **must not** be called.
+
+		returns (int): returns the first virtual address in the BinaryView.
+		"""
 		return 0
 
 	def perform_get_entry_point(self):
+		"""
+		``perform_get_entry_point`` implements a query for the initial entry point for code execution. This method
+		**should** be implmented for custom BinaryViews that are executable. This method **must not** be called.
+
+		returns (int): the virtual address of the entry point
+		"""
 		return 0
 
 	def perform_is_executable(self):
+		"""
+		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
+		This method **must** be implemented for custom BinaryViews that are executable. This method **must not**
+		be called.
+
+		returns (boolean): true if the current BinaryView is executable, false if it is not executable or on error
+		"""
 		return False
 
 	def perform_get_default_endianness(self):
+		"""
+		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
+		This method **must** be implemented for custom BinaryViews that are not LittleEndian. This method
+		**must not** be called.
+
+		returns: either ``core.LittleEndian`` or ``core.BigEndian``
+		"""
 		return core.LittleEndian
 
 	def create_database(self, filename):
+		"""
+		```perform_get_database``` writes the current database (.bndb) file out to the specified file.  This method
+		**must not** be called.
+
+		filename (str): path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
+
+		returns (boolean): true on success, false on failure
+		"""
 		return self.file.create_database(filename)
 
 	def save_auto_snapshot(self):
@@ -1350,19 +1543,71 @@ class BinaryView(object):
 	def navigate(self, view, offset):
 		self.file.navigate(view, offset)
 
-	def read(self, offset, length):
+	def read(self, addr, length):
+		"""
+		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
+
+		addr (int): virtual address to read from.
+		length (int): number of bytes to read.
+
+		return (str): at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.::
+
+			>>> #Opening a x86_64 Mach-O binary
+			>>> bv = BinaryViewType['Raw'].open("/bin/ls")
+			>>> bv.read(0,4)
+			'\xcf\xfa\xed\xfe'
+		"""
 		buf = DataBuffer(handle = core.BNReadViewBuffer(self.handle, offset, length))
 		return str(buf)
 
-	def write(self, offset, data):
+	def write(self, addr, data):
+		"""
+		``write`` writes the bytes in ``data`` to the virtual address ``addr``.
+
+		addr (int): virtual address to write to.
+		data (str): data to be written at addr.
+
+		return (int): number of bytes written to virtual address ``addr``::
+
+			>>> bv.write(0, "AAAA")
+			4L
+			>>> bv.read(0,4)
+			'AAAA'
+		"""
 		buf = DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, offset, buf.handle)
 
-	def insert(self, offset, data):
+	def insert(self, addr, data):
+		"""
+		``insert`` inserts the bytes in ``data`` to the virtual address ``addr``.
+
+		addr (int): virtual address to write to.
+		data (str): data to be inserted at addr.
+
+		return (int): number of bytes inserted to virtual address ``addr``::
+
+			>>> bv.insert(0,"BBBB")
+			4L
+			>>> bv.read(0,8)
+			'BBBBAAAA'
+		"""
 		buf = DataBuffer(data)
 		return core.BNInsertViewBuffer(self.handle, offset, buf.handle)
 
-	def remove(self, offset, length):
+	def remove(self, addr, length):
+		"""
+		``remove`` removes at most ``length`` bytes from virtual address ``addr``.
+
+		addr (int): virtual address to remove from.
+		length (int): number of bytes to remove.
+
+		return (int): number of bytes removed from virtual address ``addr``::
+
+			>>> bv.remove(0,4)
+			4L
+			>>> bv.read(0,4)
+			'AAAA'
+		"""
 		return core.BNRemoveViewData(self.handle, offset, length)
 
 	def get_modification(self, offset, length = None):
@@ -1385,6 +1630,11 @@ class BinaryView(object):
 		return core.BNIsOffsetExecutable(self.handle, offset)
 
 	def save(self, dest):
+		"""
+		``save`` saves the original file to the provided destination ``dest`` along with any modifications.
+
+		dest (str): destination path and filename of file to be written
+		"""
 		if isinstance(dest, FileAccessor):
 			return core.BNSaveToFile(self.handle, dest._cb)
 		return core.BNSaveToFilename(self.handle, str(dest))
@@ -1400,6 +1650,14 @@ class BinaryView(object):
 			del self.notifications[notify]
 
 	def add_function(self, platform, addr):
+		"""
+		``add_function`` adds a new function of the given ``platform`` at the virtual address ``addr``
+
+		platform (binaryninja.Platform): platform for the function to be added
+		addr (int): virtual address of the function to be added
+
+		returns
+		"""
 		core.BNAddFunctionForAnalysis(self.handle, platform.handle, addr)
 
 	def add_entry_point(self, platform, addr):
@@ -1415,9 +1673,25 @@ class BinaryView(object):
 		core.BNRemoveUserFunction(self.handle, func.handle)
 
 	def update_analysis(self):
+		"""
+		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
+		does not occur automatically, the user must start analysis by calling either ``update_analysis()`` or
+		``update_analysis_and_wait()``. An analysis update **must** be run after changes are made which could change
+		analysis results such as adding functions.
+
+		returns (None):
+		"""
 		core.BNUpdateAnalysis(self.handle)
 
 	def update_analysis_and_wait(self):
+		"""
+		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
+		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
+		``update_analysis()`` or ``update_analysis_and_wait()``. An analysis update **must** be run after changes are
+		made which could change analysis results such as adding functions.
+
+		returns (None):
+		"""
 		class WaitEvent:
 			def __init__(self):
 				self.cond = threading.Condition()

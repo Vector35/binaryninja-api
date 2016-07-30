@@ -29,8 +29,8 @@ pages:
         #- Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'
-        - Plugin Design: 'dev/plugins.md'
-        - API: 'dev/api.md'
+        #- Plugin Design: 'dev/plugins.md'
+        #- API: 'dev/api.md'
     - About:
         - License: 'about/license.md'
         - Open Source: 'about/open-source.md'

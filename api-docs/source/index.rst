@@ -14,7 +14,6 @@ Contents:
    :maxdepth: 2
    
    Python API <python>
-   C API <c>
    C++ API <c++>
 
 Indices and tables

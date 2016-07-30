@@ -1706,7 +1706,9 @@ class BinaryView(object):
 				token_type = core.BNInstructionTextTokenType_names[lines[i].contents.tokens[j].type]
 				text = lines[i].contents.tokens[j].text
 				value = lines[i].contents.tokens[j].value
-				tokens.append(InstructionTextToken(token_type, text, value))
+				size = lines[i].contents.tokens[j].size
+				operand = lines[i].contents.tokens[j].operand
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
 			contents = DisassemblyTextLine(addr, tokens)
 			result.append(LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
@@ -2829,7 +2831,9 @@ class Function(object):
 				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
-				tokens.append(InstructionTextToken(token_type, text, value))
+				size = lines[i].tokens[j].size
+				operand = lines[i].tokens[j].operand
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
@@ -2839,6 +2843,14 @@ class Function(object):
 
 	def set_user_type(self, value):
 		core.BNSetFunctionUserType(self.handle, value.handle)
+
+	def get_int_display_type(self, arch, instr_addr, value, operand):
+		return core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
+
+	def set_int_display_type(self, arch, instr_addr, value, operand, display_type):
+		if isinstance(display_type, str):
+			display_type = core.BNIntegerDisplayType_by_name[display_type]
+		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):
@@ -2972,7 +2984,9 @@ class BasicBlock(object):
 				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
-				tokens.append(InstructionTextToken(token_type, text, value))
+				size = lines[i].tokens[j].size
+				operand = lines[i].tokens[j].operand
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -3070,7 +3084,9 @@ class FunctionGraphBlock(object):
 				token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
-				tokens.append(InstructionTextToken(token_type, text, value))
+				size = lines[i].tokens[j].size
+				operand = lines[i].tokens[j].operand
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -3118,7 +3134,9 @@ class FunctionGraphBlock(object):
 					token_type = core.BNInstructionTextTokenType_names[lines[i].tokens[j].type]
 					text = lines[i].tokens[j].text
 					value = lines[i].tokens[j].value
-					tokens.append(InstructionTextToken(token_type, text, value))
+					size = lines[i].tokens[j].size
+					operand = lines[i].tokens[j].operand
+					tokens.append(InstructionTextToken(token_type, text, value, size, operand))
 				yield DisassemblyTextLine(addr, tokens)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
@@ -3347,10 +3365,12 @@ class InstructionInfo:
 		return "<instr: %d bytes%s, %s>" % (self.length, branch_delay, repr(self.branches))
 
 class InstructionTextToken:
-	def __init__(self, token_type, text, value = 0):
+	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff):
 		self.type = token_type
 		self.text = text
 		self.value = value
+		self.size = size
+		self.operand = operand
 
 	def __str__(self):
 		return self.text
@@ -3749,6 +3769,8 @@ class Architecture(object):
 					token_buf[i].type = tokens[i].type
 				token_buf[i].text = tokens[i].text
 				token_buf[i].value = tokens[i].value
+				token_buf[i].size = tokens[i].size
+				token_buf[i].operand = tokens[i].operand
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
@@ -4187,7 +4209,9 @@ class Architecture(object):
 			token_type = core.BNInstructionTextTokenType_names[tokens[i].type]
 			text = tokens[i].text
 			value = tokens[i].value
-			result.append(InstructionTextToken(token_type, text, value))
+			size = tokens[i].size
+			operand = tokens[i].operand
+			result.append(InstructionTextToken(token_type, text, value, size, operand))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -4551,7 +4575,9 @@ class LowLevelILInstruction(object):
 			token_type = core.BNInstructionTextTokenType_names[tokens[i].type]
 			text = tokens[i].text
 			value = tokens[i].value
-			result.append(InstructionTextToken(token_type, text, value))
+			size = tokens[i].size
+			operand = tokens[i].operand
+			result.append(InstructionTextToken(token_type, text, value, size, operand))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 

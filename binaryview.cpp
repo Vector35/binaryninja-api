@@ -1289,6 +1289,8 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 			token.type = lines[i].contents.tokens[j].type;
 			token.text = lines[i].contents.tokens[j].text;
 			token.value = lines[i].contents.tokens[j].value;
+			token.size = lines[i].contents.tokens[j].size;
+			token.operand = lines[i].contents.tokens[j].operand;
 			line.contents.tokens.push_back(token);
 		}
 		result.push_back(line);
@@ -1330,6 +1332,8 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 			token.type = lines[i].contents.tokens[j].type;
 			token.text = lines[i].contents.tokens[j].text;
 			token.value = lines[i].contents.tokens[j].value;
+			token.size = lines[i].contents.tokens[j].size;
+			token.operand = lines[i].contents.tokens[j].operand;
 			line.contents.tokens.push_back(token);
 		}
 		result.push_back(line);

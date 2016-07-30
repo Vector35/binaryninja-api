@@ -51,8 +51,8 @@ InstructionTextToken::InstructionTextToken(): type(TextToken), value(0)
 }
 
 
-InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val) :
-	type(t), text(txt), value(val)
+InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
+	size_t s, size_t o) : type(t), text(txt), value(val), size(s), operand(o)
 {
 }
 
@@ -144,6 +144,8 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 		(*result)[i].type = tokens[i].type;
 		(*result)[i].text = BNAllocString(tokens[i].text.c_str());
 		(*result)[i].value = tokens[i].value;
+		(*result)[i].size = tokens[i].size;
+		(*result)[i].operand = tokens[i].operand;
 	}
 	return true;
 }
@@ -931,7 +933,10 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 		return false;
 
 	for (size_t i = 0; i < count; i++)
-		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].text, tokens[i].value));
+	{
+		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].text, tokens[i].value,
+			tokens[i].size, tokens[i].operand));
+	}
 
 	BNFreeInstructionText(tokens, count);
 	return true;

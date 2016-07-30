@@ -539,3 +539,17 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 	BNFreeInstructionTextLines(lines, count);
 	return result;
 }
+
+
+BNIntegerDisplayType Function::GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
+	size_t operand)
+{
+	return BNGetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand);
+}
+
+
+void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
+	BNIntegerDisplayType type)
+{
+	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
+}

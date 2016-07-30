@@ -629,9 +629,11 @@ namespace BinaryNinja
 		BNInstructionTextTokenType type;
 		std::string text;
 		uint64_t value;
+		size_t size, operand;
 
 		InstructionTextToken();
-		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0);
+		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
+			size_t size = 0, size_t operand = BN_INVALID_OPERAND);
 	};
 
 	struct DisassemblyTextLine
@@ -1646,6 +1648,11 @@ namespace BinaryNinja
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
+
+		BNIntegerDisplayType GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
+			size_t operand);
+		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
+			BNIntegerDisplayType type);
 	};
 
 	struct FunctionGraphEdge

@@ -173,6 +173,7 @@ extern "C"
 		HexDumpTextToken = 20,
 		OpcodeToken = 21,
 		StringToken = 22,
+		CharacterConstantToken = 23,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -489,6 +490,19 @@ extern "C"
 		Utf32String = 2
 	};
 
+	enum BNIntegerDisplayType
+	{
+		DefaultIntegerDisplayType,
+		BinaryDisplayType,
+		SignedOctalDisplayType,
+		UnsignedOctalDisplayType,
+		SignedDecimalDisplayType,
+		UnsignedDecimalDisplayType,
+		SignedHexadecimalDisplayType,
+		UnsignedHexadecimalDisplayType,
+		CharacterConstantDisplayType
+	};
+
 	struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
@@ -674,6 +688,7 @@ extern "C"
 		BNInstructionTextTokenType type;
 		char* text;
 		uint64_t value;
+		size_t size, operand;
 	};
 
 	struct BNInstructionTextLine
@@ -1422,6 +1437,11 @@ extern "C"
 	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
+
+	BINARYNINJACOREAPI BNIntegerDisplayType BNGetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
+		uint64_t instrAddr, uint64_t value, size_t operand);
+	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
+		uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
 
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
 		void (*callback)(void* ctxt));

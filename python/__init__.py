@@ -1782,6 +1782,13 @@ class BinaryView(object):
 	def undefine_user_type(self, name):
 		core.BNUndefineUserAnalysisType(self.handle, name)
 
+	def find_next_data(self, start, data, flags = 0):
+		buf = DataBuffer(str(data))
+		result = ctypes.c_ulonglong()
+		if not core.BNFindNextData(self.handle, start, buf.handle, result, flags):
+			return None
+		return result.value
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)

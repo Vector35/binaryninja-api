@@ -1421,6 +1421,12 @@ void BinaryView::UndefineUserType(const std::string& name)
 }
 
 
+bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
+{
+	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

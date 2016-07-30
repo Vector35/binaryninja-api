@@ -902,6 +902,8 @@ namespace BinaryNinja
 		void DefineUserType(const std::string& name, Type* type);
 		void UndefineType(const std::string& name);
 		void UndefineUserType(const std::string& name);
+
+		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 	};
 
 	class BinaryData: public BinaryView

@@ -1348,10 +1348,11 @@ class BinaryView(object):
 		have segments or the virtual address is different from the physical address.  This method **must not** be called
 		directly.
 
-		addr (int): a virtual address to attempt to read from
-		length (int): the number of bytes to be read
+                :param int addr: a virtual address to attempt to read from
+                :param int length: the number of bytes to be read
 
-		returns (int): length bytes read from addr, should return empty string on error
+                :return: length bytes read from addr, should return empty string on error
+                :type: int
 		"""
 		return ""
 
@@ -1376,10 +1377,11 @@ class BinaryView(object):
 		have segments or the virtual address is different from the physical address.  This method **must not** be
 		called.
 
-		addr (int): a virtual address
-		data (str): the data to be inserted
+		:param int addr: a virtual address
+		:param str data: the data to be inserted
 
-		returns (int): length of data inserted, should return 0 on error
+                :return: length of data inserted, should return 0 on error
+                :rtype: int
 		"""
 		return 0
 
@@ -1390,33 +1392,36 @@ class BinaryView(object):
 		have segments or the virtual address is different from the physical address. This method **must not** be called
 		directly.
 
-		addr (int): a virtual address
-		data (str): the data to be removed
+		:param int addr: a virtual address
+		:param str data: the data to be removed
 
-		returns (int): length of data removed, should return 0 on error
+                :return: length of data removed, should return 0 on error
+                :rtype: int
 		"""
 		return 0
 
 	def perform_get_modification(self, addr):
 		"""
-		```perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified. This
+		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified. This
 		method **must not** be called.
 
-		addr (int): a virtual address to be checked
+		:param int addr: a virtual address to be checked
 
-		returns (int): One of the following: Original = 0, Changed = 1, Inserted = 2
+		:return: One of the following: Original = 0, Changed = 1, Inserted = 2
+                :rtype: int
 		"""
 		return core.Original
 
 	def perform_is_valid_offset(self, addr):
 		"""
-		``perform_is_valid_offset`` implements a check if an virtual address ``addr``` is valid. This method **must**
+		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid. This method **must**
 		be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets. This method
 		**must not** be called.
 
-		addr (int): a virtual address to be checked
+		:param int addr: a virtual address to be checked
 
-		returns (boolean): true if the virtual address is valid, false if the virtual address is invalid or error
+                :return: true if the virtual address is valid, false if the virtual address is invalid or error
+                :rtype: boolean
 		"""
 		data = self.read(offset, 1)
 		return (data is not None) and (len(data) == 1)
@@ -1427,9 +1432,10 @@ class BinaryView(object):
 		implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or if memory
 		protections exist.This method **must not** be called.
 
-		addr (int): a virtual address to be checked
+		:param int addr: a virtual address to be checked
 
-		returns (boolean): true if the virtual address is readable, false if the virtual address is not readable or error
+                :return: true if the virtual address is readable, false if the virtual address is not readable or error
+                :rtype: boolean
 		"""
 		return self.is_valid_offset(offset)
 
@@ -1439,9 +1445,10 @@ class BinaryView(object):
 		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or
 		if memory protections exist. This method **must not** be called.
 
-		addr (int): a virtual address to be checked
+		:param int addr: a virtual address to be checked
 
-		returns (boolean): true if the virtual address is writable, false if the virtual address is not writable or error
+                :return: true if the virtual address is writable, false if the virtual address is not writable or error
+                :rtype: boolean
 		"""
 		return self.is_valid_offset(offset)
 
@@ -1451,9 +1458,10 @@ class BinaryView(object):
 		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets,
 		or if memory protections exist. This method **must not** be called.
 
-		addr (int): a virtual address to be checked
+		:param int addr: a virtual address to be checked
 
-		returns (boolean): true if the virtual address is executable, false if the virtual address is not executable or error
+                :return: true if the virtual address is executable, false if the virtual address is not executable or error
+                :rtype: int
 		"""
 		return self.is_valid_offset(offset)
 
@@ -1462,9 +1470,10 @@ class BinaryView(object):
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address. This method **must not** be called.
 
-		addr (int): a virtual address to start checking from.
+		:param int addr: a virtual address to start checking from.
 
-		returns (int): the next readable, writable, or executable virtual memory address
+                :return: the next readable, writable, or executable virtual memory address
+                :rtype: int
 		"""
 		if offset < self.perform_get_start():
 			return self.perform_get_start()
@@ -1475,7 +1484,8 @@ class BinaryView(object):
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView. This method **must not** be called.
 
-		returns (int): returns the first virtual address in the BinaryView.
+                :return: returns the first virtual address in the BinaryView.
+                :rtype: int
 		"""
 		return 0
 
@@ -1484,7 +1494,8 @@ class BinaryView(object):
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution. This method
 		**should** be implmented for custom BinaryViews that are executable. This method **must not** be called.
 
-		returns (int): the virtual address of the entry point
+                :return: the virtual address of the entry point
+                :rtype: int
 		"""
 		return 0
 
@@ -1494,7 +1505,8 @@ class BinaryView(object):
 		This method **must** be implemented for custom BinaryViews that are executable. This method **must not**
 		be called.
 
-		returns (boolean): true if the current BinaryView is executable, false if it is not executable or on error
+                :return: true if the current BinaryView is executable, false if it is not executable or on error
+                :rtype: boolean
 		"""
 		return False
 
@@ -1504,18 +1516,20 @@ class BinaryView(object):
 		This method **must** be implemented for custom BinaryViews that are not LittleEndian. This method
 		**must not** be called.
 
-		returns: either ``core.LittleEndian`` or ``core.BigEndian``
+                :return: either ``core.LittleEndian`` or ``core.BigEndian``
+                :type: int
 		"""
 		return core.LittleEndian
 
 	def create_database(self, filename):
 		"""
-		```perform_get_database``` writes the current database (.bndb) file out to the specified file.  This method
+		``perform_get_database`` writes the current database (.bndb) file out to the specified file.  This method
 		**must not** be called.
 
-		filename (str): path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
+		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 
-		returns (boolean): true on success, false on failure
+                :return: true on success, false on failure
+                :rtype: boolean
 		"""
 		return self.file.create_database(filename)
 
@@ -1547,8 +1561,8 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
-		addr (int): virtual address to read from.
-		length (int): number of bytes to read.
+		:param int addr: virtual address to read from.
+		:param int length: number of bytes to read.
 
 		return (str): at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.::
 
@@ -1564,8 +1578,8 @@ class BinaryView(object):
 		"""
 		``write`` writes the bytes in ``data`` to the virtual address ``addr``.
 
-		addr (int): virtual address to write to.
-		data (str): data to be written at addr.
+		:param int addr: virtual address to write to.
+		:param str data: data to be written at addr.
 
 		return (int): number of bytes written to virtual address ``addr``::
 
@@ -1581,8 +1595,8 @@ class BinaryView(object):
 		"""
 		``insert`` inserts the bytes in ``data`` to the virtual address ``addr``.
 
-		addr (int): virtual address to write to.
-		data (str): data to be inserted at addr.
+		:param int addr: virtual address to write to.
+		:param str data: data to be inserted at addr.
 
 		return (int): number of bytes inserted to virtual address ``addr``::
 
@@ -1598,8 +1612,8 @@ class BinaryView(object):
 		"""
 		``remove`` removes at most ``length`` bytes from virtual address ``addr``.
 
-		addr (int): virtual address to remove from.
-		length (int): number of bytes to remove.
+		:param int addr: virtual address to remove from.
+		:param int length: number of bytes to remove.
 
 		return (int): number of bytes removed from virtual address ``addr``::
 
@@ -1633,7 +1647,7 @@ class BinaryView(object):
 		"""
 		``save`` saves the original file to the provided destination ``dest`` along with any modifications.
 
-		dest (str): destination path and filename of file to be written
+		:param str dest: destination path and filename of file to be written
 		"""
 		if isinstance(dest, FileAccessor):
 			return core.BNSaveToFile(self.handle, dest._cb)
@@ -1653,10 +1667,10 @@ class BinaryView(object):
 		"""
 		``add_function`` adds a new function of the given ``platform`` at the virtual address ``addr``
 
-		platform (binaryninja.Platform): platform for the function to be added
-		addr (int): virtual address of the function to be added
+		:param binaryninja.Platform platform: platform for the function to be added
+		:param int addr: virtual address of the function to be added
 
-		returns (None): ::
+                :return: None ::
 
 			>>> bv.add_function(bv.platform, bv.entry_point + 1)
 			>>> bv.functions
@@ -1673,7 +1687,7 @@ class BinaryView(object):
 
 		func (binaryninja.Function): a binaryninja.Function object.
 
-		returns (None): ::
+                :return: None ::
 
 			>>> bv.functions
 			[<func: x86_64@0x1>]
@@ -1696,7 +1710,7 @@ class BinaryView(object):
 		``update_analysis_and_wait()``. An analysis update **must** be run after changes are made which could change
 		analysis results such as adding functions.
 
-		returns (None):
+                :return: None
 		"""
 		core.BNUpdateAnalysis(self.handle)
 
@@ -1707,7 +1721,7 @@ class BinaryView(object):
 		``update_analysis()`` or ``update_analysis_and_wait()``. An analysis update **must** be run after changes are
 		made which could change analysis results such as adding functions.
 
-		returns (None):
+                :return: None
 		"""
 		class WaitEvent:
 			def __init__(self):
@@ -1735,7 +1749,7 @@ class BinaryView(object):
 		"""
 		``abort_analysis`` will abort the currently running analysis.
 
-		returns (None):
+                :return: None
 		"""
 		core.BNAbortAnalysis(self.handle)
 
@@ -1743,10 +1757,10 @@ class BinaryView(object):
 		"""
 		``define_data_var`` defines a data variable ``var_type`` at the virtual address ``addr``.
 
-		addr (int): virtual address to define the given data variable
-		var_type (binaryninja.Type): type to be defined at the given virtual address
+		:param int addr: virtual address to define the given data variable
+		:param binaryninja.Type var_type: type to be defined at the given virtual address
 
-		returns (None): ::
+                :return None ::
 
 			>>> bv.define_data_var(bv.entry_point, bv.parse_type_string("int foo")[0])
 			>>> t = bv.parse_type_string("int foo")
@@ -1763,9 +1777,9 @@ class BinaryView(object):
 		"""
 		``undefine_data_var`` removes the data variable at the virtual address ``addr``.
 
-		addr (int): virtual address to define the data variable to be removed
+		:param int addr: virtual address to define the data variable to be removed
 
-		returns (None): ::
+                :return: None ::
 
 			>>> bv.undefine_data_var(bv.entry_point)
 			>>>
@@ -1779,14 +1793,16 @@ class BinaryView(object):
 		"""
 		``get_data_var_at`` returns the data type at a given virtual address.
 
-		addr (int): virtual address to get the data type from
+		:param int addr: virtual address to get the data type from
 
-		returns (binaryninja.DataVariable): returns the DataVariable at the given virtual address, None on error.::
+                :return: returns the DataVariable at the given virtual address, None on error.::
 
 			>>> t = bv.parse_type_string("int foo")
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>> bv.get_data_var_at(bv.entry_point)
 			<var 0x100001174: int32_t>
+
+                :rtype: binaryninja.DataVariable
 		"""
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
@@ -1795,16 +1811,18 @@ class BinaryView(object):
 
 	def get_function_at(self, platform, addr):
 		"""
-		''get_function_at'' gets a binaryninja.Function object for the function at the virtual address ``addr``:
+		``get_function_at`` gets a binaryninja.Function object for the function at the virtual address ``addr``:
 
-		platform (binaryninja.Platform): platform of the desired function
-		addr (int): virtual address of the desired function
+		:param binaryninja.Platform platform: platform of the desired function
+		:param int addr: virtual address of the desired function
 
-		returns (binaryninja.Function): returns a Function object or None for the function at the virtual address provided ::
+                :return: returns a Function object or None for the function at the virtual address provided ::
 
 			>>> bv.get_function_at(bv.platform, bv.entry_point)
 			<func: x86_64@0x100001174>
 			>>>
+
+                :rtype: binaryninja.Function
 		"""
 		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
@@ -1818,9 +1836,10 @@ class BinaryView(object):
 		functions defined from different architectures at the same location. This API allows you to query all of valid
 		platforms.
 
-		addr (int): virtual address of the desired Function object list.
+		:param int addr: virtual address of the desired Function object list.
 
-		returns ([binaryninja.Function]): a list of binaryninja.Function objects defined at the provided virtual address
+                :return: a list of binaryninja.Function objects defined at the provided virtual address
+                :rtype: list
 		"""
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)

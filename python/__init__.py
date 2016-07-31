@@ -1362,10 +1362,10 @@ class BinaryView(object):
 		have segments or the virtual address is different from the physical address.  This method **must not** be called
 		directly.
 
-		addr (int): a virtual address
-		data (str): the data to be written
-
-		returns (int): length of data written, should return 0 on error
+		:param int addr: a virtual address
+		:param str data: the data to be written
+		:return: length of data written, should return 0 on error
+		:rtype: int
 		"""
 		return 0
 
@@ -1656,7 +1656,11 @@ class BinaryView(object):
 		platform (binaryninja.Platform): platform for the function to be added
 		addr (int): virtual address of the function to be added
 
-		returns
+		returns (None): ::
+
+			>>> bv.add_function(bv.platform, bv.entry_point + 1)
+			>>> bv.functions
+			[<func: x86_64@0x1>]
 		"""
 		core.BNAddFunctionForAnalysis(self.handle, platform.handle, addr)
 
@@ -1664,6 +1668,19 @@ class BinaryView(object):
 		core.BNAddEntryPointForAnalysis(self.handle, platform.handle, addr)
 
 	def remove_function(self, func):
+		"""
+		``remove_function`` removes the function ``func`` from the list of functions
+
+		func (binaryninja.Function): a binaryninja.Function object.
+
+		returns (None): ::
+
+			>>> bv.functions
+			[<func: x86_64@0x1>]
+			>>> bv.remove_function(bv.functions[0])
+			>>> bv.functions
+			[]
+		"""
 		core.BNRemoveAnalysisFunction(self.handle, func.handle)
 
 	def create_user_function(self, platform, addr):
@@ -1715,33 +1732,96 @@ class BinaryView(object):
 		wait.wait()
 
 	def abort_analysis(self):
+		"""
+		``abort_analysis`` will abort the currently running analysis.
+
+		returns (None):
+		"""
 		core.BNAbortAnalysis(self.handle)
 
 	def define_data_var(self, addr, var_type):
+		"""
+		``define_data_var`` defines a data variable ``var_type`` at the virtual address ``addr``.
+
+		addr (int): virtual address to define the given data variable
+		var_type (binaryninja.Type): type to be defined at the given virtual address
+
+		returns (None): ::
+
+			>>> bv.define_data_var(bv.entry_point, bv.parse_type_string("int foo")[0])
+			>>> t = bv.parse_type_string("int foo")
+			>>> t
+			(<type: int32_t>, 'foo')
+			>>> bv.define_data_var(bv.entry_point, t[0])
+		"""
 		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
 
 	def define_user_data_var(self, addr, var_type):
 		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
 
 	def undefine_data_var(self, addr):
+		"""
+		``undefine_data_var`` removes the data variable at the virtual address ``addr``.
+
+		addr (int): virtual address to define the data variable to be removed
+
+		returns (None): ::
+
+			>>> bv.undefine_data_var(bv.entry_point)
+			>>>
+		"""
 		core.BNUndefineDataVariable(self.handle, addr)
 
 	def undefine_user_data_var(self, addr):
 		core.BNUndefineUserDataVariable(self.handle, addr)
 
 	def get_data_var_at(self, addr):
+		"""
+		``get_data_var_at`` returns the data type at a given virtual address.
+
+		addr (int): virtual address to get the data type from
+
+		returns (binaryninja.DataVariable): returns the DataVariable at the given virtual address, None on error.::
+
+			>>> t = bv.parse_type_string("int foo")
+			>>> bv.define_data_var(bv.entry_point, t[0])
+			>>> bv.get_data_var_at(bv.entry_point)
+			<var 0x100001174: int32_t>
+		"""
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
 		return DataVariable(var.address, Type(var.type), var.autoDiscovered)
 
 	def get_function_at(self, platform, addr):
+		"""
+		''get_function_at'' gets a binaryninja.Function object for the function at the virtual address ``addr``:
+
+		platform (binaryninja.Platform): platform of the desired function
+		addr (int): virtual address of the desired function
+
+		returns (binaryninja.Function): returns a Function object or None for the function at the virtual address provided ::
+
+			>>> bv.get_function_at(bv.platform, bv.entry_point)
+			<func: x86_64@0x100001174>
+			>>>
+		"""
 		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
 			return None
 		return Function(self, func)
 
 	def get_functions_at(self, addr):
+		"""
+		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid platform) at the given
+		virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be multiple
+		functions defined from different architectures at the same location. This API allows you to query all of valid
+		platforms.
+
+		addr (int): virtual address of the desired Function object list.
+
+		returns ([binaryninja.Function]): a list of binaryninja.Function objects defined at the provided virtual address
+		"""
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)
 		result = []
@@ -1757,6 +1837,9 @@ class BinaryView(object):
 		return Function(self, func)
 
 	def get_basic_blocks_at(self, addr):
+		"""
+		``get_basic_blocks_at`` returns the binaryninja.BasicBlock
+		"""
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
 		result = []

@@ -1571,7 +1571,7 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'\xcf\xfa\xed\xfe'
 		"""
-		buf = DataBuffer(handle = core.BNReadViewBuffer(self.handle, offset, length))
+		buf = DataBuffer(handle = core.BNReadViewBuffer(self.handle, addr, length))
 		return str(buf)
 
 	def write(self, addr, data):
@@ -1589,7 +1589,7 @@ class BinaryView(object):
 			'AAAA'
 		"""
 		buf = DataBuffer(data)
-		return core.BNWriteViewBuffer(self.handle, offset, buf.handle)
+		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
 	def insert(self, addr, data):
 		"""
@@ -1606,7 +1606,7 @@ class BinaryView(object):
 			'BBBBAAAA'
 		"""
 		buf = DataBuffer(data)
-		return core.BNInsertViewBuffer(self.handle, offset, buf.handle)
+		return core.BNInsertViewBuffer(self.handle, addr, buf.handle)
 
 	def remove(self, addr, length):
 		"""
@@ -1622,7 +1622,7 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
-		return core.BNRemoveViewData(self.handle, offset, length)
+		return core.BNRemoveViewData(self.handle, addr, length)
 
 	def get_modification(self, offset, length = None):
 		if length is None:

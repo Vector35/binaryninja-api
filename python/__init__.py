@@ -1423,10 +1423,10 @@ class BinaryView(object):
                 :return: true if the virtual address is valid, false if the virtual address is invalid or error
                 :rtype: boolean
 		"""
-		data = self.read(offset, 1)
+		data = self.read(addr, 1)
 		return (data is not None) and (len(data) == 1)
 
-	def perform_is_offset_readable(self, offset):
+	def perform_is_offset_readable(self, addr):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable. This method **must** be
 		implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or if memory
@@ -1437,9 +1437,9 @@ class BinaryView(object):
                 :return: true if the virtual address is readable, false if the virtual address is not readable or error
                 :rtype: boolean
 		"""
-		return self.is_valid_offset(offset)
+		return self.is_valid_offset(addr)
 
-	def perform_is_offset_writable(self, offset):
+	def perform_is_offset_writable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable. This method
 		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or
@@ -1450,9 +1450,9 @@ class BinaryView(object):
                 :return: true if the virtual address is writable, false if the virtual address is not writable or error
                 :rtype: boolean
 		"""
-		return self.is_valid_offset(offset)
+		return self.is_valid_offset(addr)
 
-	def perform_is_offset_executable(self, offset):
+	def perform_is_offset_executable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable. This method
 		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets,
@@ -1463,9 +1463,9 @@ class BinaryView(object):
                 :return: true if the virtual address is executable, false if the virtual address is not executable or error
                 :rtype: int
 		"""
-		return self.is_valid_offset(offset)
+		return self.is_valid_offset(addr)
 
-	def perform_get_next_valid_offset(self, offset):
+	def perform_get_next_valid_offset(self, addr):
 		"""
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address. This method **must not** be called.
@@ -1475,9 +1475,9 @@ class BinaryView(object):
                 :return: the next readable, writable, or executable virtual memory address
                 :rtype: int
 		"""
-		if offset < self.perform_get_start():
+		if addr < self.perform_get_start():
 			return self.perform_get_start()
-		return offset
+		return addr
 
 	def perform_get_start(self):
 		"""

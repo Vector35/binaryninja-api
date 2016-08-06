@@ -71,4 +71,3 @@ Binary Ninja Python API Documentation
    :members:
    :undoc-members:
    :show-inheritance:
-   :private-members:

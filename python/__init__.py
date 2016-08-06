@@ -809,6 +809,7 @@ class BinaryView(object):
 	_registered = False
 	_registered_cb = None
 	registered_view_type = None
+	next_address = 0
 
 	def __init__(self, file_metadata = None, handle = None):
 		if handle is not None:
@@ -850,6 +851,7 @@ class BinaryView(object):
 			self.file = file_metadata
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, self._cb)
 		self.notifications = {}
+		self.next_address = self.entry_point
 
 	@classmethod
 	def register(cls):
@@ -1341,24 +1343,73 @@ class BinaryView(object):
 	def init(self):
 		return True
 
+	def get_disassembly(self, addr, arch=None):
+		"""
+		``get_disassembly`` simple helper function for printing disassembly of a given address
+
+		:param int addr: virtual address of instruction
+		:param Architecture arch: optional Architecture of instruction to decode
+		:return: a str representation of the instruction at virtual address ``addr`` or None
+		:rtype: str or None
+		:Example:
+
+			>>> bv.get_disassembly(bv.entry_point)
+			'push    ebp'
+			>>>
+		"""
+		if arch is None:
+			arch = self.arch
+		txt, size = arch.get_instruction_text(self.read(addr, self.arch.max_instr_length), addr)
+		self.next_address = addr + size
+		if txt is None:
+			return None
+		return ''.join(str(a) for a in txt).strip()
+
+	def get_next_disassembly(self, arch=None):
+		"""
+		``get_next_disassembly`` simple helper function for printing disassembly of the next instruction.
+		The internal state of the instruction to be printed is stored in the ``next_address`` attribute
+
+		:param int addr: virtual address of instruction
+		:return: a str representation of the instruction at virtual address ``addr`` or None
+		:rtype: str or None
+		:Example:
+
+			>>> bv.get_next_disassembly()
+			'push    ebp'
+			>>> bv.get_next_disassembly()
+			'mov     ebp, esp'
+			>>> #Now reset the starting point back to the entry point
+			>>> bv.next_address = bv.entry_point
+			>>> bv.get_next_disassembly()
+			'push    ebp'
+			>>>
+		"""
+		if arch is None:
+			arch = self.arch
+		txt, size = arch.get_instruction_text(self.read(self.next_address, self.arch.max_instr_length), self.next_address)
+		self.next_address += size
+		if txt is None:
+			return None
+		return ''.join(str(a) for a in txt).strip()
+
 	def perform_read(self, addr, length):
 		"""
-		``perform_read`` implements a mapping between a rebased (virtual) address and an absolute file offset, reading
+		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
 		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
 		have segments or the virtual address is different from the physical address.  This method **must not** be called
 		directly.
 
-                :param int addr: a virtual address to attempt to read from
-                :param int length: the number of bytes to be read
-
-                :return: length bytes read from addr, should return empty string on error
-                :type: int
+		:param int addr: a virtual address to attempt to read from
+		:param int length: the number of bytes to be read
+		:return: length bytes read from addr, should return empty string on error
+		:rtype: int
 		"""
 		return ""
 
 	def perform_write(self, addr, data):
 		"""
-		``perform_write`` implements a mapping between a rebased (virtual) address and an absolute file offset, writing
+		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
 		have segments or the virtual address is different from the physical address.  This method **must not** be called
 		directly.
@@ -1372,31 +1423,29 @@ class BinaryView(object):
 
 	def perform_insert(self, addr, data):
 		"""
-		``perform_insert`` implements a mapping between a rebased (virtual) address and an absolute file offset, inserting
+		``perform_insert`` implements a mapping between a virtual address and an absolute file offset, inserting
 		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
 		have segments or the virtual address is different from the physical address.  This method **must not** be
 		called.
 
 		:param int addr: a virtual address
 		:param str data: the data to be inserted
-
-                :return: length of data inserted, should return 0 on error
-                :rtype: int
+		:return: length of data inserted, should return 0 on error
+		:rtype: int
 		"""
 		return 0
 
 	def perform_remove(self, addr, length):
 		"""
-		``perform_remove`` implements a mapping between a rebased (virtual) address and an absolute file offset, removing
+		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
 		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
 		have segments or the virtual address is different from the physical address. This method **must not** be called
 		directly.
 
 		:param int addr: a virtual address
 		:param str data: the data to be removed
-
-                :return: length of data removed, should return 0 on error
-                :rtype: int
+		:return: length of data removed, should return 0 on error
+		:rtype: int
 		"""
 		return 0
 
@@ -1406,9 +1455,8 @@ class BinaryView(object):
 		method **must not** be called.
 
 		:param int addr: a virtual address to be checked
-
 		:return: One of the following: Original = 0, Changed = 1, Inserted = 2
-                :rtype: int
+		:rtype: BNModificationStatus
 		"""
 		return core.Original
 
@@ -1419,25 +1467,23 @@ class BinaryView(object):
 		**must not** be called.
 
 		:param int addr: a virtual address to be checked
-
-                :return: true if the virtual address is valid, false if the virtual address is invalid or error
-                :rtype: boolean
+		:return: true if the virtual address is valid, false if the virtual address is invalid or error
+		:rtype: bool
 		"""
 		data = self.read(addr, 1)
 		return (data is not None) and (len(data) == 1)
 
-	def perform_is_offset_readable(self, addr):
+	def perform_is_offset_readable(self, offset):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable. This method **must** be
 		implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or if memory
 		protections exist.This method **must not** be called.
 
-		:param int addr: a virtual address to be checked
-
-                :return: true if the virtual address is readable, false if the virtual address is not readable or error
-                :rtype: boolean
+		:param int offset: a virtual address to be checked
+		:return: true if the virtual address is readable, false if the virtual address is not readable or error
+		:rtype: bool
 		"""
-		return self.is_valid_offset(addr)
+		return self.is_valid_offset(offset)
 
 	def perform_is_offset_writable(self, addr):
 		"""
@@ -1446,9 +1492,8 @@ class BinaryView(object):
 		if memory protections exist. This method **must not** be called.
 
 		:param int addr: a virtual address to be checked
-
-                :return: true if the virtual address is writable, false if the virtual address is not writable or error
-                :rtype: boolean
+		:return: true if the virtual address is writable, false if the virtual address is not writable or error
+		:rtype: bool
 		"""
 		return self.is_valid_offset(addr)
 
@@ -1459,9 +1504,8 @@ class BinaryView(object):
 		or if memory protections exist. This method **must not** be called.
 
 		:param int addr: a virtual address to be checked
-
-                :return: true if the virtual address is executable, false if the virtual address is not executable or error
-                :rtype: int
+		:return: true if the virtual address is executable, false if the virtual address is not executable or error
+		:rtype: int
 		"""
 		return self.is_valid_offset(addr)
 
@@ -1471,9 +1515,8 @@ class BinaryView(object):
 		memory address. This method **must not** be called.
 
 		:param int addr: a virtual address to start checking from.
-
-                :return: the next readable, writable, or executable virtual memory address
-                :rtype: int
+		:return: the next readable, writable, or executable virtual memory address
+		:rtype: int
 		"""
 		if addr < self.perform_get_start():
 			return self.perform_get_start()
@@ -1484,8 +1527,8 @@ class BinaryView(object):
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView. This method **must not** be called.
 
-                :return: returns the first virtual address in the BinaryView.
-                :rtype: int
+		:return: returns the first virtual address in the BinaryView.
+		:rtype: int
 		"""
 		return 0
 
@@ -1494,8 +1537,8 @@ class BinaryView(object):
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution. This method
 		**should** be implmented for custom BinaryViews that are executable. This method **must not** be called.
 
-                :return: the virtual address of the entry point
-                :rtype: int
+		:return: the virtual address of the entry point
+		:rtype: int
 		"""
 		return 0
 
@@ -1505,8 +1548,8 @@ class BinaryView(object):
 		This method **must** be implemented for custom BinaryViews that are executable. This method **must not**
 		be called.
 
-                :return: true if the current BinaryView is executable, false if it is not executable or on error
-                :rtype: boolean
+		:return: true if the current BinaryView is executable, false if it is not executable or on error
+		:rtype: bool
 		"""
 		return False
 
@@ -1516,8 +1559,8 @@ class BinaryView(object):
 		This method **must** be implemented for custom BinaryViews that are not LittleEndian. This method
 		**must not** be called.
 
-                :return: either ``core.LittleEndian`` or ``core.BigEndian``
-                :type: int
+		:return: either ``core.LittleEndian`` or ``core.BigEndian``
+		:rtype: BNEndianness
 		"""
 		return core.LittleEndian
 
@@ -1527,9 +1570,8 @@ class BinaryView(object):
 		**must not** be called.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
-
-                :return: true on success, false on failure
-                :rtype: boolean
+		:return: true on success, false on failure
+		:rtype: bool
 		"""
 		return self.file.create_database(filename)
 
@@ -1563,13 +1605,14 @@ class BinaryView(object):
 
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
-
-		return (str): at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.::
+		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
+		:rtype: str
+		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary
 			>>> bv = BinaryViewType['Raw'].open("/bin/ls")
 			>>> bv.read(0,4)
-			'\xcf\xfa\xed\xfe'
+			\'\\xcf\\xfa\\xed\\xfe\'
 		"""
 		buf = DataBuffer(handle = core.BNReadViewBuffer(self.handle, addr, length))
 		return str(buf)
@@ -1580,9 +1623,12 @@ class BinaryView(object):
 
 		:param int addr: virtual address to write to.
 		:param str data: data to be written at addr.
+		:return: number of bytes written to virtual address ``addr``
+		:rtype: int
+		:Example:
 
-		return (int): number of bytes written to virtual address ``addr``::
-
+			>>> bv.read(0,4)
+			'BBBB'
 			>>> bv.write(0, "AAAA")
 			4L
 			>>> bv.read(0,4)
@@ -1597,8 +1643,9 @@ class BinaryView(object):
 
 		:param int addr: virtual address to write to.
 		:param str data: data to be inserted at addr.
-
-		return (int): number of bytes inserted to virtual address ``addr``::
+		:return: number of bytes inserted to virtual address ``addr``
+		:rtype: int
+		:Example:
 
 			>>> bv.insert(0,"BBBB")
 			4L
@@ -1614,9 +1661,12 @@ class BinaryView(object):
 
 		:param int addr: virtual address to remove from.
 		:param int length: number of bytes to remove.
+		:return: number of bytes removed from virtual address ``addr``
+		:rtype: int
+		:Example:
 
-		return (int): number of bytes removed from virtual address ``addr``::
-
+			>>> bv.read(0,8)
+			'BBBBAAAA'
 			>>> bv.remove(0,4)
 			4L
 			>>> bv.read(0,4)
@@ -1624,30 +1674,69 @@ class BinaryView(object):
 		"""
 		return core.BNRemoveViewData(self.handle, addr, length)
 
-	def get_modification(self, offset, length = None):
+	def get_modification(self, addr, length = None):
+		"""
+		``get_modification`` returns the modified bytes of up to ``length`` bytes from virtual address ``addr``, or if
+		``length`` is None returns the core.BNModificationStatus.
+
+		:param int addr: virtual address to get modification from
+		:param int length: optional length of modification
+		:return: Either core.BNModificationStatus of the byte at ``addr``, or string of modified bytes at ``addr``
+		:rtype: core.BNModificationStatus or str
+		"""
 		if length is None:
-			return core.BNGetModification(self.handle, offset)
+			return core.BNGetModification(self.handle, addr)
 		data = (core.BNModificationStatus * length)()
-		length = core.BNGetModificationArray(self.handle, offset, data, length);
+		length = core.BNGetModificationArray(self.handle, addr, data, length);
 		return data[0:length]
 
-	def is_valid_offset(self, offset):
-		return core.BNIsValidOffset(self.handle, offset)
+	def is_valid_offset(self, addr):
+		"""
+		``is_valid_offset`` checks if an virtual address ``addr`` is valid .
 
-	def is_offset_readable(self, offset):
-		return core.BNIsOffsetReadable(self.handle, offset)
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsValidOffset(self.handle, addr)
 
-	def is_offset_writable(self, offset):
-		return core.BNIsOffsetWritable(self.handle, offset)
+	def is_offset_readable(self, addr):
+		"""
+		``is_valid_offset`` checks if an virtual address ``addr`` is valid for reading.
 
-	def is_offset_executable(self, offset):
-		return core.BNIsOffsetExecutable(self.handle, offset)
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for reading, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetReadable(self.handle, addr)
+
+	def is_offset_writable(self, addr):
+		"""
+		``is_valid_offset`` checks if an virtual address ``addr`` is valid for writing.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetWritable(self.handle, addr)
+
+	def is_offset_executable(self, addr):
+		"""
+		``is_valid_offset`` checks if an virtual address ``addr`` is valid for executing.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for executing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetExecutable(self.handle, addr)
 
 	def save(self, dest):
 		"""
-		``save`` saves the original file to the provided destination ``dest`` along with any modifications.
+		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
 
 		:param str dest: destination path and filename of file to be written
+		:return: boolean True on success, False on failure
+		:rtype: bool
 		"""
 		if isinstance(dest, FileAccessor):
 			return core.BNSaveToFile(self.handle, dest._cb)
@@ -1665,29 +1754,43 @@ class BinaryView(object):
 
 	def add_function(self, platform, addr):
 		"""
-		``add_function`` adds a new function of the given ``platform`` at the virtual address ``addr``
+		``add_function`` add a new function of the given ``platform`` at the virtual address ``addr``
 
-		:param binaryninja.Platform platform: platform for the function to be added
+		:param Platform platform: Platform for the function to be added
 		:param int addr: virtual address of the function to be added
-
-                :return: None ::
+		:return: Nothing
+		:rtype: None
+		:Example:
 
 			>>> bv.add_function(bv.platform, bv.entry_point + 1)
 			>>> bv.functions
 			[<func: x86_64@0x1>]
+
 		"""
 		core.BNAddFunctionForAnalysis(self.handle, platform.handle, addr)
 
 	def add_entry_point(self, platform, addr):
+		"""
+		``add_entry_point`` adds an virtual address to start analysis from for a given platform.
+
+		:param Platform platform: Platform for the entry point analysis
+		:param int addr: virtual address to start analysis from
+		:return: Nothing
+		:rtype: None
+		:Example:
+			>>> bv.add_entry_point(bv.platform, 0xdeadbeef)
+			>>>
+		"""
 		core.BNAddEntryPointForAnalysis(self.handle, platform.handle, addr)
 
 	def remove_function(self, func):
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
-		func (binaryninja.Function): a binaryninja.Function object.
-
-                :return: None ::
+		:param Function func: a Function object.
+		:return: Nothing
+		:rtype: None
+		:Example:
 
 			>>> bv.functions
 			[<func: x86_64@0x1>]
@@ -1710,7 +1813,8 @@ class BinaryView(object):
 		``update_analysis_and_wait()``. An analysis update **must** be run after changes are made which could change
 		analysis results such as adding functions.
 
-                :return: None
+		:return: Nothing
+		:rtype: None
 		"""
 		core.BNUpdateAnalysis(self.handle)
 
@@ -1721,7 +1825,8 @@ class BinaryView(object):
 		``update_analysis()`` or ``update_analysis_and_wait()``. An analysis update **must** be run after changes are
 		made which could change analysis results such as adding functions.
 
-                :return: None
+		:return: Nothing
+		:rtype: None
 		"""
 		class WaitEvent:
 			def __init__(self):
@@ -1749,37 +1854,55 @@ class BinaryView(object):
 		"""
 		``abort_analysis`` will abort the currently running analysis.
 
-                :return: None
+		:return: Nothing
+		:rtype: None
 		"""
 		core.BNAbortAnalysis(self.handle)
 
 	def define_data_var(self, addr, var_type):
 		"""
-		``define_data_var`` defines a data variable ``var_type`` at the virtual address ``addr``.
+		``define_data_var`` defines a non-user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
 		:param binaryninja.Type var_type: type to be defined at the given virtual address
+		:return Nothing
+		:rtype: None
+		:Example:
 
-                :return None ::
-
-			>>> bv.define_data_var(bv.entry_point, bv.parse_type_string("int foo")[0])
 			>>> t = bv.parse_type_string("int foo")
 			>>> t
 			(<type: int32_t>, 'foo')
 			>>> bv.define_data_var(bv.entry_point, t[0])
+			>>>
 		"""
 		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
 
 	def define_user_data_var(self, addr, var_type):
+		"""
+		``define_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
+
+		:param int addr: virtual address to define the given data variable
+		:param binaryninja.Type var_type: type to be defined at the given virtual address
+		:return Nothing
+		:rtype: None
+		:Example:
+
+			>>> t = bv.parse_type_string("int foo")
+			>>> t
+			(<type: int32_t>, 'foo')
+			>>> bv.define_user_data_var(bv.entry_point, t[0])
+			>>>
+		"""
 		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
 
 	def undefine_data_var(self, addr):
 		"""
-		``undefine_data_var`` removes the data variable at the virtual address ``addr``.
+		``undefine_data_var`` removes the non-user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
-
-                :return: None ::
+		:return: Nothing
+		:rtype: None
+		:Example:
 
 			>>> bv.undefine_data_var(bv.entry_point)
 			>>>
@@ -1787,6 +1910,17 @@ class BinaryView(object):
 		core.BNUndefineDataVariable(self.handle, addr)
 
 	def undefine_user_data_var(self, addr):
+		"""
+		``undefine_data_var`` removes the user data variable at the virtual address ``addr``.
+
+		:param int addr: virtual address to define the data variable to be removed
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.undefine_user_data_var(bv.entry_point)
+			>>>
+		"""
 		core.BNUndefineUserDataVariable(self.handle, addr)
 
 	def get_data_var_at(self, addr):
@@ -1794,15 +1928,15 @@ class BinaryView(object):
 		``get_data_var_at`` returns the data type at a given virtual address.
 
 		:param int addr: virtual address to get the data type from
-
-                :return: returns the DataVariable at the given virtual address, None on error.::
+		:return: returns the DataVariable at the given virtual address, None on error.
+		:rtype: DataVariable
+		:Example:
 
 			>>> t = bv.parse_type_string("int foo")
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>> bv.get_data_var_at(bv.entry_point)
 			<var 0x100001174: int32_t>
 
-                :rtype: binaryninja.DataVariable
 		"""
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
@@ -1815,14 +1949,13 @@ class BinaryView(object):
 
 		:param binaryninja.Platform platform: platform of the desired function
 		:param int addr: virtual address of the desired function
-
-                :return: returns a Function object or None for the function at the virtual address provided ::
+		:return: returns a Function object or None for the function at the virtual address provided
+		:rtype: Function
+		:Example:
 
 			>>> bv.get_function_at(bv.platform, bv.entry_point)
 			<func: x86_64@0x100001174>
 			>>>
-
-                :rtype: binaryninja.Function
 		"""
 		func = core.BNGetAnalysisFunction(self.handle, platform.handle, addr)
 		if func is None:
@@ -1837,9 +1970,8 @@ class BinaryView(object):
 		platforms.
 
 		:param int addr: virtual address of the desired Function object list.
-
-                :return: a list of binaryninja.Function objects defined at the provided virtual address
-                :rtype: list
+		:return: a list of binaryninja.Function objects defined at the provided virtual address
+		:rtype: list(Function)
 		"""
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)
@@ -1857,7 +1989,11 @@ class BinaryView(object):
 
 	def get_basic_blocks_at(self, addr):
 		"""
-		``get_basic_blocks_at`` returns the binaryninja.BasicBlock
+		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which exist at the provided virtual address.
+
+		:param int addr: virtual address of BasicBlock desired
+		:return: a list of :py:Class:`BasicBlock` objects
+		:rtype: list(BasicBlock)
 		"""
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
@@ -1895,18 +2031,54 @@ class BinaryView(object):
 		return result
 
 	def get_symbol_at(self, addr):
+		"""
+		``get_symbol_at`` returns the Symbol at the provided virtual address.
+
+		:param int addr: virtual address to query for symbol
+		:return: Symbol for the given virtual address
+		:rtype: Symbol
+		:Example:
+
+			>>> bv.get_symbol_at(bv.entry_point)
+			<FunctionSymbol: "_start" @ 0x100001174>
+			>>>
+		"""
 		sym = core.BNGetSymbolByAddress(self.handle, addr)
 		if sym is None:
 			return None
 		return Symbol(None, None, None, handle = sym)
 
 	def get_symbol_by_raw_name(self, name):
+		"""
+		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
+
+		:param str name: raw (mangled) name of Symbol to be retrieved
+		:return: Symbol object corresponding to the provided raw name
+		:rtype: Symbol
+		:Example:
+
+			>>> bv.get_symbol_by_raw_name('?testf@Foobar@@SA?AW4foo@1@W421@@Z')
+			<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>
+			>>>
+		"""
 		sym = core.BNGetSymbolByRawName(self.handle, name)
 		if sym is None:
 			return None
 		return Symbol(None, None, None, handle = sym)
 
 	def get_symbols_by_name(self, name):
+		"""
+		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name.
+
+		:param str name: name of Symbol object to be retrieved
+		:return: Symbol object corresponding to the provided name
+		:rtype: Symbol
+		:Example:
+
+			>>> bv.get_symbols_by_name('?testf@Foobar@@SA?AW4foo@1@W421@@Z')
+			[<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>]
+			>>>
+		"""
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count)
 		result = []
@@ -1916,6 +2088,19 @@ class BinaryView(object):
 		return result
 
 	def get_symbols(self, start = None, length = None):
+		"""
+		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
+
+		:param int start: optional start virtual address
+		:param int length: optional length
+		:return: list of all Symbol objects, or those Symbol objects in the range of ``start``-``start+length``
+		:rtype: list(Symbol)
+		:Example:
+
+			>>> bv.get_symbols(0x1000200c, 1)
+			[<ImportAddressSymbol: "KERNEL32!IsProcessorFeaturePresent@IAT" @ 0x1000200c>]
+			>>>
+		"""
 		count = ctypes.c_ulonglong(0)
 		if start is None:
 			syms = core.BNGetSymbols(self.handle, count)
@@ -1928,6 +2113,21 @@ class BinaryView(object):
 		return result
 
 	def get_symbols_of_type(self, sym_type, start = None, length = None):
+		"""
+		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
+		 provided range.
+
+		:param SymbolType sym_type: A Symbol type: :py:Class:`Symbol`.
+		:param int start: optional start virtual address
+		:param int length: optional length
+		:return: list of all Symbol objects of type sym_type, or those Symbol objects in the range of ``start``-``start+length``
+		:rtype: list(Symbol)
+		:Example:
+
+			>>> bv.get_symbols_of_type(core.ImportAddressSymbol, 0x10002028, 1)
+			[<ImportAddressSymbol: "KERNEL32!GetCurrentThreadId@IAT" @ 0x10002028>]
+			>>>
+		"""
 		if isinstance(sym_type, str):
 			sym_type = core.BNSymbolType_by_name[sym_type]
 		count = ctypes.c_ulonglong(0)
@@ -1942,51 +2142,319 @@ class BinaryView(object):
 		return result
 
 	def define_auto_symbol(self, sym):
+		"""
+		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+
+		:param Symbol sym: the symbol to define
+		:return: Nothing
+		:rtype: None
+		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
 	def undefine_auto_symbol(self, sym):
+		"""
+		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
+
+		:param Symbol sym: the symbol to undefine
+		:return: Nothing
+		:rtype: None
+		"""
 		core.BNUndefineAutoSymbol(self.handle, sym.handle)
 
 	def define_user_symbol(self, sym):
+		"""
+		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
+
+		:param Symbol sym: the symbol to define
+		:return: Nothing
+		:rtype: None
+		"""
 		core.BNDefineUserSymbol(self.handle, sym.handle)
 
 	def undefine_user_symbol(self, sym):
+		"""
+		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
+
+		:param Symbol sym: the symbol to undefine
+		:return: Nothing
+		:rtype: None
+		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
 
 	def define_imported_function(self, import_addr_sym, func):
+		"""
+		``define_imported_function``
+		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
 
 	def is_never_branch_patch_available(self, arch, addr):
+		"""
+		``is_never_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
+		instruction at ``addr`` can be made to **never branch**. The actual logic of which is implemented in the
+		``perform_is_never_branch_patch_available`` in the corresponding architecture.
+
+		:param Architecture arch: the architecture for the current view
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012ed)
+			'test    eax, eax'
+			>>> bv.is_never_branch_patch_available(bv.arch, 0x100012ed)
+			False
+			>>> bv.get_disassembly(0x100012ef)
+			'jg      0x100012f5'
+			>>> bv.is_never_branch_patch_available(bv.arch, 0x100012ef)
+			True
+			>>>
+		"""
 		return core.BNIsNeverBranchPatchAvailable(self.handle, arch.handle, addr)
 
 	def is_always_branch_patch_available(self, arch, addr):
+		"""
+		``is_always_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
+		instruction at ``addr`` can be made to **always branch**. The actual logic of which is implemented in the
+		``perform_is_always_branch_patch_available`` in the corresponding architecture.
+
+		:param Architecture arch: the architecture for the current view
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012ed)
+			'test    eax, eax'
+			>>> bv.is_always_branch_patch_available(bv.arch, 0x100012ed)
+			False
+			>>> bv.get_disassembly(0x100012ef)
+			'jg      0x100012f5'
+			>>> bv.is_always_branch_patch_available(bv.arch, 0x100012ef)
+			True
+			>>>
+		"""
 		return core.BNIsAlwaysBranchPatchAvailable(self.handle, arch.handle, addr)
 
 	def is_invert_branch_patch_available(self, arch, addr):
+		"""
+		``is_invert_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
+		instruction at ``addr`` is a branch that can be inverted. The actual logic of which is implemented in the
+		``perform_is_invert_branch_patch_available`` in the corresponding architecture.
+
+		:param Architecture arch: the architecture for the current view
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012ed)
+			'test    eax, eax'
+			>>> bv.is_invert_branch_patch_available(bv.arch, 0x100012ed)
+			False
+			>>> bv.get_disassembly(0x100012ef)
+			'jg      0x100012f5'
+			>>> bv.is_invert_branch_patch_available(bv.arch, 0x100012ef)
+			True
+			>>>
+		"""
 		return core.BNIsInvertBranchPatchAvailable(self.handle, arch.handle, addr)
 
 	def is_skip_and_return_zero_patch_available(self, arch, addr):
+		"""
+		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the instruction at the
+		instruction at ``addr`` is similar to an x86 "call"  instruction which can be made to return zero.  The actual
+		logic of which is implemented in the ``perform_is_skip_and_return_zero_patch_available`` in the corresponding
+		architecture.
+
+		:param Architecture arch: the architecture for the current view
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f6)
+			'mov     dword [0x10003020], eax'
+			>>> bv.is_skip_and_return_zero_patch_available(bv.arch, 0x100012f6)
+			False
+			>>> bv.get_disassembly(0x100012fb)
+			'call    0x10001629'
+			>>> bv.is_skip_and_return_zero_patch_available(bv.arch, 0x100012fb)
+			True
+			>>>
+		"""
 		return core.BNIsSkipAndReturnZeroPatchAvailable(self.handle, arch.handle, addr)
 
 	def is_skip_and_return_value_patch_available(self, arch, addr):
+		"""
+		``is_skip_and_return_value_patch_available`` queries the architecture plugin to determine if the instruction at the
+		instruction at ``addr`` is similar to an x86 "call" instruction which can be made to return a value. The actual
+		logic of which is implemented in the ``perform_is_skip_and_return_value_patch_available`` in the corresponding
+		architecture.
+
+		:param Architecture arch: the architecture for the current view
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f6)
+			'mov     dword [0x10003020], eax'
+			>>> bv.is_skip_and_return_value_patch_available(bv.arch, 0x100012f6)
+			False
+			>>> bv.get_disassembly(0x100012fb)
+			'call    0x10001629'
+			>>> bv.is_skip_and_return_value_patch_available(bv.arch, 0x100012fb)
+			True
+			>>>
+		"""
 		return core.BNIsSkipAndReturnValuePatchAvailable(self.handle, arch.handle, addr)
 
 	def convert_to_nop(self, arch, addr):
+		"""
+		``convert_to_nop`` converts the instruction at virtual address ``addr`` to a nop of the provided architecture.
+
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
+		file must be saved in order to preserve the changes made.
+
+		:param Architecture arch: architecture of the current BinaryView
+		:param int addr: virtual address of the instruction to conver to nops
+		:return: True on success, False on falure.
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012fb)
+			'call    0x10001629'
+			>>> bv.convert_to_nop(bv.arch, 0x100012fb)
+			True
+			>>> #The above 'call' instruction is 5 bytes, a nop in x86 is 1 byte, thus 5 nops are used:
+			>>> bv.get_disassembly(0x100012fb)
+			'nop'
+			>>> bv.get_next_disassembly()
+			'nop'
+			>>> bv.get_next_disassembly()
+			'nop'
+			>>> bv.get_next_disassembly()
+			'nop'
+			>>> bv.get_next_disassembly()
+			'nop'
+			>>> bv.get_next_disassembly()
+			'mov     byte [ebp-0x1c], al'
+		"""
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
 	def always_branch(self, arch, addr):
+		"""
+		``always_branch`` convert the instruction of architecture ``arch`` at the virtual address ``addr`` to an
+		unconditional branch.
+
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
+		file must be saved in order to preserve the changes made.
+
+		:param Architecture arch: architecture of the current binary view
+		:param int addr: virtual address of the instruction to be modified
+		:return: True on success, False on falure.
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x100012ef)
+			'jg      0x100012f5'
+			>>> bv.always_branch(bv.arch, 0x100012ef)
+			True
+			>>> bv.get_disassembly(0x100012ef)
+			'jmp     0x100012f5'
+			>>>
+		"""
 		return core.BNAlwaysBranch(self.handle, arch.handle, addr)
 
 	def never_branch(self, arch, addr):
+		"""
+		``always_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to
+		a fall through.
+
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
+		file must be saved in order to preserve the changes made.
+
+		:param Architecture arch: architecture of the current binary view
+		:param int addr: virtual address of the instruction to be modified
+		:return: True on success, False on falure.
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x1000130e)
+			'jne     0x10001317'
+			>>> bv.never_branch(bv.arch, 0x1000130e)
+			True
+			>>> bv.get_disassembly(0x1000130e)
+			'nop'
+			>>>
+		"""
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
 	def invert_branch(self, arch, addr):
+		"""
+		``invert_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to the
+		inverse branch.
+
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary
+		file must be saved in order to preserve the changes made.
+
+		:param Architecture arch: architecture of the current binary view
+		:param int addr: virtual address of the instruction to be modified
+		:return: True on success, False on falure.
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x1000130e)
+			'je      0x10001317'
+			>>> bv.invert_branch(bv.arch, 0x1000130e)
+			True
+			>>>
+			>>> bv.get_disassembly(0x1000130e)
+			'jne     0x10001317'
+			>>>
+		"""
 		return core.BNInvertBranch(self.handle, arch.handle, addr)
 
 	def skip_and_return_value(self, arch, addr, value):
+		"""
+		``skip_and_return_value`` convert the ``call`` instruction of architecture ``arch`` at the virtual address
+		``addr`` to the equivilent of returning a value.
+
+		:param Architecture arch: architecture of the current binary view
+		:param int addr: virtual address of the instruction to be modified
+		:param int value: value to make the instruction *return*
+		:return: True on success, False on falure.
+		:rtype: bool
+		:Example:
+
+			>>> bv.get_disassembly(0x1000132a)
+			'call    0x1000134a'
+			>>> bv.skip_and_return_value(bv.arch, 0x1000132a, 42)
+			True
+			>>> #The return value from x86 functions is stored in eax thus:
+			>>> bv.get_disassembly(0x1000132a)
+			'mov     eax, 0x2a'
+			>>>
+		"""
 		return core.BNSkipAndReturnValue(self.handle, arch.handle, addr, value)
 
 	def get_instruction_length(self, arch, addr):
+		"""
+		``get_instruction_length`` returns the number of bytes in the instruction of Architecture ``arch`` at the virtual
+		address ``addr``
+
+		:param Architecture arch: architecture of the current binary view
+		:param int addr: virtual address of the instruction query
+		:return: Number of bytes in instruction
+		:rtype: int
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.get_instruction_length(bv.arch, 0x100012f1)
+			2L
+			>>>
+		"""
 		return core.BNGetInstructionLength(self.handle, arch.handle, addr)
 
 	def notify_data_written(self, offset, length):
@@ -1999,6 +2467,20 @@ class BinaryView(object):
 		core.BNNotifyDataRemoved(self.handle, offset, length)
 
 	def get_strings(self, start = None, length = None):
+		"""
+		``get_strings`` returns a list of strings defined in the binary in the optional virtual address range:
+		``start-(start+length)``
+
+		:param int start: optional virtual address to start the string list from, defaults to start of the binary
+		:param int length: optional length range to return strings from, defaults to length of the binary
+		:return: a list of all strings or a list of strings defined between ``start`` and ``start+length``
+		:rtype: list(str())
+		:Example:
+
+			>>> bv.get_strings(0x1000004d, 1)
+			[<AsciiString: 0x1000004d, len 0x2c>]
+			>>>
+		"""
 		count = ctypes.c_ulonglong(0)
 		if start is None:
 			strings = core.BNGetStrings(self.handle, count)
@@ -2108,7 +2590,24 @@ class BinaryView(object):
 		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
 
 	def get_linear_disassembly(self, settings):
-		"""Gets an iterator for all lines in the linear disassembly of the view for the given disassembly settings"""
+		"""
+		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
+		disassembly settings. **Note:** linear_disassembly doesn't just return disassembly it will return a single line
+		from the linear view, and thus will contain both hex dump and disassembly.
+
+		:param DisassemblySettings settings: :py:Class:`DisassemblySettings` instance specifying the desired output formatting.
+		:return: An iterator containing formatted dissassembly lines.
+		:rtype: LinearDisassemblyIterator
+		:Example:
+
+			>>> settings = DisassemblySettings()
+			>>> lines = bv.get_linear_disassembly(settings)
+			>>> for line in lines:
+			...  print line
+			...  break
+			...
+			cf fa ed fe 07 00 00 01  ........
+		"""
 		class LinearDisassemblyIterator(object):
 			def __init__(self, view, settings):
 				self.view = view
@@ -2126,6 +2625,18 @@ class BinaryView(object):
 		return iter(LinearDisassemblyIterator(self, settings))
 
 	def parse_type_string(self, text):
+		"""
+		``parse_type_string`` converts `C-style` string into a :py:Class:`Type`.
+
+		:param str text: `C-style` string of type to create
+		:return: A tuple of a :py:Class:`Type` and string type name
+		:rtype: tuple(Type, str)
+		:Example:
+
+			>>> bv.parse_type_string("int foo")
+			(<type: int32_t>, 'foo')
+			>>>
+		"""
 		result = core.BNNameAndType()
 		errors = ctypes.c_char_p()
 		if not core.BNParseTypeString(self.handle, text, result, errors):
@@ -2138,24 +2649,102 @@ class BinaryView(object):
 		return type_obj, name
 
 	def get_type_by_name(self, name):
+		"""
+		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
+
+		:param str name: Type name to lookup
+		:return: A :py:Class:`Type` or None if the type does not exist
+		:rtype: Type or None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_type(name, type)
+			>>> bv.get_type_by_name(name)
+			<type: int32_t>
+			>>>
+		"""
 		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
 		return Type(obj)
 
 	def is_type_auto_defined(self, name):
+		#TODO: Documentation
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
 
 	def define_type(self, name, type_obj):
+		"""
+		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
+		the current :py:Class:`BinaryView`.
+
+		:param str name: Name of the type to be registered
+		:param Type type_obj: Type object to be registered
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_type(name, type)
+			>>> bv.get_type_by_name(name)
+			<type: int32_t>
+		"""
 		core.BNDefineAnalysisType(self.handle, name, type_obj.handle)
 
 	def define_user_type(self, name, type_obj):
+		"""
+		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
+		types for the current :py:Class:`BinaryView`.
+
+		:param str name: Name of the user type to be registered
+		:param Type type_obj: Type object to be registered
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_user_type(name, type)
+			>>> bv.get_type_by_name(name)
+			<type: int32_t>
+		"""
 		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
 
 	def undefine_type(self, name):
+		"""
+		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
+
+		:param str name: Name of type to be undefined
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_type(name, type)
+			>>> bv.get_type_by_name(name)
+			<type: int32_t>
+			>>> bv.undefine_type(name)
+			>>> bv.get_type_by_name(name)
+			>>>
+		"""
 		core.BNUndefineAnalysisType(self.handle, name)
 
 	def undefine_user_type(self, name):
+		"""
+		``undefine_user_type`` removes a :py:Class:`Type` from the global list of user types for the current
+		:py:Class:`BinaryView`
+
+		:param str name: Name of user type to be undefined
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_type(name, type)
+			>>> bv.get_type_by_name(name)
+			<type: int32_t>
+			>>> bv.undefine_type(name)
+			>>> bv.get_type_by_name(name)
+			>>>
+		"""
 		core.BNUndefineUserAnalysisType(self.handle, name)
 
 	def find_next_data(self, start, data, flags = 0):
@@ -2357,6 +2946,19 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self.handle, offset)
 
 class Symbol(object):
+	"""
+	Symbols are defined as one of the following types:
+
+		=========================== ==============================================================
+		SymbolType                  Description
+		=========================== ==============================================================
+		FunctionSymbol              Symbol for Function that exists in the current binary
+		ImportAddressSymbol         Symbol defined in the Import Address Table
+		ImportedFunctionSymbol      Symbol for Function that is not defined in the current binary
+		DataSymbol                  Symbol for Data in the current binary
+		ImportedDataSymbol          Symbol for Data that is not defined in the current binary
+		=========================== ==============================================================
+	"""
 	def __init__(self, sym_type, addr, short_name, full_name = None, raw_name = None, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
@@ -4059,8 +4661,8 @@ class Architecture(object):
 		return Platform(self, pl)
 
 	def __setattr__(self, name, value):
-		if ((name == "name") or (name == "endianness") or (name == "address_size") or (name == "default_int_size") or
-			(name == "regs")):
+		if ((name == "name") or (name == "endianness") or (name == "address_size") or
+		    (name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
 			raise AttributeError, "attribute '%s' is read only" % name
 		else:
 			try:

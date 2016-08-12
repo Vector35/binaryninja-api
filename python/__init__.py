@@ -275,15 +275,101 @@ class FileMetadata(object):
 		core.BNCloseFile(self.handle)
 
 	def begin_undo_actions(self):
+		"""
+		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>>
+		"""
 		core.BNBeginUndoActions(self.handle)
 
 	def commit_undo_actions(self):
+		"""
+		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>>
+		"""
 		core.BNCommitUndoActions(self.handle)
 
 	def undo(self):
+		"""
+		``undo`` undo the last commited action in the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.redo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
 		core.BNUndo(self.handle)
 
 	def redo(self):
+		"""
+		``redo`` redo the last commited action in the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.redo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
 		core.BNRedo(self.handle)
 
 	def navigate(self, view, offset):
@@ -731,6 +817,12 @@ class AnalysisProgress(object):
 		return "<progress: %s>" % str(self)
 
 class LinearDisassemblyPosition(object):
+	"""
+	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly.
+
+	.. note:: This object should not be instantiated directly. Rather call :py:method:`get_linear_disassembly_position_at` \
+	which instantiates this object.
+	"""
 	def __init__(self, func, block, addr):
 		self.function = func
 		self.block = block
@@ -1348,7 +1440,7 @@ class BinaryView(object):
 		``get_disassembly`` simple helper function for printing disassembly of a given address
 
 		:param int addr: virtual address of instruction
-		:param Architecture arch: optional Architecture of instruction to decode
+		:param Architecture arch: optional Architecture, ``self.arch`` is used if this parameter is None
 		:return: a str representation of the instruction at virtual address ``addr`` or None
 		:rtype: str or None
 		:Example:
@@ -1370,8 +1462,8 @@ class BinaryView(object):
 		``get_next_disassembly`` simple helper function for printing disassembly of the next instruction.
 		The internal state of the instruction to be printed is stored in the ``next_address`` attribute
 
-		:param int addr: virtual address of instruction
-		:return: a str representation of the instruction at virtual address ``addr`` or None
+		:param Architecture arch: optional Architecture, ``self.arch`` is used if this parameter is None
+		:return: a str representation of the instruction at virtual address ``self.next_address``
 		:rtype: str or None
 		:Example:
 
@@ -1396,9 +1488,11 @@ class BinaryView(object):
 	def perform_read(self, addr, length):
 		"""
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
-		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
-		have segments or the virtual address is different from the physical address.  This method **must not** be called
-		directly.
+		``length`` bytes from the rebased address ``addr``.
+
+		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is\
+		 different from the physical address.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to attempt to read from
 		:param int length: the number of bytes to be read
@@ -1410,9 +1504,11 @@ class BinaryView(object):
 	def perform_write(self, addr, data):
 		"""
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
-		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
-		have segments or the virtual address is different from the physical address.  This method **must not** be called
-		directly.
+		the bytes ``data`` to rebased address ``addr``.
+
+		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
+		different from the physical address.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
 		:param str data: the data to be written
@@ -1424,9 +1520,11 @@ class BinaryView(object):
 	def perform_insert(self, addr, data):
 		"""
 		``perform_insert`` implements a mapping between a virtual address and an absolute file offset, inserting
-		the bytes ``data`` to rebased address ``addr``. This method must be overridden by custom BinaryViews if they
-		have segments or the virtual address is different from the physical address.  This method **must not** be
-		called.
+		the bytes ``data`` to rebased address ``addr``.
+
+		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
+		different from the physical address.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
 		:param str data: the data to be inserted
@@ -1438,9 +1536,11 @@ class BinaryView(object):
 	def perform_remove(self, addr, length):
 		"""
 		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
-		``length`` bytes from the rebased address ``addr``. This method must be overridden by custom BinaryViews if they
-		have segments or the virtual address is different from the physical address. This method **must not** be called
-		directly.
+		``length`` bytes from the rebased address ``addr``.
+
+		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
+		different from the physical address.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
 		:param str data: the data to be removed
@@ -1451,8 +1551,10 @@ class BinaryView(object):
 
 	def perform_get_modification(self, addr):
 		"""
-		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified. This
-		method **must not** be called.
+		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
+
+		.. note:: This method **may** be overridden by custom BinaryViews.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
 		:return: One of the following: Original = 0, Changed = 1, Inserted = 2
@@ -1462,9 +1564,11 @@ class BinaryView(object):
 
 	def perform_is_valid_offset(self, addr):
 		"""
-		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid. This method **must**
-		be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets. This method
-		**must not** be called.
+		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
+
+		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
+		physical file offsets.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid, false if the virtual address is invalid or error
@@ -1475,9 +1579,11 @@ class BinaryView(object):
 
 	def perform_is_offset_readable(self, offset):
 		"""
-		``perform_is_offset_readable`` implements a check if an virtual address is readable. This method **must** be
-		implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or if memory
-		protections exist.This method **must not** be called.
+		``perform_is_offset_readable`` implements a check if an virtual address is readable.
+
+		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
+		physical file offsets, or if memory protections exist.
+		.. warning:: This method **must not** be called directly.
 
 		:param int offset: a virtual address to be checked
 		:return: true if the virtual address is readable, false if the virtual address is not readable or error
@@ -1487,9 +1593,11 @@ class BinaryView(object):
 
 	def perform_is_offset_writable(self, addr):
 		"""
-		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable. This method
-		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets, or
-		if memory protections exist. This method **must not** be called.
+		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
+
+		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
+		physical file offsets, or if memory protections exist.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is writable, false if the virtual address is not writable or error
@@ -1499,9 +1607,11 @@ class BinaryView(object):
 
 	def perform_is_offset_executable(self, addr):
 		"""
-		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable. This method
-		**must** be implemented for custom BinaryViews whose virtual addresses differ from physical file offsets,
-		or if memory protections exist. This method **must not** be called.
+		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable.
+
+		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
+		physical file offsets, or if memory protections exist.
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is executable, false if the virtual address is not executable or error
@@ -1512,7 +1622,10 @@ class BinaryView(object):
 	def perform_get_next_valid_offset(self, addr):
 		"""
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
-		memory address. This method **must not** be called.
+		memory address.
+
+		.. note:: This method **may** be implemented by custom BinaryViews
+		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to start checking from.
 		:return: the next readable, writable, or executable virtual memory address
@@ -1525,7 +1638,10 @@ class BinaryView(object):
 	def perform_get_start(self):
 		"""
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
-		the BinaryView. This method **must not** be called.
+		the BinaryView.
+
+		.. note:: This method **may** be implemented by custom BinaryViews
+		.. warning:: This method **must not** be called directly.
 
 		:return: returns the first virtual address in the BinaryView.
 		:rtype: int
@@ -1534,8 +1650,10 @@ class BinaryView(object):
 
 	def perform_get_entry_point(self):
 		"""
-		``perform_get_entry_point`` implements a query for the initial entry point for code execution. This method
-		**should** be implmented for custom BinaryViews that are executable. This method **must not** be called.
+		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
+
+		.. note:: This method **should** be implmented for custom BinaryViews that are executable.
+		.. warning:: This method **must not** be called directly.
 
 		:return: the virtual address of the entry point
 		:rtype: int
@@ -1545,8 +1663,9 @@ class BinaryView(object):
 	def perform_is_executable(self):
 		"""
 		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
-		This method **must** be implemented for custom BinaryViews that are executable. This method **must not**
-		be called.
+
+		.. note:: This method **must** be implemented for custom BinaryViews that are executable.
+		.. warning:: This method **must not** be called directly.
 
 		:return: true if the current BinaryView is executable, false if it is not executable or on error
 		:rtype: bool
@@ -1556,8 +1675,9 @@ class BinaryView(object):
 	def perform_get_default_endianness(self):
 		"""
 		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
-		This method **must** be implemented for custom BinaryViews that are not LittleEndian. This method
-		**must not** be called.
+
+		.. note:: This method **must** be implemented for custom BinaryViews that are not LittleEndian.
+		.. warning:: This method **must not** be called directly.
 
 		:return: either ``core.LittleEndian`` or ``core.BigEndian``
 		:rtype: BNEndianness
@@ -1566,8 +1686,7 @@ class BinaryView(object):
 
 	def create_database(self, filename):
 		"""
-		``perform_get_database`` writes the current database (.bndb) file out to the specified file.  This method
-		**must not** be called.
+		``perform_get_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:return: true on success, false on failure
@@ -1576,24 +1695,125 @@ class BinaryView(object):
 		return self.file.create_database(filename)
 
 	def save_auto_snapshot(self):
+		"""
+		``save_auto_snapshot`` saves the current database to the already created file.
+
+		.. note:: :py:method:`create_database` should have been called prior to executing this method
+
+		:return: True if it successfully saved the snapshot, False otherwise
+		:rtype: bool
+		"""
 		return self.file.save_auto_snapshot()
 
 	def get_view_of_type(self, name):
+		"""
+		``get_view_of_type`` returns the BinaryView associated with the provided name if it exists.
+
+		:param str name: Name of the view to be retrieved
+		:return: BinaryView object assocated with the provided name or None on failure
+		:rtype: BinaryView or None
+		"""
 		return self.file.get_view_of_type(name)
 
 	def begin_undo_actions(self):
+		"""
+		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>>
+		"""
 		self.file.begin_undo_actions()
 
 	def add_undo_action(self, action):
 		core.BNAddUndoAction(self.handle, action.__class__.name, action._cb)
 
 	def commit_undo_actions(self):
+		"""
+		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>>
+		"""
 		self.file.commit_undo_actions()
 
 	def undo(self):
+		"""
+		``undo`` undo the last commited action in the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.redo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
 		self.file.undo()
 
 	def redo(self):
+		"""
+		``redo`` redo the last commited action in the undo database.
+
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.begin_undo_actions()
+			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			True
+			>>> bv.commit_undo_actions()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> bv.redo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
 		self.file.redo()
 
 	def navigate(self, view, offset):
@@ -1762,7 +1982,7 @@ class BinaryView(object):
 		:rtype: None
 		:Example:
 
-			>>> bv.add_function(bv.platform, bv.entry_point + 1)
+			>>> bv.add_function(bv.platform, 1)
 			>>> bv.functions
 			[<func: x86_64@0x1>]
 
@@ -1801,9 +2021,37 @@ class BinaryView(object):
 		core.BNRemoveAnalysisFunction(self.handle, func.handle)
 
 	def create_user_function(self, platform, addr):
+		"""
+		``create_user_function`` add a new *user* function of the given ``platform`` at the virtual address ``addr``
+
+		:param Platform platform: Platform for the function to be added
+		:param int addr: virtual address of the *user* function to be added
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.create_user_function(bv.platform, 1)
+			>>> bv.functions
+			[<func: x86_64@0x1>]
+
+		"""
 		core.BNCreateUserFunction(self.handle, platform.handle, addr)
 
 	def remove_user_function(self, func):
+		"""
+		``remove_user_function`` removes the *user* function ``func`` from the list of functions
+
+		:param Function func: a Function object.
+		:return: Nothing
+		:rtype: None
+		:Example:
+
+			>>> bv.functions
+			[<func: x86_64@0x1>]
+			>>> bv.remove_user_function(bv.functions[0])
+			>>> bv.functions
+			[]
+		"""
 		core.BNRemoveUserFunction(self.handle, func.handle)
 
 	def update_analysis(self):
@@ -2183,7 +2431,12 @@ class BinaryView(object):
 
 	def define_imported_function(self, import_addr_sym, func):
 		"""
-		``define_imported_function``
+		``define_imported_function`` defines an imported Function ``func`` with a ImportedFunctionSymbol type.
+
+		:param Symbol import_addr_sym: A Symbol object with type ImportedFunctionSymbol
+		:param Function func: A Function object to define as an imported function
+		:return: Nothing
+		:rtype: None
 		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
 
@@ -2493,36 +2746,203 @@ class BinaryView(object):
 		return result
 
 	def add_analysis_completion_event(self, callback):
+		"""
+		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
+		This is helpful when using asynchronously analysis.
+
+		:param callable() callback: A function to be called with no parameters when analysis has completed.
+		:return: An initialized AnalysisCompletionEvent object.
+		:rtype: AnalysisCompletionEvent
+		:Example:
+
+			>>> def completionEvent():
+			...   print "done"
+			...
+			>>> bv.add_analysis_completion_event(completionEvent)
+			<binaryninja.AnalysisCompletionEvent object at 0x10a2c9f10>
+			>>> bv.update_analysis()
+			done
+			>>>
+		"""
 		return AnalysisCompletionEvent(self, callback)
 
 	def get_next_function_start_after(self, addr):
+		"""
+		``get_next_function_start_after`` returns the virtual address of the Function that occurs after the virtual address
+		``addr``
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the next Function
+		:rtype: int
+		:Example:
+
+			>>> bv.get_next_function_start_after(bv.entry_point)
+			268441061L
+			>>> hex(bv.get_next_function_start_after(bv.entry_point))
+			'0x100015e5L'
+			>>> hex(bv.get_next_function_start_after(0x100015e5))
+			'0x10001629L'
+			>>> hex(bv.get_next_function_start_after(0x10001629))
+			'0x1000165eL'
+			>>>
+		"""
 		return core.BNGetNextFunctionStartAfterAddress(self.handle, addr)
 
 	def get_next_basic_block_start_after(self, addr):
+		"""
+		``get_next_basic_block_start_after`` returns the virtual address of the BasicBlock that occurs after the virtual
+		 address ``addr``
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the next BasicBlock
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.get_next_basic_block_start_after(bv.entry_point))
+			'0x100014a8L'
+			>>> hex(bv.get_next_basic_block_start_after(0x100014a8))
+			'0x100014adL'
+			>>>
+		"""
 		return core.BNGetNextBasicBlockStartAfterAddress(self.handle, addr)
 
 	def get_next_data_after(self, addr):
+		"""
+		``get_next_data_after`` retrieves the virtual address of the next non-code byte.
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the next data byte which is data, not code
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.get_next_data_after(0x10000000))
+			'0x10000001L'
+		"""
 		return core.BNGetNextDataAfterAddress(self.handle, addr)
 
 	def get_next_data_var_after(self, addr):
+		"""
+		``get_next_data_var_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the next :py:Class:`DataVariable`
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.get_next_data_var_after(0x10000000))
+			'0x1000003cL'
+			>>> bv.get_data_var_at(0x1000003c)
+			<var 0x1000003c: int32_t>
+			>>>
+		"""
 		return core.BNGetNextDataVariableAfterAddress(self.handle, addr)
 
 	def get_previous_function_start_before(self, addr):
+		"""
+		``get_previous_function_start_before`` returns the virtual address of the Function that occurs prior to the
+		virtual address provided
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the previous Function
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.entry_point)
+			'0x1000149fL'
+			>>> hex(bv.get_next_function_start_after(bv.entry_point))
+			'0x100015e5L'
+			>>> hex(bv.get_previous_function_start_before(0x100015e5))
+			'0x1000149fL'
+			>>>
+		"""
 		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
 
 	def get_previous_basic_block_start_before(self, addr):
+		"""
+		``get_previous_basic_block_start_before`` returns the virtual address of the BasicBlock that occurs prior to the
+		provided virtual address
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the previous BasicBlock
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.entry_point)
+			'0x1000149fL'
+			>>> hex(bv.get_next_basic_block_start_after(bv.entry_point))
+			'0x100014a8L'
+			>>> hex(bv.get_previous_basic_block_start_before(0x100014a8))
+			'0x1000149fL'
+			>>>
+		"""
 		return core.BNGetPreviousBasicBlockStartBeforeAddress(self.handle, addr)
 
 	def get_previous_basic_block_end_before(self, addr):
+		"""
+		``get_previous_basic_block_end_before``
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the previous BasicBlock end
+		:rtype: int
+		:Example:
+			>>> hex(bv.entry_point)
+			'0x1000149fL'
+			>>> hex(bv.get_next_basic_block_start_after(bv.entry_point))
+			'0x100014a8L'
+			>>> hex(bv.get_previous_basic_block_end_before(0x100014a8))
+			'0x100014a8L'
+		"""
 		return core.BNGetPreviousBasicBlockEndBeforeAddress(self.handle, addr)
 
 	def get_previous_data_before(self, addr):
+		"""
+		``get_previous_data_before``
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the previous data (non-code) byte
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.get_previous_data_before(0x1000001))
+			'0x1000000L'
+			>>>
+		"""
 		return core.BNGetPreviousDataBeforeAddress(self.handle, addr)
 
 	def get_previous_data_var_before(self, addr):
+		"""
+		``get_previous_data_var_before``
+
+		:param int addr: the virtual address to start looking from.
+		:return: the virtual address of the previous :py:Class:`DataVariable`
+		:rtype: int
+		:Example:
+
+			>>> hex(bv.get_previous_data_var_before(0x1000003c))
+			'0x10000000L'
+			>>> bv.get_data_var_at(0x10000000)
+			<var 0x10000000: int16_t>
+			>>>
+		"""
 		return core.BNGetPreviousDataVariableBeforeAddress(self.handle, addr)
 
 	def get_linear_disassembly_position_at(self, addr, settings):
+		"""
+		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition` object for use in
+		:py:method:`get_previous_linear_disassembly_lines` or :py:method:`get_next_linear_disassembly_lines`.
+
+		:param int addr: virtual address of linear disassembly position
+		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object
+		:return: An instantied :py:class:`LinearDisassemblyPosition` object for the provided virtual address
+		:rtype: LinearDisassemblyPosition
+		:Example:
+
+			>>> settings = DisassemblySettings()
+			>>> pos = bv.get_linear_disassembly_position_at(0x1000149f, settings)
+			>>> lines = bv.get_previous_linear_disassembly_lines(pos, settings)
+			>>> lines
+			[<0x1000149a: pop     esi>, <0x1000149b: pop     ebp>, <0x1000149c: retn    0xc>, <0x1000149f: >]
+		"""
 		if settings is not None:
 			settings = settings.handle
 		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr, settings)
@@ -2584,16 +3004,53 @@ class BinaryView(object):
 		return result
 
 	def get_previous_linear_disassembly_lines(self, pos, settings):
+		"""
+		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
+		previous disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
+		repeatedly to get more lines of linear disassembly.
+
+		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
+		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly
+		:return: a list of :py:class:`LinearDisassemblyLine` objects for the previous lines.
+		:Example:
+
+			>>> settings = DisassemblySettings()
+			>>> pos = bv.get_linear_disassembly_position_at(0x1000149a, settings)
+			>>> bv.get_previous_linear_disassembly_lines(pos, settings)
+			[<0x10001488: push    dword [ebp+0x10 {arg_c}]>, ... , <0x1000149a: >]
+			>>> bv.get_previous_linear_disassembly_lines(pos, settings)
+			[<0x10001483: xor     eax, eax  {0x0}>, ... , <0x10001488: >]
+		"""
 		return self._get_linear_disassembly_lines(core.BNGetPreviousLinearDisassemblyLines, pos, settings)
 
 	def get_next_linear_disassembly_lines(self, pos, settings):
+		"""
+		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
+		next disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
+		repeatedly to get more lines of linear disassembly.
+
+		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
+		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly
+		:return: a list of :py:class:`LinearDisassemblyLine` objects for the next lines.
+		:Example:
+
+			>>> settings = DisassemblySettings()
+			>>> pos = bv.get_linear_disassembly_position_at(0x10001483, settings)
+			>>> bv.get_next_linear_disassembly_lines(pos, settings)
+			[<0x10001483: xor     eax, eax  {0x0}>, <0x10001485: inc     eax  {0x1}>, ... , <0x10001488: >]
+			>>> bv.get_next_linear_disassembly_lines(pos, settings)
+			[<0x10001488: push    dword [ebp+0x10 {arg_c}]>, ... , <0x1000149a: >]
+			>>>
+		"""
 		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
 
 	def get_linear_disassembly(self, settings):
 		"""
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
-		disassembly settings. **Note:** linear_disassembly doesn't just return disassembly it will return a single line
-		from the linear view, and thus will contain both hex dump and disassembly.
+		disassembly settings.
+
+		.. note:: linear_disassembly doesn't just return disassembly it will return a single line from the linear view,\
+		 and thus will contain both data views, and disassembly.
 
 		:param DisassemblySettings settings: :py:Class:`DisassemblySettings` instance specifying the desired output formatting.
 		:return: An iterator containing formatted dissassembly lines.
@@ -2669,7 +3126,20 @@ class BinaryView(object):
 		return Type(obj)
 
 	def is_type_auto_defined(self, name):
-		#TODO: Documentation
+		"""
+		``is_type_auto_defined`` queries the user type list of name. If name is not in the *user* type list then the name
+		is considered an *auto* type.
+
+		:param str name: Name of type to query
+		:return: True if the type is not a *user* type. False if the type is a *user* type.
+		:Example:
+			>>> bv.is_type_auto_defined("foo")
+			True
+			>>> bv.define_user_type("foo", bv.parse_type_string("struct {int x,y;}")[0])
+			>>> bv.is_type_auto_defined("foo")
+			False
+			>>>
+		"""
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
 
 	def define_type(self, name, type_obj):
@@ -2748,6 +3218,21 @@ class BinaryView(object):
 		core.BNUndefineUserAnalysisType(self.handle, name)
 
 	def find_next_data(self, start, data, flags = 0):
+		"""
+		``find_next_data`` searchs for the bytes in data starting at the virtual address ``start`` either, case-sensitive,
+		or case-insensitive.
+
+		:param int start: virtual address to start searching from.
+		:param str data: bytes to search for
+		:param FindFlags flags: case-sensitivity flag, one of the following:
+
+			==================== ======================
+			FindFlags            Description
+			==================== ======================
+			NoFindFlags          Case-sensitive find
+			FindCaseInsensitive  Case-insensitive find
+			==================== ======================
+		"""
 		buf = DataBuffer(str(data))
 		result = ctypes.c_ulonglong()
 		if not core.BNFindNextData(self.handle, start, buf.handle, result, flags):
@@ -4350,6 +4835,44 @@ class InstructionInfo:
 		return "<instr: %d bytes%s, %s>" % (self.length, branch_delay, repr(self.branches))
 
 class InstructionTextToken:
+	"""
+	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
+
+		======================== ============================================
+		InstructionTextTokenType Description
+		======================== ============================================
+		TextToken                Text that doesn't fit into the other tokens
+		InstructionToken         The instruction mnemonic
+		OperandSeparatorToken    The comma or whatever else separates tokens
+		RegisterToken            Registers
+		IntegerToken             Integers
+		PossibleAddressToken     Integers that are likely addresses
+		BeginMemoryOperandToken  The start of memory operand
+		EndMemoryOperandToken    The end of a memory operand
+		FloatingPointToken       Floating point number
+		AnnotationToken          **For internal use only**
+		CodeRelativeAddressToken **For internal use only**
+		StackVariableTypeToken   **For internal use only**
+		DataVariableTypeToken    **For internal use only**
+		FunctionReturnTypeToken  **For internal use only**
+		FunctionAttributeToken   **For internal use only**
+		ArgumentTypeToken        **For internal use only**
+		ArgumentNameToken        **For internal use only**
+		HexDumpByteValueToken    **For internal use only**
+		HexDumpSkippedByteToken  **For internal use only**
+		HexDumpInvalidByteToken  **For internal use only**
+		HexDumpTextToken         **For internal use only**
+		OpcodeToken              **For internal use only**
+		StringToken              **For internal use only**
+		CharacterConstantToken   **For internal use only**
+		CodeSymbolToken          **For internal use only**
+		DataSymbolToken          **For internal use only**
+		StackVariableToken       **For internal use only**
+		ImportToken              **For internal use only**
+		AddressDisplayToken      **For internal use only**
+		======================== ============================================
+
+	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff):
 		self.type = token_type
 		self.text = text
@@ -4408,6 +4931,10 @@ class _ArchitectureMetaClass(type):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 class Architecture(object):
+	"""
+	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implemnt assembly,
+	disassembly, IL lifting, and patching.
+	"""
 	name = None
 	endianness = core.LittleEndian
 	address_size = 8
@@ -5120,7 +5647,57 @@ class Architecture(object):
 			log_error(traceback.format_exc())
 			return False
 
+	def perform_get_instruction_info(self, data, addr):
+		"""
+		``perform_get_instruction_info`` implements a method which interpretes the bytes passed in ``data`` as an
+		:py:Class:`InstructionInfo` object. The InstructionInfo object should have the length of the current instruction.
+		If the instruction is a branch instruction the method should add a branch of the proper type:
+
+			===================== =================================================
+			BranchType            Description
+			===================== =================================================
+			UnconditionalBranch   Branch will alwasy be taken
+			FalseBranch           False branch condition
+			TrueBranch            True branch condition
+			CallDestination       Branch is a call instruction (Branch with Link)
+			FunctionReturn        Branch returns from a function
+			SystemCall            System call instruction
+			IndirectBranch        Branch destination is a memory address or register
+			UnresolvedBranch      Call instruction that isn't
+			===================== ==================================================
+
+		:param str data: bytes to decode
+		:param int addr: virtual address of the byte to be decoded
+		:return: a :py:class:`InstructionInfo` object containing the length and branche types for the given instruction
+		:rtype: InstructionInfo
+		"""
+		return None
+
+	def perform_get_instruction_text(self, data, addr):
+		"""
+		``perform_get_instruction_text`` implements a method which interpretes the bytes passed in ``data`` as a
+		list of :py:class:`InstructionTextToken` objects.
+
+		:param str data: bytes to decode
+		:param int addr: virtual address of the byte to be decoded
+		:return: a tuple of list(InstructionTextToken) and length of instruction decoded
+		:rtype: tuple(list(InstructionTextToken), int)
+		"""
+		return None, None
+
 	def perform_get_instruction_low_level_il(self, data, addr, il):
+		"""
+		``perform_get_instruction_low_level_il`` implements a method to interpret the bytes passed in ``data`` to
+		low-level IL instructions. The il instructions must be appended to the :py:class:`LowLevelILFunction`.
+
+		.. note:: Architecture subclasses should implement this method.
+
+		:param str data: bytes to be interpreted as low-level IL instructions
+		:param int addr: virtual address of start of ``data``
+		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
+		:return: Nothing
+		:rtype: None
+		"""
 		return None
 
 	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
@@ -5130,33 +5707,160 @@ class Architecture(object):
 		return il.unimplemented()
 
 	def perform_assemble(self, code, addr):
+		"""
+		``perform_assemble`` implements a method to convert the string of assembly instructions ``code`` loaded at
+		virtual address ``addr`` to the byte representation of those instructions. This can be done by simply shelling
+		out to an assembler like yasm or llvm-mc, since this method isn't performance sensitive.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. note :: It is important that the assembler used accepts a syntax identical to the one emitted by the \
+		disassembler. This will prevent confusing the user.
+		.. warning:: This method should never be called directly.
+
+		:param str code: string representation of the instructions to be assembled
+		:param int addr: virtual address that the instructions will be loaded at
+		:return: the bytes for the assembled instructions or error string
+		:rtype: (a tuple of instructions and empty string) or (or None and error string)
+		"""
 		return None, "Architecture does not implement an assembler.\n"
 
 	def perform_is_never_branch_patch_available(self, data, addr):
+		"""
+		``perform_is_never_branch_patch_available`` implements a check to determine if the instruction represented by
+		the bytes contained in ``data`` at address addr is a branch instruction that can be made to never branch.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		"""
 		return False
 
 	def perform_is_always_branch_patch_available(self, data, addr):
+		"""
+		``perform_is_always_branch_patch_available`` implements a check to determine if the instruction represented by
+		the bytes contained in ``data`` at address addr is a conditional branch that can be made unconditional.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		"""
 		return False
 
 	def perform_is_invert_branch_patch_available(self, data, addr):
+		"""
+		``perform_is_invert_branch_patch_available`` implements a check to determine if the instruction represented by
+		the bytes contained in ``data`` at address addr is a conditional branch which can be inverted.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		"""
 		return False
 
 	def perform_is_skip_and_return_zero_patch_available(self, data, addr):
+		"""
+		``perform_is_skip_and_return_zero_patch_available`` implements a check to determine if the instruction represented by
+		the bytes contained in ``data`` at address addr is a *call-like* instruction which can made into instructions
+		that are equivilent to "return 0". For example if ``data`` was the x86 instruction ``call eax`` which could be
+		converted into ``xor eax,eax`` thus this function would return True.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		"""
 		return False
 
 	def perform_is_skip_and_return_value_patch_available(self, data, addr):
+		"""
+		``perform_is_skip_and_return_value_patch_available`` implements a check to determine if the instruction represented by
+		the bytes contained in ``data`` at address addr is a *call-like* instruction which can made into instructions
+		that are equivilent to "return 0". For example if ``data`` was the x86 instruction ``call 0xdeadbeef`` which could be
+		converted into ``mov eax, 42`` thus this function would return True.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		"""
 		return False
 
 	def perform_convert_to_nop(self, data, addr):
+		"""
+		``perform_convert_to_nop`` implements a method which returns a nop sequence of len(data) bytes long.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes at virtual address ``addr``
+		:param int addr: the virtual address of the instruction to be patched
+		:return: nop sequence of same length as ``data`` or None
+		:rtype: str or None
+		"""
 		return None
 
 	def perform_always_branch(self, data, addr):
+		"""
+		``perform_always_branch`` implements a method which converts the branch represented by the bytes in ``data`` to
+		at ``addr`` to an unconditional branch.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: The bytes of the replacement unconditional branch instruction
+		:rtype: str
+		"""
 		return None
 
 	def perform_invert_branch(self, data, addr):
+		"""
+		``perform_invert_branch`` implements a method which inverts the branch represented by the bytes in ``data`` to
+		at ``addr``.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: The bytes of the replacement unconditional branch instruction
+		:rtype: str
+		"""
 		return None
 
 	def perform_skip_and_return_value(self, data, addr, value):
+		"""
+		``perform_skip_and_return_value`` implements a method which converts a *call-like* instruction represented by
+		the bytes in ``data`` at ``addr`` to one or more instructions that are equivilent to a function returning a
+		value.
+
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str data: bytes to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:param int value: value to be returned
+		:return: The bytes of the replacement unconditional branch instruction
+		:rtype: str
+		"""
 		return None
 
 	def get_instruction_info(self, data, addr):
@@ -5417,6 +6121,12 @@ class LowLevelILLabel:
 			self.handle = handle
 
 class LowLevelILInstruction(object):
+	"""
+	``class LowLevelILInstruction`` Low Level Intermediate Language Instructions are infinite length tree-based
+	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.
+	Infix notation is thus more natural to read than other notations (e.g. x86 ``mov eax, 0`` vs. LLIL ``eax = 0``).
+	"""
+
 	ILOperations = {
 		core.LLIL_NOP: [],
 		core.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
@@ -5430,35 +6140,35 @@ class LowLevelILInstruction(object):
 		core.LLIL_CONST: [("value", "int")],
 		core.LLIL_FLAG: [("src", "flag")],
 		core.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
-		core.LLIL_ADD: [("left", "expr"), ("right", "expr")],
-		core.LLIL_ADC: [("left", "expr"), ("right", "expr")],
-		core.LLIL_SUB: [("left", "expr"), ("right", "expr")],
-		core.LLIL_SBB: [("left", "expr"), ("right", "expr")],
-		core.LLIL_AND: [("left", "expr"), ("right", "expr")],
-		core.LLIL_OR: [("left", "expr"), ("right", "expr")],
-		core.LLIL_XOR: [("left", "expr"), ("right", "expr")],
-		core.LLIL_LSL: [("left", "expr"), ("right", "expr")],
-		core.LLIL_LSR: [("left", "expr"), ("right", "expr")],
-		core.LLIL_ASR: [("left", "expr"), ("right", "expr")],
-		core.LLIL_ROL: [("left", "expr"), ("right", "expr")],
-		core.LLIL_RLC: [("left", "expr"), ("right", "expr")],
-		core.LLIL_ROR: [("left", "expr"), ("right", "expr")],
-		core.LLIL_RRC: [("left", "expr"), ("right", "expr")],
-		core.LLIL_MUL: [("left", "expr"), ("right", "expr")],
+		core.LLIL_ADD:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_ADC:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_SUB:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_SBB:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_AND:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_OR:      [("left", "expr"), ("right", "expr")],
+		core.LLIL_XOR:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_LSL:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_LSR:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_ASR:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_ROL:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_RLC:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_ROR:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_RRC:     [("left", "expr"), ("right", "expr")],
+		core.LLIL_MUL:     [("left", "expr"), ("right", "expr")],
 		core.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		core.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
-		core.LLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		core.LLIL_DIVU:    [("left", "expr"), ("right", "expr")],
 		core.LLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		core.LLIL_DIVS:    [("left", "expr"), ("right", "expr")],
 		core.LLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_MODU: [("left", "expr"), ("right", "expr")],
+		core.LLIL_MODU:    [("left", "expr"), ("right", "expr")],
 		core.LLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_MODS: [("left", "expr"), ("right", "expr")],
+		core.LLIL_MODS:    [("left", "expr"), ("right", "expr")],
 		core.LLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_NEG: [("src", "expr")],
-		core.LLIL_NOT: [("src", "expr")],
-		core.LLIL_SX: [("src", "expr")],
-		core.LLIL_ZX: [("src", "expr")],
+		core.LLIL_NEG:     [("src", "expr")],
+		core.LLIL_NOT:     [("src", "expr")],
+		core.LLIL_SX:      [("src", "expr")],
+		core.LLIL_ZX:      [("src", "expr")],
 		core.LLIL_JUMP: [("dest", "expr")],
 		core.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		core.LLIL_CALL: [("dest", "expr")],
@@ -5467,16 +6177,16 @@ class LowLevelILInstruction(object):
 		core.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
 		core.LLIL_GOTO: [("dest", "int")],
 		core.LLIL_FLAG_COND: [("condition", "cond")],
-		core.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_E:    [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_NE:   [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SLT:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_ULT:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SLE:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_ULE:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SGE:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_UGE:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SGT:  [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_UGT:  [("left", "expr"), ("right", "expr")],
 		core.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
 		core.LLIL_BOOL_TO_INT: [("src", "expr")],
 		core.LLIL_SYSCALL: [],
@@ -5573,10 +6283,43 @@ class LowLevelILInstruction(object):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 class LowLevelILExpr:
+	"""
+	``class LowLevelILExpr`` hold the index of IL Expressions.
+
+	.. note:: This class shouldn't be instantiated directly. Rather the helper members of LowLevelILFunction should be \
+	used instead.
+	"""
 	def __init__(self, index):
 		self.index = index
 
 class LowLevelILFunction(object):
+	"""
+	``class LowLevelILFunction`` contains the list of LowLevelILExpr objects that make up a function. LowLevelILExpr
+	objects can be added to the LowLevelILFunction by calling ``append`` and passing the result of the various class
+	methods which return LowLevelILExpr objects.
+
+
+	LowLevelILFlagCondition values used as parameters in the ``flag_condition`` method.
+
+		======================= ========== ===============================
+		LowLevelILFlagCondition Operator   Description
+		======================= ========== ===============================
+		LLFC_E                  ==         Equal
+		LLFC_NE                 !=         Not equal
+		LLFC_SLT                s<         Signed less than
+		LLFC_ULT                u<         Unsigned less than
+		LLFC_SLE                s<=        Signed less than or equal
+		LLFC_ULE                u<=        Unsigned less than or equal
+		LLFC_SGE                s>=        Signed greater than or equal
+		LLFC_UGE                u>=        Unsigned greater than or equal
+		LLFC_SGT                s>         Signed greather than
+		LLFC_UGT                u>         Unsigned greater than
+		LLFC_NEG                -          Negative
+		LLFC_POS                +          Positive
+		LLFC_O                  overflow   Overflow
+		LLFC_NO                 !overflow  No overflow
+		======================= ========== ===============================
+	"""
 	def __init__(self, arch, handle = None, source_func = None):
 		self.arch = arch
 		self.source_function = source_func
@@ -5590,6 +6333,7 @@ class LowLevelILFunction(object):
 
 	@property
 	def current_address(self):
+		"""Current IL Address (read/write)"""
 		return core.BNLowLevelILGetCurrentAddress(self.handle)
 
 	@current_address.setter
@@ -5608,7 +6352,7 @@ class LowLevelILFunction(object):
 
 	@property
 	def basic_blocks(self):
-		"""Low level IL basic blocks (read-only)"""
+		"""list of LowLevelILBasicBlock objects (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
 		result = []
@@ -5674,17 +6418,52 @@ class LowLevelILFunction(object):
 		return LowLevelILExpr(core.BNLowLevelILAddExpr(self.handle, operation, size, flags, a, b, c, d))
 
 	def append(self, expr):
+		"""
+		``append`` adds the LowLevelILExpr ``expr`` to the current LowLevelILFunction.
+
+		:param LowLevelILExpr expr: the LowLevelILExpr to add to the current LowLevelILFunction
+		:return: number of LowLevelILExpr in the current function
+		:rtype: int
+		"""
 		return core.BNLowLevelILAddInstruction(self.handle, expr.index)
 
 	def nop(self):
+		"""
+		``nop`` no operation, this instruction does nothing
+
+		:return: The no operation expression
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_NOP)
 
 	def set_reg(self, size, reg, value, flags = 0):
+		"""
+		``set_reg`` sets the register ``reg`` of size ``size`` to the expression ``value``
+
+		:param int size: size of the register parameter in bytes
+		:param str reg: the register name
+		:param LowLevelILExpr value: an expression to set the register to
+		:param str flags: which flags are set by this operation
+		:return: The expression ``reg = value``
+		:rtype: LowLevelILExpr
+		"""
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
 		return self.expr(core.LLIL_SET_REG, reg, value.index, size = size, flags = flags)
 
 	def set_reg_split(self, size, hi, lo, value, flags = 0):
+		"""
+		``set_reg_split`` uses ``hi`` and ``lo`` as a single extended register setting ``hi:lo`` to the expression
+		``value``.
+
+		:param int size: size of the register parameter in bytes
+		:param str hi: the high register name
+		:param str lo: the low register name
+		:param LowLevelILExpr value: an expression to set the split regiters to
+		:param str flags: which flags are set by this operation
+		:return: The expression ``hi:lo = value``
+		:rtype: LowLevelILExpr
+		"""
 		if isinstance(hi, str):
 			hi = self.arch.regs[hi].index
 		if isinstance(lo, str):
@@ -5692,226 +6471,860 @@ class LowLevelILFunction(object):
 		return self.expr(core.LLIL_SET_REG_SPLIT, hi, lo, value.index, size = size, flags = flags)
 
 	def set_flag(self, flag, value):
+		"""
+		``set_flag`` sets the flag ``flag`` to the LowLevelILExpr ``value``
+
+		:param str flag: the low register name
+		:param LowLevelILExpr value: an expression to set the flag to
+		:return: The expression FLAG.flag = value
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_SET_FLAG, self.arch.get_flag_by_name(flag), value.index)
 
 	def load(self, size, addr):
+		"""
+		``laod`` Reads ``size`` bytes from the expression ``addr``
+
+		:param int size: number of bytes to read
+		:param LowLevelILExpr addr: the expression to read memory from
+		:return: The expression ``[addr].size``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_LOAD, addr.index, size = size)
 
 	def store(self, size, addr, value):
+		"""
+		``store`` Writes ``size`` bytes to expression ``addr`` read from expression ``value``
+
+		:param int size: number of bytes to write
+		:param LowLevelILExpr addr: the expression to write to
+		:param LowLevelILExpr value: the expression to be written
+		:return: The expression ``[addr].size = value``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_STORE, addr.index, value.index, size = size)
 
 	def push(self, size, value):
+		"""
+		``push`` writes ``size`` bytes from expression ``value`` to the stack, adjusting the stack by *address size*.
+
+		:param int size: number of bytes to write and adjust the stack by
+		:param LowLevelILExpr value: the expression to write
+		:return: The expression push(value)
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_PUSH, value.index, size = size)
 
 	def pop(self, size):
+		"""
+		``pop`` reads ``size`` bytes from the stack, adjusting the stack by *address size*.
+
+		:param int size: number of bytes to read from the stack
+		:return: The expression ``pop``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_POP, size = size)
 
 	def reg(self, size, reg):
+		"""
+		``reg`` returns a register of size ``size`` with name ``name``
+
+		:param int size: the size of the register in bytes
+		:param str reg: the name of the register
+		:return: A register expression for the given string
+		:rtype: LowLevelILExpr
+		"""
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
 		return self.expr(core.LLIL_REG, reg, size = size)
 
 	def const(self, size, value):
+		"""
+		``const`` returns an expression for the constant integer ``value`` with size ``size``
+
+		:param int size: the size of the constant in bytes
+		:param int value: integer value of the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CONST, value, size = size)
 
 	def flag(self, reg):
+		"""
+		``flag`` returns a flag expression for the given flag name.
+
+		:param str reg: name of the flag expression to retrieve
+		:return: A flag expression of given flag name
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_FLAG, self.arch.get_flag_by_name(reg))
 
 	def flag_bit(self, size, reg, bit):
+		"""
+		``flag_bit`` sets the flag named ``reg`` and size ``size`` to the constant integer value ``bit``
+
+		:param int size: the size of the flag
+		:param str reg: flag value
+		:param int bit: integer value to set the bit to
+		:return: A constant expression of given value and size ``FLAG.reg = bit``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size = size)
 
 	def add(self, size, a, b, flags = None):
+		"""
+		``add`` adds expression ``a`` to expression ``b`` potentially setting flags ``flags`` and returning
+		an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``add.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ADD, a.index, b.index, size = size, flags = flags)
 
 	def add_carry(self, size, a, b, flags = None):
+		"""
+		``add_carry`` adds with carry expression ``a`` to expression ``b`` potentially setting flags ``flags`` and returning
+		an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``adc.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ADC, a.index, b.index, size = size, flags = flags)
 
 	def sub(self, size, a, b, flags = None):
+		"""
+		``sub`` subtracts expression ``b`` from expression ``a`` potentially setting flags ``flags`` and returning
+		an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``sub.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_SUB, a.index, b.index, size = size, flags = flags)
 
 	def sub_borrow(self, size, a, b, flags = None):
+		"""
+		``sub_borrow`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``sbc.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_SBB, a.index, b.index, size = size, flags = flags)
 
 	def and_expr(self, size, a, b, flags = None):
+		"""
+		``and_expr`` bitwise and's expression ``a`` and expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``and.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_AND, a.index, b.index, size = size, flags = flags)
 
 	def or_expr(self, size, a, b, flags = None):
+		"""
+		``or_expr`` bitwise or's expression ``a`` and expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``or.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_OR, a.index, b.index, size = size, flags = flags)
 
 	def xor_expr(self, size, a, b, flags = None):
+		"""
+		``xor_expr`` xor's expression ``a`` with expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``xor.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_XOR, a.index, b.index, size = size, flags = flags)
 
 	def shift_left(self, size, a, b, flags = None):
+		"""
+		``shift_left`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``lsl.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_LSL, a.index, b.index, size = size, flags = flags)
 
 	def logical_shift_right(self, size, a, b, flags = None):
+		"""
+		``logical_shift_right`` shifts logically right expression ``a`` by expression ``b`` potentially setting flags
+		``flags``and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``lsr.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_LSR, a.index, b.index, size = size, flags = flags)
 
 	def arith_shift_right(self, size, a, b, flags = None):
+		"""
+		``arith_shift_right`` shifts arithmatic right expression ``a`` by expression ``b``  potentially setting flags
+		``flags`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``asr.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ASR, a.index, b.index, size = size, flags = flags)
 
 	def rotate_left(self, size, a, b, flags = None):
+		"""
+		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``rol.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ROL, a.index, b.index, size = size, flags = flags)
 
 	def rotate_left_carry(self, size, a, b, flags = None):
+		"""
+		``rotate_left_carry`` bitwise rotates left with carry expression ``a`` by expression ``b`` potentially setting
+		flags ``flags`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``rcl.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_RLC, a.index, b.index, size = size, flags = flags)
 
 	def rotate_right(self, size, a, b, flags = None):
+		"""
+		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``ror.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ROR, a.index, b.index, size = size, flags = flags)
 
 	def rotate_right_carry(self, size, a, b, flags = None):
+		"""
+		``rotate_right_carry`` bitwise rotates right with carry expression ``a`` by expression ``b`` potentially setting
+		flags ``flags`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``rcr.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_RRC, a.index, b.index, size = size, flags = flags)
 
 	def mult(self, size, a, b, flags = None):
+		"""
+		``mult`` multiplies expression ``a`` by expression ``b`` potentially setting flags ``flags`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``sbc.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MUL, a.index, b.index, size = size, flags = flags)
 
 	def mult_double_prec_signed(self, size, a, b, flags = None):
+		"""
+		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``
+		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MULS_DP, a.index, b.index, size = size, flags = flags)
 
 	def mult_double_prec_unsigned(self, size, a, b, flags = None):
+		"""
+		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``
+		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MULU_DP, a.index, b.index, size = size, flags = flags)
 
 	def div_signed(self, size, a, b, flags = None):
+		"""
+		``div_signed`` signed divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``divs.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_DIVS, a.index, b.index, size = size, flags = flags)
 
 	def div_double_prec_signed(self, size, hi, lo, b, flags = None):
+		"""
+		``div_double_prec_signed`` signed double precision divide using expression ``hi`` and expression ``lo`` as a single
+		double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an expression
+		of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr hi: high LHS expression
+		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_DIVS_DP, hi.index, lo.index, b.index, size = size, flags = flags)
 
 	def div_unsigned(self, size, a, b, flags = None):
+		"""
+		``div_unsigned`` unsigned divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``divs.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_DIVS, a.index, b.index, size = size, flags = flags)
 
 	def div_double_prec_unsigned(self, size, hi, lo, b, flags = None):
+		"""
+		``div_double_prec_unsigned`` unsigned double precision divide using expression ``hi`` and expression ``lo`` as
+		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr hi: high LHS expression
+		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_DIVS_DP, hi.index, lo.index, b.index, size = size, flags = flags)
 
 	def mod_signed(self, size, a, b, flags = None):
+		"""
+		``mod_signed`` signed modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``mods.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MODS, a.index, b.index, size = size, flags = flags)
 
 	def mod_double_prec_signed(self, size, hi, lo, b, flags = None):
+		"""
+		``mod_double_prec_signed`` signed double precision modulus using expression ``hi`` and expression ``lo`` as a single
+		double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an expression
+		of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr hi: high LHS expression
+		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``mods.dp.<size>{<flags>}(hi:lo, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MODS_DP, hi.index, lo.index, b.index, size = size, flags = flags)
 
 	def mod_unsigned(self, size, a, b, flags = None):
+		"""
+		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``modu.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MODS, a.index, b.index, size = size, flags = flags)
 
 	def mod_double_prec_unsigned(self, size, hi, lo, b, flags = None):
+		"""
+		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``hi`` and expression ``lo`` as
+		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr hi: high LHS expression
+		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: optional, flags to set
+		:return: The expression ``modu.dp.<size>{<flags>}(hi:lo, b)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_MODS_DP, hi.index, lo.index, b.index, size = size, flags = flags)
 
 	def neg_expr(self, size, value, flags = None):
+		"""
+		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``neg.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_NEG, value.index, size = size, flags = flags)
 
 	def not_expr(self, size, value, flags = None):
+		"""
+		``not_expr`` bitwise inverse of expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to bitwise invert
+		:param str flags: optional, flags to set
+		:return: The expression ``not.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_NOT, value.index, size = size, flags = flags)
 
 	def sign_extend(self, size, value):
+		"""
+		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to sign extend
+		:return: The expression ``sx.<size>(value)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_SX, value.index, size = size)
 
 	def zero_extend(self, size, value):
+		"""
+		``sign_extend`` zero-extends the expression in ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to zero extend
+		:return: The expression ``sx.<size>(value)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_ZX, value.index, size = size)
 
 	def jump(self, dest):
+		"""
+		``jump`` returns an expression which jumps (branches) to the expression ``dest``
+
+		:param LowLevelILExpr dest: the expression to jump to
+		:return: The expression ``jump(dest)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_JUMP, dest.index)
 
 	def call(self, dest):
+		"""
+		``call`` returns an expression which first pushes the address of the next instruction onto the stack then jumps
+		(branches) to the expression ``dest``
+
+		:param LowLevelILExpr dest: the expression to call
+		:return: The expression ``call(dest)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CALL, dest.index)
 
 	def ret(self, dest):
+		"""
+		``ret`` returns an expression which jumps (branches) to the expression ``dest``. ``ret`` is a special alias for
+		jump that makes the disassembler top disassembling.
+
+		:param LowLevelILExpr dest: the expression to jump to
+		:return: The expression ``jump(dest)``
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_RET, dest.index)
 
-	def no_ret(self, dest):
-		return self.expr(core.LLIL_NORET, dest.index)
+	def no_ret(self):
+		"""
+		``no_ret`` returns an expression halts disassembly
+
+		:return: The expression ``noreturn``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(core.LLIL_NORET)
 
 	def flag_condition(self, cond):
+		"""
+		``flag_condition`` returns a flag_condition expression for the given LowLevelILFlagCondition
+
+		:param LowLevelILFlagCondition cond: Flag condition expression to retrieve
+		:return: A flag_condition expression
+		:rtype: LowLevelILExpr
+		"""
 		if isinstance(cond, str):
 			cond = BNLowLevelILFlagCondition_by_name[cond]
 		return self.expr(core.LLIL_FLAG_COND, cond)
 
 	def compare_equal(self, size, a, b):
+		"""
+		``compare_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is equal to
+		expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_E, a.index, b.index, size = size)
 
 	def compare_not_equal(self, size, a, b):
+		"""
+		``compare_not_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is not equal to
+		expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_NE, a.index, b.index, size = size)
 
 	def compare_signed_less_than(self, size, a, b):
+		"""
+		``compare_signed_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed less than expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_SLT, a.index, b.index, size = size)
 
 	def compare_unsigned_less_than(self, size, a, b):
+		"""
+		``compare_unsigned_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned less than expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_ULT, a.index, b.index, size = size)
 
 	def compare_signed_less_equal(self, size, a, b):
+		"""
+		``compare_signed_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed less than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_SLE, a.index, b.index, size = size)
 
 	def compare_unsigned_less_equal(self, size, a, b):
+		"""
+		``compare_unsigned_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned less than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_ULE, a.index, b.index, size = size)
 
 	def compare_signed_greater_equal(self, size, a, b):
+		"""
+		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed greater than or equal toexpression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_SGE, a.index, b.index, size = size)
 
 	def compare_unsigned_greater_equal(self, size, a, b):
+		"""
+		``compare_unsigned_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a``
+		is unsigned greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_UGE, a.index, b.index, size = size)
 
 	def compare_signed_greater_than(self, size, a, b):
+		"""
+		``compare_signed_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_SGT, a.index, b.index, size = size)
 
 	def compare_unsigned_greater_than(self, size, a, b):
+		"""
+		``compare_unsigned_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param LowLevelILExpr a: LHS of comparison
+		:param LowLevelILExpr b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_CMP_UGT, a.index, b.index, size = size)
 
 	def test_bit(self, size, a, b):
 		return self.expr(core.LLIL_TEST_BIT, a.index, b.index, size = size)
 
 	def system_call(self):
+		"""
+		``system_call`` return a system call expression.
+
+		:return: a system call expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_SYSCALL)
 
 	def breakpoint(self):
+		"""
+		``breakpoint`` returns a processor breakpoint expression.
+
+		:return: a breakpoint expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_BP)
 
 	def trap(self, value):
+		"""
+		``trap`` returns a processor trap (interrupt) expression of the given integer ``value``.
+
+		:param int value: trap (interrupt) number
+		:return: a trap expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_TRAP, value)
 
 	def undefined(self):
+		"""
+		``undefined`` returns the undefined expression. This should be used for instructions which perform functions but
+		aren't important for dataflow or partial emulation purposes.
+
+		:return: the unimplemented expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_UNDEF)
 
 	def unimplemented(self):
+		"""
+		``unimplemented`` returns the unimplemented expression. This should be used for all instructions which aren't
+		implemented.
+
+		:return: the unimplemented expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_UNIMPL)
 
 	def unimplemented_memory_ref(self, size, addr):
+		"""
+		``unimplemented_memory_ref`` a memory reference to expression ``addr`` of size ``size`` with unimplemented operation.
+
+		:param int size: size in bytes of the memory reference
+		:param LowLevelILExpr addr: expression to reference memory
+		:return: the unimplemented memory reference expression.
+		:rtype: LowLevelILExpr
+		"""
 		return self.expr(core.LLIL_UNIMPL_MEM, addr.index, size = size)
 
 	def goto(self, label):
+		"""
+		``goto`` returns a goto expression which jumps to the provided LowLevelILLabel.
+
+		:param LowLevelILLabel label: Label to jump to
+		:return: the LowLevelILExpr that jumps to the provided label
+		:rtype: LowLevelILExpr
+		"""
 		return LowLevelILExpr(core.BNLowLevelILGoto(self.handle, label.handle))
 
 	def if_expr(self, operand, t, f):
+		"""
+		``if_expr`` returns the ``if`` expression which depending on condition ``operand`` jumps to the LowLevelILLabel
+		``t`` when the condition expression ``operand`` is non-zero and ``f`` when it's zero.
+
+		:param LowLevelILExpr operand: comparison expression to evaluate.
+		:param LowLevelILLabel t: Label for the true branch
+		:param LowLevelILLabel f: Label for the false branch
+		:return: the LowLevelILExpr for the if expression
+		:rtype: LowLevelILExpr
+		"""
 		return LowLevelILExpr(core.BNLowLevelILIf(self.handle, operand.index, t.handle, f.handle))
 
 	def mark_label(self, label):
+		"""
+		``mark_label`` assigns a LowLevelILLabel to the current IL address.
+
+		:param LowLevelILLabel label:
+		:return: Nothing
+		:rtype: None
+		"""
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
 
 	def add_label_list(self, labels):
+		"""
+		``add_label_list`` returns a label list expression for the given list of LowLevelILLabel objects.
+
+		:param list(LowLevelILLabel) lables: the list of LowLevelILLabel to get a label list expression from
+		:return: the label list expression
+		:rtype: LowLevelILExpr
+		"""
 		label_list = (ctypes.POINTER(BNLowLevelILLabel) * len(labels))()
 		for i in xrange(len(labels)):
 			label_list[i] = labels[i].handle
 		return LowLevelILExpr(core.BNLowLevelILAddLabelList(self.handle, label_list, len(labels)))
 
 	def add_operand_list(self, operands):
+		"""
+		``add_operand_list`` returns an operand list expression for the given list of integer operands.
+
+		:param list(int) operands: list of operand numbers
+		:return: an operand list expression
+		:rtype: LowLevelILExpr
+		"""
 		operand_list = (ctypes.c_ulonglong * len(operands))()
 		for i in xrange(len(operands)):
 			operand_list[i] = operands[i]
 		return LowLevelILExpr(core.BNLowLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
 	def operand(self, n, expr):
+		"""
+		``operand`` sets the operand number of the expression ``expr`` and passes back ``expr`` without modification.
+
+		:param int n:
+		:param LowLevelILExpr expr:
+		:return: returns the expression ``expr`` unmodified
+		:rtype: LowLevelILExpr
+		"""
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)
 		return expr
 
 	def finalize(self, func = None):
+		"""
+		``finalize`` ends the provided LowLevelILLabel.
+
+		:param LowLevelILFunction func: optional function to end
+		:return: Nothing
+		:rtype: None
+		"""
 		if func is None:
 			core.BNFinalizeLowLevelILFunction(self.handle, None)
 		else:
 			core.BNFinalizeLowLevelILFunction(self.handle, func.handle)
 
 	def add_label_for_address(self, arch, addr):
+		"""
+		``add_label_for_address`` adds a low-level IL label for the given architecture ``arch`` at the given virtual
+		address ``addr``
+
+		:param Architecture arch: Architecture to add labels for
+		:param int addr: the IL address to add a label at
+		"""
 		if arch is not None:
 			arch = arch.handle
 		core.BNAddLowLevelILLabelForAddress(self.handle, arch, addr)
 
 	def get_label_for_address(self, arch, addr):
+		"""
+		``get_label_for_address`` returns the LowLevelILLabel for the given Architecture ``arch`` and IL address ``addr``.
+
+		:param Architecture arch:
+		:param int addr: IL Address label to retrieve
+		:return: the LowLevelILLabel for the given IL address
+		:rtype: LowLevelILLabel
+		"""
 		if arch is not None:
 			arch = arch.handle
 		label = core.BNGetLowLevelILLabelForAddress(self.handle, arch, addr)

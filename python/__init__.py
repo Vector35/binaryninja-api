@@ -6721,7 +6721,7 @@ class Architecture(object):
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
 		:return: a tuple of py:class:`TypeParserResult` and error string
-#		:rtype: tuple(TypeParserResult,str)
+		:rtype: tuple(TypeParserResult,str)
 		:Example:
 
 			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')

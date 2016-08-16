@@ -176,7 +176,8 @@ class NavigationHandler(object):
 
 class FileMetadata(object):
 	"""
-	FileMetadata is the base class for opening, reading, and writing the file being manipulated.
+	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
+	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
 	"""
 	def __init__(self, filename = None, handle = None):
 		"""
@@ -278,7 +279,6 @@ class FileMetadata(object):
 		"""
 		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -301,7 +301,6 @@ class FileMetadata(object):
 		"""
 		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -324,7 +323,6 @@ class FileMetadata(object):
 		"""
 		``undo`` undo the last commited action in the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -350,7 +348,6 @@ class FileMetadata(object):
 		"""
 		``redo`` redo the last commited action in the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1719,7 +1716,6 @@ class BinaryView(object):
 		"""
 		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1745,7 +1741,6 @@ class BinaryView(object):
 		"""
 		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1768,7 +1763,6 @@ class BinaryView(object):
 		"""
 		``undo`` undo the last commited action in the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1794,7 +1788,6 @@ class BinaryView(object):
 		"""
 		``redo`` redo the last commited action in the undo database.
 
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1978,7 +1971,6 @@ class BinaryView(object):
 
 		:param Platform platform: Platform for the function to be added
 		:param int addr: virtual address of the function to be added
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -1995,7 +1987,6 @@ class BinaryView(object):
 
 		:param Platform platform: Platform for the entry point analysis
 		:param int addr: virtual address to start analysis from
-		:return: Nothing
 		:rtype: None
 		:Example:
 			>>> bv.add_entry_point(bv.platform, 0xdeadbeef)
@@ -2008,7 +1999,6 @@ class BinaryView(object):
 		``remove_function`` removes the function ``func`` from the list of functions
 
 		:param Function func: a Function object.
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -2026,7 +2016,6 @@ class BinaryView(object):
 
 		:param Platform platform: Platform for the function to be added
 		:param int addr: virtual address of the *user* function to be added
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -2042,7 +2031,6 @@ class BinaryView(object):
 		``remove_user_function`` removes the *user* function ``func`` from the list of functions
 
 		:param Function func: a Function object.
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -2061,7 +2049,6 @@ class BinaryView(object):
 		``update_analysis_and_wait()``. An analysis update **must** be run after changes are made which could change
 		analysis results such as adding functions.
 
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNUpdateAnalysis(self.handle)
@@ -2073,7 +2060,6 @@ class BinaryView(object):
 		``update_analysis()`` or ``update_analysis_and_wait()``. An analysis update **must** be run after changes are
 		made which could change analysis results such as adding functions.
 
-		:return: Nothing
 		:rtype: None
 		"""
 		class WaitEvent:
@@ -2102,7 +2088,6 @@ class BinaryView(object):
 		"""
 		``abort_analysis`` will abort the currently running analysis.
 
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNAbortAnalysis(self.handle)
@@ -2112,8 +2097,7 @@ class BinaryView(object):
 		``define_data_var`` defines a non-user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
-		:param binaryninja.Type var_type: type to be defined at the given virtual address
-		:return Nothing
+		:param Type var_type: type to be defined at the given virtual address
 		:rtype: None
 		:Example:
 
@@ -2131,7 +2115,6 @@ class BinaryView(object):
 
 		:param int addr: virtual address to define the given data variable
 		:param binaryninja.Type var_type: type to be defined at the given virtual address
-		:return Nothing
 		:rtype: None
 		:Example:
 
@@ -2148,7 +2131,6 @@ class BinaryView(object):
 		``undefine_data_var`` removes the non-user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -2162,7 +2144,6 @@ class BinaryView(object):
 		``undefine_data_var`` removes the user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -2394,7 +2375,6 @@ class BinaryView(object):
 		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
 
 		:param Symbol sym: the symbol to define
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
@@ -2404,7 +2384,6 @@ class BinaryView(object):
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNUndefineAutoSymbol(self.handle, sym.handle)
@@ -2414,7 +2393,6 @@ class BinaryView(object):
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
 
 		:param Symbol sym: the symbol to define
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNDefineUserSymbol(self.handle, sym.handle)
@@ -2424,7 +2402,6 @@ class BinaryView(object):
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
@@ -2435,7 +2412,6 @@ class BinaryView(object):
 
 		:param Symbol import_addr_sym: A Symbol object with type ImportedFunctionSymbol
 		:param Function func: A Function object to define as an imported function
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
@@ -2466,7 +2442,7 @@ class BinaryView(object):
 
 	def is_always_branch_patch_available(self, arch, addr):
 		"""
-		``is_always_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
+		``is_always_branch_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` can be made to **always branch**. The actual logic of which is implemented in the
 		``perform_is_always_branch_patch_available`` in the corresponding architecture.
 
@@ -2490,8 +2466,8 @@ class BinaryView(object):
 
 	def is_invert_branch_patch_available(self, arch, addr):
 		"""
-		``is_invert_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
-		instruction at ``addr`` is a branch that can be inverted. The actual logic of which is implemented in the
+		``is_invert_branch_patch_available`` queries the architecture plugin to determine if the instruction at ``addr``
+		is a branch that can be inverted. The actual logic of which is implemented in the
 		``perform_is_invert_branch_patch_available`` in the corresponding architecture.
 
 		:param Architecture arch: the architecture for the current view
@@ -2514,7 +2490,7 @@ class BinaryView(object):
 
 	def is_skip_and_return_zero_patch_available(self, arch, addr):
 		"""
-		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the instruction at the
+		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call"  instruction which can be made to return zero.  The actual
 		logic of which is implemented in the ``perform_is_skip_and_return_zero_patch_available`` in the corresponding
 		architecture.
@@ -2539,7 +2515,7 @@ class BinaryView(object):
 
 	def is_skip_and_return_value_patch_available(self, arch, addr):
 		"""
-		``is_skip_and_return_value_patch_available`` queries the architecture plugin to determine if the instruction at the
+		``is_skip_and_return_value_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call" instruction which can be made to return a value. The actual
 		logic of which is implemented in the ``perform_is_skip_and_return_value_patch_available`` in the corresponding
 		architecture.
@@ -2579,7 +2555,8 @@ class BinaryView(object):
 			'call    0x10001629'
 			>>> bv.convert_to_nop(bv.arch, 0x100012fb)
 			True
-			>>> #The above 'call' instruction is 5 bytes, a nop in x86 is 1 byte, thus 5 nops are used:
+			>>> #The above 'call' instruction is 5 bytes, a nop in x86 is 1 byte,
+			>>> # thus 5 nops are used:
 			>>> bv.get_disassembly(0x100012fb)
 			'nop'
 			>>> bv.get_next_disassembly()
@@ -2621,7 +2598,7 @@ class BinaryView(object):
 
 	def never_branch(self, arch, addr):
 		"""
-		``always_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to
+		``never_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to
 		a fall through.
 
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
@@ -2941,7 +2918,8 @@ class BinaryView(object):
 			>>> pos = bv.get_linear_disassembly_position_at(0x1000149f, settings)
 			>>> lines = bv.get_previous_linear_disassembly_lines(pos, settings)
 			>>> lines
-			[<0x1000149a: pop     esi>, <0x1000149b: pop     ebp>, <0x1000149c: retn    0xc>, <0x1000149f: >]
+			[<0x1000149a: pop     esi>, <0x1000149b: pop     ebp>,
+			<0x1000149c: retn    0xc>, <0x1000149f: >]
 		"""
 		if settings is not None:
 			settings = settings.handle
@@ -3052,7 +3030,7 @@ class BinaryView(object):
 		.. note:: linear_disassembly doesn't just return disassembly it will return a single line from the linear view,\
 		 and thus will contain both data views, and disassembly.
 
-		:param DisassemblySettings settings: :py:Class:`DisassemblySettings` instance specifying the desired output formatting.
+		:param DisassemblySettings settings: instance specifying the desired output formatting.
 		:return: An iterator containing formatted dissassembly lines.
 		:rtype: LinearDisassemblyIterator
 		:Example:
@@ -3149,7 +3127,6 @@ class BinaryView(object):
 
 		:param str name: Name of the type to be registered
 		:param Type type_obj: Type object to be registered
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -3167,7 +3144,6 @@ class BinaryView(object):
 
 		:param str name: Name of the user type to be registered
 		:param Type type_obj: Type object to be registered
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -3183,7 +3159,6 @@ class BinaryView(object):
 		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
 
 		:param str name: Name of type to be undefined
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -3203,7 +3178,6 @@ class BinaryView(object):
 		:py:Class:`BinaryView`
 
 		:param str name: Name of user type to be undefined
-		:return: Nothing
 		:rtype: None
 		:Example:
 
@@ -3246,10 +3220,30 @@ class BinaryView(object):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 class BinaryReader(object):
-	def __init__(self, data, endian = None):
-		self.handle = core.BNCreateBinaryReader(data.handle)
+	"""
+	``class BinaryReader`` is a convenience class for reading binary data.
+
+	BinaryReader can be instantiated as follows and the rest of the document will start from this context ::
+
+		>>> from binaryninja import *
+		>>> bv = BinaryViewType['Mach-O'].open("/bin/ls")
+		>>> br = BinaryReader(bv)
+		>>> hex(br.read32())
+		'0xfeedfacfL'
+		>>>
+
+	Or using the optional endian parameter ::
+
+		>>> from binaryninja import *
+		>>> br = BinaryReader(bv, core.BigEndian)
+		>>> hex(br.read32())
+		'0xcffaedfeL'
+		>>>
+	"""
+	def __init__(self, view, endian = None):
+		self.handle = core.BNCreateBinaryReader(view.handle)
 		if endian is None:
-			core.BNSetBinaryReaderEndianness(self.handle, data.endianness)
+			core.BNSetBinaryReaderEndianness(self.handle, view.endianness)
 		else:
 			core.BNSetBinaryReaderEndianness(self.handle, endian)
 
@@ -3258,6 +3252,13 @@ class BinaryReader(object):
 
 	@property
 	def endianness(self):
+		"""
+		The Endianness to read data. (read/write)
+
+		:getter: returns the endianness of the reader
+		:setter: sets the endianness of the reader (BigEndian or LittleEndian)
+		:type: Endianness
+		"""
 		return core.BNGetBinaryReaderEndianness(self.handle)
 
 	@endianness.setter
@@ -3266,6 +3267,13 @@ class BinaryReader(object):
 
 	@property
 	def offset(self):
+		"""
+		The current read offset (read/write).
+
+		:getter: returns the current internal offset
+		:setter: sets the internal offset
+		:type: int
+		"""
 		return core.BNGetReaderPosition(self.handle)
 
 	@offset.setter
@@ -3274,79 +3282,243 @@ class BinaryReader(object):
 
 	@property
 	def eof(self):
-		"""Boolean, is end of file (read-only)"""
+		"""
+		Is end of file (read-only)
+
+		:getter: returns boolean, true if end of file, false otherwise
+		:type: bool
+		"""
 		return core.BNIsEndOfFile(self.handle)
 
 	def read(self, length):
+		"""
+		``read`` returns ``length`` bytes read from the current offset, adding ``length`` to offset.
+
+		:param int length: number of bytes to read.
+		:return: ``length`` bytes from current offset
+		:rtype: str, or None on failure
+		:Example:
+
+			>>> br.read(8)
+			'\\xcf\\xfa\\xed\\xfe\\x07\\x00\\x00\\x01'
+			>>>
+		"""
 		dest = ctypes.create_string_buffer(length)
 		if not core.BNReadData(self.handle, dest, length):
 			return None
 		return dest.raw
 
 	def read8(self):
+		"""
+		``read8`` returns a one byte integer from offet incrementing the offset.
+
+		:return: byte at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> br.read8()
+			207
+			>>>
+		"""
 		result = ctypes.c_ubyte()
 		if not core.BNRead8(self.handle, result):
 			return None
 		return result.value
 
 	def read16(self):
+		"""
+		``read16`` returns a two byte integer from offet incrementing the offset by two, using specified endianness.
+
+		:return: a two byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read16())
+			'0xfacf'
+			>>>
+		"""
 		result = ctypes.c_ushort()
 		if not core.BNRead16(self.handle, result):
 			return None
 		return result.value
 
 	def read32(self):
+		"""
+		``read32`` returns a four byte integer from offet incrementing the offset by four, using specified endianness.
+
+		:return: a four byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read32())
+			'0xfeedfacfL'
+			>>>
+		"""
 		result = ctypes.c_uint()
 		if not core.BNRead32(self.handle, result):
 			return None
 		return result.value
 
 	def read64(self):
+		"""
+		``read64`` returns an eight byte integer from offet incrementing the offset by eight, using specified endianness.
+
+		:return: an eight byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read64())
+			'0x1000007feedfacfL'
+			>>>
+		"""
 		result = ctypes.c_ulonglong()
 		if not core.BNRead64(self.handle, result):
 			return None
 		return result.value
 
 	def read16le(self):
+		"""
+		``read16le`` returns a two byte little endian integer from offet incrementing the offset by two.
+
+		:return: a two byte integer at offset.
+		:rtype: int, or None on failure
+		:Exmaple:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read16le())
+			'0xfacf'
+			>>>
+		"""
 		result = self.read(2)
 		if (result is None) or (len(result) != 2):
 			return None
 		return struct.unpack("<H", result)[0]
 
 	def read32le(self):
+		"""
+		``read32le`` returns a four byte little endian integer from offet incrementing the offset by four.
+
+		:return: a four byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read32le())
+			'0xfeedfacf'
+			>>>
+		"""
 		result = self.read(4)
 		if (result is None) or (len(result) != 4):
 			return None
 		return struct.unpack("<I", result)[0]
 
 	def read64le(self):
+		"""
+		``read64le`` returns an eight byte little endian integer from offet incrementing the offset by eight.
+
+		:return: a eight byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read64le())
+			'0x1000007feedfacf'
+			>>>
+		"""
 		result = self.read(8)
 		if (result is None) or (len(result) != 8):
 			return None
 		return struct.unpack("<Q", result)[0]
 
 	def read16be(self):
+		"""
+		``read16be`` returns a two byte big endian integer from offet incrementing the offset by two.
+
+		:return: a two byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read16be())
+			'0xcffa'
+			>>>
+		"""
 		result = self.read(2)
 		if (result is None) or (len(result) != 2):
 			return None
 		return struct.unpack(">H", result)[0]
 
 	def read32be(self):
+		"""
+		``read32be`` returns a four byte big endian integer from offet incrementing the offset by four.
+
+		:return: a four byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read32be())
+			'0xcffaedfe'
+			>>>
+		"""
 		result = self.read(4)
 		if (result is None) or (len(result) != 4):
 			return None
 		return struct.unpack(">I", result)[0]
 
 	def read64be(self):
+		"""
+		``read64be`` returns an eight byte big endian integer from offet incrementing the offset by eight.
+
+		:return: a eight byte integer at offset.
+		:rtype: int, or None on failure
+		:Example:
+
+			>>> br.seek(0x100000000)
+			>>> hex(br.read64be())
+			'0xcffaedfe07000001L'
+		"""
 		result = self.read(8)
 		if (result is None) or (len(result) != 8):
 			return None
 		return struct.unpack(">Q", result)[0]
 
 	def seek(self, offset):
+		"""
+		``seek`` update internal offset to ``offset``.
+
+		:param int offset: offset to set the internal offset to
+		:rtype: None
+		:Example:
+
+			>>> hex(br.offset)
+			'0x100000008L'
+			>>> br.seek(0x100000000)
+			>>> hex(br.offset)
+			'0x100000000L'
+			>>>
+		"""
 		core.BNSeekBinaryReader(self.handle, offset)
 
 	def seek_relative(self, offset):
+		"""
+		``seek_relative`` updates the internal offset by ``offset``.
+
+		:param int offset: offset to add to the internal offset
+		:rtype: None
+		:Example:
+
+			>>> hex(br.offset)
+			'0x100000008L'
+			>>> br.seek_relative(-8)
+			>>> hex(br.offset)
+			'0x100000000L'
+			>>>
+		"""
 		core.BNSeekBinaryReaderRelative(self.handle, offset)
 
 	def __setattr__(self, name, value):
@@ -3355,11 +3527,29 @@ class BinaryReader(object):
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
-class BinaryWriter:
-	def __init__(self, data, endian = None):
-		self.handle = core.BNCreateBinaryWriter(data.handle)
+class BinaryWriter(object):
+	"""
+	``class BinaryWriter`` is a convenience class for writing binary data.
+
+	BinaryWriter can be instantiated as follows and the rest of the document will start from this context ::
+
+		>>> from binaryninja import *
+		>>> bv = BinaryViewType['Mach-O'].open("/bin/ls")
+		>>> br = BinaryReader(bv)
+		>>> bw = BinaryWriter(bv)
+		>>>
+
+	Or using the optional endian parameter ::
+
+		>>> from binaryninja import *
+		>>> br = BinaryReader(bv, core.BigEndian)
+		>>> bw = BinaryWriter(bv, core.BigEndian)
+		>>>
+	"""
+	def __init__(self, view, endian = None):
+		self.handle = core.BNCreateBinaryWriter(view.handle)
 		if endian is None:
-			core.BNSetBinaryWriterEndianness(self.handle, data.endianness)
+			core.BNSetBinaryWriterEndianness(self.handle, view.endianness)
 		else:
 			core.BNSetBinaryWriterEndianness(self.handle, endian)
 
@@ -3368,6 +3558,13 @@ class BinaryWriter:
 
 	@property
 	def endianness(self):
+		"""
+		The Endianness to written data. (read/write)
+
+		:getter: returns the endianness of the reader
+		:setter: sets the endianness of the reader (BigEndian or LittleEndian)
+		:type: Endianness
+		"""
 		return core.BNGetBinaryWriterEndianness(self.handle)
 
 	@endianness.setter
@@ -3376,6 +3573,13 @@ class BinaryWriter:
 
 	@property
 	def offset(self):
+		"""
+		The current write offset (read/write).
+
+		:getter: returns the current internal offset
+		:setter: sets the internal offset
+		:type: int
+		"""
 		return core.BNGetWriterPosition(self.handle)
 
 	@offset.setter
@@ -3383,51 +3587,170 @@ class BinaryWriter:
 		core.BNSeekBinaryWriter(self.handle, value)
 
 	def write(self, value):
+		"""
+		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
+
+		:param str value: bytes to be written at current offset
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		:Example:
+
+			>>> bw.write("AAAA")
+			True
+			>>> br.read(4)
+			'AAAA'
+			>>>
+		"""
 		value = str(value)
 		buf = ctypes.create_string_buffer(len(value))
 		ctypes.memmove(buf, value, len(value))
 		return core.BNWriteData(self.handle, buf, len(value))
 
 	def write8(self, value):
+		"""
+		``write8`` lowest order byte from the integer ``value`` to the current offset.
+
+		:param str value: bytes to be written at current offset
+		:return: boolean
+		:rtype: int
+		:Example:
+
+			>>> bw.write8(0x42)
+			True
+			>>> br.read(1)
+			'B'
+			>>>
+		"""
 		return core.BNWrite8(self.handle, value)
 
 	def write16(self, value):
+		"""
+		```` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		return core.BNWrite16(self.handle, value)
 
 	def write32(self, value):
+		"""
+		```` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		return core.BNWrite32(self.handle, value)
 
 	def write64(self, value):
+		"""
+		```` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		return core.BNWrite64(self.handle, value)
 
 	def write16le(self, value):
+		"""
+		``write16le`` writes the lowest order two bytes from the little endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack("<H", value)
 		return self.write(value)
 
 	def write32le(self, value):
+		"""
+		``write32le`` writes the lowest order four bytes from the little endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack("<I", value)
 		return self.write(value)
 
 	def write64le(self, value):
+		"""
+		``write64le`` writes the lowest order eight bytes from the little endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack("<Q", value)
 		return self.write(value)
 
 	def write16be(self, value):
+		"""
+		``write16be`` writes the lowest order two bytes from the big endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack(">H", value)
 		return self.write(value)
 
 	def write32be(self, value):
+		"""
+		``write32be`` writes the lowest order four bytes from the big endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack(">I", value)
 		return self.write(value)
 
 	def write64be(self, value):
+		"""
+		``write64be`` writes the lowest order eight bytes from the big endian integer ``value`` to the current offset.
+
+		:param int value: integer value to write.
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
 		value = struct.pack(">Q", value)
 		return self.write(value)
 
 	def seek(self, offset):
+		"""
+		``seek`` update internal offset to ``offset``.
+
+		:param int offset: offset to set the internal offset to
+		:rtype: None
+		:Example:
+
+			>>> hex(bw.offset)
+			'0x100000008L'
+			>>> bw.seek(0x100000000)
+			>>> hex(br.offset)
+			'0x100000000L'
+			>>>
+		"""
 		core.BNSeekBinaryWriter(self.handle, offset)
 
 	def seek_relative(self, offset):
+		"""
+		``seek_relative`` updates the internal offset by ``offset``.
+
+		:param int offset: offset to add to the internal offset
+		:rtype: None
+		:Example:
+
+			>>> hex(bw.offset)
+			'0x100000008L'
+			>>> bw.seek_relative(-8)
+			>>> hex(br.offset)
+			'0x100000000L'
+			>>>
+		"""
 		core.BNSeekBinaryWriterRelative(self.handle, offset)
 
 class Symbol(object):
@@ -4889,7 +5212,6 @@ class InstructionTextToken:
 class _ArchitectureMetaClass(type):
 	@property
 	def list(self):
-		"""Architecture list (read-only)"""
 		_init_plugins()
 		count = ctypes.c_ulonglong()
 		archs = core.BNGetArchitectureList(count)
@@ -4934,6 +5256,28 @@ class Architecture(object):
 	"""
 	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implemnt assembly,
 	disassembly, IL lifting, and patching.
+
+	``class Architecture`` has a ``__metaclass__`` with the additional methods ``register``, and supports
+	iteration::
+
+		>>> #List the architectures
+		>>> list(Architecture)
+		[<arch: aarch64>, <arch: armv7>, <arch: armv7eb>, <arch: mipsel32>, <arch: mips32>, <arch: powerpc>,
+		<arch: x86>, <arch: x86_64>]
+		>>> #Register a new Architecture
+		>>> class MyArch(Architecture):
+		...  name = "MyArch"
+		...
+		>>> MyArch.register()
+		>>> list(Architecture)
+		[<arch: aarch64>, <arch: armv7>, <arch: armv7eb>, <arch: mipsel32>, <arch: mips32>, <arch: powerpc>,
+		<arch: x86>, <arch: x86_64>, <arch: MyArch>]
+		>>>
+
+	For the purposes of this documentation the variable ``arch`` will be used in the following context ::
+
+		>>> from binaryninja import *
+		>>> arch = Architecture['x86']
 	"""
 	name = None
 	endianness = core.LittleEndian
@@ -4950,6 +5294,7 @@ class Architecture(object):
 	flags_required_for_flag_condition = {}
 	flags_written_by_flag_write_type = {}
 	__metaclass__ = _ArchitectureMetaClass
+	next_address = 0
 
 	def __init__(self, handle = None):
 		if handle is not None:
@@ -5160,7 +5505,7 @@ class Architecture(object):
 
 	@property
 	def full_width_regs(self):
-		"""List of full width registers (read-only)"""
+		"""List of full width register strings (read-only)"""
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
 		result = []
@@ -5171,7 +5516,7 @@ class Architecture(object):
 
 	@property
 	def calling_conventions(self):
-		"""Dict of calling conventions (read-only)"""
+		"""Dict of CallingConvention objects (read-only)"""
 		count = ctypes.c_ulonglong()
 		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
 		result = {}
@@ -5695,15 +6040,34 @@ class Architecture(object):
 		:param str data: bytes to be interpreted as low-level IL instructions
 		:param int addr: virtual address of start of ``data``
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:return: Nothing
 		:rtype: None
 		"""
 		return None
 
 	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
+		"""
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param LowLevelILOperation op:
+		:param int size:
+		:param int write_type:
+		:param int flag:
+		:param list(int_or_str):
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
 		return il.unimplemented()
 
 	def perform_get_flag_condition_low_level_il(self, cond, il):
+		"""
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param LowLevelILFlagCondition cond:
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
 		return il.unimplemented()
 
 	def perform_assemble(self, code, addr):
@@ -5864,6 +6228,18 @@ class Architecture(object):
 		return None
 
 	def get_instruction_info(self, data, addr):
+		"""
+		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address
+		``addr`` with data ``data``.
+
+		.. note :: The instruction info object should always set the InstructionInfo.length to the instruction length, \
+		and the branches of the proper types shoulde be added if the instruction is a branch.
+
+		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param int addr: virtual address of bytes in ``data``
+		:return: the InstructionInfo for the current instruction
+		:rtype: InstructionInfo
+		"""
 		info = core.BNInstructionInfo()
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
@@ -5884,6 +6260,15 @@ class Architecture(object):
 		return result
 
 	def get_instruction_text(self, data, addr):
+		"""
+		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
+		address ``addr`` with data ``data``.
+
+		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param int addr: virtual address of bytes in ``data``
+		:return: an InstructionTextToken list for the current instruction
+		:rtype: list(InstructionTextToken)
+		"""
 		data = str(data)
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
@@ -5905,6 +6290,16 @@ class Architecture(object):
 		return result, length.value
 
 	def get_instruction_low_level_il(self, data, addr, il):
+		"""
+		``get_instruction_low_level_il`` appends LowLevelILExpr objects for the instruction at the given virtual
+		address ``addr`` with data ``data``.
+
+		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param int addr: virtual address of bytes in ``data``
+		:param LowLevelILFunction il: The function the current instruction belongs to
+		:return: the length of the current instruction
+		:rtype: int
+		"""
 		data = str(data)
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
@@ -5914,21 +6309,65 @@ class Architecture(object):
 		return length.value
 
 	def get_reg_name(self, reg):
+		"""
+		``get_reg_name`` gets a register name from a register number.
+
+		:param int reg: register number
+		:return: the corresponding register string
+		:rtype: str
+		"""
 		return core.BNGetArchitectureRegisterName(self.handle, reg)
 
 	def get_flag_name(self, flag):
+		"""
+		``get_flag_name`` gets a flag name from a flag number.
+
+		:param int reg: register number
+		:return: the corresponding register string
+		:rtype: str
+		"""
 		return core.BNGetArchitectureFlagName(self.handle, flag)
 
 	def get_flag_write_type_name(self, write_type):
+		"""
+		``get_flag_write_type_name`` gets the flag write type name for the given flag.
+
+		:param int write_type: flag
+		:return: flag write type name
+		:rtype: str
+		"""
 		return core.BNGetArchitectureFlagWriteTypeName(self.handle, write_type)
 
 	def get_flag_by_name(self, flag):
+		"""
+		``get_flag_by_name`` get flag name for flag index.
+
+		:param int flag: flag index
+		:return: flag name for flag index
+		:rtype: str
+		"""
 		return self._flags[flag]
 
 	def get_flag_write_type_by_name(self, write_type):
+		"""
+		``get_flag_write_type_by_name`` gets the flag write type name for the flage write type.
+
+		:param int write_type: flag write type
+		:return: flag write type
+		:rtype: str
+		"""
 		return self._flag_write_types[write_type]
 
 	def get_flag_write_low_level_il(self, op, size, write_type, operands, il):
+		"""
+		:param LowLevelILOperation op:
+		:param int size:
+		:param str write_type:
+		:param list(str or int) operands: a list of either items that are either string register names or constant \
+		integer values
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
@@ -5937,10 +6376,19 @@ class Architecture(object):
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
-		return core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size, self._flag_write_types[write_type],
-			operand_list, len(operand_list), il.handle)
+		return LowLevelILExpr(core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size,
+		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
 
 	def get_default_flag_write_low_level_il(self, op, size, write_type, operands, il):
+		"""
+		:param LowLevelILOperation op:
+		:param int size:
+		:param str write_type:
+		:param list(str or int) operands: a list of either items that are either string register names or constant \
+		integer values
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr index
+		"""
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
@@ -5949,13 +6397,25 @@ class Architecture(object):
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
-		return core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size, self._flag_write_types[write_type],
-			operand_list, len(operand_list), il.handle)
+		return LowLevelILExpr(core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size,
+		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
 
 	def get_flag_condition_low_level_il(self, cond, il):
-		return core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle)
+		"""
+		:param LowLevelILFlagCondition cond:
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
+		return LowLevelILExpr(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
 
 	def get_modified_regs_on_write(self, reg):
+		"""
+		``get_modified_regs_on_write`` returns a list of register names that are modified when ``reg`` is written.
+
+		:param str reg: string register name
+		:return: list of register names
+		:rtype: list(str)
+		"""
 		reg = core.BNGetArchitectureRegisterByName(self.handle, str(reg))
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetModifiedArchitectureRegistersOnWrite(self.handle, reg, count)
@@ -5966,6 +6426,20 @@ class Architecture(object):
 		return result
 
 	def assemble(self, code, addr = 0):
+		"""
+		``assemble`` converts the string of assembly instructions ``code`` loaded at virtual address ``addr`` to the
+		byte representation of those instructions.
+
+		:param str code: string representation of the instructions to be assembled
+		:param int addr: virtual address that the instructions will be loaded at
+		:return: the bytes for the assembled instructions or error string
+		:rtype: (a tuple of instructions and empty string) or (or None and error string)
+		:Example:
+
+			>>> arch.assemble("je 10")
+			('\\x0f\\x84\\x04\\x00\\x00\\x00', '')
+			>>>
+		"""
 		result = DataBuffer()
 		errors = ctypes.c_char_p()
 		if not core.BNAssemble(self.handle, code, addr, result.handle, errors):
@@ -5973,36 +6447,130 @@ class Architecture(object):
 		return str(result), errors.value
 
 	def is_never_branch_patch_available(self, data, addr):
+		"""
+		``is_never_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be made to **never branch**.
+
+		:param str data: bytes for the instruction to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> arch.is_never_branch_patch_available(arch.assemble("je 10")[0], 0)
+			True
+			>>> arch.is_never_branch_patch_available(arch.assemble("nop")[0], 0)
+			False
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureNeverBranchPatchAvailable(self.handle, buf, addr, len(data))
 
 	def is_always_branch_patch_available(self, data, addr):
+		"""
+		``is_always_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be made to
+		**always branch**.
+
+		:param str data: bytes for the instruction to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> arch.is_always_branch_patch_available(arch.assemble("je 10")[0], 0)
+			True
+			>>> arch.is_always_branch_patch_available(arch.assemble("nop")[0], 0)
+			False
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureAlwaysBranchPatchAvailable(self.handle, buf, addr, len(data))
 
 	def is_invert_branch_patch_available(self, data, addr):
+		"""
+		``is_always_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be inverted.
+
+		:param str data: bytes for the instruction to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> arch.is_invert_branch_patch_available(arch.assemble("je 10")[0], 0)
+			True
+			>>> arch.is_invert_branch_patch_available(arch.assemble("nop")[0], 0)
+			False
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureInvertBranchPatchAvailable(self.handle, buf, addr, len(data))
 
 	def is_skip_and_return_zero_patch_available(self, data, addr):
+		"""
+		``is_skip_and_return_zero_patch_available`` determines if the instruction ``data`` at ``addr`` is a *call-like*
+		instruction that can be made into an instruction *returns zero*.
+
+		:param str data: bytes for the instruction to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0")[0], 0)
+			True
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call eax")[0], 0)
+			True
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax")[0], 0)
+			False
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.handle, buf, addr, len(data))
 
 	def is_skip_and_return_value_patch_available(self, data, addr):
+		"""
+		``is_skip_and_return_zero_patch_available`` determines if the instruction ``data`` at ``addr`` is a *call-like*
+		instruction that can be made into an instruction *returns a value*.
+
+		:param str data: bytes for the instruction to be checked
+		:param int addr: the virtual address of the instruction to be patched
+		:return: True if the instruction can be patched, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0")[0], 0)
+			True
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax")[0], 0)
+			False
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnValuePatchAvailable(self.handle, buf, addr, len(data))
 
 	def convert_to_nop(self, data, addr):
+		"""
+		``convert_to_nop`` reads the instruction(s) in ``data`` at virtual address ``addr`` and returns a string of nop
+		instructions of the same length as data.
+
+		:param str data: bytes for the instruction to be converted
+		:param int addr: the virtual address of the instruction to be patched
+		:return: string containing len(data) worth of no-operation instructions
+		:rtype: str
+		:Example:
+
+			>>> arch.convert_to_nop("\\x00\\x00", 0)
+			'\\x90\\x90'
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
@@ -6013,6 +6581,23 @@ class Architecture(object):
 		return result.raw
 
 	def always_branch(self, data, addr):
+		"""
+		``always_branch`` reads the instruction(s) in ``data`` at virtual address ``addr`` and returns a string of bytes
+		of the same length which always branches.
+
+		:param str data: bytes for the instruction to be converted
+		:param int addr: the virtual address of the instruction to be patched
+		:return: string containing len(data) which always branches to the same location as the provided instruction
+		:rtype: str
+		:Example:
+
+			>>> bytes = arch.always_branch(arch.assemble("je 10")[0], 0)
+			>>> arch.get_instruction_text(bytes, 0)
+			(['nop     '], 1L)
+			>>> arch.get_instruction_text(bytes[1:], 0)
+			(['jmp     ', '0x9'], 5L)
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
@@ -6023,6 +6608,24 @@ class Architecture(object):
 		return result.raw
 
 	def invert_branch(self, data, addr):
+		"""
+		``invert_branch`` reads the instruction(s) in ``data`` at virtual address ``addr`` and returns a string of bytes
+		of the same length which inverts the branch of provided instruction.
+
+		:param str data: bytes for the instruction to be converted
+		:param int addr: the virtual address of the instruction to be patched
+		:return: string containing len(data) which always branches to the same location as the provided instruction
+		:rtype: str
+		:Example:
+
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("je 10")[0], 0), 0)
+			(['jne     ', '0xa'], 6L)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jo 10")[0], 0), 0)
+			(['jno     ', '0xa'], 6L)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jge 10")[0], 0), 0)
+			(['jl      ', '0xa'], 6L)
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
@@ -6033,6 +6636,20 @@ class Architecture(object):
 		return result.raw
 
 	def skip_and_return_value(self, data, addr, value):
+		"""
+		``skip_and_return_value`` reads the instruction(s) in ``data`` at virtual address ``addr`` and returns a string of
+		bytes of the same length which doesn't call and instead *return a value*.
+
+		:param str data: bytes for the instruction to be converted
+		:param int addr: the virtual address of the instruction to be patched
+		:return: string containing len(data) which always branches to the same location as the provided instruction
+		:rtype: str
+		:Example:
+
+			>>> arch.get_instruction_text(arch.skip_and_return_value(arch.assemble("call 10")[0], 0, 0), 0)
+			(['mov     ', 'eax', ', ', '0x0'], 5L)
+			>>>
+		"""
 		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
@@ -6043,15 +6660,92 @@ class Architecture(object):
 		return result.raw
 
 	def is_view_type_constant_defined(self, type_name, const_name):
+		"""
+
+		:param str type_name: the BinaryView type name of the constant to query
+		:param str const_name: the constant name to query
+		:rtype: None
+		:Example:
+
+			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
+			>>> arch.is_view_type_constant_defined("ELF", "R_COPY")
+			True
+			>>> arch.is_view_type_constant_defined("ELF", "NOT_THERE")
+			False
+			>>>
+		"""
 		return core.BNIsBinaryViewTypeArchitectureConstantDefined(self.handle, type_name, const_name)
 
 	def get_view_type_constant(self, type_name, const_name, default_value = 0):
+		"""
+		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
+
+		:param str type_name: the BinaryView type name of the constant to be retrieved
+		:param str const_name: the constant name to retrieved
+		:param int value: optional default value if the type_name is not present. default value is zero.
+		:return: The BinaryView type constant or the default_value if not found
+		:rtype: int
+		:Example:
+
+			>>> ELF_RELOC_COPY = 5
+			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
+			>>> arch.get_view_type_constant("ELF", "R_COPY")
+			5L
+			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
+			100L
+		"""
 		return core.BNGetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, default_value)
 
 	def set_view_type_constant(self, type_name, const_name, value):
+		"""
+		``set_view_type_constant`` creates a new binaryview type constant.
+
+		:param str type_name: the BinaryView type name of the constant to be registered
+		:param str const_name: the constant name to register
+		:param int value: the value of the constant
+		:rtype: None
+		:Example:
+
+			>>> ELF_RELOC_COPY = 5
+			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
+			>>>
+		"""
 		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
 
 	def parse_types_from_source(self, source, filename = None, include_dirs = []):
+		"""
+		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
+
+		:param str type_name: the BinaryView type name of the constant to be retrieved
+		:param str const_name: the constant name to retrieved
+		:param int value: optional default value if the type_name is not present. default value is zero.
+		:return: The BinaryView type constant or the default_value if not found
+		:rtype: int
+		:Example:
+
+			>>> ELF_RELOC_COPY = 5
+			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
+			>>> arch.get_view_type_constant("ELF", "R_COPY")
+			5L
+			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
+			100L
+		"""
+		# """
+		# ``parse_types_from_source`` parses the source string and any needed headers searching for them in
+		# the optional list of directories provided in ``include_dirs``.
+		#
+		# :param str source: source string to be parsed
+		# :param str filename: optional source filename
+		# :param list(str) include_dirs: optional list of string filename include directories
+		# :return: a tuple of py:class:`TypeParserResult` and error string
+		# :rtype: tuple(TypeParserResult,str)
+		# :Example:
+		#
+		# 	>>> arch.parse_types_from_source('int foo;\nint bar(int x);\nstruct bas{int x,y;};\n')
+		# 	({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
+		# 	{'bar': <type: int32_t(int32_t x)>}}, '')
+		# 	>>>
+		# """
 		if filename is None:
 			filename = "input"
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
@@ -6076,6 +6770,24 @@ class Architecture(object):
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def parse_types_from_source_file(self, filename, include_dirs = []):
+		"""
+		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
+		the optional list of directories provided in ``include_dirs``.
+
+		:param str filename: filename of file to be parsed
+		:param list(str) include_dirs: optional list of string filename include directories
+		:return: a tuple of py:class:`TypeParserResult` and error string
+		:rtype: tuple(TypeParserResult, str)
+		:Example:
+
+			>>> file = "/Users/binja/tmp.c"
+			>>> open(file).read()
+			'int foo;\nint bar(int x);\nstruct bas{int x,y;};\n'
+			>>> arch.parse_types_from_source_file(file)
+			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
+			{'bar': <type: int32_t(int32_t x)>}}, '')
+			>>>
+		"""
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in xrange(0, len(include_dirs)):
 			dir_buf[i] = str(include_dirs[i])
@@ -6098,6 +6810,12 @@ class Architecture(object):
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def register_calling_convention(self, cc):
+		"""
+		``register_calling_convention`` registers a new calling convention for the Architecture.
+
+		:param CallingConvention cc: CallingConvention object to be registered
+		:rtype: None
+		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
 class ReferenceSource:
@@ -6506,7 +7224,7 @@ class LowLevelILFunction(object):
 
 	def push(self, size, value):
 		"""
-		``push`` writes ``size`` bytes from expression ``value`` to the stack, adjusting the stack by *address size*.
+		``push`` writes ``size`` bytes from expression ``value`` to the stack, adjusting the stack by ``size``.
 
 		:param int size: number of bytes to write and adjust the stack by
 		:param LowLevelILExpr value: the expression to write
@@ -6517,7 +7235,7 @@ class LowLevelILFunction(object):
 
 	def pop(self, size):
 		"""
-		``pop`` reads ``size`` bytes from the stack, adjusting the stack by *address size*.
+		``pop`` reads ``size`` bytes from the stack, adjusting the stack by ``size``.
 
 		:param int size: number of bytes to read from the stack
 		:return: The expression ``pop``
@@ -7248,7 +7966,6 @@ class LowLevelILFunction(object):
 		``mark_label`` assigns a LowLevelILLabel to the current IL address.
 
 		:param LowLevelILLabel label:
-		:return: Nothing
 		:rtype: None
 		"""
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
@@ -7296,7 +8013,6 @@ class LowLevelILFunction(object):
 		``finalize`` ends the provided LowLevelILLabel.
 
 		:param LowLevelILFunction func: optional function to end
-		:return: Nothing
 		:rtype: None
 		"""
 		if func is None:
@@ -8203,7 +8919,11 @@ class _PlatformMetaClass(type):
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
-class Platform:
+class Platform(object):
+	"""
+	``class Platform`` contains all information releated to the execution environment of the binary, mainly the
+	calling conventions used.
+	"""
 	__metaclass__ = _PlatformMetaClass
 	name = None
 
@@ -8221,6 +8941,13 @@ class Platform:
 
 	@property
 	def default_calling_convention(self):
+		"""
+		Default calling convention.
+
+		:getter: returns a CallingConvention object for the default calling convention.
+		:setter: sets the default calling convention
+		:type: CallingConvention
+		"""
 		result = core.BNGetPlatformDefaultCallingConvention(self.handle)
 		if result is None:
 			return None
@@ -8232,6 +8959,13 @@ class Platform:
 
 	@property
 	def cdecl_calling_convention(self):
+		"""
+		Cdecl calling convention.
+
+		:getter: returns a CallingConvention object for the cdecl calling convention.
+		:setter sets the cdecl calling convention
+		:type: CallingConvention
+		"""
 		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
 		if result is None:
 			return None
@@ -8243,6 +8977,13 @@ class Platform:
 
 	@property
 	def stdcall_calling_convention(self):
+		"""
+		Stdcall calling convention.
+
+		:getter: returns a CallingConvention object for the stdcall calling convention.
+		:setter sets the stdcall calling convention
+		:type: CallingConvention
+		"""
 		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
 		if result is None:
 			return None
@@ -8254,6 +8995,13 @@ class Platform:
 
 	@property
 	def fastcall_calling_convention(self):
+		"""
+		Fastcall calling convention.
+
+		:getter: returns a CallingConvention object for the fastcall calling convention.
+		:setter sets the fastcall calling convention
+		:type: CallingConvention
+		"""
 		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
 		if result is None:
 			return None
@@ -8265,6 +9013,13 @@ class Platform:
 
 	@property
 	def system_call_convention(self):
+		"""
+		System call convention.
+
+		:getter: returns a CallingConvention object for the system call convention.
+		:setter sets the system call convention
+		:type: CallingConvention
+		"""
 		result = core.BNGetPlatformSystemCallConvention(self.handle)
 		if result is None:
 			return None
@@ -8276,7 +9031,12 @@ class Platform:
 
 	@property
 	def calling_conventions(self):
-		"""List of platform calling conventions (read-only)"""
+		"""
+		List of platform CallingConvention objects (read-only)
+
+		:getter: returns the list of supported CallingConvention objects
+		:type: list(CallingConvention)
+		"""
 		count = ctypes.c_ulonglong()
 		cc = core.BNGetPlatformCallingConventions(self.handle, count)
 		result = []
@@ -8298,9 +9058,21 @@ class Platform:
 		return self.name
 
 	def register(self, os):
+		"""
+		``register`` registers the platform for given OS name.
+
+		:param str os: OS name to register
+		:rtype: None
+		"""
 		core.BNRegisterPlatform(os, self.handle)
 
 	def register_calling_convention(self, cc):
+		"""
+		``register_calling_convention`` register a new calling convention.
+
+		:param CallingConvention cc: a CallingConvention object to register
+		:rtype: None
+		"""
 		core.BNRegisterPlatformCallingConvention(self.handle, cc.handle)
 
 def LLIL_TEMP(n):
@@ -8316,33 +9088,140 @@ def shutdown():
 	core.BNShutdown()
 
 def log(level, text):
+	"""
+	``log`` writes messages to the log console for the given log level.
+
+		============ ======== =======================================================================
+		LogLevelName LogLevel  Description
+		============ ======== =======================================================================
+		DebugLog        0     Logs debuging information messages to the console.
+		InfoLog         1     Logs general information messages to the console.
+		WarningLog      2     Logs message to console with **Warning** icon.
+		ErrorLog        3     Logs message to console with **Error** icon, focusing the error console.
+		AlertLog        4     Logs message to pop up window.
+		============ ======== =======================================================================
+
+	:param LogLevel level: Log level to use
+	:param str text: message to print
+	:rtype: None
+	"""
 	core.BNLog(level, "%s", str(text))
 
 def log_debug(text):
+	"""
+	``log_debug`` Logs debuging information messages to the console.
+
+	:param str text: message to print
+	:rtype: None
+	:Example:
+
+		>>> log_to_stdout(core.DebugLog)
+		>>> log_debug("Hotdogs!")
+		Hotdogs!
+	"""
 	core.BNLogDebug("%s", str(text))
 
 def log_info(text):
+	"""
+	``log_info`` Logs general information messages to the console.
+
+	:param str text: message to print
+	:rtype: None
+	:Example:
+
+		>>> log_info("Saucisson!")
+		Saucisson!
+		>>>
+	"""
 	core.BNLogInfo("%s", str(text))
 
 def log_warn(text):
+	"""
+	``log_warn`` Logs message to console, if run through the GUI it logs with **Warning** icon.
+
+	:param str text: message to print
+	:rtype: None
+	:Example:
+
+		>>> log_to_stdout(core.DebugLog)
+		>>> log_info("Chilidogs!")
+		Chilidogs!
+		>>>
+	"""
 	core.BNLogWarn("%s", str(text))
 
 def log_error(text):
+	"""
+	``log_error`` Logs message to console, if run through the GUI it logs with **Error** icon, focusing the error console.
+
+	:param str text: message to print
+	:rtype: None
+	:Example:
+
+		>>> log_to_stdout(core.DebugLog)
+		>>> log_error("Spanferkel!")
+		Spanferkel!
+		>>>
+	"""
 	core.BNLogError("%s", str(text))
 
 def log_alert(text):
+	"""
+	``log_alert`` Logs message console and to a pop up window if run through the GUI.
+
+	:param str text: message to print
+	:rtype: None
+	:Example:
+
+		>>> log_to_stdout(core.DebugLog)
+		>>> log_alert("Kielbasa!")
+		Kielbasa!
+		>>>
+	"""
 	core.BNLogAlert("%s", str(text))
 
 def log_to_stdout(min_level):
+	"""
+	``log_to_stdout`` redirects minimum log level to standard out.
+
+	:param int min_level: minimum level to log to
+	:rtype: None
+	:Example:
+
+		>>> log_debug("Hotdogs!")
+		>>> log_to_stdout(core.DebugLog)
+		>>> log_debug("Hotdogs!")
+		Hotdogs!
+		>>>
+	"""
 	core.BNLogToStdout(min_level)
 
 def log_to_stderr(min_level):
+	"""
+	``log_to_stderr`` redirects minimum log level to standard error.
+
+	:param int min_level: minimum level to log to
+	:rtype: None
+	"""
 	core.BNLogToStderr(min_level)
 
 def log_to_file(min_level, path, append = False):
+	"""
+	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwritting.
+
+	:param int min_level: minimum level to log to
+	:param str path: path to log to
+	:param bool append: optional flag for specifying appending. True = append, False = overwrite.
+	:rtype: None
+	"""
 	core.BNLogToFile(min_level, str(path), append)
 
 def close_logs():
+	"""
+	``close_logs`` close all log files.
+
+	:rtype: None
+	"""
 	core.BNCloseLogs()
 
 def escape_string(text):
@@ -8352,6 +9231,21 @@ def unescape_string(text):
 	return DataBuffer(text).unescape()
 
 def preprocess_source(source, filename = None, include_dirs = []):
+	"""
+	``preprocess_source`` run the C preprocessor on the given source or source filename.
+
+	:param str source: source to preprocess
+	:param str filename: optional filename to preprocess
+	:param list(str) include_dirs: list of string directorires to use as include directories.
+	:return: returns a tuple of (preprocessed_source, error_string)
+	:rtype: tuple(str,str)
+	:Example:
+
+		>>> source = "#define TEN 10\\nint x[TEN];\\n"
+		>>> preprocess_source(source)
+		('#line 1 "input"\\n\\n#line 2 "input"\\n int x [ 10 ] ;\\n', '')
+		>>>
+	"""
 	if filename is None:
 		filename = "input"
 	dir_buf = (ctypes.c_char_p * len(include_dirs))()
@@ -8369,32 +9263,70 @@ def preprocess_source(source, filename = None, include_dirs = []):
 	return (None, error_str)
 
 def are_auto_updates_enabled():
+	"""
+	``are_auto_updates_enabled`` queries if auto updates are enabled.
+
+	:return: boolean True if auto updates are enabled. False if they are disabled.
+	:rtype: bool
+	"""
 	return core.BNAreAutoUpdatesEnabled()
 
 def set_auto_updates_enabled(enabled):
+	"""
+	``set_auto_updates_enabled`` sets auto update enabled status.
+
+	:param bool enabled: True to enable update, Flase to disable updates.
+	:rtype: None
+	"""
 	core.BNSetAutoUpdatesEnabled(enabled)
 
 def get_time_since_last_update_check():
+	"""
+	``get_time_since_last_update_check`` returns the time stamp for the last time updates were checked.
+
+	:return: time stacmp for last update check
+	:rtype: int
+	"""
 	return core.BNGetTimeSinceLastUpdateCheck()
 
 def updates_checked():
 	core.BNUpdatesChecked()
 
 def get_qualified_name(names):
-	out = ""
-	for i,a in enumerate(names):
-		if i == 0:
-			out += a
-		else:
-			out += "::" + a
-	return out
+	"""
+	``get_qualified_name`` gets a qualified name for the provied name list.
 
-def demangle_ms(arch, mangledName):
+	:param list(str) names: name list to qualify
+	:return: a qualified name
+	:rtype: str
+	:Example:
+
+		>>> type, name = demangle_ms(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		>>> get_qualified_name(name)
+		'Foobar::testf'
+		>>>
+	"""
+	return "::".join(names)
+
+def demangle_ms(arch, mangled_name):
+	"""
+	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
+
+	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
+	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
+	:return: returns a Type object for the mangled name
+	:rtype: Type
+	:Example:
+
+		>>> demangle_ms(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
+		>>>
+	"""
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if core.BNDemangleMS(arch.handle, mangledName, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		return (Type(handle), names)

@@ -6714,38 +6714,22 @@ class Architecture(object):
 
 	def parse_types_from_source(self, source, filename = None, include_dirs = []):
 		"""
-		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
+		``parse_types_from_source`` parses the source string and any needed headers searching for them in
+		the optional list of directories provided in ``include_dirs``.
 
-		:param str type_name: the BinaryView type name of the constant to be retrieved
-		:param str const_name: the constant name to retrieved
-		:param int value: optional default value if the type_name is not present. default value is zero.
-		:return: The BinaryView type constant or the default_value if not found
-		:rtype: int
+		:param str source: source string to be parsed
+		:param str filename: optional source filename
+		:param list(str) include_dirs: optional list of string filename include directories
+		:return: a tuple of py:class:`TypeParserResult` and error string
+#		:rtype: tuple(TypeParserResult,str)
 		:Example:
 
-			>>> ELF_RELOC_COPY = 5
-			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
-			>>> arch.get_view_type_constant("ELF", "R_COPY")
-			5L
-			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
-			100L
+			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
+			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:{'bar':
+			<type: int32_t(int32_t x)>}}, '')
+			>>>
 		"""
-		# """
-		# ``parse_types_from_source`` parses the source string and any needed headers searching for them in
-		# the optional list of directories provided in ``include_dirs``.
-		#
-		# :param str source: source string to be parsed
-		# :param str filename: optional source filename
-		# :param list(str) include_dirs: optional list of string filename include directories
-		# :return: a tuple of py:class:`TypeParserResult` and error string
-		# :rtype: tuple(TypeParserResult,str)
-		# :Example:
-		#
-		# 	>>> arch.parse_types_from_source('int foo;\nint bar(int x);\nstruct bas{int x,y;};\n')
-		# 	({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
-		# 	{'bar': <type: int32_t(int32_t x)>}}, '')
-		# 	>>>
-		# """
+
 		if filename is None:
 			filename = "input"
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
@@ -6782,7 +6766,7 @@ class Architecture(object):
 
 			>>> file = "/Users/binja/tmp.c"
 			>>> open(file).read()
-			'int foo;\nint bar(int x);\nstruct bas{int x,y;};\n'
+			'int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n'
 			>>> arch.parse_types_from_source_file(file)
 			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
 			{'bar': <type: int32_t(int32_t x)>}}, '')

@@ -7,9 +7,10 @@
  - Did you read all the items on this page?
  - Then you should contact [support]!
 
-### License Trouble
+## License Problems
 
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and re-download the latest installer. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/index.html#license).
+- If you need to change the email address on your license, contact [support].
 
 ## Arch Linux
 

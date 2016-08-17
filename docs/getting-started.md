@@ -156,18 +156,8 @@ On windows, this is achieved through a separate launcher that loads first and re
 
 Most preferences are fairly intuitive. There is no advanced preference system at this time, but it is [expected](https://github.com/Vector35/binaryninja-api/issues/126) to be added soon.
 
-## Troubleshooting
-
-### Common problems
-
-- If you are having problems finding your license or the installers, you can always [recover] either with a self-service email mechanism.
-- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and re-download the latest installer. Preferences are saved outside the installation folder and are preserved.
-- Always check both closed and open [issues](https://github.com/Vector35/binaryninja-api/issues) on the github issues search.
-
-### Getting Support
+## Getting Support
 
 Vector 35 offers a number of ways to get Binary Ninja [support].
 
-[recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html
-[issues]: https://github.com/Vector35/binaryninja-api/issues

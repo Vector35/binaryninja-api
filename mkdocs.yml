@@ -20,7 +20,7 @@ markdown_extensions:
 pages:
     - Home: 'index.md'
     - Getting Started Guide: 'getting-started.md'
-    #- User Guide:
+    - User Guide:
         #- Installing: 'guide/installing.md'
         #- Running: 'guide/running.md'
         #- Interface: 'guide/interface.md'
@@ -28,7 +28,7 @@ pages:
         #- SCC: 'guide/scc.md'
         #- Types Library: 'guide/type.md'
         #- Using Plugins: 'guide/plugins.md'
-        #- Troubleshooting: 'guide/troubleshooting.md'
+        - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'
         #- Plugin Design: 'dev/plugins.md'

@@ -273,6 +273,8 @@ namespace BinaryNinja
 	class Platform;
 	class Type;
 	class DataBuffer;
+	class MainThreadAction;
+	class MainThreadActionHandler;
 
 	/*! Logs to the error console with the given BNLogLevel.
 
@@ -364,6 +366,10 @@ namespace BinaryNinja
 	                const std::string& mangledName,
 	                Type** outType,
 	                std::vector<std::string>& outVarName);
+
+	void RegisterMainThread(MainThreadActionHandler* handler);
+	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
+	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
 
 	class DataBuffer
 	{
@@ -2152,5 +2158,21 @@ namespace BinaryNinja
 	public:
 		CoreScriptingProvider(BNScriptingProvider* provider);
 		virtual Ref<ScriptingInstance> CreateNewInstance() override;
+	};
+
+	class MainThreadAction: public CoreRefCountObject<BNMainThreadAction,
+		BNNewMainThreadActionReference, BNFreeMainThreadAction>
+	{
+	public:
+		MainThreadAction(BNMainThreadAction* action);
+		void Execute();
+		bool IsDone() const;
+		void Wait();
+	};
+
+	class MainThreadActionHandler
+	{
+	public:
+		virtual void AddMainThreadAction(MainThreadAction* action) = 0;
 	};
 }

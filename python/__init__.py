@@ -9480,6 +9480,7 @@ class PythonScriptingInstance(ScriptingInstance):
 						self.locals["current_function"] = self.active_func
 						self.locals["current_basic_block"] = self.active_block
 						self.locals["current_address"] = self.active_addr
+						self.locals["here"] = self.active_addr
 						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
 
 						self.interpreter.runsource(code)
@@ -9557,6 +9558,44 @@ class PythonScriptingInstance(ScriptingInstance):
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
 	instance_class = PythonScriptingInstance
+
+class MainThreadAction(object):
+	def __init__(self, handle):
+		self.handle = handle
+
+	def __del__(self):
+		core.BNFreeMainThreadAction(self.handle)
+
+	def execute(self):
+		core.BNExecuteMainThreadAction(self.handle)
+
+	@property
+	def done(self):
+		return core.BNIsMainThreadActionDone(self.handle)
+
+	def wait(self):
+		core.BNWaitForMainThreadAction(self.handle)
+
+class MainThreadActionHandler(object):
+	_main_thread = None
+
+	def __init__(self):
+		self._cb = core.BNMainThreadCallbacks()
+		self._cb.context = 0
+		self._cb.addAction = self._cb.addAction.__class__(self._add_action)
+
+	def register(self):
+		self.__class__._main_thread = self
+		core.BNRegisterMainThread(self._cb)
+
+	def _add_action(self, ctxt, action):
+		try:
+			self.add_action(MainThreadAction(action))
+		except:
+			log_error(traceback.format_exc())
+
+	def add_action(self, action):
+		pass
 
 def LLIL_TEMP(n):
 	return n | 0x80000000
@@ -9819,6 +9858,39 @@ _output_to_log = False
 def redirect_output_to_log():
 	global _output_to_log
 	_output_to_log = True
+
+class _MainThreadActionContext:
+	_actions = []
+
+	def __init__(self, func):
+		self.func = func
+		self.interpreter = None
+		if "value" in dir(PythonScriptingInstance._interpreter):
+			self.interpreter = PythonScriptingInstance._interpreter.value
+		self.__class__._actions.append(self)
+		self.callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(lambda ctxt: self.execute())
+
+	def execute(self):
+		old_interpreter = None
+		if "value" in dir(PythonScriptingInstance._interpreter):
+			old_interpreter = PythonScriptingInstance._interpreter.value
+		PythonScriptingInstance._interpreter.value = self.interpreter
+		try:
+			self.func()
+		finally:
+			PythonScriptingInstance._interpreter.value = old_interpreter
+			self.__class__._actions.remove(self)
+
+def execute_on_main_thread(func):
+	action = _MainThreadActionContext(func)
+	obj = core.BNExecuteOnMainThread(0, action.callback)
+	if obj:
+		return MainThreadAction(obj)
+	return None
+
+def execute_on_main_thread_and_wait(func):
+	action = _MainThreadActionContext(func)
+	core.BNExecuteOnMainThreadAndWait(0, action.callback)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

@@ -101,6 +101,7 @@ extern "C"
 	struct BNDisassemblySettings;
 	struct BNScriptingProvider;
 	struct BNScriptingInstance;
+	struct BNMainThreadAction;
 
 	//! Console log levels
 	enum BNLogLevel
@@ -1004,6 +1005,12 @@ extern "C"
 		void (*output)(void* ctxt, const char* text);
 		void (*error)(void* ctxt, const char* text);
 		void (*inputReadyStateChanged)(void* ctxt, BNScriptingProviderInputReadyState state);
+	};
+
+	struct BNMainThreadCallbacks
+	{
+		void* context;
+		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -1922,6 +1929,17 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentAddress(BNScriptingInstance* instance, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentSelection(BNScriptingInstance* instance,
 		uint64_t begin, uint64_t end);
+
+	// Main thread actions
+	BINARYNINJACOREAPI void BNRegisterMainThread(BNMainThreadCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMainThreadAction* BNNewMainThreadActionReference(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNFreeMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNExecuteMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI bool BNIsMainThreadActionDone(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNWaitForMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI BNMainThreadAction* BNExecuteOnMainThread(void* ctxt, void (*func)(void* ctxt));
+	BINARYNINJACOREAPI void BNExecuteOnMainThreadAndWait(void* ctxt, void (*func)(void* ctxt));
+
 #ifdef __cplusplus
 }
 #endif

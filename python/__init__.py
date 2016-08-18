@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import _binaryninjacore as core
-import ctypes, traceback, json, struct, threading
+import ctypes, traceback, json, struct, threading, code, sys
 
 _plugin_init = False
 def _init_plugins():
@@ -9059,6 +9059,505 @@ class Platform(object):
 		"""
 		core.BNRegisterPlatformCallingConvention(self.handle, cc.handle)
 
+class ScriptingOutputListener(object):
+	def _register(self, handle):
+		self._cb = core.BNScriptingOutputListener()
+		self._cb.context = 0
+		self._cb.output = self._cb.output.__class__(self._output)
+		self._cb.error = self._cb.error.__class__(self._error)
+		self._cb.inputReadyStateChanged = self._cb.inputReadyStateChanged.__class__(self._input_ready_state_changed)
+		core.BNRegisterScriptingInstanceOutputListener(handle, self._cb)
+
+	def _unregister(self, handle):
+		core.BNUnregisterScriptingInstanceOutputListener(handle, self._cb)
+
+	def _output(self, ctxt, text):
+		try:
+			self.notify_output(text)
+		except:
+			log_error(traceback.format_exc())
+
+	def _error(self, ctxt, text):
+		try:
+			self.notify_error(text)
+		except:
+			log_error(traceback.format_exc())
+
+	def _input_ready_state_changed(self, ctxt, state):
+		try:
+			self.notify_input_ready_state_changed(state)
+		except:
+			log_error(traceback.format_exc())
+
+	def notify_output(self, text):
+		pass
+
+	def notify_error(self, text):
+		pass
+
+	def notify_input_ready_state_changed(self, state):
+		pass
+
+class ScriptingInstance(object):
+	def __init__(self, provider, handle = None):
+		if handle is None:
+			self._cb = core.BNScriptingInstanceCallbacks()
+			self._cb.context = 0
+			self._cb.destroyInstance = self._cb.destroyInstance.__class__(self._destroy_instance)
+			self._cb.executeScriptInput = self._cb.executeScriptInput.__class__(self._execute_script_input)
+			self._cb.setCurrentBinaryView = self._cb.setCurrentBinaryView.__class__(self._set_current_binary_view)
+			self._cb.setCurrentFunction = self._cb.setCurrentFunction.__class__(self._set_current_function)
+			self._cb.setCurrentBasicBlock = self._cb.setCurrentBasicBlock.__class__(self._set_current_basic_block)
+			self._cb.setCurrentAddress = self._cb.setCurrentAddress.__class__(self._set_current_address)
+			self._cb.setCurrentSelection = self._cb.setCurrentSelection.__class__(self._set_current_selection)
+			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
+		else:
+			self.handle = core.handle_of_type(handle, core.BNScriptingInstance)
+		self.listeners = []
+
+	def __del__(self):
+		core.BNFreeScriptingInstance(self.handle)
+
+	def _destroy_instance(self, ctxt):
+		try:
+			self.perform_destroy_instance()
+		except:
+			log_error(traceback.format_exc())
+
+	def _execute_script_input(self, ctxt, text):
+		try:
+			return self.perform_execute_script_input(text)
+		except:
+			log_error(traceback.format_exc())
+			return core.InvalidScriptInput
+
+	def _set_current_binary_view(self, ctxt, view):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.perform_set_current_binary_view(view)
+		except:
+			log_error(traceback.format_exc())
+
+	def _set_current_function(self, ctxt, func):
+		try:
+			if func:
+				func = Function(BinaryView(None, handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
+			else:
+				func = None
+			self.perform_set_current_function(func)
+		except:
+			log_error(traceback.format_exc())
+
+	def _set_current_basic_block(self, ctxt, block):
+		try:
+			if block:
+				func = core.BNGetBasicBlockFunction(block)
+				if func is None:
+					block = None
+				else:
+					block = BasicBlock(BinaryView(None, handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
+					core.BNFreeFunction(func)
+			else:
+				block = None
+			self.perform_set_current_basic_block(block)
+		except:
+			log_error(traceback.format_exc())
+
+	def _set_current_address(self, ctxt, addr):
+		try:
+			self.perform_set_current_address(addr)
+		except:
+			log_error(traceback.format_exc())
+
+	def _set_current_selection(self, ctxt, begin, end):
+		try:
+			self.perform_set_current_selection(begin, end)
+		except:
+			log_error(traceback.format_exc())
+
+	def perform_destroy_instance(self):
+		pass
+
+	def perform_execute_script_input(self, text):
+		return core.InvalidScriptInput
+
+	def perform_set_current_binary_view(self, view):
+		pass
+
+	def perform_set_current_function(self, func):
+		pass
+
+	def perform_set_current_basic_block(self, block):
+		pass
+
+	def perform_set_current_address(self, addr):
+		pass
+
+	def perform_set_current_selection(self, begin, end):
+		pass
+
+	@property
+	def input_ready_state(self):
+		return core.BNGetScriptingInstanceInputReadyState(self.handle)
+
+	@input_ready_state.setter
+	def input_ready_state(self, value):
+		core.BNNotifyInputReadyStateForScriptingInstance(self.handle, value)
+
+	def output(self, text):
+		core.BNNotifyOutputForScriptingInstance(self.handle, text)
+
+	def error(self, text):
+		core.BNNotifyErrorForScriptingInstance(self.handle, text)
+
+	def execute_script_input(self, text):
+		return core.BNExecuteScriptInput(self.handle, text)
+
+	def set_current_binary_view(self, view):
+		if view is not None:
+			view = view.handle
+		core.BNSetScriptingInstanceCurrentBinaryView(self.handle, view)
+
+	def set_current_function(self, func):
+		if func is not None:
+			func = func.handle
+		core.BNSetScriptingInstanceCurrentFunction(self.handle, func)
+
+	def set_current_basic_block(self, block):
+		if block is not None:
+			block = block.handle
+		core.BNSetScriptingInstanceCurrentBasicBlock(self.handle, block)
+
+	def set_current_address(self, addr):
+		core.BNSetScriptingInstanceCurrentAddress(self.handle, addr)
+
+	def set_current_selection(self, begin, end):
+		core.BNSetScriptingInstanceCurrentSelection(self.handle, begin, end)
+
+	def register_output_listener(self, listener):
+		listener._register(self.handle)
+		self.listeners.append(listener)
+
+	def unregister_output_listener(self, listener):
+		if listener in self.listeners:
+			listener._unregister(self.handle)
+			self.listeners.remove(listener)
+
+class _ScriptingProviderMetaclass(type):
+	@property
+	def list(self):
+		"""List all ScriptingProvider types (read-only)"""
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		types = core.BNGetScriptingProviderList(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(ScriptingProvider(types[i]))
+		core.BNFreeScriptingProviderList(types)
+		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		types = core.BNGetScriptingProviderList(count)
+		try:
+			for i in xrange(0, count.value):
+				yield ScriptingProvider(types[i])
+		finally:
+			core.BNFreeScriptingProviderList(types)
+
+	def __getitem__(self, value):
+		_init_plugins()
+		provider = core.BNGetScriptingProviderByName(str(value))
+		if provider is None:
+			raise KeyError, "'%s' is not a valid scripting provider" % str(value)
+		return ScriptingProvider(provider)
+
+	def __setattr__(self, name, value):
+		try:
+			type.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
+
+class ScriptingProvider(object):
+	__metaclass__ = _ScriptingProviderMetaclass
+
+	name = None
+	instance_class = None
+	_registered_providers = []
+
+	def __init__(self, handle = None):
+		if handle is not None:
+			self.handle = core.handle_of_type(handle, core.BNScriptingProvider)
+			self.__dict__["name"] = core.BNGetScriptingProviderName(handle)
+
+	def register(self):
+		self._cb = core.BNScriptingProviderCallbacks()
+		self._cb.context = 0
+		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
+		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self._cb)
+		self.__class__._registered_providers.append(self)
+
+	def _create_instance(self, ctxt):
+		try:
+			result = self.__class__.instance_class(self)
+			if result is None:
+				return None
+			return ctypes.cast(core.BNNewScriptingInstanceReference(result.handle), ctypes.c_void_p).value
+		except:
+			log_error(traceback.format_exc())
+			return None
+
+	def create_instance(self):
+		result = core.BNCreateScriptingProviderInstance(self.handle)
+		if result is None:
+			return None
+		return ScriptingInstance(self, handle = result)
+
+class _PythonScriptingInstanceOutput(object):
+	def __init__(self, orig, is_error):
+		self.orig = orig
+		self.is_error = is_error
+		self.buffer = ""
+
+	def write(self, data):
+		global _output_to_log
+
+		interpreter = None
+		if "value" in dir(PythonScriptingInstance._interpreter):
+			interpreter = PythonScriptingInstance._interpreter.value
+
+		if interpreter is None:
+			if _output_to_log:
+				self.buffer += data
+				while True:
+					i = self.buffer.find('\n')
+					if i == -1:
+						break
+					line = self.buffer[:i]
+					self.buffer = self.buffer[i + 1:]
+
+					if self.is_error:
+						log_error(line)
+					else:
+						log_info(line)
+			else:
+				self.orig.write(data)
+		else:
+			PythonScriptingInstance._interpreter.value = None
+			try:
+				if self.is_error:
+					interpreter.instance.error(data)
+				else:
+					interpreter.instance.output(data)
+			finally:
+				PythonScriptingInstance._interpreter.value = interpreter
+
+class _PythonScriptingInstanceInput(object):
+	def __init__(self, orig):
+		self.orig = orig
+
+	def read(self, size):
+		interpreter = None
+		if "value" in dir(PythonScriptingInstance._interpreter):
+			interpreter = PythonScriptingInstance._interpreter.value
+
+		if interpreter is None:
+			return self.orig.read(size)
+		else:
+			PythonScriptingInstance._interpreter.value = None
+			try:
+				result = interpreter.read(size)
+			finally:
+				PythonScriptingInstance._interpreter.value = interpreter
+			return result
+
+	def readline(self):
+		interpreter = None
+		if "value" in dir(PythonScriptingInstance._interpreter):
+			interpreter = PythonScriptingInstance._interpreter.value
+
+		if interpreter is None:
+			return self.orig.readline()
+		else:
+			result = ""
+			while True:
+				data = interpreter.read(1)
+				result += data
+				if (len(data) == 0) or (data == "\n"):
+					break
+			return result
+
+class PythonScriptingInstance(ScriptingInstance):
+	_interpreter = threading.local()
+
+	class InterpreterThread(threading.Thread):
+		def __init__(self, instance):
+			super(PythonScriptingInstance.InterpreterThread, self).__init__()
+			self.instance = instance
+			self.locals = {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
+			self.interpreter = code.InteractiveInterpreter(self.locals)
+			self.event = threading.Event()
+			self.daemon = True
+
+			# Latest selections from UI
+			self.current_view = None
+			self.current_func = None
+			self.current_block = None
+			self.current_addr = 0
+			self.current_selection_begin = 0
+			self.current_selection_end = 0
+
+			# Selections that were current as of last issued command
+			self.active_view = None
+			self.active_func = None
+			self.active_block = None
+			self.active_addr = 0
+			self.active_selection_begin = 0
+			self.active_selection_end = 0
+
+			self.locals["get_selected_data"] = self.get_selected_data
+			self.locals["write_at_cursor"] = self.write_at_cursor
+
+			self.exit = False
+			self.code = None
+			self.input = ""
+
+			self.interpreter.runsource("from binaryninja import *\n")
+
+		def execute(self, code):
+			self.code = code
+			self.event.set()
+
+		def add_input(self, data):
+			self.input += data
+			self.event.set()
+
+		def end(self):
+			self.exit = True
+			self.event.set()
+
+		def read(self, size):
+			while not self.exit:
+				if len(self.input) > size:
+					result = self.input[:size]
+					self.input = self.input[size:]
+					return result
+				elif len(self.input) > 0:
+					result = self.input
+					self.input = ""
+					return result
+				self.instance.input_ready_state = core.ReadyForScriptProgramInput
+				self.event.wait()
+				self.event.clear()
+			return ""
+
+		def run(self):
+			while not self.exit:
+				self.event.wait()
+				self.event.clear()
+				if self.exit:
+					break
+				if self.code is not None:
+					self.instance.input_ready_state = core.NotReadyForInput
+					code = self.code
+					self.code = None
+
+					PythonScriptingInstance._interpreter.value = self
+					try:
+						self.active_view = self.current_view
+						self.active_func = self.current_func
+						self.active_block = self.current_block
+						self.active_addr = self.current_addr
+						self.active_selection_begin = self.current_selection_begin
+						self.active_selection_end = self.current_selection_end
+
+						self.locals["current_view"] = self.active_view
+						self.locals["bv"] = self.active_view
+						self.locals["current_function"] = self.active_func
+						self.locals["current_basic_block"] = self.active_block
+						self.locals["current_address"] = self.active_addr
+						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
+
+						self.interpreter.runsource(code)
+					finally:
+						PythonScriptingInstance._interpreter.value = None
+						self.instance.input_ready_state = core.ReadyForScriptExecution
+
+		def get_selected_data(self):
+			if self.active_view is None:
+				return None
+			length = self.active_selection_end - self.active_selection_begin
+			return self.active_view.read(self.active_selection_begin, length)
+
+		def write_at_cursor(self, data):
+			if self.active_view is None:
+				return 0
+			selected_length = self.active_selection_end - self.active_selection_begin
+			data = str(data)
+			if (len(data) == selected_length) or (selected_length == 0):
+				return self.active_view.write(self.active_selection_begin, data)
+			else:
+				self.active_view.remove(self.active_selection_begin, selected_length)
+				return self.active_view.insert(self.active_selection_begin, data)
+
+	def __init__(self, provider):
+		super(PythonScriptingInstance, self).__init__(provider)
+		self.interpreter = PythonScriptingInstance.InterpreterThread(self)
+		self.interpreter.start()
+		self.queued_input = ""
+		self.input_ready_state = core.ReadyForScriptExecution
+
+	def perform_destroy_instance(self):
+		self.interpreter.end()
+
+	def perform_execute_script_input(self, text):
+		if self.input_ready_state == core.NotReadyForInput:
+			return core.InvalidScriptInput
+
+		if self.input_ready_state == core.ReadyForScriptProgramInput:
+			if len(text) == 0:
+				return core.SuccessfulScriptExecution
+			self.input_ready_state = core.NotReadyForInput
+			self.interpreter.add_input(text)
+			return core.SuccessfulScriptExecution
+
+		try:
+			result = code.compile_command(text)
+		except:
+			result = False
+
+		if result is None:
+			# Command is not complete, ask for more input
+			return core.IncompleteScriptInput
+
+		self.input_ready_state = core.NotReadyForInput
+		self.interpreter.execute(text)
+		return core.SuccessfulScriptExecution
+
+	def perform_set_current_binary_view(self, view):
+		self.interpreter.current_view = view
+
+	def perform_set_current_function(self, func):
+		self.interpreter.current_func = func
+
+	def perform_set_current_basic_block(self, block):
+		self.interpreter.current_block = block
+
+	def perform_set_current_address(self, addr):
+		self.interpreter.current_addr = addr
+
+	def perform_set_current_selection(self, begin, end):
+		self.interpreter.current_selection_begin = begin
+		self.interpreter.current_selection_end = end
+
+class PythonScriptingProvider(ScriptingProvider):
+	name = "Python"
+	instance_class = PythonScriptingInstance
+
 def LLIL_TEMP(n):
 	return n | 0x80000000
 
@@ -9316,6 +9815,11 @@ def demangle_ms(arch, mangled_name):
 		return (Type(handle), names)
 	return (None, mangledName)
 
+_output_to_log = False
+def redirect_output_to_log():
+	global _output_to_log
+	_output_to_log = True
+
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()
 
@@ -9325,3 +9829,10 @@ core_build_id = core.BNGetBuildId()
 # Ensure all enumeration constants from the core are exposed by this module
 for name in core.all_enum_values:
 	globals()[name] = core.all_enum_values[name]
+
+PythonScriptingProvider().register()
+
+# Wrap stdin/stdout/stderr for Python scripting provider implementation
+sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
+sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
+sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

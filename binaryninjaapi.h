@@ -2062,4 +2062,95 @@ namespace BinaryNinja
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 	};
+
+	class ScriptingOutputListener
+	{
+		BNScriptingOutputListener m_callbacks;
+
+		static void OutputCallback(void* ctxt, const char* text);
+		static void ErrorCallback(void* ctxt, const char* text);
+		static void InputReadyStateChangedCallback(void* ctxt, BNScriptingProviderInputReadyState state);
+
+	public:
+		ScriptingOutputListener();
+		BNScriptingOutputListener& GetCallbacks() { return m_callbacks; }
+
+		virtual void NotifyOutput(const std::string& text);
+		virtual void NotifyError(const std::string& text);
+		virtual void NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState state);
+	};
+
+	class ScriptingProvider;
+
+	class ScriptingInstance: public CoreRefCountObject<BNScriptingInstance,
+		BNNewScriptingInstanceReference, BNFreeScriptingInstance>
+	{
+	protected:
+		ScriptingInstance(ScriptingProvider* provider);
+		ScriptingInstance(BNScriptingInstance* instance);
+
+		static void DestroyInstanceCallback(void* ctxt);
+		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
+		static void SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view);
+		static void SetCurrentFunctionCallback(void* ctxt, BNFunction* func);
+		static void SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block);
+		static void SetCurrentAddressCallback(void* ctxt, uint64_t addr);
+		static void SetCurrentSelectionCallback(void* ctxt, uint64_t begin, uint64_t end);
+
+		virtual void DestroyInstance();
+
+	public:
+		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) = 0;
+		virtual void SetCurrentBinaryView(BinaryView* view);
+		virtual void SetCurrentFunction(Function* func);
+		virtual void SetCurrentBasicBlock(BasicBlock* block);
+		virtual void SetCurrentAddress(uint64_t addr);
+		virtual void SetCurrentSelection(uint64_t begin, uint64_t end);
+
+		void Output(const std::string& text);
+		void Error(const std::string& text);
+		void InputReadyStateChanged(BNScriptingProviderInputReadyState state);
+		BNScriptingProviderInputReadyState GetInputReadyState();
+
+		void RegisterOutputListener(ScriptingOutputListener* listener);
+		void UnregisterOutputListener(ScriptingOutputListener* listener);
+	};
+
+	class CoreScriptingInstance: public ScriptingInstance
+	{
+	public:
+		CoreScriptingInstance(BNScriptingInstance* instance);
+
+		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) override;
+		virtual void SetCurrentBinaryView(BinaryView* view) override;
+		virtual void SetCurrentFunction(Function* func) override;
+		virtual void SetCurrentBasicBlock(BasicBlock* block) override;
+		virtual void SetCurrentAddress(uint64_t addr) override;
+		virtual void SetCurrentSelection(uint64_t begin, uint64_t end) override;
+	};
+
+	class ScriptingProvider: public StaticCoreRefCountObject<BNScriptingProvider>
+	{
+		std::string m_nameForRegister;
+
+	protected:
+		ScriptingProvider(const std::string& name);
+		ScriptingProvider(BNScriptingProvider* provider);
+
+		static BNScriptingInstance* CreateInstanceCallback(void* ctxt);
+
+	public:
+		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
+
+		static std::vector<Ref<ScriptingProvider>> GetList();
+		static Ref<ScriptingProvider> GetByName(const std::string& name);
+		static void Register(ScriptingProvider* provider);
+	};
+
+	class CoreScriptingProvider: public ScriptingProvider
+	{
+	public:
+		CoreScriptingProvider(BNScriptingProvider* provider);
+		virtual Ref<ScriptingInstance> CreateNewInstance() override;
+	};
 }

@@ -2,7 +2,7 @@
 
 ## Basics
 
- - Have you searched [known issues][issues]?
+ - Have you searched [known issues]?
  - Is your computer powered on?
  - Did you read all the items on this page?
  - Then you should contact [support]!
@@ -23,7 +23,7 @@ Arch Linux is not an officially supported operating system, but many of our user
 
  - If the GUI launches but the license file is not valid, check that you're using the right version of Python. Only a 64-bit Python 2.7 is supported at this time.
 
-[known issues]: https://github.com/steakknife/unsign
+[known issues]: https://github.com/Vector35/binaryninja-api/issues?q=is%3Aissue
 [libcurl-compat]: https://aur.archlinux.org/packages/libcurl-compat/
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html

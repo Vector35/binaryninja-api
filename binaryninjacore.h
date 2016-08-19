@@ -99,6 +99,9 @@ extern "C"
 	struct BNPlatform;
 	struct BNAnalysisCompletionEvent;
 	struct BNDisassemblySettings;
+	struct BNScriptingProvider;
+	struct BNScriptingInstance;
+	struct BNMainThreadAction;
 
 	//! Console log levels
 	enum BNLogLevel
@@ -961,6 +964,53 @@ extern "C"
 	{
 		NoFindFlags = 0,
 		FindCaseInsensitive = 1
+	};
+
+	enum BNScriptingProviderInputReadyState
+	{
+		NotReadyForInput,
+		ReadyForScriptExecution,
+		ReadyForScriptProgramInput
+	};
+
+	enum BNScriptingProviderExecuteResult
+	{
+		InvalidScriptInput,
+		IncompleteScriptInput,
+		SuccessfulScriptExecution
+	};
+
+	struct BNScriptingInstanceCallbacks
+	{
+		void* context;
+		void (*destroyInstance)(void* ctxt);
+		BNScriptingProviderExecuteResult (*executeScriptInput)(void* ctxt, const char* input);
+		void (*setCurrentBinaryView)(void* ctxt, BNBinaryView* view);
+		void (*setCurrentFunction)(void* ctxt, BNFunction* func);
+		void (*setCurrentBasicBlock)(void* ctxt, BNBasicBlock* block);
+		void (*setCurrentAddress)(void* ctxt, uint64_t addr);
+		void (*setCurrentSelection)(void* ctxt, uint64_t begin, uint64_t end);
+	};
+
+	struct BNScriptingProviderCallbacks
+	{
+		void* context;
+		BNScriptingInstance* (*createInstance)(void* ctxt);
+
+	};
+
+	struct BNScriptingOutputListener
+	{
+		void* context;
+		void (*output)(void* ctxt, const char* text);
+		void (*error)(void* ctxt, const char* text);
+		void (*inputReadyStateChanged)(void* ctxt, BNScriptingProviderInputReadyState state);
+	};
+
+	struct BNMainThreadCallbacks
+	{
+		void* context;
+		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -1844,6 +1894,52 @@ extern "C"
 	                                     BNType** outType,
 	                                     char*** outVarName,
 	                                     size_t* outVarNameElements);
+
+	// Scripting providers
+	BINARYNINJACOREAPI BNScriptingProvider* BNRegisterScriptingProvider(const char* name,
+		BNScriptingProviderCallbacks* callbacks);
+	BINARYNINJACOREAPI BNScriptingProvider** BNGetScriptingProviderList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeScriptingProviderList(BNScriptingProvider** providers);
+	BINARYNINJACOREAPI BNScriptingProvider* BNGetScriptingProviderByName(const char* name);
+
+	BINARYNINJACOREAPI char* BNGetScriptingProviderName(BNScriptingProvider* provider);
+	BINARYNINJACOREAPI BNScriptingInstance* BNCreateScriptingProviderInstance(BNScriptingProvider* provider);
+
+	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(BNScriptingProvider* provider,
+		BNScriptingInstanceCallbacks* callbacks);
+	BINARYNINJACOREAPI BNScriptingInstance* BNNewScriptingInstanceReference(BNScriptingInstance* instance);
+	BINARYNINJACOREAPI void BNFreeScriptingInstance(BNScriptingInstance* instance);
+	BINARYNINJACOREAPI void BNNotifyOutputForScriptingInstance(BNScriptingInstance* instance, const char* text);
+	BINARYNINJACOREAPI void BNNotifyErrorForScriptingInstance(BNScriptingInstance* instance, const char* text);
+	BINARYNINJACOREAPI void BNNotifyInputReadyStateForScriptingInstance(BNScriptingInstance* instance,
+		BNScriptingProviderInputReadyState state);
+
+	BINARYNINJACOREAPI void BNRegisterScriptingInstanceOutputListener(BNScriptingInstance* instance,
+		BNScriptingOutputListener* callbacks);
+	BINARYNINJACOREAPI void BNUnregisterScriptingInstanceOutputListener(BNScriptingInstance* instance,
+		BNScriptingOutputListener* callbacks);
+
+	BINARYNINJACOREAPI BNScriptingProviderInputReadyState BNGetScriptingInstanceInputReadyState(
+		BNScriptingInstance* instance);
+	BINARYNINJACOREAPI BNScriptingProviderExecuteResult BNExecuteScriptInput(BNScriptingInstance* instance,
+		const char* input);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentBinaryView(BNScriptingInstance* instance, BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentFunction(BNScriptingInstance* instance, BNFunction* func);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentBasicBlock(BNScriptingInstance* instance, BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentAddress(BNScriptingInstance* instance, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentSelection(BNScriptingInstance* instance,
+		uint64_t begin, uint64_t end);
+
+	// Main thread actions
+	BINARYNINJACOREAPI void BNRegisterMainThread(BNMainThreadCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMainThreadAction* BNNewMainThreadActionReference(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNFreeMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNExecuteMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI bool BNIsMainThreadActionDone(BNMainThreadAction* action);
+	BINARYNINJACOREAPI void BNWaitForMainThreadAction(BNMainThreadAction* action);
+	BINARYNINJACOREAPI BNMainThreadAction* BNExecuteOnMainThread(void* ctxt, void (*func)(void* ctxt));
+	BINARYNINJACOREAPI void BNExecuteOnMainThreadAndWait(void* ctxt, void (*func)(void* ctxt));
+
 #ifdef __cplusplus
 }
 #endif

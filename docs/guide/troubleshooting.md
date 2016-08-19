@@ -2,7 +2,7 @@
 
 ## Basics
 
- - Have you searched [known issues]?
+ - Have you searched [known issues][issues]?
  - Is your computer powered on?
  - Did you read all the items on this page?
  - Then you should contact [support]!

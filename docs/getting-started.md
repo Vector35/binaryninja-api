@@ -146,6 +146,32 @@ The function list also highlights imports, and functions identified with symbols
 !!! Tip "Tip"
     To search in the function list, just click to make sure it's focused and start typing!
 
+### Script (Python) Console
+
+![console](/images/console.png "Console")
+
+The integrated script console is useful for small scripts that aren't worth writing as full plugins.
+
+To trigger the console, either use `<CTRL>-<BACKTICK>` (markdown can't handle the \` character inside of an escaped block), or use the `View`/`Script console` menu.
+
+Once loaded, the script console can be docked in different locations or popped out into a stand-alone window. Note that [at this time](https://github.com/Vector35/binaryninja-api/issues/226) window locations are not saved on restart.
+
+Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`
+
+By default the interactive python prompt has a number of convenient helper functions and variables built in:
+
+- `here` / `current_address`: address of the current selection
+- `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.BinaryView.html)
+- `current_function`: the current [Function](https://api.binary.ninja/binaryninja.Function.html)
+- `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)
+- `current_selection`: a tuple of the start and end addresses of the current selection
+- `write_at_cursor(data)`: function that writes data to the start of the current selection
+- `get_selected_data()`: function that returns the data in the current selection
+
+Note
+!!! Tip "Note"
+    The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who with to implement their own bindings.
+
 ## Preferences/Updates
 
 ![preferences](/images/preferences.png "Preferences")

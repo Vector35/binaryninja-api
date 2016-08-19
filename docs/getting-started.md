@@ -52,7 +52,7 @@ Errors or warnings during the load of the binary are also shown in the status ba
  - "e" : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - "x" : Focuses the cross-reference pane
  - ";" : Adds a comment
- - "l" : Switches between disassembly and low-level il in graph view
+ - "i" : Switches between disassembly and low-level il in graph view
  - "y" : Change type
  - [1248] : Change type directly to a data variable of the indicated widths
  - "d" : Switches between data variables of various widths

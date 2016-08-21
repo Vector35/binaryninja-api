@@ -4343,16 +4343,6 @@ class Function(object):
 		return result
 
 	@property
-	def indirect_branches(self):
-		count = ctypes.c_ulonglong()
-		branches = core.BNGetIndirectBranches(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
-		core.BNFreeIndirectBranchList(branches)
-		return result
-
-	@property
 	def low_level_il(self):
 		"""Function low level IL (read-only)"""
 		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
@@ -8201,7 +8191,7 @@ class Transform:
 
 	def perform_decode(self, data, params):
 		if self.type == "InvertingTransform":
-			return perform_encode(data, params)
+			return self.perform_encode(data, params)
 		return None
 
 	def perform_encode(self, data, params):
@@ -9852,7 +9842,7 @@ def demangle_ms(arch, mangled_name):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		return (Type(handle), names)
-	return (None, mangledName)
+	return (None, mangled_name)
 
 _output_to_log = False
 def redirect_output_to_log():

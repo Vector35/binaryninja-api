@@ -889,9 +889,11 @@ class BinaryView(object):
 	externally. Additionanlly, methods which begin with ``perform_`` should not be called either and are
 	used explicitly for subclassing the BinaryView.
 
-	Another important note is the ``*_user_*()`` methods. These methods are reserved for `undo-able` actions, and thus
-	under most circumstances shouldn't be called by plugins, rather methods with the same name without ``_user_`` should
-	be used (e.g. ``remove_function()`` rather than ``remove_user_function()``)
+	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
+	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \
+	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the \
+	database (e.g. ``remove_user_function()`` rather than ``remove_function()``). Thus use ``_user_`` methods if saving \
+	to the database is desired.
 	"""
 	name = None
 	long_name = None

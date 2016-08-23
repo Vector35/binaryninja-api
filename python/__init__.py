@@ -9476,6 +9476,15 @@ class PythonScriptingInstance(ScriptingInstance):
 						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
 
 						self.interpreter.runsource(code)
+
+						if self.locals["here"] != self.active_addr:
+							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
+								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
+						elif self.locals["current_address"] != self.active_addr:
+							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
+								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+					except:
+						traceback.print_exc()
 					finally:
 						PythonScriptingInstance._interpreter.value = None
 						self.instance.input_ready_state = core.ReadyForScriptExecution

@@ -3,7 +3,7 @@ import sys
 import binaryninja
 import datetime
 
-chandefault="private-beta"
+chandefault="release"
 channel=0
 versions=0
 

@@ -1449,6 +1449,7 @@ namespace BinaryNinja
 	};
 
 	class Structure;
+	class UnknownType;
 	class Enumeration;
 
 	struct NameAndType
@@ -1476,6 +1477,8 @@ namespace BinaryNinja
 		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
+		Ref<UnknownType> GetUnknownType() const;
+
 		uint64_t GetElementCount() const;
 
 		void SetFunctionCanReturn(bool canReturn);
@@ -1492,6 +1495,7 @@ namespace BinaryNinja
 		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
+		static Ref<Type> UnknownNamedType(UnknownType* unknwn);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
@@ -1500,6 +1504,14 @@ namespace BinaryNinja
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 
 		static std::string GetQualifiedName(const std::vector<std::string>& names);
+	};
+
+	class UnknownType: public CoreRefCountObject<BNUnknownType, BNNewUnknownTypeReference, BNFreeUnknownType>
+	{
+	public:
+		UnknownType(BNUnknownType* s, std::vector<std::string> name = {});
+		std::vector<std::string> GetName() const;
+		void SetName(const std::vector<std::string>& name);
 	};
 
 	struct StructureMember

@@ -94,6 +94,7 @@ extern "C"
 	struct BNLowLevelILFunction;
 	struct BNType;
 	struct BNStructure;
+	struct BNUnknownType;
 	struct BNEnumeration;
 	struct BNCallingConvention;
 	struct BNPlatform;
@@ -355,7 +356,8 @@ extern "C"
 		ArrayTypeClass = 7,
 		FunctionTypeClass = 8,
 		VarArgsTypeClass = 9,
-		ValueTypeClass = 10
+		ValueTypeClass = 10,
+		UnknownTypeClass = 11
 	};
 
 	enum BNStructureType
@@ -471,7 +473,11 @@ extern "C"
 		RttiBaseClassDescriptor,
 		RttiBaseClassArray,
 		RttiClassHeirarchyDescriptor,
-		RttiCompleteObjectLocator
+		RttiCompleteObjectLocator,
+		OperatorUnaryMinusNameType,
+		OperatorUnaryPlusNameType,
+		OperatorUnaryBitAndNameType,
+		OperatorUnaryStarNameType
 	};
 
 	enum BNCallingConventionName
@@ -1878,6 +1884,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringAfterName(BNType* type);
 
+	BINARYNINJACOREAPI BNType* BNCreateUnknownNamedType(BNUnknownType* ut);
+	BINARYNINJACOREAPI BNUnknownType* BNCreateUnknownType(void);
+	BINARYNINJACOREAPI void BNSetUnknownTypeName(BNUnknownType* ut, const char** name, size_t size);
+	BINARYNINJACOREAPI char** BNGetUnknownTypeName(BNUnknownType* ut, size_t* size);
+	BINARYNINJACOREAPI void BNFreeUnknownType(BNUnknownType* ut);
+	BINARYNINJACOREAPI BNUnknownType* BNNewUnknownTypeReference(BNUnknownType* ut);
+
 	BINARYNINJACOREAPI BNStructure* BNCreateStructure(void);
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
@@ -2143,6 +2156,12 @@ extern "C"
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
 		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 
+	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch,
+	                                       const char* mangledName,
+	                                       BNType** outType,
+	                                       char*** outVarName,
+	                                       size_t* outVarNameElements);
+	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 #ifdef __cplusplus
 }
 #endif

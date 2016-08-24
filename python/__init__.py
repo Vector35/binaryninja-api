@@ -4151,6 +4151,10 @@ class Type(object):
 		return Type(core.BNCreateUnknownType(unknown_type.handle))
 
 	@classmethod
+	def unknown_type(self, s):
+		return Type(core.BNCreateUnknownType(s.handle))
+
+	@classmethod
 	def enumeration_type(self, arch, e, width = None):
 		if width is None:
 			width = arch.default_int_size
@@ -10838,6 +10842,21 @@ def demangle_ms(arch, mangled_name):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		#core.BNFreeDemangledName(outName.value, outSize.value)
+		return (Type(handle), names)
+	return (None, mangledName)
+
+
+def demangle_gnu3(arch, mangledName):
+	handle = ctypes.POINTER(core.BNType)()
+	outName = ctypes.POINTER(ctypes.c_char_p)()
+	outSize = ctypes.c_ulonglong()
+	names = []
+	if core.BNDemangleGNU3(arch.handle, mangledName, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+		for i in xrange(outSize.value):
+			names.append(outName[i])
+		#core.BNFreeDemangledName(outName.value, outSize.value)
+		if not handle:
+			return (None, names)
 		return (Type(handle), names)
 	return (None, mangled_name)
 

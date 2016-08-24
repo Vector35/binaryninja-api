@@ -1082,31 +1082,31 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 }
 
 
-void BinaryView::DefineAutoSymbol(Symbol* sym)
+void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNDefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::UndefineAutoSymbol(Symbol* sym)
+void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNUndefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineUserSymbol(Symbol* sym)
+void BinaryView::DefineUserSymbol(Ref<Symbol> sym)
 {
 	BNDefineUserSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::UndefineUserSymbol(Symbol* sym)
+void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
 {
 	BNUndefineUserSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineImportedFunction(Symbol* importAddressSym, Function* func)
+void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func)
 {
 	BNDefineImportedFunction(m_object, importAddressSym->GetObject(), func->GetObject());
 }
@@ -1397,13 +1397,13 @@ bool BinaryView::IsTypeAutoDefined(const std::string& name)
 }
 
 
-void BinaryView::DefineType(const std::string& name, Type* type)
+void BinaryView::DefineType(const std::string& name, Ref<Type> type)
 {
 	BNDefineAnalysisType(m_object, name.c_str(), type->GetObject());
 }
 
 
-void BinaryView::DefineUserType(const std::string& name, Type* type)
+void BinaryView::DefineUserType(const std::string& name, Ref<Type> type)
 {
 	BNDefineUserAnalysisType(m_object, name.c_str(), type->GetObject());
 }

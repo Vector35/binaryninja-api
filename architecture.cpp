@@ -163,7 +163,7 @@ bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* d
                                                     size_t* len, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	LowLevelILFunction func(il);
 	return arch->GetInstructionLowLevelIL(data, addr, *len, func);
 }
 
@@ -281,7 +281,7 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	LowLevelILFunction func(il);
 	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, func);
 }
 
@@ -290,7 +290,7 @@ size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelIL
 	BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(BNNewLowLevelILFunctionReference(il));
+	LowLevelILFunction func(il);
 	return arch->GetFlagConditionLowLevelIL(cond, func);
 }
 

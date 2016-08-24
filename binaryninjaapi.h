@@ -857,13 +857,13 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type);
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
 
-		void DefineAutoSymbol(Symbol* sym);
-		void UndefineAutoSymbol(Symbol* sym);
+		void DefineAutoSymbol(Ref<Symbol> sym);
+		void UndefineAutoSymbol(Ref<Symbol> sym);
 
-		void DefineUserSymbol(Symbol* sym);
-		void UndefineUserSymbol(Symbol* sym);
+		void DefineUserSymbol(Ref<Symbol> sym);
+		void UndefineUserSymbol(Ref<Symbol> sym);
 
-		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
+		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
 
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -904,8 +904,8 @@ namespace BinaryNinja
 		std::map<std::string, Ref<Type>> GetTypes();
 		Ref<Type> GetTypeByName(const std::string& name);
 		bool IsTypeAutoDefined(const std::string& name);
-		void DefineType(const std::string& name, Type* type);
-		void DefineUserType(const std::string& name, Type* type);
+		void DefineType(const std::string& name, Ref<Type> type);
+		void DefineUserType(const std::string& name, Ref<Type> type);
 		void UndefineType(const std::string& name);
 		void UndefineUserType(const std::string& name);
 
@@ -1643,8 +1643,8 @@ namespace BinaryNinja
 		Ref<FunctionGraph> CreateFunctionGraph();
 
 		std::map<int64_t, StackVariable> GetStackLayout();
-		void CreateAutoStackVariable(int64_t offset, Type* type, const std::string& name);
-		void CreateUserStackVariable(int64_t offset, Type* type, const std::string& name);
+		void CreateAutoStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
+		void CreateUserStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);

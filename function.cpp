@@ -406,13 +406,13 @@ map<int64_t, StackVariable> Function::GetStackLayout()
 }
 
 
-void Function::CreateAutoStackVariable(int64_t offset, Type* type, const string& name)
+void Function::CreateAutoStackVariable(int64_t offset, Ref<Type> type, const string& name)
 {
 	BNCreateAutoStackVariable(m_object, offset, type->GetObject(), name.c_str());
 }
 
 
-void Function::CreateUserStackVariable(int64_t offset, Type* type, const string& name)
+void Function::CreateUserStackVariable(int64_t offset, Ref<Type> type, const string& name)
 {
 	BNCreateUserStackVariable(m_object, offset, type->GetObject(), name.c_str());
 }

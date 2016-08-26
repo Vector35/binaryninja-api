@@ -17,28 +17,20 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 CFLAGS := -c -fPIC -O2 -pipe -std=gnu++11 -Wall -W
 ifeq ($(UNAME_S),Darwin)
-	CC := $(shell xcrun -f clang++)
+	CC := $(shell xcrun -f g++)
 	AR := $(shell xcrun -f ar)
 	CFLAGS += -stdlib=libc++
-all: $(TARGET).a $(TARGET).dylib
 else
 	CC := g++
 	AR := ar
-all: $(TARGET).a $(TARGET).so
 endif
+
+all: $(TARGET).a
 
 $(TARGET).a: $(OBJECTS)
 	@mkdir -p $(TARGETDIR)
 	$(AR) rcs $@ $^
  
-$(TARGET).so: $(OBJECTS)
-	@mkdir -p $(TARGETDIR)
-	$(CC) -shared $(LIB) $(JSONCPP) $^ -o $@
-
-$(TARGET).dylib: $(OBJECTS)
-	$(CC) -dynamiclib $(LIB) $(JSONCPP) $^ -o $@
-	install_name_tool -id @loader_path/$(TARGETNAME).dylib -add_rpath @loader_path/.. $@
-
 %.o: %.cpp
 	@echo " Compiling... $@ $<"
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<

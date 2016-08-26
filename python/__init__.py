@@ -372,18 +372,32 @@ class FileMetadata(object):
 	def navigate(self, view, offset):
 		return core.BNNavigate(self.handle, str(view), offset)
 
-	def create_database(self, filename):
+	def create_database(self, filename, progress_func = None):
+		if progress_func is None:
+			return core.BNCreateDatabase(self.raw.handle, str(filename))
+		else:
+			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+					lambda ctxt, cur, total: progress_func(cur, total)))
 
-		return core.BNCreateDatabase(self.raw.handle, str(filename))
-
-	def open_existing_database(self, filename):
-		view = core.BNOpenExistingDatabase(self.handle, str(filename))
+	def open_existing_database(self, filename, progress_func = None):
+		if progress_func is None:
+			view = core.BNOpenExistingDatabase(self.handle, str(filename))
+		else:
+			view = core.BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
 		return BinaryView(self, handle = view)
 
-	def save_auto_snapshot(self):
-		return core.BNSaveAutoSnapshot(self.raw.handle)
+	def save_auto_snapshot(self, progress_func = None):
+		if progress_func is None:
+			return core.BNSaveAutoSnapshot(self.raw.handle)
+		else:
+			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				lambda ctxt, cur, total: progress_func(cur, total)))
 
 	def get_view_of_type(self, name):
 		view = core.BNGetFileViewOfType(self.handle, str(name))
@@ -1683,26 +1697,28 @@ class BinaryView(object):
 		"""
 		return core.LittleEndian
 
-	def create_database(self, filename):
+	def create_database(self, filename, progress_func = None):
 		"""
 		``perform_get_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
+		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
 		return self.file.create_database(filename)
 
-	def save_auto_snapshot(self):
+	def save_auto_snapshot(self, progress_func = None):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
 		.. note:: :py:method:`create_database` should have been called prior to executing this method
 
+		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
-		return self.file.save_auto_snapshot()
+		return self.file.save_auto_snapshot(progress_func)
 
 	def get_view_of_type(self, name):
 		"""
@@ -4248,6 +4264,16 @@ class StackVariableReference:
 			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
+class ConstantReference:
+	def __init__(self, val, size):
+		self.value = val
+		self.size = size
+
+	def __repr__(self):
+		if self.size == 0:
+			return "<constant %#x>" % self.value
+		return "<constant %#x size %d>" % (self.value, self.size)
+
 class IndirectBranchInfo:
 	def __init__(self, source_arch, source_addr, dest_arch, dest_addr, auto_defined):
 		self.source_arch = source_arch
@@ -4529,6 +4555,15 @@ class Function(object):
 			result.append(StackVariableReference(refs[i].sourceOperand, Type(core.BNNewTypeReference(refs[i].type)),
 				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
+		return result
+
+	def get_constants_referenced_by(self, arch, addr):
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(ConstantReference(refs[i].value, refs[i].size))
+		core.BNFreeConstantReferenceList(refs)
 		return result
 
 	def get_lifted_il_at(self, arch, addr):

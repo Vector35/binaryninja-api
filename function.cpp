@@ -288,6 +288,19 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
+vector<BNConstantReference> Function::GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNConstantReference* refs = BNGetConstantsReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+
+	vector<BNConstantReference> result;
+	result.insert(result.end(), &refs[0], &refs[count]);
+
+	BNFreeConstantReferenceList(refs);
+	return result;
+}
+
+
 Ref<LowLevelILFunction> Function::GetLiftedIL() const
 {
 	return new LowLevelILFunction(BNGetFunctionLiftedIL(m_object));

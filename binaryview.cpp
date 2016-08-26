@@ -518,9 +518,22 @@ bool BinaryView::CreateDatabase(const string& path)
 }
 
 
+bool BinaryView::CreateDatabase(const string& path,
+	const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->CreateDatabase(path, this, progressCallback);
+}
+
+
 bool BinaryView::SaveAutoSnapshot()
 {
 	return m_file->SaveAutoSnapshot(this);
+}
+
+
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->SaveAutoSnapshot(this, progressCallback);
 }
 
 

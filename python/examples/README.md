@@ -5,7 +5,7 @@ The following examples demonstrate some of the Binary Ninja API. They include bo
 ## Stand-alone
 
 * bin-info.py - general binary information
-* arm-syscall.py - extract syscall numbers from IL for arm Mach-O files
+* print_syscalls.py - extract syscall numbers from IL on specified file. Can be run both headless and in Binary Ninja
 * version-switcher.py - uses the update API to see raw version notes and manually downgrade or upgrade
 
 To use the stand-alone Python examples, make sure your `PYTHON_PATH` includes the API, like:

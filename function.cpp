@@ -72,6 +72,12 @@ bool Function::HasExplicitlyDefinedType() const
 }
 
 
+bool Function::NeedsUpdate() const
+{
+	return BNIsFunctionUpdateNeeded(m_object);
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;

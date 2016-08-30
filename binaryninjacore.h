@@ -1381,6 +1381,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);
 
 	BINARYNINJACOREAPI BNFunction* BNNewFunctionReference(BNFunction* func);
 	BINARYNINJACOREAPI void BNFreeFunction(BNFunction* func);

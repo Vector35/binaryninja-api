@@ -1611,6 +1611,7 @@ namespace BinaryNinja
 		bool WasAutomaticallyDiscovered() const;
 		bool CanReturn() const;
 		bool HasExplicitlyDefinedType() const;
+		bool NeedsUpdate() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();

@@ -4349,6 +4349,11 @@ class Function(object):
 		return core.BNHasExplicitlyDefinedType(self.handle)
 
 	@property
+	def needs_update(self):
+		"""Whether the function has analysis that needs to be updated (read-only)"""
+		return core.BNIsFunctionUpdateNeeded(self.handle)
+
+	@property
 	def basic_blocks(self):
 		"""List of basic blocks (read-only)"""
 		count = ctypes.c_ulonglong()

@@ -572,3 +572,9 @@ void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrA
 {
 	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
 }
+
+
+void Function::Reanalyze()
+{
+	BNReanalyzeFunction(m_object);
+}

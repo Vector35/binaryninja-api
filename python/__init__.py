@@ -3231,6 +3231,14 @@ class BinaryView(object):
 			return None
 		return result.value
 
+	def reanalyze(self):
+		"""
+		``reanalyze`` causes all functions to be reanalyzed. This function does not wait for the analysis to finish.
+
+		:rtype: None
+		"""
+		core.BNReanalyzeAllFunctions(self.handle)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -4676,6 +4684,14 @@ class Function(object):
 		if isinstance(display_type, str):
 			display_type = core.BNIntegerDisplayType_by_name[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
+
+	def reanalyze(self):
+		"""
+		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
+
+		:rtype: None
+		"""
+		core.BNReanalyzeFunction(self.handle)
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):

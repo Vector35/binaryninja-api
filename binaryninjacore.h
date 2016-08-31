@@ -1565,6 +1565,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, const char* name);
 
+	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
+
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);

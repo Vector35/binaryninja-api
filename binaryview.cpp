@@ -1440,6 +1440,12 @@ bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& 
 }
 
 
+void BinaryView::Reanalyze()
+{
+	BNReanalyzeAllFunctions(m_object);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

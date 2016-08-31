@@ -919,6 +919,8 @@ namespace BinaryNinja
 		void UndefineUserType(const std::string& name);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
+
+		void Reanalyze();
 	};
 
 	class BinaryData: public BinaryView
@@ -1672,6 +1674,8 @@ namespace BinaryNinja
 			size_t operand);
 		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
 			BNIntegerDisplayType type);
+
+		void Reanalyze();
 	};
 
 	struct FunctionGraphEdge

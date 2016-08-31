@@ -24,6 +24,12 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+struct WorkerThreadActionContext
+{
+	std::function<void()> action;
+};
+
+
 void BinaryNinja::InitCorePlugins()
 {
 	BNInitCorePlugins();
@@ -137,4 +143,60 @@ void BinaryNinja::AddRequiredPluginDependency(const string& name)
 void BinaryNinja::AddOptionalPluginDependency(const string& name)
 {
 	BNAddOptionalPluginDependency(name.c_str());
+}
+
+
+static void WorkerActionCallback(void* ctxt)
+{
+	WorkerThreadActionContext* action = (WorkerThreadActionContext*)ctxt;
+	action->action();
+	delete action;
+}
+
+
+void BinaryNinja::WorkerEnqueue(const function<void()>& action)
+{
+	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
+	ctxt->action = action;
+	BNWorkerEnqueue(ctxt, WorkerActionCallback);
+}
+
+
+void BinaryNinja::WorkerEnqueue(RefCountObject* owner, const function<void()>& action)
+{
+	struct
+	{
+		Ref<RefCountObject> owner;
+		function<void()> func;
+	} context;
+	context.owner = owner;
+	context.func = action;
+
+	WorkerEnqueue([=]() {
+			context.func();
+		});
+}
+
+
+void BinaryNinja::WorkerPriorityEnqueue(const function<void()>& action)
+{
+	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
+	ctxt->action = action;
+	BNWorkerPriorityEnqueue(ctxt, WorkerActionCallback);
+}
+
+
+void BinaryNinja::WorkerPriorityEnqueue(RefCountObject* owner, const function<void()>& action)
+{
+	struct
+	{
+		Ref<RefCountObject> owner;
+		function<void()> func;
+	} context;
+	context.owner = owner;
+	context.func = action;
+
+	WorkerPriorityEnqueue([=]() {
+			context.func();
+		});
 }

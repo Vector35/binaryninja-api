@@ -9916,7 +9916,7 @@ def redirect_output_to_log():
 	global _output_to_log
 	_output_to_log = True
 
-class _MainThreadActionContext:
+class _ThreadActionContext:
 	_actions = []
 
 	def __init__(self, func):
@@ -9939,15 +9939,23 @@ class _MainThreadActionContext:
 			self.__class__._actions.remove(self)
 
 def execute_on_main_thread(func):
-	action = _MainThreadActionContext(func)
+	action = _ThreadActionContext(func)
 	obj = core.BNExecuteOnMainThread(0, action.callback)
 	if obj:
 		return MainThreadAction(obj)
 	return None
 
 def execute_on_main_thread_and_wait(func):
-	action = _MainThreadActionContext(func)
+	action = _ThreadActionContext(func)
 	core.BNExecuteOnMainThreadAndWait(0, action.callback)
+
+def worker_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerEnqueue(0, action.callback)
+
+def worker_priority_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerEnqueue(0, action.callback)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

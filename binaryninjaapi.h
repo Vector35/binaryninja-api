@@ -371,6 +371,11 @@ namespace BinaryNinja
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
 
+	void WorkerEnqueue(const std::function<void()>& action);
+	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerPriorityEnqueue(const std::function<void()>& action);
+	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action);
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

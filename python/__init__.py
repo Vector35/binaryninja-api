@@ -6046,9 +6046,9 @@ class Architecture(object):
 		:py:Class:`InstructionInfo` object. The InstructionInfo object should have the length of the current instruction.
 		If the instruction is a branch instruction the method should add a branch of the proper type:
 
-			===================== =================================================
+			===================== ===================================================
 			BranchType            Description
-			===================== =================================================
+			===================== ===================================================
 			UnconditionalBranch   Branch will alwasy be taken
 			FalseBranch           False branch condition
 			TrueBranch            True branch condition
@@ -6057,7 +6057,7 @@ class Architecture(object):
 			SystemCall            System call instruction
 			IndirectBranch        Branch destination is a memory address or register
 			UnresolvedBranch      Call instruction that isn't
-			===================== ==================================================
+			===================== ===================================================
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded

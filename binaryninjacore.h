@@ -1013,6 +1013,12 @@ extern "C"
 		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	};
 
+	struct BNConstantReference
+	{
+		int64_t value;
+		size_t size;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1105,8 +1111,14 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsBackedByDatabase(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path);
+	BINARYNINJACOREAPI bool BNCreateDatabaseWithProgress(BNBinaryView* data, const char* path,
+		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabase(BNFileMetadata* file, const char* path);
+	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
+		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data);
+	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
+		void (*progress)(void* ctxt, size_t progress, size_t total));
 
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
@@ -1369,6 +1381,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);
 
 	BINARYNINJACOREAPI BNFunction* BNNewFunctionReference(BNFunction* func);
 	BINARYNINJACOREAPI void BNFreeFunction(BNFunction* func);
@@ -1433,6 +1446,9 @@ extern "C"
 	BINARYNINJACOREAPI BNStackVariableReference* BNGetStackVariablesReferencedByInstruction(BNFunction* func, BNArchitecture* arch,
 	                                                                                        uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStackVariableReferenceList(BNStackVariableReference* refs, size_t count);
+	BINARYNINJACOREAPI BNConstantReference* BNGetConstantsReferencedByInstruction(BNFunction* func,
+		BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeConstantReferenceList(BNConstantReference* refs);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLiftedIL(BNFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLiftedILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
@@ -1548,6 +1564,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNDefineUserAnalysisType(BNBinaryView* view, const char* name, BNType* type);
 	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, const char* name);
+
+	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

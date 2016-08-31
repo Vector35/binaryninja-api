@@ -72,6 +72,12 @@ bool Function::HasExplicitlyDefinedType() const
 }
 
 
+bool Function::NeedsUpdate() const
+{
+	return BNIsFunctionUpdateNeeded(m_object);
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;
@@ -284,6 +290,19 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	}
 
 	BNFreeStackVariableReferenceList(refs, count);
+	return result;
+}
+
+
+vector<BNConstantReference> Function::GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNConstantReference* refs = BNGetConstantsReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+
+	vector<BNConstantReference> result;
+	result.insert(result.end(), &refs[0], &refs[count]);
+
+	BNFreeConstantReferenceList(refs);
 	return result;
 }
 
@@ -552,4 +571,10 @@ void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrA
 	BNIntegerDisplayType type)
 {
 	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
+}
+
+
+void Function::Reanalyze()
+{
+	BNReanalyzeFunction(m_object);
 }

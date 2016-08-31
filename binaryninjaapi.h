@@ -511,8 +511,14 @@ namespace BinaryNinja
 
 		bool IsBackedByDatabase() const;
 		bool CreateDatabase(const std::string& name, BinaryView* data);
+		bool CreateDatabase(const std::string& name, BinaryView* data,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
+		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		bool SaveAutoSnapshot(BinaryView* data);
+		bool SaveAutoSnapshot(BinaryView* data,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 
 		void BeginUndoActions();
 		void CommitUndoActions();
@@ -766,7 +772,10 @@ namespace BinaryNinja
 		bool IsAnalysisChanged() const;
 		bool IsBackedByDatabase() const;
 		bool CreateDatabase(const std::string& path);
+		bool CreateDatabase(const std::string& path,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		bool SaveAutoSnapshot();
+		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback);
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);
@@ -910,6 +919,8 @@ namespace BinaryNinja
 		void UndefineUserType(const std::string& name);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
+
+		void Reanalyze();
 	};
 
 	class BinaryData: public BinaryView
@@ -1602,6 +1613,7 @@ namespace BinaryNinja
 		bool WasAutomaticallyDiscovered() const;
 		bool CanReturn() const;
 		bool HasExplicitlyDefinedType() const;
+		bool NeedsUpdate() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		void MarkRecentUse();
@@ -1626,6 +1638,7 @@ namespace BinaryNinja
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
@@ -1661,6 +1674,8 @@ namespace BinaryNinja
 			size_t operand);
 		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
 			BNIntegerDisplayType type);
+
+		void Reanalyze();
 	};
 
 	struct FunctionGraphEdge

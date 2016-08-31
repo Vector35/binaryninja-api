@@ -518,9 +518,22 @@ bool BinaryView::CreateDatabase(const string& path)
 }
 
 
+bool BinaryView::CreateDatabase(const string& path,
+	const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->CreateDatabase(path, this, progressCallback);
+}
+
+
 bool BinaryView::SaveAutoSnapshot()
 {
 	return m_file->SaveAutoSnapshot(this);
+}
+
+
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->SaveAutoSnapshot(this, progressCallback);
 }
 
 
@@ -1424,6 +1437,12 @@ void BinaryView::UndefineUserType(const std::string& name)
 bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);
+}
+
+
+void BinaryView::Reanalyze()
+{
+	BNReanalyzeAllFunctions(m_object);
 }
 
 

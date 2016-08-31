@@ -1694,6 +1694,10 @@ namespace BinaryNinja
 	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,
 		BNNewFunctionGraphBlockReference, BNFreeFunctionGraphBlock>
 	{
+		std::vector<DisassemblyTextLine> m_cachedLines;
+		std::vector<FunctionGraphEdge> m_cachedEdges;
+		bool m_cachedLinesValid, m_cachedEdgesValid;
+
 	public:
 		FunctionGraphBlock(BNFunctionGraphBlock* block);
 
@@ -1705,14 +1709,15 @@ namespace BinaryNinja
 		int GetWidth() const;
 		int GetHeight() const;
 
-		std::vector<DisassemblyTextLine> GetLines() const;
-		std::vector<FunctionGraphEdge> GetOutgoingEdges() const;
+		const std::vector<DisassemblyTextLine>& GetLines();
+		const std::vector<FunctionGraphEdge>& GetOutgoingEdges();
 	};
 
 	class FunctionGraph: public RefCountObject
 	{
 		BNFunctionGraph* m_graph;
 		std::function<void()> m_completeFunc;
+		std::map<BNFunctionGraphBlock*, Ref<FunctionGraphBlock>> m_cachedBlocks;
 
 		static void CompleteCallback(void* ctxt);
 
@@ -1735,7 +1740,7 @@ namespace BinaryNinja
 		void OnComplete(const std::function<void()>& func);
 		void Abort();
 
-		std::vector<Ref<FunctionGraphBlock>> GetBlocks() const;
+		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
 
 		int GetWidth() const;
 		int GetHeight() const;

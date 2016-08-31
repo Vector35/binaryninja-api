@@ -637,6 +637,7 @@ extern "C"
 		bool (*isOffsetReadable)(void* ctxt, uint64_t offset);
 		bool (*isOffsetWritable)(void* ctxt, uint64_t offset);
 		bool (*isOffsetExecutable)(void* ctxt, uint64_t offset);
+		bool (*isOffsetBackedByFile)(void* ctxt, uint64_t offset);
 		uint64_t (*getNextValidOffset)(void* ctxt, uint64_t offset);
 		uint64_t (*getStart)(void* ctxt);
 		uint64_t (*getLength)(void* ctxt);
@@ -1164,6 +1165,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsOffsetReadable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetWritable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetExecutable(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI bool BNIsOffsetBackedByFile(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetNextValidOffset(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetStartOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetEndOffset(BNBinaryView* view);

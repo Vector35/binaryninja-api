@@ -258,6 +258,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 	view.isOffsetReadable = IsOffsetReadableCallback;
 	view.isOffsetWritable = IsOffsetWritableCallback;
 	view.isOffsetExecutable = IsOffsetExecutableCallback;
+	view.isOffsetBackedByFile = IsOffsetBackedByFileCallback;
 	view.getNextValidOffset = GetNextValidOffsetCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
@@ -357,6 +358,13 @@ bool BinaryView::IsOffsetExecutableCallback(void* ctxt, uint64_t offset)
 }
 
 
+bool BinaryView::IsOffsetBackedByFileCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsOffsetBackedByFile(offset);
+}
+
+
 uint64_t BinaryView::GetNextValidOffsetCallback(void* ctxt, uint64_t offset)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -434,6 +442,12 @@ bool BinaryView::PerformIsOffsetWritable(uint64_t offset)
 
 
 bool BinaryView::PerformIsOffsetExecutable(uint64_t offset)
+{
+	return PerformIsValidOffset(offset);
+}
+
+
+bool BinaryView::PerformIsOffsetBackedByFile(uint64_t offset)
 {
 	return PerformIsValidOffset(offset);
 }
@@ -693,6 +707,12 @@ bool BinaryView::IsOffsetWritable(uint64_t offset) const
 bool BinaryView::IsOffsetExecutable(uint64_t offset) const
 {
 	return BNIsOffsetExecutable(m_object, offset);
+}
+
+
+bool BinaryView::IsOffsetBackedByFile(uint64_t offset) const
+{
+	return BNIsOffsetBackedByFile(m_object, offset);
 }
 
 

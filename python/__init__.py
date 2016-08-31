@@ -945,6 +945,7 @@ class BinaryView(object):
 			self._cb.isOffsetReadable = self._cb.isOffsetReadable.__class__(self._is_offset_readable)
 			self._cb.isOffsetWritable = self._cb.isOffsetWritable.__class__(self._is_offset_writable)
 			self._cb.isOffsetExecutable = self._cb.isOffsetExecutable.__class__(self._is_offset_executable)
+			self._cb.isOffsetBackedByFile = self._cb.isOffsetExecutable.__class__(self._is_offset_backed_by_file)
 			self._cb.getNextValidOffset = self._cb.getNextValidOffset.__class__(self._get_next_valid_offset)
 			self._cb.getStart = self._cb.getStart.__class__(self._get_start)
 			self._cb.getLength = self._cb.getLength.__class__(self._get_length)
@@ -1389,6 +1390,13 @@ class BinaryView(object):
 			log_error(traceback.format_exc())
 			return False
 
+	def _is_offset_backed_by_file(self, ctxt, offset):
+		try:
+			return self.perform_is_offset_backed_by_file(offset)
+		except:
+			log_error(traceback.format_exc())
+			return False
+
 	def _get_next_valid_offset(self, ctxt, offset):
 		try:
 			return self.perform_get_next_valid_offset(offset)
@@ -1628,6 +1636,20 @@ class BinaryView(object):
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is executable, false if the virtual address is not executable or error
+		:rtype: int
+		"""
+		return self.is_valid_offset(addr)
+
+	def perform_is_offset_backed_by_file(self, addr):
+		"""
+		``perform_is_offset_backed_by_file`` implements a check if a virtual address ``addr`` is backed by the file
+		contents.
+
+		.. warning:: This method **must not** be called directly.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is backed by the file, false if the virtual address is initialized by \
+		the loader
 		:rtype: int
 		"""
 		return self.is_valid_offset(addr)
@@ -1933,7 +1955,7 @@ class BinaryView(object):
 
 	def is_offset_readable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for reading.
+		``is_offset_readable`` checks if an virtual address ``addr`` is valid for reading.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for reading, false if the virtual address is invalid or error
@@ -1943,7 +1965,7 @@ class BinaryView(object):
 
 	def is_offset_writable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for writing.
+		``is_offset_writable`` checks if an virtual address ``addr`` is valid for writing.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
@@ -1953,13 +1975,24 @@ class BinaryView(object):
 
 	def is_offset_executable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for executing.
+		``is_offset_executable`` checks if an virtual address ``addr`` is valid for executing.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for executing, false if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetExecutable(self.handle, addr)
+
+	def is_offset_backed_by_file(self, addr):
+		"""
+		``is_offset_backed_by_file`` checks if an virtual address ``addr`` is backed by the file contents.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is backed by the file, false if the virtual address is initialized by \
+		the loader
+		:rtype: bool
+		"""
+		return core.BNIsOffsetBackedByFile(self.handle, addr)
 
 	def save(self, dest):
 		"""

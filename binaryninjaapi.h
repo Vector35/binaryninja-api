@@ -730,6 +730,7 @@ namespace BinaryNinja
 		virtual bool PerformIsOffsetReadable(uint64_t offset);
 		virtual bool PerformIsOffsetWritable(uint64_t offset);
 		virtual bool PerformIsOffsetExecutable(uint64_t offset);
+		virtual bool PerformIsOffsetBackedByFile(uint64_t offset);
 		virtual uint64_t PerformGetNextValidOffset(uint64_t offset);
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
@@ -756,6 +757,7 @@ namespace BinaryNinja
 		static bool IsOffsetReadableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetWritableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetExecutableCallback(void* ctxt, uint64_t offset);
+		static bool IsOffsetBackedByFileCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetNextValidOffsetCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
@@ -811,6 +813,7 @@ namespace BinaryNinja
 		bool IsOffsetReadable(uint64_t offset) const;
 		bool IsOffsetWritable(uint64_t offset) const;
 		bool IsOffsetExecutable(uint64_t offset) const;
+		bool IsOffsetBackedByFile(uint64_t offset) const;
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
 		uint64_t GetStart() const;

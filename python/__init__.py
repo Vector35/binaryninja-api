@@ -4330,8 +4330,11 @@ class Function(object):
 	def __init__(self, view, handle):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
+		self._advanced_analysis_requests = 0
 
 	def __del__(self):
+		if self._advanced_analysis_requests > 0:
+			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 		core.BNFreeFunction(self.handle)
 
 	@property
@@ -4725,6 +4728,41 @@ class Function(object):
 		:rtype: None
 		"""
 		core.BNReanalyzeFunction(self.handle)
+
+	def request_advanced_analysis_data(self):
+		core.BNRequestAdvancedFunctionAnalysisData(self.handle)
+		self._advanced_analysis_requests += 1
+
+	def release_advanced_analysis_data(self):
+		core.BNReleaseAdvancedFunctionAnalysisData(self.handle)
+		self._advanced_analysis_requests -= 1
+
+class AdvancedFunctionAnalysisDataRequestor(object):
+	def __init__(self, func = None):
+		self._function = func
+		if self._function is not None:
+			self._function.request_advanced_analysis_data()
+
+	def __del__(self):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+
+	@property
+	def function(self):
+		return self._function
+
+	@function.setter
+	def function(self, func):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+		self._function = func
+		if self._function is not None:
+			self._function.request_advanced_analysis_data()
+
+	def close(self):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+		self._function = None
 
 class BasicBlockEdge:
 	def __init__(self, branch_type, target, arch):

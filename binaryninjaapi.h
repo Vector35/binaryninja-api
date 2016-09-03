@@ -1611,8 +1611,11 @@ namespace BinaryNinja
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
+		int m_advancedAnalysisRequests;
+
 	public:
 		Function(BNFunction* func);
+		virtual ~Function();
 
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Platform> GetPlatform() const;
@@ -1684,6 +1687,24 @@ namespace BinaryNinja
 			BNIntegerDisplayType type);
 
 		void Reanalyze();
+
+		void RequestAdvancedAnalysisData();
+		void ReleaseAdvancedAnalysisData();
+		void ReleaseAdvancedAnalysisData(size_t count);
+	};
+
+	class AdvancedFunctionAnalysisDataRequestor
+	{
+		Ref<Function> m_func;
+
+	public:
+		AdvancedFunctionAnalysisDataRequestor(Function* func = nullptr);
+		AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req);
+		~AdvancedFunctionAnalysisDataRequestor();
+		AdvancedFunctionAnalysisDataRequestor& operator=(const AdvancedFunctionAnalysisDataRequestor& req);
+
+		Ref<Function> GetFunction() { return m_func; }
+		void SetFunction(Function* func);
 	};
 
 	struct FunctionGraphEdge

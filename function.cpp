@@ -27,6 +27,14 @@ using namespace std;
 Function::Function(BNFunction* func)
 {
 	m_object = func;
+	m_advancedAnalysisRequests = 0;
+}
+
+
+Function::~Function()
+{
+	if (m_advancedAnalysisRequests > 0)
+		BNReleaseAdvancedFunctionAnalysisDataMultiple(m_object, (size_t)m_advancedAnalysisRequests);
 }
 
 
@@ -577,4 +585,68 @@ void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrA
 void Function::Reanalyze()
 {
 	BNReanalyzeFunction(m_object);
+}
+
+
+void Function::RequestAdvancedAnalysisData()
+{
+	BNRequestAdvancedFunctionAnalysisData(m_object);
+#ifdef WIN32
+	InterlockedIncrement((LONG*)&m_advancedAnalysisRequests);
+#else
+	__sync_fetch_and_add(&m_advancedAnalysisRequests, 1);
+#endif
+}
+
+
+void Function::ReleaseAdvancedAnalysisData()
+{
+	BNReleaseAdvancedFunctionAnalysisData(m_object);
+#ifdef WIN32
+	InterlockedDecrement((LONG*)&m_advancedAnalysisRequests);
+#else
+	__sync_fetch_and_add(&m_advancedAnalysisRequests, -1);
+#endif
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
+{
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req)
+{
+	m_func = req.m_func;
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::~AdvancedFunctionAnalysisDataRequestor()
+{
+	if (m_func)
+		m_func->ReleaseAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor& AdvancedFunctionAnalysisDataRequestor::operator=(
+	const AdvancedFunctionAnalysisDataRequestor& req)
+{
+	SetFunction(req.m_func);
+	return *this;
+}
+
+
+void AdvancedFunctionAnalysisDataRequestor::SetFunction(Function* func)
+{
+	if (m_func)
+		m_func->ReleaseAdvancedAnalysisData();
+
+	m_func = func;
+
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
 }

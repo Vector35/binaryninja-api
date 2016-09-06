@@ -93,7 +93,7 @@ string BinaryNinja::GetPathRelativeToUserPluginDirectory(const string& rel)
 
 
 bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>& args, const DataBuffer& input,
-                                       string& output, string& errors)
+                                       string& output, string& errors, bool stdoutIsText, bool stderrIsText)
 {
 	const char** argArray = new const char*[args.size() + 1];
 	for (size_t i = 0; i < args.size(); i++)
@@ -102,7 +102,8 @@ bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>&
 
 	char* outputStr;
 	char* errorStr;
-	bool result = BNExecuteWorkerProcess(path.c_str(), argArray, input.GetBufferObject(), &outputStr, &errorStr);
+	bool result = BNExecuteWorkerProcess(path.c_str(), argArray, input.GetBufferObject(), &outputStr, &errorStr,
+                                         stdoutIsText, stderrIsText);
 
 	output = outputStr;
 	errors = errorStr;

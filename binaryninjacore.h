@@ -1041,7 +1041,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetPathRelativeToUserPluginDirectory(const char* path);
 
 	BINARYNINJACOREAPI bool BNExecuteWorkerProcess(const char* path, const char* args[],
-	                                               BNDataBuffer* input, char** output, char** error);
+	                                               BNDataBuffer* input, char** output, char** error,
+	                                               bool stdoutIsText, bool stderrIsText);
 
 	BINARYNINJACOREAPI void BNSetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	BINARYNINJACOREAPI void BNAddRequiredPluginDependency(const char* name);

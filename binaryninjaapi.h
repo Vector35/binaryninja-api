@@ -346,7 +346,7 @@ namespace BinaryNinja
 	std::string GetPathRelativeToUserPluginDirectory(const std::string& path);
 
 	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
-	                          std::string& output, std::string& errors);
+	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);
 
 	std::string GetVersionString();
 	uint32_t GetBuildId();

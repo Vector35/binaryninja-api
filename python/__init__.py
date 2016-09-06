@@ -4461,14 +4461,12 @@ class Function(object):
 	@property
 	def low_level_il(self):
 		"""Function low level IL (read-only)"""
-		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLowLevelIL(self.handle)), self)
+		return LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
 	def lifted_il(self):
 		"""Function lifted IL (read-only)"""
-		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLiftedIL(self.handle)), self)
+		return LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
 	def function_type(self):
@@ -6924,6 +6922,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def parse_types_from_source_file(self, filename, include_dirs = []):
@@ -6964,6 +6963,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def register_calling_convention(self, cc):

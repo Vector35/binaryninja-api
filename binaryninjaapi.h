@@ -375,6 +375,11 @@ namespace BinaryNinja
 	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action);
 	void WorkerPriorityEnqueue(const std::function<void()>& action);
 	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action);
+
+	size_t GetWorkerThreadCount();
+	void SetWorkerThreadCount(size_t count);
 
 	class DataBuffer
 	{

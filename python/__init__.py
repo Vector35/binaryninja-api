@@ -10097,7 +10097,17 @@ def worker_enqueue(func):
 
 def worker_priority_enqueue(func):
 	action = _ThreadActionContext(func)
-	core.BNWorkerEnqueue(0, action.callback)
+	core.BNWorkerPriorityEnqueue(0, action.callback)
+
+def worker_interactive_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerInteractiveEnqueue(0, action.callback)
+
+def get_worker_thread_count():
+	return core.BNGetWorkerThreadCount()
+
+def set_worker_thread_count(count):
+	core.BNSetWorkerThreadCount(count)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

@@ -1968,6 +1968,10 @@ extern "C"
 	// Worker thread queue management
 	BINARYNINJACOREAPI void BNWorkerEnqueue(void* ctxt, void (*action)(void* ctxt));
 	BINARYNINJACOREAPI void BNWorkerPriorityEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerInteractiveEnqueue(void* ctxt, void (*action)(void* ctxt));
+
+	BINARYNINJACOREAPI size_t BNGetWorkerThreadCount(void);
+	BINARYNINJACOREAPI void BNSetWorkerThreadCount(size_t count);
 
 #ifdef __cplusplus
 }

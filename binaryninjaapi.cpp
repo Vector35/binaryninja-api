@@ -201,3 +201,39 @@ void BinaryNinja::WorkerPriorityEnqueue(RefCountObject* owner, const function<vo
 			context.func();
 		});
 }
+
+
+void BinaryNinja::WorkerInteractiveEnqueue(const function<void()>& action)
+{
+	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
+	ctxt->action = action;
+	BNWorkerInteractiveEnqueue(ctxt, WorkerActionCallback);
+}
+
+
+void BinaryNinja::WorkerInteractiveEnqueue(RefCountObject* owner, const function<void()>& action)
+{
+	struct
+	{
+		Ref<RefCountObject> owner;
+		function<void()> func;
+	} context;
+	context.owner = owner;
+	context.func = action;
+
+	WorkerInteractiveEnqueue([=]() {
+			context.func();
+		});
+}
+
+
+size_t BinaryNinja::GetWorkerThreadCount()
+{
+	return BNGetWorkerThreadCount();
+}
+
+
+void BinaryNinja::SetWorkerThreadCount(size_t count)
+{
+	BNSetWorkerThreadCount(count);
+}

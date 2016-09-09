@@ -1788,7 +1788,7 @@ namespace BinaryNinja
 		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
 	public:
-		LowLevelILFunction(Architecture* arch);
+		LowLevelILFunction(Architecture* arch, Function* func = nullptr);
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
 		uint64_t GetCurrentAddress() const;
@@ -1883,7 +1883,7 @@ namespace BinaryNinja
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
 
-		void Finalize(Function* func = nullptr);
+		void Finalize();
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
 		bool GetInstructionText(Function* func, Architecture* arch, size_t i,

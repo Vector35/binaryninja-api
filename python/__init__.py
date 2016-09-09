@@ -7201,7 +7201,10 @@ class LowLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
-			self.handle = core.BNCreateLowLevelILFunction(arch.handle)
+			func_handle = None
+			if self.source_function is not None:
+				func_handle = self.source_function.handle
+			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
@@ -8164,17 +8167,13 @@ class LowLevelILFunction(object):
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)
 		return expr
 
-	def finalize(self, func = None):
+	def finalize(self):
 		"""
-		``finalize`` ends the provided LowLevelILLabel.
+		``finalize`` ends the function and computes the list of basic blocks.
 
-		:param LowLevelILFunction func: optional function to end
 		:rtype: None
 		"""
-		if func is None:
-			core.BNFinalizeLowLevelILFunction(self.handle, None)
-		else:
-			core.BNFinalizeLowLevelILFunction(self.handle, func.handle)
+		core.BNFinalizeLowLevelILFunction(self.handle)
 
 	def add_label_for_address(self, arch, addr):
 		"""

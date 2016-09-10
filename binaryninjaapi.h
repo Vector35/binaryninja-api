@@ -867,6 +867,7 @@ namespace BinaryNinja
 
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
+		std::vector<Ref<BasicBlock>> GetBasicBlocksStartingAtAddress(uint64_t addr);
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);

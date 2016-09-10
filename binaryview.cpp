@@ -987,6 +987,20 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 }
 
 
+vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksStartingAtAddress(uint64_t addr)
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlocksStartingAtAddress(m_object, addr, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 {
 	size_t count;

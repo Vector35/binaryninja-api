@@ -2288,6 +2288,22 @@ class BinaryView(object):
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
+	def get_basic_blocks_starting_at(self, addr):
+		"""
+		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
+
+		:param int addr: virtual address of BasicBlock desired
+		:return: a list of :py:Class:`BasicBlock` objects
+		:rtype: list(BasicBlock)
+		"""
+		count = ctypes.c_ulonglong(0)
+		blocks = core.BNGetBasicBlocksStartingAtAddress(self.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
 	def get_recent_basic_block_at(self, addr):
 		block = core.BNGetRecentBasicBlockForAddress(self.handle, addr)
 		if block is None:

@@ -32,6 +32,12 @@ FunctionGraphBlock::FunctionGraphBlock(BNFunctionGraphBlock* block)
 }
 
 
+Ref<BasicBlock> FunctionGraphBlock::GetBasicBlock() const
+{
+	return new BasicBlock(BNGetFunctionGraphBasicBlock(m_object));
+}
+
+
 Ref<Architecture> FunctionGraphBlock::GetArchitecture() const
 {
 	return new CoreArchitecture(BNGetFunctionGraphBlockArchitecture(m_object));

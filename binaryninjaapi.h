@@ -1561,6 +1561,18 @@ namespace BinaryNinja
 		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
 
 		std::vector<DisassemblyTextLine> GetDisassemblyText(DisassemblySettings* settings);
+
+		BNHighlightColor GetBasicBlockHighlight();
+		void SetAutoBasicBlockHighlight(BNHighlightColor color);
+		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+			uint8_t mix, uint8_t alpha = 255);
+		void SetAutoBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(BNHighlightColor color);
+		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+			uint8_t mix, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 	};
 
 	struct StackVariable
@@ -1633,6 +1645,7 @@ namespace BinaryNinja
 		bool NeedsUpdate() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const;
 		void MarkRecentUse();
 
 		std::string GetCommentForAddress(uint64_t addr) const;
@@ -1692,6 +1705,22 @@ namespace BinaryNinja
 		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
 			BNIntegerDisplayType type);
 
+		BNHighlightColor GetInstructionHighlight(Architecture* arch, uint64_t addr);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			uint8_t alpha = 255);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+			uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+			uint8_t alpha = 255);
+
 		void Reanalyze();
 
 		void RequestAdvancedAnalysisData();
@@ -1731,6 +1760,7 @@ namespace BinaryNinja
 	public:
 		FunctionGraphBlock(BNFunctionGraphBlock* block);
 
+		Ref<BasicBlock> GetBasicBlock() const;
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;

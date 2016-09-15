@@ -9961,6 +9961,104 @@ class MainThreadActionHandler(object):
 	def add_action(self, action):
 		pass
 
+class _BackgroundTaskMetaclass(type):
+	@property
+	def list(self):
+		"""List all running background tasks (read-only)"""
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i])))
+		core.BNFreeBackgroundTaskList(tasks)
+		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		try:
+			for i in xrange(0, count.value):
+				yield BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i]))
+		finally:
+			core.BNFreeBackgroundTaskList(tasks)
+
+class BackgroundTask(object):
+	__metaclass__ = _BackgroundTaskMetaclass
+
+	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
+		if handle is None:
+			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeBackgroundTask(self.handle)
+
+	@property
+	def progress(self):
+		"""Text description of the progress of the background task (displayed in status bar of the UI)"""
+		return core.BNGetBackgroundTaskProgressText(self.handle)
+
+	@progress.setter
+	def progress(self, value):
+		core.BNSetBackgroundTaskProgressText(self.handle, str(value))
+
+	@property
+	def can_cancel(self):
+		"""Whether the task can be cancelled (read-only)"""
+		return core.BNCanCancelBackgroundTask(self.handle)
+
+	@property
+	def finished(self):
+		"""Whether the task has finished"""
+		return core.BNIsBackgroundTaskFinished(self.handle)
+
+	@finished.setter
+	def finished(self, value):
+		if value:
+			self.finish()
+
+	def finish(self):
+		core.BNFinishBackgroundTask(self.handle)
+
+	@property
+	def cancelled(self):
+		"""Whether the task has been cancelled"""
+		return core.BNIsBackgroundTaskCancelled(self.handle)
+
+	@cancelled.setter
+	def cancelled(self, value):
+		if value:
+			self.cancel()
+
+	def cancel(self):
+		core.BNCancelBackgroundTask(self.handle)
+
+class BackgroundTaskThread(BackgroundTask):
+	def __init__(self, initial_progress_text = "", can_cancel = False):
+		class _Thread(threading.Thread):
+			def __init__(self, task):
+				threading.Thread.__init__(self)
+				self.task = task
+
+			def run(self):
+				self.task.run()
+				self.task.finish()
+				self.task = None
+
+		BackgroundTask.__init__(self, initial_progress_text, can_cancel)
+		self.thread = _Thread(self)
+
+	def run(self):
+		pass
+
+	def start(self):
+		self.thread.start()
+
+	def join(self):
+		self.thread.join()
+
 def LLIL_TEMP(n):
 	return n | 0x80000000
 

@@ -1480,6 +1480,39 @@ void BinaryView::Reanalyze()
 }
 
 
+void BinaryView::ShowPlainTextReport(const string& title, const string& contents)
+{
+	BNShowPlainTextReport(m_object, title.c_str(), contents.c_str());
+}
+
+
+void BinaryView::ShowMarkdownReport(const string& title, const string& contents, const string& plainText)
+{
+	BNShowMarkdownReport(m_object, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+void BinaryView::ShowHTMLReport(const string& title, const string& contents, const string& plainText)
+{
+	BNShowHTMLReport(m_object, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const string& title)
+{
+	uint64_t currentAddress = 0;
+	if (m_file)
+		currentAddress = m_file->GetCurrentOffset();
+	return BNGetAddressInput(&result, prompt.c_str(), title.c_str(), m_object, currentAddress);
+}
+
+
+bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const string& title, uint64_t currentAddress)
+{
+	return BNGetAddressInput(&result, prompt.c_str(), title.c_str(), m_object, currentAddress);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

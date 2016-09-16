@@ -1050,6 +1050,26 @@ extern "C"
 		uint8_t mix, r, g, b, alpha;
 	};
 
+	struct BNInteractionHandlerCallbacks
+	{
+		void* context;
+		void (*showPlainTextReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents);
+		void (*showMarkdownReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents,
+			const char* plaintext);
+		void (*showHTMLReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents,
+			const char* plaintext);
+		bool (*getTextLineInput)(void* ctxt, char** result, const char* prompt, const char* title);
+		bool (*getIntegerInput)(void* ctxt, int64_t* result, const char* prompt, const char* title);
+		bool (*getAddressInput)(void* ctxt, uint64_t* result, const char* prompt, const char* title,
+			BNBinaryView* view, uint64_t currentAddr);
+		bool (*getChoiceInput)(void* ctxt, size_t* result, const char* prompt, const char* title,
+			const char** choices, size_t count);
+		bool (*getOpenFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext);
+		bool (*getSaveFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext,
+			const char* defaultName);
+		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -2029,6 +2049,25 @@ extern "C"
 	BINARYNINJACOREAPI bool BNCanCancelBackgroundTask(BNBackgroundTask* task);
 	BINARYNINJACOREAPI void BNCancelBackgroundTask(BNBackgroundTask* task);
 	BINARYNINJACOREAPI bool BNIsBackgroundTaskFinished(BNBackgroundTask* task);
+
+	// Interaction APIs
+	BINARYNINJACOREAPI void BNRegisterInteractionHandler(BNInteractionHandlerCallbacks* callbacks);
+	BINARYNINJACOREAPI char* BNMarkdownToHTML(const char* contents);
+	BINARYNINJACOREAPI void BNShowPlainTextReport(BNBinaryView* view, const char* title, const char* contents);
+	BINARYNINJACOREAPI void BNShowMarkdownReport(BNBinaryView* view, const char* title, const char* contents,
+		const char* plaintext);
+	BINARYNINJACOREAPI void BNShowHTMLReport(BNBinaryView* view, const char* title, const char* contents,
+		const char* plaintext);
+	BINARYNINJACOREAPI bool BNGetTextLineInput(char** result, const char* prompt, const char* title);
+	BINARYNINJACOREAPI bool BNGetIntegerInput(int64_t* result, const char* prompt, const char* title);
+	BINARYNINJACOREAPI bool BNGetAddressInput(uint64_t* result, const char* prompt, const char* title,
+		BNBinaryView* view, uint64_t currentAddr);
+	BINARYNINJACOREAPI bool BNGetChoiceInput(size_t* result, const char* prompt, const char* title,
+		const char** choices, size_t count);
+	BINARYNINJACOREAPI bool BNGetOpenFileNameInput(char** result, const char* prompt, const char* ext);
+	BINARYNINJACOREAPI bool BNGetSaveFileNameInput(char** result, const char* prompt, const char* ext,
+		const char* defaultName);
+	BINARYNINJACOREAPI bool BNGetDirectoryNameInput(char** result, const char* prompt, const char* defaultName);
 
 #ifdef __cplusplus
 }

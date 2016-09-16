@@ -3293,6 +3293,23 @@ class BinaryView(object):
 		"""
 		core.BNReanalyzeAllFunctions(self.handle)
 
+	def show_plain_text_report(self, title, contents):
+		core.BNShowPlainTextReport(self.handle, title, contents)
+
+	def show_markdown_report(self, title, contents, plaintext = ""):
+		core.BNShowMarkdownReport(self.handle, title, contents, plaintext)
+
+	def show_html_report(self, title, contents, plaintext = ""):
+		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
+
+	def get_address_input(self, prompt, title, current_address = None):
+		if current_address is None:
+			current_address = self.file.offset
+		value = ctypes.c_ulonglong()
+		if not core.BNGetAddressInput(value, prompt, title, self.handle, current_address):
+			return None
+		return value.value
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -10059,6 +10076,172 @@ class BackgroundTaskThread(BackgroundTask):
 	def join(self):
 		self.thread.join()
 
+class InteractionHandler(object):
+	_interaction_handler = None
+
+	def __init__(self):
+		self._cb = core.BNInteractionHandlerCallbacks()
+		self._cb.context = 0
+		self._cb.showPlainTextReport = self._cb.showPlainTextReport.__class__(self._show_plain_text_report)
+		self._cb.showMarkdownReport = self._cb.showMarkdownReport.__class__(self._show_markdown_report)
+		self._cb.showHTMLReport = self._cb.showHTMLReport.__class__(self._show_html_report)
+		self._cb.getTextLineInput = self._cb.getTextLineInput.__class__(self._get_text_line_input)
+		self._cb.getIntegerInput = self._cb.getIntegerInput.__class__(self._get_int_input)
+		self._cb.getAddressInput = self._cb.getAddressInput.__class__(self._get_address_input)
+		self._cb.getChoiceInput = self._cb.getChoiceInput.__class__(self._get_choice_input)
+		self._cb.getOpenFileNameInput = self._cb.getOpenFileNameInput.__class__(self._get_open_filename_input)
+		self._cb.getSaveFileNameInput = self._cb.getSaveFileNameInput.__class__(self._get_save_filename_input)
+		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
+
+	def register(self):
+		self.__class__._interaction_handler = self
+		core.BNRegisterInteractionHandler(self._cb)
+
+	def _show_plain_text_report(self, ctxt, view, title, contents):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_plain_text_report(view, title, contents)
+		except:
+			log_error(traceback.format_exc())
+
+	def _show_markdown_report(self, ctxt, view, title, contents, plaintext):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_markdown_report(view, title, contents, plaintext)
+		except:
+			log_error(traceback.format_exc())
+
+	def _show_html_report(self, ctxt, view, title, contents, plaintext):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_html_report(view, title, contents, plaintext)
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_text_line_input(self, ctxt, result, prompt, title):
+		try:
+			value = self.get_text_line_input(prompt, title)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_int_input(self, ctxt, result, prompt, title):
+		try:
+			value = self.get_int_input(prompt, title)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_address_input(self, ctxt, result, prompt, title, view, current_address):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			value = self.get_address_input(prompt, title, view, current_address)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_choice_input(self, ctxt, result, prompt, title, choice_buf, count):
+		try:
+			choices = []
+			for i in xrange(0, count):
+				choices.append(choice_buf[i])
+			value = self.get_choice_input(prompt, title, choices)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_open_filename_input(self, ctxt, result, prompt, ext):
+		try:
+			value = self.get_open_filename_input(prompt, ext)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_save_filename_input(self, ctxt, result, prompt, ext, default_name):
+		try:
+			value = self.get_save_filename_input(prompt, ext, default_name)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_directory_name_input(self, ctxt, result, prompt, default_name):
+		try:
+			value = self.get_directory_name_input(prompt, default_name)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def show_plain_text_report(self, view, title, contents):
+		pass
+
+	def show_markdown_report(self, view, title, contents, plaintext):
+		self.show_html_report(view, title, markdown_to_html(contents), plaintext)
+
+	def show_html_report(self, view, title, contents, plaintext):
+		if len(plaintext) != 0:
+			self.show_plain_text_report(view, title, plaintext)
+
+	def get_text_line_input(self, prompt, title):
+		return None
+
+	def get_int_input(self, prompt, title):
+		while True:
+			text = self.get_text_line_input(prompt, title)
+			if len(text) == 0:
+				return False
+			try:
+				return int(text)
+			except:
+				continue
+
+	def get_address_input(self, prompt, title, view, current_address):
+		return get_int_input(prompt, title)
+
+	def get_choice_input(self, prompt, title, choices):
+		return None
+
+	def get_open_filename_input(self, prompt, ext):
+		return get_text_line_input(prompt, "Open File")
+
+	def get_save_filename_input(self, prompt, ext, default_name):
+		return get_text_line_input(title, "Save File")
+
+	def get_directory_name_input(self, prompt, default_name):
+		return get_text_line_input(title, "Select Directory")
+
 def LLIL_TEMP(n):
 	return n | 0x80000000
 
@@ -10373,6 +10556,71 @@ def get_worker_thread_count():
 
 def set_worker_thread_count(count):
 	core.BNSetWorkerThreadCount(count)
+
+def markdown_to_html(contents):
+	return core.BNMarkdownToHTML(contents)
+
+def show_plain_text_report(title, contents):
+	core.BNShowPlainTextReport(None, title, contents)
+
+def show_markdown_report(title, contents, plaintext = ""):
+	core.BNShowMarkdownReport(None, title, contents, plaintext)
+
+def show_html_report(title, contents, plaintext = ""):
+	core.BNShowHTMLReport(None, title, contents, plaintext)
+
+def get_text_line_input(prompt, title):
+	value = ctypes.c_char_p()
+	if not core.BNGetTextLineInput(value, prompt, title):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_int_input(prompt, title):
+	value = ctypes.c_longlong()
+	if not core.BNGetIntegerInput(value, prompt, title):
+		return None
+	return value.value
+
+def get_address_input(prompt, title):
+	value = ctypes.c_ulonglong()
+	if not core.BNGetAddressInput(value, prompt, title, None, 0):
+		return None
+	return value.value
+
+def get_choice_input(prompt, title, choices):
+	choice_buf = (ctypes.c_char_p * len(choices))()
+	for i in xrange(0, len(choices)):
+		choice_buf[i] = str(choices[i])
+	value = ctypes.c_ulonglong()
+	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
+		return None
+	return value.value
+
+def get_open_filename_input(prompt, ext = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetOpenFileNameInput(value, prompt, ext):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_save_filename_input(prompt, ext = "", default_name = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetSaveFileNameInput(value, prompt, ext, default_name):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_directory_name_input(prompt, default_name = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetDirectoryNameInput(value, prompt, default_name):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

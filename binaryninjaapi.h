@@ -275,6 +275,7 @@ namespace BinaryNinja
 	class DataBuffer;
 	class MainThreadAction;
 	class MainThreadActionHandler;
+	class InteractionHandler;
 
 	/*! Logs to the error console with the given BNLogLevel.
 
@@ -380,6 +381,26 @@ namespace BinaryNinja
 
 	size_t GetWorkerThreadCount();
 	void SetWorkerThreadCount(size_t count);
+
+	std::string MarkdownToHTML(const std::string& contents);
+
+	void RegisterInteractionHandler(InteractionHandler* handler);
+
+	void ShowPlainTextReport(const std::string& title, const std::string& contents);
+	void ShowMarkdownReport(const std::string& title, const std::string& contents,
+		const std::string& plainText = "");
+	void ShowHTMLReport(const std::string& title, const std::string& contents,
+		const std::string& plainText = "");
+
+	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
+	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
+	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+	bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
+		const std::vector<std::string>& choices);
+	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
+		const std::string& defaultName = "");
+	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
 
 	class DataBuffer
 	{
@@ -935,6 +956,13 @@ namespace BinaryNinja
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
 		void Reanalyze();
+
+		void ShowPlainTextReport(const std::string& title, const std::string& contents);
+		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
+			uint64_t currentAddress);
 	};
 
 	class BinaryData: public BinaryView
@@ -2278,5 +2306,27 @@ namespace BinaryNinja
 		void SetProgressText(const std::string& text);
 
 		static std::vector<Ref<BackgroundTask>> GetRunningTasks();
+	};
+
+	class InteractionHandler
+	{
+	public:
+		virtual void ShowPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents) = 0;
+		virtual void ShowMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText);
+		virtual void ShowHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText);
+
+		virtual bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title) = 0;
+		virtual bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
+		virtual bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
+			Ref<BinaryView> view, uint64_t currentAddr);
+		virtual bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
+			const std::vector<std::string>& choices) = 0;
+		virtual bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt,
+			const std::string& ext = "", const std::string& defaultName = "");
+		virtual bool GetDirectoryNameInput(std::string& result, const std::string& prompt,
+			const std::string& defaultName = "");
 	};
 }

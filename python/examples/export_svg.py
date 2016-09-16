@@ -1,6 +1,8 @@
 from binaryninja import *
 import os,sys
 
+colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}   
+
 escape_table = {
 	"'": "&#39;",
 	">": "&#62;",
@@ -21,7 +23,7 @@ def save_svg(bv,function):
 	output = open(outputfile,'w')
 	output.write(content)
 	output.close()
-	#os.system('open %s' % outputfile)
+	os.system('%s' % outputfile)
 
 def instruction_data_flow(function,address):
 	''' TODO:  Extract data flow information '''
@@ -46,7 +48,6 @@ def render_svg(function):
 				background-color: rgb(42, 42, 42);
 			}
 			.basicblock {
-				fill: rgb(74, 74, 74);
 				stroke: rgb(224, 224, 224);
 			}
 			.edge {
@@ -133,7 +134,16 @@ def render_svg(function):
 		#Render block
 		output += '		<g id="basicblock{i}">\n'.format(i=i)
 		output += '			<title>Basic Block {i}</title>\n'.format(i=i)
-		output += '			<rect class="basicblock" x="{x}" y="{y}" height="{height}" width="{width}"/>\n'.format(x=x,y=y,width=width,height=height)
+		rgb=colors['none']
+		try:
+				bb = block.basic_block
+				color_code = bb.highlight._get_core_struct().color
+				color_str = bb.highlight._standard_color_to_str(color_code)
+				if color_str in colors:
+						rgb=colors[color_str]
+		except:
+				pass
+		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width,height=height,r=rgb[0],g=rgb[1],b=rgb[2])
 
 		#Render instructions, unfortunately tspans don't allow copying/pasting more
 		#than one line at a time, need SVG 1.2 textarea tags for that it looks like
@@ -164,3 +174,4 @@ def render_svg(function):
 	return output
 
 PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function to your home folder.", save_svg)
+

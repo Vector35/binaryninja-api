@@ -172,3 +172,113 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
+
+
+BNHighlightColor BasicBlock::GetBasicBlockHighlight()
+{
+	return BNGetBasicBlockHighlight(m_object);
+}
+
+
+void BasicBlock::SetAutoBasicBlockHighlight(BNHighlightColor color)
+{
+	BNSetAutoBasicBlockHighlight(m_object, color);
+}
+
+
+void BasicBlock::SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = StandardHighlightColor;
+	hc.color = color;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetAutoBasicBlockHighlight(hc);
+}
+
+
+void BasicBlock::SetAutoBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+	uint8_t mix, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = MixedHighlightColor;
+	hc.color = color;
+	hc.mixColor = mixColor;
+	hc.mix = mix;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetAutoBasicBlockHighlight(hc);
+}
+
+
+void BasicBlock::SetAutoBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = CustomHighlightColor;
+	hc.color = NoHighlightColor;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = r;
+	hc.g = g;
+	hc.b = b;
+	hc.alpha = alpha;
+	SetAutoBasicBlockHighlight(hc);
+}
+
+
+void BasicBlock::SetUserBasicBlockHighlight(BNHighlightColor color)
+{
+	BNSetUserBasicBlockHighlight(m_object, color);
+}
+
+
+void BasicBlock::SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = StandardHighlightColor;
+	hc.color = color;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetUserBasicBlockHighlight(hc);
+}
+
+
+void BasicBlock::SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+	uint8_t mix, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = MixedHighlightColor;
+	hc.color = color;
+	hc.mixColor = mixColor;
+	hc.mix = mix;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetUserBasicBlockHighlight(hc);
+}
+
+
+void BasicBlock::SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = CustomHighlightColor;
+	hc.color = NoHighlightColor;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = r;
+	hc.g = g;
+	hc.b = b;
+	hc.alpha = alpha;
+	SetUserBasicBlockHighlight(hc);
+}

@@ -102,6 +102,7 @@ extern "C"
 	struct BNScriptingProvider;
 	struct BNScriptingInstance;
 	struct BNMainThreadAction;
+	struct BNBackgroundTask;
 
 	//! Console log levels
 	enum BNLogLevel
@@ -1020,6 +1021,35 @@ extern "C"
 		size_t size;
 	};
 
+	enum BNHighlightColorStyle
+	{
+		StandardHighlightColor = 0,
+		MixedHighlightColor = 1,
+		CustomHighlightColor = 2
+	};
+
+	enum BNHighlightStandardColor
+	{
+		NoHighlightColor = 0,
+		BlueHighlightColor = 1,
+		GreenHighlightColor = 2,
+		CyanHighlightColor = 3,
+		RedHighlightColor = 4,
+		MagentaHighlightColor = 5,
+		YellowHighlightColor = 6,
+		OrangeHighlightColor = 7,
+		WhiteHighlightColor = 8,
+		BlackHighlightColor = 9
+	};
+
+	struct BNHighlightColor
+	{
+		BNHighlightColorStyle style;
+		BNHighlightStandardColor color;
+		BNHighlightStandardColor mixColor;
+		uint8_t mix, r, g, b, alpha;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1418,6 +1448,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionBasicBlockList(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockList(BNBasicBlock** blocks, size_t count);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionBasicBlockAtAddress(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetRecentBasicBlockForAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksForAddress(BNBinaryView* view, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksStartingAtAddress(BNBinaryView* view, uint64_t addr, size_t* count);
@@ -1575,6 +1606,15 @@ extern "C"
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
 
+	BINARYNINJACOREAPI BNHighlightColor BNGetInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetAutoInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr,
+		BNHighlightColor color);
+	BINARYNINJACOREAPI void BNSetUserInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr,
+		BNHighlightColor color);
+	BINARYNINJACOREAPI BNHighlightColor BNGetBasicBlockHighlight(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNSetAutoBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+	BINARYNINJACOREAPI void BNSetUserBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);
@@ -1622,6 +1662,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFunctionGraphBlock* BNNewFunctionGraphBlockReference(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlock(BNFunctionGraphBlock* block);
 
+	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionGraphBasicBlock(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI BNArchitecture* BNGetFunctionGraphBlockArchitecture(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockStart(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockEnd(BNFunctionGraphBlock* block);
@@ -1973,6 +2014,21 @@ extern "C"
 
 	BINARYNINJACOREAPI size_t BNGetWorkerThreadCount(void);
 	BINARYNINJACOREAPI void BNSetWorkerThreadCount(size_t count);
+
+	// Background task progress reporting
+	BINARYNINJACOREAPI BNBackgroundTask* BNBeginBackgroundTask(const char* initialText, bool canCancel);
+	BINARYNINJACOREAPI void BNFinishBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNSetBackgroundTaskProgressText(BNBackgroundTask* task, const char* text);
+	BINARYNINJACOREAPI bool BNIsBackgroundTaskCancelled(BNBackgroundTask* task);
+
+	BINARYNINJACOREAPI BNBackgroundTask** BNGetRunningBackgroundTasks(size_t* count);
+	BINARYNINJACOREAPI BNBackgroundTask* BNNewBackgroundTaskReference(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNFreeBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNFreeBackgroundTaskList(BNBackgroundTask** tasks, size_t count);
+	BINARYNINJACOREAPI char* BNGetBackgroundTaskProgressText(BNBackgroundTask* task);
+	BINARYNINJACOREAPI bool BNCanCancelBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNCancelBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI bool BNIsBackgroundTaskFinished(BNBackgroundTask* task);
 
 #ifdef __cplusplus
 }

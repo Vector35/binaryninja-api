@@ -4381,6 +4381,93 @@ class IndirectBranchInfo:
 	def __repr__(self):
 		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
 
+class HighlightColor(object):
+	def __init__(self, color = None, mix_color = None, mix = None, red = None, green = None, blue = None, alpha = 255):
+		if (red is not None) and (green is not None) and (blue is not None):
+			self.style = core.CustomHighlightColor
+			self.red = red
+			self.green = green
+			self.blue = blue
+		elif (mix_color is not None) and (mix is not None):
+			self.style = core.MixedHighlightColor
+			if color is None:
+				self.color = core.NoHighlightColor
+			else:
+				self.color = color
+			self.mix_color = mix_color
+			self.mix = mix
+		else:
+			self.style = core.StandardHighlightColor
+			if color is None:
+				self.color = core.NoHighlightColor
+			else:
+				self.color = color
+		self.alpha = alpha
+
+	def _standard_color_to_str(self, color):
+		if color == core.NoHighlightColor:
+			return "none"
+		if color == core.BlueHighlightColor:
+			return "blue"
+		if color == core.GreenHighlightColor:
+			return "green"
+		if color == core.CyanHighlightColor:
+			return "cyan"
+		if color == core.RedHighlightColor:
+			return "red"
+		if color == core.MagentaHighlightColor:
+			return "magenta"
+		if color == core.YellowHighlightColor:
+			return "yellow"
+		if color == core.OrangeHighlightColor:
+			return "orange"
+		if color == core.WhiteHighlightColor:
+			return "white"
+		if color == core.BlackHighlightColor:
+			return "black"
+		return "%d" % color
+
+	def __repr__(self):
+		if self.style == core.StandardHighlightColor:
+			if self.alpha == 255:
+				return "<color: %s>" % self._standard_color_to_str(self.color)
+			return "<color: %s, alpha %d>" % (self._standard_color_to_str(self.color), self.alpha)
+		if self.style == core.MixedHighlightColor:
+			if self.alpha == 255:
+				return "<color: mix %s to %s factor %d>" % (self._standard_color_to_str(self.color),
+					self._standard_color_to_str(self.mix_color), self.mix)
+			return "<color: mix %s to %s factor %d, alpha %d>" % (self._standard_color_to_str(self.color),
+				self._standard_color_to_str(self.mix_color), self.mix, self.alpha)
+		if self.style == core.CustomHighlightColor:
+			if self.alpha == 255:
+				return "<color: #%.2x%.2x%.2x>" % (self.red, self.green, self.blue)
+			return "<color: #%.2x%.2x%.2x, alpha %d>" % (self.red, self.green, self.blue, self.alpha)
+		return "<color>"
+
+	def _get_core_struct(self):
+		result = core.BNHighlightColor()
+		result.style = self.style
+		result.color = core.NoHighlightColor
+		result.mix_color = core.NoHighlightColor
+		result.mix = 0
+		result.r = 0
+		result.g = 0
+		result.b = 0
+		result.alpha = self.alpha
+
+		if self.style == core.StandardHighlightColor:
+			result.color = self.color
+		elif self.style == core.MixedHighlightColor:
+			result.color = self.color
+			result.mixColor = self.mix_color
+			result.mix = self.mix
+		elif self.style == core.CustomHighlightColor:
+			result.r = self.red
+			result.g = self.green
+			result.b = self.blue
+
+		return result
+
 class Function(object):
 	def __init__(self, view, handle):
 		self._view = view
@@ -4790,6 +4877,32 @@ class Function(object):
 		core.BNReleaseAdvancedFunctionAnalysisData(self.handle)
 		self._advanced_analysis_requests -= 1
 
+	def get_basic_block_at(self, arch, addr):
+		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
+		if not block:
+			return None
+		return BasicBlock(self._view, handle = block)
+
+	def get_instr_highlight(self, arch, addr):
+		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
+		if color.style == core.StandardHighlightColor:
+			return HighlightColor(color = color.color, alpha = color.alpha)
+		elif color.style == core.MixedHighlightColor:
+			return HighlightColor(color = color.color, mix_color = color.mixColor, mix = color.mix, alpha = color.alpha)
+		elif color.style == core.CustomHighlightColor:
+			return HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
+		return HighlightColor(color = core.NoHighlightColor)
+
+	def set_auto_instr_highlight(self, arch, addr, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+
+	def set_user_instr_highlight(self, arch, addr, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):
 		self._function = func
@@ -4902,6 +5015,22 @@ class BasicBlock(object):
 	def disassembly_text(self):
 		return self.get_disassembly_text()
 
+	@property
+	def highlight(self):
+		"""Highlight color for basic block"""
+		color = core.BNGetBasicBlockHighlight(self.handle)
+		if color.style == core.StandardHighlightColor:
+			return HighlightColor(color = color.color, alpha = color.alpha)
+		elif color.style == core.MixedHighlightColor:
+			return HighlightColor(color = color.color, mix_color = color.mixColor, mix = color.mix, alpha = color.alpha)
+		elif color.style == core.CustomHighlightColor:
+			return HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
+		return HighlightColor(color = core.NoHighlightColor)
+
+	@highlight.setter
+	def highlight(self, value):
+		self.set_user_highlight(value)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -4956,6 +5085,16 @@ class BasicBlock(object):
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
+	def set_auto_highlight(self, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
+
+	def set_user_highlight(self, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
+
 class LowLevelILBasicBlock(BasicBlock):
 	def __init__(self, view, handle, owner):
 		super(LowLevelILBasicBlock, self).__init__(view, handle)
@@ -4997,6 +5136,19 @@ class FunctionGraphBlock(object):
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
+
+	@property
+	def basic_block(self):
+		"""Basic block associated with this part of the funciton graph (read-only)"""
+		block = core.BNGetFunctionGraphBasicBlock(self.handle)
+		func = core.BNGetBasicBlockFunction(block)
+		if func is None:
+			core.BNFreeBasicBlock(block)
+			block = None
+		else:
+			block = BasicBlock(BinaryView(None, handle = core.BNGetFunctionData(func)), block)
+			core.BNFreeFunction(func)
+		return block
 
 	@property
 	def arch(self):
@@ -9808,6 +9960,104 @@ class MainThreadActionHandler(object):
 
 	def add_action(self, action):
 		pass
+
+class _BackgroundTaskMetaclass(type):
+	@property
+	def list(self):
+		"""List all running background tasks (read-only)"""
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i])))
+		core.BNFreeBackgroundTaskList(tasks)
+		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		try:
+			for i in xrange(0, count.value):
+				yield BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i]))
+		finally:
+			core.BNFreeBackgroundTaskList(tasks)
+
+class BackgroundTask(object):
+	__metaclass__ = _BackgroundTaskMetaclass
+
+	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
+		if handle is None:
+			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeBackgroundTask(self.handle)
+
+	@property
+	def progress(self):
+		"""Text description of the progress of the background task (displayed in status bar of the UI)"""
+		return core.BNGetBackgroundTaskProgressText(self.handle)
+
+	@progress.setter
+	def progress(self, value):
+		core.BNSetBackgroundTaskProgressText(self.handle, str(value))
+
+	@property
+	def can_cancel(self):
+		"""Whether the task can be cancelled (read-only)"""
+		return core.BNCanCancelBackgroundTask(self.handle)
+
+	@property
+	def finished(self):
+		"""Whether the task has finished"""
+		return core.BNIsBackgroundTaskFinished(self.handle)
+
+	@finished.setter
+	def finished(self, value):
+		if value:
+			self.finish()
+
+	def finish(self):
+		core.BNFinishBackgroundTask(self.handle)
+
+	@property
+	def cancelled(self):
+		"""Whether the task has been cancelled"""
+		return core.BNIsBackgroundTaskCancelled(self.handle)
+
+	@cancelled.setter
+	def cancelled(self, value):
+		if value:
+			self.cancel()
+
+	def cancel(self):
+		core.BNCancelBackgroundTask(self.handle)
+
+class BackgroundTaskThread(BackgroundTask):
+	def __init__(self, initial_progress_text = "", can_cancel = False):
+		class _Thread(threading.Thread):
+			def __init__(self, task):
+				threading.Thread.__init__(self)
+				self.task = task
+
+			def run(self):
+				self.task.run()
+				self.task.finish()
+				self.task = None
+
+		BackgroundTask.__init__(self, initial_progress_text, can_cancel)
+		self.thread = _Thread(self)
+
+	def run(self):
+		pass
+
+	def start(self):
+		self.thread.start()
+
+	def join(self):
+		self.thread.join()
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

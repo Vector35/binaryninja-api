@@ -59,7 +59,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [qt]: https://www.qt.io/download/
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
-[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html)
+[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [discount license]: http://www.pell.portland.or.us/~orc/Code/discount/COPYRIGHT.html
 [zlib]: http://www.zlib.net/

@@ -23,6 +23,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [lzf] ([lzf license] - BSD)
     - [zlib] ([zlib license] - zlib license)
     - [openssl] ([openssl license] - openssl license)
+    - [discount] ([discount license] - BSD)
 
 * Upvector update Library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -58,7 +59,9 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [qt]: https://www.qt.io/download/
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
-[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html)
+[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
+[discount]: http://www.pell.portland.or.us/~orc/Code/discount/
+[discount license]: http://www.pell.portland.or.us/~orc/Code/discount/COPYRIGHT.html
 [zlib]: http://www.zlib.net/
 [zlib license]: http://www.zlib.net/zlib_license.html
 [openssl]: https://www.openssl.org/

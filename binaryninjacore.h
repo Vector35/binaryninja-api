@@ -1050,6 +1050,29 @@ extern "C"
 		uint8_t mix, r, g, b, alpha;
 	};
 
+	enum BNMessageBoxIcon
+	{
+		InformationIcon,
+		QuestionIcon,
+		WarningIcon,
+		ErrorIcon
+	};
+
+	enum BNMessageBoxButtonSet
+	{
+		OKButtonSet,
+		YesNoButtonSet,
+		YesNoCancelButtonSet
+	};
+
+	enum BNMessageBoxButtonResult
+	{
+		NoButton = 0,
+		YesButton = 1,
+		OKButton = 2,
+		CancelButton = 3
+	};
+
 	struct BNInteractionHandlerCallbacks
 	{
 		void* context;
@@ -1068,6 +1091,8 @@ extern "C"
 		bool (*getSaveFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext,
 			const char* defaultName);
 		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
+		BNMessageBoxButtonResult (*showMessageBox)(void* ctxt, const char* title, const char* text,
+			BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 	};
 
 	struct BNObjectDestructionCallbacks
@@ -2082,6 +2107,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetSaveFileNameInput(char** result, const char* prompt, const char* ext,
 		const char* defaultName);
 	BINARYNINJACOREAPI bool BNGetDirectoryNameInput(char** result, const char* prompt, const char* defaultName);
+	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
+		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 
 #ifdef __cplusplus
 }

@@ -10193,6 +10193,7 @@ class InteractionHandler(object):
 		self._cb.getOpenFileNameInput = self._cb.getOpenFileNameInput.__class__(self._get_open_filename_input)
 		self._cb.getSaveFileNameInput = self._cb.getSaveFileNameInput.__class__(self._get_save_filename_input)
 		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
+		self._cb.showMessageBox = self._cb.showMessageBox.__class__(self._show_message_box)
 
 	def register(self):
 		self.__class__._interaction_handler = self
@@ -10305,6 +10306,12 @@ class InteractionHandler(object):
 		except:
 			log_error(traceback.format_exc())
 
+	def _show_message_box(self, ctxt, title, text, buttons, icon):
+		try:
+			return self.show_message_box(title, text, buttons, icon)
+		except:
+			log_error(traceback.format_exc())
+
 	def show_plain_text_report(self, view, title, contents):
 		pass
 
@@ -10342,6 +10349,9 @@ class InteractionHandler(object):
 
 	def get_directory_name_input(self, prompt, default_name):
 		return get_text_line_input(title, "Select Directory")
+
+	def show_message_box(self, title, text, buttons, icon):
+		return CancelButton
 
 class _DestructionCallbackHandler:
 	def __init__(self):
@@ -10742,6 +10752,9 @@ def get_directory_name_input(prompt, default_name = ""):
 	result = value.value
 	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
 	return result
+
+def show_message_box(title, text, buttons = core.OKButtonSet, icon = core.InformationIcon):
+	return core.BNShowMessageBox(title, text, buttons, icon)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

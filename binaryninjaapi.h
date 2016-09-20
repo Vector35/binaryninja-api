@@ -402,6 +402,9 @@ namespace BinaryNinja
 		const std::string& defaultName = "");
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
 
+	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
+		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;
@@ -2328,5 +2331,8 @@ namespace BinaryNinja
 			const std::string& ext = "", const std::string& defaultName = "");
 		virtual bool GetDirectoryNameInput(std::string& result, const std::string& prompt,
 			const std::string& defaultName = "");
+
+		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
+			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
 	};
 }

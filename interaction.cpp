@@ -172,6 +172,14 @@ static bool GetDirectoryNameInputCallback(void* ctxt, char** result, const char*
 }
 
 
+static BNMessageBoxButtonResult ShowMessageBoxCallback(void* ctxt, const char* title, const char* text,
+	BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	return handler->ShowMessageBox(title, text, buttons, icon);
+}
+
+
 void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 {
 	BNInteractionHandlerCallbacks cb;
@@ -186,6 +194,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getOpenFileNameInput = GetOpenFileNameInputCallback;
 	cb.getSaveFileNameInput = GetSaveFileNameInputCallback;
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
+	cb.showMessageBox = ShowMessageBoxCallback;
 	BNRegisterInteractionHandler(&cb);
 }
 
@@ -283,4 +292,11 @@ bool BinaryNinja::GetDirectoryNameInput(string& result, const string& prompt, co
 	result = value;
 	BNFreeString(value);
 	return true;
+}
+
+
+BNMessageBoxButtonResult BinaryNinja::ShowMessageBox(const string& title, const string& text,
+	BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon)
+{
+	return BNShowMessageBox(title.c_str(), text.c_str(), buttons, icon);
 }

@@ -1,7 +1,7 @@
 from binaryninja import *
 import os,sys
 
-colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}   
+colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
 
 escape_table = {
 	"'": "&#39;",
@@ -16,9 +16,11 @@ def escape(string):
 	return ''.join(escape_table.get(i,i) for i in string) 				#still escape the basics
 
 def save_svg(bv,function):
-	filename = os.path.basename(bv.file.filename) 
 	address = hex(function.start).replace('L','')
-	outputfile = os.path.join(os.path.expanduser('~'), 'binaryninja-{filename}-{function}.html'.format(filename=filename,function=address))
+	filename = 'binaryninja-{filename}-{function}.html'.format(filename=os.path.basename(bv.file.filename),function=address)
+	outputfile = get_save_filename_input('File name for svg-export', 'HTML files (*.html)', filename)
+	if outputfile is None:
+		return
 	content = render_svg(function)
 	output = open(outputfile,'w')
 	output.write(content)
@@ -136,13 +138,13 @@ def render_svg(function):
 		output += '			<title>Basic Block {i}</title>\n'.format(i=i)
 		rgb=colors['none']
 		try:
-				bb = block.basic_block
-				color_code = bb.highlight._get_core_struct().color
-				color_str = bb.highlight._standard_color_to_str(color_code)
-				if color_str in colors:
-						rgb=colors[color_str]
+			bb = block.basic_block
+			color_code = bb.highlight.color
+			color_str = bb.highlight._standard_color_to_str(color_code)
+			if color_str in colors:
+				rgb=colors[color_str]
 		except:
-				pass
+			pass
 		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width,height=height,r=rgb[0],g=rgb[1],b=rgb[2])
 
 		#Render instructions, unfortunately tspans don't allow copying/pasting more
@@ -174,4 +176,3 @@ def render_svg(function):
 	return output
 
 PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function to your home folder.", save_svg)
-

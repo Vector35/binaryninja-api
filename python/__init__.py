@@ -27,6 +27,7 @@ import struct
 import threading
 import code
 import sys
+import copy
 
 _plugin_init = False
 def _init_plugins():
@@ -181,7 +182,35 @@ class NavigationHandler(object):
 			log_error(traceback.format_exc())
 			return False
 
+class _AssociatedDataStore(dict):
+	_defaults = {}
+
+	@classmethod
+	def set_default(cls, name, value):
+		cls._defaults[name] = value
+
+	def __getattr__(self, name):
+		if name in self.__dict__:
+			return self.__dict__[name]
+		if name not in self:
+			if name in self.__class__._defaults:
+				result = copy.copy(self.__class__._defaults[name])
+				self[name] = result
+				return result
+		return self.__getitem__(name)
+
+	def __setattr__(self, name, value):
+		self.__setitem__(name, value)
+
+	def __delattr__(self, name):
+		self.__delitem__(name)
+
+class _FileMetadataAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
+
 class FileMetadata(object):
+	_associated_data = {}
+
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
@@ -206,6 +235,16 @@ class FileMetadata(object):
 		if self.navigation is not None:
 			core.BNSetFileMetadataNavigationHandler(self.handle, None)
 		core.BNFreeFileMetadata(self.handle)
+
+	@classmethod
+	def _unregister(cls, f):
+		handle = ctypes.cast(f, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
 	def filename(self):
@@ -283,6 +322,17 @@ class FileMetadata(object):
 	def navigation(self, value):
 		value._register(self.handle)
 		self.nav = value
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the file"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in FileMetadata._associated_data:
+			obj = _FileMetadataAssociatedDataStore()
+			FileMetadata._associated_data[handle.value] = obj
+			return obj
+		else:
+			return FileMetadata._associated_data[handle.value]
 
 	def close(self):
 		"""
@@ -874,6 +924,9 @@ class DataVariable(object):
 	def __repr__(self):
 		return "<var 0x%x: %s>" % (self.address, str(self.type))
 
+class _BinaryViewAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
+
 class BinaryView(object):
 	"""
 	``class BinaryView`` implements a view on binary data, and presents a queryable interface of a binary file. One key
@@ -927,6 +980,7 @@ class BinaryView(object):
 	_registered_cb = None
 	registered_view_type = None
 	next_address = 0
+	_associated_data = {}
 
 	def __init__(self, file_metadata = None, handle = None):
 		if handle is not None:
@@ -1034,6 +1088,16 @@ class BinaryView(object):
 			return None
 		result = BinaryView(file_metadata, handle = view)
 		return result
+
+	@classmethod
+	def _unregister(cls, view):
+		handle = ctypes.cast(view, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):
 		for i in self.notifications.values():
@@ -1245,6 +1309,17 @@ class BinaryView(object):
 			result[type_list[i].name] = Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
 		return result
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the view"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in BinaryView._associated_data:
+			obj = _BinaryViewAssociatedDataStore()
+			BinaryView._associated_data[handle.value] = obj
+			return obj
+		else:
+			return BinaryView._associated_data[handle.value]
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -4485,7 +4560,12 @@ class HighlightColor(object):
 
 		return result
 
+class _FunctionAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
+
 class Function(object):
+	_associated_data = {}
+
 	def __init__(self, view, handle):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
@@ -4495,6 +4575,16 @@ class Function(object):
 		if self._advanced_analysis_requests > 0:
 			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 		core.BNFreeFunction(self.handle)
+
+	@classmethod
+	def _unregister(cls, func):
+		handle = ctypes.cast(func, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_FunctionAssociatedDataStore.set_default(name, value)
 
 	@property
 	def name(self):
@@ -4619,6 +4709,17 @@ class Function(object):
 			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the function"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in Function._associated_data:
+			obj = _FunctionAssociatedDataStore()
+			Function._associated_data[handle.value] = obj
+			return obj
+		else:
+			return Function._associated_data[handle.value]
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -10241,6 +10342,26 @@ class InteractionHandler(object):
 
 	def get_directory_name_input(self, prompt, default_name):
 		return get_text_line_input(title, "Select Directory")
+
+class _DestructionCallbackHandler:
+	def __init__(self):
+		self._cb = core.BNObjectDestructionCallbacks()
+		self._cb.context = 0
+		self._cb.destructBinaryView = self._cb.destructBinaryView.__class__(self.destruct_binary_view)
+		self._cb.destructFileMetadata = self._cb.destructFileMetadata.__class__(self.destruct_file_metadata)
+		self._cb.destructFunction = self._cb.destructFunction.__class__(self.destruct_function)
+		core.BNRegisterObjectDestructionCallbacks(self._cb)
+
+	def destruct_binary_view(self, ctxt, view):
+		BinaryView._unregister(view)
+
+	def destruct_file_metadata(self, ctxt, f):
+		FileMetadata._unregister(f)
+
+	def destruct_function(self, ctxt, func):
+		Function._unregister(func)
+
+_destruct_callbacks = _DestructionCallbackHandler()
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

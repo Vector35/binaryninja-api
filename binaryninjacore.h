@@ -1070,6 +1070,17 @@ extern "C"
 		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
 	};
 
+	struct BNObjectDestructionCallbacks
+	{
+		void* context;
+		// The provided pointers have a reference count of zero. Do not add additional references, doing so
+		// can lead to a double free. These are provided only for freeing additional state related to the
+		// objects passed.
+		void (*destructBinaryView)(void* ctxt, BNBinaryView* view);
+		void (*destructFileMetadata)(void* ctxt, BNFileMetadata* file);
+		void (*destructFunction)(void* ctxt, BNFunction* func);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1079,6 +1090,9 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);
 
 	BINARYNINJACOREAPI bool BNIsLicenseValidated(void);
+
+	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);

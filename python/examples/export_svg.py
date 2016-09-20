@@ -1,5 +1,11 @@
 from binaryninja import *
-import os,sys
+import os
+import webbrowser
+try:
+    from urllib import pathname2url         # Python 2.x
+except:
+    from urllib.request import pathname2url # Python 3.x
+
 
 colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
 
@@ -17,15 +23,19 @@ def escape(string):
 
 def save_svg(bv,function):
 	address = hex(function.start).replace('L','')
-	filename = 'binaryninja-{filename}-{function}.html'.format(filename=os.path.basename(bv.file.filename),function=address)
-	outputfile = get_save_filename_input('File name for svg-export', 'HTML files (*.html)', filename)
+	path = os.path.dirname(bv.file.filename)
+	origname = os.path.basename(bv.file.filename)
+	filename = os.path.join(path,'binaryninja-{filename}-{function}.html'.format(filename=origname,function=address))
+	outputfile = get_save_filename_input('File name for export_svg', 'HTML files (*.html)', filename)
 	if outputfile is None:
 		return
 	content = render_svg(function)
 	output = open(outputfile,'w')
 	output.write(content)
 	output.close()
-	os.system('%s' % outputfile)
+	if show_message_box("Open SVG", "Would you like to view the exported SVG?", buttons = core.YesNoButtonSet, icon = core.QuestionIcon) == core.YesButton:
+		url = 'file:{}'.format(pathname2url(outputfile))
+		webbrowser.open(url)
 
 def instruction_data_flow(function,address):
 	''' TODO:  Extract data flow information '''
@@ -175,4 +185,4 @@ def render_svg(function):
 	output += '</svg></html>'
 	return output
 
-PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function to your home folder.", save_svg)
+PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function", save_svg)

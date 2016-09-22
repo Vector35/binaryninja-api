@@ -276,6 +276,7 @@ namespace BinaryNinja
 	class MainThreadAction;
 	class MainThreadActionHandler;
 	class InteractionHandler;
+	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
 
@@ -401,6 +402,7 @@ namespace BinaryNinja
 	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
 		const std::string& defaultName = "");
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
+	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
 
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
@@ -2311,6 +2313,33 @@ namespace BinaryNinja
 		static std::vector<Ref<BackgroundTask>> GetRunningTasks();
 	};
 
+	struct FormInputField
+	{
+		BNFormInputFieldType type;
+		std::string prompt;
+		Ref<BinaryView> view; // For AddressFormField
+		uint64_t currentAddress; // For AddressFormField
+		std::vector<std::string> choices; // For ChoiceFormField
+		std::string ext; // For OpenFileNameFormField, SaveFileNameFormField
+		std::string defaultName; // For SaveFileNameFormField
+		int64_t intResult;
+		uint64_t addressResult;
+		std::string stringResult;
+		size_t indexResult;
+
+		static FormInputField Label(const std::string& text);
+		static FormInputField Separator();
+		static FormInputField TextLine(const std::string& prompt);
+		static FormInputField MultilineText(const std::string& prompt);
+		static FormInputField Integer(const std::string& prompt);
+		static FormInputField Address(const std::string& prompt, BinaryView* view = nullptr, uint64_t currentAddress = 0);
+		static FormInputField Choice(const std::string& prompt, const std::vector<std::string>& choices);
+		static FormInputField OpenFileName(const std::string& prompt, const std::string& ext);
+		static FormInputField SaveFileName(const std::string& prompt, const std::string& ext,
+			const std::string& defaultName = "");
+		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
+	};
+
 	class InteractionHandler
 	{
 	public:
@@ -2331,6 +2360,7 @@ namespace BinaryNinja
 			const std::string& ext = "", const std::string& defaultName = "");
 		virtual bool GetDirectoryNameInput(std::string& result, const std::string& prompt,
 			const std::string& defaultName = "");
+		virtual bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title) = 0;
 
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;

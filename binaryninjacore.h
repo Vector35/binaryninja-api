@@ -1073,6 +1073,36 @@ extern "C"
 		CancelButton = 3
 	};
 
+	enum BNFormInputFieldType
+	{
+		LabelFormField,
+		SeparatorFormField,
+		TextLineFormField,
+		MultilineTextFormField,
+		IntegerFormField,
+		AddressFormField,
+		ChoiceFormField,
+		OpenFileNameFormField,
+		SaveFileNameFormField,
+		DirectoryNameFormField
+	};
+
+	struct BNFormInputField
+	{
+		BNFormInputFieldType type;
+		const char* prompt;
+		BNBinaryView* view; // For AddressFormField
+		uint64_t currentAddress; // For AddressFormField
+		const char** choices; // For ChoiceFormField
+		size_t count; // For ChoiceFormField
+		const char* ext; // For OpenFileNameFormField, SaveFileNameFormField
+		const char* defaultName; // For SaveFileNameFormField
+		int64_t intResult;
+		uint64_t addressResult;
+		char* stringResult;
+		size_t indexResult;
+	};
+
 	struct BNInteractionHandlerCallbacks
 	{
 		void* context;
@@ -1091,6 +1121,7 @@ extern "C"
 		bool (*getSaveFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext,
 			const char* defaultName);
 		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
+		bool (*getFormInput)(void* ctxt, BNFormInputField* fields, size_t count, const char* title);
 		BNMessageBoxButtonResult (*showMessageBox)(void* ctxt, const char* title, const char* text,
 			BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 	};
@@ -2107,6 +2138,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetSaveFileNameInput(char** result, const char* prompt, const char* ext,
 		const char* defaultName);
 	BINARYNINJACOREAPI bool BNGetDirectoryNameInput(char** result, const char* prompt, const char* defaultName);
+	BINARYNINJACOREAPI bool BNGetFormInput(BNFormInputField* fields, size_t count, const char* title);
+	BINARYNINJACOREAPI void BNFreeFormInputResults(BNFormInputField* fields, size_t count);
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
 		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 

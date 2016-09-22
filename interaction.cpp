@@ -6,6 +6,102 @@ using namespace std;
 using namespace BinaryNinja;
 
 
+FormInputField FormInputField::Label(const string& text)
+{
+	FormInputField result;
+	result.type = LabelFormField;
+	result.prompt = text;
+	return result;
+}
+
+
+FormInputField FormInputField::Separator()
+{
+	FormInputField result;
+	result.type = SeparatorFormField;
+	return result;
+}
+
+
+FormInputField FormInputField::TextLine(const string& prompt)
+{
+	FormInputField result;
+	result.type = TextLineFormField;
+	result.prompt = prompt;
+	return result;
+}
+
+
+FormInputField FormInputField::MultilineText(const string& prompt)
+{
+	FormInputField result;
+	result.type = MultilineTextFormField;
+	result.prompt = prompt;
+	return result;
+}
+
+
+FormInputField FormInputField::Integer(const string& prompt)
+{
+	FormInputField result;
+	result.type = IntegerFormField;
+	result.prompt = prompt;
+	return result;
+}
+
+
+FormInputField FormInputField::Address(const std::string& prompt, BinaryView* view, uint64_t currentAddress)
+{
+	FormInputField result;
+	result.type = AddressFormField;
+	result.prompt = prompt;
+	result.view = view;
+	result.currentAddress = currentAddress;
+	return result;
+}
+
+
+FormInputField FormInputField::Choice(const string& prompt, const vector<string>& choices)
+{
+	FormInputField result;
+	result.type = ChoiceFormField;
+	result.prompt = prompt;
+	result.choices = choices;
+	return result;
+}
+
+
+FormInputField FormInputField::OpenFileName(const string& prompt, const string& ext)
+{
+	FormInputField result;
+	result.type = OpenFileNameFormField;
+	result.prompt = prompt;
+	result.ext = ext;
+	return result;
+}
+
+
+FormInputField FormInputField::SaveFileName(const string& prompt, const string& ext, const string& defaultName)
+{
+	FormInputField result;
+	result.type = SaveFileNameFormField;
+	result.prompt = prompt;
+	result.ext = ext;
+	result.defaultName = defaultName;
+	return result;
+}
+
+
+FormInputField FormInputField::DirectoryName(const string& prompt, const string& defaultName)
+{
+	FormInputField result;
+	result.type = DirectoryNameFormField;
+	result.prompt = prompt;
+	result.defaultName = defaultName;
+	return result;
+}
+
+
 void InteractionHandler::ShowMarkdownReport(Ref<BinaryView> view, const string& title, const string& contents,
 	const string& plainText)
 {
@@ -172,6 +268,85 @@ static bool GetDirectoryNameInputCallback(void* ctxt, char** result, const char*
 }
 
 
+static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t count, const char* title)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+
+	// Convert list of fields from core structure to API structure
+	vector<FormInputField> fields;
+	for (size_t i = 0; i < count; i++)
+	{
+		vector<string> choices;
+		switch (fieldBuf[i].type)
+		{
+		case SeparatorFormField:
+			fields.push_back(FormInputField::Separator());
+			break;
+		case TextLineFormField:
+			fields.push_back(FormInputField::TextLine(fieldBuf[i].prompt));
+			break;
+		case MultilineTextFormField:
+			fields.push_back(FormInputField::MultilineText(fieldBuf[i].prompt));
+			break;
+		case IntegerFormField:
+			fields.push_back(FormInputField::Integer(fieldBuf[i].prompt));
+			break;
+		case AddressFormField:
+			fields.push_back(FormInputField::Address(fieldBuf[i].prompt, fieldBuf[i].view ?
+				new BinaryView(BNNewViewReference(fieldBuf[i].view)) : nullptr, fieldBuf[i].currentAddress));
+			break;
+		case ChoiceFormField:
+			for (size_t j = 0; j < fieldBuf[i].count; j++)
+				choices.push_back(fieldBuf[i].choices[j]);
+			fields.push_back(FormInputField::Choice(fieldBuf[i].prompt, choices));
+			break;
+		case OpenFileNameFormField:
+			fields.push_back(FormInputField::OpenFileName(fieldBuf[i].prompt, fieldBuf[i].ext));
+			break;
+		case SaveFileNameFormField:
+			fields.push_back(FormInputField::SaveFileName(fieldBuf[i].prompt, fieldBuf[i].ext, fieldBuf[i].defaultName));
+			break;
+		case DirectoryNameFormField:
+			fields.push_back(FormInputField::DirectoryName(fieldBuf[i].prompt, fieldBuf[i].defaultName));
+			break;
+		default:
+			fields.push_back(FormInputField::Label(fieldBuf[i].prompt));
+			break;
+		}
+	}
+
+	if (!handler->GetFormInput(fields, title))
+		return false;
+
+	// Place results into core structure
+	for (size_t i = 0; i < count; i++)
+	{
+		switch (fieldBuf[i].type)
+		{
+		case TextLineFormField:
+		case MultilineTextFormField:
+		case OpenFileNameFormField:
+		case SaveFileNameFormField:
+		case DirectoryNameFormField:
+			fieldBuf[i].stringResult = BNAllocString(fields[i].stringResult.c_str());
+			break;
+		case IntegerFormField:
+			fieldBuf[i].intResult = fields[i].intResult;
+			break;
+		case AddressFormField:
+			fieldBuf[i].addressResult = fields[i].addressResult;
+			break;
+		case ChoiceFormField:
+			fieldBuf[i].indexResult = fields[i].indexResult;
+			break;
+		default:
+			break;
+		}
+	}
+	return true;
+}
+
+
 static BNMessageBoxButtonResult ShowMessageBoxCallback(void* ctxt, const char* title, const char* text,
 	BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon)
 {
@@ -194,6 +369,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getOpenFileNameInput = GetOpenFileNameInputCallback;
 	cb.getSaveFileNameInput = GetSaveFileNameInputCallback;
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
+	cb.getFormInput = GetFormInputCallback;
 	cb.showMessageBox = ShowMessageBoxCallback;
 	BNRegisterInteractionHandler(&cb);
 }
@@ -291,6 +467,85 @@ bool BinaryNinja::GetDirectoryNameInput(string& result, const string& prompt, co
 		return false;
 	result = value;
 	BNFreeString(value);
+	return true;
+}
+
+
+bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& title)
+{
+	// Construct field list in core format
+	BNFormInputField* fieldBuf = new BNFormInputField[fields.size()];
+	for (size_t i = 0; i < fields.size(); i++)
+	{
+		fieldBuf[i].type = fields[i].type;
+		fieldBuf[i].prompt = fields[i].prompt.c_str();
+		switch (fields[i].type)
+		{
+		case AddressFormField:
+			fieldBuf[i].view = fields[i].view ? fields[i].view->GetObject() : nullptr;
+			fieldBuf[i].currentAddress = fields[i].currentAddress;
+			break;
+		case ChoiceFormField:
+			fieldBuf[i].choices = new const char*[fields[i].choices.size()];
+			fieldBuf[i].count = fields[i].choices.size();
+			for (size_t j = 0; j < fields[i].choices.size(); j++)
+				fieldBuf[i].choices[j] = fields[i].choices[j].c_str();
+			break;
+		case OpenFileNameFormField:
+			fieldBuf[i].ext = fields[i].ext.c_str();
+			break;
+		case SaveFileNameFormField:
+			fieldBuf[i].ext = fields[i].ext.c_str();
+			fieldBuf[i].defaultName = fields[i].defaultName.c_str();
+			break;
+		case DirectoryNameFormField:
+			fieldBuf[i].defaultName = fields[i].defaultName.c_str();
+			break;
+		default:
+			break;
+		}
+	}
+
+	bool ok = BNGetFormInput(fieldBuf, fields.size(), title.c_str());
+
+	// Free any memory used by field descriptions
+	for (size_t i = 0; i < fields.size(); i++)
+	{
+		if (fields[i].type == ChoiceFormField)
+			delete[] fieldBuf[i].choices;
+	}
+
+	// If user cancelled, there are no results
+	if (!ok)
+		return false;
+
+	// Copy results to API structures
+	for (size_t i = 0; i < fields.size(); i++)
+	{
+		switch (fields[i].type)
+		{
+		case TextLineFormField:
+		case MultilineTextFormField:
+		case OpenFileNameFormField:
+		case SaveFileNameFormField:
+		case DirectoryNameFormField:
+			fields[i].stringResult = fieldBuf[i].stringResult;
+			break;
+		case IntegerFormField:
+			fields[i].intResult = fieldBuf[i].intResult;
+			break;
+		case AddressFormField:
+			fields[i].addressResult = fieldBuf[i].addressResult;
+			break;
+		case ChoiceFormField:
+			fields[i].indexResult = fieldBuf[i].indexResult;
+			break;
+		default:
+			break;
+		}
+	}
+
+	BNFreeFormInputResults(fieldBuf, fields.size());
 	return true;
 }
 

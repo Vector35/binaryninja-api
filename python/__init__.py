@@ -5696,7 +5696,7 @@ class _ArchitectureMetaClass(type):
 
 class Architecture(object):
 	"""
-	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implemnt assembly,
+	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implement assembly,
 	disassembly, IL lifting, and patching.
 
 	``class Architecture`` has a ``__metaclass__`` with the additional methods ``register``, and supports

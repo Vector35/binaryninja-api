@@ -40,24 +40,32 @@ Errors or warnings during the load of the binary are also shown in the status ba
 
 ## Interacting
 
+### Navigating
+
+Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jmp edges, etc, can all be double-clicked to navigate. Additionally, The `g` hotkey can navigate to a specific address in the current view.
+
+![graph view](/images/view-choices.png "Different Views")
+
+Switching views happens multiple ways. In some instances, it's automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
+
 ### Hotkeys
 
- - "h" : Switch to hex view
- - "p" : Create a function
- - &lt;ESC&gt; : Navigate backward
- - &lt;SPACE&gt; : Toggle between linear view and graph view
- - "g" : Go To Address dialog
- - "n" : Name a symbol
- - "u" : Undefine a symbol
- - "e" : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
- - "x" : Focuses the cross-reference pane
- - ";" : Adds a comment
- - "i" : Switches between disassembly and low-level il in graph view
- - "y" : Change type
+ - `h` : Switch to hex view
+ - `p` : Create a function
+ - `&lt;ESC&gt;` : Navigate backward
+ - `&lt;SPACE&gt;` : Toggle between linear view and graph view
+ - `g` : Go To Address dialog
+ - `n` : Name a symbol
+ - `u` : Undefine a symbol
+ - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
+ - `x` : Focuses the cross-reference pane
+ - `;` : Adds a comment
+ - `i` : Switches between disassembly and low-level il in graph view
+ - `y` : Change type
  - [1248] : Change type directly to a data variable of the indicated widths
- - "d" : Switches between data variables of various widths
- - "r" : Change the data type to single ASCII character
- - "o" : Create a pointer data type
+ - `d` : Switches between data variables of various widths
+ - `r` : Change the data type to single ASCII character
+ - `o` : Create a pointer data type
 
 ### Graph View
 

@@ -14,7 +14,7 @@ def escape(string):
 	return ''.join(escape_table.get(i,i) for i in string) 				#still escape the basics
 
 def save_svg(bv,function):
-	filename = bv.file.filename.split(os.sep)[-1]
+	filename = os.path.split(bv.file.filename)[1]
 	address = hex(function.start).replace('L','')
 	outputfile = os.path.join(os.path.expanduser('~'), 'binaryninja-{filename}-{function}.html'.format(filename=filename,function=address))
 	content = render_svg(function)

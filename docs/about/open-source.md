@@ -18,6 +18,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [qt] ([qt license] - LGPLv3 / note, please see our [qt build instructions below](open-source.md#building-qt))
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
     - [opensans] ([opensans license] - Apache 2.0)
+    - [dejavusanscode] ([dejavusanscode license] - multiple open licenses)
 
 * Core
     - [lzf] ([lzf license] - BSD)
@@ -72,6 +73,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.txt
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
+[dejavusanscode]: https://github.com/SSNikolaevich/DejaVuSansCode
+[dejavusanscode license]: https://github.com/SSNikolaevich/DejaVuSansCode/blob/master/LICENSE
 [Qt 5.6]: https://www.qt.io/qt-licensing-terms/
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
 [tarball]: https://binary.ninja/qt5.6.0.tar.xz

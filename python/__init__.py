@@ -1022,7 +1022,7 @@ class BinaryView(object):
 			self.file = file_metadata
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, self._cb)
 		self.notifications = {}
-		self.next_address = self.entry_point
+		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
 	@classmethod
 	def register(cls):
@@ -1579,6 +1579,8 @@ class BinaryView(object):
 		"""
 		if arch is None:
 			arch = self.arch
+		if self.next_address is None:
+			self.next_address = self.entry_point
 		txt, size = arch.get_instruction_text(self.read(self.next_address, self.arch.max_instr_length), self.next_address)
 		self.next_address += size
 		if txt is None:

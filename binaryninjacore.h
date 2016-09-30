@@ -200,7 +200,10 @@ extern "C"
 		FunctionContinuationLineType,
 		StackVariableLineType,
 		StackVariableListEndLineType,
-		FunctionEndLineType
+		FunctionEndLineType,
+		NoteBeginLineType,
+		NoteLineType,
+		NoteEndLineType
 	};
 
 	enum BNSymbolType

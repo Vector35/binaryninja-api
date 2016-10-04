@@ -201,9 +201,13 @@ extern "C"
 		StackVariableLineType,
 		StackVariableListEndLineType,
 		FunctionEndLineType,
-		NoteBeginLineType,
+		NoteStartLineType,
 		NoteLineType,
-		NoteEndLineType
+		NoteEndLineType,
+		SectionStartLineType,
+		SectionEndLineType,
+		SectionSeparatorLineType,
+		NonContiguousSeparatorLineType
 	};
 
 	enum BNSymbolType

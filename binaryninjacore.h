@@ -386,7 +386,8 @@ extern "C"
 	{
 		PointerReferenceType = 0,
 		ReferenceReferenceType = 1,
-		RValueReferenceType = 2
+		RValueReferenceType = 2,
+		NoReference = 3
 	};
 
 	enum BNPointerSuffix

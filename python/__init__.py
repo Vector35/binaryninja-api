@@ -1040,7 +1040,7 @@ class BinaryView(object):
 	next_address = 0
 	_associated_data = {}
 
-	def __init__(self, parent_view = None, file_metadata = None, handle = None):
+	def __init__(self, file_metadata = None, parent_view = None, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:

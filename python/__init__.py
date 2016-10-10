@@ -243,7 +243,7 @@ class FileMetadata(object):
 			del cls._associated_data[handle.value]
 
 	@classmethod
-	def set_default_data(cls, name, value):
+	def set_default_session_data(cls, name, value):
 		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
@@ -324,7 +324,7 @@ class FileMetadata(object):
 		self.nav = value
 
 	@property
-	def data(self):
+	def session_data(self):
 		"""Dictionary object where plugins can store arbitrary data associated with the file"""
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in FileMetadata._associated_data:
@@ -1096,7 +1096,7 @@ class BinaryView(object):
 			del cls._associated_data[handle.value]
 
 	@classmethod
-	def set_default_data(cls, name, value):
+	def set_default_session_data(cls, name, value):
 		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):
@@ -1311,7 +1311,7 @@ class BinaryView(object):
 		return result
 
 	@property
-	def data(self):
+	def session_data(self):
 		"""Dictionary object where plugins can store arbitrary data associated with the view"""
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in BinaryView._associated_data:
@@ -4589,7 +4589,7 @@ class Function(object):
 			del cls._associated_data[handle.value]
 
 	@classmethod
-	def set_default_data(cls, name, value):
+	def set_default_session_data(cls, name, value):
 		_FunctionAssociatedDataStore.set_default(name, value)
 
 	@property
@@ -4717,7 +4717,7 @@ class Function(object):
 		return result
 
 	@property
-	def data(self):
+	def session_data(self):
 		"""Dictionary object where plugins can store arbitrary data associated with the function"""
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in Function._associated_data:

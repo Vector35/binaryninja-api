@@ -21,8 +21,8 @@ import os
 logging.disable(logging.WARNING)
 
 # Create sets in the BinaryView's data field to store the desired path for each view
-BinaryView.set_default_data("angr_find", set())
-BinaryView.set_default_data("angr_avoid", set())
+BinaryView.set_default_session_data("angr_find", set())
+BinaryView.set_default_session_data("angr_avoid", set())
 
 def escaped_output(str):
 	return '\n'.join([s.encode("string_escape") for s in str.split('\n')])
@@ -89,7 +89,7 @@ def find_instr(bv, addr):
 		block.function.set_auto_instr_highlight(block.arch, addr, GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
-	bv.data.angr_find.add(addr)
+	bv.session_data.angr_find.add(addr)
 
 def avoid_instr(bv, addr):
 	# Highlight the instruction in red
@@ -99,17 +99,17 @@ def avoid_instr(bv, addr):
 		block.function.set_auto_instr_highlight(block.arch, addr, RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
-	bv.data.angr_avoid.add(addr)
+	bv.session_data.angr_avoid.add(addr)
 
 def solve(bv):
-	if len(bv.data.angr_find) == 0:
+	if len(bv.session_data.angr_find) == 0:
 		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
 			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
 			"continue.", OKButtonSet, ErrorIcon)
 		return
 
 	# Start a solver thread for the path associated with the view
-	s = Solver(bv.data.angr_find, bv.data.angr_avoid, bv)
+	s = Solver(bv.session_data.angr_find, bv.session_data.angr_avoid, bv)
 	s.start()
 
 # Register commands for the user to interact with the plugin

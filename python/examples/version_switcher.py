@@ -3,14 +3,14 @@ import sys
 import binaryninja
 import datetime
 
-chandefault="private-beta"
-channel=0
-versions=0
+chandefault = binaryninja.UpdateChannel.list[0].name
+channel = None
+versions = []
 
 def load_channel(newchannel):
 	global channel
 	global versions
-	if (channel != 0 and newchannel == channel.name):
+	if (channel != None and newchannel == channel.name):
 		print "Same channel, not updating."
 	else:
 		try:

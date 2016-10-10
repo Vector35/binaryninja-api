@@ -1,5 +1,13 @@
 from binaryninja import *
-import os,sys
+import os
+import webbrowser
+try:
+    from urllib import pathname2url         # Python 2.x
+except:
+    from urllib.request import pathname2url # Python 3.x
+
+
+colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
 
 escape_table = {
 	"'": "&#39;",
@@ -14,14 +22,20 @@ def escape(string):
 	return ''.join(escape_table.get(i,i) for i in string) 				#still escape the basics
 
 def save_svg(bv,function):
-	filename = os.path.split(bv.file.filename)[1]
 	address = hex(function.start).replace('L','')
-	outputfile = os.path.join(os.path.expanduser('~'), 'binaryninja-{filename}-{function}.html'.format(filename=filename,function=address))
+	path = os.path.dirname(bv.file.filename)
+	origname = os.path.basename(bv.file.filename)
+	filename = os.path.join(path,'binaryninja-{filename}-{function}.html'.format(filename=origname,function=address))
+	outputfile = get_save_filename_input('File name for export_svg', 'HTML files (*.html)', filename)
+	if outputfile is None:
+		return
 	content = render_svg(function)
 	output = open(outputfile,'w')
 	output.write(content)
 	output.close()
-	#os.system('open %s' % outputfile)
+	if show_message_box("Open SVG", "Would you like to view the exported SVG?", buttons = core.YesNoButtonSet, icon = core.QuestionIcon) == core.YesButton:
+		url = 'file:{}'.format(pathname2url(outputfile))
+		webbrowser.open(url)
 
 def instruction_data_flow(function,address):
 	''' TODO:  Extract data flow information '''
@@ -46,7 +60,6 @@ def render_svg(function):
 				background-color: rgb(42, 42, 42);
 			}
 			.basicblock {
-				fill: rgb(74, 74, 74);
 				stroke: rgb(224, 224, 224);
 			}
 			.edge {
@@ -133,7 +146,16 @@ def render_svg(function):
 		#Render block
 		output += '		<g id="basicblock{i}">\n'.format(i=i)
 		output += '			<title>Basic Block {i}</title>\n'.format(i=i)
-		output += '			<rect class="basicblock" x="{x}" y="{y}" height="{height}" width="{width}"/>\n'.format(x=x,y=y,width=width,height=height)
+		rgb=colors['none']
+		try:
+			bb = block.basic_block
+			color_code = bb.highlight.color
+			color_str = bb.highlight._standard_color_to_str(color_code)
+			if color_str in colors:
+				rgb=colors[color_str]
+		except:
+			pass
+		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width,height=height,r=rgb[0],g=rgb[1],b=rgb[2])
 
 		#Render instructions, unfortunately tspans don't allow copying/pasting more
 		#than one line at a time, need SVG 1.2 textarea tags for that it looks like
@@ -163,4 +185,4 @@ def render_svg(function):
 	output += '</svg></html>'
 	return output
 
-PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function to your home folder.", save_svg)
+PluginCommand.register_for_function("Export to SVG", "Exports an SVG of the current function", save_svg)

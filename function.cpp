@@ -27,6 +27,14 @@ using namespace std;
 Function::Function(BNFunction* func)
 {
 	m_object = func;
+	m_advancedAnalysisRequests = 0;
+}
+
+
+Function::~Function()
+{
+	if (m_advancedAnalysisRequests > 0)
+		BNReleaseAdvancedFunctionAnalysisDataMultiple(m_object, (size_t)m_advancedAnalysisRequests);
 }
 
 
@@ -72,6 +80,12 @@ bool Function::HasExplicitlyDefinedType() const
 }
 
 
+bool Function::NeedsUpdate() const
+{
+	return BNIsFunctionUpdateNeeded(m_object);
+}
+
+
 vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 {
 	size_t count;
@@ -83,6 +97,15 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 
 	BNFreeBasicBlockList(blocks, count);
 	return result;
+}
+
+
+Ref<BasicBlock> Function::GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const
+{
+	BNBasicBlock* block = BNGetFunctionBasicBlockAtAddress(m_object, arch->GetObject(), addr);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
 }
 
 
@@ -288,6 +311,19 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
+vector<BNConstantReference> Function::GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNConstantReference* refs = BNGetConstantsReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+
+	vector<BNConstantReference> result;
+	result.insert(result.end(), &refs[0], &refs[count]);
+
+	BNFreeConstantReferenceList(refs);
+	return result;
+}
+
+
 Ref<LowLevelILFunction> Function::GetLiftedIL() const
 {
 	return new LowLevelILFunction(BNGetFunctionLiftedIL(m_object));
@@ -406,13 +442,13 @@ map<int64_t, StackVariable> Function::GetStackLayout()
 }
 
 
-void Function::CreateAutoStackVariable(int64_t offset, Type* type, const string& name)
+void Function::CreateAutoStackVariable(int64_t offset, Ref<Type> type, const string& name)
 {
 	BNCreateAutoStackVariable(m_object, offset, type->GetObject(), name.c_str());
 }
 
 
-void Function::CreateUserStackVariable(int64_t offset, Type* type, const string& name)
+void Function::CreateUserStackVariable(int64_t offset, Ref<Type> type, const string& name)
 {
 	BNCreateUserStackVariable(m_object, offset, type->GetObject(), name.c_str());
 }
@@ -552,4 +588,188 @@ void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrA
 	BNIntegerDisplayType type)
 {
 	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
+}
+
+
+BNHighlightColor Function::GetInstructionHighlight(Architecture* arch, uint64_t addr)
+{
+	return BNGetInstructionHighlight(m_object, arch->GetObject(), addr);
+}
+
+
+void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color)
+{
+	BNSetAutoInstructionHighlight(m_object, arch->GetObject(), addr, color);
+}
+
+
+void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+	uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = StandardHighlightColor;
+	hc.color = color;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetAutoInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+	BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = MixedHighlightColor;
+	hc.color = color;
+	hc.mixColor = mixColor;
+	hc.mix = mix;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetAutoInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+	uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = CustomHighlightColor;
+	hc.color = NoHighlightColor;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = r;
+	hc.g = g;
+	hc.b = b;
+	hc.alpha = alpha;
+	SetAutoInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color)
+{
+	BNSetUserInstructionHighlight(m_object, arch->GetObject(), addr, color);
+}
+
+
+void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+	uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = StandardHighlightColor;
+	hc.color = color;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetUserInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+	BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = MixedHighlightColor;
+	hc.color = color;
+	hc.mixColor = mixColor;
+	hc.mix = mix;
+	hc.r = 0;
+	hc.g = 0;
+	hc.b = 0;
+	hc.alpha = alpha;
+	SetUserInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+	uint8_t alpha)
+{
+	BNHighlightColor hc;
+	hc.style = CustomHighlightColor;
+	hc.color = NoHighlightColor;
+	hc.mixColor = NoHighlightColor;
+	hc.mix = 0;
+	hc.r = r;
+	hc.g = g;
+	hc.b = b;
+	hc.alpha = alpha;
+	SetUserInstructionHighlight(arch, addr, hc);
+}
+
+
+void Function::Reanalyze()
+{
+	BNReanalyzeFunction(m_object);
+}
+
+
+void Function::RequestAdvancedAnalysisData()
+{
+	BNRequestAdvancedFunctionAnalysisData(m_object);
+#ifdef WIN32
+	InterlockedIncrement((LONG*)&m_advancedAnalysisRequests);
+#else
+	__sync_fetch_and_add(&m_advancedAnalysisRequests, 1);
+#endif
+}
+
+
+void Function::ReleaseAdvancedAnalysisData()
+{
+	BNReleaseAdvancedFunctionAnalysisData(m_object);
+#ifdef WIN32
+	InterlockedDecrement((LONG*)&m_advancedAnalysisRequests);
+#else
+	__sync_fetch_and_add(&m_advancedAnalysisRequests, -1);
+#endif
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
+{
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req)
+{
+	m_func = req.m_func;
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor::~AdvancedFunctionAnalysisDataRequestor()
+{
+	if (m_func)
+		m_func->ReleaseAdvancedAnalysisData();
+}
+
+
+AdvancedFunctionAnalysisDataRequestor& AdvancedFunctionAnalysisDataRequestor::operator=(
+	const AdvancedFunctionAnalysisDataRequestor& req)
+{
+	SetFunction(req.m_func);
+	return *this;
+}
+
+
+void AdvancedFunctionAnalysisDataRequestor::SetFunction(Function* func)
+{
+	if (m_func)
+		m_func->ReleaseAdvancedAnalysisData();
+
+	m_func = func;
+
+	if (m_func)
+		m_func->RequestAdvancedAnalysisData();
 }

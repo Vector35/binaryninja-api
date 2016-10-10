@@ -19,7 +19,15 @@
 # IN THE SOFTWARE.
 
 import _binaryninjacore as core
-import ctypes, traceback, json, struct, threading, code, sys
+import abc
+import ctypes
+import traceback
+import json
+import struct
+import threading
+import code
+import sys
+import copy
 
 _plugin_init = False
 def _init_plugins():
@@ -31,11 +39,11 @@ def _init_plugins():
 	if not core.BNIsLicenseValidated():
 		raise RuntimeError, "License is not valid. Please supply a valid license."
 
-class DataBuffer:
-	def __init__(self, contents = "", handle = None):
+class DataBuffer(object):
+	def __init__(self, contents="", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
-		elif (type(contents) is int) or (type(contents) is long):
+		elif isinstance(contents, int) or isinstance(contents, long):
 			self.handle = core.BNCreateDataBuffer(None, contents)
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
@@ -123,7 +131,7 @@ class DataBuffer:
 		return core.BNDataBufferToEscapedString(self.handle)
 
 	def unescape(self):
-		return DataBuffer(handle = core.BNDecodeEscapedString(str(self)))
+		return DataBuffer(handle=core.BNDecodeEscapedString(str(self)))
 
 	def base64_encode(self):
 		return core.BNDataBufferToBase64(self.handle)
@@ -174,7 +182,35 @@ class NavigationHandler(object):
 			log_error(traceback.format_exc())
 			return False
 
+class _AssociatedDataStore(dict):
+	_defaults = {}
+
+	@classmethod
+	def set_default(cls, name, value):
+		cls._defaults[name] = value
+
+	def __getattr__(self, name):
+		if name in self.__dict__:
+			return self.__dict__[name]
+		if name not in self:
+			if name in self.__class__._defaults:
+				result = copy.copy(self.__class__._defaults[name])
+				self[name] = result
+				return result
+		return self.__getitem__(name)
+
+	def __setattr__(self, name, value):
+		self.__setitem__(name, value)
+
+	def __delattr__(self, name):
+		self.__delitem__(name)
+
+class _FileMetadataAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
+
 class FileMetadata(object):
+	_associated_data = {}
+
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
@@ -193,12 +229,22 @@ class FileMetadata(object):
 			self.handle = core.BNCreateFileMetadata()
 			if filename is not None:
 				core.BNSetFilename(self.handle, str(filename))
-		self.__dict__['navigation'] = None
+		self.nav = None
 
 	def __del__(self):
 		if self.navigation is not None:
 			core.BNSetFileMetadataNavigationHandler(self.handle, None)
 		core.BNFreeFileMetadata(self.handle)
+
+	@classmethod
+	def _unregister(cls, f):
+		handle = ctypes.cast(f, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
 	def filename(self):
@@ -267,6 +313,26 @@ class FileMetadata(object):
 			core.BNMarkFileSaved(self.handle)
 		else:
 			core.BNMarkFileModified(self.handle)
+
+	@property
+	def navigation(self):
+		return self.nav
+
+	@navigation.setter
+	def navigation(self, value):
+		value._register(self.handle)
+		self.nav = value
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the file"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in FileMetadata._associated_data:
+			obj = _FileMetadataAssociatedDataStore()
+			FileMetadata._associated_data[handle.value] = obj
+			return obj
+		else:
+			return FileMetadata._associated_data[handle.value]
 
 	def close(self):
 		"""
@@ -372,18 +438,32 @@ class FileMetadata(object):
 	def navigate(self, view, offset):
 		return core.BNNavigate(self.handle, str(view), offset)
 
-	def create_database(self, filename):
+	def create_database(self, filename, progress_func = None):
+		if progress_func is None:
+			return core.BNCreateDatabase(self.raw.handle, str(filename))
+		else:
+			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+					lambda ctxt, cur, total: progress_func(cur, total)))
 
-		return core.BNCreateDatabase(self.raw.handle, str(filename))
-
-	def open_existing_database(self, filename):
-		view = core.BNOpenExistingDatabase(self.handle, str(filename))
+	def open_existing_database(self, filename, progress_func = None):
+		if progress_func is None:
+			view = core.BNOpenExistingDatabase(self.handle, str(filename))
+		else:
+			view = core.BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
 		return BinaryView(self, handle = view)
 
-	def save_auto_snapshot(self):
-		return core.BNSaveAutoSnapshot(self.raw.handle)
+	def save_auto_snapshot(self, progress_func = None):
+		if progress_func is None:
+			return core.BNSaveAutoSnapshot(self.raw.handle)
+		else:
+			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
+				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				lambda ctxt, cur, total: progress_func(cur, total)))
 
 	def get_view_of_type(self, name):
 		view = core.BNGetFileViewOfType(self.handle, str(name))
@@ -397,14 +477,10 @@ class FileMetadata(object):
 		return BinaryView(self, handle = view)
 
 	def __setattr__(self, name, value):
-		if name == "navigation":
-			value._register(self.handle)
-			self.__dict__["navigation"] = value
-		else:
-			try:
-				object.__setattr__(self,name,value)
-			except AttributeError:
-				raise AttributeError, "attribute '%s' is read only" % name
+		try:
+			object.__setattr__(self,name,value)
+		except AttributeError:
+			raise AttributeError, "attribute '%s' is read only" % name
 
 class FileAccessor:
 	def __init__(self):
@@ -512,7 +588,7 @@ class UndoAction:
 			raise TypeError, "undo action type not registered"
 		action_type = self.__class__.action_type
 		if isinstance(action_type, str):
-			self._cb.type = BNActionType_by_name[action_type]
+			self._cb.type = core.BNActionType_by_name[action_type]
 		else:
 			self._cb.type = action_type
 		self._cb.context = 0
@@ -569,7 +645,7 @@ class UndoAction:
 			log_error(traceback.format_exc())
 			return "null"
 
-class StringReference:
+class StringReference(object):
 	def __init__(self, string_type, start, length):
 		self.type = string_type
 		self.start = start
@@ -578,7 +654,7 @@ class StringReference:
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
-class BinaryDataNotificationCallbacks:
+class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
 		self.view = view
 		self.notify = notify
@@ -605,7 +681,7 @@ class BinaryDataNotificationCallbacks:
 	def _data_written(self, ctxt, view, offset, length):
 		try:
 			self.notify.data_written(self.view, offset, length)
-		except:
+		except OSError:
 			log_error(traceback.format_exc())
 
 	def _data_inserted(self, ctxt, view, offset, length):
@@ -709,7 +785,7 @@ class _BinaryViewTypeMetaclass(type):
 
 	def __setattr__(self, name, value):
 		try:
-			type.__setattr__(self,name,value)
+			type.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
@@ -770,7 +846,7 @@ class BinaryViewType(object):
 
 	def __setattr__(self, name, value):
 		try:
-			object.__setattr__(self,name,value)
+			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
@@ -817,8 +893,8 @@ class LinearDisassemblyPosition(object):
 	"""
 	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly.
 
-	.. note:: This object should not be instantiated directly. Rather call :py:method:`get_linear_disassembly_position_at` \
-	which instantiates this object.
+	.. note:: This object should not be instantiated directly. Rather call \
+	:py:method:`get_linear_disassembly_position_at` which instantiates this object.
 	"""
 	def __init__(self, func, block, addr):
 		self.function = func
@@ -847,6 +923,9 @@ class DataVariable(object):
 
 	def __repr__(self):
 		return "<var 0x%x: %s>" % (self.address, str(self.type))
+
+class _BinaryViewAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
 
 class BinaryView(object):
 	"""
@@ -889,9 +968,11 @@ class BinaryView(object):
 	externally. Additionanlly, methods which begin with ``perform_`` should not be called either and are
 	used explicitly for subclassing the BinaryView.
 
-	Another important note is the ``*_user_*()`` methods. These methods are reserved for `undo-able` actions, and thus
-	under most circumstances shouldn't be called by plugins, rather methods with the same name without ``_user_`` should
-	be used (e.g. ``remove_function()`` rather than ``remove_user_function()``)
+	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
+	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \
+	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the \
+	database (e.g. ``remove_user_function()`` rather than ``remove_function()``). Thus use ``_user_`` methods if saving \
+	to the database is desired.
 	"""
 	name = None
 	long_name = None
@@ -899,6 +980,7 @@ class BinaryView(object):
 	_registered_cb = None
 	registered_view_type = None
 	next_address = 0
+	_associated_data = {}
 
 	def __init__(self, file_metadata = None, handle = None):
 		if handle is not None:
@@ -940,7 +1022,7 @@ class BinaryView(object):
 			self.file = file_metadata
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, self._cb)
 		self.notifications = {}
-		self.next_address = self.entry_point
+		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
 	@classmethod
 	def register(cls):
@@ -1006,6 +1088,16 @@ class BinaryView(object):
 			return None
 		result = BinaryView(file_metadata, handle = view)
 		return result
+
+	@classmethod
+	def _unregister(cls, view):
+		handle = ctypes.cast(view, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):
 		for i in self.notifications.values():
@@ -1217,6 +1309,17 @@ class BinaryView(object):
 			result[type_list[i].name] = Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
 		return result
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the view"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in BinaryView._associated_data:
+			obj = _BinaryViewAssociatedDataStore()
+			BinaryView._associated_data[handle.value] = obj
+			return obj
+		else:
+			return BinaryView._associated_data[handle.value]
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1476,12 +1579,27 @@ class BinaryView(object):
 		"""
 		if arch is None:
 			arch = self.arch
+		if self.next_address is None:
+			self.next_address = self.entry_point
 		txt, size = arch.get_instruction_text(self.read(self.next_address, self.arch.max_instr_length), self.next_address)
 		self.next_address += size
 		if txt is None:
 			return None
 		return ''.join(str(a) for a in txt).strip()
 
+	@abc.abstractmethod
+	def perform_save(self, accessor):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def perform_get_address_size(self):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def perform_get_length(self):
+		raise NotImplementedError
+
+	@abc.abstractmethod
 	def perform_read(self, addr, length):
 		"""
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
@@ -1496,8 +1614,9 @@ class BinaryView(object):
 		:return: length bytes read from addr, should return empty string on error
 		:rtype: int
 		"""
-		return ""
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_write(self, addr, data):
 		"""
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
@@ -1512,8 +1631,9 @@ class BinaryView(object):
 		:return: length of data written, should return 0 on error
 		:rtype: int
 		"""
-		return 0
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_insert(self, addr, data):
 		"""
 		``perform_insert`` implements a mapping between a virtual address and an absolute file offset, inserting
@@ -1528,8 +1648,9 @@ class BinaryView(object):
 		:return: length of data inserted, should return 0 on error
 		:rtype: int
 		"""
-		return 0
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_remove(self, addr, length):
 		"""
 		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
@@ -1544,8 +1665,9 @@ class BinaryView(object):
 		:return: length of data removed, should return 0 on error
 		:rtype: int
 		"""
-		return 0
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_get_modification(self, addr):
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
@@ -1559,6 +1681,7 @@ class BinaryView(object):
 		"""
 		return core.Original
 
+	@abc.abstractmethod
 	def perform_is_valid_offset(self, addr):
 		"""
 		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
@@ -1574,6 +1697,7 @@ class BinaryView(object):
 		data = self.read(addr, 1)
 		return (data is not None) and (len(data) == 1)
 
+	@abc.abstractmethod
 	def perform_is_offset_readable(self, offset):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable.
@@ -1588,6 +1712,7 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(offset)
 
+	@abc.abstractmethod
 	def perform_is_offset_writable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
@@ -1602,6 +1727,7 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(addr)
 
+	@abc.abstractmethod
 	def perform_is_offset_executable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable.
@@ -1616,6 +1742,7 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(addr)
 
+	@abc.abstractmethod
 	def perform_get_next_valid_offset(self, addr):
 		"""
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
@@ -1632,6 +1759,7 @@ class BinaryView(object):
 			return self.perform_get_start()
 		return addr
 
+	@abc.abstractmethod
 	def perform_get_start(self):
 		"""
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
@@ -1645,6 +1773,7 @@ class BinaryView(object):
 		"""
 		return 0
 
+	@abc.abstractmethod
 	def perform_get_entry_point(self):
 		"""
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
@@ -1657,6 +1786,7 @@ class BinaryView(object):
 		"""
 		return 0
 
+	@abc.abstractmethod
 	def perform_is_executable(self):
 		"""
 		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
@@ -1667,13 +1797,14 @@ class BinaryView(object):
 		:return: true if the current BinaryView is executable, false if it is not executable or on error
 		:rtype: bool
 		"""
-		return False
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_get_default_endianness(self):
 		"""
 		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
 
-		.. note:: This method **must** be implemented for custom BinaryViews that are not LittleEndian.
+		.. note:: This method **may** be implemented for custom BinaryViews that are not LittleEndian.
 		.. warning:: This method **must not** be called directly.
 
 		:return: either ``core.LittleEndian`` or ``core.BigEndian``
@@ -1681,26 +1812,28 @@ class BinaryView(object):
 		"""
 		return core.LittleEndian
 
-	def create_database(self, filename):
+	def create_database(self, filename, progress_func = None):
 		"""
 		``perform_get_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
+		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
-		return self.file.create_database(filename)
+		return self.file.create_database(filename, progress_func)
 
-	def save_auto_snapshot(self):
+	def save_auto_snapshot(self, progress_func = None):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
 		.. note:: :py:method:`create_database` should have been called prior to executing this method
 
+		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
-		return self.file.save_auto_snapshot()
+		return self.file.save_auto_snapshot(progress_func)
 
 	def get_view_of_type(self, name):
 		"""
@@ -1900,7 +2033,7 @@ class BinaryView(object):
 		if length is None:
 			return core.BNGetModification(self.handle, addr)
 		data = (core.BNModificationStatus * length)()
-		length = core.BNGetModificationArray(self.handle, addr, data, length);
+		length = core.BNGetModificationArray(self.handle, addr, data, length)
 		return data[0:length]
 
 	def is_valid_offset(self, addr):
@@ -1915,7 +2048,7 @@ class BinaryView(object):
 
 	def is_offset_readable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for reading.
+		``is_offset_readable`` checks if an virtual address ``addr`` is valid for reading.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for reading, false if the virtual address is invalid or error
@@ -1925,7 +2058,7 @@ class BinaryView(object):
 
 	def is_offset_writable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for writing.
+		``is_offset_writable`` checks if an virtual address ``addr`` is valid for writing.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
@@ -1935,7 +2068,7 @@ class BinaryView(object):
 
 	def is_offset_executable(self, addr):
 		"""
-		``is_valid_offset`` checks if an virtual address ``addr`` is valid for executing.
+		``is_offset_executable`` checks if an virtual address ``addr`` is valid for executing.
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is valid for executing, false if the virtual address is invalid or error
@@ -2226,6 +2359,22 @@ class BinaryView(object):
 		"""
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	def get_basic_blocks_starting_at(self, addr):
+		"""
+		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
+
+		:param int addr: virtual address of BasicBlock desired
+		:return: a list of :py:Class:`BasicBlock` objects
+		:rtype: list(BasicBlock)
+		"""
+		count = ctypes.c_ulonglong(0)
+		blocks = core.BNGetBasicBlocksStartingAtAddress(self.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
@@ -3213,6 +3362,31 @@ class BinaryView(object):
 			return None
 		return result.value
 
+	def reanalyze(self):
+		"""
+		``reanalyze`` causes all functions to be reanalyzed. This function does not wait for the analysis to finish.
+
+		:rtype: None
+		"""
+		core.BNReanalyzeAllFunctions(self.handle)
+
+	def show_plain_text_report(self, title, contents):
+		core.BNShowPlainTextReport(self.handle, title, contents)
+
+	def show_markdown_report(self, title, contents, plaintext = ""):
+		core.BNShowMarkdownReport(self.handle, title, contents, plaintext)
+
+	def show_html_report(self, title, contents, plaintext = ""):
+		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
+
+	def get_address_input(self, prompt, title, current_address = None):
+		if current_address is None:
+			current_address = self.file.offset
+		value = ctypes.c_ulonglong()
+		if not core.BNGetAddressInput(value, prompt, title, self.handle, current_address):
+			return None
+		return value.value
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -3839,7 +4013,7 @@ class Type(object):
 	@property
 	def type_class(self):
 		"""Type class (read-only)"""
-		return BNTypeClass_names[core.BNGetTypeClass(self.handle)]
+		return core.BNTypeClass_names[core.BNGetTypeClass(self.handle)]
 
 	@property
 	def width(self):
@@ -3969,8 +4143,12 @@ class Type(object):
 		return Type(core.BNCreateFloatType(width))
 
 	@classmethod
-	def structure_type(self, s):
-		return Type(core.BNCreateStructureType(s.handle))
+	def structure_type(self, structure_type):
+		return Type(core.BNCreateStructureType(structure_type.handle))
+
+	@classmethod
+	def unknown_type(self, unknown_type):
+		return Type(core.BNCreateUnknownType(unknown_type.handle))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width = None):
@@ -3991,7 +4169,7 @@ class Type(object):
 		param_buf = (core.BNNameAndType * len(params))()
 		for i in xrange(0, len(params)):
 			if isinstance(params[i], Type):
-				param_buf[i].name = "";
+				param_buf[i].name = ""
 				param_buf[i].type = params[i].handle
 			else:
 				param_buf[i].name = params[i][1]
@@ -4007,7 +4185,32 @@ class Type(object):
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
-class StructureMember:
+
+class UnknownType(object):
+	def __init__(self, handle = None):
+		if handle is None:
+			self.handle = core.BNCreateUnknownType()
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeUnknownType(self.handle)
+
+	@property
+	def name(self):
+		count = ctypes.c_ulonglong()
+		nameList = core.BNGetUnknownTypeName(self.handle, count)
+		result = []
+		for i in xrange(count.value):
+			result.append(nameList[i])
+		return get_qualified_name(result)
+
+	@name.setter
+	def name(self, value):
+		core.BNSetUnknownTypeName(self.handle, value)
+
+
+class StructureMember(object):
 	def __init__(self, t, name, offset):
 		self.type = t
 		self.name = name
@@ -4031,7 +4234,12 @@ class Structure(object):
 
 	@property
 	def name(self):
-		return core.BNGetStructureName(self.handle)
+		count = ctypes.c_ulonglong()
+		nameList = core.BNGetStructureName(self.handle, count)
+		result = []
+		for i in xrange(count.value):
+			result.append(nameList[i])
+		return get_qualified_name(result)
 
 	@name.setter
 	def name(self, value):
@@ -4095,7 +4303,7 @@ class Structure(object):
 	def remove(self, i):
 		core.BNRemoveStructureMember(self.handle, i)
 
-class EnumerationMember:
+class EnumerationMember(object):
 	def __init__(self, name, value, default):
 		self.name = name
 		self.value = value
@@ -4150,7 +4358,7 @@ class Enumeration(object):
 		else:
 			core.BNAddEnumerationMemberWithValue(self.handle, name, value)
 
-class LookupTableEntry:
+class LookupTableEntry(object):
 	def __init__(self, from_values, to_value):
 		self.from_values = from_values
 		self.to_value = to_value
@@ -4158,19 +4366,19 @@ class LookupTableEntry:
 	def __repr__(self):
 		return "[%s] -> %#x" % (', '.join(["%#x" % i for i in self.from_values]), self.to_value)
 
-class RegisterValue:
+class RegisterValue(object):
 	def __init__(self, arch, value):
 		self.type = value.state
-		if value.state == EntryValue:
+		if value.state == core.EntryValue:
 			self.reg = arch.get_reg_name(value.reg)
-		elif value.state == OffsetFromEntryValue:
+		elif value.state == core.OffsetFromEntryValue:
 			self.reg = arch.get_reg_name(value.reg)
 			self.offset = value.value
-		elif value.state == ConstantValue:
+		elif value.state == core.ConstantValue:
 			self.value = value.value
-		elif value.state == StackFrameOffset:
+		elif value.state == core.StackFrameOffset:
 			self.offset = value.value
-		elif value.state == SignedRangeValue:
+		elif value.state == core.SignedRangeValue:
 			self.offset = value.value
 			self.start = value.rangeStart
 			self.end = value.rangeEnd
@@ -4179,12 +4387,12 @@ class RegisterValue:
 				self.start |= ~((1 << 63) - 1)
 			if self.end & (1 << 63):
 				self.end |= ~((1 << 63) - 1)
-		elif value.state == UnsignedRangeValue:
+		elif value.state == core.UnsignedRangeValue:
 			self.offset = value.value
 			self.start = value.rangeStart
 			self.end = value.rangeEnd
 			self.step = value.rangeStep
-		elif value.state == LookupTableValue:
+		elif value.state == core.LookupTableValue:
 			self.table = []
 			self.mapping = {}
 			for i in xrange(0, value.rangeEnd):
@@ -4193,29 +4401,29 @@ class RegisterValue:
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
-		elif value.state == OffsetFromUndeterminedValue:
+		elif value.state == core.OffsetFromUndeterminedValue:
 			self.offset = value.value
 
 	def __repr__(self):
-		if self.type == EntryValue:
+		if self.type == core.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == OffsetFromEntryValue:
+		if self.type == core.OffsetFromEntryValue:
 			return "<entry %s + %#x>" % (self.reg, self.offset)
-		if self.type == ConstantValue:
+		if self.type == core.ConstantValue:
 			return "<const %#x>" % self.value
-		if self.type == StackFrameOffset:
+		if self.type == core.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if (self.type == SignedRangeValue) or (self.type == UnsignedRangeValue):
+		if (self.type == core.SignedRangeValue) or (self.type == core.UnsignedRangeValue):
 			if self.step == 1:
 				return "<range: %#x to %#x>" % (self.start, self.end)
 			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
-		if self.type == LookupTableValue:
+		if self.type == core.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == OffsetFromUndeterminedValue:
+		if self.type == core.OffsetFromUndeterminedValue:
 			return "<undetermined with offset %#x>" % self.offset
 		return "<undetermined>"
 
-class StackVariable:
+class StackVariable(object):
 	def __init__(self, ofs, name, t):
 		self.offset = ofs
 		self.name = name
@@ -4246,6 +4454,16 @@ class StackVariableReference:
 			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
+class ConstantReference:
+	def __init__(self, val, size):
+		self.value = val
+		self.size = size
+
+	def __repr__(self):
+		if self.size == 0:
+			return "<constant %#x>" % self.value
+		return "<constant %#x size %d>" % (self.value, self.size)
+
 class IndirectBranchInfo:
 	def __init__(self, source_arch, source_addr, dest_arch, dest_addr, auto_defined):
 		self.source_arch = source_arch
@@ -4257,13 +4475,118 @@ class IndirectBranchInfo:
 	def __repr__(self):
 		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
 
+class HighlightColor(object):
+	def __init__(self, color = None, mix_color = None, mix = None, red = None, green = None, blue = None, alpha = 255):
+		if (red is not None) and (green is not None) and (blue is not None):
+			self.style = core.CustomHighlightColor
+			self.red = red
+			self.green = green
+			self.blue = blue
+		elif (mix_color is not None) and (mix is not None):
+			self.style = core.MixedHighlightColor
+			if color is None:
+				self.color = core.NoHighlightColor
+			else:
+				self.color = color
+			self.mix_color = mix_color
+			self.mix = mix
+		else:
+			self.style = core.StandardHighlightColor
+			if color is None:
+				self.color = core.NoHighlightColor
+			else:
+				self.color = color
+		self.alpha = alpha
+
+	def _standard_color_to_str(self, color):
+		if color == core.NoHighlightColor:
+			return "none"
+		if color == core.BlueHighlightColor:
+			return "blue"
+		if color == core.GreenHighlightColor:
+			return "green"
+		if color == core.CyanHighlightColor:
+			return "cyan"
+		if color == core.RedHighlightColor:
+			return "red"
+		if color == core.MagentaHighlightColor:
+			return "magenta"
+		if color == core.YellowHighlightColor:
+			return "yellow"
+		if color == core.OrangeHighlightColor:
+			return "orange"
+		if color == core.WhiteHighlightColor:
+			return "white"
+		if color == core.BlackHighlightColor:
+			return "black"
+		return "%d" % color
+
+	def __repr__(self):
+		if self.style == core.StandardHighlightColor:
+			if self.alpha == 255:
+				return "<color: %s>" % self._standard_color_to_str(self.color)
+			return "<color: %s, alpha %d>" % (self._standard_color_to_str(self.color), self.alpha)
+		if self.style == core.MixedHighlightColor:
+			if self.alpha == 255:
+				return "<color: mix %s to %s factor %d>" % (self._standard_color_to_str(self.color),
+					self._standard_color_to_str(self.mix_color), self.mix)
+			return "<color: mix %s to %s factor %d, alpha %d>" % (self._standard_color_to_str(self.color),
+				self._standard_color_to_str(self.mix_color), self.mix, self.alpha)
+		if self.style == core.CustomHighlightColor:
+			if self.alpha == 255:
+				return "<color: #%.2x%.2x%.2x>" % (self.red, self.green, self.blue)
+			return "<color: #%.2x%.2x%.2x, alpha %d>" % (self.red, self.green, self.blue, self.alpha)
+		return "<color>"
+
+	def _get_core_struct(self):
+		result = core.BNHighlightColor()
+		result.style = self.style
+		result.color = core.NoHighlightColor
+		result.mix_color = core.NoHighlightColor
+		result.mix = 0
+		result.r = 0
+		result.g = 0
+		result.b = 0
+		result.alpha = self.alpha
+
+		if self.style == core.StandardHighlightColor:
+			result.color = self.color
+		elif self.style == core.MixedHighlightColor:
+			result.color = self.color
+			result.mixColor = self.mix_color
+			result.mix = self.mix
+		elif self.style == core.CustomHighlightColor:
+			result.r = self.red
+			result.g = self.green
+			result.b = self.blue
+
+		return result
+
+class _FunctionAssociatedDataStore(_AssociatedDataStore):
+	_defaults = {}
+
 class Function(object):
+	_associated_data = {}
+
 	def __init__(self, view, handle):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
+		self._advanced_analysis_requests = 0
 
 	def __del__(self):
+		if self._advanced_analysis_requests > 0:
+			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 		core.BNFreeFunction(self.handle)
+
+	@classmethod
+	def _unregister(cls, func):
+		handle = ctypes.cast(func, ctypes.c_void_p)
+		if handle.value in cls._associated_data:
+			del cls._associated_data[handle.value]
+
+	@classmethod
+	def set_default_data(cls, name, value):
+		_FunctionAssociatedDataStore.set_default(name, value)
 
 	@property
 	def name(self):
@@ -4276,7 +4599,7 @@ class Function(object):
 			if self.symbol is not None:
 				self.view.undefine_user_symbol(self.symbol)
 		else:
-			symbol = Symbol(FunctionSymbol,self.start,value)
+			symbol = Symbol(core.FunctionSymbol,self.start,value)
 			self.view.define_user_symbol(symbol)
 
 	@property
@@ -4321,6 +4644,11 @@ class Function(object):
 		return core.BNHasExplicitlyDefinedType(self.handle)
 
 	@property
+	def needs_update(self):
+		"""Whether the function has analysis that needs to be updated (read-only)"""
+		return core.BNIsFunctionUpdateNeeded(self.handle)
+
+	@property
 	def basic_blocks(self):
 		"""List of basic blocks (read-only)"""
 		count = ctypes.c_ulonglong()
@@ -4343,26 +4671,14 @@ class Function(object):
 		return result
 
 	@property
-	def indirect_branches(self):
-		count = ctypes.c_ulonglong()
-		branches = core.BNGetIndirectBranches(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
-		core.BNFreeIndirectBranchList(branches)
-		return result
-
-	@property
 	def low_level_il(self):
 		"""Function low level IL (read-only)"""
-		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLowLevelIL(self.handle)), self)
+		return LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
 	def lifted_il(self):
 		"""Function lifted IL (read-only)"""
-		return LowLevelILFunction(self.arch, core.BNNewLowLevelILFunctionReference(
-					core.BNGetFunctionLiftedIL(self.handle)), self)
+		return LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
 	def function_type(self):
@@ -4395,6 +4711,17 @@ class Function(object):
 			result.append(IndirectBranchInfo(Architecture(branches[i].sourceArch), branches[i].sourceAddr, Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
+
+	@property
+	def data(self):
+		"""Dictionary object where plugins can store arbitrary data associated with the function"""
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		if handle.value not in Function._associated_data:
+			obj = _FunctionAssociatedDataStore()
+			Function._associated_data[handle.value] = obj
+			return obj
+		else:
+			return Function._associated_data[handle.value]
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -4539,6 +4866,15 @@ class Function(object):
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
+	def get_constants_referenced_by(self, arch, addr):
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(ConstantReference(refs[i].value, refs[i].size))
+		core.BNFreeConstantReferenceList(refs)
+		return result
+
 	def get_lifted_il_at(self, arch, addr):
 		return core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
 
@@ -4645,7 +4981,76 @@ class Function(object):
 			display_type = core.BNIntegerDisplayType_by_name[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
 
-class BasicBlockEdge:
+	def reanalyze(self):
+		"""
+		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
+
+		:rtype: None
+		"""
+		core.BNReanalyzeFunction(self.handle)
+
+	def request_advanced_analysis_data(self):
+		core.BNRequestAdvancedFunctionAnalysisData(self.handle)
+		self._advanced_analysis_requests += 1
+
+	def release_advanced_analysis_data(self):
+		core.BNReleaseAdvancedFunctionAnalysisData(self.handle)
+		self._advanced_analysis_requests -= 1
+
+	def get_basic_block_at(self, arch, addr):
+		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
+		if not block:
+			return None
+		return BasicBlock(self._view, handle = block)
+
+	def get_instr_highlight(self, arch, addr):
+		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
+		if color.style == core.StandardHighlightColor:
+			return HighlightColor(color = color.color, alpha = color.alpha)
+		elif color.style == core.MixedHighlightColor:
+			return HighlightColor(color = color.color, mix_color = color.mixColor, mix = color.mix, alpha = color.alpha)
+		elif color.style == core.CustomHighlightColor:
+			return HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
+		return HighlightColor(color = core.NoHighlightColor)
+
+	def set_auto_instr_highlight(self, arch, addr, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+
+	def set_user_instr_highlight(self, arch, addr, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+
+class AdvancedFunctionAnalysisDataRequestor(object):
+	def __init__(self, func = None):
+		self._function = func
+		if self._function is not None:
+			self._function.request_advanced_analysis_data()
+
+	def __del__(self):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+
+	@property
+	def function(self):
+		return self._function
+
+	@function.setter
+	def function(self, func):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+		self._function = func
+		if self._function is not None:
+			self._function.request_advanced_analysis_data()
+
+	def close(self):
+		if self._function is not None:
+			self._function.release_advanced_analysis_data()
+		self._function = None
+
+class BasicBlockEdge(object):
 	def __init__(self, branch_type, target, arch):
 		self.type = core.BNBranchType_names[branch_type]
 		if self.type != "UnresolvedBranch":
@@ -4730,6 +5135,22 @@ class BasicBlock(object):
 	def disassembly_text(self):
 		return self.get_disassembly_text()
 
+	@property
+	def highlight(self):
+		"""Highlight color for basic block"""
+		color = core.BNGetBasicBlockHighlight(self.handle)
+		if color.style == core.StandardHighlightColor:
+			return HighlightColor(color = color.color, alpha = color.alpha)
+		elif color.style == core.MixedHighlightColor:
+			return HighlightColor(color = color.color, mix_color = color.mixColor, mix = color.mix, alpha = color.alpha)
+		elif color.style == core.CustomHighlightColor:
+			return HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
+		return HighlightColor(color = core.NoHighlightColor)
+
+	@highlight.setter
+	def highlight(self, value):
+		self.set_user_highlight(value)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -4784,6 +5205,16 @@ class BasicBlock(object):
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
+	def set_auto_highlight(self, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
+
+	def set_user_highlight(self, color):
+		if not isinstance(color, HighlightColor):
+			color = HighlightColor(color = color)
+		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
+
 class LowLevelILBasicBlock(BasicBlock):
 	def __init__(self, view, handle, owner):
 		super(LowLevelILBasicBlock, self).__init__(view, handle)
@@ -4793,7 +5224,7 @@ class LowLevelILBasicBlock(BasicBlock):
 		for idx in xrange(self.start, self.end):
 			yield self.il_function[idx]
 
-class DisassemblyTextLine:
+class DisassemblyTextLine(object):
 	def __init__(self, addr, tokens):
 		self.address = addr
 		self.tokens = tokens
@@ -4825,6 +5256,19 @@ class FunctionGraphBlock(object):
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
+
+	@property
+	def basic_block(self):
+		"""Basic block associated with this part of the funciton graph (read-only)"""
+		block = core.BNGetFunctionGraphBasicBlock(self.handle)
+		func = core.BNGetBasicBlockFunction(block)
+		if func is None:
+			core.BNFreeBasicBlock(block)
+			block = None
+		else:
+			block = BasicBlock(BinaryView(None, handle = core.BNGetFunctionData(func)), block)
+			core.BNFreeFunction(func)
+		return block
 
 	@property
 	def arch(self):
@@ -4962,12 +5406,12 @@ class DisassemblySettings(object):
 
 	def is_option_set(self, option):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption_by_name(option)
+			option = core.BNDisassemblyOption_by_name[option]
 		return core.BNIsDisassemblySettingsOptionSet(self.handle, option)
 
 	def set_option(self, option, state = True):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption_by_name(option)
+			option = core.BNDisassemblyOption_by_name[option]
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 class FunctionGraph(object):
@@ -5111,7 +5555,7 @@ class FunctionGraph(object):
 			option = core.BNDisassemblyOption_by_name(option)
 		core.BNSetFunctionGraphOption(self.handle, option, state)
 
-class RegisterInfo:
+class RegisterInfo(object):
 	def __init__(self, full_width_reg, size, offset = 0, extend = core.NoExtend, index = None):
 		self.full_width_reg = full_width_reg
 		self.offset = offset
@@ -5128,7 +5572,7 @@ class RegisterInfo:
 			extend = ""
 		return "<reg: size %d, offset %d in %s%s>" % (self.size, self.offset, self.full_width_reg, extend)
 
-class InstructionBranch:
+class InstructionBranch(object):
 	def __init__(self, branch_type, target = 0, arch = None):
 		self.type = branch_type
 		self.target = target
@@ -5142,7 +5586,7 @@ class InstructionBranch:
 			return "<%s: %s@%#x>" % (branch_type, self.arch.name, self.target)
 		return "<%s: %#x>" % (branch_type, self.target)
 
-class InstructionInfo:
+class InstructionInfo(object):
 	def __init__(self):
 		self.length = 0
 		self.branch_delay = False
@@ -5157,7 +5601,7 @@ class InstructionInfo:
 			branch_delay = ", delay slot"
 		return "<instr: %d bytes%s, %s>" % (self.length, branch_delay, repr(self.branches))
 
-class InstructionTextToken:
+class InstructionTextToken(object):
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
@@ -5254,7 +5698,7 @@ class _ArchitectureMetaClass(type):
 
 class Architecture(object):
 	"""
-	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implemnt assembly,
+	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implement assembly,
 	disassembly, IL lifting, and patching.
 
 	``class Architecture`` has a ``__metaclass__`` with the additional methods ``register``, and supports
@@ -5354,7 +5798,7 @@ class Architecture(object):
 
 			self._flags_required_for_flag_condition = {}
 			self.__dict__["flags_required_for_flag_condition"] = {}
-			for cond in core.BNLowLevelILFlagCondition_names.keys():
+			for cond in core.BNLowLevelILFlagCondition_names:
 				count = ctypes.c_ulonglong()
 				flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, count)
 				flag_indexes = []
@@ -5441,7 +5885,7 @@ class Architecture(object):
 			self._regs_by_index = {}
 			self.__dict__["regs"] = self.__class__.regs
 			reg_index = 0
-			for reg in self.regs.keys():
+			for reg in self.regs:
 				info = self.regs[reg]
 				if reg not in self._all_regs:
 					self._all_regs[reg] = reg_index
@@ -5478,7 +5922,7 @@ class Architecture(object):
 
 			self._flag_roles = {}
 			self.__dict__["flag_roles"] = self.__class__.flag_roles
-			for flag in self.__class__.flag_roles.keys():
+			for flag in self.__class__.flag_roles:
 				role = self.__class__.flag_roles[flag]
 				if isinstance(role, str):
 					role = core.BNFlagRole_by_name[role]
@@ -5486,7 +5930,7 @@ class Architecture(object):
 
 			self._flags_required_for_flag_condition = {}
 			self.__dict__["flags_required_for_flag_condition"] = self.__class__.flags_required_for_flag_condition
-			for cond in self.__class__.flags_required_for_flag_condition.keys():
+			for cond in self.__class__.flags_required_for_flag_condition:
 				flags = []
 				for flag in self.__class__.flags_required_for_flag_condition[cond]:
 					flags.append(self._flags[flag])
@@ -5494,7 +5938,7 @@ class Architecture(object):
 
 			self._flags_written_by_flag_write_type = {}
 			self.__dict__["flags_written_by_flag_write_type"] = self.__class__.flags_written_by_flag_write_type
-			for write_type in self.__class__.flags_written_by_flag_write_type.keys():
+			for write_type in self.__class__.flags_written_by_flag_write_type:
 				flags = []
 				for flag in self.__class__.flags_written_by_flag_write_type[write_type]:
 					flags.append(self._flags[flag])
@@ -5604,7 +6048,7 @@ class Architecture(object):
 				else:
 					result[0].branchArch[i] = info.branches[i].arch.handle
 			return True
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return False
 
@@ -5621,7 +6065,7 @@ class Architecture(object):
 			token_buf = (core.BNInstructionTextToken * len(tokens))()
 			for i in xrange(0, len(tokens)):
 				if isinstance(tokens[i].type, str):
-					token_buf[i].type = BNInstructionTextTokenType_by_name[tokens[i].type]
+					token_buf[i].type = core.BNInstructionTextTokenType_by_name[tokens[i].type]
 				else:
 					token_buf[i].type = tokens[i].type
 				token_buf[i].text = tokens[i].text
@@ -5632,7 +6076,7 @@ class Architecture(object):
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
 			return True
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return False
 
@@ -5642,7 +6086,7 @@ class Architecture(object):
 			if buf.value not in self._pending_token_lists:
 				raise ValueError, "freeing token list that wasn't allocated"
 			del self._pending_token_lists[buf.value]
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 
 	def _get_instruction_low_level_il(self, ctxt, data, addr, length, il):
@@ -5655,7 +6099,7 @@ class Architecture(object):
 				return False
 			length[0] = result
 			return True
-		except:
+		except OSError:
 			log_error(traceback.format_exc())
 			return False
 
@@ -5664,7 +6108,7 @@ class Architecture(object):
 			if reg in self._regs_by_index:
 				return core.BNAllocString(self._regs_by_index[reg])
 			return core.BNAllocString("")
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -5673,7 +6117,7 @@ class Architecture(object):
 			if flag in self._flags_by_index:
 				return core.BNAllocString(self._flags_by_index[flag])
 			return core.BNAllocString("")
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -5682,7 +6126,7 @@ class Architecture(object):
 			if write_type in self._flag_write_types_by_index:
 				return core.BNAllocString(self._flag_write_types_by_index[write_type])
 			return core.BNAllocString("")
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -5696,7 +6140,7 @@ class Architecture(object):
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5711,7 +6155,7 @@ class Architecture(object):
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5726,7 +6170,7 @@ class Architecture(object):
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5741,7 +6185,7 @@ class Architecture(object):
 			result = ctypes.cast(type_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, type_buf)
 			return result.value
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5751,7 +6195,7 @@ class Architecture(object):
 			if flag in self._flag_roles:
 				return self._flag_roles[flag]
 			return core.SpecialFlagRole
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			return None
 
@@ -5768,7 +6212,7 @@ class Architecture(object):
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5786,7 +6230,7 @@ class Architecture(object):
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -5807,7 +6251,7 @@ class Architecture(object):
 					operand_list.append(("reg", self._regs_by_index[operands[i].reg]))
 			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
 				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
-		except:
+		except (KeyError, OSError):
 			log_error(traceback.format_exc())
 			return False
 
@@ -5815,7 +6259,7 @@ class Architecture(object):
 		try:
 			return self.perform_get_flag_condition_low_level_il(cond,
 				LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
-		except:
+		except OSError:
 			log_error(traceback.format_exc())
 			return 0
 
@@ -5825,7 +6269,7 @@ class Architecture(object):
 			if buf.value not in self._pending_reg_lists:
 				raise ValueError, "freeing register list that wasn't allocated"
 			del self._pending_reg_lists[buf.value]
-		except:
+		except (ValueError, KeyError):
 			log_error(traceback.format_exc())
 
 	def _get_register_info(self, ctxt, reg, result):
@@ -5844,7 +6288,7 @@ class Architecture(object):
 				result[0].extend = core.BNImplicitRegisterExtend_by_name[info.extend]
 			else:
 				result[0].extend = info.extend
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			result[0].fullWidthRegister = 0
 			result[0].offset = 0
@@ -5854,7 +6298,7 @@ class Architecture(object):
 	def _get_stack_pointer_register(self, ctxt):
 		try:
 			return self._all_regs[self.__class__.stack_pointer]
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			return 0
 
@@ -5863,7 +6307,7 @@ class Architecture(object):
 			if self.__class__.link_reg is None:
 				return 0xffffffff
 			return self._all_regs[self.__class__.link_reg]
-		except:
+		except KeyError:
 			log_error(traceback.format_exc())
 			return 0
 
@@ -5992,16 +6436,17 @@ class Architecture(object):
 			log_error(traceback.format_exc())
 			return False
 
+	@abc.abstractmethod
 	def perform_get_instruction_info(self, data, addr):
 		"""
 		``perform_get_instruction_info`` implements a method which interpretes the bytes passed in ``data`` as an
 		:py:Class:`InstructionInfo` object. The InstructionInfo object should have the length of the current instruction.
 		If the instruction is a branch instruction the method should add a branch of the proper type:
 
-			===================== =================================================
+			===================== ===================================================
 			BranchType            Description
-			===================== =================================================
-			UnconditionalBranch   Branch will alwasy be taken
+			===================== ===================================================
+			UnconditionalBranch   Branch will always be taken
 			FalseBranch           False branch condition
 			TrueBranch            True branch condition
 			CallDestination       Branch is a call instruction (Branch with Link)
@@ -6009,15 +6454,16 @@ class Architecture(object):
 			SystemCall            System call instruction
 			IndirectBranch        Branch destination is a memory address or register
 			UnresolvedBranch      Call instruction that isn't
-			===================== ==================================================
+			===================== ===================================================
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
 		:return: a :py:class:`InstructionInfo` object containing the length and branche types for the given instruction
 		:rtype: InstructionInfo
 		"""
-		return None
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_get_instruction_text(self, data, addr):
 		"""
 		``perform_get_instruction_text`` implements a method which interpretes the bytes passed in ``data`` as a
@@ -6028,8 +6474,9 @@ class Architecture(object):
 		:return: a tuple of list(InstructionTextToken) and length of instruction decoded
 		:rtype: tuple(list(InstructionTextToken), int)
 		"""
-		return None, None
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_get_instruction_low_level_il(self, data, addr, il):
 		"""
 		``perform_get_instruction_low_level_il`` implements a method to interpret the bytes passed in ``data`` to
@@ -6042,8 +6489,9 @@ class Architecture(object):
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
 		:rtype: None
 		"""
-		return None
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""
 		.. note:: Architecture subclasses should implement this method.
@@ -6059,6 +6507,7 @@ class Architecture(object):
 		"""
 		return il.unimplemented()
 
+	@abc.abstractmethod
 	def perform_get_flag_condition_low_level_il(self, cond, il):
 		"""
 		.. note:: Architecture subclasses should implement this method.
@@ -6070,6 +6519,7 @@ class Architecture(object):
 		"""
 		return il.unimplemented()
 
+	@abc.abstractmethod
 	def perform_assemble(self, code, addr):
 		"""
 		``perform_assemble`` implements a method to convert the string of assembly instructions ``code`` loaded at
@@ -6088,6 +6538,7 @@ class Architecture(object):
 		"""
 		return None, "Architecture does not implement an assembler.\n"
 
+	@abc.abstractmethod
 	def perform_is_never_branch_patch_available(self, data, addr):
 		"""
 		``perform_is_never_branch_patch_available`` implements a check to determine if the instruction represented by
@@ -6103,6 +6554,7 @@ class Architecture(object):
 		"""
 		return False
 
+	@abc.abstractmethod
 	def perform_is_always_branch_patch_available(self, data, addr):
 		"""
 		``perform_is_always_branch_patch_available`` implements a check to determine if the instruction represented by
@@ -6118,6 +6570,7 @@ class Architecture(object):
 		"""
 		return False
 
+	@abc.abstractmethod
 	def perform_is_invert_branch_patch_available(self, data, addr):
 		"""
 		``perform_is_invert_branch_patch_available`` implements a check to determine if the instruction represented by
@@ -6132,6 +6585,7 @@ class Architecture(object):
 		"""
 		return False
 
+	@abc.abstractmethod
 	def perform_is_skip_and_return_zero_patch_available(self, data, addr):
 		"""
 		``perform_is_skip_and_return_zero_patch_available`` implements a check to determine if the instruction represented by
@@ -6149,6 +6603,7 @@ class Architecture(object):
 		"""
 		return False
 
+	@abc.abstractmethod
 	def perform_is_skip_and_return_value_patch_available(self, data, addr):
 		"""
 		``perform_is_skip_and_return_value_patch_available`` implements a check to determine if the instruction represented by
@@ -6166,6 +6621,7 @@ class Architecture(object):
 		"""
 		return False
 
+	@abc.abstractmethod
 	def perform_convert_to_nop(self, data, addr):
 		"""
 		``perform_convert_to_nop`` implements a method which returns a nop sequence of len(data) bytes long.
@@ -6180,6 +6636,7 @@ class Architecture(object):
 		"""
 		return None
 
+	@abc.abstractmethod
 	def perform_always_branch(self, data, addr):
 		"""
 		``perform_always_branch`` implements a method which converts the branch represented by the bytes in ``data`` to
@@ -6195,6 +6652,7 @@ class Architecture(object):
 		"""
 		return None
 
+	@abc.abstractmethod
 	def perform_invert_branch(self, data, addr):
 		"""
 		``perform_invert_branch`` implements a method which inverts the branch represented by the bytes in ``data`` to
@@ -6210,6 +6668,7 @@ class Architecture(object):
 		"""
 		return None
 
+	@abc.abstractmethod
 	def perform_skip_and_return_value(self, data, addr, value):
 		"""
 		``perform_skip_and_return_value`` implements a method which converts a *call-like* instruction represented by
@@ -6751,6 +7210,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def parse_types_from_source_file(self, filename, include_dirs = []):
@@ -6791,6 +7251,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def register_calling_convention(self, cc):
@@ -6802,7 +7263,7 @@ class Architecture(object):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
-class ReferenceSource:
+class ReferenceSource(object):
 	def __init__(self, func, arch, addr):
 		self.function = func
 		self.arch = arch
@@ -6814,7 +7275,7 @@ class ReferenceSource:
 		else:
 			return "<ref: %#x>" % self.address
 
-class LowLevelILLabel:
+class LowLevelILLabel(object):
 	def __init__(self, handle = None):
 		if handle is None:
 			self.handle = (core.BNLowLevelILLabel * 1)()
@@ -6830,73 +7291,73 @@ class LowLevelILInstruction(object):
 	"""
 
 	ILOperations = {
-		core.LLIL_NOP: [],
-		core.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
+		core.LLIL_NOP:           [],
+		core.LLIL_SET_REG:       [("dest", "reg"), ("src", "expr")],
 		core.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
-		core.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
-		core.LLIL_LOAD: [("src", "expr")],
-		core.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
-		core.LLIL_PUSH: [("src", "expr")],
-		core.LLIL_POP: [],
-		core.LLIL_REG: [("src", "reg")],
-		core.LLIL_CONST: [("value", "int")],
-		core.LLIL_FLAG: [("src", "flag")],
-		core.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
-		core.LLIL_ADD:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_ADC:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_SUB:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_SBB:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_AND:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_OR:      [("left", "expr"), ("right", "expr")],
-		core.LLIL_XOR:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_LSL:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_LSR:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_ASR:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_ROL:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_RLC:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_ROR:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_RRC:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_MUL:     [("left", "expr"), ("right", "expr")],
-		core.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
-		core.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
-		core.LLIL_DIVU:    [("left", "expr"), ("right", "expr")],
-		core.LLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_DIVS:    [("left", "expr"), ("right", "expr")],
-		core.LLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_MODU:    [("left", "expr"), ("right", "expr")],
-		core.LLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_MODS:    [("left", "expr"), ("right", "expr")],
-		core.LLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.LLIL_NEG:     [("src", "expr")],
-		core.LLIL_NOT:     [("src", "expr")],
-		core.LLIL_SX:      [("src", "expr")],
-		core.LLIL_ZX:      [("src", "expr")],
-		core.LLIL_JUMP: [("dest", "expr")],
-		core.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
-		core.LLIL_CALL: [("dest", "expr")],
-		core.LLIL_RET: [("dest", "expr")],
-		core.LLIL_NORET: [],
-		core.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
-		core.LLIL_GOTO: [("dest", "int")],
-		core.LLIL_FLAG_COND: [("condition", "cond")],
-		core.LLIL_CMP_E:    [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_NE:   [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SLT:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_ULT:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SLE:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_ULE:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SGE:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_UGE:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_SGT:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_CMP_UGT:  [("left", "expr"), ("right", "expr")],
-		core.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
-		core.LLIL_BOOL_TO_INT: [("src", "expr")],
-		core.LLIL_SYSCALL: [],
-		core.LLIL_BP: [],
-		core.LLIL_TRAP: [("value", "int")],
-		core.LLIL_UNDEF: [],
-		core.LLIL_UNIMPL: [],
-		core.LLIL_UNIMPL_MEM: [("src", "expr")]
+		core.LLIL_SET_FLAG:      [("dest", "flag"), ("src", "expr")],
+		core.LLIL_LOAD:          [("src", "expr")],
+		core.LLIL_STORE:         [("dest", "expr"), ("src", "expr")],
+		core.LLIL_PUSH:          [("src", "expr")],
+		core.LLIL_POP:           [],
+		core.LLIL_REG:           [("src", "reg")],
+		core.LLIL_CONST:         [("value", "int")],
+		core.LLIL_FLAG:          [("src", "flag")],
+		core.LLIL_FLAG_BIT:      [("src", "flag"), ("bit", "int")],
+		core.LLIL_ADD:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_ADC:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_SUB:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_SBB:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_AND:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_OR:            [("left", "expr"), ("right", "expr")],
+		core.LLIL_XOR:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_LSL:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_LSR:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_ASR:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_ROL:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_RLC:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_ROR:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_RRC:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_MUL:           [("left", "expr"), ("right", "expr")],
+		core.LLIL_MULU_DP:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_MULS_DP:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_DIVU:          [("left", "expr"), ("right", "expr")],
+		core.LLIL_DIVU_DP:       [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		core.LLIL_DIVS:          [("left", "expr"), ("right", "expr")],
+		core.LLIL_DIVS_DP:       [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		core.LLIL_MODU:          [("left", "expr"), ("right", "expr")],
+		core.LLIL_MODU_DP:       [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		core.LLIL_MODS:          [("left", "expr"), ("right", "expr")],
+		core.LLIL_MODS_DP:       [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		core.LLIL_NEG:           [("src", "expr")],
+		core.LLIL_NOT:           [("src", "expr")],
+		core.LLIL_SX:            [("src", "expr")],
+		core.LLIL_ZX:            [("src", "expr")],
+		core.LLIL_JUMP:          [("dest", "expr")],
+		core.LLIL_JUMP_TO:       [("dest", "expr"), ("targets", "int_list")],
+		core.LLIL_CALL:          [("dest", "expr")],
+		core.LLIL_RET:           [("dest", "expr")],
+		core.LLIL_NORET:         [],
+		core.LLIL_IF:            [("condition", "expr"), ("true", "int"), ("false", "int")],
+		core.LLIL_GOTO:          [("dest", "int")],
+		core.LLIL_FLAG_COND:     [("condition", "cond")],
+		core.LLIL_CMP_E:         [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_NE:        [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SLT:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_ULT:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SLE:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_ULE:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SGE:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_UGE:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_SGT:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_CMP_UGT:       [("left", "expr"), ("right", "expr")],
+		core.LLIL_TEST_BIT:      [("left", "expr"), ("right", "expr")],
+		core.LLIL_BOOL_TO_INT:   [("src", "expr")],
+		core.LLIL_SYSCALL:       [],
+		core.LLIL_BP:            [],
+		core.LLIL_TRAP:          [("value", "int")],
+		core.LLIL_UNDEF:         [],
+		core.LLIL_UNIMPL:        [],
+		core.LLIL_UNIMPL_MEM:    [("src", "expr")]
 	}
 
 	def __init__(self, func, expr_index, instr_index = None):
@@ -6984,7 +7445,7 @@ class LowLevelILInstruction(object):
 		except AttributeError:
 			raise AttributeError, "attribute '%s' is read only" % name
 
-class LowLevelILExpr:
+class LowLevelILExpr(object):
 	"""
 	``class LowLevelILExpr`` hold the index of IL Expressions.
 
@@ -7028,7 +7489,10 @@ class LowLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
-			self.handle = core.BNCreateLowLevelILFunction(arch.handle)
+			func_handle = None
+			if self.source_function is not None:
+				func_handle = self.source_function.handle
+			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
@@ -7084,13 +7548,12 @@ class LowLevelILFunction(object):
 			raise IndexError, "index out of range"
 		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
 
-	def __setitem__(self, i):
+	def __setitem__(self, i, j):
 		raise IndexError, "instruction modification not implemented"
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
-		result = []
 		view = None
 		if self.source_function is not None:
 			view = self.source_function.view
@@ -7112,7 +7575,7 @@ class LowLevelILFunction(object):
 
 	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, size = 0, flags = None):
 		if isinstance(operation, str):
-			operation = BNLowLevelILOperation_by_name[operation]
+			operation = core.BNLowLevelILOperation_by_name[operation]
 		if isinstance(flags, str):
 			flags = self.arch.get_flag_write_type_by_name(flags)
 		elif flags is None:
@@ -7727,7 +8190,7 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		if isinstance(cond, str):
-			cond = BNLowLevelILFlagCondition_by_name[cond]
+			cond = core.BNLowLevelILFlagCondition_by_name[cond]
 		return self.expr(core.LLIL_FLAG_COND, cond)
 
 	def compare_equal(self, size, a, b):
@@ -7962,7 +8425,7 @@ class LowLevelILFunction(object):
 		:return: the label list expression
 		:rtype: LowLevelILExpr
 		"""
-		label_list = (ctypes.POINTER(BNLowLevelILLabel) * len(labels))()
+		label_list = (ctypes.POINTER(core.BNLowLevelILLabel) * len(labels))()
 		for i in xrange(len(labels)):
 			label_list[i] = labels[i].handle
 		return LowLevelILExpr(core.BNLowLevelILAddLabelList(self.handle, label_list, len(labels)))
@@ -7992,17 +8455,13 @@ class LowLevelILFunction(object):
 		core.BNLowLevelILSetExprSourceOperand(self.handle, expr.index, n)
 		return expr
 
-	def finalize(self, func = None):
+	def finalize(self):
 		"""
-		``finalize`` ends the provided LowLevelILLabel.
+		``finalize`` ends the function and computes the list of basic blocks.
 
-		:param LowLevelILFunction func: optional function to end
 		:rtype: None
 		"""
-		if func is None:
-			core.BNFinalizeLowLevelILFunction(self.handle, None)
-		else:
-			core.BNFinalizeLowLevelILFunction(self.handle, func.handle)
+		core.BNFinalizeLowLevelILFunction(self.handle)
 
 	def add_label_for_address(self, arch, addr):
 		"""
@@ -8032,7 +8491,7 @@ class LowLevelILFunction(object):
 			return None
 		return LowLevelILLabel(label)
 
-class TypeParserResult:
+class TypeParserResult(object):
 	def __init__(self, types, variables, functions):
 		self.types = types
 		self.variables = variables
@@ -8090,7 +8549,7 @@ class _TransformMetaClass(type):
 		cls._registered_cb = xform._cb
 		xform.handle = core.BNRegisterTransformType(cls.transform_type, cls.name, cls.long_name, cls.group, xform._cb)
 
-class TransformParameter:
+class TransformParameter(object):
 	def __init__(self, name, long_name = None, fixed_length = 0):
 		self.name = name
 		if long_name is None:
@@ -8199,11 +8658,13 @@ class Transform:
 			log_error(traceback.format_exc())
 			return False
 
+	@abc.abstractmethod
 	def perform_decode(self, data, params):
 		if self.type == "InvertingTransform":
-			return perform_encode(data, params)
+			return self.perform_encode(data, params)
 		return None
 
+	@abc.abstractmethod
 	def perform_encode(self, data, params):
 		return None
 
@@ -8235,7 +8696,7 @@ class Transform:
 			return None
 		return str(output_buf)
 
-class FunctionRecognizer:
+class FunctionRecognizer(object):
 	_instance = None
 
 	def __init__(self):
@@ -8334,7 +8795,7 @@ class _UpdateChannelMetaClass(type):
 			raise KeyError, "'%s' is not a valid channel" % str(name)
 		return result
 
-class UpdateProgressCallback:
+class UpdateProgressCallback(object):
 	def __init__(self, func):
 		self.cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(self.callback)
 		self.func = func
@@ -8422,7 +8883,7 @@ class UpdateChannel(object):
 			raise IOError, error_str
 		return core.BNUpdateResult_names[result]
 
-class UpdateVersion:
+class UpdateVersion(object):
 	def __init__(self, channel, ver, notes, t):
 		self.channel = channel
 		self.version = ver
@@ -8445,7 +8906,7 @@ class UpdateVersion:
 			raise IOError, error_str
 		return core.BNUpdateResult_names[result]
 
-class PluginCommandContext:
+class PluginCommandContext(object):
 	def __init__(self, view):
 		self.view = view
 		self.address = 0
@@ -8658,7 +9119,7 @@ class PluginCommand:
 	def __repr__(self):
 		return "<PluginCommand: %s>" % self.name
 
-class CallingConvention:
+class CallingConvention(object):
 	name = None
 	caller_saved_regs = []
 	int_arg_regs = []
@@ -9178,26 +9639,33 @@ class ScriptingInstance(object):
 		except:
 			log_error(traceback.format_exc())
 
+	@abc.abstractmethod
 	def perform_destroy_instance(self):
-		pass
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
 		return core.InvalidScriptInput
 
+	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
-		pass
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_set_current_function(self, func):
-		pass
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_set_current_basic_block(self, block):
-		pass
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_set_current_address(self, addr):
-		pass
+		raise NotImplementedError
 
+	@abc.abstractmethod
 	def perform_set_current_selection(self, begin, end):
-		pass
+		raise NotImplementedError
 
 	@property
 	def input_ready_state(self):
@@ -9484,6 +9952,15 @@ class PythonScriptingInstance(ScriptingInstance):
 						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
 
 						self.interpreter.runsource(code)
+
+						if self.locals["here"] != self.active_addr:
+							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
+								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
+						elif self.locals["current_address"] != self.active_addr:
+							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
+								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+					except:
+						traceback.print_exc()
 					finally:
 						PythonScriptingInstance._interpreter.value = None
 						self.instance.input_ready_state = core.ReadyForScriptExecution
@@ -9512,9 +9989,11 @@ class PythonScriptingInstance(ScriptingInstance):
 		self.queued_input = ""
 		self.input_ready_state = core.ReadyForScriptExecution
 
+	@abc.abstractmethod
 	def perform_destroy_instance(self):
 		self.interpreter.end()
 
+	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
 		if self.input_ready_state == core.NotReadyForInput:
 			return core.InvalidScriptInput
@@ -9539,18 +10018,23 @@ class PythonScriptingInstance(ScriptingInstance):
 		self.interpreter.execute(text)
 		return core.SuccessfulScriptExecution
 
+	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
 
+	@abc.abstractmethod
 	def perform_set_current_function(self, func):
 		self.interpreter.current_func = func
 
+	@abc.abstractmethod
 	def perform_set_current_basic_block(self, block):
 		self.interpreter.current_block = block
 
+	@abc.abstractmethod
 	def perform_set_current_address(self, addr):
 		self.interpreter.current_addr = addr
 
+	@abc.abstractmethod
 	def perform_set_current_selection(self, begin, end):
 		self.interpreter.current_selection_begin = begin
 		self.interpreter.current_selection_end = end
@@ -9596,6 +10080,508 @@ class MainThreadActionHandler(object):
 
 	def add_action(self, action):
 		pass
+
+class _BackgroundTaskMetaclass(type):
+	@property
+	def list(self):
+		"""List all running background tasks (read-only)"""
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i])))
+		core.BNFreeBackgroundTaskList(tasks)
+		return result
+
+	def __iter__(self):
+		_init_plugins()
+		count = ctypes.c_ulonglong()
+		tasks = core.BNGetRunningBackgroundTasks(count)
+		try:
+			for i in xrange(0, count.value):
+				yield BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i]))
+		finally:
+			core.BNFreeBackgroundTaskList(tasks)
+
+class BackgroundTask(object):
+	__metaclass__ = _BackgroundTaskMetaclass
+
+	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
+		if handle is None:
+			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeBackgroundTask(self.handle)
+
+	@property
+	def progress(self):
+		"""Text description of the progress of the background task (displayed in status bar of the UI)"""
+		return core.BNGetBackgroundTaskProgressText(self.handle)
+
+	@progress.setter
+	def progress(self, value):
+		core.BNSetBackgroundTaskProgressText(self.handle, str(value))
+
+	@property
+	def can_cancel(self):
+		"""Whether the task can be cancelled (read-only)"""
+		return core.BNCanCancelBackgroundTask(self.handle)
+
+	@property
+	def finished(self):
+		"""Whether the task has finished"""
+		return core.BNIsBackgroundTaskFinished(self.handle)
+
+	@finished.setter
+	def finished(self, value):
+		if value:
+			self.finish()
+
+	def finish(self):
+		core.BNFinishBackgroundTask(self.handle)
+
+	@property
+	def cancelled(self):
+		"""Whether the task has been cancelled"""
+		return core.BNIsBackgroundTaskCancelled(self.handle)
+
+	@cancelled.setter
+	def cancelled(self, value):
+		if value:
+			self.cancel()
+
+	def cancel(self):
+		core.BNCancelBackgroundTask(self.handle)
+
+class BackgroundTaskThread(BackgroundTask):
+	def __init__(self, initial_progress_text = "", can_cancel = False):
+		class _Thread(threading.Thread):
+			def __init__(self, task):
+				threading.Thread.__init__(self)
+				self.task = task
+
+			def run(self):
+				self.task.run()
+				self.task.finish()
+				self.task = None
+
+		BackgroundTask.__init__(self, initial_progress_text, can_cancel)
+		self.thread = _Thread(self)
+
+	def run(self):
+		pass
+
+	def start(self):
+		self.thread.start()
+
+	def join(self):
+		self.thread.join()
+
+class LabelField(object):
+	def __init__(self, text):
+		self.text = text
+
+	def _fill_core_struct(self, value):
+		value.type = core.LabelFormField
+		value.prompt = self.text
+
+	def _fill_core_result(self, value):
+		pass
+
+	def _get_result(self, value):
+		pass
+
+class SeparatorField(object):
+	def _fill_core_struct(self, value):
+		value.type = core.SeparatorFormField
+
+	def _fill_core_result(self, value):
+		pass
+
+	def _get_result(self, value):
+		pass
+
+class TextLineField(object):
+	def __init__(self, prompt):
+		self.prompt = prompt
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.TextLineFormField
+		value.prompt = self.prompt
+
+	def _fill_core_result(self, value):
+		value.stringResult = core.BNAllocString(str(self.result))
+
+	def _get_result(self, value):
+		self.result = value.stringResult
+
+class MultilineTextField(object):
+	def __init__(self, prompt):
+		self.prompt = prompt
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.MultilineTextFormField
+		value.prompt = self.prompt
+
+	def _fill_core_result(self, value):
+		value.stringResult = core.BNAllocString(str(self.result))
+
+	def _get_result(self, value):
+		self.result = value.stringResult
+
+class IntegerField(object):
+	def __init__(self, prompt):
+		self.prompt = prompt
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.IntegerFormField
+		value.prompt = self.prompt
+
+	def _fill_core_result(self, value):
+		value.intResult = self.result
+
+	def _get_result(self, value):
+		self.result = value.intResult
+
+class AddressField(object):
+	def __init__(self, prompt, view = None, current_address = 0):
+		self.prompt = prompt
+		self.view = view
+		self.current_address = current_address
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.AddressFormField
+		value.prompt = self.prompt
+		value.view = None
+		if self.view is not None:
+			value.view = self.view.handle
+		value.currentAddress = self.current_address
+
+	def _fill_core_result(self, value):
+		value.addressResult = self.result
+
+	def _get_result(self, value):
+		self.result = value.addressResult
+
+class ChoiceField(object):
+	def __init__(self, prompt, choices):
+		self.prompt = prompt
+		self.choices = choices
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.ChoiceFormField
+		value.prompt = self.prompt
+		choice_buf = (ctypes.c_char_p * len(self.choices))()
+		for i in xrange(0, len(self.choices)):
+			choice_buf[i] = str(self.choices[i])
+		value.choices = choice_buf
+		value.count = len(self.choices)
+
+	def _fill_core_result(self, value):
+		value.indexResult = self.result
+
+	def _get_result(self, value):
+		self.result = value.indexResult
+
+class OpenFileNameField(object):
+	def __init__(self, prompt, ext = ""):
+		self.prompt = prompt
+		self.ext = ext
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.OpenFileNameFormField
+		value.prompt = self.prompt
+		value.ext = self.ext
+
+	def _fill_core_result(self, value):
+		value.stringResult = core.BNAllocString(str(self.result))
+
+	def _get_result(self, value):
+		self.result = value.stringResult
+
+class SaveFileNameField(object):
+	def __init__(self, prompt, ext = "", default_name = ""):
+		self.prompt = prompt
+		self.ext = ext
+		self.default_name = default_name
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.SaveFileNameFormField
+		value.prompt = self.prompt
+		value.ext = self.ext
+		value.defaultName = self.default_name
+
+	def _fill_core_result(self, value):
+		value.stringResult = core.BNAllocString(str(self.result))
+
+	def _get_result(self, value):
+		self.result = value.stringResult
+
+class DirectoryNameField(object):
+	def __init__(self, prompt, default_name = ""):
+		self.prompt = prompt
+		self.default_name = default_name
+		self.result = None
+
+	def _fill_core_struct(self, value):
+		value.type = core.DirectoryNameField
+		value.prompt = self.prompt
+		value.defaultName = self.default_name
+
+	def _fill_core_result(self, value):
+		value.stringResult = core.BNAllocString(str(self.result))
+
+	def _get_result(self, value):
+		self.result = value.stringResult
+
+class InteractionHandler(object):
+	_interaction_handler = None
+
+	def __init__(self):
+		self._cb = core.BNInteractionHandlerCallbacks()
+		self._cb.context = 0
+		self._cb.showPlainTextReport = self._cb.showPlainTextReport.__class__(self._show_plain_text_report)
+		self._cb.showMarkdownReport = self._cb.showMarkdownReport.__class__(self._show_markdown_report)
+		self._cb.showHTMLReport = self._cb.showHTMLReport.__class__(self._show_html_report)
+		self._cb.getTextLineInput = self._cb.getTextLineInput.__class__(self._get_text_line_input)
+		self._cb.getIntegerInput = self._cb.getIntegerInput.__class__(self._get_int_input)
+		self._cb.getAddressInput = self._cb.getAddressInput.__class__(self._get_address_input)
+		self._cb.getChoiceInput = self._cb.getChoiceInput.__class__(self._get_choice_input)
+		self._cb.getOpenFileNameInput = self._cb.getOpenFileNameInput.__class__(self._get_open_filename_input)
+		self._cb.getSaveFileNameInput = self._cb.getSaveFileNameInput.__class__(self._get_save_filename_input)
+		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
+		self._cb.getFormInput = self._cb.getFormInput.__class__(self._get_form_input)
+		self._cb.showMessageBox = self._cb.showMessageBox.__class__(self._show_message_box)
+
+	def register(self):
+		self.__class__._interaction_handler = self
+		core.BNRegisterInteractionHandler(self._cb)
+
+	def _show_plain_text_report(self, ctxt, view, title, contents):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_plain_text_report(view, title, contents)
+		except:
+			log_error(traceback.format_exc())
+
+	def _show_markdown_report(self, ctxt, view, title, contents, plaintext):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_markdown_report(view, title, contents, plaintext)
+		except:
+			log_error(traceback.format_exc())
+
+	def _show_html_report(self, ctxt, view, title, contents, plaintext):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_html_report(view, title, contents, plaintext)
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_text_line_input(self, ctxt, result, prompt, title):
+		try:
+			value = self.get_text_line_input(prompt, title)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_int_input(self, ctxt, result, prompt, title):
+		try:
+			value = self.get_int_input(prompt, title)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_address_input(self, ctxt, result, prompt, title, view, current_address):
+		try:
+			if view:
+				view = BinaryView(None, handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			value = self.get_address_input(prompt, title, view, current_address)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_choice_input(self, ctxt, result, prompt, title, choice_buf, count):
+		try:
+			choices = []
+			for i in xrange(0, count):
+				choices.append(choice_buf[i])
+			value = self.get_choice_input(prompt, title, choices)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_open_filename_input(self, ctxt, result, prompt, ext):
+		try:
+			value = self.get_open_filename_input(prompt, ext)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_save_filename_input(self, ctxt, result, prompt, ext, default_name):
+		try:
+			value = self.get_save_filename_input(prompt, ext, default_name)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_directory_name_input(self, ctxt, result, prompt, default_name):
+		try:
+			value = self.get_directory_name_input(prompt, default_name)
+			if value is None:
+				return False
+			result[0] = core.BNAllocString(str(value))
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_form_input(self, ctxt, fields, count, title):
+		try:
+			field_objs = []
+			for i in xrange(0, count):
+				if fields[i].type == core.LabelFormField:
+					field_objs.append(LabelField(fields[i].prompt))
+				elif fields[i].type == core.SeparatorFormField:
+					field_objs.append(SeparatorField())
+				elif fields[i].type == core.TextLineFormField:
+					field_objs.append(TextLineField(fields[i].prompt))
+				elif fields[i].type == core.MultilineTextFormField:
+					field_objs.append(MultilineTextField(fields[i].prompt))
+				elif fields[i].type == core.IntegerFormField:
+					field_objs.append(IntegerField(fields[i].prompt))
+				elif fields[i].type == core.AddressFormField:
+					view = None
+					if fields[i].view:
+						view = BinaryView(None, handle = core.BNNewViewReference(fields[i].view))
+					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
+				elif fields[i].type == core.ChoiceFormField:
+					choices = []
+					for i in xrange(0, fields[i].count):
+						choices.append(fields[i].choices[i])
+					field_objs.append(ChoiceField(fields[i].prompt, choices))
+				elif fields[i].type == core.OpenFileNameFormField:
+					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext))
+				elif fields[i].type == core.SaveFileNameFormField:
+					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName))
+				elif fields[i].type == core.DirectoryNameField:
+					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName))
+				else:
+					field_objs.append(LabelField(fields[i].prompt))
+			if not self.get_form_input(field_objs, title):
+				return False
+			for i in xrange(0, count):
+				field_objs[i]._fill_core_result(fields[i])
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _show_message_box(self, ctxt, title, text, buttons, icon):
+		try:
+			return self.show_message_box(title, text, buttons, icon)
+		except:
+			log_error(traceback.format_exc())
+
+	def show_plain_text_report(self, view, title, contents):
+		pass
+
+	def show_markdown_report(self, view, title, contents, plaintext):
+		self.show_html_report(view, title, markdown_to_html(contents), plaintext)
+
+	def show_html_report(self, view, title, contents, plaintext):
+		if len(plaintext) != 0:
+			self.show_plain_text_report(view, title, plaintext)
+
+	def get_text_line_input(self, prompt, title):
+		return None
+
+	def get_int_input(self, prompt, title):
+		while True:
+			text = self.get_text_line_input(prompt, title)
+			if len(text) == 0:
+				return False
+			try:
+				return int(text)
+			except:
+				continue
+
+	def get_address_input(self, prompt, title, view, current_address):
+		return get_int_input(prompt, title)
+
+	def get_choice_input(self, prompt, title, choices):
+		return None
+
+	def get_open_filename_input(self, prompt, ext):
+		return get_text_line_input(prompt, "Open File")
+
+	def get_save_filename_input(self, prompt, ext, default_name):
+		return get_text_line_input(title, "Save File")
+
+	def get_directory_name_input(self, prompt, default_name):
+		return get_text_line_input(title, "Select Directory")
+
+	def get_form_input(self, fields, title):
+		return False
+
+	def show_message_box(self, title, text, buttons, icon):
+		return core.CancelButton
+
+class _DestructionCallbackHandler:
+	def __init__(self):
+		self._cb = core.BNObjectDestructionCallbacks()
+		self._cb.context = 0
+		self._cb.destructBinaryView = self._cb.destructBinaryView.__class__(self.destruct_binary_view)
+		self._cb.destructFileMetadata = self._cb.destructFileMetadata.__class__(self.destruct_file_metadata)
+		self._cb.destructFunction = self._cb.destructFunction.__class__(self.destruct_function)
+		core.BNRegisterObjectDestructionCallbacks(self._cb)
+
+	def destruct_binary_view(self, ctxt, view):
+		BinaryView._unregister(view)
+
+	def destruct_file_metadata(self, ctxt, f):
+		FileMetadata._unregister(f)
+
+	def destruct_function(self, ctxt, func):
+		Function._unregister(func)
+
+_destruct_callbacks = _DestructionCallbackHandler()
 
 def LLIL_TEMP(n):
 	return n | 0x80000000
@@ -9851,15 +10837,17 @@ def demangle_ms(arch, mangled_name):
 	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
+		#core.BNFreeDemangledName(outName.value, outSize.value)
 		return (Type(handle), names)
-	return (None, mangledName)
+	return (None, mangled_name)
+
 
 _output_to_log = False
 def redirect_output_to_log():
 	global _output_to_log
 	_output_to_log = True
 
-class _MainThreadActionContext:
+class _ThreadActionContext(object):
 	_actions = []
 
 	def __init__(self, func):
@@ -9882,15 +10870,118 @@ class _MainThreadActionContext:
 			self.__class__._actions.remove(self)
 
 def execute_on_main_thread(func):
-	action = _MainThreadActionContext(func)
+	action = _ThreadActionContext(func)
 	obj = core.BNExecuteOnMainThread(0, action.callback)
 	if obj:
 		return MainThreadAction(obj)
 	return None
 
 def execute_on_main_thread_and_wait(func):
-	action = _MainThreadActionContext(func)
+	action = _ThreadActionContext(func)
 	core.BNExecuteOnMainThreadAndWait(0, action.callback)
+
+def worker_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerEnqueue(0, action.callback)
+
+def worker_priority_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerPriorityEnqueue(0, action.callback)
+
+def worker_interactive_enqueue(func):
+	action = _ThreadActionContext(func)
+	core.BNWorkerInteractiveEnqueue(0, action.callback)
+
+def get_worker_thread_count():
+	return core.BNGetWorkerThreadCount()
+
+def set_worker_thread_count(count):
+	core.BNSetWorkerThreadCount(count)
+
+def markdown_to_html(contents):
+	return core.BNMarkdownToHTML(contents)
+
+def show_plain_text_report(title, contents):
+	core.BNShowPlainTextReport(None, title, contents)
+
+def show_markdown_report(title, contents, plaintext = ""):
+	core.BNShowMarkdownReport(None, title, contents, plaintext)
+
+def show_html_report(title, contents, plaintext = ""):
+	core.BNShowHTMLReport(None, title, contents, plaintext)
+
+def get_text_line_input(prompt, title):
+	value = ctypes.c_char_p()
+	if not core.BNGetTextLineInput(value, prompt, title):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_int_input(prompt, title):
+	value = ctypes.c_longlong()
+	if not core.BNGetIntegerInput(value, prompt, title):
+		return None
+	return value.value
+
+def get_address_input(prompt, title):
+	value = ctypes.c_ulonglong()
+	if not core.BNGetAddressInput(value, prompt, title, None, 0):
+		return None
+	return value.value
+
+def get_choice_input(prompt, title, choices):
+	choice_buf = (ctypes.c_char_p * len(choices))()
+	for i in xrange(0, len(choices)):
+		choice_buf[i] = str(choices[i])
+	value = ctypes.c_ulonglong()
+	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
+		return None
+	return value.value
+
+def get_open_filename_input(prompt, ext = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetOpenFileNameInput(value, prompt, ext):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_save_filename_input(prompt, ext = "", default_name = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetSaveFileNameInput(value, prompt, ext, default_name):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_directory_name_input(prompt, default_name = ""):
+	value = ctypes.c_char_p()
+	if not core.BNGetDirectoryNameInput(value, prompt, default_name):
+		return None
+	result = value.value
+	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	return result
+
+def get_form_input(fields, title):
+	value = (core.BNFormInputField * len(fields))()
+	for i in xrange(0, len(fields)):
+		if isinstance(fields[i], str):
+			LabelField(fields[i])._fill_core_struct(value[i])
+		elif fields[i] is None:
+			SeparatorField()._fill_core_struct(value[i])
+		else:
+			fields[i]._fill_core_struct(value[i])
+	if not core.BNGetFormInput(value, len(fields), title):
+		return False
+	for i in xrange(0, len(fields)):
+		if not (isinstance(fields[i], str) or (fields[i] is None)):
+			fields[i]._get_result(value[i])
+	core.BNFreeFormInputResults(value, len(fields))
+	return True
+
+def show_message_box(title, text, buttons = core.OKButtonSet, icon = core.InformationIcon):
+	return core.BNShowMessageBox(title, text, buttons, icon)
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()

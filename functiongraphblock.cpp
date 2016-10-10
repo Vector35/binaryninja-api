@@ -27,6 +27,14 @@ using namespace std;
 FunctionGraphBlock::FunctionGraphBlock(BNFunctionGraphBlock* block)
 {
 	m_object = block;
+	m_cachedLinesValid = false;
+	m_cachedEdgesValid = false;
+}
+
+
+Ref<BasicBlock> FunctionGraphBlock::GetBasicBlock() const
+{
+	return new BasicBlock(BNGetFunctionGraphBasicBlock(m_object));
 }
 
 
@@ -72,8 +80,11 @@ int FunctionGraphBlock::GetHeight() const
 }
 
 
-vector<DisassemblyTextLine> FunctionGraphBlock::GetLines() const
+const vector<DisassemblyTextLine>& FunctionGraphBlock::GetLines()
 {
+	if (m_cachedLinesValid)
+		return m_cachedLines;
+
 	size_t count;
 	BNDisassemblyTextLine* lines = BNGetFunctionGraphBlockLines(m_object, &count);
 
@@ -96,12 +107,17 @@ vector<DisassemblyTextLine> FunctionGraphBlock::GetLines() const
 	}
 
 	BNFreeDisassemblyTextLines(lines, count);
-	return result;
+	m_cachedLines = result;
+	m_cachedLinesValid = true;
+	return m_cachedLines;
 }
 
 
-vector<FunctionGraphEdge> FunctionGraphBlock::GetOutgoingEdges() const
+const vector<FunctionGraphEdge>& FunctionGraphBlock::GetOutgoingEdges()
 {
+	if (m_cachedEdgesValid)
+		return m_cachedEdges;
+
 	size_t count;
 	BNFunctionGraphEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_object, &count);
 
@@ -117,5 +133,7 @@ vector<FunctionGraphEdge> FunctionGraphBlock::GetOutgoingEdges() const
 	}
 
 	BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count);
-	return result;
+	m_cachedEdges = result;
+	m_cachedEdgesValid = true;
+	return m_cachedEdges;
 }

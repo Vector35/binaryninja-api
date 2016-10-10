@@ -30,9 +30,9 @@ LowLevelILLabel::LowLevelILLabel()
 }
 
 
-LowLevelILFunction::LowLevelILFunction(Architecture* arch)
+LowLevelILFunction::LowLevelILFunction(Architecture* arch, Function* func)
 {
-	m_object = BNCreateLowLevelILFunction(arch->GetObject());
+	m_object = BNCreateLowLevelILFunction(arch->GetObject(), func ? func->GetObject() : nullptr);
 }
 
 
@@ -559,9 +559,9 @@ BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, Ex
 }
 
 
-void LowLevelILFunction::Finalize(Function* func)
+void LowLevelILFunction::Finalize()
 {
-	BNFinalizeLowLevelILFunction(m_object, func ? func->GetObject() : nullptr);
+	BNFinalizeLowLevelILFunction(m_object);
 }
 
 

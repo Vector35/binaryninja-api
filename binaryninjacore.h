@@ -102,6 +102,7 @@ extern "C"
 	struct BNScriptingProvider;
 	struct BNScriptingInstance;
 	struct BNMainThreadAction;
+	struct BNBackgroundTask;
 
 	//! Console log levels
 	enum BNLogLevel
@@ -637,6 +638,7 @@ extern "C"
 		bool (*isOffsetReadable)(void* ctxt, uint64_t offset);
 		bool (*isOffsetWritable)(void* ctxt, uint64_t offset);
 		bool (*isOffsetExecutable)(void* ctxt, uint64_t offset);
+		bool (*isOffsetBackedByFile)(void* ctxt, uint64_t offset);
 		uint64_t (*getNextValidOffset)(void* ctxt, uint64_t offset);
 		uint64_t (*getStart)(void* ctxt);
 		uint64_t (*getLength)(void* ctxt);
@@ -1013,6 +1015,128 @@ extern "C"
 		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	};
 
+	struct BNConstantReference
+	{
+		int64_t value;
+		size_t size;
+	};
+
+	enum BNHighlightColorStyle
+	{
+		StandardHighlightColor = 0,
+		MixedHighlightColor = 1,
+		CustomHighlightColor = 2
+	};
+
+	enum BNHighlightStandardColor
+	{
+		NoHighlightColor = 0,
+		BlueHighlightColor = 1,
+		GreenHighlightColor = 2,
+		CyanHighlightColor = 3,
+		RedHighlightColor = 4,
+		MagentaHighlightColor = 5,
+		YellowHighlightColor = 6,
+		OrangeHighlightColor = 7,
+		WhiteHighlightColor = 8,
+		BlackHighlightColor = 9
+	};
+
+	struct BNHighlightColor
+	{
+		BNHighlightColorStyle style;
+		BNHighlightStandardColor color;
+		BNHighlightStandardColor mixColor;
+		uint8_t mix, r, g, b, alpha;
+	};
+
+	enum BNMessageBoxIcon
+	{
+		InformationIcon,
+		QuestionIcon,
+		WarningIcon,
+		ErrorIcon
+	};
+
+	enum BNMessageBoxButtonSet
+	{
+		OKButtonSet,
+		YesNoButtonSet,
+		YesNoCancelButtonSet
+	};
+
+	enum BNMessageBoxButtonResult
+	{
+		NoButton = 0,
+		YesButton = 1,
+		OKButton = 2,
+		CancelButton = 3
+	};
+
+	enum BNFormInputFieldType
+	{
+		LabelFormField,
+		SeparatorFormField,
+		TextLineFormField,
+		MultilineTextFormField,
+		IntegerFormField,
+		AddressFormField,
+		ChoiceFormField,
+		OpenFileNameFormField,
+		SaveFileNameFormField,
+		DirectoryNameFormField
+	};
+
+	struct BNFormInputField
+	{
+		BNFormInputFieldType type;
+		const char* prompt;
+		BNBinaryView* view; // For AddressFormField
+		uint64_t currentAddress; // For AddressFormField
+		const char** choices; // For ChoiceFormField
+		size_t count; // For ChoiceFormField
+		const char* ext; // For OpenFileNameFormField, SaveFileNameFormField
+		const char* defaultName; // For SaveFileNameFormField
+		int64_t intResult;
+		uint64_t addressResult;
+		char* stringResult;
+		size_t indexResult;
+	};
+
+	struct BNInteractionHandlerCallbacks
+	{
+		void* context;
+		void (*showPlainTextReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents);
+		void (*showMarkdownReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents,
+			const char* plaintext);
+		void (*showHTMLReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents,
+			const char* plaintext);
+		bool (*getTextLineInput)(void* ctxt, char** result, const char* prompt, const char* title);
+		bool (*getIntegerInput)(void* ctxt, int64_t* result, const char* prompt, const char* title);
+		bool (*getAddressInput)(void* ctxt, uint64_t* result, const char* prompt, const char* title,
+			BNBinaryView* view, uint64_t currentAddr);
+		bool (*getChoiceInput)(void* ctxt, size_t* result, const char* prompt, const char* title,
+			const char** choices, size_t count);
+		bool (*getOpenFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext);
+		bool (*getSaveFileNameInput)(void* ctxt, char** result, const char* prompt, const char* ext,
+			const char* defaultName);
+		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
+		bool (*getFormInput)(void* ctxt, BNFormInputField* fields, size_t count, const char* title);
+		BNMessageBoxButtonResult (*showMessageBox)(void* ctxt, const char* title, const char* text,
+			BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
+	};
+
+	struct BNObjectDestructionCallbacks
+	{
+		void* context;
+		// The provided pointers have a reference count of zero. Do not add additional references, doing so
+		// can lead to a double free. These are provided only for freeing additional state related to the
+		// objects passed.
+		void (*destructBinaryView)(void* ctxt, BNBinaryView* view);
+		void (*destructFileMetadata)(void* ctxt, BNFileMetadata* file);
+		void (*destructFunction)(void* ctxt, BNFunction* func);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 
@@ -1022,6 +1146,9 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);
 
 	BINARYNINJACOREAPI bool BNIsLicenseValidated(void);
+
+	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);
@@ -1034,7 +1161,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetPathRelativeToUserPluginDirectory(const char* path);
 
 	BINARYNINJACOREAPI bool BNExecuteWorkerProcess(const char* path, const char* args[],
-	                                               BNDataBuffer* input, char** output, char** error);
+	                                               BNDataBuffer* input, char** output, char** error,
+	                                               bool stdoutIsText, bool stderrIsText);
 
 	BINARYNINJACOREAPI void BNSetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	BINARYNINJACOREAPI void BNAddRequiredPluginDependency(const char* name);
@@ -1105,8 +1233,14 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsBackedByDatabase(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path);
+	BINARYNINJACOREAPI bool BNCreateDatabaseWithProgress(BNBinaryView* data, const char* path,
+		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabase(BNFileMetadata* file, const char* path);
+	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
+		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data);
+	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
+		void (*progress)(void* ctxt, size_t progress, size_t total));
 
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
@@ -1152,6 +1286,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsOffsetReadable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetWritable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetExecutable(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI bool BNIsOffsetBackedByFile(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetNextValidOffset(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetStartOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetEndOffset(BNBinaryView* view);
@@ -1369,6 +1504,10 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);
+	BINARYNINJACOREAPI void BNRequestAdvancedFunctionAnalysisData(BNFunction* func);
+	BINARYNINJACOREAPI void BNReleaseAdvancedFunctionAnalysisData(BNFunction* func);
+	BINARYNINJACOREAPI void BNReleaseAdvancedFunctionAnalysisDataMultiple(BNFunction* func, size_t count);
 
 	BINARYNINJACOREAPI BNFunction* BNNewFunctionReference(BNFunction* func);
 	BINARYNINJACOREAPI void BNFreeFunction(BNFunction* func);
@@ -1399,8 +1538,10 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionBasicBlockList(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockList(BNBasicBlock** blocks, size_t count);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionBasicBlockAtAddress(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetRecentBasicBlockForAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksForAddress(BNBinaryView* view, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksStartingAtAddress(BNBinaryView* view, uint64_t addr, size_t* count);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
@@ -1433,6 +1574,9 @@ extern "C"
 	BINARYNINJACOREAPI BNStackVariableReference* BNGetStackVariablesReferencedByInstruction(BNFunction* func, BNArchitecture* arch,
 	                                                                                        uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStackVariableReferenceList(BNStackVariableReference* refs, size_t count);
+	BINARYNINJACOREAPI BNConstantReference* BNGetConstantsReferencedByInstruction(BNFunction* func,
+		BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeConstantReferenceList(BNConstantReference* refs);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLiftedIL(BNFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLiftedILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
@@ -1549,6 +1693,18 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, const char* name);
 
+	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
+
+	BINARYNINJACOREAPI BNHighlightColor BNGetInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetAutoInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr,
+		BNHighlightColor color);
+	BINARYNINJACOREAPI void BNSetUserInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr,
+		BNHighlightColor color);
+	BINARYNINJACOREAPI BNHighlightColor BNGetBasicBlockHighlight(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNSetAutoBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+	BINARYNINJACOREAPI void BNSetUserBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);
@@ -1596,6 +1752,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFunctionGraphBlock* BNNewFunctionGraphBlockReference(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlock(BNFunctionGraphBlock* block);
 
+	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionGraphBasicBlock(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI BNArchitecture* BNGetFunctionGraphBlockArchitecture(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockStart(BNFunctionGraphBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockEnd(BNFunctionGraphBlock* block);
@@ -1640,7 +1797,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbol* BNImportedFunctionFromImportAddressSymbol(BNSymbol* sym, uint64_t addr);
 
 	// Low-level IL
-	BINARYNINJACOREAPI BNLowLevelILFunction* BNCreateLowLevelILFunction(BNArchitecture* arch);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNCreateLowLevelILFunction(BNArchitecture* arch, BNFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNNewLowLevelILFunctionReference(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI void BNFreeLowLevelILFunction(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI uint64_t BNLowLevelILGetCurrentAddress(BNLowLevelILFunction* func);
@@ -1656,7 +1813,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNLowLevelILIf(BNLowLevelILFunction* func, uint64_t op, BNLowLevelILLabel* t, BNLowLevelILLabel* f);
 	BINARYNINJACOREAPI void BNLowLevelILInitLabel(BNLowLevelILLabel* label);
 	BINARYNINJACOREAPI void BNLowLevelILMarkLabel(BNLowLevelILFunction* func, BNLowLevelILLabel* label);
-	BINARYNINJACOREAPI void BNFinalizeLowLevelILFunction(BNLowLevelILFunction* func, BNFunction* sourceFunc);
+	BINARYNINJACOREAPI void BNFinalizeLowLevelILFunction(BNLowLevelILFunction* func);
 
 	BINARYNINJACOREAPI size_t BNLowLevelILAddLabelList(BNLowLevelILFunction* func, BNLowLevelILLabel** labels, size_t count);
 	BINARYNINJACOREAPI size_t BNLowLevelILAddOperandList(BNLowLevelILFunction* func, uint64_t* operands, size_t count);
@@ -1939,6 +2096,52 @@ extern "C"
 	BINARYNINJACOREAPI void BNWaitForMainThreadAction(BNMainThreadAction* action);
 	BINARYNINJACOREAPI BNMainThreadAction* BNExecuteOnMainThread(void* ctxt, void (*func)(void* ctxt));
 	BINARYNINJACOREAPI void BNExecuteOnMainThreadAndWait(void* ctxt, void (*func)(void* ctxt));
+
+	// Worker thread queue management
+	BINARYNINJACOREAPI void BNWorkerEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerPriorityEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerInteractiveEnqueue(void* ctxt, void (*action)(void* ctxt));
+
+	BINARYNINJACOREAPI size_t BNGetWorkerThreadCount(void);
+	BINARYNINJACOREAPI void BNSetWorkerThreadCount(size_t count);
+
+	// Background task progress reporting
+	BINARYNINJACOREAPI BNBackgroundTask* BNBeginBackgroundTask(const char* initialText, bool canCancel);
+	BINARYNINJACOREAPI void BNFinishBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNSetBackgroundTaskProgressText(BNBackgroundTask* task, const char* text);
+	BINARYNINJACOREAPI bool BNIsBackgroundTaskCancelled(BNBackgroundTask* task);
+
+	BINARYNINJACOREAPI BNBackgroundTask** BNGetRunningBackgroundTasks(size_t* count);
+	BINARYNINJACOREAPI BNBackgroundTask* BNNewBackgroundTaskReference(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNFreeBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNFreeBackgroundTaskList(BNBackgroundTask** tasks, size_t count);
+	BINARYNINJACOREAPI char* BNGetBackgroundTaskProgressText(BNBackgroundTask* task);
+	BINARYNINJACOREAPI bool BNCanCancelBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI void BNCancelBackgroundTask(BNBackgroundTask* task);
+	BINARYNINJACOREAPI bool BNIsBackgroundTaskFinished(BNBackgroundTask* task);
+
+	// Interaction APIs
+	BINARYNINJACOREAPI void BNRegisterInteractionHandler(BNInteractionHandlerCallbacks* callbacks);
+	BINARYNINJACOREAPI char* BNMarkdownToHTML(const char* contents);
+	BINARYNINJACOREAPI void BNShowPlainTextReport(BNBinaryView* view, const char* title, const char* contents);
+	BINARYNINJACOREAPI void BNShowMarkdownReport(BNBinaryView* view, const char* title, const char* contents,
+		const char* plaintext);
+	BINARYNINJACOREAPI void BNShowHTMLReport(BNBinaryView* view, const char* title, const char* contents,
+		const char* plaintext);
+	BINARYNINJACOREAPI bool BNGetTextLineInput(char** result, const char* prompt, const char* title);
+	BINARYNINJACOREAPI bool BNGetIntegerInput(int64_t* result, const char* prompt, const char* title);
+	BINARYNINJACOREAPI bool BNGetAddressInput(uint64_t* result, const char* prompt, const char* title,
+		BNBinaryView* view, uint64_t currentAddr);
+	BINARYNINJACOREAPI bool BNGetChoiceInput(size_t* result, const char* prompt, const char* title,
+		const char** choices, size_t count);
+	BINARYNINJACOREAPI bool BNGetOpenFileNameInput(char** result, const char* prompt, const char* ext);
+	BINARYNINJACOREAPI bool BNGetSaveFileNameInput(char** result, const char* prompt, const char* ext,
+		const char* defaultName);
+	BINARYNINJACOREAPI bool BNGetDirectoryNameInput(char** result, const char* prompt, const char* defaultName);
+	BINARYNINJACOREAPI bool BNGetFormInput(BNFormInputField* fields, size_t count, const char* title);
+	BINARYNINJACOREAPI void BNFreeFormInputResults(BNFormInputField* fields, size_t count);
+	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
+		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 
 #ifdef __cplusplus
 }

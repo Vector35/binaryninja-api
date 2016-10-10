@@ -104,14 +104,26 @@ void FunctionGraph::Abort()
 }
 
 
-vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks() const
+vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 {
 	size_t count;
 	BNFunctionGraphBlock** blocks = BNGetFunctionGraphBlocks(m_graph, &count);
 
 	vector<Ref<FunctionGraphBlock>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new FunctionGraphBlock(BNNewFunctionGraphBlockReference(blocks[i])));
+	{
+		auto block = m_cachedBlocks.find(blocks[i]);
+		if (block == m_cachedBlocks.end())
+		{
+			FunctionGraphBlock* newBlock = new FunctionGraphBlock(BNNewFunctionGraphBlockReference(blocks[i]));
+			m_cachedBlocks[blocks[i]] = newBlock;
+			result.push_back(newBlock);
+		}
+		else
+		{
+			result.push_back(block->second);
+		}
+	}
 
 	BNFreeFunctionGraphBlockList(blocks, count);
 	return result;
@@ -137,7 +149,19 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocksInRegion(int left, int t
 
 	vector<Ref<FunctionGraphBlock>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new FunctionGraphBlock(BNNewFunctionGraphBlockReference(blocks[i])));
+	{
+		auto block = m_cachedBlocks.find(blocks[i]);
+		if (block == m_cachedBlocks.end())
+		{
+			FunctionGraphBlock* newBlock = new FunctionGraphBlock(BNNewFunctionGraphBlockReference(blocks[i]));
+			m_cachedBlocks[blocks[i]] = newBlock;
+			result.push_back(newBlock);
+		}
+		else
+		{
+			result.push_back(block->second);
+		}
+	}
 
 	BNFreeFunctionGraphBlockList(blocks, count);
 	return result;

@@ -21,6 +21,7 @@
 #pragma once
 
 #ifdef WIN32
+#define NOMINMAX
 #include <windows.h>
 #endif
 #include <stddef.h>
@@ -275,6 +276,8 @@ namespace BinaryNinja
 	class DataBuffer;
 	class MainThreadAction;
 	class MainThreadActionHandler;
+	class InteractionHandler;
+	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
 
@@ -346,7 +349,7 @@ namespace BinaryNinja
 	std::string GetPathRelativeToUserPluginDirectory(const std::string& path);
 
 	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
-	                          std::string& output, std::string& errors);
+	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);
 
 	std::string GetVersionString();
 	uint32_t GetBuildId();
@@ -370,6 +373,40 @@ namespace BinaryNinja
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
+
+	void WorkerEnqueue(const std::function<void()>& action);
+	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerPriorityEnqueue(const std::function<void()>& action);
+	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action);
+
+	size_t GetWorkerThreadCount();
+	void SetWorkerThreadCount(size_t count);
+
+	std::string MarkdownToHTML(const std::string& contents);
+
+	void RegisterInteractionHandler(InteractionHandler* handler);
+
+	void ShowPlainTextReport(const std::string& title, const std::string& contents);
+	void ShowMarkdownReport(const std::string& title, const std::string& contents,
+		const std::string& plainText = "");
+	void ShowHTMLReport(const std::string& title, const std::string& contents,
+		const std::string& plainText = "");
+
+	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
+	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
+	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+	bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
+		const std::vector<std::string>& choices);
+	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
+		const std::string& defaultName = "");
+	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
+	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
+
+	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
+		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
 	class DataBuffer
 	{
@@ -511,8 +548,14 @@ namespace BinaryNinja
 
 		bool IsBackedByDatabase() const;
 		bool CreateDatabase(const std::string& name, BinaryView* data);
+		bool CreateDatabase(const std::string& name, BinaryView* data,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
+		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		bool SaveAutoSnapshot(BinaryView* data);
+		bool SaveAutoSnapshot(BinaryView* data,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 
 		void BeginUndoActions();
 		void CommitUndoActions();
@@ -719,6 +762,7 @@ namespace BinaryNinja
 		virtual bool PerformIsOffsetReadable(uint64_t offset);
 		virtual bool PerformIsOffsetWritable(uint64_t offset);
 		virtual bool PerformIsOffsetExecutable(uint64_t offset);
+		virtual bool PerformIsOffsetBackedByFile(uint64_t offset);
 		virtual uint64_t PerformGetNextValidOffset(uint64_t offset);
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
@@ -745,6 +789,7 @@ namespace BinaryNinja
 		static bool IsOffsetReadableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetWritableCallback(void* ctxt, uint64_t offset);
 		static bool IsOffsetExecutableCallback(void* ctxt, uint64_t offset);
+		static bool IsOffsetBackedByFileCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetNextValidOffsetCallback(void* ctxt, uint64_t offset);
 		static uint64_t GetStartCallback(void* ctxt);
 		static uint64_t GetLengthCallback(void* ctxt);
@@ -766,7 +811,10 @@ namespace BinaryNinja
 		bool IsAnalysisChanged() const;
 		bool IsBackedByDatabase() const;
 		bool CreateDatabase(const std::string& path);
+		bool CreateDatabase(const std::string& path,
+			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		bool SaveAutoSnapshot();
+		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback);
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);
@@ -797,6 +845,7 @@ namespace BinaryNinja
 		bool IsOffsetReadable(uint64_t offset) const;
 		bool IsOffsetWritable(uint64_t offset) const;
 		bool IsOffsetExecutable(uint64_t offset) const;
+		bool IsOffsetBackedByFile(uint64_t offset) const;
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
 		uint64_t GetStart() const;
@@ -845,6 +894,7 @@ namespace BinaryNinja
 
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
+		std::vector<Ref<BasicBlock>> GetBasicBlocksStartingAtAddress(uint64_t addr);
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
@@ -857,13 +907,13 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type);
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
 
-		void DefineAutoSymbol(Symbol* sym);
-		void UndefineAutoSymbol(Symbol* sym);
+		void DefineAutoSymbol(Ref<Symbol> sym);
+		void UndefineAutoSymbol(Ref<Symbol> sym);
 
-		void DefineUserSymbol(Symbol* sym);
-		void UndefineUserSymbol(Symbol* sym);
+		void DefineUserSymbol(Ref<Symbol> sym);
+		void UndefineUserSymbol(Ref<Symbol> sym);
 
-		void DefineImportedFunction(Symbol* importAddressSym, Function* func);
+		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
 
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -904,12 +954,21 @@ namespace BinaryNinja
 		std::map<std::string, Ref<Type>> GetTypes();
 		Ref<Type> GetTypeByName(const std::string& name);
 		bool IsTypeAutoDefined(const std::string& name);
-		void DefineType(const std::string& name, Type* type);
-		void DefineUserType(const std::string& name, Type* type);
+		void DefineType(const std::string& name, Ref<Type> type);
+		void DefineUserType(const std::string& name, Ref<Type> type);
 		void UndefineType(const std::string& name);
 		void UndefineUserType(const std::string& name);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
+
+		void Reanalyze();
+
+		void ShowPlainTextReport(const std::string& title, const std::string& contents);
+		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
+			uint64_t currentAddress);
 	};
 
 	class BinaryData: public BinaryView
@@ -1536,6 +1595,18 @@ namespace BinaryNinja
 		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
 
 		std::vector<DisassemblyTextLine> GetDisassemblyText(DisassemblySettings* settings);
+
+		BNHighlightColor GetBasicBlockHighlight();
+		void SetAutoBasicBlockHighlight(BNHighlightColor color);
+		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+			uint8_t mix, uint8_t alpha = 255);
+		void SetAutoBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(BNHighlightColor color);
+		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
+			uint8_t mix, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 	};
 
 	struct StackVariable
@@ -1592,8 +1663,11 @@ namespace BinaryNinja
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
+		int m_advancedAnalysisRequests;
+
 	public:
 		Function(BNFunction* func);
+		virtual ~Function();
 
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Platform> GetPlatform() const;
@@ -1602,8 +1676,10 @@ namespace BinaryNinja
 		bool WasAutomaticallyDiscovered() const;
 		bool CanReturn() const;
 		bool HasExplicitlyDefinedType() const;
+		bool NeedsUpdate() const;
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const;
 		void MarkRecentUse();
 
 		std::string GetCommentForAddress(uint64_t addr) const;
@@ -1626,6 +1702,7 @@ namespace BinaryNinja
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
@@ -1643,8 +1720,8 @@ namespace BinaryNinja
 		Ref<FunctionGraph> CreateFunctionGraph();
 
 		std::map<int64_t, StackVariable> GetStackLayout();
-		void CreateAutoStackVariable(int64_t offset, Type* type, const std::string& name);
-		void CreateUserStackVariable(int64_t offset, Type* type, const std::string& name);
+		void CreateAutoStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
+		void CreateUserStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
@@ -1661,6 +1738,42 @@ namespace BinaryNinja
 			size_t operand);
 		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
 			BNIntegerDisplayType type);
+
+		BNHighlightColor GetInstructionHighlight(Architecture* arch, uint64_t addr);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			uint8_t alpha = 255);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+			uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
+			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
+			uint8_t alpha = 255);
+
+		void Reanalyze();
+
+		void RequestAdvancedAnalysisData();
+		void ReleaseAdvancedAnalysisData();
+		void ReleaseAdvancedAnalysisData(size_t count);
+	};
+
+	class AdvancedFunctionAnalysisDataRequestor
+	{
+		Ref<Function> m_func;
+
+	public:
+		AdvancedFunctionAnalysisDataRequestor(Function* func = nullptr);
+		AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req);
+		~AdvancedFunctionAnalysisDataRequestor();
+		AdvancedFunctionAnalysisDataRequestor& operator=(const AdvancedFunctionAnalysisDataRequestor& req);
+
+		Ref<Function> GetFunction() { return m_func; }
+		void SetFunction(Function* func);
 	};
 
 	struct FunctionGraphEdge
@@ -1674,9 +1787,14 @@ namespace BinaryNinja
 	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,
 		BNNewFunctionGraphBlockReference, BNFreeFunctionGraphBlock>
 	{
+		std::vector<DisassemblyTextLine> m_cachedLines;
+		std::vector<FunctionGraphEdge> m_cachedEdges;
+		bool m_cachedLinesValid, m_cachedEdgesValid;
+
 	public:
 		FunctionGraphBlock(BNFunctionGraphBlock* block);
 
+		Ref<BasicBlock> GetBasicBlock() const;
 		Ref<Architecture> GetArchitecture() const;
 		uint64_t GetStart() const;
 		uint64_t GetEnd() const;
@@ -1685,14 +1803,15 @@ namespace BinaryNinja
 		int GetWidth() const;
 		int GetHeight() const;
 
-		std::vector<DisassemblyTextLine> GetLines() const;
-		std::vector<FunctionGraphEdge> GetOutgoingEdges() const;
+		const std::vector<DisassemblyTextLine>& GetLines();
+		const std::vector<FunctionGraphEdge>& GetOutgoingEdges();
 	};
 
 	class FunctionGraph: public RefCountObject
 	{
 		BNFunctionGraph* m_graph;
 		std::function<void()> m_completeFunc;
+		std::map<BNFunctionGraphBlock*, Ref<FunctionGraphBlock>> m_cachedBlocks;
 
 		static void CompleteCallback(void* ctxt);
 
@@ -1715,7 +1834,7 @@ namespace BinaryNinja
 		void OnComplete(const std::function<void()>& func);
 		void Abort();
 
-		std::vector<Ref<FunctionGraphBlock>> GetBlocks() const;
+		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
 
 		int GetWidth() const;
 		int GetHeight() const;
@@ -1734,7 +1853,7 @@ namespace BinaryNinja
 		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
 	public:
-		LowLevelILFunction(Architecture* arch);
+		LowLevelILFunction(Architecture* arch, Function* func = nullptr);
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
 		uint64_t GetCurrentAddress() const;
@@ -1829,7 +1948,7 @@ namespace BinaryNinja
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
 
-		void Finalize(Function* func = nullptr);
+		void Finalize();
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
 		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
@@ -2174,5 +2293,77 @@ namespace BinaryNinja
 	{
 	public:
 		virtual void AddMainThreadAction(MainThreadAction* action) = 0;
+	};
+
+	class BackgroundTask: public CoreRefCountObject<BNBackgroundTask,
+		BNNewBackgroundTaskReference, BNFreeBackgroundTask>
+	{
+	public:
+		BackgroundTask(BNBackgroundTask* task);
+		BackgroundTask(const std::string& initialText, bool canCancel);
+
+		bool CanCancel() const;
+		bool IsCancelled() const;
+		bool IsFinished() const;
+		std::string GetProgressText() const;
+
+		void Cancel();
+		void Finish();
+		void SetProgressText(const std::string& text);
+
+		static std::vector<Ref<BackgroundTask>> GetRunningTasks();
+	};
+
+	struct FormInputField
+	{
+		BNFormInputFieldType type;
+		std::string prompt;
+		Ref<BinaryView> view; // For AddressFormField
+		uint64_t currentAddress; // For AddressFormField
+		std::vector<std::string> choices; // For ChoiceFormField
+		std::string ext; // For OpenFileNameFormField, SaveFileNameFormField
+		std::string defaultName; // For SaveFileNameFormField
+		int64_t intResult;
+		uint64_t addressResult;
+		std::string stringResult;
+		size_t indexResult;
+
+		static FormInputField Label(const std::string& text);
+		static FormInputField Separator();
+		static FormInputField TextLine(const std::string& prompt);
+		static FormInputField MultilineText(const std::string& prompt);
+		static FormInputField Integer(const std::string& prompt);
+		static FormInputField Address(const std::string& prompt, BinaryView* view = nullptr, uint64_t currentAddress = 0);
+		static FormInputField Choice(const std::string& prompt, const std::vector<std::string>& choices);
+		static FormInputField OpenFileName(const std::string& prompt, const std::string& ext);
+		static FormInputField SaveFileName(const std::string& prompt, const std::string& ext,
+			const std::string& defaultName = "");
+		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
+	};
+
+	class InteractionHandler
+	{
+	public:
+		virtual void ShowPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents) = 0;
+		virtual void ShowMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText);
+		virtual void ShowHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText);
+
+		virtual bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title) = 0;
+		virtual bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
+		virtual bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
+			Ref<BinaryView> view, uint64_t currentAddr);
+		virtual bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
+			const std::vector<std::string>& choices) = 0;
+		virtual bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt,
+			const std::string& ext = "", const std::string& defaultName = "");
+		virtual bool GetDirectoryNameInput(std::string& result, const std::string& prompt,
+			const std::string& defaultName = "");
+		virtual bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title) = 0;
+
+		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
+			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
 	};
 }

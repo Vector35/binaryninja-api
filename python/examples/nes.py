@@ -521,9 +521,9 @@ class NESView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, data.file)
-		self.data = data
+		self.raw = data
 		self.notification = NESViewUpdateNotification(self)
-		self.data.register_notification(self.notification)
+		self.raw.register_notification(self.notification)
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -539,7 +539,7 @@ class NESView(BinaryView):
 
 	def init(self):
 		try:
-			hdr = self.data.read(0, 16)
+			hdr = self.raw.read(0, 16)
 			self.rom_banks = struct.unpack("B", hdr[4])[0]
 			self.vrom_banks = struct.unpack("B", hdr[5])[0]
 			self.rom_flags = struct.unpack("B", hdr[6])[0]
@@ -592,9 +592,9 @@ class NESView(BinaryView):
 			self.define_auto_symbol(Symbol(DataSymbol, 0x4016, "JOY1"))
 			self.define_auto_symbol(Symbol(DataSymbol, 0x4017, "JOY2"))
 
-			sym_files = [self.data.file.filename + ".%x.nl" % self.__class__.bank,
-					self.data.file.filename + ".ram.nl",
-					self.data.file.filename + ".%x.nl" % (self.rom_banks - 1)]
+			sym_files = [self.raw.file.filename + ".%x.nl" % self.__class__.bank,
+					self.raw.file.filename + ".ram.nl",
+					self.raw.file.filename + ".%x.nl" % (self.rom_banks - 1)]
 			for f in sym_files:
 				if os.path.exists(f):
 					sym_contents = open(f, "r").read()
@@ -634,9 +634,9 @@ class NESView(BinaryView):
 			else:
 				to_read = length
 			if addr < 0xc000:
-				data = self.data.read(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), to_read)
+				data = self.raw.read(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), to_read)
 			else:
-				data = self.data.read(self.rom_offset + bank_ofs + self.rom_length - 0x4000, to_read)
+				data = self.raw.read(self.rom_offset + bank_ofs + self.rom_length - 0x4000, to_read)
 			result += data
 			if len(data) < to_read:
 				break
@@ -663,9 +663,9 @@ class NESView(BinaryView):
 			else:
 				to_write = length
 			if addr < 0xc000:
-				written = self.data.write(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), value[offset : offset + to_write])
+				written = self.raw.write(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), value[offset : offset + to_write])
 			else:
-				written = self.data.write(self.rom_offset + bank_ofs + self.rom_length - 0x4000, value[offset : offset + to_write])
+				written = self.raw.write(self.rom_offset + bank_ofs + self.rom_length - 0x4000, value[offset : offset + to_write])
 			if written < to_write:
 				break
 			length -= to_write

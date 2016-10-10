@@ -258,6 +258,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 	view.isOffsetReadable = IsOffsetReadableCallback;
 	view.isOffsetWritable = IsOffsetWritableCallback;
 	view.isOffsetExecutable = IsOffsetExecutableCallback;
+	view.isOffsetBackedByFile = IsOffsetBackedByFileCallback;
 	view.getNextValidOffset = GetNextValidOffsetCallback;
 	view.getStart = GetStartCallback;
 	view.getLength = GetLengthCallback;
@@ -357,6 +358,13 @@ bool BinaryView::IsOffsetExecutableCallback(void* ctxt, uint64_t offset)
 }
 
 
+bool BinaryView::IsOffsetBackedByFileCallback(void* ctxt, uint64_t offset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsOffsetBackedByFile(offset);
+}
+
+
 uint64_t BinaryView::GetNextValidOffsetCallback(void* ctxt, uint64_t offset)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -434,6 +442,12 @@ bool BinaryView::PerformIsOffsetWritable(uint64_t offset)
 
 
 bool BinaryView::PerformIsOffsetExecutable(uint64_t offset)
+{
+	return PerformIsValidOffset(offset);
+}
+
+
+bool BinaryView::PerformIsOffsetBackedByFile(uint64_t offset)
 {
 	return PerformIsValidOffset(offset);
 }
@@ -518,9 +532,22 @@ bool BinaryView::CreateDatabase(const string& path)
 }
 
 
+bool BinaryView::CreateDatabase(const string& path,
+	const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->CreateDatabase(path, this, progressCallback);
+}
+
+
 bool BinaryView::SaveAutoSnapshot()
 {
 	return m_file->SaveAutoSnapshot(this);
+}
+
+
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	return m_file->SaveAutoSnapshot(this, progressCallback);
 }
 
 
@@ -680,6 +707,12 @@ bool BinaryView::IsOffsetWritable(uint64_t offset) const
 bool BinaryView::IsOffsetExecutable(uint64_t offset) const
 {
 	return BNIsOffsetExecutable(m_object, offset);
+}
+
+
+bool BinaryView::IsOffsetBackedByFile(uint64_t offset) const
+{
+	return BNIsOffsetBackedByFile(m_object, offset);
 }
 
 
@@ -954,6 +987,20 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 }
 
 
+vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksStartingAtAddress(uint64_t addr)
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlocksStartingAtAddress(m_object, addr, &count);
+
+	vector<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 {
 	size_t count;
@@ -1082,31 +1129,31 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 }
 
 
-void BinaryView::DefineAutoSymbol(Symbol* sym)
+void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNDefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::UndefineAutoSymbol(Symbol* sym)
+void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNUndefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineUserSymbol(Symbol* sym)
+void BinaryView::DefineUserSymbol(Ref<Symbol> sym)
 {
 	BNDefineUserSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::UndefineUserSymbol(Symbol* sym)
+void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
 {
 	BNUndefineUserSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineImportedFunction(Symbol* importAddressSym, Function* func)
+void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func)
 {
 	BNDefineImportedFunction(m_object, importAddressSym->GetObject(), func->GetObject());
 }
@@ -1397,13 +1444,13 @@ bool BinaryView::IsTypeAutoDefined(const std::string& name)
 }
 
 
-void BinaryView::DefineType(const std::string& name, Type* type)
+void BinaryView::DefineType(const std::string& name, Ref<Type> type)
 {
 	BNDefineAnalysisType(m_object, name.c_str(), type->GetObject());
 }
 
 
-void BinaryView::DefineUserType(const std::string& name, Type* type)
+void BinaryView::DefineUserType(const std::string& name, Ref<Type> type)
 {
 	BNDefineUserAnalysisType(m_object, name.c_str(), type->GetObject());
 }
@@ -1424,6 +1471,45 @@ void BinaryView::UndefineUserType(const std::string& name)
 bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);
+}
+
+
+void BinaryView::Reanalyze()
+{
+	BNReanalyzeAllFunctions(m_object);
+}
+
+
+void BinaryView::ShowPlainTextReport(const string& title, const string& contents)
+{
+	BNShowPlainTextReport(m_object, title.c_str(), contents.c_str());
+}
+
+
+void BinaryView::ShowMarkdownReport(const string& title, const string& contents, const string& plainText)
+{
+	BNShowMarkdownReport(m_object, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+void BinaryView::ShowHTMLReport(const string& title, const string& contents, const string& plainText)
+{
+	BNShowHTMLReport(m_object, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const string& title)
+{
+	uint64_t currentAddress = 0;
+	if (m_file)
+		currentAddress = m_file->GetCurrentOffset();
+	return BNGetAddressInput(&result, prompt.c_str(), title.c_str(), m_object, currentAddress);
+}
+
+
+bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const string& title, uint64_t currentAddress)
+{
+	return BNGetAddressInput(&result, prompt.c_str(), title.c_str(), m_object, currentAddress);
 }
 
 

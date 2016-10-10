@@ -18,11 +18,18 @@ The previous tools are used in the generation of our documentation, but are not 
     - [qt] ([qt license] - LGPLv3 / note, please see our [qt build instructions below](open-source.md#building-qt))
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
     - [opensans] ([opensans license] - Apache 2.0)
+    - [dejavusanscode] ([dejavusanscode license] - multiple open licenses)
 
 * Core
     - [lzf] ([lzf license] - BSD)
     - [zlib] ([zlib license] - zlib license)
     - [openssl] ([openssl license] - openssl license)
+    - [discount] ([discount license] - BSD)
+    - [sqlite] ([sqlite license] - public domain)
+    - [llvm] ([llvm license] - BSD-style)
+
+* Other
+    - [yasm] ([yasm license] - 2-clause BSD)
 
 * Upvector update Library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -58,7 +65,15 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [qt]: https://www.qt.io/download/
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
-[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html)
+[lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
+[discount]: http://www.pell.portland.or.us/~orc/Code/discount/
+[discount license]: http://www.pell.portland.or.us/~orc/Code/discount/COPYRIGHT.html
+[sqlite]: https://www.sqlite.org/index.html
+[sqlite license]: https://www.sqlite.org/copyright.html
+[llvm]: http://llvm.org/releases/3.8.1/
+[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[yasm]: http://yasm.tortall.net/
+[yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [zlib]: http://www.zlib.net/
 [zlib license]: http://www.zlib.net/zlib_license.html
 [openssl]: https://www.openssl.org/
@@ -69,6 +84,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.txt
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
+[dejavusanscode]: https://github.com/SSNikolaevich/DejaVuSansCode
+[dejavusanscode license]: https://github.com/SSNikolaevich/DejaVuSansCode/blob/master/LICENSE
 [Qt 5.6]: https://www.qt.io/qt-licensing-terms/
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
 [tarball]: https://binary.ninja/qt5.6.0.tar.xz

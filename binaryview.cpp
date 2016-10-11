@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include <algorithm>
+#include <iterator>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;

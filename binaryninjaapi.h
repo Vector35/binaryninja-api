@@ -730,6 +730,22 @@ namespace BinaryNinja
 		bool autoDiscovered;
 	};
 
+	struct Segment
+	{
+		uint64_t start, length;
+		uint64_t dataOffset, dataLength;
+		uint32_t flags;
+	};
+
+	struct Section
+	{
+		std::string name, type;
+		uint64_t start, length;
+		std::string linkedSection, infoSection;
+		uint64_t infoData;
+		uint64_t align, entrySize;
+	};
+
 	struct NameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
@@ -743,8 +759,9 @@ namespace BinaryNinja
 		/*! BinaryView constructor
 		   \param typeName name of the BinaryView (e.g. ELF, PE, Mach-O, ...)
 		   \param file a file to create a view from
+		   \param parentView optional view that contains the raw data used by this view
 		 */
-		BinaryView(const std::string& typeName, FileMetadata* file);
+		BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView = nullptr);
 
 		/*! PerformRead provides a mapping between the flat file and virtual offsets in the file.
 
@@ -771,7 +788,7 @@ namespace BinaryNinja
 		virtual BNEndianness PerformGetDefaultEndianness() const;
 		virtual size_t PerformGetAddressSize() const;
 
-		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
+		virtual bool PerformSave(FileAccessor* file);
 
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
@@ -805,6 +822,7 @@ namespace BinaryNinja
 		virtual bool Init() { return true; }
 
 		FileMetadata* GetFile() const { return m_file; }
+		Ref<BinaryView> GetParentView() const;
 		std::string GetTypeName() const;
 
 		bool IsModified() const;
@@ -969,6 +987,29 @@ namespace BinaryNinja
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
 			uint64_t currentAddress);
+
+		void AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+		void RemoveAutoSegment(uint64_t start, uint64_t length);
+		void AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+		void RemoveUserSegment(uint64_t start, uint64_t length);
+		std::vector<Segment> GetSegments();
+		bool GetSegmentAt(uint64_t addr, Segment& result);
+
+		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
+			const std::string& infoSection = "", uint64_t infoData = 0);
+		void RemoveAutoSection(const std::string& name);
+		void AddUserSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
+			const std::string& infoSection = "", uint64_t infoData = 0);
+		void RemoveUserSection(const std::string& name);
+		std::vector<Section> GetSections();
+		std::vector<Section> GetSectionsAt(uint64_t addr);
+		bool GetSectionByName(const std::string& name, Section& result);
+
+		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
+
+		std::vector<BNAddressRange> GetAllocatedRanges();
 	};
 
 	class BinaryData: public BinaryView

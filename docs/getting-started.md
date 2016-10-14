@@ -66,6 +66,10 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `d` : Switches between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
+ - `[CMD-SHIFT] +` (OS X) : Graph view zoom in
+ - `[CMD-SHIFT] -` (OS X) : Graph view zoom out
+ - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
+ - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
 
 ### Graph View
 

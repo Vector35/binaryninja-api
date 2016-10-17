@@ -11015,12 +11015,12 @@ def demangle_ms(arch, mangled_name):
 	return (None, mangledName)
 
 
-def demangle_gnu3(arch, mangledName):
+def demangle_gnu3(arch, mangled_name):
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if core.BNDemangleGNU3(arch.handle, mangledName, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		#core.BNFreeDemangledName(outName.value, outSize.value)

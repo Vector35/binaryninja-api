@@ -4789,6 +4789,14 @@ class Function(object):
 		return Architecture(arch)
 
 	@property
+	def platform(self):
+		"""Function platform (read-only)"""
+		platform = core.BNGetFunctionPlatform(self.handle)
+		if platform is None:
+			return None
+		return Platform(None, handle = platform)
+
+	@property
 	def start(self):
 		"""Function start (read-only)"""
 		return core.BNGetFunctionStart(self.handle)

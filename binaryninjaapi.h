@@ -1257,6 +1257,7 @@ namespace BinaryNinja
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
+		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
@@ -1310,6 +1311,8 @@ namespace BinaryNinja
 
 		virtual size_t GetMaxInstructionLength() const;
 		virtual size_t GetOpcodeDisplayLength() const;
+
+		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
 
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
@@ -1454,6 +1457,7 @@ namespace BinaryNinja
 		virtual size_t GetDefaultIntegerSize() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
+		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;

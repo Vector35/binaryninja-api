@@ -52,8 +52,8 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
 
  - `h` : Switch to hex view
  - `p` : Create a function
- - `&lt;ESC&gt;` : Navigate backward
- - `&lt;SPACE&gt;` : Toggle between linear view and graph view
+ - `[ESC]` : Navigate backward
+ - `[SPACE]` : Toggle between linear view and graph view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
  - `u` : Undefine a symbol

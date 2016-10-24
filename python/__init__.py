@@ -9713,6 +9713,15 @@ class Platform(object):
 		"""
 		core.BNRegisterPlatformCallingConvention(self.handle, cc.handle)
 
+	def get_related_platform(self, arch):
+		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
+		if not result:
+			return None
+		return Platform(None, handle = result)
+
+	def add_related_platform(self, arch, platform):
+		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
+
 class ScriptingOutputListener(object):
 	def _register(self, handle):
 		self._cb = core.BNScriptingOutputListener()

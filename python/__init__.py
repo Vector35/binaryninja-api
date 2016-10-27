@@ -4320,10 +4320,6 @@ class Type(object):
 		return Type(core.BNCreateUnknownType(unknown_type.handle))
 
 	@classmethod
-	def unknown_type(self, s):
-		return Type(core.BNCreateUnknownType(s.handle))
-
-	@classmethod
 	def enumeration_type(self, arch, e, width = None):
 		if width is None:
 			width = arch.default_int_size
@@ -8874,7 +8870,6 @@ class Transform:
 		output_buf = DataBuffer()
 		keys = params.keys()
 		param_buf = (core.BNTransformParameter * len(keys))()
-		param_data = []
 		for i in xrange(0, len(keys)):
 			data = DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
@@ -8888,7 +8883,6 @@ class Transform:
 		output_buf = DataBuffer()
 		keys = params.keys()
 		param_buf = (core.BNTransformParameter * len(keys))()
-		param_data = []
 		for i in xrange(0, len(keys)):
 			data = DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
@@ -10762,10 +10756,10 @@ class InteractionHandler(object):
 		return get_text_line_input(prompt, "Open File")
 
 	def get_save_filename_input(self, prompt, ext, default_name):
-		return get_text_line_input(title, "Save File")
+		return get_text_line_input(prompt, "Save File")
 
 	def get_directory_name_input(self, prompt, default_name):
-		return get_text_line_input(title, "Select Directory")
+		return get_text_line_input(prompt, "Select Directory")
 
 	def get_form_input(self, fields, title):
 		return False
@@ -11049,7 +11043,7 @@ def demangle_ms(arch, mangled_name):
 			names.append(outName[i])
 		#core.BNFreeDemangledName(outName.value, outSize.value)
 		return (Type(handle), names)
-	return (None, mangledName)
+	return (None, mangled_name)
 
 
 def demangle_gnu3(arch, mangled_name):

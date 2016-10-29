@@ -37,20 +37,20 @@ else:
 bv = binaryninja.BinaryViewType[bintype].open(target)
 bv.update_analysis_and_wait()
 
-print("-------- %s --------" % target)
-print("START: 0x%x" % bv.start)
-print("ENTRY: 0x%x" % bv.entry_point)
-print("ARCH: %s" % bv.arch.name)
-print("\n-------- Function List --------")
+log.log_info("-------- %s --------" % target)
+log.log_info("START: 0x%x" % bv.start)
+log.log_info("ENTRY: 0x%x" % bv.entry_point)
+log.log_info("ARCH: %s" % bv.arch.name)
+log.log_info("\n-------- Function List --------")
 
 for func in bv.functions:
-	print(func.symbol.name)
+	log.log_info(func.symbol.name)
 
 
-print("\n-------- First 10 strings --------")
+log.log_info("\n-------- First 10 strings --------")
 
 for i in xrange(10):
 	start = bv.strings[i].start
 	length = bv.strings[i].length
 	string = bv.read(start, length)
-	print("0x%x (%d):\t%s" % (start, length, string))
+	log.log_info("0x%x (%d):\t%s" % (start, length, string))

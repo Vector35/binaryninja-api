@@ -222,6 +222,8 @@ class Architecture(object):
 			self._cb.getDefaultIntegerSize = self._cb.getDefaultIntegerSize.__class__(self._get_default_integer_size)
 			self._cb.getMaxInstructionLength = self._cb.getMaxInstructionLength.__class__(self._get_max_instruction_length)
 			self._cb.getOpcodeDisplayLength = self._cb.getOpcodeDisplayLength.__class__(self._get_opcode_display_length)
+			self._cb.getAssociatedArchitectureByAddress = \
+				self._cb.getAssociatedArchitectureByAddress.__class__(self._get_associated_arch_by_address)
 			self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__(self._get_instruction_info)
 			self._cb.getInstructionText = self._cb.getInstructionText.__class__(self._get_instruction_text)
 			self._cb.freeInstructionText = self._cb.freeInstructionText.__class__(self._free_instruction_text)
@@ -410,6 +412,15 @@ class Architecture(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return 8
+
+	def _get_associated_arch_by_address(self, ctxt, addr):
+		try:
+			result, new_addr = self.perform_get_associated_arch_by_address(addr[0])
+			addr[0] = new_addr
+			return ctypes.cast(result.handle, ctypes.c_void_p).value
+		except:
+			log.log_error(traceback.format_exc())
+			return ctypes.cast(self.handle, ctypes.c_void_p).value
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
 		try:
@@ -819,6 +830,9 @@ class Architecture(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+	def perform_get_associated_arch_by_address(self, addr):
+		return self, addr
 
 	@abc.abstractmethod
 	def perform_get_instruction_info(self, data, addr):

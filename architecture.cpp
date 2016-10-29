@@ -111,6 +111,13 @@ size_t Architecture::GetOpcodeDisplayLengthCallback(void* ctxt)
 }
 
 
+BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetAssociatedArchitectureByAddress(*addr)->GetObject();
+}
+
+
 bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
                                               size_t maxLen, BNInstructionInfo* result)
 {
@@ -408,6 +415,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getDefaultIntegerSize = GetDefaultIntegerSizeCallback;
 	callbacks.getMaxInstructionLength = GetMaxInstructionLengthCallback;
 	callbacks.getOpcodeDisplayLength = GetOpcodeDisplayLengthCallback;
+	callbacks.getAssociatedArchitectureByAddress = GetAssociatedArchitectureByAddressCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
@@ -496,6 +504,12 @@ size_t Architecture::GetOpcodeDisplayLength() const
 	if (maxLen < BN_DEFAULT_OPCODE_DISPLAY)
 		return maxLen;
 	return BN_DEFAULT_OPCODE_DISPLAY;
+}
+
+
+Ref<Architecture> Architecture::GetAssociatedArchitectureByAddress(uint64_t&)
+{
+	return this;
 }
 
 
@@ -916,6 +930,12 @@ size_t CoreArchitecture::GetMaxInstructionLength() const
 size_t CoreArchitecture::GetOpcodeDisplayLength() const
 {
 	return BNGetArchitectureOpcodeDisplayLength(m_object);
+}
+
+
+Ref<Architecture> CoreArchitecture::GetAssociatedArchitectureByAddress(uint64_t& addr)
+{
+	return new CoreArchitecture(BNGetAssociatedArchitectureByAddress(m_object, &addr));
 }
 
 

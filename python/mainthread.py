@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,46 +18,42 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import binaryninja
+# Binary Ninja components
+import _binaryninjacore as core
+import scriptingprovider
 
 
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
-else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
-
-if len(sys.argv) > 1:
-	target = sys.argv[1]
-else:
-	target = "/bin/ls"
-
-bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
-
-print "-------- %s --------" % target
-print "START: 0x%x" % bv.start
-print "ENTRY: 0x%x" % bv.entry_point
-print "ARCH: %s" % bv.arch.name
-print "\n-------- Function List --------"
-
-""" print all the functions, their basic blocks, and their il instructions """
-for func in bv.functions:
-    print repr(func)
-    for block in func.low_level_il:
-        print "\t{0}".format(block)
-
-        for insn in block:
-            print "\t\t{0}".format(insn)
+def execute_on_main_thread(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	obj = core.BNExecuteOnMainThread(0, action.callback)
+	if obj:
+		return scriptingprovider.MainThreadAction(obj)
+	return None
 
 
-""" print all the functions, their basic blocks, and their mc instructions """
-for func in bv.functions:
-    print repr(func)
-    for block in func:
-        print "\t{0}".format(block)
+def execute_on_main_thread_and_wait(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNExecuteOnMainThreadAndWait(0, action.callback)
 
-        for insn in block:
-            print "\t\t{0}".format(insn)
+
+def worker_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerEnqueue(0, action.callback)
+
+
+def worker_priority_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerPriorityEnqueue(0, action.callback)
+
+
+def worker_interactive_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerInteractiveEnqueue(0, action.callback)
+
+
+def get_worker_thread_count():
+	return core.BNGetWorkerThreadCount()
+
+
+def set_worker_thread_count(count):
+	core.BNSetWorkerThreadCount(count)

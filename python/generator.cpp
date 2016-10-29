@@ -101,7 +101,7 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 		fprintf(out, "%s", type->GetQualifiedName(type->GetStructure()->GetName()).c_str());
 		break;
 	case EnumerationTypeClass:
-		fprintf(out, "%s", type->GetQualifiedName(type->GetEnumeration()->GetName()).c_str());
+		fprintf(out, "%sEnum", type->GetQualifiedName(type->GetEnumeration()->GetName()).c_str());
 		break;
 	case PointerTypeClass:
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
 	FILE* out = fopen(argv[2], "w");
 
-	fprintf(out, "import ctypes, os\n\n");
+	fprintf(out, "import ctypes, os, enum\n\n");
 
 	fprintf(out, "# Load core module\n");
 #if defined(__APPLE__)
@@ -184,7 +184,6 @@ int main(int argc, char* argv[])
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
-	map<string, int64_t> enumMembers;
 	for (auto& i : types)
 	{
 		if (i.second->GetClass() == StructureTypeClass)
@@ -194,19 +193,13 @@ int main(int argc, char* argv[])
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
-			fprintf(out, "%s = ctypes.c_int\n", i.first.c_str());
+			fprintf(out, "%sEnum = ctypes.c_int\n", i.first.c_str());
+			fprintf(out, "class %s(enum.IntEnum):\n", i.first.c_str());
 			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "%s = %" PRId64 "\n", j.name.c_str(), j.value);
-			fprintf(out, "%s_names = {\n", i.first.c_str());
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "    %" PRId64 ": \"%s\",\n", j.value, j.name.c_str());
-			fprintf(out, "}\n");
-			fprintf(out, "%s_by_name = {\n", i.first.c_str());
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "    \"%s\": %" PRId64 ",\n", j.name.c_str(), j.value);
-			fprintf(out, "}\n");
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				enumMembers[j.name] = j.value;
+			{
+				fprintf(out, "    %s = %" PRId64 "\n", j.name.c_str(), j.value);
+			}
+
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
 		         (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
@@ -217,10 +210,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	fprintf(out, "all_enum_values = {\n");
-	for (auto& i : enumMembers)
-		fprintf(out, "    \"%s\": %" PRId64 ",\n", i.first.c_str(), i.second);
-	fprintf(out, "}\n");
 
 	fprintf(out, "\n# Structure definitions\n");
 	for (auto& i : types)

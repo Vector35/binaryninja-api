@@ -18,10 +18,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from binaryninja import *
 import struct
 import traceback
 import os
+
+
+from binaryninja import *
+
 
 InstructionNames = [
 	"brk", "ora", None, None, None, "ora", "asl", None, # 0x00
@@ -142,43 +145,44 @@ OperandLengths = [
 
 OperandTokens = [
 	lambda value: [], # NONE
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ABS_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ABS_X_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ABS_Y_DEST
-	lambda value: [InstructionTextToken(RegisterToken, "a")], # ACCUM
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # ADDR
-	lambda value: [InstructionTextToken(TextToken, "#"), InstructionTextToken(IntegerToken, "$%.2x" % value, value)], # IMMED
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value),
-		InstructionTextToken(TextToken, "]")], # IND
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
-		InstructionTextToken(TextToken, "]")], # IND_X
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x"),
-		InstructionTextToken(TextToken, "]")], # IND_X_DEST
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y
-	lambda value: [InstructionTextToken(TextToken, "["), InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, "], "), InstructionTextToken(RegisterToken, "y")], # IND_Y_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.4x" % value, value)], # REL
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value)], # ZERO_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "x")], # ZERO_X_DEST
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")], # ZERO_Y
-	lambda value: [InstructionTextToken(PossibleAddressToken, "$%.2x" % value, value),
-		InstructionTextToken(TextToken, ", "), InstructionTextToken(RegisterToken, "y")] # ZERO_Y_DEST
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)], # ABS
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)], # ABS_DEST
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(core.core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.core.BNInstructionTextTokenType.RegisterToken, "x")], # ABS_X
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(core.core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.core.BNInstructionTextTokenType.RegisterToken, "x")], # ABS_X_DEST
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(core.core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.core.BNInstructionTextTokenType.RegisterToken, "y")], # ABS_Y
+	lambda value: [InstructionTextToken(core.core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "y")], # ABS_Y_DEST
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "a")], # ACCUM
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)], # ADDR
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "#"), InstructionTextToken(core.BNInstructionTextTokenType.IntegerToken, "$%.2x" % value, value)], # IMMED
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "["), InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "]")], # IND
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "["), InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "x"),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "]")], # IND_X
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "["), InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "x"),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "]")], # IND_X_DEST
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "["), InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "], "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "y")], # IND_Y
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "["), InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "], "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "y")], # IND_Y_DEST
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)], # REL
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value)], # ZERO
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value)], # ZERO_DEST
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "x")], # ZERO_X
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "x")], # ZERO_X_DEST
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "y")], # ZERO_Y
+	lambda value: [InstructionTextToken(core.BNInstructionTextTokenType.PossibleAddressToken, "$%.2x" % value, value),
+		InstructionTextToken(core.BNInstructionTextTokenType.TextToken, ", "), InstructionTextToken(core.BNInstructionTextTokenType.RegisterToken, "y")] # ZERO_Y_DEST
 ]
+
 
 def indirect_load(il, value):
 	if (value & 0xff) == 0xff:
@@ -189,8 +193,9 @@ def indirect_load(il, value):
 		return il.or_expr(2, lo, hi)
 	return il.load(2, il.const(2, value))
 
+
 def load_zero_page_16(il, value):
-	if il[value].operation == "LLIL_CONST":
+	if il[value].operation == core.BNLowLevelILOperation.LLIL_CONST:
 		if il[value].value == 0xff:
 			lo = il.zero_extend(2, il.load(1, il.const(2, 0xff)))
 			hi = il.shift_left(2, il.zero_extend(2, il.load(1, il.const(2, 0)), il.const(2, 8)))
@@ -229,9 +234,10 @@ OperandIL = [
 	lambda il, value: il.zero_extend(2, il.add(1, il.const(1, value), il.reg(1, "y"))) # ZERO_Y_DEST
 ]
 
+
 def cond_branch(il, cond, dest):
 	t = None
-	if il[dest].operation == LLIL_CONST:
+	if il[dest].operation == core.BNLowLevelILOperation.LLIL_CONST:
 		t = il.get_label_for_address(Architecture['6502'], il[dest].value)
 	if t is None:
 		t = LowLevelILLabel()
@@ -246,15 +252,17 @@ def cond_branch(il, cond, dest):
 	il.mark_label(f)
 	return None
 
+
 def jump(il, dest):
 	label = None
-	if il[dest].operation == LLIL_CONST:
+	if il[dest].operation == core.BNLowLevelILOperation.LLIL_CONST:
 		label = il.get_label_for_address(Architecture['6502'], il[dest].value)
 	if label is None:
 		il.append(il.jump(dest))
 	else:
 		il.append(il.goto(label))
 	return None
+
 
 def get_p_value(il):
 	c = il.flag_bit(1, "c", 0)
@@ -267,6 +275,7 @@ def get_p_value(il):
 	return il.or_expr(1, il.or_expr(1, il.or_expr(1, il.or_expr(1, il.or_expr(1,
 	                  il.or_expr(1, c, z), i), d), b), v), s)
 
+
 def set_p_value(il, value):
 	il.append(il.set_reg(1, LLIL_TEMP(0), value))
 	il.append(il.set_flag("c", il.test_bit(1, il.reg(1, LLIL_TEMP(0)), il.const(1, 0x01))))
@@ -278,6 +287,7 @@ def set_p_value(il, value):
 	il.append(il.set_flag("s", il.test_bit(1, il.reg(1, LLIL_TEMP(0)), il.const(1, 0x80))))
 	return None
 
+
 def rti(il):
 	set_p_value(il, il.pop(1))
 	return il.ret(il.pop(2))
@@ -287,13 +297,13 @@ InstructionIL = {
 	"asl": lambda il, operand: il.store(1, operand, il.shift_left(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
 	"asl@": lambda il, operand: il.set_reg(1, "a", il.shift_left(1, operand, il.const(1, 1), flags = "czs")),
 	"and": lambda il, operand: il.set_reg(1, "a", il.and_expr(1, il.reg(1, "a"), operand, flags = "zs")),
-	"bcc": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_UGE), operand),
-	"bcs": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_ULT), operand),
-	"beq": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_E), operand),
+	"bcc": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_UGE), operand),
+	"bcs": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_ULT), operand),
+	"beq": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_E), operand),
 	"bit": lambda il, operand: il.and_expr(1, il.reg(1, "a"), operand, flags = "czs"),
-	"bmi": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_NEG), operand),
-	"bne": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_NE), operand),
-	"bpl": lambda il, operand: cond_branch(il, il.flag_condition(LLFC_POS), operand),
+	"bmi": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_NEG), operand),
+	"bne": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_NE), operand),
+	"bpl": lambda il, operand: cond_branch(il, il.flag_condition(core.BNLowLevelILFlagCondition.LLFC_POS), operand),
 	"brk": lambda il, operand: il.system_call(),
 	"bvc": lambda il, operand: cond_branch(il, il.not_expr(0, il.flag("v")), operand),
 	"bvs": lambda il, operand: cond_branch(il, il.flag("v"), operand),
@@ -345,6 +355,7 @@ InstructionIL = {
 	"tya": lambda il, operand: il.set_reg(1, "a", il.reg(1, "y"), flags = "zs")
 }
 
+
 class M6502(Architecture):
 	name = "6502"
 	address_size = 2
@@ -360,18 +371,18 @@ class M6502(Architecture):
 	flags = ["c", "z", "i", "d", "b", "v", "s"]
 	flag_write_types = ["*", "czs", "zvs", "zs"]
 	flag_roles = {
-		"c": SpecialFlagRole, # Not a normal carry flag, subtract result is inverted
-		"z": ZeroFlagRole,
-		"v": OverflowFlagRole,
-		"s": NegativeSignFlagRole
+		"c": core.BNFlagRole.SpecialFlagRole, # Not a normal carry flag, subtract result is inverted
+		"z": core.BNFlagRole.ZeroFlagRole,
+		"v": core.BNFlagRole.OverflowFlagRole,
+		"s": core.BNFlagRole.NegativeSignFlagRole
 	}
 	flags_required_for_flag_condition = {
-		LLFC_UGE: ["c"],
-		LLFC_ULT: ["c"],
-		LLFC_E: ["z"],
-		LLFC_NE: ["z"],
-		LLFC_NEG: ["s"],
-		LLFC_POS: ["s"]
+		core.BNLowLevelILFlagCondition.LLFC_UGE: ["c"],
+		core.BNLowLevelILFlagCondition.LLFC_ULT: ["c"],
+		core.BNLowLevelILFlagCondition.LLFC_E: ["z"],
+		core.BNLowLevelILFlagCondition.LLFC_NE: ["z"],
+		core.BNLowLevelILFlagCondition.LLFC_NEG: ["s"],
+		core.BNLowLevelILFlagCondition.LLFC_POS: ["s"]
 	}
 	flags_written_by_flag_write_type = {
 		"*": ["c", "z", "v", "s"],
@@ -413,17 +424,17 @@ class M6502(Architecture):
 		result.length = length
 		if instr == "jmp":
 			if operand == ADDR:
-				result.add_branch(UnconditionalBranch, struct.unpack("<H", data[1:3])[0])
+				result.add_branch(core.BNBranchType.UnconditionalBranch, struct.unpack("<H", data[1:3])[0])
 			else:
-				result.add_branch(UnresolvedBranch)
+				result.add_branch(core.BNBranchType.UnresolvedBranch)
 		elif instr == "jsr":
-			result.add_branch(CallDestination, struct.unpack("<H", data[1:3])[0])
+			result.add_branch(core.BNBranchType.CallDestination, struct.unpack("<H", data[1:3])[0])
 		elif instr in ["rti", "rts"]:
-			result.add_branch(FunctionReturn)
+			result.add_branch(core.BNBranchType.FunctionReturn)
 		if instr in ["bcc", "bcs", "beq", "bmi", "bne", "bpl", "bvc", "bvs"]:
 			dest = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
-			result.add_branch(TrueBranch, dest)
-			result.add_branch(FalseBranch, addr + 2)
+			result.add_branch(core.BNBranchType.TrueBranch, dest)
+			result.add_branch(core.BNBranchType.FalseBranch, addr + 2)
 		return result
 
 	def perform_get_instruction_text(self, data, addr):
@@ -432,7 +443,7 @@ class M6502(Architecture):
 			return None
 
 		tokens = []
-		tokens.append(InstructionTextToken(TextToken, "%-7s " % instr.replace("@", "")))
+		tokens.append(InstructionTextToken(core.BNInstructionTextTokenType.TextToken, "%-7s " % instr.replace("@", "")))
 		tokens += OperandTokens[operand](value)
 		return tokens, length
 
@@ -488,6 +499,7 @@ class M6502(Architecture):
 			return None
 		return "\xa9" + chr(value & 0xff) + "\xea"
 
+
 class NESView(BinaryView):
 	name = "NES"
 	long_name = "NES ROM"
@@ -521,55 +533,55 @@ class NESView(BinaryView):
 			self.rom_length = self.rom_banks * 0x4000
 
 			# Add mapping for RAM and hardware registers, not backed by file contents
-			self.add_auto_segment(0, 0x8000, 0, 0, SegmentReadable | SegmentWritable | SegmentExecutable)
+			self.add_auto_segment(0, 0x8000, 0, 0, core.BNSegmentFlag.SegmentReadable | core.BNSegmentFlag.SegmentWritable | core.BNSegmentFlag.SegmentExecutable)
 
 			# Add ROM mappings
 			self.add_auto_segment(0x8000, 0x4000, self.rom_offset + (self.__class__.bank * 0x4000), 0x4000,
-				SegmentReadable | SegmentExecutable)
+				core.BNSegmentFlag.SegmentReadable | core.BNSegmentFlag.SegmentExecutable)
 			self.add_auto_segment(0xc000, 0x4000, self.rom_offset + self.rom_length - 0x4000, 0x4000,
-				SegmentReadable | SegmentExecutable)
+				core.BNSegmentFlag.SegmentReadable | core.BNSegmentFlag.SegmentExecutable)
 
 			nmi = struct.unpack("<H", self.read(0xfffa, 2))[0]
 			start = struct.unpack("<H", self.read(0xfffc, 2))[0]
 			irq = struct.unpack("<H", self.read(0xfffe, 2))[0]
-			self.define_auto_symbol(Symbol(FunctionSymbol, nmi, "_nmi"))
-			self.define_auto_symbol(Symbol(FunctionSymbol, start, "_start"))
-			self.define_auto_symbol(Symbol(FunctionSymbol, irq, "_irq"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.FunctionSymbol, nmi, "_nmi"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.FunctionSymbol, start, "_start"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.FunctionSymbol, irq, "_irq"))
 			self.add_function(Architecture['6502'].standalone_platform, nmi)
 			self.add_function(Architecture['6502'].standalone_platform, irq)
 			self.add_entry_point(Architecture['6502'].standalone_platform, start)
 
 			# Hardware registers
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2000, "PPUCTRL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2001, "PPUMASK"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2002, "PPUSTATUS"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2003, "OAMADDR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2004, "OAMDATA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2005, "PPUSCROLL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2006, "PPUADDR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2007, "PPUDATA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4000, "SQ1_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4001, "SQ1_SWEEP"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4002, "SQ1_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4003, "SQ1_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4004, "SQ2_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4005, "SQ2_SWEEP"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4006, "SQ2_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4007, "SQ2_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4008, "TRI_LINEAR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400a, "TRI_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400b, "TRI_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400c, "NOISE_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400e, "NOISE_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400f, "NOISE_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4010, "DMC_FREQ"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4011, "DMC_RAW"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4012, "DMC_START"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4013, "DMC_LEN"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4014, "OAMDMA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4015, "SND_CHN"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4016, "JOY1"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4017, "JOY2"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2000, "PPUCTRL"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2001, "PPUMASK"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2002, "PPUSTATUS"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2003, "OAMADDR"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2004, "OAMDATA"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2005, "PPUSCROLL"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2006, "PPUADDR"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x2007, "PPUDATA"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4000, "SQ1_VOL"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4001, "SQ1_SWEEP"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4002, "SQ1_LO"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4003, "SQ1_HI"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4004, "SQ2_VOL"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4005, "SQ2_SWEEP"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4006, "SQ2_LO"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4007, "SQ2_HI"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4008, "TRI_LINEAR"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x400a, "TRI_LO"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x400b, "TRI_HI"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x400c, "NOISE_VOL"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x400e, "NOISE_LO"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x400f, "NOISE_HI"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4010, "DMC_FREQ"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4011, "DMC_RAW"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4012, "DMC_START"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4013, "DMC_LEN"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4014, "OAMDMA"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4015, "SND_CHN"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4016, "JOY1"))
+			self.define_auto_symbol(Symbol(core.BNSymbolType.DataSymbol, 0x4017, "JOY2"))
 
 			sym_files = [self.file.filename + ".%x.nl" % self.__class__.bank,
 					self.file.filename + ".ram.nl",
@@ -584,7 +596,7 @@ class NESView(BinaryView):
 							break
 						addr = int(sym[0][1:], 16)
 						name = sym[1]
-						self.define_auto_symbol(Symbol(FunctionSymbol, addr, name))
+						self.define_auto_symbol(Symbol(core.BNSymbolType.FunctionSymbol, addr, name))
 						if addr >= 0x8000:
 							self.add_function(Architecture['6502'].standalone_platform, addr)
 

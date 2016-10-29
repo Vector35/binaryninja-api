@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,38 +18,21 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import binaryninja
-
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
-else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
-
-if len(sys.argv) > 1:
-	target = sys.argv[1]
-else:
-	target = "/bin/ls"
-
-bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
-
-print("-------- %s --------" % target)
-print("START: 0x%x" % bv.start)
-print("ENTRY: 0x%x" % bv.entry_point)
-print("ARCH: %s" % bv.arch.name)
-print("\n-------- Function List --------")
-
-for func in bv.functions:
-	print(func.symbol.name)
+import _binaryninjacore as core
 
 
-print("\n-------- First 10 strings --------")
+_plugin_init = False
 
-for i in xrange(10):
-	start = bv.strings[i].start
-	length = bv.strings[i].length
-	string = bv.read(start, length)
-	print("0x%x (%d):\t%s" % (start, length, string))
+
+def _init_plugins():
+	global _plugin_init
+	if not _plugin_init:
+		_plugin_init = True
+		core.BNInitCorePlugins()
+		core.BNInitUserPlugins()
+	if not core.BNIsLicenseValidated():
+		raise RuntimeError("License is not valid. Please supply a valid license.")
+
+
+def shutdown():
+	core.BNShutdown()

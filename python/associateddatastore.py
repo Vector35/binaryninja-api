@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,38 +18,28 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import binaryninja
-
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
-else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
-
-if len(sys.argv) > 1:
-	target = sys.argv[1]
-else:
-	target = "/bin/ls"
-
-bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
-
-print("-------- %s --------" % target)
-print("START: 0x%x" % bv.start)
-print("ENTRY: 0x%x" % bv.entry_point)
-print("ARCH: %s" % bv.arch.name)
-print("\n-------- Function List --------")
-
-for func in bv.functions:
-	print(func.symbol.name)
+import copy
 
 
-print("\n-------- First 10 strings --------")
+class _AssociatedDataStore(dict):
+	_defaults = {}
 
-for i in xrange(10):
-	start = bv.strings[i].start
-	length = bv.strings[i].length
-	string = bv.read(start, length)
-	print("0x%x (%d):\t%s" % (start, length, string))
+	@classmethod
+	def set_default(cls, name, value):
+		cls._defaults[name] = value
+
+	def __getattr__(self, name):
+		if name in self.__dict__:
+			return self.__dict__[name]
+		if name not in self:
+			if name in self.__class__._defaults:
+				result = copy.copy(self.__class__._defaults[name])
+				self[name] = result
+				return result
+		return self.__getitem__(name)
+
+	def __setattr__(self, name, value):
+		self.__setitem__(name, value)
+
+	def __delattr__(self, name):
+		self.__delitem__(name)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,38 +18,30 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import binaryninja
 
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
-else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
+class LinearDisassemblyPosition(object):
+	"""
+	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly.
 
-if len(sys.argv) > 1:
-	target = sys.argv[1]
-else:
-	target = "/bin/ls"
-
-bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
-
-print("-------- %s --------" % target)
-print("START: 0x%x" % bv.start)
-print("ENTRY: 0x%x" % bv.entry_point)
-print("ARCH: %s" % bv.arch.name)
-print("\n-------- Function List --------")
-
-for func in bv.functions:
-	print(func.symbol.name)
+	.. note:: This object should not be instantiated directly. Rather call \
+	:py:method:`get_linear_disassembly_position_at` which instantiates this object.
+	"""
+	def __init__(self, func, block, addr):
+		self.function = func
+		self.block = block
+		self.address = addr
 
 
-print("\n-------- First 10 strings --------")
+class LinearDisassemblyLine(object):
+	def __init__(self, line_type, func, block, line_offset, contents):
+		self.type = line_type
+		self.function = func
+		self.block = block
+		self.line_offset = line_offset
+		self.contents = contents
 
-for i in xrange(10):
-	start = bv.strings[i].start
-	length = bv.strings[i].length
-	string = bv.read(start, length)
-	print("0x%x (%d):\t%s" % (start, length, string))
+	def __str__(self):
+		return str(self.contents)
+
+	def __repr__(self):
+		return repr(self.contents)

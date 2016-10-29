@@ -12,8 +12,8 @@
 __name__ = "__console__" # angr looks for this, it won't load from within a UI without it
 import angr
 from binaryninja import *
+
 import tempfile
-import threading
 import logging
 import os
 
@@ -24,8 +24,10 @@ logging.disable(logging.WARNING)
 BinaryView.set_default_session_data("angr_find", set())
 BinaryView.set_default_session_data("angr_avoid", set())
 
+
 def escaped_output(str):
 	return '\n'.join([s.encode("string_escape") for s in str.split('\n')])
+
 
 # Define a background thread object for solving in the background
 class Solver(BackgroundTaskThread):
@@ -81,31 +83,34 @@ class Solver(BackgroundTaskThread):
 		else:
 			show_plain_text_report("Results from angr", text_report)
 
+
 def find_instr(bv, addr):
 	# Highlight the instruction in green
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(GreenHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, GreenHighlightColor)
+		block.set_auto_highlight(HighlightColor(core.BNHighlightStandardColor.GreenHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(block.arch, addr, core.BNHighlightStandardColor.GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_find.add(addr)
+
 
 def avoid_instr(bv, addr):
 	# Highlight the instruction in red
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(RedHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, RedHighlightColor)
+		block.set_auto_highlight(HighlightColor(core.BNHighlightStandardColor.RedHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(block.arch, addr, core.BNHighlightStandardColor.RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_avoid.add(addr)
+
 
 def solve(bv):
 	if len(bv.session_data.angr_find) == 0:
 		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
 			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
-			"continue.", OKButtonSet, ErrorIcon)
+			"continue.", core.BNMessageBoxButtonSet.OKButtonSet, core.BNMessageBoxButtonSet.ErrorIcon)
 		return
 
 	# Start a solver thread for the path associated with the view

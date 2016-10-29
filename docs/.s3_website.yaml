@@ -1,0 +1,3 @@
+s3_bucket: docs.binary.ninja
+site: ../site
+s3_reduced_redundancy: True

@@ -1084,6 +1084,12 @@ class Architecture(object):
 		"""
 		return None
 
+	def get_associated_arch_by_address(self, addr):
+		new_addr = ctypes.c_ulonglong()
+		new_addr.value = addr
+		result = core.BNGetAssociatedArchitectureByAddress(self.handle, new_addr)
+		return Architecture(handle = result), new_addr.value
+
 	def get_instruction_info(self, data, addr):
 		"""
 		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address

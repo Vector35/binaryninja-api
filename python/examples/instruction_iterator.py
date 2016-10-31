@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 
 import sys
-import binaryninja
+import binaryninja as binja
 
 
 if sys.platform.lower().startswith("linux"):
@@ -35,30 +35,30 @@ if len(sys.argv) > 1:
 else:
 	target = "/bin/ls"
 
-bv = binaryninja.BinaryViewType[bintype].open(target)
+bv = binja.BinaryViewType[bintype].open(target)
 bv.update_analysis_and_wait()
-
-print "-------- %s --------" % target
-print "START: 0x%x" % bv.start
-print "ENTRY: 0x%x" % bv.entry_point
-print "ARCH: %s" % bv.arch.name
-print "\n-------- Function List --------"
+binja.log_to_stdout(True)
+binja.log_info("-------- %s --------" % target)
+binja.log_info("START: 0x%x" % bv.start)
+binja.log_info("ENTRY: 0x%x" % bv.entry_point)
+binja.log_info("ARCH: %s" % bv.arch.name)
+binja.log_info("\n-------- Function List --------")
 
 """ print all the functions, their basic blocks, and their il instructions """
 for func in bv.functions:
-    print repr(func)
+    binja.log_info(repr(func))
     for block in func.low_level_il:
-        print "\t{0}".format(block)
+        binja.log_info("\t{0}".format(block))
 
         for insn in block:
-            print "\t\t{0}".format(insn)
+            binja.log_info("\t\t{0}".format(insn))
 
 
 """ print all the functions, their basic blocks, and their mc instructions """
 for func in bv.functions:
-    print repr(func)
+    binja.log_info(repr(func))
     for block in func:
-        print "\t{0}".format(block)
+        binja.log_info("\t{0}".format(block))
 
         for insn in block:
-            print "\t\t{0}".format(insn)
+            binja.log_info("\t\t{0}".format(insn))

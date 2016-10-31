@@ -20,37 +20,51 @@
 # IN THE SOFTWARE.
 
 import sys
-import binaryninja
+import binaryninja.log as log
+import binaryninja.binaryview as view
+import binaryninja.interaction as interaction
+from binaryninja.plugin import PluginCommand
 
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
+
+def bininfo(bv):
+	if bv is None:
+		filename = ""
+		if len(sys.argv) > 1:
+			filename = sys.argv[1]
+		else:
+			filename = interaction.get_open_filename_input("Filename:")
+			if filename is None:
+				log.log_warn("No file specified")
+				sys.exit(1)
+
+		bv = view.BinaryViewType.get_view_of_file(filename)
+		log.redirect_output_to_log()
+		log.log_to_stdout(True)
+
+	contents = "## %s ##\n" % bv.file.filename
+	contents += "- START: 0x%x\n\n" % bv.start
+	contents += "- ENTRY: 0x%x\n\n" % bv.entry_point
+	contents += "- ARCH: %s\n\n" % bv.arch.name
+	contents += "### First 10 Functions ###\n"
+
+	contents += "| Start | Name   |\n"
+	contents += "|------:|:-------|\n"
+	for i in xrange(min(10, len(bv.functions))):
+		contents += "| 0x%x | %s |\n" % (bv.functions[i].start, bv.functions[i].symbol.full_name)
+
+	contents += "### First 10 Strings ###\n"
+	contents += "| Start | Length | String |\n"
+	contents += "|------:|-------:|:-------|\n"
+	for i in xrange(min(10, len(bv.strings))):
+		start = bv.strings[i].start
+		length = bv.strings[i].length
+		string = bv.read(start, length)
+		contents += "| 0x%x |%d | %s |\n" % (start, length, string)
+
+	interaction.show_markdown_report("Binary Info Report", contents)
+
+
+if __name__ == "__main__":
+	bininfo(None)
 else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
-
-if len(sys.argv) > 1:
-	target = sys.argv[1]
-else:
-	target = "/bin/ls"
-
-bv = binaryninja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
-
-log.log_info("-------- %s --------" % target)
-log.log_info("START: 0x%x" % bv.start)
-log.log_info("ENTRY: 0x%x" % bv.entry_point)
-log.log_info("ARCH: %s" % bv.arch.name)
-log.log_info("\n-------- Function List --------")
-
-for func in bv.functions:
-	log.log_info(func.symbol.name)
-
-
-log.log_info("\n-------- First 10 strings --------")
-
-for i in xrange(10):
-	start = bv.strings[i].start
-	length = bv.strings[i].length
-	string = bv.read(start, length)
-	log.log_info("0x%x (%d):\t%s" % (start, length, string))
+	PluginCommand.register("Binary Info", "Display basic info about the binary", bininfo)

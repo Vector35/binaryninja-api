@@ -266,12 +266,6 @@ class _BinaryViewTypeMetaclass(type):
 			raise KeyError("'%s' is not a valid view type" % str(value))
 		return BinaryViewType(view_type)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 
 class BinaryViewType(object):
 	__metaclass__ = _BinaryViewTypeMetaclass
@@ -304,6 +298,27 @@ class BinaryViewType(object):
 			return None
 		return self.create(data)
 
+	@classmethod
+	def get_view_of_file(cls, filename, update_analysis=True):
+		"""
+		``get_view_of_file`` returns the first available, non-Raw `BinaryView` available.
+
+		:param str filename: Path to filename
+		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
+		:return: returns a BinaryView object for the given filename.
+		:rtype: BinaryView or None
+		"""
+		view = BinaryView.open(filename)
+		if view is None:
+			return None
+		for available in view.available_view_types:
+			if available.name != "Raw":
+				bv = cls[available.name].open(filename)
+				if update_analysis:
+					bv.update_analysis_and_wait()
+				return bv
+		return None
+
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
@@ -327,12 +342,6 @@ class BinaryViewType(object):
 		if plat is None:
 			return None
 		return platform.Platform(None, plat)
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
 
 
 class Segment(object):
@@ -467,7 +476,7 @@ class BinaryView(object):
 			if file_metadata is None:
 				file_metadata = filemetadata.FileMetadata()
 			self.handle = core.BNCreateBinaryDataView(file_metadata.handle)
-			self.file = filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata))
+			self.file = filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
 		else:
 			startup._init_plugins()
 			if not self.__class__._registered:

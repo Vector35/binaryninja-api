@@ -2630,6 +2630,21 @@ class BinaryView(object):
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, platform = None):
+		"""
+		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+
+		:param Symbol sym: the symbol to define
+		:rtype: None
+		"""
+		if platform is None:
+			platform = self.platform
+		if platform is not None:
+			platform = platform.handle
+		if sym_type is not None:
+			sym_type = sym_type.handle
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, platform, sym.handle, sym_type)
+
 	def undefine_auto_symbol(self, sym):
 		"""
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
@@ -9729,6 +9744,12 @@ class Platform(object):
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
+
+	def get_associated_platform_by_address(self, addr):
+		new_addr = ctypes.c_ulonglong()
+		new_addr.value = addr
+		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
+		return Platform(None, handle = result), new_addr.value
 
 class ScriptingOutputListener(object):
 	def _register(self, handle):

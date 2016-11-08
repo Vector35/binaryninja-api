@@ -2490,6 +2490,19 @@ class BinaryView(object):
 		return BasicBlock(self, block)
 
 	def get_code_refs(self, addr, length = None):
+		"""
+		``get_code_refs`` returns a list of ReferenceSource objects (xrefs or cross-references) that point to the provided virtual address.
+
+		:param int addr: virtual address to query for references
+		:return: List of References for the given virtual address
+		:rtype: list(ReferenceSource)
+		:Example:
+
+			>>> bv.get_code_refs(here)
+			[<ref: x86@0x4165ff>]
+			>>>
+
+		"""
 		count = ctypes.c_ulonglong(0)
 		if length is None:
 			refs = core.BNGetCodeReferences(self.handle, addr, count)

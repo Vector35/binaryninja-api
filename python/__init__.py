@@ -3996,7 +3996,7 @@ class BinaryWriter(object):
 
 	def write16(self, value):
 		"""
-		```` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -4006,7 +4006,7 @@ class BinaryWriter(object):
 
 	def write32(self, value):
 		"""
-		```` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -4016,7 +4016,7 @@ class BinaryWriter(object):
 
 	def write64(self, value):
 		"""
-		```` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.

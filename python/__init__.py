@@ -2367,7 +2367,7 @@ class BinaryView(object):
 
 	def get_basic_blocks_starting_at(self, addr):
 		"""
-		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
+		``get_basic_blocks_starting_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
 
 		:param int addr: virtual address of BasicBlock desired
 		:return: a list of :py:Class:`BasicBlock` objects

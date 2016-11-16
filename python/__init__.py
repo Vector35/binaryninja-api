@@ -8347,16 +8347,17 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(core.LLIL_NOT, value.index, size = size, flags = flags)
 
-	def sign_extend(self, size, value):
+	def sign_extend(self, size, value, flags = None):
 		"""
 		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
 
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr value: the expression to sign extend
+		:param str flags: optional, flags to set
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.LLIL_SX, value.index, size = size)
+		return self.expr(core.LLIL_SX, value.index, size = size, flags = flags)
 
 	def zero_extend(self, size, value):
 		"""

@@ -1157,6 +1157,16 @@ class BinaryView(object):
 
 	@classmethod
 	def set_default_session_data(cls, name, value):
+		"""
+		```set_default_session_data``` saves a variable to the BinaryView.
+		:param name: name of the variable to be saved
+		:param value: value of the variable to be saved
+
+		:Example:
+			>>> BinaryView.set_default_session_data("variable_name", "value")
+			>>> bv.session_data.variable_name
+			'value'
+		"""
 		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):

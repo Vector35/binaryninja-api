@@ -18,39 +18,31 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
-import sys
-
-
 # Binary Ninja components
-try:
-	import _binaryninjacore as core
-	from databuffer import *
-	from filemetadata import *
-	from fileaccessor import *
-	from binaryview import *
-	from transform import *
-	from architecture import *
-	from basicblock import *
-	from function import *
-	from log import *
-	from lowlevelil import *
-	from bntype import *
-	from functionrecognizer import *
-	from update import *
-	from plugin import *
-	from callingconvention import *
-	from platform import *
-	from demangle import *
-	from mainthread import *
-	from interaction import *
-	from lineardisassembly import *
-	from undoaction import *
-	from highlight import *
-except:
-	x = open("/Users/peterl/path", "w")
-	x.write(str(sys.exc_info()))
-	x.close()
+import _binaryninjacore as core
+from databuffer import *
+from filemetadata import *
+from fileaccessor import *
+from binaryview import *
+from transform import *
+from architecture import *
+from basicblock import *
+from function import *
+from log import *
+from lowlevelil import *
+from bntype import *
+from functionrecognizer import *
+from update import *
+from plugin import *
+from callingconvention import *
+from platform import *
+from demangle import *
+from mainthread import *
+from interaction import *
+from lineardisassembly import *
+from undoaction import *
+from highlight import *
+
 
 class _DestructionCallbackHandler(object):
 	def __init__(self):

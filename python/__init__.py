@@ -4136,6 +4136,12 @@ class Type(object):
 
 	@classmethod
 	def int(self, width, sign = True):
+		"""
+		``int`` class method for creating an int Type.
+
+		:param int width: width of the integer in bytes
+		:param bool sign: optional variable representing signedness
+		"""
 		return Type(core.BNCreateIntegerType(width, sign))
 
 	@classmethod
@@ -4166,6 +4172,15 @@ class Type(object):
 
 	@classmethod
 	def function(self, ret, params, calling_convention = None, variable_arguments = False):
+		"""
+		``function`` class method for creating an function Type.
+		
+		:param Type ret: width of the integer in bytes
+		:param list ret: list of parameter Types
+		:param CallingConvention calling_convention: optional argument for function calling convention
+		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
+		
+		"""
 		param_buf = (core.BNNameAndType * len(params))()
 		for i in xrange(0, len(params)):
 			if isinstance(params[i], Type):

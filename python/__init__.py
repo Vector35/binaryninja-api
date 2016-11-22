@@ -4176,7 +4176,7 @@ class Type(object):
 		``function`` class method for creating an function Type.
 		
 		:param Type ret: width of the integer in bytes
-		:param list ret: list of parameter Types
+		:param list(Type) params: list of parameter Types
 		:param CallingConvention calling_convention: optional argument for function calling convention
 		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
 		

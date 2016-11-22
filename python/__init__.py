@@ -6750,7 +6750,7 @@ class Architecture(object):
 
 	def get_instruction_low_level_il(self, data, addr, il):
 		"""
-		``get_instruction_low_level_il`` appends LowLevelILExpr objects for the instruction at the given virtual
+		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given virtual
 		address ``addr`` with data ``data``.
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``

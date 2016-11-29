@@ -4342,8 +4342,9 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
-	def int(self, width, sign = True):
-		return Type(core.BNCreateIntegerType(width, sign))
+	def int(self, width, sign = True, altname = ""):
+		return Type(core.BNCreateIntegerType(width, sign,
+			   ctypes.create_string_buffer(altname)))
 
 	@classmethod
 	def float(self, width):

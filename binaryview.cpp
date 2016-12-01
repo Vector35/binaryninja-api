@@ -18,6 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <algorithm>
+#include <iterator>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -243,7 +245,7 @@ void AnalysisCompletionEvent::Cancel()
 }
 
 
-BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
+BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView)
 {
 	BNCustomBinaryView view;
 	view.context = this;
@@ -270,7 +272,8 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file)
 
 	m_file = file;
 	AddRefForRegistration();
-	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(), &view);
+	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(),
+		parentView ? parentView->GetObject() : nullptr, &view);
 }
 
 
@@ -481,6 +484,15 @@ size_t BinaryView::PerformGetAddressSize() const
 }
 
 
+bool BinaryView::PerformSave(FileAccessor* file)
+{
+	Ref<BinaryView> parent = GetParentView();
+	if (parent)
+		return parent->Save(file);
+	return false;
+}
+
+
 void BinaryView::NotifyDataWritten(uint64_t offset, size_t len)
 {
 	BNNotifyDataWritten(m_object, offset, len);
@@ -496,6 +508,15 @@ void BinaryView::NotifyDataInserted(uint64_t offset, size_t len)
 void BinaryView::NotifyDataRemoved(uint64_t offset, uint64_t len)
 {
 	BNNotifyDataRemoved(m_object, offset, len);
+}
+
+
+Ref<BinaryView> BinaryView::GetParentView() const
+{
+	BNBinaryView* view = BNGetParentView(m_object);
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
 }
 
 
@@ -1135,6 +1156,13 @@ void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 }
 
 
+void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
+{
+	BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(),
+		type ? type->GetObject() : nullptr);
+}
+
+
 void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNUndefineAutoSymbol(m_object, sym->GetObject());
@@ -1225,7 +1253,7 @@ vector<BNStringReference> BinaryView::GetStrings()
 	BNStringReference* strings = BNGetStrings(m_object, &count);
 	vector<BNStringReference> result;
 	result.insert(result.end(), strings, strings + count);
-	BNFreeStringList(strings);
+	BNFreeStringReferenceList(strings);
 	return result;
 }
 
@@ -1236,7 +1264,7 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 	BNStringReference* strings = BNGetStringsInRange(m_object, start, len, &count);
 	vector<BNStringReference> result;
 	result.insert(result.end(), strings, strings + count);
-	BNFreeStringList(strings);
+	BNFreeStringReferenceList(strings);
 	return result;
 }
 
@@ -1510,6 +1538,198 @@ bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const s
 bool BinaryView::GetAddressInput(uint64_t& result, const string& prompt, const string& title, uint64_t currentAddress)
 {
 	return BNGetAddressInput(&result, prompt.c_str(), title.c_str(), m_object, currentAddress);
+}
+
+
+void BinaryView::AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength,
+	uint32_t flags)
+{
+	BNAddAutoSegment(m_object, start, length, dataOffset, dataLength, flags);
+}
+
+
+void BinaryView::RemoveAutoSegment(uint64_t start, uint64_t length)
+{
+	BNRemoveAutoSegment(m_object, start, length);
+}
+
+
+void BinaryView::AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength,
+	uint32_t flags)
+{
+	BNAddUserSegment(m_object, start, length, dataOffset, dataLength, flags);
+}
+
+
+void BinaryView::RemoveUserSegment(uint64_t start, uint64_t length)
+{
+	BNRemoveUserSegment(m_object, start, length);
+}
+
+
+vector<Segment> BinaryView::GetSegments()
+{
+	size_t count;
+	BNSegment* segments = BNGetSegments(m_object, &count);
+
+	vector<Segment> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		Segment segment;
+		segment.start = segments[i].start;
+		segment.length = segments[i].length;
+		segment.dataOffset = segments[i].dataOffset;
+		segment.dataLength = segments[i].dataLength;
+		segment.flags = segments[i].flags;
+		result.push_back(segment);
+	}
+
+	BNFreeSegmentList(segments);
+	return result;
+}
+
+
+bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
+{
+	BNSegment segment;
+	if (!BNGetSegmentAt(m_object, addr, &segment))
+		return false;
+
+	result.start = segment.start;
+	result.length = segment.length;
+	result.dataOffset = segment.dataOffset;
+	result.dataLength = segment.dataLength;
+	result.flags = segment.flags;
+	return true;
+}
+
+
+void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, const string& type,
+	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+{
+	BNAddAutoSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
+		infoSection.c_str(), infoData);
+}
+
+
+void BinaryView::RemoveAutoSection(const string& name)
+{
+	BNRemoveAutoSection(m_object, name.c_str());
+}
+
+
+void BinaryView::AddUserSection(const string& name, uint64_t start, uint64_t length, const string& type,
+	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+{
+	BNAddUserSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
+		infoSection.c_str(), infoData);
+}
+
+
+void BinaryView::RemoveUserSection(const string& name)
+{
+	BNRemoveUserSection(m_object, name.c_str());
+}
+
+
+vector<Section> BinaryView::GetSections()
+{
+	size_t count;
+	BNSection* sections = BNGetSections(m_object, &count);
+
+	vector<Section> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		Section section;
+		section.name = sections[i].name;
+		section.type = sections[i].type;
+		section.start = sections[i].start;
+		section.length = sections[i].length;
+		section.linkedSection = sections[i].linkedSection;
+		section.infoSection = sections[i].infoSection;
+		section.infoData = sections[i].infoData;
+		section.align = sections[i].align;
+		section.entrySize = sections[i].entrySize;
+		result.push_back(section);
+	}
+
+	BNFreeSectionList(sections, count);
+	return result;
+}
+
+
+vector<Section> BinaryView::GetSectionsAt(uint64_t addr)
+{
+	size_t count;
+	BNSection* sections = BNGetSectionsAt(m_object, addr, &count);
+
+	vector<Section> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		Section section;
+		section.name = sections[i].name;
+		section.type = sections[i].type;
+		section.start = sections[i].start;
+		section.length = sections[i].length;
+		section.linkedSection = sections[i].linkedSection;
+		section.infoSection = sections[i].infoSection;
+		section.infoData = sections[i].infoData;
+		section.align = sections[i].align;
+		section.entrySize = sections[i].entrySize;
+		result.push_back(section);
+	}
+
+	BNFreeSectionList(sections, count);
+	return result;
+}
+
+
+bool BinaryView::GetSectionByName(const string& name, Section& result)
+{
+	BNSection section;
+	if (!BNGetSectionByName(m_object, name.c_str(), &section))
+		return false;
+
+	result.name = section.name;
+	result.type = section.type;
+	result.start = section.start;
+	result.length = section.length;
+	result.linkedSection = section.linkedSection;
+	result.infoSection = section.infoSection;
+	result.infoData = section.infoData;
+	result.align = section.align;
+	result.entrySize = section.entrySize;
+
+	BNFreeSection(&section);
+	return true;
+}
+
+
+vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
+{
+	const char** incomingNames = new const char*[names.size()];
+	for (size_t i = 0; i < names.size(); i++)
+		incomingNames[i] = names[i].c_str();
+
+	char** outgoingNames = BNGetUniqueSectionNames(m_object, incomingNames, names.size());
+	vector<string> result;
+	for (size_t i = 0; i < names.size(); i++)
+		result.push_back(outgoingNames[i]);
+
+	BNFreeStringList(outgoingNames, names.size());
+	return result;
+}
+
+
+vector<BNAddressRange> BinaryView::GetAllocatedRanges()
+{
+	size_t count;
+	BNAddressRange* ranges = BNGetAllocatedRanges(m_object, &count);
+
+	vector<BNAddressRange> result;
+	copy(&ranges[0], &ranges[count], back_inserter(result));
+	BNFreeAddressRanges(ranges);
+	return result;
 }
 
 

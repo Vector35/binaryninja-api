@@ -488,42 +488,12 @@ class M6502(Architecture):
 			return None
 		return "\xa9" + chr(value & 0xff) + "\xea"
 
-class NESViewUpdateNotification(BinaryDataNotification):
-	def __init__(self, view):
-		self.view = view
-
-	def data_written(self, view, offset, length):
-		addr = offset - self.view.rom_offset
-		while length > 0:
-			bank_ofs = addr & 0x3fff
-			if (bank_ofs + length) > 0x4000:
-				to_read = 0x4000 - bank_ofs
-			else:
-				to_read = length
-			if length < to_read:
-				to_read = length
-			if (addr >= (bank_ofs + (self.view.__class__.bank * 0x4000))) and (addr < (bank_ofs + ((self.view.__class__.bank + 1) * 0x4000))):
-				self.view.notify_data_written(0x8000 + bank_ofs, to_read)
-			elif (addr >= (bank_ofs + (self.view.rom_length - 0x4000))) and (addr < (bank_ofs + self.view.rom_length)):
-				self.view.notify_data_written(0xc000 + bank_ofs, to_read)
-			length -= to_read
-			addr += to_read
-
-	def data_inserted(self, view, offset, length):
-		self.view.notify_data_written(0x8000, 0x8000)
-
-	def data_removed(self, view, offset, length):
-		self.view.notify_data_written(0x8000, 0x8000)
-
 class NESView(BinaryView):
 	name = "NES"
 	long_name = "NES ROM"
 
 	def __init__(self, data):
-		BinaryView.__init__(self, data.file)
-		self.raw = data
-		self.notification = NESViewUpdateNotification(self)
-		self.raw.register_notification(self.notification)
+		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -539,7 +509,7 @@ class NESView(BinaryView):
 
 	def init(self):
 		try:
-			hdr = self.raw.read(0, 16)
+			hdr = self.parent_view.read(0, 16)
 			self.rom_banks = struct.unpack("B", hdr[4])[0]
 			self.vrom_banks = struct.unpack("B", hdr[5])[0]
 			self.rom_flags = struct.unpack("B", hdr[6])[0]
@@ -549,6 +519,15 @@ class NESView(BinaryView):
 			if self.rom_flags & 4:
 				self.rom_offset += 512
 			self.rom_length = self.rom_banks * 0x4000
+
+			# Add mapping for RAM and hardware registers, not backed by file contents
+			self.add_auto_segment(0, 0x8000, 0, 0, SegmentReadable | SegmentWritable | SegmentExecutable)
+
+			# Add ROM mappings
+			self.add_auto_segment(0x8000, 0x4000, self.rom_offset + (self.__class__.bank * 0x4000), 0x4000,
+				SegmentReadable | SegmentExecutable)
+			self.add_auto_segment(0xc000, 0x4000, self.rom_offset + self.rom_length - 0x4000, 0x4000,
+				SegmentReadable | SegmentExecutable)
 
 			nmi = struct.unpack("<H", self.read(0xfffa, 2))[0]
 			start = struct.unpack("<H", self.read(0xfffc, 2))[0]
@@ -592,9 +571,9 @@ class NESView(BinaryView):
 			self.define_auto_symbol(Symbol(DataSymbol, 0x4016, "JOY1"))
 			self.define_auto_symbol(Symbol(DataSymbol, 0x4017, "JOY2"))
 
-			sym_files = [self.raw.file.filename + ".%x.nl" % self.__class__.bank,
-					self.raw.file.filename + ".ram.nl",
-					self.raw.file.filename + ".%x.nl" % (self.rom_banks - 1)]
+			sym_files = [self.file.filename + ".%x.nl" % self.__class__.bank,
+					self.file.filename + ".ram.nl",
+					self.file.filename + ".%x.nl" % (self.rom_banks - 1)]
 			for f in sym_files:
 				if os.path.exists(f):
 					sym_contents = open(f, "r").read()
@@ -613,71 +592,6 @@ class NESView(BinaryView):
 		except:
 			log_error(traceback.format_exc())
 			return False
-
-	def perform_is_valid_offset(self, addr):
-		if (addr >= 0x8000) and (addr < 0x10000):
-			return True
-		return False
-
-	def perform_read(self, addr, length):
-		if addr < 0x8000:
-			return None
-		if addr >= (0x8000 + self.rom_length):
-			return None
-		if (addr + length) > 0x10000:
-			length = 0x10000 - addr
-		result = ""
-		while length > 0:
-			bank_ofs = addr & 0x3fff
-			if (bank_ofs + length) > 0x4000:
-				to_read = 0x4000 - bank_ofs
-			else:
-				to_read = length
-			if addr < 0xc000:
-				data = self.raw.read(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), to_read)
-			else:
-				data = self.raw.read(self.rom_offset + bank_ofs + self.rom_length - 0x4000, to_read)
-			result += data
-			if len(data) < to_read:
-				break
-			length -= to_read
-			addr += to_read
-		return result
-
-	def perform_write(self, addr, value):
-		if addr < 0x8000:
-			return 0
-		if addr >= (0x8000 + self.rom_length):
-			return 0
-		if (addr + len(value)) > (0x8000 + self.rom_length):
-			length = (0x8000 + self.rom_length) - addr
-		else:
-			length = len(value)
-		if (addr + length) > 0x10000:
-			length = 0x10000 - addr
-		offset = 0
-		while length > 0:
-			bank_ofs = addr & 0x3fff
-			if (bank_ofs + length) > 0x4000:
-				to_write = 0x4000 - bank_ofs
-			else:
-				to_write = length
-			if addr < 0xc000:
-				written = self.raw.write(self.rom_offset + bank_ofs + (self.__class__.bank * 0x4000), value[offset : offset + to_write])
-			else:
-				written = self.raw.write(self.rom_offset + bank_ofs + self.rom_length - 0x4000, value[offset : offset + to_write])
-			if written < to_write:
-				break
-			length -= to_write
-			addr += to_write
-			offset += to_write
-		return offset
-
-	def perform_get_start(self):
-		return 0
-
-	def perform_get_length(self):
-		return 0x10000
 
 	def perform_is_executable(self):
 		return True

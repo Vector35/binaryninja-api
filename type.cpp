@@ -235,6 +235,12 @@ Ref<Type> Type::StructureType(Structure* strct)
 }
 
 
+Ref<Type> Type::UnknownNamedType(UnknownType* unknwn)
+{
+	return new Type(BNCreateUnknownNamedType(unknwn->GetObject()));
+}
+
+
 Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
 {
 	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width, isSigned));
@@ -274,6 +280,46 @@ Ref<Type> Type::FunctionType(Type* returnValue, CallingConvention* callingConven
 void Type::SetFunctionCanReturn(bool canReturn)
 {
 	BNSetFunctionCanReturn(m_object, canReturn);
+}
+
+
+UnknownType::UnknownType(BNUnknownType* ut, vector<string> names)
+{
+	m_object = ut;
+	const char ** nameList = new const char*[names.size()];
+	for (size_t i = 0; i < names.size(); i++)
+	{
+		nameList[i] = names[i].c_str();
+	}
+	BNSetUnknownTypeName(ut, nameList, names.size());
+	delete [] nameList;
+}
+
+
+void UnknownType::SetName(const vector<string>& names)
+{
+	const char ** nameList = new const char*[names.size()];
+	for (size_t i = 0; i < names.size(); i++)
+	{
+		nameList[i] = names[i].c_str();
+	}
+	BNSetUnknownTypeName(m_object, nameList, names.size());
+	delete [] nameList;
+}
+
+
+vector<string> UnknownType::GetName() const
+{
+	size_t size;
+	char** name = BNGetUnknownTypeName(m_object, &size);
+	vector<string> result;
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(name[i]);
+		BNFreeString(name[i]);
+	}
+	delete [] name;
+	return result;
 }
 
 

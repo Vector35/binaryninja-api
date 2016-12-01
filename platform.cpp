@@ -244,3 +244,12 @@ void Platform::AddRelatedPlatform(Architecture* arch, Platform* platform)
 {
 	BNAddRelatedPlatform(m_object, arch->GetObject(), platform->GetObject());
 }
+
+
+Ref<Platform> Platform::GetAssociatedPlatformByAddress(uint64_t& addr)
+{
+	BNPlatform* platform = BNGetAssociatedPlatformByAddress(m_object, &addr);
+	if (!platform)
+		return nullptr;
+	return new Platform(platform);
+}

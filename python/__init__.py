@@ -300,7 +300,7 @@ class FileMetadata(object):
 		view = core.BNGetFileViewOfType(self.handle, "Raw")
 		if view is None:
 			return None
-		return BinaryView(self, handle = view)
+		return BinaryView(file_metadata = self, handle = view)
 
 	@property
 	def saved(self):
@@ -455,7 +455,7 @@ class FileMetadata(object):
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
-		return BinaryView(self, handle = view)
+		return BinaryView(file_metadata = self, handle = view)
 
 	def save_auto_snapshot(self, progress_func = None):
 		if progress_func is None:
@@ -474,7 +474,7 @@ class FileMetadata(object):
 			view = core.BNCreateBinaryViewOfType(view_type, self.raw.handle)
 			if view is None:
 				return None
-		return BinaryView(self, handle = view)
+		return BinaryView(file_metadata = self, handle = view)
 
 	def __setattr__(self, name, value):
 		try:
@@ -812,7 +812,7 @@ class BinaryViewType(object):
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
 		if view is None:
 			return None
-		return BinaryView(data.file, handle = view)
+		return BinaryView(file_metadata = data.file, handle = view)
 
 	def open(self, src, file_metadata = None):
 		data = BinaryView.open(src, file_metadata)
@@ -924,6 +924,64 @@ class DataVariable(object):
 	def __repr__(self):
 		return "<var 0x%x: %s>" % (self.address, str(self.type))
 
+class Segment(object):
+	def __init__(self, start, length, data_offset, data_length, flags):
+		self.start = start
+		self.length = length
+		self.data_offset = data_offset
+		self.data_length = data_length
+		self.flags = flags
+
+	@property
+	def end(self):
+		return self.start + self.length
+
+	def __len__(self):
+		return self.length
+
+	def __repr__(self):
+		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
+			"r" if (self.flags & core.SegmentReadable) != 0 else "-",
+			"w" if (self.flags & core.SegmentWritable) != 0 else "-",
+			"x" if (self.flags & core.SegmentExecutable) != 0 else "-")
+
+class Section(object):
+	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size):
+		self.name = name
+		self.type = section_type
+		self.start = start
+		self.length = length
+		self.linked_section = linked_section
+		self.info_section = info_section
+		self.info_data = info_data
+		self.align = align
+		self.entry_size = entry_size
+
+	@property
+	def end(self):
+		return self.start + self.length
+
+	def __len__(self):
+		return self.length
+
+	def __repr__(self):
+		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
+
+class AddressRange(object):
+	def __init__(self, start, end):
+		self.start = start
+		self.end = end
+
+	@property
+	def length(self):
+		return self.end - self.start
+
+	def __len__(self):
+		return self.end - self.start
+
+	def __repr__(self):
+		return "<%#x-%#x>" % (self.start, self.end)
+
 class _BinaryViewAssociatedDataStore(_AssociatedDataStore):
 	_defaults = {}
 
@@ -982,7 +1040,7 @@ class BinaryView(object):
 	next_address = 0
 	_associated_data = {}
 
-	def __init__(self, file_metadata = None, handle = None):
+	def __init__(self, file_metadata = None, parent_view = None, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
@@ -1020,7 +1078,9 @@ class BinaryView(object):
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.save = self._cb.save.__class__(self._save)
 			self.file = file_metadata
-			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, self._cb)
+			if parent_view is not None:
+				parent_view = parent_view.handle
+			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, parent_view, self._cb)
 		self.notifications = {}
 		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
@@ -1042,7 +1102,7 @@ class BinaryView(object):
 	def _create(cls, ctxt, data):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(data))
-			view = cls(BinaryView(file_metadata, handle = core.BNNewViewReference(data)))
+			view = cls(BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data)))
 			if view is None:
 				return None
 			return ctypes.cast(core.BNNewViewReference(view.handle), ctypes.c_void_p).value
@@ -1053,7 +1113,7 @@ class BinaryView(object):
 	@classmethod
 	def _is_valid_for_data(cls, ctxt, data):
 		try:
-			return cls.is_valid_for_data(BinaryView(None, handle = core.BNNewViewReference(data)))
+			return cls.is_valid_for_data(BinaryView(handle = core.BNNewViewReference(data)))
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -1071,7 +1131,7 @@ class BinaryView(object):
 			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src))
 		if view is None:
 			return None
-		result = BinaryView(file_metadata, handle = view)
+		result = BinaryView(file_metadata = file_metadata, handle = view)
 		return result
 
 	@classmethod
@@ -1086,7 +1146,7 @@ class BinaryView(object):
 			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, buf.handle)
 		if view is None:
 			return None
-		result = BinaryView(file_metadata, handle = view)
+		result = BinaryView(file_metadata = file_metadata, handle = view)
 		return result
 
 	@classmethod
@@ -1097,6 +1157,16 @@ class BinaryView(object):
 
 	@classmethod
 	def set_default_session_data(cls, name, value):
+		"""
+		```set_default_session_data``` saves a variable to the BinaryView.
+		:param name: name of the variable to be saved
+		:param value: value of the variable to be saved
+
+		:Example:
+			>>> BinaryView.set_default_session_data("variable_name", "value")
+			>>> bv.session_data.variable_name
+			'value'
+		"""
 		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):
@@ -1112,6 +1182,14 @@ class BinaryView(object):
 				yield Function(self, core.BNNewFunctionReference(funcs[i]))
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
+
+	@property
+	def parent_view(self):
+		"""View that contains the raw data used by this view (read-only)"""
+		result = core.BNGetParentView(self.handle)
+		if result is None:
+			return None
+		return BinaryView(handle = result)
 
 	@property
 	def modified(self):
@@ -1308,6 +1386,42 @@ class BinaryView(object):
 		for i in xrange(0, count.value):
 			result[type_list[i].name] = Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
+		return result
+
+	@property
+	def segments(self):
+		"""List of segments (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		segment_list = core.BNGetSegments(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Segment(segment_list[i].start, segment_list[i].length,
+				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags))
+		core.BNFreeSegmentList(segment_list)
+		return result
+
+	@property
+	def sections(self):
+		"""List of sections (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		section_list = core.BNGetSections(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
+				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize)
+		core.BNFreeSectionList(section_list, count.value)
+		return result
+
+	@property
+	def allocated_ranges(self):
+		"""List of valid address ranges for this view (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		range_list = core.BNGetAllocatedRanges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(AddressRange(range_list[i].start, range_list[i].end))
+		core.BNFreeAddressRanges(range_list)
 		return result
 
 	@property
@@ -1587,43 +1701,52 @@ class BinaryView(object):
 			return None
 		return ''.join(str(a) for a in txt).strip()
 
-	@abc.abstractmethod
 	def perform_save(self, accessor):
-		raise NotImplementedError
+		if self.parent_view is not None:
+			return self.parent_view.save(accessor)
+		return False
 
 	@abc.abstractmethod
 	def perform_get_address_size(self):
 		raise NotImplementedError
 
-	@abc.abstractmethod
 	def perform_get_length(self):
-		raise NotImplementedError
+		"""
+		``perform_get_length`` implements a query for the size of the virtual address range used by
+		the BinaryView.
 
-	@abc.abstractmethod
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
+		.. warning:: This method **must not** be called directly.
+
+		:return: returns the size of the virtual address range used by the BinaryView.
+		:rtype: int
+		"""
+		return 0
+
 	def perform_read(self, addr, length):
 		"""
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
 		``length`` bytes from the rebased address ``addr``.
 
-		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is\
-		 different from the physical address.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to attempt to read from
 		:param int length: the number of bytes to be read
 		:return: length bytes read from addr, should return empty string on error
-		:rtype: int
+		:rtype: str
 		"""
-		raise NotImplementedError
+		return ""
 
-	@abc.abstractmethod
 	def perform_write(self, addr, data):
 		"""
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``.
 
-		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
-		different from the physical address.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1631,16 +1754,14 @@ class BinaryView(object):
 		:return: length of data written, should return 0 on error
 		:rtype: int
 		"""
-		raise NotImplementedError
+		return 0
 
-	@abc.abstractmethod
 	def perform_insert(self, addr, data):
 		"""
 		``perform_insert`` implements a mapping between a virtual address and an absolute file offset, inserting
 		the bytes ``data`` to rebased address ``addr``.
 
-		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
-		different from the physical address.
+		.. note:: This method **may** be overridden by custom BinaryViews. If not overridden, inserting is disallowed
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1648,16 +1769,14 @@ class BinaryView(object):
 		:return: length of data inserted, should return 0 on error
 		:rtype: int
 		"""
-		raise NotImplementedError
+		return 0
 
-	@abc.abstractmethod
 	def perform_remove(self, addr, length):
 		"""
 		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
 		``length`` bytes from the rebased address ``addr``.
 
-		.. note:: This method must be overridden by custom BinaryViews if they have segments or the virtual address is \
-		different from the physical address.
+		.. note:: This method **may** be overridden by custom BinaryViews. If not overridden, removing data is disallowed
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1665,14 +1784,14 @@ class BinaryView(object):
 		:return: length of data removed, should return 0 on error
 		:rtype: int
 		"""
-		raise NotImplementedError
+		return 0
 
-	@abc.abstractmethod
 	def perform_get_modification(self, addr):
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
 
-		.. note:: This method **may** be overridden by custom BinaryViews.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1681,13 +1800,12 @@ class BinaryView(object):
 		"""
 		return core.Original
 
-	@abc.abstractmethod
 	def perform_is_valid_offset(self, addr):
 		"""
 		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
 
-		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
-		physical file offsets.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1697,13 +1815,12 @@ class BinaryView(object):
 		data = self.read(addr, 1)
 		return (data is not None) and (len(data) == 1)
 
-	@abc.abstractmethod
 	def perform_is_offset_readable(self, offset):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable.
 
-		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
-		physical file offsets, or if memory protections exist.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int offset: a virtual address to be checked
@@ -1712,13 +1829,12 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(offset)
 
-	@abc.abstractmethod
 	def perform_is_offset_writable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
 
-		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
-		physical file offsets, or if memory protections exist.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1727,13 +1843,12 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(addr)
 
-	@abc.abstractmethod
 	def perform_is_offset_executable(self, addr):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable.
 
-		.. note:: This method **must** be implemented for custom BinaryViews whose virtual addresses differ from \
-		physical file offsets, or if memory protections exist.
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1742,13 +1857,13 @@ class BinaryView(object):
 		"""
 		return self.is_valid_offset(addr)
 
-	@abc.abstractmethod
 	def perform_get_next_valid_offset(self, addr):
 		"""
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address.
 
-		.. note:: This method **may** be implemented by custom BinaryViews
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to start checking from.
@@ -1759,13 +1874,13 @@ class BinaryView(object):
 			return self.perform_get_start()
 		return addr
 
-	@abc.abstractmethod
 	def perform_get_start(self):
 		"""
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView.
 
-		.. note:: This method **may** be implemented by custom BinaryViews
+		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
 		:return: returns the first virtual address in the BinaryView.
@@ -1773,7 +1888,6 @@ class BinaryView(object):
 		"""
 		return 0
 
-	@abc.abstractmethod
 	def perform_get_entry_point(self):
 		"""
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
@@ -1786,7 +1900,6 @@ class BinaryView(object):
 		"""
 		return 0
 
-	@abc.abstractmethod
 	def perform_is_executable(self):
 		"""
 		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
@@ -1797,9 +1910,8 @@ class BinaryView(object):
 		:return: true if the current BinaryView is executable, false if it is not executable or on error
 		:rtype: bool
 		"""
-		raise NotImplementedError
+		return False
 
-	@abc.abstractmethod
 	def perform_get_default_endianness(self):
 		"""
 		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
@@ -2388,6 +2500,19 @@ class BinaryView(object):
 		return BasicBlock(self, block)
 
 	def get_code_refs(self, addr, length = None):
+		"""
+		``get_code_refs`` returns a list of ReferenceSource objects (xrefs or cross-references) that point to the provided virtual address.
+
+		:param int addr: virtual address to query for references
+		:return: List of References for the given virtual address
+		:rtype: list(ReferenceSource)
+		:Example:
+
+			>>> bv.get_code_refs(here)
+			[<ref: x86@0x4165ff>]
+			>>>
+
+		"""
 		count = ctypes.c_ulonglong(0)
 		if length is None:
 			refs = core.BNGetCodeReferences(self.handle, addr, count)
@@ -2527,6 +2652,21 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
+
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, platform = None):
+		"""
+		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+
+		:param Symbol sym: the symbol to define
+		:rtype: None
+		"""
+		if platform is None:
+			platform = self.platform
+		if platform is not None:
+			platform = platform.handle
+		if sym_type is not None:
+			sym_type = sym_type.handle
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, platform, sym.handle, sym_type)
 
 	def undefine_auto_symbol(self, sym):
 		"""
@@ -2868,7 +3008,7 @@ class BinaryView(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(StringReference(core.BNStringType_names[strings[i].type], strings[i].start, strings[i].length))
-		core.BNFreeStringList(strings)
+		core.BNFreeStringReferenceList(strings)
 		return result
 
 	def add_analysis_completion_event(self, callback):
@@ -3387,6 +3527,73 @@ class BinaryView(object):
 			return None
 		return value.value
 
+	def add_auto_segment(self, start, length, data_offset, data_length, flags):
+		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
+
+	def remove_auto_segment(self, start, length):
+		core.BNRemoveAutoSegment(self.handle, start, length)
+
+	def add_user_segment(self, start, length, data_offset, data_length, flags):
+		core.BNAddUserSegment(self.handle, start, length, data_offset, data_length, flags)
+
+	def remove_user_segment(self, start, length):
+		core.BNRemoveUserSegment(self.handle, start, length)
+
+	def get_segment_at(self, addr):
+		segment = core.BNSegment()
+		if not core.BNGetSegmentAt(self.handle, addr, segment):
+			return None
+		result = Segment(segment.start, segment.length, segment.dataOffset, segment.dataLength,
+			segment.flags)
+		return result
+
+	def add_auto_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
+		info_section = "", info_data = 0):
+		core.BNAddAutoSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+			info_section, info_data)
+
+	def remove_auto_section(self, name):
+		core.BNRemoveAutoSection(self.handle, name)
+
+	def add_user_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
+		info_section = "", info_data = 0):
+		core.BNAddUserSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+			info_section, info_data)
+
+	def remove_user_section(self, name):
+		core.BNRemoveUserSection(self.handle, name)
+
+	def get_sections_at(self, addr):
+		count = ctypes.c_ulonglong(0)
+		section_list = core.BNGetSectionsAt(self.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
+				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize))
+		core.BNFreeSectionList(section_list, count.value)
+		return result
+
+	def get_section_by_name(self, name):
+		section = core.BNSection()
+		if not core.BNGetSectionByName(self.handle, name, section):
+			return None
+		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
+			section.infoSection, section.infoData, section.align, section.entrySize)
+		core.BNFreeSection(section)
+		return result
+
+	def get_unique_section_names(self, name_list):
+		incoming_names = (ctypes.c_char_p * len(name_list))()
+		for i in xrange(0, len(name_list)):
+			incoming_names[i] = name_list[i]
+		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
+		result = []
+		for i in xrange(0, len(name_list)):
+			result.append(str(outgoing_names[i]))
+		core.BNFreeStringList(outgoing_names, len(name_list))
+		return result
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self,name,value)
@@ -3799,7 +4006,7 @@ class BinaryWriter(object):
 
 	def write16(self, value):
 		"""
-		```` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -3809,7 +4016,7 @@ class BinaryWriter(object):
 
 	def write32(self, value):
 		"""
-		```` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -3819,7 +4026,7 @@ class BinaryWriter(object):
 
 	def write64(self, value):
 		"""
-		```` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -4135,14 +4342,16 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
-	def int(self, width, sign = True):
+	def int(self, width, sign = True, altname = ""):
 		"""
 		``int`` class method for creating an int Type.
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
+		:param str altname: optional name of integer type
 		"""
-		return Type(core.BNCreateIntegerType(width, sign))
+		return Type(core.BNCreateIntegerType(width, sign,
+			   ctypes.create_string_buffer(altname)))
 
 	@classmethod
 	def float(self, width):
@@ -4155,6 +4364,10 @@ class Type(object):
 	@classmethod
 	def unknown_type(self, unknown_type):
 		return Type(core.BNCreateUnknownType(unknown_type.handle))
+
+	@classmethod
+	def unknown_type(self, s):
+		return Type(core.BNCreateUnknownType(s.handle))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width = None):
@@ -4174,12 +4387,12 @@ class Type(object):
 	def function(self, ret, params, calling_convention = None, variable_arguments = False):
 		"""
 		``function`` class method for creating an function Type.
-		
+
 		:param Type ret: width of the integer in bytes
 		:param list(Type) params: list of parameter Types
 		:param CallingConvention calling_convention: optional argument for function calling convention
 		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
-		
+
 		"""
 		param_buf = (core.BNNameAndType * len(params))()
 		for i in xrange(0, len(params)):
@@ -4629,6 +4842,14 @@ class Function(object):
 		if arch is None:
 			return None
 		return Architecture(arch)
+
+	@property
+	def platform(self):
+		"""Function platform (read-only)"""
+		platform = core.BNGetFunctionPlatform(self.handle)
+		if platform is None:
+			return None
+		return Platform(None, handle = platform)
 
 	@property
 	def start(self):
@@ -5281,7 +5502,7 @@ class FunctionGraphBlock(object):
 			core.BNFreeBasicBlock(block)
 			block = None
 		else:
-			block = BasicBlock(BinaryView(None, handle = core.BNGetFunctionData(func)), block)
+			block = BasicBlock(BinaryView(handle = core.BNGetFunctionData(func)), block)
 			core.BNFreeFunction(func)
 		return block
 
@@ -5853,6 +6074,8 @@ class Architecture(object):
 			self._cb.getDefaultIntegerSize = self._cb.getDefaultIntegerSize.__class__(self._get_default_integer_size)
 			self._cb.getMaxInstructionLength = self._cb.getMaxInstructionLength.__class__(self._get_max_instruction_length)
 			self._cb.getOpcodeDisplayLength = self._cb.getOpcodeDisplayLength.__class__(self._get_opcode_display_length)
+			self._cb.getAssociatedArchitectureByAddress = self._cb.getAssociatedArchitectureByAddress.__class__(
+				self._get_associated_arch_by_address)
 			self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__(self._get_instruction_info)
 			self._cb.getInstructionText = self._cb.getInstructionText.__class__(self._get_instruction_text)
 			self._cb.freeInstructionText = self._cb.freeInstructionText.__class__(self._free_instruction_text)
@@ -6041,6 +6264,15 @@ class Architecture(object):
 		except:
 			log_error(traceback.format_exc())
 			return 8
+
+	def _get_associated_arch_by_address(self, ctxt, addr):
+		try:
+			result, new_addr = self.perform_get_associated_arch_by_address(addr[0])
+			addr[0] = new_addr
+			return ctypes.cast(result.handle, ctypes.c_void_p).value
+		except:
+			log_error(traceback.format_exc())
+			return ctypes.cast(self.handle, ctypes.c_void_p).value
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
 		try:
@@ -6451,6 +6683,9 @@ class Architecture(object):
 			log_error(traceback.format_exc())
 			return False
 
+	def perform_get_associated_arch_by_address(self, addr):
+		return self, addr
+
 	@abc.abstractmethod
 	def perform_get_instruction_info(self, data, addr):
 		"""
@@ -6700,6 +6935,12 @@ class Architecture(object):
 		:rtype: str
 		"""
 		return None
+
+	def get_associated_arch_by_address(self, addr):
+		new_addr = ctypes.c_ulonglong()
+		new_addr.value = addr
+		result = core.BNGetAssociatedArchitectureByAddress(self.handle, new_addr)
+		return Architecture(handle = result), new_addr.value
 
 	def get_instruction_info(self, data, addr):
 		"""
@@ -8133,16 +8374,17 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(core.LLIL_NOT, value.index, size = size, flags = flags)
 
-	def sign_extend(self, size, value):
+	def sign_extend(self, size, value, flags = None):
 		"""
 		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
 
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr value: the expression to sign extend
+		:param str flags: optional, flags to set
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.LLIL_SX, value.index, size = size)
+		return self.expr(core.LLIL_SX, value.index, size = size, flags = flags)
 
 	def zero_extend(self, size, value):
 		"""
@@ -8734,7 +8976,7 @@ class FunctionRecognizer(object):
 	def _recognize_low_level_il(self, ctxt, data, func, il):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(data))
-			view = BinaryView(file_metadata, handle = core.BNNewViewReference(data))
+			view = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
 			func = Function(view, handle = core.BNNewFunctionReference(func))
 			il = LowLevelILFunction(func.arch, handle = core.BNNewLowLevelILFunctionReference(il))
 			return self.recognize_low_level_il(view, func, il)
@@ -8971,7 +9213,7 @@ class PluginCommand:
 	def _default_action(cls, view, action):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj)
 		except:
 			log_error(traceback.format_exc())
@@ -8980,7 +9222,7 @@ class PluginCommand:
 	def _address_action(cls, view, addr, action):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr)
 		except:
 			log_error(traceback.format_exc())
@@ -8989,7 +9231,7 @@ class PluginCommand:
 	def _range_action(cls, view, addr, length, action):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr, length)
 		except:
 			log_error(traceback.format_exc())
@@ -8998,7 +9240,7 @@ class PluginCommand:
 	def _function_action(cls, view, func, action):
 		try:
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
@@ -9010,7 +9252,7 @@ class PluginCommand:
 			if is_valid is None:
 				return True
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj)
 		except:
 			log_error(traceback.format_exc())
@@ -9022,7 +9264,7 @@ class PluginCommand:
 			if is_valid is None:
 				return True
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr)
 		except:
 			log_error(traceback.format_exc())
@@ -9034,7 +9276,7 @@ class PluginCommand:
 			if is_valid is None:
 				return True
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr, length)
 		except:
 			log_error(traceback.format_exc())
@@ -9046,7 +9288,7 @@ class PluginCommand:
 			if is_valid is None:
 				return True
 			file_metadata = FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = BinaryView(file_metadata, handle = core.BNNewViewReference(view))
+			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
@@ -9535,6 +9777,21 @@ class Platform(object):
 		"""
 		core.BNRegisterPlatformCallingConvention(self.handle, cc.handle)
 
+	def get_related_platform(self, arch):
+		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
+		if not result:
+			return None
+		return Platform(None, handle = result)
+
+	def add_related_platform(self, arch, platform):
+		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
+
+	def get_associated_platform_by_address(self, addr):
+		new_addr = ctypes.c_ulonglong()
+		new_addr.value = addr
+		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
+		return Platform(None, handle = result), new_addr.value
+
 class ScriptingOutputListener(object):
 	def _register(self, handle):
 		self._cb = core.BNScriptingOutputListener()
@@ -9610,7 +9867,7 @@ class ScriptingInstance(object):
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
-				view = BinaryView(None, handle = core.BNNewViewReference(view))
+				view = BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)
@@ -9620,7 +9877,7 @@ class ScriptingInstance(object):
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = Function(BinaryView(None, handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
+				func = Function(BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
@@ -9634,7 +9891,7 @@ class ScriptingInstance(object):
 				if func is None:
 					block = None
 				else:
-					block = BasicBlock(BinaryView(None, handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
+					block = BasicBlock(BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
 					core.BNFreeFunction(func)
 			else:
 				block = None
@@ -10384,7 +10641,7 @@ class InteractionHandler(object):
 	def _show_plain_text_report(self, ctxt, view, title, contents):
 		try:
 			if view:
-				view = BinaryView(None, handle = core.BNNewViewReference(view))
+				view = BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_plain_text_report(view, title, contents)
@@ -10394,7 +10651,7 @@ class InteractionHandler(object):
 	def _show_markdown_report(self, ctxt, view, title, contents, plaintext):
 		try:
 			if view:
-				view = BinaryView(None, handle = core.BNNewViewReference(view))
+				view = BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_markdown_report(view, title, contents, plaintext)
@@ -10404,7 +10661,7 @@ class InteractionHandler(object):
 	def _show_html_report(self, ctxt, view, title, contents, plaintext):
 		try:
 			if view:
-				view = BinaryView(None, handle = core.BNNewViewReference(view))
+				view = BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_html_report(view, title, contents, plaintext)
@@ -10434,7 +10691,7 @@ class InteractionHandler(object):
 	def _get_address_input(self, ctxt, result, prompt, title, view, current_address):
 		try:
 			if view:
-				view = BinaryView(None, handle = core.BNNewViewReference(view))
+				view = BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			value = self.get_address_input(prompt, title, view, current_address)
@@ -10505,7 +10762,7 @@ class InteractionHandler(object):
 				elif fields[i].type == core.AddressFormField:
 					view = None
 					if fields[i].view:
-						view = BinaryView(None, handle = core.BNNewViewReference(fields[i].view))
+						view = BinaryView(handle = core.BNNewViewReference(fields[i].view))
 					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
 				elif fields[i].type == core.ChoiceFormField:
 					choices = []
@@ -10853,6 +11110,21 @@ def demangle_ms(arch, mangled_name):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		#core.BNFreeDemangledName(outName.value, outSize.value)
+		return (Type(handle), names)
+	return (None, mangledName)
+
+
+def demangle_gnu3(arch, mangled_name):
+	handle = ctypes.POINTER(core.BNType)()
+	outName = ctypes.POINTER(ctypes.c_char_p)()
+	outSize = ctypes.c_ulonglong()
+	names = []
+	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+		for i in xrange(outSize.value):
+			names.append(outName[i])
+		#core.BNFreeDemangledName(outName.value, outSize.value)
+		if not handle:
+			return (None, names)
 		return (Type(handle), names)
 	return (None, mangled_name)
 

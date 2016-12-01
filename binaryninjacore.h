@@ -94,6 +94,7 @@ extern "C"
 	struct BNLowLevelILFunction;
 	struct BNType;
 	struct BNStructure;
+	struct BNUnknownType;
 	struct BNEnumeration;
 	struct BNCallingConvention;
 	struct BNPlatform;
@@ -200,7 +201,14 @@ extern "C"
 		FunctionContinuationLineType,
 		StackVariableLineType,
 		StackVariableListEndLineType,
-		FunctionEndLineType
+		FunctionEndLineType,
+		NoteStartLineType,
+		NoteLineType,
+		NoteEndLineType,
+		SectionStartLineType,
+		SectionEndLineType,
+		SectionSeparatorLineType,
+		NonContiguousSeparatorLineType
 	};
 
 	enum BNSymbolType
@@ -355,7 +363,8 @@ extern "C"
 		ArrayTypeClass = 7,
 		FunctionTypeClass = 8,
 		VarArgsTypeClass = 9,
-		ValueTypeClass = 10
+		ValueTypeClass = 10,
+		UnknownTypeClass = 11
 	};
 
 	enum BNStructureType
@@ -384,7 +393,8 @@ extern "C"
 	{
 		PointerReferenceType = 0,
 		ReferenceReferenceType = 1,
-		RValueReferenceType = 2
+		RValueReferenceType = 2,
+		NoReference = 3
 	};
 
 	enum BNPointerSuffix
@@ -471,7 +481,11 @@ extern "C"
 		RttiBaseClassDescriptor,
 		RttiBaseClassArray,
 		RttiClassHeirarchyDescriptor,
-		RttiCompleteObjectLocator
+		RttiCompleteObjectLocator,
+		OperatorUnaryMinusNameType,
+		OperatorUnaryPlusNameType,
+		OperatorUnaryBitAndNameType,
+		OperatorUnaryStarNameType
 	};
 
 	enum BNCallingConventionName
@@ -711,6 +725,7 @@ extern "C"
 		size_t (*getDefaultIntegerSize)(void* ctxt);
 		size_t (*getMaxInstructionLength)(void* ctxt);
 		size_t (*getOpcodeDisplayLength)(void* ctxt);
+		BNArchitecture* (*getAssociatedArchitectureByAddress)(void* ctxt, uint64_t* addr);
 		bool (*getInstructionInfo)(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		                           BNInstructionTextToken** result, size_t* count);
@@ -1137,8 +1152,44 @@ extern "C"
 		void (*destructFunction)(void* ctxt, BNFunction* func);
 	};
 
+	enum BNSegmentFlag
+	{
+		SegmentExecutable = 1,
+		SegmentWritable = 2,
+		SegmentReadable = 4,
+		SegmentContainsData = 8,
+		SegmentContainsCode = 0x10,
+		SegmentDenyWrite = 0x20,
+		SegmentDenyExecute = 0x40
+	};
+
+	struct BNSegment
+	{
+		uint64_t start, length;
+		uint64_t dataOffset, dataLength;
+		uint32_t flags;
+	};
+
+	struct BNSection
+	{
+		char* name;
+		char* type;
+		uint64_t start, length;
+		char* linkedSection;
+		char* infoSection;
+		uint64_t infoData;
+		uint64_t align, entrySize;
+	};
+
+	struct BNAddressRange
+	{
+		uint64_t start;
+		uint64_t end;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
+	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
 
@@ -1266,6 +1317,8 @@ extern "C"
 	BINARYNINJACOREAPI BNFileMetadata* BNGetFileForView(BNBinaryView* view);
 	BINARYNINJACOREAPI char* BNGetViewType(BNBinaryView* view);
 
+	BINARYNINJACOREAPI BNBinaryView* BNGetParentView(BNBinaryView* view);
+
 	BINARYNINJACOREAPI size_t BNReadViewData(BNBinaryView* view, void* dest, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadViewBuffer(BNBinaryView* view, uint64_t offset, size_t len);
 
@@ -1325,6 +1378,35 @@ extern "C"
 	BINARYNINJACOREAPI bool BNFindNextData(BNBinaryView* view, uint64_t start, BNDataBuffer* data, uint64_t* result,
 		BNFindFlag flags);
 
+	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length,
+		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+	BINARYNINJACOREAPI void BNRemoveAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length);
+	BINARYNINJACOREAPI void BNAddUserSegment(BNBinaryView* view, uint64_t start, uint64_t length,
+		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+	BINARYNINJACOREAPI void BNRemoveUserSegment(BNBinaryView* view, uint64_t start, uint64_t length);
+	BINARYNINJACOREAPI BNSegment* BNGetSegments(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSegmentList(BNSegment* segments);
+	BINARYNINJACOREAPI bool BNGetSegmentAt(BNBinaryView* view, uint64_t addr, BNSegment* result);
+
+	BINARYNINJACOREAPI void BNAddAutoSection(BNBinaryView* view, const char* name, uint64_t start, uint64_t length,
+		const char* type, uint64_t align, uint64_t entrySize, const char* linkedSection, const char* infoSection,
+		uint64_t infoData);
+	BINARYNINJACOREAPI void BNRemoveAutoSection(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI void BNAddUserSection(BNBinaryView* view, const char* name, uint64_t start, uint64_t length,
+		const char* type, uint64_t align, uint64_t entrySize, const char* linkedSection, const char* infoSection,
+		uint64_t infoData);
+	BINARYNINJACOREAPI void BNRemoveUserSection(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNSection* BNGetSections(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNSection* BNGetSectionsAt(BNBinaryView* view, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSectionList(BNSection* sections, size_t count);
+	BINARYNINJACOREAPI bool BNGetSectionByName(BNBinaryView* view, const char* name, BNSection* result);
+	BINARYNINJACOREAPI void BNFreeSection(BNSection* section);
+
+	BINARYNINJACOREAPI char** BNGetUniqueSectionNames(BNBinaryView* view, const char** names, size_t count);
+
+	BINARYNINJACOREAPI BNAddressRange* BNGetAllocatedRanges(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeAddressRanges(BNAddressRange* ranges);
+
 	// Raw binary data view
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataView(BNFileMetadata* file);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromBuffer(BNFileMetadata* file, BNDataBuffer* buf);
@@ -1333,7 +1415,8 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFile(BNFileMetadata* file, BNFileAccessor* accessor);
 
 	// Creation of new types of binary views
-	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(const char* name, BNFileMetadata* file, BNCustomBinaryView* view);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(const char* name, BNFileMetadata* file,
+		BNBinaryView* parent, BNCustomBinaryView* view);
 
 	// Binary view type management
 	BINARYNINJACOREAPI BNBinaryViewType* BNGetBinaryViewTypeByName(const char* name);
@@ -1434,6 +1517,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
+	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
 	                                             size_t maxLen, BNInstructionInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
@@ -1616,7 +1700,7 @@ extern "C"
 	BINARYNINJACOREAPI BNStringReference* BNGetStrings(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNStringReference* BNGetStringsInRange(BNBinaryView* view, uint64_t start,
 	                                                          uint64_t len, size_t* count);
-	BINARYNINJACOREAPI void BNFreeStringList(BNStringReference* strings);
+	BINARYNINJACOREAPI void BNFreeStringReferenceList(BNStringReference* strings);
 
 	BINARYNINJACOREAPI BNStackVariable* BNGetStackLayout(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStackLayout(BNStackVariable* vars, size_t count);
@@ -1793,6 +1877,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNDefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNUndefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNDefineImportedFunction(BNBinaryView* view, BNSymbol* importAddressSym, BNFunction* func);
+	BINARYNINJACOREAPI void BNDefineAutoSymbolAndVariableOrFunction(BNBinaryView* view, BNPlatform* platform,
+		BNSymbol* sym, BNType* type);
 
 	BINARYNINJACOREAPI BNSymbol* BNImportedFunctionFromImportAddressSymbol(BNSymbol* sym, uint64_t addr);
 
@@ -1877,6 +1963,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringAfterName(BNType* type);
+
+	BINARYNINJACOREAPI BNType* BNCreateUnknownNamedType(BNUnknownType* ut);
+	BINARYNINJACOREAPI BNUnknownType* BNCreateUnknownType(void);
+	BINARYNINJACOREAPI void BNSetUnknownTypeName(BNUnknownType* ut, const char** name, size_t size);
+	BINARYNINJACOREAPI char** BNGetUnknownTypeName(BNUnknownType* ut, size_t* size);
+	BINARYNINJACOREAPI void BNFreeUnknownType(BNUnknownType* ut);
+	BINARYNINJACOREAPI BNUnknownType* BNNewUnknownTypeReference(BNUnknownType* ut);
 
 	BINARYNINJACOREAPI BNStructure* BNCreateStructure(void);
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
@@ -2044,6 +2137,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNPlatform* BNGetRelatedPlatform(BNPlatform* platform, BNArchitecture* arch);
 	BINARYNINJACOREAPI void BNAddRelatedPlatform(BNPlatform* platform, BNArchitecture* arch, BNPlatform* related);
+	BINARYNINJACOREAPI BNPlatform* BNGetAssociatedPlatformByAddress(BNPlatform* platform, uint64_t* addr);
 
 	//Demangler
 	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch,
@@ -2143,6 +2237,12 @@ extern "C"
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
 		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 
+	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch,
+	                                       const char* mangledName,
+	                                       BNType** outType,
+	                                       char*** outVarName,
+	                                       size_t* outVarNameElements);
+	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 #ifdef __cplusplus
 }
 #endif

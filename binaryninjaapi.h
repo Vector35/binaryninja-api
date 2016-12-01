@@ -730,6 +730,22 @@ namespace BinaryNinja
 		bool autoDiscovered;
 	};
 
+	struct Segment
+	{
+		uint64_t start, length;
+		uint64_t dataOffset, dataLength;
+		uint32_t flags;
+	};
+
+	struct Section
+	{
+		std::string name, type;
+		uint64_t start, length;
+		std::string linkedSection, infoSection;
+		uint64_t infoData;
+		uint64_t align, entrySize;
+	};
+
 	struct NameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
@@ -743,8 +759,9 @@ namespace BinaryNinja
 		/*! BinaryView constructor
 		   \param typeName name of the BinaryView (e.g. ELF, PE, Mach-O, ...)
 		   \param file a file to create a view from
+		   \param parentView optional view that contains the raw data used by this view
 		 */
-		BinaryView(const std::string& typeName, FileMetadata* file);
+		BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView = nullptr);
 
 		/*! PerformRead provides a mapping between the flat file and virtual offsets in the file.
 
@@ -771,7 +788,7 @@ namespace BinaryNinja
 		virtual BNEndianness PerformGetDefaultEndianness() const;
 		virtual size_t PerformGetAddressSize() const;
 
-		virtual bool PerformSave(FileAccessor* file) { (void)file; return false; }
+		virtual bool PerformSave(FileAccessor* file);
 
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
@@ -805,6 +822,7 @@ namespace BinaryNinja
 		virtual bool Init() { return true; }
 
 		FileMetadata* GetFile() const { return m_file; }
+		Ref<BinaryView> GetParentView() const;
 		std::string GetTypeName() const;
 
 		bool IsModified() const;
@@ -908,6 +926,7 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
 
 		void DefineAutoSymbol(Ref<Symbol> sym);
+		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
 		void UndefineAutoSymbol(Ref<Symbol> sym);
 
 		void DefineUserSymbol(Ref<Symbol> sym);
@@ -969,6 +988,29 @@ namespace BinaryNinja
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
 			uint64_t currentAddress);
+
+		void AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+		void RemoveAutoSegment(uint64_t start, uint64_t length);
+		void AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+		void RemoveUserSegment(uint64_t start, uint64_t length);
+		std::vector<Segment> GetSegments();
+		bool GetSegmentAt(uint64_t addr, Segment& result);
+
+		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
+			const std::string& infoSection = "", uint64_t infoData = 0);
+		void RemoveAutoSection(const std::string& name);
+		void AddUserSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
+			const std::string& infoSection = "", uint64_t infoData = 0);
+		void RemoveUserSection(const std::string& name);
+		std::vector<Section> GetSections();
+		std::vector<Section> GetSectionsAt(uint64_t addr);
+		bool GetSectionByName(const std::string& name, Section& result);
+
+		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
+
+		std::vector<BNAddressRange> GetAllocatedRanges();
 	};
 
 	class BinaryData: public BinaryView
@@ -1216,6 +1258,7 @@ namespace BinaryNinja
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
+		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
 		                                       size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
@@ -1269,6 +1312,8 @@ namespace BinaryNinja
 
 		virtual size_t GetMaxInstructionLength() const;
 		virtual size_t GetOpcodeDisplayLength() const;
+
+		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
 
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
@@ -1413,6 +1458,7 @@ namespace BinaryNinja
 		virtual size_t GetDefaultIntegerSize() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
+		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 		                                std::vector<InstructionTextToken>& result) override;
@@ -1449,6 +1495,7 @@ namespace BinaryNinja
 	};
 
 	class Structure;
+	class UnknownType;
 	class Enumeration;
 
 	struct NameAndType
@@ -1476,6 +1523,8 @@ namespace BinaryNinja
 		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
+		Ref<UnknownType> GetUnknownType() const;
+
 		uint64_t GetElementCount() const;
 
 		void SetFunctionCanReturn(bool canReturn);
@@ -1492,6 +1541,7 @@ namespace BinaryNinja
 		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
+		static Ref<Type> UnknownNamedType(UnknownType* unknwn);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
@@ -1500,6 +1550,14 @@ namespace BinaryNinja
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 
 		static std::string GetQualifiedName(const std::vector<std::string>& names);
+	};
+
+	class UnknownType: public CoreRefCountObject<BNUnknownType, BNNewUnknownTypeReference, BNFreeUnknownType>
+	{
+	public:
+		UnknownType(BNUnknownType* s, std::vector<std::string> name = {});
+		std::vector<std::string> GetName() const;
+		void SetName(const std::vector<std::string>& name);
 	};
 
 	struct StructureMember
@@ -2186,6 +2244,7 @@ namespace BinaryNinja
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
+		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 	};
 
 	class ScriptingOutputListener

@@ -576,6 +576,12 @@ class BinaryDataNotification:
 	def string_removed(self, view, string_type, offset, length):
 		pass
 
+	def type_defined(self, view, name, type):
+		pass
+
+	def type_undefined(self, view, name, type):
+		pass
+
 class UndoAction:
 	name = None
 	action_type = None
@@ -671,6 +677,8 @@ class BinaryDataNotificationCallbacks(object):
 		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
 		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
+		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
+		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
 
 	def _register(self):
 		core.BNRegisterDataNotification(self.view.handle, self._cb)
@@ -750,6 +758,18 @@ class BinaryDataNotificationCallbacks(object):
 	def _string_removed(self, ctxt, view, string_type, offset, length):
 		try:
 			self.notify.string_removed(self.view, core.BNStringType_names[string_type], offset, length)
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_defined(self, ctxt, name, type_obj):
+		try:
+			self.notify.type_defined(self.view, name, Type(core.BNNewTypeReference(type_obj)))
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_undefined(self, ctxt, name, type_obj):
+		try:
+			self.notify.type_undefined(self.view, name, Type(core.BNNewTypeReference(type_obj)))
 		except:
 			log_error(traceback.format_exc())
 
@@ -4447,13 +4467,21 @@ class Structure(object):
 
 	@property
 	def width(self):
-		"""Structure width (read-only)"""
+		"""Structure width"""
 		return core.BNGetStructureWidth(self.handle)
+
+	@width.setter
+	def width(self, new_width):
+		core.BNSetStructureWidth(self.handle, new_width)
 
 	@property
 	def alignment(self):
-		"""Structure alignment (read-only)"""
+		"""Structure alignment"""
 		return core.BNGetStructureAlignment(self.handle)
+
+	@alignment.setter
+	def alignment(self, align):
+		core.BNSetStructureAlignment(self.handle, align)
 
 	@property
 	def packed(self):

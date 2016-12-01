@@ -590,6 +590,8 @@ namespace BinaryNinja
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type);
+		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type);
 
 	public:
 		BinaryDataNotification();
@@ -608,6 +610,8 @@ namespace BinaryNinja
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
+		virtual void OnTypeDefined(BinaryView* data, const std::string& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeUndefined(BinaryView* data, const std::string& name, Type* type) { (void)data; (void)name; (void)type; }
 	};
 
 	class FileAccessor
@@ -1570,13 +1574,16 @@ namespace BinaryNinja
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	public:
+		Structure();
 		Structure(BNStructure* s);
 
 		std::vector<std::string> GetName() const;
 		void SetName(const std::vector<std::string>& name);
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
+		void SetWidth(size_t width);
 		size_t GetAlignment() const;
+		void SetAlignment(size_t align);
 		bool IsPacked() const;
 		void SetPacked(bool packed);
 		bool IsUnion() const;
@@ -1585,6 +1592,7 @@ namespace BinaryNinja
 		void AddMember(Type* type, const std::string& name);
 		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
 		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, Type* type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -1606,6 +1614,8 @@ namespace BinaryNinja
 
 		void AddMember(const std::string& name);
 		void AddMemberWithValue(const std::string& name, uint64_t value);
+		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,

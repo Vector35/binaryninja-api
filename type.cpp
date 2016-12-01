@@ -323,6 +323,12 @@ vector<string> UnknownType::GetName() const
 }
 
 
+Structure::Structure()
+{
+	m_object = BNCreateStructure();
+}
+
+
 Structure::Structure(BNStructure* s)
 {
 	m_object = s;
@@ -382,9 +388,21 @@ uint64_t Structure::GetWidth() const
 }
 
 
+void Structure::SetWidth(size_t width)
+{
+	BNSetStructureWidth(m_object, width);
+}
+
+
 size_t Structure::GetAlignment() const
 {
 	return BNGetStructureAlignment(m_object);
+}
+
+
+void Structure::SetAlignment(size_t align)
+{
+	BNSetStructureAlignment(m_object, align);
 }
 
 
@@ -427,6 +445,12 @@ void Structure::AddMemberAtOffset(Type* type, const string& name, uint64_t offse
 void Structure::RemoveMember(size_t idx)
 {
 	BNRemoveStructureMember(m_object, idx);
+}
+
+
+void Structure::ReplaceMember(size_t idx, Type* type, const std::string& name)
+{
+	BNReplaceStructureMember(m_object, idx, type->GetObject(), name.c_str());
 }
 
 
@@ -491,6 +515,18 @@ void Enumeration::AddMember(const string& name)
 void Enumeration::AddMemberWithValue(const string& name, uint64_t value)
 {
 	BNAddEnumerationMemberWithValue(m_object, name.c_str(), value);
+}
+
+
+void Enumeration::RemoveMember(size_t idx)
+{
+	BNRemoveEnumerationMember(m_object, idx);
+}
+
+
+void Enumeration::ReplaceMember(size_t idx, const string& name, uint64_t value)
+{
+	BNReplaceEnumerationMember(m_object, idx, name.c_str(), value);
 }
 
 

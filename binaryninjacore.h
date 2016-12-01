@@ -179,6 +179,10 @@ extern "C"
 		OpcodeToken = 21,
 		StringToken = 22,
 		CharacterConstantToken = 23,
+		TypeDefinitionToken = 24,
+		TypeDefinitionNameToken = 25,
+		TypeDefinitionFieldToken = 26,
+		TypeDefinitionFieldNameToken = 27,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -628,6 +632,8 @@ extern "C"
 		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
+		void (*typeDefined)(void* ctxt, BNBinaryView* view, const char* name, BNType* type);
+		void (*typeUndefined)(void* ctxt, BNBinaryView* view, const char* name, BNType* type);
 	};
 
 	struct BNFileAccessor
@@ -1980,7 +1986,9 @@ extern "C"
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
 	BINARYNINJACOREAPI uint64_t BNGetStructureWidth(BNStructure* s);
+	BINARYNINJACOREAPI void BNSetStructureWidth(BNStructure* s, uint64_t width);
 	BINARYNINJACOREAPI size_t BNGetStructureAlignment(BNStructure* s);
+	BINARYNINJACOREAPI void BNSetStructureAlignment(BNStructure* s, size_t align);
 	BINARYNINJACOREAPI bool BNIsStructurePacked(BNStructure* s);
 	BINARYNINJACOREAPI void BNSetStructurePacked(BNStructure* s, bool packed);
 	BINARYNINJACOREAPI bool BNIsStructureUnion(BNStructure* s);
@@ -1989,6 +1997,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNAddStructureMember(BNStructure* s, BNType* type, const char* name);
 	BINARYNINJACOREAPI void BNAddStructureMemberAtOffset(BNStructure* s, BNType* type, const char* name, uint64_t offset);
 	BINARYNINJACOREAPI void BNRemoveStructureMember(BNStructure* s, size_t idx);
+	BINARYNINJACOREAPI void BNReplaceStructureMember(BNStructure* s, size_t idx, BNType* type, const char* name);
 
 	BINARYNINJACOREAPI BNEnumeration* BNCreateEnumeration(void);
 	BINARYNINJACOREAPI BNEnumeration* BNNewEnumerationReference(BNEnumeration* e);
@@ -2001,6 +2010,8 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNAddEnumerationMember(BNEnumeration* e, const char* name);
 	BINARYNINJACOREAPI void BNAddEnumerationMemberWithValue(BNEnumeration* e, const char* name, uint64_t value);
+	BINARYNINJACOREAPI void BNRemoveEnumerationMember(BNEnumeration* e, size_t idx);
+	BINARYNINJACOREAPI void BNReplaceEnumerationMember(BNEnumeration* e, size_t idx, const char* name, uint64_t value);
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,

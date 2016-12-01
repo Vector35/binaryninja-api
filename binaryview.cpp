@@ -129,6 +129,24 @@ void BinaryDataNotification::StringRemovedCallback(void* ctxt, BNBinaryView* obj
 }
 
 
+void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+	notify->OnTypeDefined(view, name, typeObj);
+}
+
+
+void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+	notify->OnTypeUndefined(view, name, typeObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -143,6 +161,8 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
+	m_callbacks.typeDefined = TypeDefinedCallback;
+	m_callbacks.typeUndefined = TypeUndefinedCallback;
 }
 
 

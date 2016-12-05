@@ -5479,7 +5479,7 @@ class FunctionGraphBlock(object):
 
 	@property
 	def basic_block(self):
-		"""Basic block associated with this part of the funciton graph (read-only)"""
+		"""Basic block associated with this part of the function graph (read-only)"""
 		block = core.BNGetFunctionGraphBasicBlock(self.handle)
 		func = core.BNGetBasicBlockFunction(block)
 		if func is None:

@@ -797,7 +797,7 @@ class BinaryViewType(object):
 
 	@property
 	def name(self):
-		"""Binary View name (read-only)"""
+		"""BinaryView name (read-only)"""
 		return core.BNGetBinaryViewTypeName(self.handle)
 
 	@property
@@ -2869,7 +2869,7 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
+		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction to be modified
 		:return: True on success, False on falure.
 		:rtype: bool
@@ -2893,7 +2893,7 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
+		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction to be modified
 		:return: True on success, False on falure.
 		:rtype: bool
@@ -2917,7 +2917,7 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
+		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction to be modified
 		:return: True on success, False on falure.
 		:rtype: bool
@@ -2939,7 +2939,7 @@ class BinaryView(object):
 		``skip_and_return_value`` convert the ``call`` instruction of architecture ``arch`` at the virtual address
 		``addr`` to the equivilent of returning a value.
 
-		:param Architecture arch: architecture of the current binary view
+		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction to be modified
 		:param int value: value to make the instruction *return*
 		:return: True on success, False on falure.
@@ -2962,7 +2962,7 @@ class BinaryView(object):
 		``get_instruction_length`` returns the number of bytes in the instruction of Architecture ``arch`` at the virtual
 		address ``addr``
 
-		:param Architecture arch: architecture of the current binary view
+		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction query
 		:return: Number of bytes in instruction
 		:rtype: int

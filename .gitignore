@@ -18,3 +18,13 @@ site/*
 api-docs/build/*
 .env
 api-docs/source/binaryninja.*
+bin/
+
+# CMake
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake

@@ -2,7 +2,7 @@
 
 # Note is setup script currently does three things:
 #
-# 1. It creates a binaryninja.desktop file in ~/.local/share/applications and 
+# 1. It creates a binaryninja.desktop file in ~/.local/share/applications and
 #    copies it to the desktop
 # 2. It creates a .xml file to add a mime type for .bndb files.
 # 3. It adds a binaryninja: url handler.
@@ -16,9 +16,9 @@ EXEC="${BNPATH}/binaryninja"
 PNG="${BNPATH}/docs/images/logo.png"
 EXT="bndb"
 SHARE=/usr/share #For system
-SUDO="sudo"	 #For system
+SUDO="sudo"      #For system
 SHARE=~/.local/share #For user only
-SUDO=""				 #For user only
+SUDO=""              #For user only
 DESKTOPFILE=$SHARE/applications/${APP}.desktop
 MIMEFILE=$SHARE/mime/packages/application-x-$APP.xml
 IMAGEPATH=$SHARE/pixmaps
@@ -26,7 +26,7 @@ IMAGEPATH=$SHARE/pixmaps
 createdesktopfile()
 {
 	mkdir -p $SHARE/{mime/packages,applications,pixmaps}
-	echo Creating .desktop file 
+	echo Creating .desktop file
 
 	# Desktop File
 	echo "[Desktop Entry]
@@ -44,7 +44,7 @@ Comment=$APPCOMMENT
 	$SUDO update-desktop-database $SHARE/applications
 }
 
-createmime() 
+createmime()
 {
 	echo Creating MIME settings
 	if [ ! -f $DESKTOPFILE ]
@@ -65,7 +65,7 @@ createmime()
 
 	#echo Copying icon
 	#$SUDO cp $PNG $IMAGEPATH/$APP.png
-	#$SUDO cp $PNG $IMAGEPATH/application-x-$APP.png
+	$SUDO cp $PNG $IMAGEPATH/application-x-$APP.png
 
 	$SUDO update-mime-database $SHARE/mime
 }

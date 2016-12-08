@@ -7450,7 +7450,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
-		BNFreeTypeParserResult(parse)
+		core.BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def parse_types_from_source_file(self, filename, include_dirs = []):
@@ -7491,7 +7491,7 @@ class Architecture(object):
 			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
 			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
-		BNFreeTypeParserResult(parse)
+		core.BNFreeTypeParserResult(parse)
 		return (TypeParserResult(types, variables, functions), error_str)
 
 	def register_calling_convention(self, cc):

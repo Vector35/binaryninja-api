@@ -4897,7 +4897,7 @@ class Function(object):
 
 	@property
 	def lifted_il(self):
-		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
+		"""returns LowLevelILFunction used to represent Function lifted IL (read-only)"""
 		return LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property

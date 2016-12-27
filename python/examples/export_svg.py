@@ -56,8 +56,13 @@ def render_svg(function):
 	<head>
 		<style type="text/css">
 			@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
+			body {
+				background-color: rgb(42, 42, 42);
+			}
 			svg {
 				background-color: rgb(42, 42, 42);
+				display: block;
+				margin: 0 auto;
 			}
 			.basicblock {
 				stroke: rgb(224, 224, 224);
@@ -130,7 +135,7 @@ def render_svg(function):
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
 		</defs>
-	'''.format(width=graph.width*widthconst, height=graph.height*heightconst)
+	'''.format(width=graph.width*widthconst + 20, height=graph.height*heightconst + 20)
 	output += '''	<g id="functiongraph0" class="functiongraph">
 			<title>Function Graph 0</title>
 	'''
@@ -155,14 +160,14 @@ def render_svg(function):
 				rgb=colors[color_str]
 		except:
 			pass
-		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width,height=height,r=rgb[0],g=rgb[1],b=rgb[2])
+		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width + 16,height=height + 12,r=rgb[0],g=rgb[1],b=rgb[2])
 
 		#Render instructions, unfortunately tspans don't allow copying/pasting more
 		#than one line at a time, need SVG 1.2 textarea tags for that it looks like
 
 		output += '			<text x="{x}" y="{y}">\n'.format(x=x,y=y + (i + 1) * heightconst)
 		for i,line in enumerate(block.lines):
-			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x,y=y + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
+			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x + 6,y=y + 6 + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
 			hover = instruction_data_flow(function, line.address)
 			output += '<title>{hover}</title>'.format(hover=hover)
 			for token in line.tokens:
@@ -177,8 +182,12 @@ def render_svg(function):
 
 		for edge in block.outgoing_edges:
 			points = ""
-			for x,y in edge.points:
+			x,y = edge.points[0]
+			points += str(x*widthconst)+","+str(y*heightconst + 12) + " "
+			for x,y in edge.points[1:-1]:
 				points += str(x*widthconst)+","+str(y*heightconst) + " "
+			x,y = edge.points[-1]
+			points += str(x*widthconst)+","+str(y*heightconst + 0) + " "
 			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=edge.type,points=points)
 	output += ' ' + edges + '\n'
 	output += '	</g>\n'

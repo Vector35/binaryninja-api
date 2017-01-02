@@ -683,6 +683,14 @@ class Function(object):
 		return core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
 
 	def set_int_display_type(self, instr_addr, value, operand, display_type, arch=None):
+		"""
+
+		:param int instr_addr:
+		:param int value:
+		:param int operand:
+		:param BNIntegerDisplayTypeEnum display_type:
+		:param Architecture arch: (optional)
+		"""
 		if arch is None:
 			arch = self.arch
 		if isinstance(display_type, str):
@@ -706,6 +714,16 @@ class Function(object):
 		self._advanced_analysis_requests -= 1
 
 	def get_basic_block_at(self, addr, arch=None):
+		"""
+		``get_basic_block_at`` returns the BasicBlock of the optionally specified Architecture ``arch`` at the given
+		address ``addr``.
+
+		:param int addr: Address of the BasicBlock to retrieve.
+		:param Architecture arch: (optional) Architecture of the basic block if different from the Function's self.arch
+		:Example:
+			>>> current_function.get_basic_block_at(current_function.start)
+			<block: x86_64@0x100000f30-0x100000f50>
+		"""
 		if arch is None:
 			arch = self.arch
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
@@ -714,6 +732,12 @@ class Function(object):
 		return basicblock.BasicBlock(self._view, handle = block)
 
 	def get_instr_highlight(self, addr, arch=None):
+		"""
+		:Example:
+			>>> current_function.set_user_instr_highlight(here, highlight.HighlightColor(red=0xff, blue=0xff, green=0))
+			>>> current_function.get_instr_highlight(here)
+			<color: #ff00ff>
+		"""
 		if arch is None:
 			arch = self.arch
 		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
@@ -726,6 +750,15 @@ class Function(object):
 		return highlight.HighlightColor(color = core.BNHighlightStandardColor.NoHighlightColor)
 
 	def set_auto_instr_highlight(self, addr, color, arch=None):
+		"""
+		``set_auto_instr_highlight`` highlights the instruction at the specified address with the supplied color
+
+		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+
+		:param int addr: virtual address of the instruction to be highlighted
+		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
+		"""
 		if arch is None:
 			arch = self.arch
 		if not isinstance(color, highlight.HighlightColor):
@@ -733,10 +766,21 @@ class Function(object):
 		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 	def set_user_instr_highlight(self, addr, color, arch=None):
+		"""
+		``set_user_instr_highlight`` highlights the instruction at the specified address with the supplied color
+
+		:param int addr: virtual address of the instruction to be highlighted
+		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
+		:Example:
+
+			>>> current_function.set_user_instr_highlight(here, core.BNHighlightStandardColor.BlueHighlightColor)
+			>>> current_function.set_user_instr_highlight(here, highlight.HighlightColor(red=0xff, blue=0xff, green=0))
+		"""
 		if arch is None:
 			arch = self.arch
-		if not isinstance(color, highlight.HighlightColor):
-			color = highlight.HighlightColor(color = color)
+		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 
@@ -805,7 +849,7 @@ class FunctionGraphBlock(object):
 
 	@property
 	def basic_block(self):
-		"""Basic block associated with this part of the funciton graph (read-only)"""
+		"""Basic block associated with this part of the function graph (read-only)"""
 		block = core.BNGetFunctionGraphBasicBlock(self.handle)
 		func = core.BNGetBasicBlockFunction(block)
 		if func is None:

@@ -926,6 +926,7 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
 
 		void DefineAutoSymbol(Ref<Symbol> sym);
+		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
 		void UndefineAutoSymbol(Ref<Symbol> sym);
 
 		void DefineUserSymbol(Ref<Symbol> sym);
@@ -2243,6 +2244,7 @@ namespace BinaryNinja
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
+		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 	};
 
 	class ScriptingOutputListener

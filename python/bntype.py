@@ -235,8 +235,8 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
-	def int(self, width, sign = True):
-		return Type(core.BNCreateIntegerType(width, sign))
+	def int(self, width, sign = True, altname=""):
+		return Type(core.BNCreateIntegerType(width, sign, altname))
 
 	@classmethod
 	def float(self, width):
@@ -251,13 +251,13 @@ class Type(object):
 		return Type(core.BNCreateUnknownType(unknown_type.handle))
 
 	@classmethod
-	def enumeration_type(self, arch, e, width = None):
+	def enumeration_type(self, arch, e, width=None):
 		if width is None:
 			width = arch.default_int_size
 		return Type(core.BNCreateEnumerationType(e.handle, width))
 
 	@classmethod
-	def pointer(self, arch, t, const = False):
+	def pointer(self, arch, t, const=False):
 		return Type(core.BNCreatePointerType(arch.handle, t.handle, const))
 
 	@classmethod
@@ -265,7 +265,7 @@ class Type(object):
 		return Type(core.BNCreateArrayType(t.handle, count))
 
 	@classmethod
-	def function(self, ret, params, calling_convention = None, variable_arguments = False):
+	def function(self, ret, params, calling_convention=None, variable_arguments=False):
 		param_buf = (core.BNNameAndType * len(params))()
 		for i in xrange(0, len(params)):
 			if isinstance(params[i], Type):
@@ -287,7 +287,7 @@ class Type(object):
 
 
 class UnknownType(object):
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is None:
 			self.handle = core.BNCreateUnknownType()
 		else:
@@ -324,7 +324,7 @@ class StructureMember(object):
 
 
 class Structure(object):
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is None:
 			self.handle = core.BNCreateStructure()
 		else:
@@ -416,7 +416,7 @@ class EnumerationMember(object):
 
 
 class Enumeration(object):
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is None:
 			self.handle = core.BNCreateEnumeration()
 		else:
@@ -472,7 +472,7 @@ class TypeParserResult(object):
 		return "{types: %s, variables: %s, functions: %s}" % (self.types, self.variables, self.functions)
 
 
-def preprocess_source(source, filename = None, include_dirs = []):
+def preprocess_source(source, filename=None, include_dirs=[]):
 	"""
 	``preprocess_source`` run the C preprocessor on the given source or source filename.
 

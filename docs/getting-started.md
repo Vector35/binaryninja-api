@@ -62,6 +62,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `;` : Adds a comment
  - `i` : Switches between disassembly and low-level il in graph view
  - `y` : Change type
+ - `a` : Change the data type to an ASCII string
  - [1248] : Change type directly to a data variable of the indicated widths
  - `d` : Switches between data variables of various widths
  - `r` : Change the data type to single ASCII character

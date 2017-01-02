@@ -1156,6 +1156,13 @@ void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 }
 
 
+void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
+{
+	BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(),
+		type ? type->GetObject() : nullptr);
+}
+
+
 void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNUndefineAutoSymbol(m_object, sym->GetObject());

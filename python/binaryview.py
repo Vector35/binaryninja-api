@@ -590,6 +590,16 @@ class BinaryView(object):
 
 	@classmethod
 	def set_default_session_data(cls, name, value):
+		"""
+		```set_default_session_data``` saves a variable to the BinaryView.
+		:param name: name of the variable to be saved
+		:param value: value of the variable to be saved
+
+		:Example:
+			>>> BinaryView.set_default_session_data("variable_name", "value")
+			>>> bv.session_data.variable_name
+			'value'
+		"""
 		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	def __del__(self):
@@ -1932,6 +1942,19 @@ class BinaryView(object):
 		return basicblock.BasicBlock(self, block)
 
 	def get_code_refs(self, addr, length=None):
+		"""
+		``get_code_refs`` returns a list of ReferenceSource objects (xrefs or cross-references) that point to the provided virtual address.
+
+		:param int addr: virtual address to query for references
+		:return: List of References for the given virtual address
+		:rtype: list(ReferenceSource)
+		:Example:
+
+			>>> bv.get_code_refs(here)
+			[<ref: x86@0x4165ff>]
+			>>>
+
+		"""
 		count = ctypes.c_ulonglong(0)
 		if length is None:
 			refs = core.BNGetCodeReferences(self.handle, addr, count)
@@ -3434,7 +3457,7 @@ class BinaryWriter(object):
 
 	def write16(self, value):
 		"""
-		```` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -3444,7 +3467,7 @@ class BinaryWriter(object):
 
 	def write32(self, value):
 		"""
-		```` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.
@@ -3454,7 +3477,7 @@ class BinaryWriter(object):
 
 	def write64(self, value):
 		"""
-		```` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
+		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:return: boolean True on success, False on failure.

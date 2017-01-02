@@ -111,11 +111,25 @@ class BasicBlock(object):
 
 	@property
 	def disassembly_text(self):
+		"""
+		``disassembly_text`` property which returns a list of function.DisassemblyTextLine objects for the current basic block.
+		:Example:
+
+			>>> current_basic_block.disassembly_text
+			[<0x100000f30: _main:>, ...]
+		"""
 		return self.get_disassembly_text()
 
 	@property
 	def highlight(self):
-		"""Highlight color for basic block"""
+		"""Gets or sets the highlight color for basic block
+
+		:Example:
+
+			>>> current_basic_block.highlight = core.BNHighlightStandardColor.BlueHighlightColor
+			>>> current_basic_block.highlight
+			<color: blue>
+		"""
 		color = core.BNGetBasicBlockHighlight(self.handle)
 		if color.style == core.BNHighlightColorStyle.StandardHighlightColor:
 			return highlight.HighlightColor(color=color.color, alpha=color.alpha)
@@ -162,6 +176,13 @@ class BasicBlock(object):
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
 
 	def get_disassembly_text(self, settings=None):
+		"""
+		``get_disassembly_text`` returns a list of function.DisassemblyTextLine objects for the current basic block.
+		:Example:
+
+			>>>current_basic_block.get_disassembly_text()
+			[<0x100000f30: _main:>, <0x100000f30: push    rbp>, ... ]
+		"""
 		settings_obj = None
 		if settings:
 			settings_obj = settings.handle
@@ -184,11 +205,27 @@ class BasicBlock(object):
 		return result
 
 	def set_auto_highlight(self, color):
-		if not isinstance(color, highlight.HighlightColor):
-			color = highlight.HighlightColor(color=color)
+		"""
+		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
+
+		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+
+		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		"""
+		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
 
 	def set_user_highlight(self, color):
-		if not isinstance(color, highlight.HighlightColor):
-			color = highlight.HighlightColor(color=color)
+		"""
+		``set_user_highlight`` highlights the current BasicBlock with the supplied color
+
+		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:Example:
+
+			>>> current_basic_block.set_user_highlight(highlight.HighlightColor(red=0xff, blue=0xff, green=0))
+			>>> current_basic_block.set_user_highlight(core.BNHighlightStandardColor.BlueHighlightColor)
+		"""
+		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())

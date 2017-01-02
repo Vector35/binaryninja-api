@@ -77,7 +77,7 @@ def find_jump_table(bv, addr):
 					i += 1
 
 		# Set the indirect branch targets on the jump instruction to be the list of targets discovered
-		func.set_user_indirect_branches(arch, jump_addr, branches)
+		func.set_user_indirect_branches(jump_addr, branches)
 
 # Create a plugin command so that the user can right click on an instruction referencing a jump table and
 # invoke the command

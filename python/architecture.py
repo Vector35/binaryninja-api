@@ -1152,6 +1152,12 @@ class Architecture(object):
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
+	def get_instruction_low_level_il_instruction(self, bv, addr):
+		il = lowlevelil.LowLevelILFunction(self)
+		data = bv.read(addr, self.max_instr_length)
+		self.get_instruction_low_level_il(data, addr, il)
+		return il[0]
+
 	def get_instruction_low_level_il(self, data, addr, il):
 		"""
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects for the instruction at the given virtual

@@ -43,7 +43,7 @@ def print_syscalls(bv):
         syscalls = (il for il in chain.from_iterable(func.low_level_il)
                     if il.operation == core.BNLowLevelILOperation.LLIL_SYSCALL)
         for il in syscalls:
-            value = func.get_reg_value_at(bv.arch, il.address, register).value
+            value = func.get_reg_value_at(il.address, register).value
             print("System call address: {:#x} - {:d}".format(il.address, value))
 
 

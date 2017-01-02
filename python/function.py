@@ -286,7 +286,7 @@ class Function(object):
 
 	@property
 	def function_type(self):
-		"""Function type"""
+		"""Function type object"""
 		return bntype.Type(core.BNGetFunctionType(self.handle))
 
 	@function_type.setter
@@ -358,10 +358,26 @@ class Function(object):
 	def set_comment(self, addr, comment):
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
-	def get_low_level_il_at(self, arch, addr):
+	def get_low_level_il_at(self, addr, arch=None):
+		"""
+		``get_low_level_il_at`` gets the LowLevelIL instruction address corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: int
+		:Example:
+
+			>>> func = bv.functions[0]
+			>>> func.get_low_level_il_at(func.start)
+			0L
+		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
 
-	def get_low_level_il_exits_at(self, arch, addr):
+	def get_low_level_il_exits_at(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		exits = core.BNGetLowLevelILExitsForInstruction(self.handle, arch.handle, addr, count)
 		result = []
@@ -370,7 +386,21 @@ class Function(object):
 		core.BNFreeLowLevelILInstructionList(exits)
 		return result
 
-	def get_reg_value_at(self, arch, addr, reg):
+	def get_reg_value_at(self, addr, reg, arch=None):
+		"""
+		``get_reg_value_at`` gets the value the provided string register address corresponding to the given virtual address
+
+		:param int addr: virtual address of the instruction to query
+		:param str reg: string value of native register to query
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: function.RegisterValue
+		:Example:
+
+			>>> func.get_reg_value_at(0x400dbe, 'rdi')
+			<const 0x2>
+		"""
+		if arch is None:
+			arch = self.arch
 		if isinstance(reg, str):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
@@ -378,7 +408,21 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_reg_value_after(self, arch, addr, reg):
+	def get_reg_value_after(self, addr, reg, arch=None):
+		"""
+		``get_reg_value_after`` gets the value instruction address corresponding to the given virtual address
+
+		:param int addr: virtual address of the instruction to query
+		:param str reg: string value of native register to query
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: function.RegisterValue
+		:Example:
+
+			>>> func.get_reg_value_after(0x400dbe, 'rdi')
+			<undetermined>
+		"""
+		if arch is None:
+			arch = self.arch
 		if isinstance(reg, str):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
@@ -386,11 +430,25 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_reg_value_at_low_level_il_instruction(self, i, reg):
+	def get_reg_value_at_low_level_il_instruction(self, i, reg, arch=None):
+		"""
+		``get_reg_value_at_low_level_il_instruction`` returns the value of the specified register ``reg`` at the il address
+		i
+
+		:param int i: il address of instruction to query
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: function.RegisterValue
+		:Example:
+
+			>>> func.get_reg_value_at_low_level_il_instruction(15, 'rdi')
+			<const 0x2>
+		"""
+		if arch is None:
+			arch = self.arch
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
 		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(self.arch, value)
+		result = RegisterValue(arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 
@@ -402,13 +460,35 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_stack_contents_at(self, arch, addr, offset, size):
+	def get_stack_contents_at(self, addr, offset, size, arch=None):
+		"""
+		``get_stack_contents_at`` returns the RegisterValue for the item on the stack in the current function at the
+		given virtual address ``addr``, stack offset ``offset`` and size of ``size``. Optionally specifying the architecture.
+
+		:param int addr: virtual address of the instruction to query
+		:param int offset: stack offset base of stack
+		:param int size: size of memory to query
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: function.RegisterValue
+
+		.. note:: Stack base is zero on entry into the function unless the architecture places the return address on the
+		stack as in (x86/x86_64) where the stack base will start at address_size
+
+		:Example:
+
+			>>> func.get_stack_contents_at(0x400fad, -16, 4)
+			<range: 0x8 to 0xffffffff>
+		"""
+		if arch is None:
+			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_stack_contents_after(self, arch, addr, offset, size):
+	def get_stack_contents_after(self, addr, offset, size, arch=None):
+		if arch is None:
+			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
 		core.BNFreeRegisterValue(value)
@@ -426,7 +506,9 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_parameter_at(self, arch, addr, func_type, i):
+	def get_parameter_at(self, addr, func_type, i, arch=None):
+		if arch is None:
+			arch = self.arch
 		if func_type is not None:
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
@@ -442,7 +524,9 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_regs_read_by(self, arch, addr):
+	def get_regs_read_by(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersReadByInstruction(self.handle, arch.handle, addr, count)
 		result = []
@@ -451,7 +535,9 @@ class Function(object):
 		core.BNFreeRegisterList(regs)
 		return result
 
-	def get_regs_written_by(self, arch, addr):
+	def get_regs_written_by(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, count)
 		result = []
@@ -460,7 +546,9 @@ class Function(object):
 		core.BNFreeRegisterList(regs)
 		return result
 
-	def get_stack_vars_referenced_by(self, arch, addr):
+	def get_stack_vars_referenced_by(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
@@ -470,7 +558,9 @@ class Function(object):
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
-	def get_constants_referenced_by(self, arch, addr):
+	def get_constants_referenced_by(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
@@ -479,7 +569,9 @@ class Function(object):
 		core.BNFreeConstantReferenceList(refs)
 		return result
 
-	def get_lifted_il_at(self, arch, addr):
+	def get_lifted_il_at(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		return core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
@@ -531,21 +623,27 @@ class Function(object):
 	def apply_auto_discovered_type(self, func_type):
 		core.BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle)
 
-	def set_auto_indirect_branches(self, source_arch, source, branches):
+	def set_auto_indirect_branches(self, source, branches, source_arch=None):
+		if source_arch is None:
+			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
 		for i in xrange(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNSetAutoIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
 
-	def set_user_indirect_branches(self, source_arch, source, branches):
+	def set_user_indirect_branches(self, source, branches, source_arch=None):
+		if source_arch is None:
+			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
 		for i in xrange(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNSetUserIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
 
-	def get_indirect_branches_at(self, arch, addr):
+	def get_indirect_branches_at(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong()
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
@@ -554,7 +652,9 @@ class Function(object):
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
-	def get_block_annotations(self, arch, addr):
+	def get_block_annotations(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, count)
 		result = []
@@ -577,10 +677,14 @@ class Function(object):
 	def set_user_type(self, value):
 		core.BNSetFunctionUserType(self.handle, value.handle)
 
-	def get_int_display_type(self, arch, instr_addr, value, operand):
+	def get_int_display_type(self, instr_addr, value, operand, arch=None):
+		if arch is None:
+			arch = self.arch
 		return core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
 
-	def set_int_display_type(self, arch, instr_addr, value, operand, display_type):
+	def set_int_display_type(self, instr_addr, value, operand, display_type, arch=None):
+		if arch is None:
+			arch = self.arch
 		if isinstance(display_type, str):
 			display_type = core.BNIntegerDisplayType[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
@@ -601,13 +705,17 @@ class Function(object):
 		core.BNReleaseAdvancedFunctionAnalysisData(self.handle)
 		self._advanced_analysis_requests -= 1
 
-	def get_basic_block_at(self, arch, addr):
+	def get_basic_block_at(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
 		if not block:
 			return None
 		return basicblock.BasicBlock(self._view, handle = block)
 
-	def get_instr_highlight(self, arch, addr):
+	def get_instr_highlight(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
 		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
 		if color.style == core.BNHighlightColorStyle.StandardHighlightColor:
 			return highlight.HighlightColor(color = color.color, alpha = color.alpha)
@@ -617,12 +725,16 @@ class Function(object):
 			return highlight.HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
 		return highlight.HighlightColor(color = core.BNHighlightStandardColor.NoHighlightColor)
 
-	def set_auto_instr_highlight(self, arch, addr, color):
+	def set_auto_instr_highlight(self, addr, color, arch=None):
+		if arch is None:
+			arch = self.arch
 		if not isinstance(color, highlight.HighlightColor):
 			color = highlight.HighlightColor(color = color)
 		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
-	def set_user_instr_highlight(self, arch, addr, color):
+	def set_user_instr_highlight(self, addr, color, arch=None):
+		if arch is None:
+			arch = self.arch
 		if not isinstance(color, highlight.HighlightColor):
 			color = highlight.HighlightColor(color = color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())

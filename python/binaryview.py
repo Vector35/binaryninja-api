@@ -275,7 +275,7 @@ class BinaryViewType(object):
 
 	@property
 	def name(self):
-		"""Binary View name (read-only)"""
+		"""BinaryView name (read-only)"""
 		return core.BNGetBinaryViewTypeName(self.handle)
 
 	@property
@@ -303,12 +303,21 @@ class BinaryViewType(object):
 		"""
 		``get_view_of_file`` returns the first available, non-Raw `BinaryView` available.
 
-		:param str filename: Path to filename
+		:param str filename: Path to filename or bndb
 		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
 		:return: returns a BinaryView object for the given filename.
 		:rtype: BinaryView or None
 		"""
-		view = BinaryView.open(filename)
+		sqlite = "SQLite format 3"
+		if filename.endswith(".bndb"):
+			f = open(filename, 'r')
+			if f is None or f.read(len(sqlite)) != sqlite:
+				return None
+			f.close()
+			view = filemetadata.FileMetadata().open_existing_database(filename)
+		else:
+			view = BinaryView.open(filename)
+
 		if view is None:
 			return None
 		for available in view.available_view_types:
@@ -1381,7 +1390,7 @@ class BinaryView(object):
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
 			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			>>> bv.convert_to_nop(0x100012f1)
 			True
 			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
@@ -1406,7 +1415,7 @@ class BinaryView(object):
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
 			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			>>> bv.convert_to_nop(0x100012f1)
 			True
 			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
@@ -1428,7 +1437,7 @@ class BinaryView(object):
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
 			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			>>> bv.convert_to_nop(0x100012f1)
 			True
 			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
@@ -1453,7 +1462,7 @@ class BinaryView(object):
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
 			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(bv.arch, 0x100012f1)
+			>>> bv.convert_to_nop(0x100012f1)
 			True
 			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
@@ -1624,33 +1633,37 @@ class BinaryView(object):
 			self.notifications[notify]._unregister()
 			del self.notifications[notify]
 
-	def add_function(self, plat, addr):
+	def add_function(self, addr, plat=None):
 		"""
 		``add_function`` add a new function of the given ``plat`` at the virtual address ``addr``
 
-		:param Platform plat: Platform for the function to be added
 		:param int addr: virtual address of the function to be added
+		:param Platform plat: Platform for the function to be added
 		:rtype: None
 		:Example:
 
-			>>> bv.add_function(bv.plat, 1)
+			>>> bv.add_function(1)
 			>>> bv.functions
 			[<func: x86_64@0x1>]
 
 		"""
+		if plat is None:
+			plat = self.platform
 		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
 
-	def add_entry_point(self, plat, addr):
+	def add_entry_point(self, addr, plat=None):
 		"""
 		``add_entry_point`` adds an virtual address to start analysis from for a given plat.
 
-		:param Platform plat: Platform for the entry point analysis
 		:param int addr: virtual address to start analysis from
+		:param Platform plat: Platform for the entry point analysis
 		:rtype: None
 		:Example:
-			>>> bv.add_entry_point(bv.plat, 0xdeadbeef)
+			>>> bv.add_entry_point(0xdeadbeef)
 			>>>
 		"""
+		if plat is None:
+			plat = self.platform
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
 
 	def remove_function(self, func):
@@ -1669,20 +1682,22 @@ class BinaryView(object):
 		"""
 		core.BNRemoveAnalysisFunction(self.handle, func.handle)
 
-	def create_user_function(self, plat, addr):
+	def create_user_function(self, addr, plat=None):
 		"""
 		``create_user_function`` add a new *user* function of the given ``plat`` at the virtual address ``addr``
 
-		:param Platform plat: Platform for the function to be added
 		:param int addr: virtual address of the *user* function to be added
+		:param Platform plat: Platform for the function to be added
 		:rtype: None
 		:Example:
 
-			>>> bv.create_user_function(bv.plat, 1)
+			>>> bv.create_user_function(1)
 			>>> bv.functions
 			[<func: x86_64@0x1>]
 
 		"""
+		if plat is None:
+			plat = self.platform
 		core.BNCreateUserFunction(self.handle, plat.handle, addr)
 
 	def remove_user_function(self, func):
@@ -1832,20 +1847,22 @@ class BinaryView(object):
 			return None
 		return DataVariable(var.address, type.Type(var.type), var.autoDiscovered)
 
-	def get_function_at(self, plat, addr):
+	def get_function_at(self, addr, plat=None):
 		"""
 		``get_function_at`` gets a binaryninja.Function object for the function at the virtual address ``addr``:
 
-		:param binaryninja.Platform plat: plat of the desired function
 		:param int addr: virtual address of the desired function
+		:param Platform plat: plat of the desired function
 		:return: returns a Function object or None for the function at the virtual address provided
 		:rtype: Function
 		:Example:
 
-			>>> bv.get_function_at(bv.plat, bv.entry_point)
+			>>> bv.get_function_at(bv.entry_point)
 			<func: x86_64@0x100001174>
 			>>>
 		"""
+		if plat is None:
+			plat = self.platform
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
@@ -2092,144 +2109,154 @@ class BinaryView(object):
 		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
 
-	def is_never_branch_patch_available(self, arch, addr):
+	def is_never_branch_patch_available(self, addr, arch=None):
 		"""
 		``is_never_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
 		instruction at ``addr`` can be made to **never branch**. The actual logic of which is implemented in the
 		``perform_is_never_branch_patch_available`` in the corresponding architecture.
 
-		:param Architecture arch: the architecture for the current view
 		:param int addr: the virtual address of the instruction to be patched
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True if the instruction can be patched, False otherwise
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012ed)
 			'test    eax, eax'
-			>>> bv.is_never_branch_patch_available(bv.arch, 0x100012ed)
+			>>> bv.is_never_branch_patch_available(0x100012ed)
 			False
 			>>> bv.get_disassembly(0x100012ef)
 			'jg      0x100012f5'
-			>>> bv.is_never_branch_patch_available(bv.arch, 0x100012ef)
+			>>> bv.is_never_branch_patch_available(0x100012ef)
 			True
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNIsNeverBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_always_branch_patch_available(self, arch, addr):
+	def is_always_branch_patch_available(self, addr, arch=None):
 		"""
 		``is_always_branch_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` can be made to **always branch**. The actual logic of which is implemented in the
 		``perform_is_always_branch_patch_available`` in the corresponding architecture.
 
-		:param Architecture arch: the architecture for the current view
 		:param int addr: the virtual address of the instruction to be patched
+		:param Architecture arch: (optional) the architecture for the current view
 		:return: True if the instruction can be patched, False otherwise
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012ed)
 			'test    eax, eax'
-			>>> bv.is_always_branch_patch_available(bv.arch, 0x100012ed)
+			>>> bv.is_always_branch_patch_available(0x100012ed)
 			False
 			>>> bv.get_disassembly(0x100012ef)
 			'jg      0x100012f5'
-			>>> bv.is_always_branch_patch_available(bv.arch, 0x100012ef)
+			>>> bv.is_always_branch_patch_available(0x100012ef)
 			True
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNIsAlwaysBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_invert_branch_patch_available(self, arch, addr):
+	def is_invert_branch_patch_available(self, addr, arch=None):
 		"""
 		``is_invert_branch_patch_available`` queries the architecture plugin to determine if the instruction at ``addr``
 		is a branch that can be inverted. The actual logic of which is implemented in the
 		``perform_is_invert_branch_patch_available`` in the corresponding architecture.
 
-		:param Architecture arch: the architecture for the current view
 		:param int addr: the virtual address of the instruction to be patched
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True if the instruction can be patched, False otherwise
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012ed)
 			'test    eax, eax'
-			>>> bv.is_invert_branch_patch_available(bv.arch, 0x100012ed)
+			>>> bv.is_invert_branch_patch_available(0x100012ed)
 			False
 			>>> bv.get_disassembly(0x100012ef)
 			'jg      0x100012f5'
-			>>> bv.is_invert_branch_patch_available(bv.arch, 0x100012ef)
+			>>> bv.is_invert_branch_patch_available(0x100012ef)
 			True
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNIsInvertBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_skip_and_return_zero_patch_available(self, arch, addr):
+	def is_skip_and_return_zero_patch_available(self, addr, arch=None):
 		"""
 		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call"  instruction which can be made to return zero.  The actual
 		logic of which is implemented in the ``perform_is_skip_and_return_zero_patch_available`` in the corresponding
 		architecture.
 
-		:param Architecture arch: the architecture for the current view
 		:param int addr: the virtual address of the instruction to be patched
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True if the instruction can be patched, False otherwise
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f6)
 			'mov     dword [0x10003020], eax'
-			>>> bv.is_skip_and_return_zero_patch_available(bv.arch, 0x100012f6)
+			>>> bv.is_skip_and_return_zero_patch_available(0x100012f6)
 			False
 			>>> bv.get_disassembly(0x100012fb)
 			'call    0x10001629'
-			>>> bv.is_skip_and_return_zero_patch_available(bv.arch, 0x100012fb)
+			>>> bv.is_skip_and_return_zero_patch_available(0x100012fb)
 			True
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNIsSkipAndReturnZeroPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_skip_and_return_value_patch_available(self, arch, addr):
+	def is_skip_and_return_value_patch_available(self, addr, arch=None):
 		"""
 		``is_skip_and_return_value_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call" instruction which can be made to return a value. The actual
 		logic of which is implemented in the ``perform_is_skip_and_return_value_patch_available`` in the corresponding
 		architecture.
 
-		:param Architecture arch: the architecture for the current view
 		:param int addr: the virtual address of the instruction to be patched
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True if the instruction can be patched, False otherwise
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f6)
 			'mov     dword [0x10003020], eax'
-			>>> bv.is_skip_and_return_value_patch_available(bv.arch, 0x100012f6)
+			>>> bv.is_skip_and_return_value_patch_available(0x100012f6)
 			False
 			>>> bv.get_disassembly(0x100012fb)
 			'call    0x10001629'
-			>>> bv.is_skip_and_return_value_patch_available(bv.arch, 0x100012fb)
+			>>> bv.is_skip_and_return_value_patch_available(0x100012fb)
 			True
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNIsSkipAndReturnValuePatchAvailable(self.handle, arch.handle, addr)
 
-	def convert_to_nop(self, arch, addr):
+	def convert_to_nop(self, addr, arch=None):
 		"""
 		``convert_to_nop`` converts the instruction at virtual address ``addr`` to a nop of the provided architecture.
 
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current BinaryView
 		:param int addr: virtual address of the instruction to conver to nops
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on falure.
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012fb)
 			'call    0x10001629'
-			>>> bv.convert_to_nop(bv.arch, 0x100012fb)
+			>>> bv.convert_to_nop(0x100012fb)
 			True
 			>>> #The above 'call' instruction is 5 bytes, a nop in x86 is 1 byte,
 			>>> # thus 5 nops are used:
@@ -2246,9 +2273,11 @@ class BinaryView(object):
 			>>> bv.get_next_disassembly()
 			'mov     byte [ebp-0x1c], al'
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
-	def always_branch(self, arch, addr):
+	def always_branch(self, addr, arch=None):
 		"""
 		``always_branch`` convert the instruction of architecture ``arch`` at the virtual address ``addr`` to an
 		unconditional branch.
@@ -2256,23 +2285,25 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
 		:param int addr: virtual address of the instruction to be modified
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on falure.
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x100012ef)
 			'jg      0x100012f5'
-			>>> bv.always_branch(bv.arch, 0x100012ef)
+			>>> bv.always_branch(0x100012ef)
 			True
 			>>> bv.get_disassembly(0x100012ef)
 			'jmp     0x100012f5'
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNAlwaysBranch(self.handle, arch.handle, addr)
 
-	def never_branch(self, arch, addr):
+	def never_branch(self, addr, arch=None):
 		"""
 		``never_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to
 		a fall through.
@@ -2280,23 +2311,25 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
 		:param int addr: virtual address of the instruction to be modified
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on falure.
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x1000130e)
 			'jne     0x10001317'
-			>>> bv.never_branch(bv.arch, 0x1000130e)
+			>>> bv.never_branch(0x1000130e)
 			True
 			>>> bv.get_disassembly(0x1000130e)
 			'nop'
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
-	def invert_branch(self, arch, addr):
+	def invert_branch(self, addr, arch=None):
 		"""
 		``invert_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to the
 		inverse branch.
@@ -2304,63 +2337,69 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary
 		file must be saved in order to preserve the changes made.
 
-		:param Architecture arch: architecture of the current binary view
 		:param int addr: virtual address of the instruction to be modified
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on falure.
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x1000130e)
 			'je      0x10001317'
-			>>> bv.invert_branch(bv.arch, 0x1000130e)
+			>>> bv.invert_branch(0x1000130e)
 			True
 			>>>
 			>>> bv.get_disassembly(0x1000130e)
 			'jne     0x10001317'
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNInvertBranch(self.handle, arch.handle, addr)
 
-	def skip_and_return_value(self, arch, addr, value):
+	def skip_and_return_value(self, addr, value, arch=None):
 		"""
 		``skip_and_return_value`` convert the ``call`` instruction of architecture ``arch`` at the virtual address
 		``addr`` to the equivilent of returning a value.
 
-		:param Architecture arch: architecture of the current binary view
 		:param int addr: virtual address of the instruction to be modified
 		:param int value: value to make the instruction *return*
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on falure.
 		:rtype: bool
 		:Example:
 
 			>>> bv.get_disassembly(0x1000132a)
 			'call    0x1000134a'
-			>>> bv.skip_and_return_value(bv.arch, 0x1000132a, 42)
+			>>> bv.skip_and_return_value(0x1000132a, 42)
 			True
 			>>> #The return value from x86 functions is stored in eax thus:
 			>>> bv.get_disassembly(0x1000132a)
 			'mov     eax, 0x2a'
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNSkipAndReturnValue(self.handle, arch.handle, addr, value)
 
-	def get_instruction_length(self, arch, addr):
+	def get_instruction_length(self, addr, arch=None):
 		"""
 		``get_instruction_length`` returns the number of bytes in the instruction of Architecture ``arch`` at the virtual
 		address ``addr``
 
-		:param Architecture arch: architecture of the current binary view
 		:param int addr: virtual address of the instruction query
+		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: Number of bytes in instruction
 		:rtype: int
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.get_instruction_length(bv.arch, 0x100012f1)
+			>>> bv.get_instruction_length(0x100012f1)
 			2L
 			>>>
 		"""
+		if arch is None:
+			arch = self.arch
 		return core.BNGetInstructionLength(self.handle, arch.handle, addr)
 
 	def notify_data_written(self, offset, length):

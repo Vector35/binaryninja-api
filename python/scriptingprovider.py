@@ -334,6 +334,48 @@ class _PythonScriptingInstanceOutput(object):
 		self.orig = orig
 		self.is_error = is_error
 		self.buffer = ""
+		self.encoding = 'UTF-8'
+		self.errors = None
+		self.isatty = False
+		self.mode = 'w'
+		self.name = 'PythonScriptingInstanceOutput'
+		self.newlines = None
+
+	def close(self):
+		pass
+
+	def closed(self):
+		return False
+
+	def flush(self):
+		pass
+
+	def next(self):
+		raise IOError("File not open for reading")
+
+	def read(self):
+		raise IOError("File not open for reading")
+
+	def readinto(self):
+		raise IOError("File not open for reading")
+
+	def readlines(self):
+		raise IOError("File not open for reading")
+
+	def seek(self):
+		pass
+
+	def sofspace(self):
+		return 0
+
+	def truncate(self):
+		pass
+
+	def tell(self):
+		return self.orig.tell()
+
+	def writelines(self, lines):
+		return self.write('\n'.join(lines))
 
 	def write(self, data):
 		global _output_to_log
@@ -589,6 +631,7 @@ class PythonScriptingInstance(ScriptingInstance):
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
 	instance_class = PythonScriptingInstance
+
 
 PythonScriptingProvider().register()
 

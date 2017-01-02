@@ -1,30 +1,10 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
 from binaryninja import *
 import os
 import webbrowser
 try:
-	from urllib import pathname2url         # Python 2.x
+    from urllib import pathname2url         # Python 2.x
 except:
-	from urllib.request import pathname2url # Python 3.x
+    from urllib.request import pathname2url # Python 3.x
 
 
 colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
@@ -37,51 +17,52 @@ escape_table = {
 	' ': "&#160;"
 }
 
-
 def escape(string):
-	string = string.decode('utf-8').encode('ascii', 'xmlcharrefreplace') # handle extended unicode
-	return ''.join(escape_table.get(i, i) for i in string)               # still escape the basics
+	string=string.decode('utf-8').encode('ascii','xmlcharrefreplace') 	#handle extended unicode
+	return ''.join(escape_table.get(i,i) for i in string) 				#still escape the basics
 
-
-def save_svg(bv, function):
-	address = hex(function.start).replace('L', '')
+def save_svg(bv,function):
+	address = hex(function.start).replace('L','')
 	path = os.path.dirname(bv.file.filename)
 	origname = os.path.basename(bv.file.filename)
-	filename = os.path.join(path, 'binaryninja-{filename}-{function}.html'.format(filename=origname, function=address))
+	filename = os.path.join(path,'binaryninja-{filename}-{function}.html'.format(filename=origname,function=address))
 	outputfile = get_save_filename_input('File name for export_svg', 'HTML files (*.html)', filename)
 	if outputfile is None:
 		return
 	content = render_svg(function)
-	output = open(outputfile, 'w')
+	output = open(outputfile,'w')
 	output.write(content)
 	output.close()
-	if show_message_box("Open SVG", "Would you like to view the exported SVG?", buttons=core.BNMessageBoxButtonSet.YesNoButtonSet, icon = core.BNMessageBoxIcon.QuestionIcon) == core.BNMessageBoxButtonResult.YesButton:
+	if show_message_box("Open SVG", "Would you like to view the exported SVG?", buttons = core.YesNoButtonSet, icon = core.QuestionIcon) == core.YesButton:
 		url = 'file:{}'.format(pathname2url(outputfile))
 		webbrowser.open(url)
 
-
-def instruction_data_flow(function, address):
+def instruction_data_flow(function,address):
 	''' TODO:  Extract data flow information '''
-	length = function.view.get_instruction_length(function.arch, address)
+	length = function.view.get_instruction_length(function.arch,address)
 	bytes = function.view.read(address, length)
 	hex = bytes.encode('hex')
-	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
+	padded = ' '.join([hex[i:i+2] for i in range(0, len(hex), 2)])
 	return 'Opcode: {bytes}'.format(bytes=padded)
-
 
 def render_svg(function):
 	graph = function.create_graph()
 	graph.layout_and_wait()
 	heightconst = 15
 	ratio = 0.48
-	widthconst = heightconst * ratio
+	widthconst = heightconst*ratio
 
 	output = '''<html>
 	<head>
 		<style type="text/css">
 			@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
+			body {
+				background-color: rgb(42, 42, 42);
+			}
 			svg {
 				background-color: rgb(42, 42, 42);
+				display: block;
+				margin: 0 auto;
 			}
 			.basicblock {
 				stroke: rgb(224, 224, 224);
@@ -154,56 +135,60 @@ def render_svg(function):
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
 		</defs>
-	'''.format(width=graph.width * widthconst, height=graph.height * heightconst)
+	'''.format(width=graph.width*widthconst + 20, height=graph.height*heightconst + 20)
 	output += '''	<g id="functiongraph0" class="functiongraph">
 			<title>Function Graph 0</title>
 	'''
 	edges = ''
-	for i, block in enumerate(graph.blocks):
+	for i,block in enumerate(graph.blocks):
 
-		# Calculate basic block location and coordinates
+		#Calculate basic block location and coordinates
 		x = ((block.x) * widthconst)
 		y = ((block.y) * heightconst)
 		width = ((block.width) * widthconst)
 		height = ((block.height) * heightconst)
 
-		# Render block
+		#Render block
 		output += '		<g id="basicblock{i}">\n'.format(i=i)
 		output += '			<title>Basic Block {i}</title>\n'.format(i=i)
-		rgb = colors['none']
+		rgb=colors['none']
 		try:
 			bb = block.basic_block
 			color_code = bb.highlight.color
 			color_str = bb.highlight._standard_color_to_str(color_code)
 			if color_str in colors:
-				rgb = colors[color_str]
+				rgb=colors[color_str]
 		except:
 			pass
-		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x, y=y, width=width, height=height, r=rgb[0], g=rgb[1], b=rgb[2])
+		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(x=x,y=y,width=width + 16,height=height + 12,r=rgb[0],g=rgb[1],b=rgb[2])
 
-		# Render instructions, unfortunately tspans don't allow copying/pasting more
-		# than one line at a time, need SVG 1.2 textarea tags for that it looks like
+		#Render instructions, unfortunately tspans don't allow copying/pasting more
+		#than one line at a time, need SVG 1.2 textarea tags for that it looks like
 
-		output += '			<text x="{x}" y="{y}">\n'.format(x=x, y=y + (i + 1) * heightconst)
-		for i, line in enumerate(block.lines):
-			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x, y=y + (i + 0.7) * heightconst, address=hex(line.address)[:-1])
+		output += '			<text x="{x}" y="{y}">\n'.format(x=x,y=y + (i + 1) * heightconst)
+		for i,line in enumerate(block.lines):
+			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(x=x + 6,y=y + 6 + (i + 0.7) * heightconst,address=hex(line.address)[:-1])
 			hover = instruction_data_flow(function, line.address)
 			output += '<title>{hover}</title>'.format(hover=hover)
 			for token in line.tokens:
 				# TODO: add hover for hex, function, and reg tokens
-				output += '<tspan class="{tokentype}">{text}</tspan>'.format(text=escape(token.text), tokentype=token.type.name)
+				output+='<tspan class="{tokentype}">{text}</tspan>'.format(text=escape(token.text),tokentype=token.type)
 			output += '</tspan>\n'
 		output += '			</text>\n'
 		output += '		</g>\n'
 
-		# Edges are rendered in a seperate chunk so they have priority over the
-		# basic blocks or else they'd render below them
+		#Edges are rendered in a seperate chunk so they have priority over the
+		#basic blocks or else they'd render below them
 
 		for edge in block.outgoing_edges:
 			points = ""
-			for x, y in edge.points:
-				points += str(x * widthconst) + "," + str(y * heightconst) + " "
-			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=edge.type.name, points=points)
+			x,y = edge.points[0]
+			points += str(x*widthconst)+","+str(y*heightconst + 12) + " "
+			for x,y in edge.points[1:-1]:
+				points += str(x*widthconst)+","+str(y*heightconst) + " "
+			x,y = edge.points[-1]
+			points += str(x*widthconst)+","+str(y*heightconst + 0) + " "
+			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=edge.type,points=points)
 	output += ' ' + edges + '\n'
 	output += '	</g>\n'
 	output += '</svg></html>'

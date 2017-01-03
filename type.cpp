@@ -199,6 +199,78 @@ string Type::GetStringAfterName() const
 }
 
 
+vector<InstructionTextToken> Type::GetTokens() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokens(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
+	return result;
+}
+
+
+vector<InstructionTextToken> Type::GetTokensBeforeName() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokensBeforeName(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
+	return result;
+}
+
+
+vector<InstructionTextToken> Type::GetTokensAfterName() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokensAfterName(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
+	return result;
+}
+
+
 Ref<Type> Type::Duplicate() const
 {
 	return new Type(BNDuplicateType(m_object));

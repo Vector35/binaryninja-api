@@ -166,23 +166,17 @@ extern "C"
 		FloatingPointToken = 8,
 		AnnotationToken = 9,
 		CodeRelativeAddressToken = 10,
-		StackVariableTypeToken = 11,
-		DataVariableTypeToken = 12,
-		FunctionReturnTypeToken = 13,
-		FunctionAttributeToken = 14,
-		ArgumentTypeToken = 15,
-		ArgumentNameToken = 16,
-		HexDumpByteValueToken = 17,
-		HexDumpSkippedByteToken = 18,
-		HexDumpInvalidByteToken = 19,
-		HexDumpTextToken = 20,
-		OpcodeToken = 21,
-		StringToken = 22,
-		CharacterConstantToken = 23,
-		TypeDefinitionToken = 24,
-		TypeDefinitionNameToken = 25,
-		TypeDefinitionFieldToken = 26,
-		TypeDefinitionFieldNameToken = 27,
+		ArgumentNameToken = 11,
+		HexDumpByteValueToken = 12,
+		HexDumpSkippedByteToken = 13,
+		HexDumpInvalidByteToken = 14,
+		HexDumpTextToken = 15,
+		OpcodeToken = 16,
+		StringToken = 17,
+		CharacterConstantToken = 18,
+		KeywordToken = 19,
+		TypeNameToken = 20,
+		FieldNameToken = 21,
 
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
@@ -191,6 +185,15 @@ extern "C"
 		StackVariableToken = 66,
 		ImportToken = 67,
 		AddressDisplayToken = 68
+	};
+
+	enum BNInstructionTextTokenContext
+	{
+		NoTokenContext = 0,
+		StackVariableTokenContext = 1,
+		DataVariableTokenContext = 2,
+		FunctionReturnTokenContext = 3,
+		ArgumentTokenContext = 4
 	};
 
 	enum BNLinearDisassemblyLineType
@@ -714,6 +717,8 @@ extern "C"
 		char* text;
 		uint64_t value;
 		size_t size, operand;
+		BNInstructionTextTokenContext context;
+		uint64_t address;
 	};
 
 	struct BNInstructionTextLine
@@ -1969,6 +1974,10 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringAfterName(BNType* type);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokens(BNType* type, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensBeforeName(BNType* type, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensAfterName(BNType* type, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTokenList(BNInstructionTextToken* tokens, size_t count);
 
 	BINARYNINJACOREAPI BNType* BNCreateUnknownNamedType(BNUnknownType* ut);
 	BINARYNINJACOREAPI BNUnknownType* BNCreateUnknownType(void);

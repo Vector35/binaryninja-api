@@ -683,10 +683,15 @@ namespace BinaryNinja
 		std::string text;
 		uint64_t value;
 		size_t size, operand;
+		BNInstructionTextTokenContext context;
+		uint64_t address;
 
 		InstructionTextToken();
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND);
+		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
+			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
+			size_t operand = BN_INVALID_OPERAND);
 	};
 
 	struct DisassemblyTextLine
@@ -1537,6 +1542,10 @@ namespace BinaryNinja
 		std::string GetTypeAndName(const std::vector<std::string>& name) const;
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
+
+		std::vector<InstructionTextToken> GetTokens() const;
+		std::vector<InstructionTextToken> GetTokensBeforeName() const;
+		std::vector<InstructionTextToken> GetTokensAfterName() const;
 
 		Ref<Type> Duplicate() const;
 

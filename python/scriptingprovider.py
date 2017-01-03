@@ -634,8 +634,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 
 PythonScriptingProvider().register()
-if not sys.stdin.isatty():
-	# Wrap stdin/stdout/stderr for Python scripting provider implementation
-	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
-	sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
-	sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)
+# Wrap stdin/stdout/stderr for Python scripting provider implementation
+sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
+sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
+sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

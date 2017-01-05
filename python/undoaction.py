@@ -24,6 +24,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import ActionType
 import startup
 import log
 
@@ -40,7 +41,7 @@ class UndoAction(object):
 			raise TypeError("undo action type not registered")
 		action_type = self.__class__.action_type
 		if isinstance(action_type, str):
-			self._cb.type = core.BNActionType[action_type]
+			self._cb.type = ActionType[action_type]
 		else:
 			self._cb.type = action_type
 		self._cb.context = 0

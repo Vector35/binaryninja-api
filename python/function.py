@@ -24,10 +24,12 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+	HighlightStandardColor, RegisterValueType, ImplicitRegisterExtend, DisassemblyOption, IntegerDisplayType)
 import architecture
 import highlight
 import associateddatastore
-import bntype
+import types
 import basicblock
 import lowlevelil
 import binaryview
@@ -46,16 +48,16 @@ class LookupTableEntry(object):
 class RegisterValue(object):
 	def __init__(self, arch, value):
 		self.type = value.state
-		if value.state == core.BNRegisterValueType.EntryValue:
+		if value.state == RegisterValueType.EntryValue:
 			self.reg = arch.get_reg_name(value.reg)
-		elif value.state == core.BNRegisterValueType.OffsetFromEntryValue:
+		elif value.state == RegisterValueType.OffsetFromEntryValue:
 			self.reg = arch.get_reg_name(value.reg)
 			self.offset = value.value
-		elif value.state == core.BNRegisterValueType.ConstantValue:
+		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
-		elif value.state == core.BNRegisterValueType.StackFrameOffset:
+		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
-		elif value.state == core.BNRegisterValueType.SignedRangeValue:
+		elif value.state == RegisterValueType.SignedRangeValue:
 			self.offset = value.value
 			self.start = value.rangeStart
 			self.end = value.rangeEnd
@@ -64,12 +66,12 @@ class RegisterValue(object):
 				self.start |= ~((1 << 63) - 1)
 			if self.end & (1 << 63):
 				self.end |= ~((1 << 63) - 1)
-		elif value.state == core.BNRegisterValueType.UnsignedRangeValue:
+		elif value.state == RegisterValueType.UnsignedRangeValue:
 			self.offset = value.value
 			self.start = value.rangeStart
 			self.end = value.rangeEnd
 			self.step = value.rangeStep
-		elif value.state == core.BNRegisterValueType.LookupTableValue:
+		elif value.state == RegisterValueType.LookupTableValue:
 			self.table = []
 			self.mapping = {}
 			for i in xrange(0, value.rangeEnd):
@@ -78,25 +80,25 @@ class RegisterValue(object):
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
-		elif value.state == core.BNRegisterValueType.OffsetFromUndeterminedValue:
+		elif value.state == RegisterValueType.OffsetFromUndeterminedValue:
 			self.offset = value.value
 
 	def __repr__(self):
-		if self.type == core.BNRegisterValueType.EntryValue:
+		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == core.BNRegisterValueType.OffsetFromEntryValue:
+		if self.type == RegisterValueType.OffsetFromEntryValue:
 			return "<entry %s + %#x>" % (self.reg, self.offset)
-		if self.type == core.BNRegisterValueType.ConstantValue:
+		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
-		if self.type == core.BNRegisterValueType.StackFrameOffset:
+		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if (self.type == core.BNRegisterValueType.SignedRangeValue) or (self.type == core.BNRegisterValueType.UnsignedRangeValue):
+		if (self.type == RegisterValueType.SignedRangeValue) or (self.type == RegisterValueType.UnsignedRangeValue):
 			if self.step == 1:
 				return "<range: %#x to %#x>" % (self.start, self.end)
 			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
-		if self.type == core.BNRegisterValueType.LookupTableValue:
+		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == core.BNRegisterValueType.OffsetFromUndeterminedValue:
+		if self.type == RegisterValueType.OffsetFromUndeterminedValue:
 			return "<undetermined with offset %#x>" % self.offset
 		return "<undetermined>"
 
@@ -195,7 +197,7 @@ class Function(object):
 			if self.symbol is not None:
 				self.view.undefine_user_symbol(self.symbol)
 		else:
-			symbol = bntype.Symbol(core.BNSymbolType.FunctionSymbol, self.start, value)
+			symbol = types.Symbol(SymbolType.FunctionSymbol, self.start, value)
 			self.view.define_user_symbol(symbol)
 
 	@property
@@ -230,7 +232,7 @@ class Function(object):
 		sym = core.BNGetFunctionSymbol(self.handle)
 		if sym is None:
 			return None
-		return bntype.Symbol(None, None, None, handle = sym)
+		return types.Symbol(None, None, None, handle = sym)
 
 	@property
 	def auto(self):
@@ -287,7 +289,7 @@ class Function(object):
 	@property
 	def function_type(self):
 		"""Function type object"""
-		return bntype.Type(core.BNGetFunctionType(self.handle))
+		return types.Type(core.BNGetFunctionType(self.handle))
 
 	@function_type.setter
 	def function_type(self, value):
@@ -300,7 +302,7 @@ class Function(object):
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariable(v[i].offset, v[i].name, bntype.Type(handle = core.BNNewTypeReference(v[i].type))))
+			result.append(StackVariable(v[i].offset, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
 		result.sort(key = lambda x: x.offset)
 		core.BNFreeStackLayout(v, count.value)
 		return result
@@ -553,7 +555,7 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariableReference(refs[i].sourceOperand, bntype.Type(core.BNNewTypeReference(refs[i].type)),
+			result.append(StackVariableReference(refs[i].sourceOperand, types.Type(core.BNNewTypeReference(refs[i].type)),
 				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
@@ -661,7 +663,7 @@ class Function(object):
 		for i in xrange(0, count.value):
 			tokens = []
 			for j in xrange(0, lines[i].count):
-				token_type = core.BNInstructionTextTokenType(lines[i].tokens[j].type)
+				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
@@ -688,13 +690,13 @@ class Function(object):
 		:param int instr_addr:
 		:param int value:
 		:param int operand:
-		:param BNIntegerDisplayTypeEnum display_type:
+		:param IntegerDisplayTypeEnum display_type:
 		:param Architecture arch: (optional)
 		"""
 		if arch is None:
 			arch = self.arch
 		if isinstance(display_type, str):
-			display_type = core.BNIntegerDisplayType[display_type]
+			display_type = IntegerDisplayType[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
 
 	def reanalyze(self):
@@ -741,13 +743,13 @@ class Function(object):
 		if arch is None:
 			arch = self.arch
 		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
-		if color.style == core.BNHighlightColorStyle.StandardHighlightColor:
+		if color.style == HighlightColorStyle.StandardHighlightColor:
 			return highlight.HighlightColor(color = color.color, alpha = color.alpha)
-		elif color.style == core.BNHighlightColorStyle.MixedHighlightColor:
+		elif color.style == HighlightColorStyle.MixedHighlightColor:
 			return highlight.HighlightColor(color = color.color, mix_color = color.mixColor, mix = color.mix, alpha = color.alpha)
-		elif color.style == core.BNHighlightColorStyle.CustomHighlightColor:
+		elif color.style == HighlightColorStyle.CustomHighlightColor:
 			return highlight.HighlightColor(red = color.r, green = color.g, blue = color.b, alpha = color.alpha)
-		return highlight.HighlightColor(color = core.BNHighlightStandardColor.NoHighlightColor)
+		return highlight.HighlightColor(color = HighlightStandardColor.NoHighlightColor)
 
 	def set_auto_instr_highlight(self, addr, color, arch=None):
 		"""
@@ -756,7 +758,7 @@ class Function(object):
 		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param int addr: virtual address of the instruction to be highlighted
-		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
 		"""
 		if arch is None:
@@ -770,17 +772,17 @@ class Function(object):
 		``set_user_instr_highlight`` highlights the instruction at the specified address with the supplied color
 
 		:param int addr: virtual address of the instruction to be highlighted
-		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
 		:Example:
 
-			>>> current_function.set_user_instr_highlight(here, core.BNHighlightStandardColor.BlueHighlightColor)
+			>>> current_function.set_user_instr_highlight(here, HighlightStandardColor.BlueHighlightColor)
 			>>> current_function.set_user_instr_highlight(here, highlight.HighlightColor(red=0xff, blue=0xff, green=0))
 		"""
 		if arch is None:
 			arch = self.arch
-		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
-			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 
@@ -908,7 +910,7 @@ class FunctionGraphBlock(object):
 			addr = lines[i].addr
 			tokens = []
 			for j in xrange(0, lines[i].count):
-				token_type = core.BNInstructionTextTokenType(lines[i].tokens[j].type)
+				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
@@ -925,7 +927,7 @@ class FunctionGraphBlock(object):
 		edges = core.BNGetFunctionGraphBlockOutgoingEdges(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			branch_type = core.BNBranchType(edges[i].type)
+			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
 			arch = None
 			if edges[i].arch is not None:
@@ -958,7 +960,7 @@ class FunctionGraphBlock(object):
 				addr = lines[i].addr
 				tokens = []
 				for j in xrange(0, lines[i].count):
-					token_type = core.BNInstructionTextTokenType(lines[i].tokens[j].type)
+					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 					text = lines[i].tokens[j].text
 					value = lines[i].tokens[j].value
 					size = lines[i].tokens[j].size
@@ -997,12 +999,12 @@ class DisassemblySettings(object):
 
 	def is_option_set(self, option):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption[option]
+			option = DisassemblyOption[option]
 		return core.BNIsDisassemblySettingsOptionSet(self.handle, option)
 
 	def set_option(self, option, state = True):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption[option]
+			option = DisassemblyOption[option]
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 
@@ -1033,7 +1035,7 @@ class FunctionGraph(object):
 	@property
 	def type(self):
 		"""Function graph type (read-only)"""
-		return core.BNFunctionGraphType(core.BNGetFunctionGraphType(self.handle))
+		return FunctionGraphType(core.BNGetFunctionGraphType(self.handle))
 
 	@property
 	def blocks(self):
@@ -1101,9 +1103,9 @@ class FunctionGraph(object):
 		except:
 			log.log_error(traceback.format_exc())
 
-	def layout(self, graph_type = core.BNFunctionGraphType.NormalFunctionGraph):
+	def layout(self, graph_type = FunctionGraphType.NormalFunctionGraph):
 		if isinstance(graph_type, str):
-			graph_type = core.BNFunctionGraphType[graph_type]
+			graph_type = FunctionGraphType[graph_type]
 		core.BNStartFunctionGraphLayout(self.handle, graph_type)
 
 	def _wait_complete(self):
@@ -1111,7 +1113,7 @@ class FunctionGraph(object):
 		self._wait_cond.notify()
 		self._wait_cond.release()
 
-	def layout_and_wait(self, graph_type = core.BNFunctionGraphType.NormalFunctionGraph):
+	def layout_and_wait(self, graph_type=FunctionGraphType.NormalFunctionGraph):
 		self._wait_cond = threading.Condition()
 		self.on_complete(self._wait_complete)
 		self.layout(graph_type)
@@ -1139,17 +1141,17 @@ class FunctionGraph(object):
 
 	def is_option_set(self, option):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption[option]
+			option = DisassemblyOption[option]
 		return core.BNIsFunctionGraphOptionSet(self.handle, option)
 
 	def set_option(self, option, state = True):
 		if isinstance(option, str):
-			option = core.BNDisassemblyOption[option]
+			option = DisassemblyOption[option]
 		core.BNSetFunctionGraphOption(self.handle, option, state)
 
 
 class RegisterInfo(object):
-	def __init__(self, full_width_reg, size, offset = 0, extend = core.BNImplicitRegisterExtend.NoExtend, index = None):
+	def __init__(self, full_width_reg, size, offset=0, extend=ImplicitRegisterExtend.NoExtend, index=None):
 		self.full_width_reg = full_width_reg
 		self.offset = offset
 		self.size = size
@@ -1157,9 +1159,9 @@ class RegisterInfo(object):
 		self.index = index
 
 	def __repr__(self):
-		if self.extend == core.BNImplicitRegisterExtend.ZeroExtendToFullWidth:
+		if self.extend == ImplicitRegisterExtend.ZeroExtendToFullWidth:
 			extend = ", zero extend"
-		elif self.extend == core.BNImplicitRegisterExtend.SignExtendToFullWidth:
+		elif self.extend == ImplicitRegisterExtend.SignExtendToFullWidth:
 			extend = ", sign extend"
 		else:
 			extend = ""
@@ -1200,7 +1202,7 @@ class InstructionTextToken(object):
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
 		========================== ============================================
-		BNInstructionTextTokenType Description
+		InstructionTextTokenType   Description
 		========================== ============================================
 		TextToken                  Text that doesn't fit into the other tokens
 		InstructionToken           The instruction mnemonic

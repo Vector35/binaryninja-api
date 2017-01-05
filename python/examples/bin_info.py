@@ -21,12 +21,12 @@
 
 import sys
 import binaryninja.log as log
-import binaryninja.binaryview as view
+from binaryninja.binaryview import BinaryViewType
 import binaryninja.interaction as interaction
 from binaryninja.plugin import PluginCommand
 
 
-def bininfo(bv):
+def get_bininfo(bv):
 	if bv is None:
 		filename = ""
 		if len(sys.argv) > 1:
@@ -37,7 +37,7 @@ def bininfo(bv):
 				log.log_warn("No file specified")
 				sys.exit(1)
 
-		bv = view.BinaryViewType.get_view_of_file(filename)
+		bv = BinaryViewType.get_view_of_file(filename)
 		log.redirect_output_to_log()
 		log.log_to_stdout(True)
 
@@ -60,11 +60,14 @@ def bininfo(bv):
 		length = bv.strings[i].length
 		string = bv.read(start, length)
 		contents += "| 0x%x |%d | %s |\n" % (start, length, string)
+	return contents
 
-	interaction.show_markdown_report("Binary Info Report", contents)
+
+def display_bininfo(bv):
+	interaction.show_markdown_report("Binary Info Report", get_bininfo(bv))
 
 
 if __name__ == "__main__":
-	bininfo(None)
+	print get_bininfo(None)
 else:
-	PluginCommand.register("Binary Info", "Display basic info about the binary", bininfo)
+	PluginCommand.register("Binary Info", "Display basic info about the binary", display_bininfo)

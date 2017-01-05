@@ -22,6 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
 import architecture
 import highlight
 import function
@@ -30,13 +31,13 @@ import function
 class BasicBlockEdge(object):
 	def __init__(self, branch_type, target, arch):
 		self.type = branch_type
-		if self.type != core.BNBranchType.UnresolvedBranch:
+		if self.type != BranchType.UnresolvedBranch:
 			self.target = target
 			self.arch = arch
 
 	def __repr__(self):
-		if self.type == core.BNBranchType.UnresolvedBranch:
-			return "<%s>" % core.BNBranchType(self.type).name
+		if self.type == BranchType.UnresolvedBranch:
+			return "<%s>" % BranchType(self.type).name
 		elif self.arch:
 			return "<%s: %s@%#x>" % (self.type, self.arch.name, self.target)
 		else:
@@ -126,18 +127,18 @@ class BasicBlock(object):
 
 		:Example:
 
-			>>> current_basic_block.highlight = core.BNHighlightStandardColor.BlueHighlightColor
+			>>> current_basic_block.highlight = HighlightStandardColor.BlueHighlightColor
 			>>> current_basic_block.highlight
 			<color: blue>
 		"""
 		color = core.BNGetBasicBlockHighlight(self.handle)
-		if color.style == core.BNHighlightColorStyle.StandardHighlightColor:
+		if color.style == HighlightColorStyle.StandardHighlightColor:
 			return highlight.HighlightColor(color=color.color, alpha=color.alpha)
-		elif color.style == core.BNHighlightColorStyle.MixedHighlightColor:
+		elif color.style == HighlightColorStyle.MixedHighlightColor:
 			return highlight.HighlightColor(color=color.color, mix_color=color.mixColor, mix=color.mix, alpha=color.alpha)
-		elif color.style == core.BNHighlightColorStyle.CustomHighlightColor:
+		elif color.style == HighlightColorStyle.CustomHighlightColor:
 			return highlight.HighlightColor(red=color.r, green=color.g, blue=color.b, alpha=color.alpha)
-		return highlight.HighlightColor(color=core.BNHighlightStandardColor.NoHighlightColor)
+		return highlight.HighlightColor(color=HighlightStandardColor.NoHighlightColor)
 
 	@highlight.setter
 	def highlight(self, value):
@@ -194,7 +195,7 @@ class BasicBlock(object):
 			addr = lines[i].addr
 			tokens = []
 			for j in xrange(0, lines[i].count):
-				token_type = core.BNInstructionTextTokenType(lines[i].tokens[j].type)
+				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
@@ -210,22 +211,22 @@ class BasicBlock(object):
 
 		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
-		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		"""
-		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
-			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
 
 	def set_user_highlight(self, color):
 		"""
 		``set_user_highlight`` highlights the current BasicBlock with the supplied color
 
-		:param core.BNHighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		:Example:
 
 			>>> current_basic_block.set_user_highlight(highlight.HighlightColor(red=0xff, blue=0xff, green=0))
-			>>> current_basic_block.set_user_highlight(core.BNHighlightStandardColor.BlueHighlightColor)
+			>>> current_basic_block.set_user_highlight(HighlightStandardColor.BlueHighlightColor)
 		"""
-		if not isinstance(color, core.BNHighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
-			raise ValueError("Specified color is not one of core.BNHighlightStandardColor, highlight.HighlightColor")
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())

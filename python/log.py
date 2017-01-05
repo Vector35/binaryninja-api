@@ -57,7 +57,7 @@ def log_debug(text):
 	:rtype: None
 	:Example:
 
-		>>> log_to_stdout(core.BNLogLevel.DebugLog)
+		>>> log_to_stdout(LogLevel.DebugLog)
 		>>> log_debug("Hotdogs!")
 		Hotdogs!
 	"""
@@ -87,7 +87,7 @@ def log_warn(text):
 	:rtype: None
 	:Example:
 
-		>>> log_to_stdout(core.BNLogLevel.DebugLog)
+		>>> log_to_stdout(LogLevel.DebugLog)
 		>>> log_info("Chilidogs!")
 		Chilidogs!
 		>>>
@@ -103,7 +103,7 @@ def log_error(text):
 	:rtype: None
 	:Example:
 
-		>>> log_to_stdout(core.BNLogLevel.DebugLog)
+		>>> log_to_stdout(LogLevel.DebugLog)
 		>>> log_error("Spanferkel!")
 		Spanferkel!
 		>>>
@@ -119,7 +119,7 @@ def log_alert(text):
 	:rtype: None
 	:Example:
 
-		>>> log_to_stdout(core.BNLogLevel.DebugLog)
+		>>> log_to_stdout(LogLevel.DebugLog)
 		>>> log_alert("Kielbasa!")
 		Kielbasa!
 		>>>
@@ -136,7 +136,7 @@ def log_to_stdout(min_level):
 	:Example:
 
 		>>> log_debug("Hotdogs!")
-		>>> log_to_stdout(core.BNLogLevel.DebugLog)
+		>>> log_to_stdout(LogLevel.DebugLog)
 		>>> log_debug("Hotdogs!")
 		Hotdogs!
 		>>>

@@ -26,45 +26,30 @@
 import sys
 from itertools import chain
 
-from binaryninja import BinaryView, core
+from binaryninja.binaryview import BinaryViewType
+from binaryninja.enums import LowLevelILOperation
 
 
-def print_syscalls(bv):
-    """ Print Syscall numbers for a provided binaryview """
+def print_syscalls(fileName):
+	""" Print Syscall numbers for a provided file """
+	bv = BinaryViewType.get_view_of_file(fileName)
+	calling_convention = bv.platform.system_call_convention
+	if calling_convention is None:
+		print('Error: No syscall convention available for {:s}'.format(bv.platform))
+		return
 
-    calling_convention = bv.platform.system_call_convention
-    if not calling_convention:
-        print('Error: No syscall convention available for {:s}'.format(bv.platform))
-        return
+	register = calling_convention.int_arg_regs[0]
 
-    register = calling_convention.int_arg_regs[0]
-
-    for func in bv.functions:
-        syscalls = (il for il in chain.from_iterable(func.low_level_il)
-                    if il.operation == core.BNLowLevelILOperation.LLIL_SYSCALL)
-        for il in syscalls:
-            value = func.get_reg_value_at(il.address, register).value
-            print("System call address: {:#x} - {:d}".format(il.address, value))
-
-
-def main():
-    if len(sys.argv) != 2:
-        print('Usage: {} <file>'.format(sys.argv[0]))
-        return -1
-
-    target = sys.argv[1]
-
-    bv = BinaryView.open(target)
-    view_type = next(bvt for bvt in bv.available_view_types if bvt.name != 'Raw')
-    if not view_type:
-        print('Error: Unable to get any other view type besides Raw')
-        return -1
-
-    bv = bv.file.get_view_of_type(view_type.name)
-    bv.update_analysis_and_wait()
-
-    print_syscalls(bv)
+	for func in bv.functions:
+		syscalls = (il for il in chain.from_iterable(func.low_level_il)
+					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
+		for il in syscalls:
+			value = func.get_reg_value_at(il.address, register).value
+			print("System call address: {:#x} - {:d}".format(il.address, value))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+	if len(sys.argv) != 2:
+		print('Usage: {} <file>'.format(sys.argv[0]))
+	else:
+		print_syscalls(sys.argv[1])

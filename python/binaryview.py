@@ -26,6 +26,7 @@ import threading
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import AnalysisState, SymbolType, InstructionTextTokenType, Endianness, ModificationStatus, StringType, SegmentFlag
 import function
 import startup
 import architecture
@@ -36,7 +37,7 @@ import filemetadata
 import log
 import databuffer
 import basicblock
-import bntype
+import types
 import lineardisassembly
 
 
@@ -116,9 +117,9 @@ class AnalysisProgress(object):
 		self.total = total
 
 	def __str__(self):
-		if self.state == core.BNAnalysisState.DisassembleState:
+		if self.state == AnalysisState.DisassembleState:
 			return "Disassembling (%d/%d)" % (self.count, self.total)
-		if self.state == core.BNAnalysisState.AnalyzeState:
+		if self.state == AnalysisState.AnalyzeState:
 			return "Analyzing (%d/%d)" % (self.count, self.total)
 		return "Idle"
 
@@ -199,7 +200,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_added(self, ctxt, view, var):
 		try:
 			address = var.address
-			var_type = bntype.Type(core.BNNewTypeReference(var.type))
+			var_type = types.Type(core.BNNewTypeReference(var.type))
 			auto_discovered = var.autoDiscovered
 			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -208,7 +209,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_removed(self, ctxt, view, var):
 		try:
 			address = var.address
-			var_type = bntype.Type(core.BNNewTypeReference(var.type))
+			var_type = types.Type(core.BNNewTypeReference(var.type))
 			auto_discovered = var.autoDiscovered
 			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -217,7 +218,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_updated(self, ctxt, view, var):
 		try:
 			address = var.address
-			var_type = bntype.Type(core.BNNewTypeReference(var.type))
+			var_type = types.Type(core.BNNewTypeReference(var.type))
 			auto_discovered = var.autoDiscovered
 			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -225,13 +226,13 @@ class BinaryDataNotificationCallbacks(object):
 
 	def _string_found(self, ctxt, view, string_type, offset, length):
 		try:
-			self.notify.string_found(self.view, core.BNStringType(string_type), offset, length)
+			self.notify.string_found(self.view, StringType(string_type), offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _string_removed(self, ctxt, view, string_type, offset, length):
 		try:
-			self.notify.string_removed(self.view, core.BNStringType(string_type), offset, length)
+			self.notify.string_removed(self.view, StringType(string_type), offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -370,9 +371,9 @@ class Segment(object):
 
 	def __repr__(self):
 		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
-			"r" if (self.flags & core.BNSegmentFlag.SegmentReadable) != 0 else "-",
-			"w" if (self.flags & core.BNSegmentFlag.SegmentWritable) != 0 else "-",
-			"x" if (self.flags & core.BNSegmentFlag.SegmentExecutable) != 0 else "-")
+			"r" if (self.flags & SegmentFlag.SegmentReadable) != 0 else "-",
+			"w" if (self.flags & SegmentFlag.SegmentWritable) != 0 else "-",
+			"x" if (self.flags & SegmentFlag.SegmentExecutable) != 0 else "-")
 
 
 class Section(object):
@@ -804,7 +805,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			addr = var_list[i].address
-			var_type = bntype.Type(core.BNNewTypeReference(var_list[i].type))
+			var_type = types.Type(core.BNNewTypeReference(var_list[i].type))
 			auto_discovered = var_list[i].autoDiscovered
 			result[addr] = DataVariable(addr, var_type, auto_discovered)
 		core.BNFreeDataVariables(var_list, count.value)
@@ -817,7 +818,7 @@ class BinaryView(object):
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			result[type_list[i].name] = bntype.Type(core.BNNewTypeReference(type_list[i].type))
+			result[type_list[i].name] = types.Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -993,7 +994,7 @@ class BinaryView(object):
 			return self.perform_get_modification(offset)
 		except:
 			log.log_error(traceback.format_exc())
-			return core.BNModificationStatus.Original
+			return ModificationStatus.Original
 
 	def _is_valid_offset(self, ctxt, offset):
 		try:
@@ -1063,7 +1064,7 @@ class BinaryView(object):
 			return self.perform_get_default_endianness()
 		except:
 			log.log_error(traceback.format_exc())
-			return core.BNEndianness.LittleEndian
+			return Endianness.LittleEndian
 
 	def _get_address_size(self, ctxt):
 		try:
@@ -1229,9 +1230,9 @@ class BinaryView(object):
 
 		:param int addr: a virtual address to be checked
 		:return: One of the following: Original = 0, Changed = 1, Inserted = 2
-		:rtype: BNModificationStatus
+		:rtype: ModificationStatus
 		"""
-		return core.BNModificationStatus.Original
+		return ModificationStatus.Original
 
 	def perform_is_valid_offset(self, addr):
 		"""
@@ -1352,10 +1353,10 @@ class BinaryView(object):
 		.. note:: This method **may** be implemented for custom BinaryViews that are not LittleEndian.
 		.. warning:: This method **must not** be called directly.
 
-		:return: either ``core.BNEndianness.LittleEndian`` or ``core.BNEndianness.BigEndian``
-		:rtype: BNEndianness
+		:return: either ``Endianness.LittleEndian`` or ``Endianness.BigEndian``
+		:rtype: Endianness
 		"""
-		return core.BNEndianness.LittleEndian
+		return Endianness.LittleEndian
 
 	def create_database(self, filename, progress_func=None):
 		"""
@@ -1568,16 +1569,16 @@ class BinaryView(object):
 	def get_modification(self, addr, length=None):
 		"""
 		``get_modification`` returns the modified bytes of up to ``length`` bytes from virtual address ``addr``, or if
-		``length`` is None returns the core.BNModificationStatus.
+		``length`` is None returns the ModificationStatus.
 
 		:param int addr: virtual address to get modification from
 		:param int length: optional length of modification
-		:return: Either core.BNModificationStatus of the byte at ``addr``, or string of modified bytes at ``addr``
-		:rtype: core.BNModificationStatus or str
+		:return: Either ModificationStatus of the byte at ``addr``, or string of modified bytes at ``addr``
+		:rtype: ModificationStatus or str
 		"""
 		if length is None:
 			return core.BNGetModification(self.handle, addr)
-		data = (core.BNModificationStatus * length)()
+		data = (ModificationStatus * length)()
 		length = core.BNGetModificationArray(self.handle, addr, data, length)
 		return data[0:length]
 
@@ -1991,7 +1992,7 @@ class BinaryView(object):
 		sym = core.BNGetSymbolByAddress(self.handle, addr)
 		if sym is None:
 			return None
-		return bntype.Symbol(None, None, None, handle = sym)
+		return types.Symbol(None, None, None, handle = sym)
 
 	def get_symbol_by_raw_name(self, name):
 		"""
@@ -2009,7 +2010,7 @@ class BinaryView(object):
 		sym = core.BNGetSymbolByRawName(self.handle, name)
 		if sym is None:
 			return None
-		return bntype.Symbol(None, None, None, handle = sym)
+		return types.Symbol(None, None, None, handle = sym)
 
 	def get_symbols_by_name(self, name):
 		"""
@@ -2028,7 +2029,7 @@ class BinaryView(object):
 		syms = core.BNGetSymbolsByName(self.handle, name, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(bntype.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
@@ -2053,7 +2054,7 @@ class BinaryView(object):
 			syms = core.BNGetSymbolsInRange(self.handle, start, length, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(bntype.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
@@ -2069,12 +2070,12 @@ class BinaryView(object):
 		:rtype: list(Symbol)
 		:Example:
 
-			>>> bv.get_symbols_of_type(core.BNSymbolType.ImportAddressSymbol, 0x10002028, 1)
+			>>> bv.get_symbols_of_type(SymbolType.ImportAddressSymbol, 0x10002028, 1)
 			[<ImportAddressSymbol: "KERNEL32!GetCurrentThreadId@IAT" @ 0x10002028>]
 			>>>
 		"""
 		if isinstance(sym_type, str):
-			sym_type = core.BNSymbolType[sym_type]
+			sym_type = SymbolType[sym_type]
 		count = ctypes.c_ulonglong(0)
 		if start is None:
 			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count)
@@ -2082,7 +2083,7 @@ class BinaryView(object):
 			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(bntype.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
@@ -2094,6 +2095,21 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
+
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, platform = None):
+		"""
+		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+
+		:param Symbol sym: the symbol to define
+		:rtype: None
+		"""
+		if platform is None:
+			platform = self.platform
+		if platform is not None:
+			platform = platform.handle
+		if sym_type is not None:
+			sym_type = sym_type.handle
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, platform, sym.handle, sym_type)
 
 	def undefine_auto_symbol(self, sym):
 		"""
@@ -2456,7 +2472,7 @@ class BinaryView(object):
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StringReference(core.BNStringType(strings[i].type), strings[i].start, strings[i].length))
+			result.append(StringReference(StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
 
@@ -2697,7 +2713,7 @@ class BinaryView(object):
 			addr = lines[i].contents.addr
 			tokens = []
 			for j in xrange(0, lines[i].contents.count):
-				token_type = core.BNInstructionTextTokenType(lines[i].contents.tokens[j].type)
+				token_type = InstructionTextTokenType(lines[i].contents.tokens[j].type)
 				text = lines[i].contents.tokens[j].text
 				value = lines[i].contents.tokens[j].value
 				size = lines[i].contents.tokens[j].size
@@ -2816,7 +2832,7 @@ class BinaryView(object):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError(error_str)
-		type_obj = bntype.Type(core.BNNewTypeReference(result.type))
+		type_obj = types.Type(core.BNNewTypeReference(result.type))
 		name = result.name
 		core.BNFreeNameAndType(result)
 		return type_obj, name
@@ -2839,7 +2855,7 @@ class BinaryView(object):
 		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return bntype.Type(obj)
+		return types.Type(obj)
 
 	def is_type_auto_defined(self, name):
 		"""
@@ -3066,7 +3082,7 @@ class BinaryReader(object):
 	Or using the optional endian parameter ::
 
 		>>> from binaryninja import *
-		>>> br = BinaryReader(bv, core.BNEndianness.BigEndian)
+		>>> br = BinaryReader(bv, Endianness.BigEndian)
 		>>> hex(br.read32())
 		'0xcffaedfeL'
 		>>>
@@ -3374,8 +3390,8 @@ class BinaryWriter(object):
 	Or using the optional endian parameter ::
 
 		>>> from binaryninja import *
-		>>> br = BinaryReader(bv, core.BNEndianness.BigEndian)
-		>>> bw = BinaryWriter(bv, core.BNEndianness.BigEndian)
+		>>> br = BinaryReader(bv, Endianness.BigEndian)
+		>>> bw = BinaryWriter(bv, Endianness.BigEndian)
 		>>>
 	"""
 	def __init__(self, view, endian = None):

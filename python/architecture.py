@@ -24,8 +24,8 @@ import abc
 
 # Binary Ninja components
 import _binaryninjacore as core
-from _binaryninjacore import BNEndianness
-
+from enums import (Endianness, ImplicitRegisterExtend, BranchType,
+	InstructionTextTokenType, LowLevelILFlagCondition, FlagRole)
 import startup
 import function
 import lowlevelil
@@ -33,7 +33,7 @@ import callingconvention
 import platform
 import log
 import databuffer
-import bntype
+import types
 
 
 class _ArchitectureMetaClass(type):
@@ -108,7 +108,7 @@ class Architecture(object):
 		>>> arch = Architecture['x86']
 	"""
 	name = None
-	endianness = BNEndianness.LittleEndian
+	endianness = Endianness.LittleEndian
 	address_size = 8
 	default_int_size = 4
 	max_instr_length = 16
@@ -128,7 +128,7 @@ class Architecture(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNArchitecture)
 			self.__dict__["name"] = core.BNGetArchitectureName(self.handle)
-			self.__dict__["endianness"] = core.BNEndianness(core.BNGetArchitectureEndianness(self.handle)).name
+			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle)).name
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
 			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
@@ -146,7 +146,7 @@ class Architecture(object):
 				info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 				full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
 				self.regs[name] = function.RegisterInfo(full_width_reg, info.size, info.offset,
-					core.BNImplicitRegisterExtend(info.extend).name, regs[i])
+					ImplicitRegisterExtend(info.extend).name, regs[i])
 			core.BNFreeRegisterList(regs)
 
 			count = ctypes.c_ulonglong()
@@ -182,7 +182,7 @@ class Architecture(object):
 
 			self._flags_required_for_flag_condition = {}
 			self.__dict__["flags_required_for_flag_condition"] = {}
-			for cond in core.BNLowLevelILFlagCondition:
+			for cond in LowLevelILFlagCondition:
 				count = ctypes.c_ulonglong()
 				flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, count)
 				flag_indexes = []
@@ -311,7 +311,7 @@ class Architecture(object):
 			for flag in self.__class__.flag_roles:
 				role = self.__class__.flag_roles[flag]
 				if isinstance(role, str):
-					role = core.BNFlagRole[role]
+					role = FlagRole[role]
 				self._flag_roles[self._flags[flag]] = role
 
 			self._flags_required_for_flag_condition = {}
@@ -383,7 +383,7 @@ class Architecture(object):
 			return self.__class__.endianness
 		except:
 			log.log_error(traceback.format_exc())
-			return core.BNEndianness.LittleEndian
+			return Endianness.LittleEndian
 
 	def _get_address_size(self, ctxt):
 		try:
@@ -434,7 +434,7 @@ class Architecture(object):
 			result[0].branchCount = len(info.branches)
 			for i in xrange(0, len(info.branches)):
 				if isinstance(info.branches[i].type, str):
-					result[0].branchType[i] = core.BNBranchType[info.branches[i].type]
+					result[0].branchType[i] = BranchType[info.branches[i].type]
 				else:
 					result[0].branchType[i] = info.branches[i].type
 				result[0].branchTarget[i] = info.branches[i].target
@@ -460,7 +460,7 @@ class Architecture(object):
 			token_buf = (core.BNInstructionTextToken * len(tokens))()
 			for i in xrange(0, len(tokens)):
 				if isinstance(tokens[i].type, str):
-					token_buf[i].type = core.BNInstructionTextTokenType[tokens[i].type]
+					token_buf[i].type = InstructionTextTokenType[tokens[i].type]
 				else:
 					token_buf[i].type = tokens[i].type
 				token_buf[i].text = tokens[i].text
@@ -589,7 +589,7 @@ class Architecture(object):
 		try:
 			if flag in self._flag_roles:
 				return self._flag_roles[flag]
-			return core.BNFlagRole.SpecialFlagRole
+			return FlagRole.SpecialFlagRole
 		except KeyError:
 			log.log_error(traceback.format_exc())
 			return None
@@ -673,14 +673,14 @@ class Architecture(object):
 				result[0].fullWidthRegister = 0
 				result[0].offset = 0
 				result[0].size = 0
-				result[0].extend = core.BNImplicitRegisterExtend.NoExtend
+				result[0].extend = ImplicitRegisterExtend.NoExtend
 				return
 			info = self.__class__.regs[self._regs_by_index[reg]]
 			result[0].fullWidthRegister = self._all_regs[info.full_width_reg]
 			result[0].offset = info.offset
 			result[0].size = info.size
 			if isinstance(info.extend, str):
-				result[0].extend = core.BNImplicitRegisterExtend[info.extend]
+				result[0].extend = ImplicitRegisterExtend[info.extend]
 			else:
 				result[0].extend = info.extend
 		except KeyError:
@@ -688,7 +688,7 @@ class Architecture(object):
 			result[0].fullWidthRegister = 0
 			result[0].offset = 0
 			result[0].size = 0
-			result[0].extend = core.BNImplicitRegisterExtend.NoExtend
+			result[0].extend = ImplicitRegisterExtend.NoExtend
 
 	def _get_stack_pointer_register(self, ctxt):
 		try:
@@ -1113,7 +1113,7 @@ class Architecture(object):
 		result.length = info.length
 		result.branch_delay = info.branchDelay
 		for i in xrange(0, info.branchCount):
-			branch_type = core.BNBranchType(info.branchType[i]).name
+			branch_type = BranchType(info.branchType[i]).name
 			target = info.branchTarget[i]
 			if info.branchArch[i]:
 				arch = Architecture(info.branchArch[i])
@@ -1143,7 +1143,7 @@ class Architecture(object):
 			return None, 0
 		result = []
 		for i in xrange(0, count.value):
-			token_type = core.BNInstructionTextTokenType(tokens[i].type).name
+			token_type = InstructionTextTokenType(tokens[i].type).name
 			text = tokens[i].text
 			value = tokens[i].value
 			size = tokens[i].size
@@ -1611,17 +1611,17 @@ class Architecture(object):
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
 			return (None, error_str)
-		types = {}
+		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = bntype.Type(core.BNNewTypeReference(parse.types[i].type))
+			types[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = bntype.Type(core.BNNewTypeReference(parse.variables[i].type))
+			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = bntype.Type(core.BNNewTypeReference(parse.functions[i].type))
+			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (bntype.TypeParserResult(types, variables, functions), error_str)
+		return (types.TypeParserResult(type_dict, variables, functions), error_str)
 
 	def parse_types_from_source_file(self, filename, include_dirs=[]):
 		"""
@@ -1652,17 +1652,17 @@ class Architecture(object):
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
 			return (None, error_str)
-		types = {}
+		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = bntype.Type(core.BNNewTypeReference(parse.types[i].type))
+			type_dict[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = bntype.Type(core.BNNewTypeReference(parse.variables[i].type))
+			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = bntype.Type(core.BNNewTypeReference(parse.functions[i].type))
+			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (bntype.TypeParserResult(types, variables, functions), error_str)
+		return (types.TypeParserResult(type_dict, variables, functions), error_str)
 
 	def register_calling_convention(self, cc):
 		"""

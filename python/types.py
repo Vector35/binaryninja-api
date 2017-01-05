@@ -22,6 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import SymbolType, TypeClass
 import callingconvention
 import demangle
 
@@ -31,7 +32,7 @@ class Symbol(object):
 	Symbols are defined as one of the following types:
 
 		=========================== ==============================================================
-		BNSymbolType                  Description
+		SymbolType                  Description
 		=========================== ==============================================================
 		FunctionSymbol              Symbol for Function that exists in the current binary
 		ImportAddressSymbol         Symbol defined in the Import Address Table
@@ -45,7 +46,7 @@ class Symbol(object):
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
 		else:
 			if isinstance(sym_type, str):
-				sym_type = core.BNSymbolType[sym_type]
+				sym_type = SymbolType[sym_type]
 			if full_name is None:
 				full_name = short_name
 			if raw_name is None:
@@ -58,7 +59,7 @@ class Symbol(object):
 	@property
 	def type(self):
 		"""Symbol type (read-only)"""
-		return core.BNSymbolType(core.BNGetSymbolType(self.handle))
+		return SymbolType(core.BNGetSymbolType(self.handle))
 
 	@property
 	def name(self):
@@ -113,7 +114,7 @@ class Type(object):
 	@property
 	def type_class(self):
 		"""Type class (read-only)"""
-		return core.BNTypeClass(core.BNGetTypeClass(self.handle))
+		return TypeClass(core.BNGetTypeClass(self.handle))
 
 	@property
 	def width(self):

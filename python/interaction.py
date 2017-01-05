@@ -23,6 +23,7 @@ import traceback
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonResult
 import binaryview
 import log
 
@@ -32,7 +33,7 @@ class LabelField(object):
 		self.text = text
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.LabelFormField
+		value.type = FormInputFieldType.LabelFormField
 		value.prompt = self.text
 
 	def _fill_core_result(self, value):
@@ -44,7 +45,7 @@ class LabelField(object):
 
 class SeparatorField(object):
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.SeparatorFormField
+		value.type = FormInputFieldType.SeparatorFormField
 
 	def _fill_core_result(self, value):
 		pass
@@ -59,7 +60,7 @@ class TextLineField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.TextLineFormField
+		value.type = FormInputFieldType.TextLineFormField
 		value.prompt = self.prompt
 
 	def _fill_core_result(self, value):
@@ -75,7 +76,7 @@ class MultilineTextField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.MultilineTextFormField
+		value.type = FormInputFieldType.MultilineTextFormField
 		value.prompt = self.prompt
 
 	def _fill_core_result(self, value):
@@ -91,7 +92,7 @@ class IntegerField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.IntegerFormField
+		value.type = FormInputFieldType.IntegerFormField
 		value.prompt = self.prompt
 
 	def _fill_core_result(self, value):
@@ -109,7 +110,7 @@ class AddressField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.AddressFormField
+		value.type = FormInputFieldType.AddressFormField
 		value.prompt = self.prompt
 		value.view = None
 		if self.view is not None:
@@ -130,7 +131,7 @@ class ChoiceField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.ChoiceFormField
+		value.type = FormInputFieldType.ChoiceFormField
 		value.prompt = self.prompt
 		choice_buf = (ctypes.c_char_p * len(self.choices))()
 		for i in xrange(0, len(self.choices)):
@@ -152,7 +153,7 @@ class OpenFileNameField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.OpenFileNameFormField
+		value.type = FormInputFieldType.OpenFileNameFormField
 		value.prompt = self.prompt
 		value.ext = self.ext
 
@@ -171,7 +172,7 @@ class SaveFileNameField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.BNFormInputFieldType.SaveFileNameFormField
+		value.type = FormInputFieldType.SaveFileNameFormField
 		value.prompt = self.prompt
 		value.ext = self.ext
 		value.defaultName = self.default_name
@@ -190,7 +191,7 @@ class DirectoryNameField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = core.DirectoryNameField
+		value.type = DirectoryNameField
 		value.prompt = self.prompt
 		value.defaultName = self.default_name
 
@@ -335,31 +336,31 @@ class InteractionHandler(object):
 		try:
 			field_objs = []
 			for i in xrange(0, count):
-				if fields[i].type == core.BNFormInputFieldType.LabelFormField:
+				if fields[i].type == FormInputFieldType.LabelFormField:
 					field_objs.append(LabelField(fields[i].prompt))
-				elif fields[i].type == core.BNFormInputFieldType.SeparatorFormField:
+				elif fields[i].type == FormInputFieldType.SeparatorFormField:
 					field_objs.append(SeparatorField())
-				elif fields[i].type == core.BNFormInputFieldType.TextLineFormField:
+				elif fields[i].type == FormInputFieldType.TextLineFormField:
 					field_objs.append(TextLineField(fields[i].prompt))
-				elif fields[i].type == core.BNFormInputFieldType.MultilineTextFormField:
+				elif fields[i].type == FormInputFieldType.MultilineTextFormField:
 					field_objs.append(MultilineTextField(fields[i].prompt))
-				elif fields[i].type == core.BNFormInputFieldType.IntegerFormField:
+				elif fields[i].type == FormInputFieldType.IntegerFormField:
 					field_objs.append(IntegerField(fields[i].prompt))
-				elif fields[i].type == core.BNFormInputFieldType.AddressFormField:
+				elif fields[i].type == FormInputFieldType.AddressFormField:
 					view = None
 					if fields[i].view:
 						view = binaryview.BinaryView(handle = core.BNNewViewReference(fields[i].view))
 					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
-				elif fields[i].type == core.BNFormInputFieldType.ChoiceFormField:
+				elif fields[i].type == FormInputFieldType.ChoiceFormField:
 					choices = []
 					for i in xrange(0, fields[i].count):
 						choices.append(fields[i].choices[i])
 					field_objs.append(ChoiceField(fields[i].prompt, choices))
-				elif fields[i].type == core.BNFormInputFieldType.OpenFileNameFormField:
+				elif fields[i].type == FormInputFieldType.OpenFileNameFormField:
 					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext))
-				elif fields[i].type == core.BNFormInputFieldType.SaveFileNameFormField:
+				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
 					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName))
-				elif fields[i].type == core.DirectoryNameField:
+				elif fields[i].type == DirectoryNameField:
 					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName))
 				else:
 					field_objs.append(LabelField(fields[i].prompt))
@@ -419,7 +420,7 @@ class InteractionHandler(object):
 		return False
 
 	def show_message_box(self, title, text, buttons, icon):
-		return core.BNMessageBoxButtonResult.CancelButton
+		return MessageBoxButtonResult.CancelButton
 
 
 def markdown_to_html(contents):
@@ -516,5 +517,5 @@ def get_form_input(fields, title):
 	return True
 
 
-def show_message_box(title, text, buttons = core.BNMessageBoxButtonResult.OKButton, icon = core.BNMessageBoxIcon.InformationIcon):
+def show_message_box(title, text, buttons = MessageBoxButtonResult.OKButton, icon = MessageBoxIcon.InformationIcon):
 	return core.BNShowMessageBox(title, text, buttons, icon)

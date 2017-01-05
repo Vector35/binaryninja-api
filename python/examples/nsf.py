@@ -23,17 +23,22 @@
 # https://scarybeastsecurity.blogspot.com/2016/11/0day-exploit-compromising-linux-desktop.html
 #
 
-from binaryninja import *
+from binaryninja.binaryview import BinaryView
+from binaryninja.architecture import Architecture
+from binaryninja.log import log_error, log_info
+from binaryninja.types import Symbol
+from binaryninja.enums import SymbolType, SegmentFlag
+
 import struct
 import traceback
-import os
+
 
 class NSFView(BinaryView):
 	name = "NSF"
 	long_name = "Nintendo Sound Format"
 
 	def __init__(self, data):
-		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
+		BinaryView.__init__(self, parent_view=data, file_metadata=data.file)
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -71,58 +76,58 @@ class NSFView(BinaryView):
 				self.ntsc = True
 			self.extra_sound_bits = struct.unpack("B", hdr[123])[0]
 
-			if self.bank_switching == "\0"*8:
-				#no bank switching
+			if self.bank_switching == "\0" * 8:
+				# no bank switching
 				self.load_address & 0xFFF
 				self.rom_offset = 128
 
 			else:
-				#bank switching not implemented
+				# bank switching not implemented
 				log_info("Bank switching not implemented in this loader.")
 
 			# Add mapping for RAM and hardware registers, not backed by file contents
-			self.add_auto_segment(0, 0x8000, 0, 0, SegmentReadable | SegmentWritable | SegmentExecutable)
+			self.add_auto_segment(0, 0x8000, 0, 0, SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable)
 
 			# Add ROM mappings
 			self.add_auto_segment(0x8000, 0x4000, self.rom_offset, 0x4000,
-				SegmentReadable | SegmentExecutable)
+				SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 
-			self.define_auto_symbol(Symbol(FunctionSymbol, self.play_address, "_play"))
-			self.define_auto_symbol(Symbol(FunctionSymbol, self.init_address, "_init"))
+			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.play_address, "_play"))
+			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.init_address, "_init"))
 			self.add_entry_point(Architecture['6502'].standalone_platform, self.init_address)
 			self.add_function(Architecture['6502'].standalone_platform, self.play_address)
 
 			# Hardware registers
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2000, "PPUCTRL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2001, "PPUMASK"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2002, "PPUSTATUS"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2003, "OAMADDR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2004, "OAMDATA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2005, "PPUSCROLL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2006, "PPUADDR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x2007, "PPUDATA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4000, "SQ1_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4001, "SQ1_SWEEP"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4002, "SQ1_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4003, "SQ1_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4004, "SQ2_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4005, "SQ2_SWEEP"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4006, "SQ2_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4007, "SQ2_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4008, "TRI_LINEAR"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400a, "TRI_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400b, "TRI_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400c, "NOISE_VOL"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400e, "NOISE_LO"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x400f, "NOISE_HI"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4010, "DMC_FREQ"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4011, "DMC_RAW"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4012, "DMC_START"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4013, "DMC_LEN"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4014, "OAMDMA"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4015, "SND_CHN"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4016, "JOY1"))
-			self.define_auto_symbol(Symbol(DataSymbol, 0x4017, "JOY2"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2000, "PPUCTRL"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2001, "PPUMASK"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2002, "PPUSTATUS"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2003, "OAMADDR"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2004, "OAMDATA"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2005, "PPUSCROLL"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2006, "PPUADDR"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2007, "PPUDATA"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4000, "SQ1_VOL"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4001, "SQ1_SWEEP"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4002, "SQ1_LO"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4003, "SQ1_HI"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4004, "SQ2_VOL"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4005, "SQ2_SWEEP"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4006, "SQ2_LO"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4007, "SQ2_HI"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4008, "TRI_LINEAR"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x400a, "TRI_LO"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x400b, "TRI_HI"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x400c, "NOISE_VOL"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x400e, "NOISE_LO"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x400f, "NOISE_HI"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4010, "DMC_FREQ"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4011, "DMC_RAW"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4012, "DMC_START"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4013, "DMC_LEN"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4014, "OAMDMA"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4015, "SND_CHN"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4016, "JOY1"))
+			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x4017, "JOY2"))
 
 			return True
 		except:
@@ -134,5 +139,6 @@ class NSFView(BinaryView):
 
 	def perform_get_entry_point(self):
 		return struct.unpack("<H", str(self.perform_read(0x0a, 2)))[0]
+
 
 NSFView.register()

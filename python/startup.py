@@ -32,7 +32,3 @@ def _init_plugins():
 		core.BNInitUserPlugins()
 	if not core.BNIsLicenseValidated():
 		raise RuntimeError("License is not valid. Please supply a valid license.")
-
-
-def shutdown():
-	core.BNShutdown()

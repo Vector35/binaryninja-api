@@ -30,13 +30,19 @@
 # virtual environment. A later update may allow for a manual override to link to the required version
 # of Python.
 
-__name__ = "__console__" # angr looks for this, it won't load from within a UI without it
-import angr
-from binaryninja import *
-
 import tempfile
 import logging
 import os
+
+__name__ = "__console__"  # angr looks for this, it won't load from within a UI without it
+
+import angr
+# For the lazy instead you can just import everything 'from binaryninja import *''
+from binaryninja.binaryview import BinaryView
+from binaryninja.plugin import BackgroundTaskThread, PluginCommand
+from binaryninja.interaction import show_plain_text_report, show_message_box
+from binaryninja.highlight import HighlightColor
+from binaryninja.enums import HighlightStandardColor, MessageBoxButtonSet
 
 # Disable warning logs as they show up as errors in the UI
 logging.disable(logging.WARNING)
@@ -109,8 +115,8 @@ def find_instr(bv, addr):
 	# Highlight the instruction in green
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(core.BNHighlightStandardColor.GreenHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, core.BNHighlightStandardColor.GreenHighlightColor)
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.GreenHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(block.arch, addr, HighlightStandardColor.GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_find.add(addr)
@@ -120,8 +126,8 @@ def avoid_instr(bv, addr):
 	# Highlight the instruction in red
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(core.BNHighlightStandardColor.RedHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, core.BNHighlightStandardColor.RedHighlightColor)
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.RedHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(block.arch, addr, HighlightStandardColor.RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_avoid.add(addr)
@@ -131,12 +137,13 @@ def solve(bv):
 	if len(bv.session_data.angr_find) == 0:
 		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
 			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
-			"continue.", core.BNMessageBoxButtonSet.OKButtonSet, core.BNMessageBoxButtonSet.ErrorIcon)
+			"continue.", MessageBoxButtonSet.OKButtonSet, MessageBoxButtonSet.ErrorIcon)
 		return
 
 	# Start a solver thread for the path associated with the view
 	s = Solver(bv.session_data.angr_find, bv.session_data.angr_avoid, bv)
 	s.start()
+
 
 # Register commands for the user to interact with the plugin
 PluginCommand.register_for_address("Find Path to This Instruction",

@@ -22,7 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-import bntype
+import types
 
 
 def get_qualified_name(names):
@@ -64,7 +64,7 @@ def demangle_ms(arch, mangled_name):
 		for i in xrange(outSize.value):
 			names.append(outName[i])
 		core.BNFreeDemangledName(outName.value, outSize.value)
-		return (bntype.Type(handle), names)
+		return (types.Type(handle), names)
 	return (None, mangled_name)
 
 
@@ -79,5 +79,5 @@ def demangle_gnu3(arch, mangled_name):
 		core.BNFreeDemangledName(outName.value, outSize.value)
 		if not handle:
 			return (None, names)
-		return (bntype.Type(handle), names)
+		return (types.Type(handle), names)
 	return (None, mangled_name)

@@ -18,7 +18,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from binaryninja import *
+
+from binaryninja.plugin import PluginCommand
+from binaryninja.log import log_error
+from binaryninja.architecture import Architecture
+
 
 def write_breakpoint(view, start, length):
 	"""Sample function to show registering a plugin menu item for a range of bytes. Also possible:
@@ -26,11 +30,21 @@ def write_breakpoint(view, start, length):
 		register_for_address
 		register_for_function
 	"""
-	if view.arch.name.startswith("x86"):
-		view.write(start, "\xcc" * length)
-	elif view.arch.name == "armv7":
-		view.write(start, "\x7a\x00\x20\xe1" * (length/4))
-	else:
-		log_error("No support for breakpoint on %s" % view.arch.name)
+	bkpt_str = {
+		"x86": "int3",
+		"x86_64": "int3",
+		"armv7": "bkpt",
+		"aarch64": "brk #0",
+		"mips32": "break"}
+
+	if view.arch.name not in bkpt_str:
+		log_error("Architecture %s not supported" % view.arch.name)
+		return
+	bkpt, err = Architecture[view.arch.name].assemble(bkpt_str[view.arch.name])
+	if bkpt is None:
+		log_error(err)
+		return
+	view.write(start, bkpt * length / len(bkpt))
+
 
 PluginCommand.register_for_range("Convert to breakpoint", "Fill region with breakpoint instructions.", write_breakpoint)

@@ -23,6 +23,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import UpdateResult
 import startup
 import log
 
@@ -180,7 +181,7 @@ class UpdateChannel(object):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
-		return core.BNUpdateResult(result)
+		return UpdateResult(result)
 
 
 class UpdateVersion(object):
@@ -204,7 +205,7 @@ class UpdateVersion(object):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
-		return core.BNUpdateResult(result)
+		return UpdateResult(result)
 
 
 def are_auto_updates_enabled():

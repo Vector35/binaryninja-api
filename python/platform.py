@@ -20,10 +20,12 @@
 
 import ctypes
 
-#Binary Ninja components
+# Binary Ninja components
 import _binaryninjacore as core
 import startup
 import architecture
+import callingconvention
+
 
 class _PlatformMetaClass(type):
 	@property
@@ -60,15 +62,15 @@ class _PlatformMetaClass(type):
 
 	def __setattr__(self, name, value):
 		try:
-			type.__setattr__(self,name,value)
+			type.__setattr__(self, name, value)
 		except AttributeError:
-			raise AttributeError, "attribute '%s' is read only" % name
+			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, value):
 		startup._init_plugins()
 		platform = core.BNGetPlatformByName(str(value))
 		if platform is None:
-			raise KeyError, "'%s' is not a valid platform" % str(value)
+			raise KeyError("'%s' is not a valid platform" % str(value))
 		return Platform(None, platform)
 
 	def get_list(cls, os = None, arch = None):
@@ -85,6 +87,7 @@ class _PlatformMetaClass(type):
 			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
+
 
 class Platform(object):
 	"""
@@ -118,7 +121,7 @@ class Platform(object):
 		result = core.BNGetPlatformDefaultCallingConvention(self.handle)
 		if result is None:
 			return None
-		return CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, result)
 
 	@default_calling_convention.setter
 	def default_calling_convention(self, value):
@@ -136,7 +139,7 @@ class Platform(object):
 		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
 		if result is None:
 			return None
-		return CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, result)
 
 	@cdecl_calling_convention.setter
 	def cdecl_calling_convention(self, value):
@@ -154,7 +157,7 @@ class Platform(object):
 		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, result)
 
 	@stdcall_calling_convention.setter
 	def stdcall_calling_convention(self, value):
@@ -172,7 +175,7 @@ class Platform(object):
 		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, result)
 
 	@fastcall_calling_convention.setter
 	def fastcall_calling_convention(self, value):
@@ -190,7 +193,7 @@ class Platform(object):
 		result = core.BNGetPlatformSystemCallConvention(self.handle)
 		if result is None:
 			return None
-		return CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, result)
 
 	@system_call_convention.setter
 	def system_call_convention(self, value):
@@ -208,15 +211,15 @@ class Platform(object):
 		cc = core.BNGetPlatformCallingConventions(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(CallingConvention(None, core.BNNewCallingConventionReference(cc[i])))
+			result.append(callingconvention.CallingConvention(None, core.BNNewCallingConventionReference(cc[i])))
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
 
 	def __setattr__(self, name, value):
 		try:
-			object.__setattr__(self,name,value)
+			object.__setattr__(self, name, value)
 		except AttributeError:
-			raise AttributeError, "attribute '%s' is read only" % name
+			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __repr__(self):
 		return "<platform: %s>" % self.name
@@ -250,3 +253,9 @@ class Platform(object):
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
+
+	def get_associated_platform_by_address(self, addr):
+		new_addr = ctypes.c_ulonglong()
+		new_addr.value = addr
+		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
+		return Platform(None, handle = result), new_addr.value

@@ -28,6 +28,7 @@ import sys
 
 # Binary Ninja Components
 import _binaryninjacore as core
+from enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 import binaryview
 import function
 import basicblock
@@ -131,7 +132,7 @@ class ScriptingInstance(object):
 			return self.perform_execute_script_input(text)
 		except:
 			log.log_error(traceback.format_exc())
-			return core.BNScriptingProviderExecuteResult.InvalidScriptInput
+			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _set_current_binary_view(self, ctxt, view):
 		try:
@@ -186,7 +187,7 @@ class ScriptingInstance(object):
 
 	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
-		return core.BNScriptingProviderExecuteResult.InvalidScriptInput
+		return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
@@ -506,7 +507,7 @@ class PythonScriptingInstance(ScriptingInstance):
 					result = self.input
 					self.input = ""
 					return result
-				self.instance.input_ready_state = core.BNScriptingProviderInputReadyState.ReadyForScriptProgramInput
+				self.instance.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptProgramInput
 				self.event.wait()
 				self.event.clear()
 			return ""
@@ -518,7 +519,7 @@ class PythonScriptingInstance(ScriptingInstance):
 				if self.exit:
 					break
 				if self.code is not None:
-					self.instance.input_ready_state = core.BNScriptingProviderInputReadyState.NotReadyForInput
+					self.instance.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
 					code = self.code
 					self.code = None
 
@@ -551,7 +552,7 @@ class PythonScriptingInstance(ScriptingInstance):
 						traceback.print_exc()
 					finally:
 						PythonScriptingInstance._interpreter.value = None
-						self.instance.input_ready_state = core.BNScriptingProviderInputReadyState.ReadyForScriptExecution
+						self.instance.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
 
 		def get_selected_data(self):
 			if self.active_view is None:
@@ -575,7 +576,7 @@ class PythonScriptingInstance(ScriptingInstance):
 		self.interpreter = PythonScriptingInstance.InterpreterThread(self)
 		self.interpreter.start()
 		self.queued_input = ""
-		self.input_ready_state = core.BNScriptingProviderInputReadyState.ReadyForScriptExecution
+		self.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
 
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
@@ -583,15 +584,15 @@ class PythonScriptingInstance(ScriptingInstance):
 
 	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
-		if self.input_ready_state == core.BNScriptingProviderInputReadyState.NotReadyForInput:
-			return core.BNScriptingProviderExecuteResult.InvalidScriptInput
+		if self.input_ready_state == ScriptingProviderInputReadyState.NotReadyForInput:
+			return ScriptingProviderExecuteResult.InvalidScriptInput
 
-		if self.input_ready_state == core.BNScriptingProviderInputReadyState.ReadyForScriptProgramInput:
+		if self.input_ready_state == ScriptingProviderInputReadyState.ReadyForScriptProgramInput:
 			if len(text) == 0:
-				return core.BNScriptingProviderExecuteResult.SuccessfulScriptExecution
-			self.input_ready_state = core.BNScriptingProviderInputReadyState.NotReadyForInput
+				return ScriptingProviderExecuteResult.SuccessfulScriptExecution
+			self.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
 			self.interpreter.add_input(text)
-			return core.BNScriptingProviderExecuteResult.SuccessfulScriptExecution
+			return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
 		try:
 			result = code.compile_command(text)
@@ -600,11 +601,11 @@ class PythonScriptingInstance(ScriptingInstance):
 
 		if result is None:
 			# Command is not complete, ask for more input
-			return core.BNScriptingProviderExecuteResult.IncompleteScriptInput
+			return ScriptingProviderExecuteResult.IncompleteScriptInput
 
-		self.input_ready_state = core.BNScriptingProviderInputReadyState.NotReadyForInput
+		self.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
 		self.interpreter.execute(text)
-		return core.BNScriptingProviderExecuteResult.SuccessfulScriptExecution
+		return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
@@ -635,6 +636,10 @@ class PythonScriptingProvider(ScriptingProvider):
 
 PythonScriptingProvider().register()
 # Wrap stdin/stdout/stderr for Python scripting provider implementation
+original_stdin = sys.stdin
+original_stdout = sys.stdout
+original_stderr = sys.stderr
+
 sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
 sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
 sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

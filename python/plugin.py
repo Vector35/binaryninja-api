@@ -24,6 +24,7 @@ import threading
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import LowLevelILOperation
 import startup
 import filemetadata
 import binaryview
@@ -77,7 +78,7 @@ class PluginCommand(object):
 		ctypes.memmove(ctypes.byref(self.command), ctypes.byref(cmd), ctypes.sizeof(core.BNPluginCommand))
 		self.name = str(cmd.name)
 		self.description = str(cmd.description)
-		self.type = core.BNPluginCommandType(cmd.type)
+		self.type = LowLevelILOperation(cmd.type)
 
 	@classmethod
 	def _default_action(cls, view, action):
@@ -209,21 +210,21 @@ class PluginCommand(object):
 	def is_valid(self, context):
 		if context.view is None:
 			return False
-		if self.command.type == core.BNPluginCommandType.DefaultPluginCommand:
+		if self.command.type == LowLevelILOperation.DefaultPluginCommand:
 			if not self.command.defaultIsValid:
 				return True
 			return self.command.defaultIsValid(self.command.context, context.view.handle)
-		elif self.command.type == core.BNPluginCommandType.AddressPluginCommand:
+		elif self.command.type == LowLevelILOperation.AddressPluginCommand:
 			if not self.command.addressIsValid:
 				return True
 			return self.command.addressIsValid(self.command.context, context.view.handle, context.address)
-		elif self.command.type == core.BNPluginCommandType.RangePluginCommand:
+		elif self.command.type == LowLevelILOperation.RangePluginCommand:
 			if context.length == 0:
 				return False
 			if not self.command.rangeIsValid:
 				return True
 			return self.command.rangeIsValid(self.command.context, context.view.handle, context.address, context.length)
-		elif self.command.type == core.BNPluginCommandType.FunctionPluginCommand:
+		elif self.command.type == LowLevelILOperation.FunctionPluginCommand:
 			if context.function is None:
 				return False
 			if not self.command.functionIsValid:
@@ -234,13 +235,13 @@ class PluginCommand(object):
 	def execute(self, context):
 		if not self.is_valid(context):
 			return
-		if self.command.type == core.BNPluginCommandType.DefaultPluginCommand:
+		if self.command.type == LowLevelILOperation.DefaultPluginCommand:
 			self.command.defaultCommand(self.command.context, context.view.handle)
-		elif self.command.type == core.BNPluginCommandType.AddressPluginCommand:
+		elif self.command.type == LowLevelILOperation.AddressPluginCommand:
 			self.command.addressCommand(self.command.context, context.view.handle, context.address)
-		elif self.command.type == core.BNPluginCommandType.RangePluginCommand:
+		elif self.command.type == LowLevelILOperation.RangePluginCommand:
 			self.command.rangeCommand(self.command.context, context.view.handle, context.address, context.length)
-		elif self.command.type == core.BNPluginCommandType.FunctionPluginCommand:
+		elif self.command.type == LowLevelILOperation.FunctionPluginCommand:
 			self.command.functionCommand(self.command.context, context.view.handle, context.function.handle)
 
 	def __repr__(self):

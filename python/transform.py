@@ -24,6 +24,7 @@ import abc
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import TransformType
 import startup
 import log
 import databuffer
@@ -109,14 +110,14 @@ class Transform(object):
 			self._pending_param_lists = {}
 			self.type = self.__class__.transform_type
 			if not isinstance(self.type, str):
-				self.type = core.BNTransformType(self.type)
+				self.type = TransformType(self.type)
 			self.name = self.__class__.name
 			self.long_name = self.__class__.long_name
 			self.group = self.__class__.group
 			self.parameters = self.__class__.parameters
 		else:
 			self.handle = handle
-			self.type = core.BNTransformType(core.BNGetTransformType(self.handle))
+			self.type = TransformType(core.BNGetTransformType(self.handle))
 			self.name = core.BNGetTransformName(self.handle)
 			self.long_name = core.BNGetTransformLongName(self.handle)
 			self.group = core.BNGetTransformGroup(self.handle)
@@ -191,7 +192,7 @@ class Transform(object):
 
 	@abc.abstractmethod
 	def perform_decode(self, data, params):
-		if self.type == core.BNTransformType.InvertingTransform:
+		if self.type == TransformType.InvertingTransform:
 			return self.perform_encode(data, params)
 		return None
 

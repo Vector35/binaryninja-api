@@ -22,6 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
+from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
 import function
 import basicblock
 
@@ -43,73 +44,73 @@ class LowLevelILInstruction(object):
 	"""
 
 	ILOperations = {
-		core.BNLowLevelILOperation.LLIL_NOP: [],
-		core.BNLowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_LOAD: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_PUSH: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_POP: [],
-		core.BNLowLevelILOperation.LLIL_REG: [("src", "reg")],
-		core.BNLowLevelILOperation.LLIL_CONST: [("value", "int")],
-		core.BNLowLevelILOperation.LLIL_FLAG: [("src", "flag")],
-		core.BNLowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
-		core.BNLowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_ADC: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_SUB: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_SBB: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_AND: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_OR: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_XOR: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_LSL: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_LSR: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_ASR: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_ROL: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_RLC: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_ROR: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_RRC: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MUL: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_DIVU: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_DIVS: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MODU: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MODS: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_NEG: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_NOT: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_SX: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_ZX: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
-		core.BNLowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
-		core.BNLowLevelILOperation.LLIL_CALL: [("dest", "expr")],
-		core.BNLowLevelILOperation.LLIL_RET: [("dest", "expr")],
-		core.BNLowLevelILOperation.LLIL_NORET: [],
-		core.BNLowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
-		core.BNLowLevelILOperation.LLIL_GOTO: [("dest", "int")],
-		core.BNLowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond")],
-		core.BNLowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
-		core.BNLowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
-		core.BNLowLevelILOperation.LLIL_SYSCALL: [],
-		core.BNLowLevelILOperation.LLIL_BP: [],
-		core.BNLowLevelILOperation.LLIL_TRAP: [("value", "int")],
-		core.BNLowLevelILOperation.LLIL_UNDEF: [],
-		core.BNLowLevelILOperation.LLIL_UNIMPL: [],
-		core.BNLowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")]
+		LowLevelILOperation.LLIL_NOP: [],
+		LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
+		LowLevelILOperation.LLIL_LOAD: [("src", "expr")],
+		LowLevelILOperation.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
+		LowLevelILOperation.LLIL_POP: [],
+		LowLevelILOperation.LLIL_REG: [("src", "reg")],
+		LowLevelILOperation.LLIL_CONST: [("value", "int")],
+		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
+		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
+		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_ADC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_SUB: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_SBB: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_AND: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_OR: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_XOR: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_LSL: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_LSR: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_ASR: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_ROL: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_RLC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_ROR: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_RRC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MUL: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODU: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODS: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_NEG: [("src", "expr")],
+		LowLevelILOperation.LLIL_NOT: [("src", "expr")],
+		LowLevelILOperation.LLIL_SX: [("src", "expr")],
+		LowLevelILOperation.LLIL_ZX: [("src", "expr")],
+		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
+		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
+		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
+		LowLevelILOperation.LLIL_NORET: [],
+		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
+		LowLevelILOperation.LLIL_GOTO: [("dest", "int")],
+		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond")],
+		LowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
+		LowLevelILOperation.LLIL_SYSCALL: [],
+		LowLevelILOperation.LLIL_BP: [],
+		LowLevelILOperation.LLIL_TRAP: [("value", "int")],
+		LowLevelILOperation.LLIL_UNDEF: [],
+		LowLevelILOperation.LLIL_UNIMPL: [],
+		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")]
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):
@@ -118,7 +119,7 @@ class LowLevelILInstruction(object):
 		self.expr_index = expr_index
 		self.instr_index = instr_index
 		self.operation = instr.operation
-		self.operation_name = core.BNLowLevelILOperation(instr.operation)
+		self.operation_name = LowLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
 		self.source_operand = instr.sourceOperand
@@ -144,7 +145,7 @@ class LowLevelILInstruction(object):
 			elif operand_type == "flag":
 				value = func.arch.get_flag_name(instr.operands[i])
 			elif operand_type == "cond":
-				value = core.BNLowLevelILFlagCondition(instr.operands[i])
+				value = LowLevelILFlagCondition(instr.operands[i])
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
 				operands = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
@@ -182,7 +183,7 @@ class LowLevelILInstruction(object):
 				return None
 		result = []
 		for i in xrange(0, count.value):
-			token_type = core.BNInstructionTextTokenType(tokens[i].type)
+			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
 			size = tokens[i].size
@@ -329,8 +330,8 @@ class LowLevelILFunction(object):
 
 	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, size = 0, flags = None):
 		if isinstance(operation, str):
-			operation = core.BNLowLevelILOperation[operation]
-		elif isinstance(operation, core.BNLowLevelILOperation):
+			operation = LowLevelILOperation[operation]
+		elif isinstance(operation, LowLevelILOperation):
 			operation = operation.value
 		if isinstance(flags, str):
 			flags = self.arch.get_flag_write_type_by_name(flags)
@@ -355,7 +356,7 @@ class LowLevelILFunction(object):
 		:return: The no operation expression
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_NOP)
+		return self.expr(LowLevelILOperation.LLIL_NOP)
 
 	def set_reg(self, size, reg, value, flags = 0):
 		"""
@@ -370,7 +371,7 @@ class LowLevelILFunction(object):
 		"""
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		return self.expr(core.BNLowLevelILOperation.LLIL_SET_REG, reg, value.index, size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG, reg, value.index, size = size, flags = flags)
 
 	def set_reg_split(self, size, hi, lo, value, flags = 0):
 		"""
@@ -389,7 +390,7 @@ class LowLevelILFunction(object):
 			hi = self.arch.regs[hi].index
 		if isinstance(lo, str):
 			lo = self.arch.regs[lo].index
-		return self.expr(core.BNLowLevelILOperation.LLIL_SET_REG_SPLIT, hi, lo, value.index, size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG_SPLIT, hi, lo, value.index, size = size, flags = flags)
 
 	def set_flag(self, flag, value):
 		"""
@@ -400,7 +401,7 @@ class LowLevelILFunction(object):
 		:return: The expression FLAG.flag = value
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_SET_FLAG, self.arch.get_flag_by_name(flag), value.index)
+		return self.expr(LowLevelILOperation.LLIL_SET_FLAG, self.arch.get_flag_by_name(flag), value.index)
 
 	def load(self, size, addr):
 		"""
@@ -411,7 +412,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``[addr].size``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_LOAD, addr.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_LOAD, addr.index, size=size)
 
 	def store(self, size, addr, value):
 		"""
@@ -423,7 +424,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``[addr].size = value``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size)
 
 	def push(self, size, value):
 		"""
@@ -434,7 +435,7 @@ class LowLevelILFunction(object):
 		:return: The expression push(value)
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_PUSH, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_PUSH, value.index, size=size)
 
 	def pop(self, size):
 		"""
@@ -444,7 +445,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``pop``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_POP, size=size)
+		return self.expr(LowLevelILOperation.LLIL_POP, size=size)
 
 	def reg(self, size, reg):
 		"""
@@ -457,7 +458,7 @@ class LowLevelILFunction(object):
 		"""
 		if isinstance(reg, str):
 			reg = self.arch.regs[reg].index
-		return self.expr(core.BNLowLevelILOperation.LLIL_REG, reg, size=size)
+		return self.expr(LowLevelILOperation.LLIL_REG, reg, size=size)
 
 	def const(self, size, value):
 		"""
@@ -468,7 +469,7 @@ class LowLevelILFunction(object):
 		:return: A constant expression of given value and size
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CONST, value, size=size)
+		return self.expr(LowLevelILOperation.LLIL_CONST, value, size=size)
 
 	def flag(self, reg):
 		"""
@@ -478,7 +479,7 @@ class LowLevelILFunction(object):
 		:return: A flag expression of given flag name
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_FLAG, self.arch.get_flag_by_name(reg))
+		return self.expr(LowLevelILOperation.LLIL_FLAG, self.arch.get_flag_by_name(reg))
 
 	def flag_bit(self, size, reg, bit):
 		"""
@@ -490,7 +491,7 @@ class LowLevelILFunction(object):
 		:return: A constant expression of given value and size ``FLAG.reg = bit``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size=size)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size=size)
 
 	def add(self, size, a, b, flags=None):
 		"""
@@ -504,7 +505,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``add.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ADD, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ADD, a.index, b.index, size=size, flags=flags)
 
 	def add_carry(self, size, a, b, flags=None):
 		"""
@@ -518,7 +519,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``adc.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ADC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ADC, a.index, b.index, size=size, flags=flags)
 
 	def sub(self, size, a, b, flags=None):
 		"""
@@ -532,7 +533,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``sub.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_SUB, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_SUB, a.index, b.index, size=size, flags=flags)
 
 	def sub_borrow(self, size, a, b, flags=None):
 		"""
@@ -546,7 +547,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``sbc.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_SBB, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_SBB, a.index, b.index, size=size, flags=flags)
 
 	def and_expr(self, size, a, b, flags=None):
 		"""
@@ -560,7 +561,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``and.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_AND, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_AND, a.index, b.index, size=size, flags=flags)
 
 	def or_expr(self, size, a, b, flags=None):
 		"""
@@ -574,7 +575,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``or.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_OR, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_OR, a.index, b.index, size=size, flags=flags)
 
 	def xor_expr(self, size, a, b, flags=None):
 		"""
@@ -588,7 +589,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``xor.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_XOR, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_XOR, a.index, b.index, size=size, flags=flags)
 
 	def shift_left(self, size, a, b, flags=None):
 		"""
@@ -602,7 +603,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``lsl.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_LSL, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_LSL, a.index, b.index, size=size, flags=flags)
 
 	def logical_shift_right(self, size, a, b, flags=None):
 		"""
@@ -616,7 +617,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``lsr.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_LSR, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_LSR, a.index, b.index, size=size, flags=flags)
 
 	def arith_shift_right(self, size, a, b, flags=None):
 		"""
@@ -630,7 +631,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``asr.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ASR, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ASR, a.index, b.index, size=size, flags=flags)
 
 	def rotate_left(self, size, a, b, flags=None):
 		"""
@@ -644,7 +645,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``rol.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ROL, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ROL, a.index, b.index, size=size, flags=flags)
 
 	def rotate_left_carry(self, size, a, b, flags=None):
 		"""
@@ -658,7 +659,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``rcl.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.LLIL_RLC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_RLC, a.index, b.index, size=size, flags=flags)
 
 	def rotate_right(self, size, a, b, flags=None):
 		"""
@@ -672,7 +673,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``ror.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ROR, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ROR, a.index, b.index, size=size, flags=flags)
 
 	def rotate_right_carry(self, size, a, b, flags=None):
 		"""
@@ -686,7 +687,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``rcr.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_RRC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_RRC, a.index, b.index, size=size, flags=flags)
 
 	def mult(self, size, a, b, flags=None):
 		"""
@@ -700,7 +701,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``sbc.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MUL, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MUL, a.index, b.index, size=size, flags=flags)
 
 	def mult_double_prec_signed(self, size, a, b, flags=None):
 		"""
@@ -714,7 +715,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MULS_DP, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MULS_DP, a.index, b.index, size=size, flags=flags)
 
 	def mult_double_prec_unsigned(self, size, a, b, flags=None):
 		"""
@@ -728,7 +729,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MULU_DP, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a.index, b.index, size=size, flags=flags)
 
 	def div_signed(self, size, a, b, flags=None):
 		"""
@@ -742,7 +743,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
 
 	def div_double_prec_signed(self, size, hi, lo, b, flags=None):
 		"""
@@ -758,7 +759,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
 
 	def div_unsigned(self, size, a, b, flags=None):
 		"""
@@ -772,7 +773,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
 
 	def div_double_prec_unsigned(self, size, hi, lo, b, flags=None):
 		"""
@@ -788,7 +789,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
 
 	def mod_signed(self, size, a, b, flags=None):
 		"""
@@ -802,7 +803,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``mods.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
 
 	def mod_double_prec_signed(self, size, hi, lo, b, flags=None):
 		"""
@@ -818,7 +819,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``mods.dp.<size>{<flags>}(hi:lo, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
 
 	def mod_unsigned(self, size, a, b, flags=None):
 		"""
@@ -832,7 +833,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``modu.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
 
 	def mod_double_prec_unsigned(self, size, hi, lo, b, flags=None):
 		"""
@@ -848,7 +849,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``modu.dp.<size>{<flags>}(hi:lo, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
 
 	def neg_expr(self, size, value, flags=None):
 		"""
@@ -860,7 +861,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``neg.<size>{<flags>}(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_NEG, value.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_NEG, value.index, size=size, flags=flags)
 
 	def not_expr(self, size, value, flags=None):
 		"""
@@ -872,7 +873,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``not.<size>{<flags>}(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_NOT, value.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_NOT, value.index, size=size, flags=flags)
 
 	def sign_extend(self, size, value, flags=None):
 		"""
@@ -884,7 +885,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_SX, value.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_SX, value.index, size=size, flags=flags)
 
 	def zero_extend(self, size, value):
 		"""
@@ -895,7 +896,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_ZX, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_ZX, value.index, size=size)
 
 	def jump(self, dest):
 		"""
@@ -905,7 +906,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``jump(dest)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_JUMP, dest.index)
+		return self.expr(LowLevelILOperation.LLIL_JUMP, dest.index)
 
 	def call(self, dest):
 		"""
@@ -916,7 +917,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``call(dest)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CALL, dest.index)
+		return self.expr(LowLevelILOperation.LLIL_CALL, dest.index)
 
 	def ret(self, dest):
 		"""
@@ -927,7 +928,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``jump(dest)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_RET, dest.index)
+		return self.expr(LowLevelILOperation.LLIL_RET, dest.index)
 
 	def no_ret(self):
 		"""
@@ -936,7 +937,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``noreturn``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_NORET)
+		return self.expr(LowLevelILOperation.LLIL_NORET)
 
 	def flag_condition(self, cond):
 		"""
@@ -947,10 +948,10 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		if isinstance(cond, str):
-			cond = core.BNLowLevelILFlagCondition[cond]
-		elif isinstance(cond, core.BNLowLevelILFlagCondition):
+			cond = LowLevelILFlagCondition[cond]
+		elif isinstance(cond, LowLevelILFlagCondition):
 			cond = cond.value
-		return self.expr(core.BNLowLevelILOperation.LLIL_FLAG_COND, cond)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond)
 
 	def compare_equal(self, size, a, b):
 		"""
@@ -963,7 +964,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_E, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_E, a.index, b.index, size = size)
 
 	def compare_not_equal(self, size, a, b):
 		"""
@@ -976,7 +977,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_NE, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_NE, a.index, b.index, size = size)
 
 	def compare_signed_less_than(self, size, a, b):
 		"""
@@ -989,7 +990,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_SLT, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SLT, a.index, b.index, size = size)
 
 	def compare_unsigned_less_than(self, size, a, b):
 		"""
@@ -1002,7 +1003,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_ULT, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_ULT, a.index, b.index, size = size)
 
 	def compare_signed_less_equal(self, size, a, b):
 		"""
@@ -1015,7 +1016,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_SLE, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SLE, a.index, b.index, size = size)
 
 	def compare_unsigned_less_equal(self, size, a, b):
 		"""
@@ -1028,7 +1029,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_ULE, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_ULE, a.index, b.index, size = size)
 
 	def compare_signed_greater_equal(self, size, a, b):
 		"""
@@ -1041,7 +1042,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_SGE, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SGE, a.index, b.index, size = size)
 
 	def compare_unsigned_greater_equal(self, size, a, b):
 		"""
@@ -1054,7 +1055,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_UGE, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_UGE, a.index, b.index, size = size)
 
 	def compare_signed_greater_than(self, size, a, b):
 		"""
@@ -1067,7 +1068,7 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_SGT, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SGT, a.index, b.index, size = size)
 
 	def compare_unsigned_greater_than(self, size, a, b):
 		"""
@@ -1080,10 +1081,10 @@ class LowLevelILFunction(object):
 		:return: a comparison expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_CMP_UGT, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_UGT, a.index, b.index, size = size)
 
 	def test_bit(self, size, a, b):
-		return self.expr(core.BNLowLevelILOperation.LLIL_TEST_BIT, a.index, b.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_TEST_BIT, a.index, b.index, size = size)
 
 	def system_call(self):
 		"""
@@ -1092,7 +1093,7 @@ class LowLevelILFunction(object):
 		:return: a system call expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_SYSCALL)
+		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
 	def breakpoint(self):
 		"""
@@ -1101,7 +1102,7 @@ class LowLevelILFunction(object):
 		:return: a breakpoint expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_BP)
+		return self.expr(LowLevelILOperation.LLIL_BP)
 
 	def trap(self, value):
 		"""
@@ -1111,7 +1112,7 @@ class LowLevelILFunction(object):
 		:return: a trap expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_TRAP, value)
+		return self.expr(LowLevelILOperation.LLIL_TRAP, value)
 
 	def undefined(self):
 		"""
@@ -1121,7 +1122,7 @@ class LowLevelILFunction(object):
 		:return: the unimplemented expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_UNDEF)
+		return self.expr(LowLevelILOperation.LLIL_UNDEF)
 
 	def unimplemented(self):
 		"""
@@ -1131,7 +1132,7 @@ class LowLevelILFunction(object):
 		:return: the unimplemented expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_UNIMPL)
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL)
 
 	def unimplemented_memory_ref(self, size, addr):
 		"""
@@ -1142,7 +1143,7 @@ class LowLevelILFunction(object):
 		:return: the unimplemented memory reference expression.
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(core.BNLowLevelILOperation.LLIL_UNIMPL_MEM, addr.index, size = size)
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr.index, size = size)
 
 	def goto(self, label):
 		"""

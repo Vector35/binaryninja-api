@@ -27,10 +27,11 @@ chandefault = binaryninja.UpdateChannel.list[0].name
 channel = None
 versions = []
 
+
 def load_channel(newchannel):
 	global channel
 	global versions
-	if (channel != None and newchannel == channel.name):
+	if (channel is None and newchannel == channel.name):
 		print "Same channel, not updating."
 	else:
 		try:
@@ -41,6 +42,7 @@ def load_channel(newchannel):
 		except Exception:
 			print "%s is not a valid channel name. Defaulting to " % chandefault
 			channel = binaryninja.UpdateChannel[chandefault]
+
 
 def select(version):
 	done = False
@@ -74,10 +76,11 @@ def select(version):
 				print "binaryninja.core_version %s" % binaryninja.core_version
 				print "Updating..."
 				print version.update()
-				#forward updating won't work without reloading
+				# forward updating won't work without reloading
 				sys.exit()
 		else:
 			print "Invalid selection"
+
 
 def list_channels():
 	done = False
@@ -85,22 +88,24 @@ def list_channels():
 	while not done:
 		channel_list = binaryninja.UpdateChannel.list
 		for index, item in enumerate(channel_list):
-			print "\t%d)\t%s" % (index+1, item.name)
-		print "\t%d)\t%s" % (len(channel_list)+1, "Main Menu")
+			print "\t%d)\t%s" % (index + 1, item.name)
+		print "\t%d)\t%s" % (len(channel_list) + 1, "Main Menu")
 		selection = raw_input('Choice: ')
 		if selection.isdigit():
 			selection = int(selection)
 		else:
 			selection = 0
-		if (selection <= 0 or selection > len(channel_list)+1):
+		if (selection <= 0 or selection > len(channel_list) + 1):
 			print "%s is an invalid choice." % selection
 		else:
 			done = True
 			if (selection != len(channel_list) + 1):
 				load_channel(channel_list[selection - 1].name)
 
+
 def toggle_updates():
 	binaryninja.set_auto_updates_enabled(not binaryninja.are_auto_updates_enabled())
+
 
 def main():
 	global channel

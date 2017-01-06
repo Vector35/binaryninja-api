@@ -10,6 +10,7 @@ binaryninjacore.lib
 binaryninjacore.dll
 binaryninjaapi.lib
 python/_binaryninjacore.py
+python/enums.py
 python/generator
 python/generator.exe
 .vs

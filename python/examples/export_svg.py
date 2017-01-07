@@ -7,7 +7,7 @@ except:
 	from urllib.request import pathname2url  # Python 3.x
 
 from binaryninja.interaction import get_save_filename_input, show_message_box
-from binaryninja.enums import MessageBoxButtonSet
+from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon, MessageBoxButtonResult, InstructionTextTokenType, BranchType
 from binaryninja.plugin import PluginCommand
 
 colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
@@ -39,15 +39,15 @@ def save_svg(bv, function):
 	output.write(content)
 	output.close()
 	result = show_message_box("Open SVG", "Would you like to view the exported SVG?",
-							buttons = MessageBoxButtonSet.YesNoButtonSet, icon = MessageBoxButtonSet.QuestionIcon)
-	if result == MessageBoxButtonSet.YesButton:
+							buttons = MessageBoxButtonSet.YesNoButtonSet, icon = MessageBoxIcon.QuestionIcon)
+	if result == MessageBoxButtonResult.YesButton:
 		url = 'file:{}'.format(pathname2url(outputfile))
 		webbrowser.open(url)
 
 
 def instruction_data_flow(function, address):
 	''' TODO:  Extract data flow information '''
-	length = function.view.get_instruction_length(function.arch, address)
+	length = function.view.get_instruction_length(address)
 	bytes = function.view.read(address, length)
 	hex = bytes.encode('hex')
 	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
@@ -181,7 +181,7 @@ def render_svg(function):
 			output += '<title>{hover}</title>'.format(hover=hover)
 			for token in line.tokens:
 				# TODO: add hover for hex, function, and reg tokens
-				output += '<tspan class="{tokentype}">{text}</tspan>'.format(text=escape(token.text), tokentype=token.type)
+				output += '<tspan class="{tokentype}">{text}</tspan>'.format(text=escape(token.text), tokentype=InstructionTextTokenType(token.type).name)
 			output += '</tspan>\n'
 		output += '			</text>\n'
 		output += '		</g>\n'
@@ -197,7 +197,7 @@ def render_svg(function):
 				points += str(x * widthconst) + "," + str(y * heightconst) + " "
 			x, y = edge.points[-1]
 			points += str(x * widthconst) + "," + str(y * heightconst + 0) + " "
-			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=edge.type, points=points)
+			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=BranchType(edge.type).name, points=points)
 	output += ' ' + edges + '\n'
 	output += '	</g>\n'
 	output += '</svg></html>'

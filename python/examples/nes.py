@@ -24,11 +24,11 @@ import os
 
 from binaryninja.architecture import Architecture
 from binaryninja.lowlevelil import LowLevelILLabel, LLIL_TEMP
-from binaryninja.function import RegisterInfo, InstructionInfo
+from binaryninja.function import RegisterInfo, InstructionInfo, InstructionTextToken
 from binaryninja.binaryview import BinaryView
 from binaryninja.types import Symbol
 from binaryninja.log import log_error
-from enums import (BranchType, InstructionTextToken, InstructionTextTokenType,
+from binaryninja.enums import (BranchType, InstructionTextTokenType,
 							LowLevelILOperation, LowLevelILFlagCondition, FlagRole, SegmentFlag, SymbolType)
 
 InstructionNames = [
@@ -513,6 +513,7 @@ class NESView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
+		self.platform = Architecture['6502'].standalone_platform
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -554,9 +555,9 @@ class NESView(BinaryView):
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, nmi, "_nmi"))
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, start, "_start"))
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, irq, "_irq"))
-			self.add_function(Architecture['6502'].standalone_platform, nmi)
-			self.add_function(Architecture['6502'].standalone_platform, irq)
-			self.add_entry_point(Architecture['6502'].standalone_platform, start)
+			self.add_function(nmi)
+			self.add_function(irq)
+			self.add_entry_point(start)
 
 			# Hardware registers
 			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2000, "PPUCTRL"))
@@ -605,7 +606,7 @@ class NESView(BinaryView):
 						name = sym[1]
 						self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, addr, name))
 						if addr >= 0x8000:
-							self.add_function(Architecture['6502'].standalone_platform, addr)
+							self.add_function(addr)
 
 			return True
 		except:

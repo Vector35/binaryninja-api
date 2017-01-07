@@ -116,7 +116,7 @@ def find_instr(bv, addr):
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
 		block.set_auto_highlight(HighlightColor(HighlightStandardColor.GreenHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, HighlightStandardColor.GreenHighlightColor)
+		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_find.add(addr)
@@ -127,7 +127,7 @@ def avoid_instr(bv, addr):
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
 		block.set_auto_highlight(HighlightColor(HighlightStandardColor.RedHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, HighlightStandardColor.RedHighlightColor)
+		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_avoid.add(addr)

@@ -21,7 +21,7 @@
 # This plugin will attempt to resolve simple jump tables (an array of code pointers) and add the destinations
 # as indirect branch targets so that the flow graph reflects the jump table's control flow.
 from binaryninja.plugin import PluginCommand
-from binaryninja.enum import InstructionTextTokenType
+from binaryninja.enums import InstructionTextTokenType
 import struct
 
 
@@ -50,7 +50,7 @@ def find_jump_table(bv, addr):
 		# Collect the branch targets for any tables referenced by the clicked instruction
 		branches = []
 		for token in tokens:
-			if token.type == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
+			if InstructionTextTokenType(token.type) == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
 				tbl = token.value
 				print "Found possible table at 0x%x" % tbl
 				i = 0

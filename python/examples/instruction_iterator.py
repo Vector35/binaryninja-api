@@ -22,21 +22,10 @@
 import sys
 import binaryninja as binja
 
-
-if sys.platform.lower().startswith("linux"):
-	bintype = "ELF"
-elif sys.platform.lower() == "darwin":
-	bintype = "Mach-O"
-else:
-	raise Exception("%s is not supported on this plugin" % sys.platform)
-
 if len(sys.argv) > 1:
 	target = sys.argv[1]
-else:
-	target = "/bin/ls"
 
-bv = binja.BinaryViewType[bintype].open(target)
-bv.update_analysis_and_wait()
+bv = binja.BinaryViewType.get_view_of_file(target)
 binja.log_to_stdout(True)
 binja.log_info("-------- %s --------" % target)
 binja.log_info("START: 0x%x" % bv.start)
@@ -46,19 +35,19 @@ binja.log_info("\n-------- Function List --------")
 
 """ print all the functions, their basic blocks, and their il instructions """
 for func in bv.functions:
-    binja.log_info(repr(func))
-    for block in func.low_level_il:
-        binja.log_info("\t{0}".format(block))
+	binja.log_info(repr(func))
+	for block in func.low_level_il:
+		binja.log_info("\t{0}".format(block))
 
-        for insn in block:
-            binja.log_info("\t\t{0}".format(insn))
+		for insn in block:
+			binja.log_info("\t\t{0}".format(insn))
 
 
 """ print all the functions, their basic blocks, and their mc instructions """
 for func in bv.functions:
-    binja.log_info(repr(func))
-    for block in func:
-        binja.log_info("\t{0}".format(block))
+	binja.log_info(repr(func))
+	for block in func:
+		binja.log_info("\t{0}".format(block))
 
-        for insn in block:
-            binja.log_info("\t\t{0}".format(insn))
+		for insn in block:
+			binja.log_info("\t\t{0}".format(insn))

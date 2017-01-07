@@ -1099,7 +1099,7 @@ class BinaryView(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		txt, size = arch.get_instruction_text(self.read(addr, self.arch.max_instr_length), addr)
+		txt, size = arch.get_instruction_text(self.read(addr, arch.max_instr_length), addr)
 		self.next_address = addr + size
 		if txt is None:
 			return None
@@ -1129,7 +1129,7 @@ class BinaryView(object):
 			arch = self.arch
 		if self.next_address is None:
 			self.next_address = self.entry_point
-		txt, size = arch.get_instruction_text(self.read(self.next_address, self.arch.max_instr_length), self.next_address)
+		txt, size = arch.get_instruction_text(self.read(self.next_address, arch.max_instr_length), self.next_address)
 		self.next_address += size
 		if txt is None:
 			return None
@@ -1658,6 +1658,8 @@ class BinaryView(object):
 			[<func: x86_64@0x1>]
 
 		"""
+		if self.platform is None:
+			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
 		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
@@ -1673,6 +1675,8 @@ class BinaryView(object):
 			>>> bv.add_entry_point(0xdeadbeef)
 			>>>
 		"""
+		if self.platform is None:
+			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
@@ -2096,20 +2100,22 @@ class BinaryView(object):
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
-	def define_auto_symbol_and_var_or_function(self, sym, sym_type, platform = None):
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None):
 		"""
-		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+		``define_auto_symbol_and_var_or_function``
 
 		:param Symbol sym: the symbol to define
+		:param SymbolType sym_type: Type of symbol being defined
+		:param Platform plat: (optional) platform
 		:rtype: None
 		"""
-		if platform is None:
-			platform = self.platform
-		if platform is not None:
-			platform = platform.handle
+		if plat is None:
+			plat = self.plat
+		if plat is not None:
+			plat = plat.handle
 		if sym_type is not None:
 			sym_type = sym_type.handle
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, platform, sym.handle, sym_type)
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type)
 
 	def undefine_auto_symbol(self, sym):
 		"""

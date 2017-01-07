@@ -21,7 +21,6 @@
 
 from binaryninja.plugin import PluginCommand
 from binaryninja.log import log_error
-from binaryninja.architecture import Architecture
 
 
 def write_breakpoint(view, start, length):
@@ -40,7 +39,8 @@ def write_breakpoint(view, start, length):
 	if view.arch.name not in bkpt_str:
 		log_error("Architecture %s not supported" % view.arch.name)
 		return
-	bkpt, err = Architecture[view.arch.name].assemble(bkpt_str[view.arch.name])
+
+	bkpt, err = view.arch.assemble(bkpt_str[view.arch.name])
 	if bkpt is None:
 		log_error(err)
 		return

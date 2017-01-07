@@ -1143,7 +1143,7 @@ class Architecture(object):
 			return None, 0
 		result = []
 		for i in xrange(0, count.value):
-			token_type = InstructionTextTokenType(tokens[i].type).name
+			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
 			size = tokens[i].size

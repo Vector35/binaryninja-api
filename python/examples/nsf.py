@@ -39,6 +39,7 @@ class NSFView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, parent_view=data, file_metadata=data.file)
+		self.platform = Architecture["6502"].standalone_platform
 
 	@classmethod
 	def is_valid_for_data(self, data):
@@ -94,8 +95,8 @@ class NSFView(BinaryView):
 
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.play_address, "_play"))
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.init_address, "_init"))
-			self.add_entry_point(Architecture['6502'].standalone_platform, self.init_address)
-			self.add_function(Architecture['6502'].standalone_platform, self.play_address)
+			self.add_entry_point(self.init_address)
+			self.add_function(self.play_address)
 
 			# Hardware registers
 			self.define_auto_symbol(Symbol(SymbolType.DataSymbol, 0x2000, "PPUCTRL"))

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,36 +19,29 @@
 # IN THE SOFTWARE.
 
 
-# Thanks to @theqlabs from arm.ninja for the nice writeup and idea for this plugin:
-# http://arm.ninja/2016/03/08/intro-to-binary-ninja-api/
+class LinearDisassemblyPosition(object):
+	"""
+	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly.
 
-import sys
-from itertools import chain
-
-from binaryninja.binaryview import BinaryViewType
-from binaryninja.enums import LowLevelILOperation
-
-
-def print_syscalls(fileName):
-	""" Print Syscall numbers for a provided file """
-	bv = BinaryViewType.get_view_of_file(fileName)
-	calling_convention = bv.platform.system_call_convention
-	if calling_convention is None:
-		print('Error: No syscall convention available for {:s}'.format(bv.platform))
-		return
-
-	register = calling_convention.int_arg_regs[0]
-
-	for func in bv.functions:
-		syscalls = (il for il in chain.from_iterable(func.low_level_il)
-					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
-		for il in syscalls:
-			value = func.get_reg_value_at(il.address, register).value
-			print("System call address: {:#x} - {:d}".format(il.address, value))
+	.. note:: This object should not be instantiated directly. Rather call \
+	:py:method:`get_linear_disassembly_position_at` which instantiates this object.
+	"""
+	def __init__(self, func, block, addr):
+		self.function = func
+		self.block = block
+		self.address = addr
 
 
-if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print('Usage: {} <file>'.format(sys.argv[0]))
-	else:
-		print_syscalls(sys.argv[1])
+class LinearDisassemblyLine(object):
+	def __init__(self, line_type, func, block, line_offset, contents):
+		self.type = line_type
+		self.function = func
+		self.block = block
+		self.line_offset = line_offset
+		self.contents = contents
+
+	def __str__(self):
+		return str(self.contents)
+
+	def __repr__(self):
+		return repr(self.contents)

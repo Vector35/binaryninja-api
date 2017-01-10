@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,37 +18,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
-# Thanks to @theqlabs from arm.ninja for the nice writeup and idea for this plugin:
-# http://arm.ninja/2016/03/08/intro-to-binary-ninja-api/
-
-import sys
-from itertools import chain
-
-from binaryninja.binaryview import BinaryViewType
-from binaryninja.enums import LowLevelILOperation
+import _binaryninjacore as core
 
 
-def print_syscalls(fileName):
-	""" Print Syscall numbers for a provided file """
-	bv = BinaryViewType.get_view_of_file(fileName)
-	calling_convention = bv.platform.system_call_convention
-	if calling_convention is None:
-		print('Error: No syscall convention available for {:s}'.format(bv.platform))
-		return
-
-	register = calling_convention.int_arg_regs[0]
-
-	for func in bv.functions:
-		syscalls = (il for il in chain.from_iterable(func.low_level_il)
-					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
-		for il in syscalls:
-			value = func.get_reg_value_at(il.address, register).value
-			print("System call address: {:#x} - {:d}".format(il.address, value))
+_plugin_init = False
 
 
-if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print('Usage: {} <file>'.format(sys.argv[0]))
-	else:
-		print_syscalls(sys.argv[1])
+def _init_plugins():
+	global _plugin_init
+	if not _plugin_init:
+		_plugin_init = True
+		core.BNInitCorePlugins()
+		core.BNInitUserPlugins()
+	if not core.BNIsLicenseValidated():
+		raise RuntimeError("License is not valid. Please supply a valid license.")

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,37 +18,28 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
-# Thanks to @theqlabs from arm.ninja for the nice writeup and idea for this plugin:
-# http://arm.ninja/2016/03/08/intro-to-binary-ninja-api/
-
-import sys
-from itertools import chain
-
-from binaryninja.binaryview import BinaryViewType
-from binaryninja.enums import LowLevelILOperation
+import copy
 
 
-def print_syscalls(fileName):
-	""" Print Syscall numbers for a provided file """
-	bv = BinaryViewType.get_view_of_file(fileName)
-	calling_convention = bv.platform.system_call_convention
-	if calling_convention is None:
-		print('Error: No syscall convention available for {:s}'.format(bv.platform))
-		return
+class _AssociatedDataStore(dict):
+	_defaults = {}
 
-	register = calling_convention.int_arg_regs[0]
+	@classmethod
+	def set_default(cls, name, value):
+		cls._defaults[name] = value
 
-	for func in bv.functions:
-		syscalls = (il for il in chain.from_iterable(func.low_level_il)
-					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
-		for il in syscalls:
-			value = func.get_reg_value_at(il.address, register).value
-			print("System call address: {:#x} - {:d}".format(il.address, value))
+	def __getattr__(self, name):
+		if name in self.__dict__:
+			return self.__dict__[name]
+		if name not in self:
+			if name in self.__class__._defaults:
+				result = copy.copy(self.__class__._defaults[name])
+				self[name] = result
+				return result
+		return self.__getitem__(name)
 
+	def __setattr__(self, name, value):
+		self.__setitem__(name, value)
 
-if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print('Usage: {} <file>'.format(sys.argv[0]))
-	else:
-		print_syscalls(sys.argv[1])
+	def __delattr__(self, name):
+		self.__delitem__(name)

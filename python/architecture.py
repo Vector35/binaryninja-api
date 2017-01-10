@@ -176,7 +176,7 @@ class Architecture(object):
 			self._flag_roles = {}
 			self.__dict__["flag_roles"] = {}
 			for flag in self.__dict__["flags"]:
-				role = core.BNGetArchitectureFlagRole(self.handle, self._flags[flag])
+				role = FlagRole(core.BNGetArchitectureFlagRole(self.handle, self._flags[flag]))
 				self.__dict__["flag_roles"][flag] = role
 				self._flag_roles[self._flags[flag]] = role
 

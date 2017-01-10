@@ -708,7 +708,7 @@ class BinaryView(object):
 	@property
 	def endianness(self):
 		"""Endianness of the binary (read-only)"""
-		return core.BNGetDefaultEndianness(self.handle)
+		return Endianness(core.BNGetDefaultEndianness(self.handle))
 
 	@property
 	def address_size(self):
@@ -1577,7 +1577,7 @@ class BinaryView(object):
 		:rtype: ModificationStatus or str
 		"""
 		if length is None:
-			return core.BNGetModification(self.handle, addr)
+			return ModificationStatus(core.BNGetModification(self.handle, addr))
 		data = (ModificationStatus * length)()
 		length = core.BNGetModificationArray(self.handle, addr, data, length)
 		return data[0:length]

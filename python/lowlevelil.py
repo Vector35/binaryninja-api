@@ -118,8 +118,7 @@ class LowLevelILInstruction(object):
 		self.function = func
 		self.expr_index = expr_index
 		self.instr_index = instr_index
-		self.operation = instr.operation
-		self.operation_name = LowLevelILOperation(instr.operation)
+		self.operation = LowLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
 		self.source_operand = instr.sourceOperand
@@ -1260,6 +1259,15 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __iter__(self):
 		for idx in xrange(self.start, self.end):
 			yield self.il_function[idx]
+
+	def __getitem__(self, idx):
+		size = self.end - self.start
+		if idx > size or idx < -size:
+			raise IndexError("list index is out of range")
+		if idx >= 0:
+			return self.il_function[idx + self.start]
+		else:
+			return self.il_function[self.end + idx]
 
 
 def LLIL_TEMP(n):

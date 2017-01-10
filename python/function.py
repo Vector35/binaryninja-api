@@ -25,7 +25,8 @@ import ctypes
 # Binary Ninja components
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
-	HighlightStandardColor, RegisterValueType, ImplicitRegisterExtend, DisassemblyOption, IntegerDisplayType)
+	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
+	DisassemblyOption, IntegerDisplayType)
 import architecture
 import highlight
 import associateddatastore
@@ -47,7 +48,7 @@ class LookupTableEntry(object):
 
 class RegisterValue(object):
 	def __init__(self, arch, value):
-		self.type = value.state
+		self.type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
 			self.reg = arch.get_reg_name(value.reg)
 		elif value.state == RegisterValueType.OffsetFromEntryValue:
@@ -682,7 +683,7 @@ class Function(object):
 	def get_int_display_type(self, instr_addr, value, operand, arch=None):
 		if arch is None:
 			arch = self.arch
-		return core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
+		return IntegerDisplayType(core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand))
 
 	def set_int_display_type(self, instr_addr, value, operand, display_type, arch=None):
 		"""
@@ -831,7 +832,7 @@ class DisassemblyTextLine(object):
 
 class FunctionGraphEdge:
 	def __init__(self, branch_type, arch, target, points):
-		self.type = branch_type
+		self.type = BranchType(branch_type)
 		self.arch = arch
 		self.target = target
 		self.points = points
@@ -1237,7 +1238,7 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff):
-		self.type = token_type
+		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
 		self.size = size

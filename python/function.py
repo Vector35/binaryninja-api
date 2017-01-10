@@ -830,7 +830,7 @@ class DisassemblyTextLine(object):
 		return "<%#x: %s>" % (self.address, str(self))
 
 
-class FunctionGraphEdge:
+class FunctionGraphEdge(object):
 	def __init__(self, branch_type, arch, target, points):
 		self.type = BranchType(branch_type)
 		self.arch = arch

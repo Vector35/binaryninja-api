@@ -41,7 +41,10 @@ import types
 import lineardisassembly
 
 
-class BinaryDataNotification:
+class BinaryDataNotification(object):
+	def __init__(self):
+		pass
+
 	def data_written(self, view, offset, length):
 		pass
 
@@ -1751,7 +1754,7 @@ class BinaryView(object):
 
 		:rtype: None
 		"""
-		class WaitEvent:
+		class WaitEvent(object):
 			def __init__(self):
 				self.cond = threading.Condition()
 				self.done = False

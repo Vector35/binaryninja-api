@@ -754,7 +754,7 @@ class BinaryView(object):
 		syms = core.BNGetSymbols(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			sym = function.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
+			sym = types.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
 			result[sym.raw_name] = sym
 		core.BNFreeSymbolList(syms, count.value)
 		return result

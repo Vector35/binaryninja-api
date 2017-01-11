@@ -133,6 +133,15 @@ Ref<Enumeration> Type::GetEnumeration() const
 }
 
 
+Ref<NamedTypeReference> Type::GetNamedTypeReference() const
+{
+	BNNamedTypeReference* ref = BNGetTypeNamedTypeReference(m_object);
+	if (ref)
+		return new NamedTypeReference(ref);
+	return nullptr;
+}
+
+
 uint64_t Type::GetElementCount() const
 {
 	return BNGetTypeElementCount(m_object);
@@ -307,9 +316,21 @@ Ref<Type> Type::StructureType(Structure* strct)
 }
 
 
-Ref<Type> Type::UnknownNamedType(UnknownType* unknwn)
+Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align)
 {
-	return new Type(BNCreateUnknownNamedType(unknwn->GetObject()));
+	return new Type(BNCreateNamedTypeReference(ref->GetObject(), width, align));
+}
+
+
+Ref<Type> Type::NamedType(const vector<string>& name, Type* type)
+{
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	Type* result = new Type(BNCreateNamedTypeReferenceFromType(nameList, name.size(),
+		type ? type->GetObject() : nullptr));
+	delete[] nameList;
+	return result;
 }
 
 
@@ -355,35 +376,54 @@ void Type::SetFunctionCanReturn(bool canReturn)
 }
 
 
-UnknownType::UnknownType(BNUnknownType* ut, vector<string> names)
+NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
 {
-	m_object = ut;
+	m_object = nt;
+}
+
+
+NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const vector<string>& names)
+{
+	m_object = BNCreateNamedType();
+	BNSetTypeReferenceClass(m_object, cls);
 	const char ** nameList = new const char*[names.size()];
 	for (size_t i = 0; i < names.size(); i++)
 	{
 		nameList[i] = names[i].c_str();
 	}
-	BNSetUnknownTypeName(ut, nameList, names.size());
+	BNSetTypeReferenceName(m_object, nameList, names.size());
 	delete [] nameList;
 }
 
 
-void UnknownType::SetName(const vector<string>& names)
+void NamedTypeReference::SetTypeClass(BNNamedTypeReferenceClass cls)
+{
+	BNSetTypeReferenceClass(m_object, cls);
+}
+
+
+BNNamedTypeReferenceClass NamedTypeReference::GetTypeClass() const
+{
+	return BNGetTypeReferenceClass(m_object);
+}
+
+
+void NamedTypeReference::SetName(const vector<string>& names)
 {
 	const char ** nameList = new const char*[names.size()];
 	for (size_t i = 0; i < names.size(); i++)
 	{
 		nameList[i] = names[i].c_str();
 	}
-	BNSetUnknownTypeName(m_object, nameList, names.size());
+	BNSetTypeReferenceName(m_object, nameList, names.size());
 	delete [] nameList;
 }
 
 
-vector<string> UnknownType::GetName() const
+vector<string> NamedTypeReference::GetName() const
 {
 	size_t size;
-	char** name = BNGetUnknownTypeName(m_object, &size);
+	char** name = BNGetTypeReferenceName(m_object, &size);
 	vector<string> result;
 	for (size_t i = 0; i < size; i++)
 	{
@@ -404,33 +444,6 @@ Structure::Structure()
 Structure::Structure(BNStructure* s)
 {
 	m_object = s;
-}
-
-
-vector<string> Structure::GetName() const
-{
-	size_t size;
-	char** name = BNGetStructureName(m_object, &size);
-	vector<string> result;
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
-	return result;
-}
-
-
-void Structure::SetName(const vector<string>& names)
-{
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetStructureName(m_object, nameList, names.size());
-	delete [] nameList;
 }
 
 
@@ -529,32 +542,6 @@ void Structure::ReplaceMember(size_t idx, Type* type, const std::string& name)
 Enumeration::Enumeration(BNEnumeration* e)
 {
 	m_object = e;
-}
-
-
-vector<string> Enumeration::GetName() const
-{
-	vector<string> result;
-	size_t size;
-	char** name = BNGetEnumerationName(m_object, &size);
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
-	return result;
-}
-
-void Enumeration::SetName(const vector<string>& names)
-{
-	const char **const nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetEnumerationName(m_object, nameList, names.size());
-	delete [] nameList;
 }
 
 

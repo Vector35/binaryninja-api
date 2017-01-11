@@ -660,6 +660,70 @@ class StringReference(object):
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
+class QualifiedName(object):
+	def __init__(self, name = []):
+		if isinstance(name, str):
+			self.name = [name]
+		else:
+			self.name = name
+
+	def __str__(self):
+		return "::".join(self.name)
+
+	def __repr__(self):
+		return repr(str(self))
+
+	def __len__(self):
+		return len(self.name)
+
+	def __hash__(self):
+		return hash(str(self))
+
+	def __eq__(self, other):
+		if isinstance(other, str):
+			return str(self) == other
+		elif isinstance(other, list):
+			return self.name == other
+		elif isinstance(other, QualifiedName):
+			return self.name == other.name
+		return False
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __lt__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name < other.name
+		return False
+
+	def __le__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name <= other.name
+		return False
+
+	def __gt__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name > other.name
+		return False
+
+	def __ge__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name >= other.name
+		return False
+
+	def __cmp__(self, other):
+		if self == other:
+			return 0
+		if self < other:
+			return -1
+		return 1
+
+	def __getitem__(self, key):
+		return self.name[key]
+
+	def __iter__(self):
+		return iter(self.name)
+
 class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
 		self.view = view
@@ -761,15 +825,21 @@ class BinaryDataNotificationCallbacks(object):
 		except:
 			log_error(traceback.format_exc())
 
-	def _type_defined(self, ctxt, name, type_obj):
+	def _type_defined(self, ctxt, name, name_count, type_obj):
 		try:
-			self.notify.type_defined(self.view, name, Type(core.BNNewTypeReference(type_obj)))
+			name_list = []
+			for i in xrange(0, name_count):
+				name_list.append(name[i])
+			self.notify.type_defined(self.view, QualifiedName(name_list), Type(core.BNNewTypeReference(type_obj)))
 		except:
 			log_error(traceback.format_exc())
 
-	def _type_undefined(self, ctxt, name, type_obj):
+	def _type_undefined(self, ctxt, name, name_count, type_obj):
 		try:
-			self.notify.type_undefined(self.view, name, Type(core.BNNewTypeReference(type_obj)))
+			name_list = []
+			for i in xrange(0, name_count):
+				name_list.append(name[i])
+			self.notify.type_undefined(self.view, QualifiedName(name_list), Type(core.BNNewTypeReference(type_obj)))
 		except:
 			log_error(traceback.format_exc())
 
@@ -1394,7 +1464,10 @@ class BinaryView(object):
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			result[type_list[i].name] = Type(core.BNNewTypeReference(type_list[i].type))
+			name = []
+			for j in xrange(0, type_list[i].nameCount):
+				name.append(type_list[i].name[j])
+			result[QualifiedName(name)] = Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -3350,30 +3423,33 @@ class BinaryView(object):
 		``parse_type_string`` converts `C-style` string into a :py:Class:`Type`.
 
 		:param str text: `C-style` string of type to create
-		:return: A tuple of a :py:Class:`Type` and string type name
-		:rtype: tuple(Type, str)
+		:return: A tuple of a :py:Class:`Type` and type name
+		:rtype: tuple(Type, QualifiedName)
 		:Example:
 
 			>>> bv.parse_type_string("int foo")
 			(<type: int32_t>, 'foo')
 			>>>
 		"""
-		result = core.BNNameAndType()
+		result = core.BNQualifiedNameAndType()
 		errors = ctypes.c_char_p()
 		if not core.BNParseTypeString(self.handle, text, result, errors):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError, error_str
 		type_obj = Type(core.BNNewTypeReference(result.type))
-		name = result.name
-		core.BNFreeNameAndType(result)
+		name = []
+		for i in xrange(0, result.nameCount):
+			name.append(result.name[i])
+		name = QualifiedName(name)
+		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
 
 	def get_type_by_name(self, name):
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
-		:param str name: Type name to lookup
+		:param QualifiedName name: Type name to lookup
 		:return: A :py:Class:`Type` or None if the type does not exist
 		:rtype: Type or None
 		:Example:
@@ -3384,7 +3460,12 @@ class BinaryView(object):
 			<type: int32_t>
 			>>>
 		"""
-		obj = core.BNGetAnalysisTypeByName(self.handle, name)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		obj = core.BNGetAnalysisTypeByName(self.handle, name_list, len(name))
 		if not obj:
 			return None
 		return Type(obj)
@@ -3394,7 +3475,7 @@ class BinaryView(object):
 		``is_type_auto_defined`` queries the user type list of name. If name is not in the *user* type list then the name
 		is considered an *auto* type.
 
-		:param str name: Name of type to query
+		:param QualifiedName name: Name of type to query
 		:return: True if the type is not a *user* type. False if the type is a *user* type.
 		:Example:
 			>>> bv.is_type_auto_defined("foo")
@@ -3404,14 +3485,19 @@ class BinaryView(object):
 			False
 			>>>
 		"""
-		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		return core.BNIsAnalysisTypeAutoDefined(self.handle, name_list, len(name))
 
 	def define_type(self, name, type_obj):
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
 		the current :py:Class:`BinaryView`.
 
-		:param str name: Name of the type to be registered
+		:param QualifiedName name: Name of the type to be registered
 		:param Type type_obj: Type object to be registered
 		:rtype: None
 		:Example:
@@ -3421,14 +3507,19 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		core.BNDefineAnalysisType(self.handle, name, type_obj.handle)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		core.BNDefineAnalysisType(self.handle, name_list, len(name), type_obj.handle)
 
 	def define_user_type(self, name, type_obj):
 		"""
 		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
 		types for the current :py:Class:`BinaryView`.
 
-		:param str name: Name of the user type to be registered
+		:param QualifiedName name: Name of the user type to be registered
 		:param Type type_obj: Type object to be registered
 		:rtype: None
 		:Example:
@@ -3438,13 +3529,18 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		core.BNDefineUserAnalysisType(self.handle, name_list, len(name), type_obj.handle)
 
 	def undefine_type(self, name):
 		"""
 		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
 
-		:param str name: Name of type to be undefined
+		:param QualifiedName name: Name of type to be undefined
 		:rtype: None
 		:Example:
 
@@ -3456,14 +3552,19 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		core.BNUndefineAnalysisType(self.handle, name)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		core.BNUndefineAnalysisType(self.handle, name_list, len(name))
 
 	def undefine_user_type(self, name):
 		"""
 		``undefine_user_type`` removes a :py:Class:`Type` from the global list of user types for the current
 		:py:Class:`BinaryView`
 
-		:param str name: Name of user type to be undefined
+		:param QualifiedName name: Name of user type to be undefined
 		:rtype: None
 		:Example:
 
@@ -3475,7 +3576,12 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		core.BNUndefineUserAnalysisType(self.handle, name)
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		core.BNUndefineUserAnalysisType(self.handle, name_list, len(name))
 
 	def find_next_data(self, start, data, flags = 0):
 		"""
@@ -4314,6 +4420,14 @@ class Type(object):
 		return Enumeration(result)
 
 	@property
+	def named_type_reference(self):
+		"""Reference to a named type (read-only)"""
+		result = core.BNGetTypeNamedTypeReference(self.handle)
+		if result is None:
+			return None
+		return NamedTypeReference(result)
+
+	@property
 	def count(self):
 		"""Type count (read-only)"""
 		return core.BNGetTypeElementCount(self.handle)
@@ -4351,12 +4465,19 @@ class Type(object):
 		return Type(core.BNCreateStructureType(structure_type.handle))
 
 	@classmethod
-	def unknown_type(self, unknown_type):
-		return Type(core.BNCreateUnknownType(unknown_type.handle))
+	def named_type(self, named_type, width = 0, align = 1):
+		return Type(core.BNCreateNamedTypeReference(named_type.handle, width, align))
 
 	@classmethod
-	def unknown_type(self, s):
-		return Type(core.BNCreateUnknownType(s.handle))
+	def named_type_from_type(self, name, t):
+		if isinstance(name, str):
+			name = [name]
+		name_list = (ctypes.c_char_p * len(name))()
+		for i in xrange(0, len(name)):
+			name_list[i] = name[i]
+		if t is not None:
+			t = t.handle
+		return Type(core.BNCreateNamedTypeReferenceFromType(name_list, len(name), t))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width = None):
@@ -4394,28 +4515,60 @@ class Type(object):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 
-class UnknownType(object):
-	def __init__(self, handle = None):
+class NamedTypeReference(object):
+	def __init__(self, type_class = core.UnknownNamedTypeClass, name = None, handle = None):
 		if handle is None:
-			self.handle = core.BNCreateUnknownType()
+			self.handle = core.BNCreateNamedType()
+			core.BNSetTypeReferenceClass(self.handle, type_class)
+			if name is not None:
+				if isinstance(name, str):
+					name = [name]
+				name_list = (ctypes.c_char_p * len(name))()
+				for i in xrange(0, len(name)):
+					name_list[i] = name[i]
+				core.BNSetTypeReferenceName(self.handle, name_list, len(name))
 		else:
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeUnknownType(self.handle)
+		core.BNFreeNamedTypeReference(self.handle)
+
+	@property
+	def type_class(self):
+		return core.BNGetTypeReferenceClass(self.handle)
+
+	@type_class.setter
+	def type_class(self, value):
+		core.BNSetTypeReferenceClass(self.handle, value)
 
 	@property
 	def name(self):
 		count = ctypes.c_ulonglong()
-		nameList = core.BNGetUnknownTypeName(self.handle, count)
+		nameList = core.BNGetTypeReferenceName(self.handle, count)
 		result = []
 		for i in xrange(count.value):
 			result.append(nameList[i])
-		return get_qualified_name(result)
+		return QualifiedName(result)
 
 	@name.setter
 	def name(self, value):
-		core.BNSetUnknownTypeName(self.handle, value)
+		if isinstance(value, str):
+			value = [value]
+		name_list = (ctypes.c_char_p * len(value))()
+		for i in xrange(0, len(value)):
+			name_list[i] = value[i]
+		core.BNSetTypeReferenceName(self.handle, name_list, len(value))
+
+	def __repr__(self):
+		if self.type_class == core.TypedefNamedTypeClass:
+			return "<named type: typedef %s>" % str(self.name)
+		if self.type_class == core.StructNamedTypeClass:
+			return "<named type: struct %s>" % str(self.name)
+		if self.type_class == core.UnionNamedTypeClass:
+			return "<named type: union %s>" % str(self.name)
+		if self.type_class == core.EnumNamedTypeClass:
+			return "<named type: enum %s>" % str(self.name)
+		return "<named type: unknown %s>" % str(self.name)
 
 
 class StructureMember(object):
@@ -4439,19 +4592,6 @@ class Structure(object):
 
 	def __del__(self):
 		core.BNFreeStructure(self.handle)
-
-	@property
-	def name(self):
-		count = ctypes.c_ulonglong()
-		nameList = core.BNGetStructureName(self.handle, count)
-		result = []
-		for i in xrange(count.value):
-			result.append(nameList[i])
-		return get_qualified_name(result)
-
-	@name.setter
-	def name(self, value):
-		core.BNSetStructureName(self.handle, value)
 
 	@property
 	def members(self):
@@ -4537,14 +4677,6 @@ class Enumeration(object):
 
 	def __del__(self):
 		core.BNFreeEnumeration(self.handle)
-
-	@property
-	def name(self):
-		return core.BNGetEnumerationName(self.handle)
-
-	@name.setter
-	def name(self, value):
-		core.BNSetEnumerationName(self.handle, value)
 
 	@property
 	def members(self):
@@ -7423,8 +7555,8 @@ class Architecture(object):
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult,str)
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
@@ -7444,18 +7576,27 @@ class Architecture(object):
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError, error_str
 		types = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = Type(core.BNNewTypeReference(parse.types[i].type))
+			name = []
+			for j in xrange(0, parse.types[i].nameCount):
+				name.append(parse.types[i].name[j])
+			types[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = []
+			for j in xrange(0, parse.variables[i].nameCount):
+				name.append(parse.variables[i].name[j])
+			variables[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
-		BNFreeTypeParserResult(parse)
-		return (TypeParserResult(types, variables, functions), error_str)
+			name = []
+			for j in xrange(0, parse.functions[i].nameCount):
+				name.append(parse.functions[i].name[j])
+			functions[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		core.BNFreeTypeParserResult(parse)
+		return TypeParserResult(types, variables, functions)
 
 	def parse_types_from_source_file(self, filename, include_dirs = []):
 		"""
@@ -7464,8 +7605,8 @@ class Architecture(object):
 
 		:param str filename: filename of file to be parsed
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult, str)
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> file = "/Users/binja/tmp.c"
@@ -7485,18 +7626,27 @@ class Architecture(object):
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError, error_str
 		types = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = Type(core.BNNewTypeReference(parse.types[i].type))
+			name = []
+			for j in xrange(0, parse.types[i].nameCount):
+				name.append(parse.types[i].name[j])
+			types[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = []
+			for j in xrange(0, parse.variables[i].nameCount):
+				name.append(parse.variables[i].name[j])
+			variables[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = Type(core.BNNewTypeReference(parse.functions[i].type))
-		BNFreeTypeParserResult(parse)
-		return (TypeParserResult(types, variables, functions), error_str)
+			name = []
+			for j in xrange(0, parse.functions[i].nameCount):
+				name.append(parse.functions[i].name[j])
+			functions[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.functions[i].type))
+		core.BNFreeTypeParserResult(parse)
+		return TypeParserResult(types, variables, functions)
 
 	def register_calling_convention(self, cc):
 		"""

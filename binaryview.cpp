@@ -129,21 +129,29 @@ void BinaryDataNotification::StringRemovedCallback(void* ctxt, BNBinaryView* obj
 }
 
 
-void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type)
+void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount,
+	BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	notify->OnTypeDefined(view, name, typeObj);
+	vector<string> nameList;
+	for (size_t i = 0; i < nameCount; i++)
+		nameList.push_back(name[i]);
+	notify->OnTypeDefined(view, nameList, typeObj);
 }
 
 
-void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type)
+void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount,
+	BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	notify->OnTypeUndefined(view, name, typeObj);
+	vector<string> nameList;
+	for (size_t i = 0; i < nameCount; i++)
+		nameList.push_back(name[i]);
+	notify->OnTypeUndefined(view, nameList, typeObj);
 }
 
 
@@ -1447,9 +1455,9 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 }
 
 
-bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string& errors)
+bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& result, string& errors)
 {
-	BNNameAndType nt;
+	BNQualifiedNameAndType nt;
 	char* errorStr;
 
 	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr))
@@ -1459,22 +1467,28 @@ bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string
 		return false;
 	}
 
-	result.name = nt.name;
-	result.type = new Type(nt.type);
+	for (size_t i = 0; i < nt.nameCount; i++)
+		result.name.push_back(nt.name[i]);
+	result.type = new Type(BNNewTypeReference(nt.type));
 	errors = "";
-	BNFreeString(nt.name);
+	BNFreeQualifiedNameAndType(&nt);
 	return true;
 }
 
 
-map<string, Ref<Type>> BinaryView::GetTypes()
+map<vector<string>, Ref<Type>> BinaryView::GetTypes()
 {
 	size_t count;
-	BNNameAndType* types = BNGetAnalysisTypeList(m_object, &count);
+	BNQualifiedNameAndType* types = BNGetAnalysisTypeList(m_object, &count);
 
-	map<string, Ref<Type>> result;
+	map<vector<string>, Ref<Type>> result;
 	for (size_t i = 0; i < count; i++)
-		result[types[i].name] = new Type(BNNewTypeReference(types[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < types[i].nameCount; j++)
+			name.push_back(types[i].name[j]);
+		result[name] = new Type(BNNewTypeReference(types[i].type));
+	}
 
 	BNFreeTypeList(types, count);
 	return result;
@@ -1483,40 +1497,112 @@ map<string, Ref<Type>> BinaryView::GetTypes()
 
 Ref<Type> BinaryView::GetTypeByName(const string& name)
 {
-	BNType* type = BNGetAnalysisTypeByName(m_object, name.c_str());
+	const char* nameStr = name.c_str();
+	BNType* type = BNGetAnalysisTypeByName(m_object, &nameStr, 1);
 	if (!type)
 		return nullptr;
 	return new Type(type);
 }
 
 
-bool BinaryView::IsTypeAutoDefined(const std::string& name)
+Ref<Type> BinaryView::GetTypeByName(const vector<string>& name)
 {
-	return BNIsAnalysisTypeAutoDefined(m_object, name.c_str());
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+
+	BNType* type = BNGetAnalysisTypeByName(m_object, nameList, name.size());
+	delete[] nameList;
+
+	if (!type)
+		return nullptr;
+	return new Type(type);
 }
 
 
-void BinaryView::DefineType(const std::string& name, Ref<Type> type)
+bool BinaryView::IsTypeAutoDefined(const string& name)
 {
-	BNDefineAnalysisType(m_object, name.c_str(), type->GetObject());
+	const char* nameStr = name.c_str();
+	return BNIsAnalysisTypeAutoDefined(m_object, &nameStr, 1);
 }
 
 
-void BinaryView::DefineUserType(const std::string& name, Ref<Type> type)
+bool BinaryView::IsTypeAutoDefined(const vector<string>& name)
 {
-	BNDefineUserAnalysisType(m_object, name.c_str(), type->GetObject());
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	bool result = BNIsAnalysisTypeAutoDefined(m_object, nameList, name.size());
+	delete[] nameList;
+	return result;
 }
 
 
-void BinaryView::UndefineType(const std::string& name)
+void BinaryView::DefineType(const string& name, Ref<Type> type)
 {
-	BNUndefineAnalysisType(m_object, name.c_str());
+	const char* nameStr = name.c_str();
+	BNDefineAnalysisType(m_object, &nameStr, 1, type->GetObject());
 }
 
 
-void BinaryView::UndefineUserType(const std::string& name)
+void BinaryView::DefineType(const vector<string>& name, Ref<Type> type)
 {
-	BNUndefineUserAnalysisType(m_object, name.c_str());
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	BNDefineAnalysisType(m_object, nameList, name.size(), type->GetObject());
+	delete[] nameList;
+}
+
+
+void BinaryView::DefineUserType(const string& name, Ref<Type> type)
+{
+	const char* nameStr = name.c_str();
+	BNDefineUserAnalysisType(m_object, &nameStr, 1, type->GetObject());
+}
+
+
+void BinaryView::DefineUserType(const vector<string>& name, Ref<Type> type)
+{
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	BNDefineUserAnalysisType(m_object, nameList, name.size(), type->GetObject());
+	delete[] nameList;
+}
+
+
+void BinaryView::UndefineType(const string& name)
+{
+	const char* nameStr = name.c_str();
+	BNUndefineAnalysisType(m_object, &nameStr, 1);
+}
+
+
+void BinaryView::UndefineType(const vector<string>& name)
+{
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	BNUndefineAnalysisType(m_object, nameList, name.size());
+	delete[] nameList;
+}
+
+
+void BinaryView::UndefineUserType(const string& name)
+{
+	const char* nameStr = name.c_str();
+	BNUndefineUserAnalysisType(m_object, &nameStr, 1);
+}
+
+
+void BinaryView::UndefineUserType(const vector<string>& name)
+{
+	const char** nameList = new const char*[name.size()];
+	for (size_t i = 0; i < name.size(); i++)
+		nameList[i] = name[i].c_str();
+	BNUndefineUserAnalysisType(m_object, nameList, name.size());
+	delete[] nameList;
 }
 
 

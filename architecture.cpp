@@ -746,9 +746,8 @@ void Architecture::SetBinaryViewTypeConstant(const string& type, const string& n
 
 
 bool Architecture::ParseTypesFromSource(const string& source, const string& fileName,
-                                        map<string, Ref<Type>>& types, map<string, Ref<Type>>& variables,
-                                        map<string, Ref<Type>>& functions, string& errors,
-                                        const vector<string>& includeDirs)
+	map<vector<string>, Ref<Type>>& types, map<vector<string>, Ref<Type>>& variables,
+	map<vector<string>, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -762,26 +761,41 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 	functions.clear();
 
 	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
-	                                 &errorStr, includeDirList, includeDirs.size());
+		&errorStr, includeDirList, includeDirs.size());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)
 		return false;
 
 	for (size_t i = 0; i < result.typeCount; i++)
-		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.types[i].nameCount; j++)
+			name.push_back(result.types[i].name[j]);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
 	for (size_t i = 0; i < result.variableCount; i++)
-		types[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.variables[i].nameCount; j++)
+			name.push_back(result.variables[i].name[j]);
+		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
 	for (size_t i = 0; i < result.functionCount; i++)
-		types[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.functions[i].nameCount; j++)
+			name.push_back(result.functions[i].name[j]);
+		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
 	BNFreeTypeParserResult(&result);
 	return true;
 }
 
 
-bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, Ref<Type>>& types,
-                                            map<string, Ref<Type>>& variables, map<string, Ref<Type>>& functions,
-                                            string& errors, const vector<string>& includeDirs)
+bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<vector<string>, Ref<Type>>& types,
+	map<vector<string>, Ref<Type>>& variables, map<vector<string>, Ref<Type>>& functions,
+	string& errors, const vector<string>& includeDirs)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -795,18 +809,33 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, 
 	functions.clear();
 
 	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
-	                                     includeDirList, includeDirs.size());
+		includeDirList, includeDirs.size());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)
 		return false;
 
 	for (size_t i = 0; i < result.typeCount; i++)
-		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.types[i].nameCount; j++)
+			name.push_back(result.types[i].name[j]);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
 	for (size_t i = 0; i < result.variableCount; i++)
-		variables[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.variables[i].nameCount; j++)
+			name.push_back(result.variables[i].name[j]);
+		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
 	for (size_t i = 0; i < result.functionCount; i++)
-		functions[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	{
+		vector<string> name;
+		for (size_t j = 0; j < result.functions[i].nameCount; j++)
+			name.push_back(result.functions[i].name[j]);
+		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
 	BNFreeTypeParserResult(&result);
 	return true;
 }

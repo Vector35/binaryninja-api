@@ -590,8 +590,8 @@ namespace BinaryNinja
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
-		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type);
-		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char* name, BNType* type);
+		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount, BNType* type);
+		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount, BNType* type);
 
 	public:
 		BinaryDataNotification();
@@ -610,8 +610,8 @@ namespace BinaryNinja
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
-		virtual void OnTypeDefined(BinaryView* data, const std::string& name, Type* type) { (void)data; (void)name; (void)type; }
-		virtual void OnTypeUndefined(BinaryView* data, const std::string& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeDefined(BinaryView* data, const std::vector<std::string>& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeUndefined(BinaryView* data, const std::vector<std::string>& name, Type* type) { (void)data; (void)name; (void)type; }
 	};
 
 	class FileAccessor
@@ -755,7 +755,7 @@ namespace BinaryNinja
 		uint64_t align, entrySize;
 	};
 
-	struct NameAndType;
+	struct QualifiedNameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -977,15 +977,21 @@ namespace BinaryNinja
 		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
 			DisassemblySettings* settings);
 
-		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
+		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 
-		std::map<std::string, Ref<Type>> GetTypes();
+		std::map<std::vector<std::string>, Ref<Type>> GetTypes();
 		Ref<Type> GetTypeByName(const std::string& name);
+		Ref<Type> GetTypeByName(const std::vector<std::string>& name);
 		bool IsTypeAutoDefined(const std::string& name);
+		bool IsTypeAutoDefined(const std::vector<std::string>& name);
 		void DefineType(const std::string& name, Ref<Type> type);
+		void DefineType(const std::vector<std::string>& name, Ref<Type> type);
 		void DefineUserType(const std::string& name, Ref<Type> type);
+		void DefineUserType(const std::vector<std::string>& name, Ref<Type> type);
 		void UndefineType(const std::string& name);
+		void UndefineType(const std::vector<std::string>& name);
 		void UndefineUserType(const std::string& name);
+		void UndefineUserType(const std::vector<std::string>& name);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
@@ -1435,13 +1441,15 @@ namespace BinaryNinja
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-		                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
-		                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
-		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<std::string, Ref<Type>>& types,
-		                              std::map<std::string, Ref<Type>>& variables,
-		                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
+			std::map<std::vector<std::string>, Ref<Type>>& types,
+			std::map<std::vector<std::string>, Ref<Type>>& variables,
+			std::map<std::vector<std::string>, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>());
+		bool ParseTypesFromSourceFile(const std::string& fileName,
+			std::map<std::vector<std::string>, Ref<Type>>& types,
+			std::map<std::vector<std::string>, Ref<Type>>& variables,
+			std::map<std::vector<std::string>, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 		void RegisterCallingConvention(CallingConvention* cc);
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
@@ -1504,12 +1512,18 @@ namespace BinaryNinja
 	};
 
 	class Structure;
-	class UnknownType;
+	class NamedTypeReference;
 	class Enumeration;
 
 	struct NameAndType
 	{
 		std::string name;
+		Ref<Type> type;
+	};
+
+	struct QualifiedNameAndType
+	{
+		std::vector<std::string> name;
 		Ref<Type> type;
 	};
 
@@ -1532,7 +1546,7 @@ namespace BinaryNinja
 		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
-		Ref<UnknownType> GetUnknownType() const;
+		Ref<NamedTypeReference> GetNamedTypeReference() const;
 
 		uint64_t GetElementCount() const;
 
@@ -1554,7 +1568,8 @@ namespace BinaryNinja
 		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
-		static Ref<Type> UnknownNamedType(UnknownType* unknwn);
+		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static Ref<Type> NamedType(const std::vector<std::string>& name, Type* type);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
@@ -1565,10 +1580,14 @@ namespace BinaryNinja
 		static std::string GetQualifiedName(const std::vector<std::string>& names);
 	};
 
-	class UnknownType: public CoreRefCountObject<BNUnknownType, BNNewUnknownTypeReference, BNFreeUnknownType>
+	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
+		BNFreeNamedTypeReference>
 	{
 	public:
-		UnknownType(BNUnknownType* s, std::vector<std::string> name = {});
+		NamedTypeReference(BNNamedTypeReference* nt);
+		NamedTypeReference(BNNamedTypeReferenceClass cls, const std::vector<std::string>& name = {});
+		BNNamedTypeReferenceClass GetTypeClass() const;
+		void SetTypeClass(BNNamedTypeReferenceClass cls);
 		std::vector<std::string> GetName() const;
 		void SetName(const std::vector<std::string>& name);
 	};
@@ -1586,8 +1605,6 @@ namespace BinaryNinja
 		Structure();
 		Structure(BNStructure* s);
 
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
 		void SetWidth(size_t width);
@@ -1615,9 +1632,6 @@ namespace BinaryNinja
 	{
 	public:
 		Enumeration(BNEnumeration* e);
-
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
 
 		std::vector<EnumerationMember> GetMembers() const;
 

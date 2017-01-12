@@ -98,7 +98,7 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			fprintf(out, "ctypes.c_double");
 		break;
 	case NamedTypeReferenceClass:
-		fprintf(out, "%s", type->GetQualifiedName(type->GetNamedTypeReference()->GetName()).c_str());
+		fprintf(out, "%s", type->GetNamedTypeReference()->GetName().GetString().c_str());
 		break;
 	case PointerTypeClass:
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 	Architecture::Register(new GeneratorArchitecture());
 
 	// Parse API header to get type and function information
-	map<vector<string>, Ref<Type>> types, vars, funcs;
+	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
 	bool ok = Architecture::GetByName("generator")->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 	fprintf(stderr, "%s", errors.c_str());

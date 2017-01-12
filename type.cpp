@@ -24,6 +24,191 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+QualifiedName::QualifiedName()
+{
+}
+
+
+QualifiedName::QualifiedName(const string& name)
+{
+	m_name.push_back(name);
+}
+
+
+QualifiedName::QualifiedName(const vector<string>& name): m_name(name)
+{
+}
+
+
+QualifiedName::QualifiedName(const QualifiedName& name): m_name(name.m_name)
+{
+}
+
+
+QualifiedName& QualifiedName::operator=(const string& name)
+{
+	m_name = vector<string>{name};
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const vector<string>& name)
+{
+	m_name = name;
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const QualifiedName& name)
+{
+	m_name = name.m_name;
+	return *this;
+}
+
+
+bool QualifiedName::operator==(const QualifiedName& other) const
+{
+	return m_name == other.m_name;
+}
+
+
+bool QualifiedName::operator!=(const QualifiedName& other) const
+{
+	return m_name != other.m_name;
+}
+
+
+bool QualifiedName::operator<(const QualifiedName& other) const
+{
+	return m_name < other.m_name;
+}
+
+
+QualifiedName QualifiedName::operator+(const QualifiedName& other) const
+{
+	QualifiedName result(*this);
+	result.m_name.insert(result.m_name.end(), other.m_name.begin(), other.m_name.end());
+	return result;
+}
+
+
+string& QualifiedName::operator[](size_t i)
+{
+	return m_name[i];
+}
+
+
+const string& QualifiedName::operator[](size_t i) const
+{
+	return m_name[i];
+}
+
+
+vector<string>::iterator QualifiedName::begin()
+{
+	return m_name.begin();
+}
+
+
+vector<string>::iterator QualifiedName::end()
+{
+	return m_name.end();
+}
+
+
+vector<string>::const_iterator QualifiedName::begin() const
+{
+	return m_name.begin();
+}
+
+
+vector<string>::const_iterator QualifiedName::end() const
+{
+	return m_name.end();
+}
+
+
+string& QualifiedName::front()
+{
+	return m_name.front();
+}
+
+
+const string& QualifiedName::front() const
+{
+	return m_name.front();
+}
+
+
+string& QualifiedName::back()
+{
+	return m_name.back();
+}
+
+
+const string& QualifiedName::back() const
+{
+	return m_name.back();
+}
+
+
+void QualifiedName::insert(vector<string>::iterator loc, const string& name)
+{
+	m_name.insert(loc, name);
+}
+
+
+void QualifiedName::insert(vector<string>::iterator loc, vector<string>::iterator b, vector<string>::iterator e)
+{
+	m_name.insert(loc, b, e);
+}
+
+
+void QualifiedName::erase(vector<string>::iterator i)
+{
+	m_name.erase(i);
+}
+
+
+void QualifiedName::clear()
+{
+	m_name.clear();
+}
+
+
+void QualifiedName::push_back(const string& name)
+{
+	m_name.push_back(name);
+}
+
+
+size_t QualifiedName::size() const
+{
+	return m_name.size();
+}
+
+
+string QualifiedName::GetString() const
+{
+	bool first = true;
+	string out;
+	for (auto &name : m_name)
+	{
+		if (!first)
+		{
+			out += "::" + name;
+		}
+		else
+		{
+			out += name;
+		}
+		if (name.length() != 0)
+			first = false;
+	}
+	return out;
+}
+
+
 Type::Type(BNType* type)
 {
 	m_object = type;
@@ -148,27 +333,6 @@ uint64_t Type::GetElementCount() const
 }
 
 
-string Type::GetQualifiedName(const vector<string>& names)
-{
-	bool first = true;
-	string out;
-	for (auto &name : names)
-	{
-		if (!first)
-		{
-			out += "::" + name;
-		}
-		else
-		{
-			out += name;
-		}
-		if (name.length() != 0)
-			first = false;
-	}
-	return out;
-}
-
-
 string Type::GetString() const
 {
 	char* str = BNGetTypeString(m_object);
@@ -178,7 +342,7 @@ string Type::GetString() const
 }
 
 
-string Type::GetTypeAndName(const vector<string>& nameList) const
+string Type::GetTypeAndName(const QualifiedName& nameList) const
 {
 	const char ** str = new const char*[nameList.size()];
 	for (size_t i = 0; i < nameList.size(); i++)
@@ -322,7 +486,7 @@ Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align)
 }
 
 
-Ref<Type> Type::NamedType(const vector<string>& name, Type* type)
+Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
 {
 	const char** nameList = new const char*[name.size()];
 	for (size_t i = 0; i < name.size(); i++)
@@ -382,7 +546,7 @@ NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
 }
 
 
-NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const vector<string>& names)
+NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const QualifiedName& names)
 {
 	m_object = BNCreateNamedType();
 	BNSetTypeReferenceClass(m_object, cls);
@@ -408,7 +572,7 @@ BNNamedTypeReferenceClass NamedTypeReference::GetTypeClass() const
 }
 
 
-void NamedTypeReference::SetName(const vector<string>& names)
+void NamedTypeReference::SetName(const QualifiedName& names)
 {
 	const char ** nameList = new const char*[names.size()];
 	for (size_t i = 0; i < names.size(); i++)
@@ -420,11 +584,11 @@ void NamedTypeReference::SetName(const vector<string>& names)
 }
 
 
-vector<string> NamedTypeReference::GetName() const
+QualifiedName NamedTypeReference::GetName() const
 {
 	size_t size;
 	char** name = BNGetTypeReferenceName(m_object, &size);
-	vector<string> result;
+	QualifiedName result;
 	for (size_t i = 0; i < size; i++)
 	{
 		result.push_back(name[i]);

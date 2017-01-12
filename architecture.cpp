@@ -746,8 +746,8 @@ void Architecture::SetBinaryViewTypeConstant(const string& type, const string& n
 
 
 bool Architecture::ParseTypesFromSource(const string& source, const string& fileName,
-	map<vector<string>, Ref<Type>>& types, map<vector<string>, Ref<Type>>& variables,
-	map<vector<string>, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs)
+	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
+	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -769,21 +769,21 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.types[i].nameCount; j++)
 			name.push_back(result.types[i].name[j]);
 		types[name] = new Type(BNNewTypeReference(result.types[i].type));
 	}
 	for (size_t i = 0; i < result.variableCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.variables[i].nameCount; j++)
 			name.push_back(result.variables[i].name[j]);
 		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
 	}
 	for (size_t i = 0; i < result.functionCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.functions[i].nameCount; j++)
 			name.push_back(result.functions[i].name[j]);
 		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
@@ -793,8 +793,8 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 }
 
 
-bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<vector<string>, Ref<Type>>& types,
-	map<vector<string>, Ref<Type>>& variables, map<vector<string>, Ref<Type>>& functions,
+bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
+	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
 	string& errors, const vector<string>& includeDirs)
 {
 	BNTypeParserResult result;
@@ -817,21 +817,21 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<vector<s
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.types[i].nameCount; j++)
 			name.push_back(result.types[i].name[j]);
 		types[name] = new Type(BNNewTypeReference(result.types[i].type));
 	}
 	for (size_t i = 0; i < result.variableCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.variables[i].nameCount; j++)
 			name.push_back(result.variables[i].name[j]);
 		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
 	}
 	for (size_t i = 0; i < result.functionCount; i++)
 	{
-		vector<string> name;
+		QualifiedName name;
 		for (size_t j = 0; j < result.functions[i].nameCount; j++)
 			name.push_back(result.functions[i].name[j]);
 		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));

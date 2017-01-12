@@ -277,6 +277,7 @@ namespace BinaryNinja
 	class MainThreadAction;
 	class MainThreadActionHandler;
 	class InteractionHandler;
+	class QualifiedName;
 	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
@@ -368,7 +369,7 @@ namespace BinaryNinja
 	bool DemangleMS(Architecture* arch,
 	                const std::string& mangledName,
 	                Type** outType,
-	                std::vector<std::string>& outVarName);
+	                QualifiedName& outVarName);
 
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
@@ -407,6 +408,47 @@ namespace BinaryNinja
 
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
+
+	class QualifiedName
+	{
+		std::vector<std::string> m_name;
+
+	public:
+		QualifiedName();
+		QualifiedName(const std::string& name);
+		QualifiedName(const std::vector<std::string>& name);
+		QualifiedName(const QualifiedName& name);
+
+		QualifiedName& operator=(const std::string& name);
+		QualifiedName& operator=(const std::vector<std::string>& name);
+		QualifiedName& operator=(const QualifiedName& name);
+
+		bool operator==(const QualifiedName& other) const;
+		bool operator!=(const QualifiedName& other) const;
+		bool operator<(const QualifiedName& other) const;
+
+		QualifiedName operator+(const QualifiedName& other) const;
+
+		std::string& operator[](size_t i);
+		const std::string& operator[](size_t i) const;
+		std::vector<std::string>::iterator begin();
+		std::vector<std::string>::iterator end();
+		std::vector<std::string>::const_iterator begin() const;
+		std::vector<std::string>::const_iterator end() const;
+		std::string& front();
+		const std::string& front() const;
+		std::string& back();
+		const std::string& back() const;
+		void insert(std::vector<std::string>::iterator loc, const std::string& name);
+		void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
+			std::vector<std::string>::iterator e);
+		void erase(std::vector<std::string>::iterator i);
+		void clear();
+		void push_back(const std::string& name);
+		size_t size() const;
+
+		std::string GetString() const;
+	};
 
 	class DataBuffer
 	{
@@ -610,8 +652,8 @@ namespace BinaryNinja
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
-		virtual void OnTypeDefined(BinaryView* data, const std::vector<std::string>& name, Type* type) { (void)data; (void)name; (void)type; }
-		virtual void OnTypeUndefined(BinaryView* data, const std::vector<std::string>& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
 	};
 
 	class FileAccessor
@@ -979,19 +1021,13 @@ namespace BinaryNinja
 
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 
-		std::map<std::vector<std::string>, Ref<Type>> GetTypes();
-		Ref<Type> GetTypeByName(const std::string& name);
-		Ref<Type> GetTypeByName(const std::vector<std::string>& name);
-		bool IsTypeAutoDefined(const std::string& name);
-		bool IsTypeAutoDefined(const std::vector<std::string>& name);
-		void DefineType(const std::string& name, Ref<Type> type);
-		void DefineType(const std::vector<std::string>& name, Ref<Type> type);
-		void DefineUserType(const std::string& name, Ref<Type> type);
-		void DefineUserType(const std::vector<std::string>& name, Ref<Type> type);
-		void UndefineType(const std::string& name);
-		void UndefineType(const std::vector<std::string>& name);
-		void UndefineUserType(const std::string& name);
-		void UndefineUserType(const std::vector<std::string>& name);
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		bool IsTypeAutoDefined(const QualifiedName& name);
+		void DefineType(const QualifiedName& name, Ref<Type> type);
+		void DefineUserType(const QualifiedName& name, Ref<Type> type);
+		void UndefineType(const QualifiedName& name);
+		void UndefineUserType(const QualifiedName& name);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
@@ -1441,14 +1477,14 @@ namespace BinaryNinja
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-			std::map<std::vector<std::string>, Ref<Type>>& types,
-			std::map<std::vector<std::string>, Ref<Type>>& variables,
-			std::map<std::vector<std::string>, Ref<Type>>& functions, std::string& errors,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
 			const std::vector<std::string>& includeDirs = std::vector<std::string>());
 		bool ParseTypesFromSourceFile(const std::string& fileName,
-			std::map<std::vector<std::string>, Ref<Type>>& types,
-			std::map<std::vector<std::string>, Ref<Type>>& variables,
-			std::map<std::vector<std::string>, Ref<Type>>& functions, std::string& errors,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
 			const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 		void RegisterCallingConvention(CallingConvention* cc);
@@ -1523,7 +1559,7 @@ namespace BinaryNinja
 
 	struct QualifiedNameAndType
 	{
-		std::vector<std::string> name;
+		QualifiedName name;
 		Ref<Type> type;
 	};
 
@@ -1553,7 +1589,7 @@ namespace BinaryNinja
 		void SetFunctionCanReturn(bool canReturn);
 
 		std::string GetString() const;
-		std::string GetTypeAndName(const std::vector<std::string>& name) const;
+		std::string GetTypeAndName(const QualifiedName& name) const;
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
 
@@ -1569,15 +1605,13 @@ namespace BinaryNinja
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
-		static Ref<Type> NamedType(const std::vector<std::string>& name, Type* type);
+		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
-
-		static std::string GetQualifiedName(const std::vector<std::string>& names);
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -1585,11 +1619,12 @@ namespace BinaryNinja
 	{
 	public:
 		NamedTypeReference(BNNamedTypeReference* nt);
-		NamedTypeReference(BNNamedTypeReferenceClass cls, const std::vector<std::string>& name = {});
+		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass,
+			const QualifiedName& name = QualifiedName());
 		BNNamedTypeReferenceClass GetTypeClass() const;
 		void SetTypeClass(BNNamedTypeReferenceClass cls);
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
+		QualifiedName GetName() const;
+		void SetName(const QualifiedName& name);
 	};
 
 	struct StructureMember

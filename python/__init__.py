@@ -664,6 +664,8 @@ class QualifiedName(object):
 	def __init__(self, name = []):
 		if isinstance(name, str):
 			self.name = [name]
+		elif isinstance(name, QualifiedName):
+			self.name = name.name
 		else:
 			self.name = name
 
@@ -723,6 +725,22 @@ class QualifiedName(object):
 
 	def __iter__(self):
 		return iter(self.name)
+
+	def _get_core_struct(self):
+		result = core.BNQualifiedName()
+		name_list = (ctypes.c_char_p * len(self.name))()
+		for i in xrange(0, len(self.name)):
+			name_list[i] = self.name[i]
+		result.name = name_list
+		result.nameCount = len(self.name)
+		return result
+
+	@classmethod
+	def _from_core_struct(cls, name):
+		result = []
+		for i in xrange(0, name.nameCount):
+			result.append(name.name[i])
+		return QualifiedName(result)
 
 class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
@@ -825,21 +843,17 @@ class BinaryDataNotificationCallbacks(object):
 		except:
 			log_error(traceback.format_exc())
 
-	def _type_defined(self, ctxt, name, name_count, type_obj):
+	def _type_defined(self, ctxt, name, type_obj):
 		try:
-			name_list = []
-			for i in xrange(0, name_count):
-				name_list.append(name[i])
-			self.notify.type_defined(self.view, QualifiedName(name_list), Type(core.BNNewTypeReference(type_obj)))
+			qualified_name = QualifiedName._from_core_struct(name[0])
+			self.notify.type_defined(self.view, qualified_name, Type(core.BNNewTypeReference(type_obj)))
 		except:
 			log_error(traceback.format_exc())
 
-	def _type_undefined(self, ctxt, name, name_count, type_obj):
+	def _type_undefined(self, ctxt, name, type_obj):
 		try:
-			name_list = []
-			for i in xrange(0, name_count):
-				name_list.append(name[i])
-			self.notify.type_undefined(self.view, QualifiedName(name_list), Type(core.BNNewTypeReference(type_obj)))
+			qualified_name = QualifiedName._from_core_struct(name[0])
+			self.notify.type_undefined(self.view, qualified_name, Type(core.BNNewTypeReference(type_obj)))
 		except:
 			log_error(traceback.format_exc())
 
@@ -1464,10 +1478,8 @@ class BinaryView(object):
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			name = []
-			for j in xrange(0, type_list[i].nameCount):
-				name.append(type_list[i].name[j])
-			result[QualifiedName(name)] = Type(core.BNNewTypeReference(type_list[i].type))
+			name = QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = Type(core.BNNewTypeReference(type_list[i].type))
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -3438,10 +3450,7 @@ class BinaryView(object):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError, error_str
 		type_obj = Type(core.BNNewTypeReference(result.type))
-		name = []
-		for i in xrange(0, result.nameCount):
-			name.append(result.name[i])
-		name = QualifiedName(name)
+		name = QualifiedName._from_core_struct(result.name)
 		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
 
@@ -3460,12 +3469,8 @@ class BinaryView(object):
 			<type: int32_t>
 			>>>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		obj = core.BNGetAnalysisTypeByName(self.handle, name_list, len(name))
+		name = QualifiedName(name)._get_core_struct()
+		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
 		return Type(obj)
@@ -3485,12 +3490,8 @@ class BinaryView(object):
 			False
 			>>>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		return core.BNIsAnalysisTypeAutoDefined(self.handle, name_list, len(name))
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
 
 	def define_type(self, name, type_obj):
 		"""
@@ -3507,12 +3508,8 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		core.BNDefineAnalysisType(self.handle, name_list, len(name), type_obj.handle)
+		name = QualifiedName(name)._get_core_struct()
+		core.BNDefineAnalysisType(self.handle, name, type_obj.handle)
 
 	def define_user_type(self, name, type_obj):
 		"""
@@ -3529,12 +3526,8 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		core.BNDefineUserAnalysisType(self.handle, name_list, len(name), type_obj.handle)
+		name = QualifiedName(name)._get_core_struct()
+		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
 
 	def undefine_type(self, name):
 		"""
@@ -3552,12 +3545,8 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		core.BNUndefineAnalysisType(self.handle, name_list, len(name))
+		name = QualifiedName(name)._get_core_struct()
+		core.BNUndefineAnalysisType(self.handle, name)
 
 	def undefine_user_type(self, name):
 		"""
@@ -3576,12 +3565,8 @@ class BinaryView(object):
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
-		core.BNUndefineUserAnalysisType(self.handle, name_list, len(name))
+		name = QualifiedName(name)._get_core_struct()
+		core.BNUndefineUserAnalysisType(self.handle, name)
 
 	def find_next_data(self, start, data, flags = 0):
 		"""
@@ -4470,14 +4455,10 @@ class Type(object):
 
 	@classmethod
 	def named_type_from_type(self, name, t):
-		if isinstance(name, str):
-			name = [name]
-		name_list = (ctypes.c_char_p * len(name))()
-		for i in xrange(0, len(name)):
-			name_list[i] = name[i]
+		name = QualifiedName(name)._get_core_struct()
 		if t is not None:
 			t = t.handle
-		return Type(core.BNCreateNamedTypeReferenceFromType(name_list, len(name), t))
+		return Type(core.BNCreateNamedTypeReferenceFromType(name, t))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width = None):
@@ -4521,12 +4502,8 @@ class NamedTypeReference(object):
 			self.handle = core.BNCreateNamedType()
 			core.BNSetTypeReferenceClass(self.handle, type_class)
 			if name is not None:
-				if isinstance(name, str):
-					name = [name]
-				name_list = (ctypes.c_char_p * len(name))()
-				for i in xrange(0, len(name)):
-					name_list[i] = name[i]
-				core.BNSetTypeReferenceName(self.handle, name_list, len(name))
+				name = QualifiedName(name)._get_core_struct()
+				core.BNSetTypeReferenceName(self.handle, name)
 		else:
 			self.handle = handle
 
@@ -4544,20 +4521,15 @@ class NamedTypeReference(object):
 	@property
 	def name(self):
 		count = ctypes.c_ulonglong()
-		nameList = core.BNGetTypeReferenceName(self.handle, count)
-		result = []
-		for i in xrange(count.value):
-			result.append(nameList[i])
-		return QualifiedName(result)
+		name = core.BNGetTypeReferenceName(self.handle, count)
+		result = QualifiedName._from_core_struct(name)
+		core.BNFreeQualifiedName(name)
+		return result
 
 	@name.setter
 	def name(self, value):
-		if isinstance(value, str):
-			value = [value]
-		name_list = (ctypes.c_char_p * len(value))()
-		for i in xrange(0, len(value)):
-			name_list[i] = value[i]
-		core.BNSetTypeReferenceName(self.handle, name_list, len(value))
+		value = QualifiedName(value)._get_core_struct()
+		core.BNSetTypeReferenceName(self.handle, value)
 
 	def __repr__(self):
 		if self.type_class == core.TypedefNamedTypeClass:
@@ -4646,8 +4618,6 @@ class Structure(object):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 	def __repr__(self):
-		if len(self.name) > 0:
-			return "<struct: %s>" % self.name
 		return "<struct: size %#x>" % self.width
 
 	def append(self, t, name = ""):
@@ -4696,8 +4666,6 @@ class Enumeration(object):
 			raise AttributeError, "attribute '%s' is read only" % name
 
 	def __repr__(self):
-		if len(self.name) > 0:
-			return "<enum: %s>" % self.name
 		return "<enum: %s>" % repr(self.members)
 
 	def append(self, name, value = None):
@@ -7581,20 +7549,14 @@ class Architecture(object):
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			name = []
-			for j in xrange(0, parse.types[i].nameCount):
-				name.append(parse.types[i].name[j])
-			types[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.types[i].type))
+			name = QualifiedName._from_core_struct(parse.types[i].name)
+			types[name] = Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			name = []
-			for j in xrange(0, parse.variables[i].nameCount):
-				name.append(parse.variables[i].name[j])
-			variables[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			name = []
-			for j in xrange(0, parse.functions[i].nameCount):
-				name.append(parse.functions[i].name[j])
-			functions[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
 		return TypeParserResult(types, variables, functions)
 
@@ -7631,20 +7593,14 @@ class Architecture(object):
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			name = []
-			for j in xrange(0, parse.types[i].nameCount):
-				name.append(parse.types[i].name[j])
-			types[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.types[i].type))
+			name = QualifiedName._from_core_struct(parse.types[i].name)
+			types[name] = Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			name = []
-			for j in xrange(0, parse.variables[i].nameCount):
-				name.append(parse.variables[i].name[j])
-			variables[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			name = []
-			for j in xrange(0, parse.functions[i].nameCount):
-				name.append(parse.functions[i].name[j])
-			functions[QualifiedName(name)] = Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
 		return TypeParserResult(types, variables, functions)
 

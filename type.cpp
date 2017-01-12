@@ -209,6 +209,34 @@ string QualifiedName::GetString() const
 }
 
 
+BNQualifiedName QualifiedName::GetAPIObject() const
+{
+	BNQualifiedName result;
+	result.nameCount = m_name.size();
+	result.name = new char*[m_name.size()];
+	for (size_t i = 0; i < m_name.size(); i++)
+		result.name[i] = BNAllocString(m_name[i].c_str());
+	return result;
+}
+
+
+void QualifiedName::FreeAPIObject(BNQualifiedName* name)
+{
+	for (size_t i = 0; i < name->nameCount; i++)
+		BNFreeString(name->name[i]);
+	delete[] name->name;
+}
+
+
+QualifiedName QualifiedName::FromAPIObject(BNQualifiedName* name)
+{
+	QualifiedName result;
+	for (size_t i = 0; i < name->nameCount; i++)
+		result.push_back(name->name[i]);
+	return result;
+}
+
+
 Type::Type(BNType* type)
 {
 	m_object = type;
@@ -344,13 +372,9 @@ string Type::GetString() const
 
 string Type::GetTypeAndName(const QualifiedName& nameList) const
 {
-	const char ** str = new const char*[nameList.size()];
-	for (size_t i = 0; i < nameList.size(); i++)
-	{
-		str[i] = nameList[i].c_str();
-	}
-	char* outName = BNGetTypeAndName(m_object, str, nameList.size());
-	delete [] str;
+	BNQualifiedName name = nameList.GetAPIObject();
+	char* outName = BNGetTypeAndName(m_object, &name);
+	QualifiedName::FreeAPIObject(&name);
 	return outName;
 }
 
@@ -488,12 +512,9 @@ Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align)
 
 Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	Type* result = new Type(BNCreateNamedTypeReferenceFromType(nameList, name.size(),
-		type ? type->GetObject() : nullptr));
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	Type* result = new Type(BNCreateNamedTypeReferenceFromType(&nameObj, type ? type->GetObject() : nullptr));
+	QualifiedName::FreeAPIObject(&nameObj);
 	return result;
 }
 
@@ -550,13 +571,12 @@ NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const Qual
 {
 	m_object = BNCreateNamedType();
 	BNSetTypeReferenceClass(m_object, cls);
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
+	if (names.size() != 0)
 	{
-		nameList[i] = names[i].c_str();
+		BNQualifiedName nameObj = names.GetAPIObject();
+		BNSetTypeReferenceName(m_object, &nameObj);
+		QualifiedName::FreeAPIObject(&nameObj);
 	}
-	BNSetTypeReferenceName(m_object, nameList, names.size());
-	delete [] nameList;
 }
 
 
@@ -574,27 +594,17 @@ BNNamedTypeReferenceClass NamedTypeReference::GetTypeClass() const
 
 void NamedTypeReference::SetName(const QualifiedName& names)
 {
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetTypeReferenceName(m_object, nameList, names.size());
-	delete [] nameList;
+	BNQualifiedName nameObj = names.GetAPIObject();
+	BNSetTypeReferenceName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
 QualifiedName NamedTypeReference::GetName() const
 {
-	size_t size;
-	char** name = BNGetTypeReferenceName(m_object, &size);
-	QualifiedName result;
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
+	BNQualifiedName name = BNGetTypeReferenceName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
 	return result;
 }
 

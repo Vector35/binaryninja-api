@@ -129,29 +129,21 @@ void BinaryDataNotification::StringRemovedCallback(void* ctxt, BNBinaryView* obj
 }
 
 
-void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount,
-	BNType* type)
+void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	QualifiedName nameList;
-	for (size_t i = 0; i < nameCount; i++)
-		nameList.push_back(name[i]);
-	notify->OnTypeDefined(view, nameList, typeObj);
+	notify->OnTypeDefined(view, QualifiedName::FromAPIObject(name), typeObj);
 }
 
 
-void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount,
-	BNType* type)
+void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	QualifiedName nameList;
-	for (size_t i = 0; i < nameCount; i++)
-		nameList.push_back(name[i]);
-	notify->OnTypeUndefined(view, nameList, typeObj);
+	notify->OnTypeUndefined(view, QualifiedName::FromAPIObject(name), typeObj);
 }
 
 
@@ -1467,8 +1459,7 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 		return false;
 	}
 
-	for (size_t i = 0; i < nt.nameCount; i++)
-		result.name.push_back(nt.name[i]);
+	result.name = QualifiedName::FromAPIObject(&nt.name);
 	result.type = new Type(BNNewTypeReference(nt.type));
 	errors = "";
 	BNFreeQualifiedNameAndType(&nt);
@@ -1484,9 +1475,7 @@ map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 	map<QualifiedName, Ref<Type>> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < types[i].nameCount; j++)
-			name.push_back(types[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
 		result[name] = new Type(BNNewTypeReference(types[i].type));
 	}
 
@@ -1497,12 +1486,9 @@ map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 
 Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-
-	BNType* type = BNGetAnalysisTypeByName(m_object, nameList, name.size());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNType* type = BNGetAnalysisTypeByName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 
 	if (!type)
 		return nullptr;
@@ -1512,52 +1498,42 @@ Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 
 bool BinaryView::IsTypeAutoDefined(const QualifiedName& name)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	bool result = BNIsAnalysisTypeAutoDefined(m_object, nameList, name.size());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	bool result = BNIsAnalysisTypeAutoDefined(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 	return result;
 }
 
 
 void BinaryView::DefineType(const QualifiedName& name, Ref<Type> type)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	BNDefineAnalysisType(m_object, nameList, name.size(), type->GetObject());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNDefineAnalysisType(m_object, &nameObj, type->GetObject());
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
 void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	BNDefineUserAnalysisType(m_object, nameList, name.size(), type->GetObject());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNDefineUserAnalysisType(m_object, &nameObj, type->GetObject());
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
 void BinaryView::UndefineType(const QualifiedName& name)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	BNUndefineAnalysisType(m_object, nameList, name.size());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNUndefineAnalysisType(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
 void BinaryView::UndefineUserType(const QualifiedName& name)
 {
-	const char** nameList = new const char*[name.size()];
-	for (size_t i = 0; i < name.size(); i++)
-		nameList[i] = name[i].c_str();
-	BNUndefineUserAnalysisType(m_object, nameList, name.size());
-	delete[] nameList;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNUndefineUserAnalysisType(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 

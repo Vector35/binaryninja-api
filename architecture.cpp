@@ -769,23 +769,17 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.types[i].nameCount; j++)
-			name.push_back(result.types[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
 		types[name] = new Type(BNNewTypeReference(result.types[i].type));
 	}
 	for (size_t i = 0; i < result.variableCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.variables[i].nameCount; j++)
-			name.push_back(result.variables[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
 		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
 	}
 	for (size_t i = 0; i < result.functionCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.functions[i].nameCount; j++)
-			name.push_back(result.functions[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
 		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
 	}
 	BNFreeTypeParserResult(&result);
@@ -817,23 +811,17 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<Qualifie
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.types[i].nameCount; j++)
-			name.push_back(result.types[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
 		types[name] = new Type(BNNewTypeReference(result.types[i].type));
 	}
 	for (size_t i = 0; i < result.variableCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.variables[i].nameCount; j++)
-			name.push_back(result.variables[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
 		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
 	}
 	for (size_t i = 0; i < result.functionCount; i++)
 	{
-		QualifiedName name;
-		for (size_t j = 0; j < result.functions[i].nameCount; j++)
-			name.push_back(result.functions[i].name[j]);
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
 		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
 	}
 	BNFreeTypeParserResult(&result);

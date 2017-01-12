@@ -631,6 +631,12 @@ extern "C"
 		bool (*navigate)(void* ctxt, const char* view, uint64_t offset);
 	};
 
+	struct BNQualifiedName
+	{
+		char** name;
+		size_t nameCount;
+	};
+
 	struct BNBinaryDataNotification
 	{
 		void* context;
@@ -645,8 +651,8 @@ extern "C"
 		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
-		void (*typeDefined)(void* ctxt, BNBinaryView* view, const char** name, size_t nameCount, BNType* type);
-		void (*typeUndefined)(void* ctxt, BNBinaryView* view, const char** name, size_t nameCount, BNType* type);
+		void (*typeDefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
+		void (*typeUndefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
 	};
 
 	struct BNFileAccessor
@@ -854,8 +860,7 @@ extern "C"
 
 	struct BNQualifiedNameAndType
 	{
-		char** name;
-		size_t nameCount;
+		BNQualifiedName name;
 		BNType* type;
 	};
 
@@ -1800,12 +1805,12 @@ extern "C"
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeList(BNQualifiedNameAndType* types, size_t count);
-	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeByName(BNBinaryView* view, const char** name, size_t nameCount);
-	BINARYNINJACOREAPI bool BNIsAnalysisTypeAutoDefined(BNBinaryView* view, const char** name, size_t nameCount);
-	BINARYNINJACOREAPI void BNDefineAnalysisType(BNBinaryView* view, const char** name, size_t nameCount, BNType* type);
-	BINARYNINJACOREAPI void BNDefineUserAnalysisType(BNBinaryView* view, const char** name, size_t nameCount, BNType* type);
-	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, const char** name, size_t nameCount);
-	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, const char** name, size_t nameCount);
+	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeByName(BNBinaryView* view, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNIsAnalysisTypeAutoDefined(BNBinaryView* view, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNDefineAnalysisType(BNBinaryView* view, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNDefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNUndefineAnalysisType(BNBinaryView* view, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name);
 
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
@@ -1969,7 +1974,7 @@ extern "C"
 	                                                BNNameAndType* params, size_t paramCount, bool varArg);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
-	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, const char** nameList, size_t nameCount);
+	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNFreeType(BNType* type);
 
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeClass(BNType* type);
@@ -2000,12 +2005,13 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeTokenList(BNInstructionTextToken* tokens, size_t count);
 
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReference(BNNamedTypeReference* nt, size_t width, size_t align);
-	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromType(const char** name, size_t nameCount, BNType* type);
+	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromType(BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNCreateNamedType(void);
 	BINARYNINJACOREAPI void BNSetTypeReferenceClass(BNNamedTypeReference* nt, BNNamedTypeReferenceClass cls);
 	BINARYNINJACOREAPI BNNamedTypeReferenceClass BNGetTypeReferenceClass(BNNamedTypeReference* nt);
-	BINARYNINJACOREAPI void BNSetTypeReferenceName(BNNamedTypeReference* nt, const char** name, size_t size);
-	BINARYNINJACOREAPI char** BNGetTypeReferenceName(BNNamedTypeReference* nt, size_t* size);
+	BINARYNINJACOREAPI void BNSetTypeReferenceName(BNNamedTypeReference* nt, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNQualifiedName BNGetTypeReferenceName(BNNamedTypeReference* nt);
+	BINARYNINJACOREAPI void BNFreeQualifiedName(BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNFreeNamedTypeReference(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNNewNamedTypeReference(BNNamedTypeReference* nt);
 

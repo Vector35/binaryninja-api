@@ -448,6 +448,10 @@ namespace BinaryNinja
 		size_t size() const;
 
 		std::string GetString() const;
+
+		BNQualifiedName GetAPIObject() const;
+		static void FreeAPIObject(BNQualifiedName* name);
+		static QualifiedName FromAPIObject(BNQualifiedName* name);
 	};
 
 	class DataBuffer
@@ -632,8 +636,8 @@ namespace BinaryNinja
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
-		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount, BNType* type);
-		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, const char** name, size_t nameCount, BNType* type);
+		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
+		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 
 	public:
 		BinaryDataNotification();

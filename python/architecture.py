@@ -364,7 +364,7 @@ class Architecture(object):
 
 	def __setattr__(self, name, value):
 		if ((name == "name") or (name == "endianness") or (name == "address_size") or
-		    (name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
+			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
 			raise AttributeError("attribute '%s' is read only" % name)
 		else:
 			try:
@@ -1610,7 +1610,7 @@ class Architecture(object):
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			raise SyntaxError, error_str
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}
@@ -1654,7 +1654,7 @@ class Architecture(object):
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			raise SyntaxError, error_str
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}

@@ -24,7 +24,6 @@ import ctypes
 import _binaryninjacore as core
 from enums import SymbolType, TypeClass, NamedTypeReferenceClass
 import callingconvention
-import demangle
 
 
 class QualifiedName(object):

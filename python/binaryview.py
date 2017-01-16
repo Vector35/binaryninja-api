@@ -250,16 +250,16 @@ class BinaryDataNotificationCallbacks(object):
 	def _type_defined(self, ctxt, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_defined(self.view, qualified_name, Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_defined(self.view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
 		except:
-			log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_undefined(self.view, qualified_name, Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_undefined(self.view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
 		except:
-			log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 
 class _BinaryViewTypeMetaclass(type):

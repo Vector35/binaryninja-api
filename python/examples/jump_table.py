@@ -1,7 +1,29 @@
+# Copyright (c) 2015-2016 Vector 35 LLC
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
 # This plugin will attempt to resolve simple jump tables (an array of code pointers) and add the destinations
 # as indirect branch targets so that the flow graph reflects the jump table's control flow.
-from binaryninja import *
+from binaryninja.plugin import PluginCommand
+from binaryninja.enums import InstructionTextTokenType
 import struct
+
 
 def find_jump_table(bv, addr):
 	for block in bv.get_basic_blocks_at(addr):
@@ -28,7 +50,7 @@ def find_jump_table(bv, addr):
 		# Collect the branch targets for any tables referenced by the clicked instruction
 		branches = []
 		for token in tokens:
-			if token.type == "PossibleAddressToken": # Table addresses will be a "possible address" token
+			if InstructionTextTokenType(token.type) == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
 				tbl = token.value
 				print "Found possible table at 0x%x" % tbl
 				i = 0
@@ -56,7 +78,8 @@ def find_jump_table(bv, addr):
 					i += 1
 
 		# Set the indirect branch targets on the jump instruction to be the list of targets discovered
-		func.set_user_indirect_branches(arch, jump_addr, branches)
+		func.set_user_indirect_branches(jump_addr, branches)
+
 
 # Create a plugin command so that the user can right click on an instruction referencing a jump table and
 # invoke the command

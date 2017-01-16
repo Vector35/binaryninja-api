@@ -1,3 +1,24 @@
+# Copyright (c) 2015-2016 Vector 35 LLC
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+
 # This plugin assumes angr is already installed and available on the system. See the angr documentation
 # for information about installing angr. It should be installed using the virtualenv method.
 #
@@ -9,13 +30,19 @@
 # virtual environment. A later update may allow for a manual override to link to the required version
 # of Python.
 
-__name__ = "__console__" # angr looks for this, it won't load from within a UI without it
-import angr
-from binaryninja import *
 import tempfile
-import threading
 import logging
 import os
+
+__name__ = "__console__"  # angr looks for this, it won't load from within a UI without it
+
+import angr
+# For the lazy instead you can just import everything 'from binaryninja import *''
+from binaryninja.binaryview import BinaryView
+from binaryninja.plugin import BackgroundTaskThread, PluginCommand
+from binaryninja.interaction import show_plain_text_report, show_message_box
+from binaryninja.highlight import HighlightColor
+from binaryninja.enums import HighlightStandardColor, MessageBoxButtonSet
 
 # Disable warning logs as they show up as errors in the UI
 logging.disable(logging.WARNING)
@@ -24,8 +51,10 @@ logging.disable(logging.WARNING)
 BinaryView.set_default_session_data("angr_find", set())
 BinaryView.set_default_session_data("angr_avoid", set())
 
+
 def escaped_output(str):
 	return '\n'.join([s.encode("string_escape") for s in str.split('\n')])
+
 
 # Define a background thread object for solving in the background
 class Solver(BackgroundTaskThread):
@@ -81,36 +110,40 @@ class Solver(BackgroundTaskThread):
 		else:
 			show_plain_text_report("Results from angr", text_report)
 
+
 def find_instr(bv, addr):
 	# Highlight the instruction in green
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(GreenHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, GreenHighlightColor)
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.GreenHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_find.add(addr)
+
 
 def avoid_instr(bv, addr):
 	# Highlight the instruction in red
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(RedHighlightColor, alpha = 128))
-		block.function.set_auto_instr_highlight(block.arch, addr, RedHighlightColor)
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.RedHighlightColor, alpha = 128))
+		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
 	bv.session_data.angr_avoid.add(addr)
+
 
 def solve(bv):
 	if len(bv.session_data.angr_find) == 0:
 		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
 			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
-			"continue.", OKButtonSet, ErrorIcon)
+			"continue.", MessageBoxButtonSet.OKButtonSet, MessageBoxButtonSet.ErrorIcon)
 		return
 
 	# Start a solver thread for the path associated with the view
 	s = Solver(bv.session_data.angr_find, bv.session_data.angr_avoid, bv)
 	s.start()
+
 
 # Register commands for the user to interact with the plugin
 PluginCommand.register_for_address("Find Path to This Instruction",

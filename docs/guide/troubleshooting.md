@@ -9,7 +9,7 @@
 
 ## License Problems
 
-- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and re-download the latest installer. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/index.html#license).
+- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/index.html#license).
 - If you need to change the email address on your license, contact [support].
 
 ## Linux

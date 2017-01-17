@@ -48,6 +48,9 @@ from .scriptingprovider import *
 
 
 def shutdown():
+	"""
+	``shutdown`` cleanly shuts down the core, stopping all workers and closing all log files.
+	"""
 	core.BNShutdown()
 
 

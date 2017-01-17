@@ -467,6 +467,8 @@ class Architecture(object):
 				token_buf[i].value = tokens[i].value
 				token_buf[i].size = tokens[i].size
 				token_buf[i].operand = tokens[i].operand
+				token_buf[i].context = tokens[i].context
+				token_buf[i].address = tokens[i].address
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
@@ -1148,7 +1150,9 @@ class Architecture(object):
 			value = tokens[i].value
 			size = tokens[i].size
 			operand = tokens[i].operand
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand))
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 

@@ -22,8 +22,9 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass
+from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType
 import callingconvention
+import function
 
 
 class QualifiedName(object):
@@ -317,6 +318,56 @@ class Type(object):
 	def get_string_after_name(self):
 		return core.BNGetTypeStringAfterName(self.handle)
 
+	@property
+	def tokens(self):
+		"""Type string as a list of tokens (read-only)"""
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokens(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
+
+	def get_tokens_before_name(self):
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokensBeforeName(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
+
+	def get_tokens_after_name(self):
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokensAfterName(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
+
 	@classmethod
 	def void(cls):
 		return Type(core.BNCreateVoidType())
@@ -518,6 +569,9 @@ class Structure(object):
 	def remove(self, i):
 		core.BNRemoveStructureMember(self.handle, i)
 
+	def replace(self, i, t, name = ""):
+		core.BNReplaceStructureMember(self.handle, i, t.handle, name)
+
 
 class EnumerationMember(object):
 	def __init__(self, name, value, default):
@@ -564,6 +618,12 @@ class Enumeration(object):
 			core.BNAddEnumerationMember(self.handle, name)
 		else:
 			core.BNAddEnumerationMemberWithValue(self.handle, name, value)
+
+	def remove(self, i):
+		core.BNRemoveEnumerationMember(self.handle, i)
+
+	def replace(self, i, name, value):
+		core.BNReplaceEnumerationMember(self.handle, i, name, value)
 
 
 class TypeParserResult(object):

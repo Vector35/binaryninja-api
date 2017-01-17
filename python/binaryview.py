@@ -1886,7 +1886,7 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable(var.address, type.Type(var.type), var.autoDiscovered)
+		return DataVariable(var.address, types.Type(var.type), var.autoDiscovered)
 
 	def get_function_at(self, addr, plat=None):
 		"""
@@ -2750,7 +2750,9 @@ class BinaryView(object):
 				value = lines[i].contents.tokens[j].value
 				size = lines[i].contents.tokens[j].size
 				operand = lines[i].contents.tokens[j].operand
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].contents.tokens[j].context
+				address = lines[i].contents.tokens[j].address
+				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 			contents = function.DisassemblyTextLine(addr, tokens)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 

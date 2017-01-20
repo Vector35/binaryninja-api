@@ -79,4 +79,10 @@ bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()
 
 core_version = core.BNGetVersionString()
+'''Core version'''
+
 core_build_id = core.BNGetBuildId()
+'''Build ID'''
+
+core_product = core.BNGetProduct()
+'''Product string from the license file'''

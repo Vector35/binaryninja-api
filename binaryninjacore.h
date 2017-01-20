@@ -1420,6 +1420,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSegment* BNGetSegments(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeSegmentList(BNSegment* segments);
 	BINARYNINJACOREAPI bool BNGetSegmentAt(BNBinaryView* view, uint64_t addr, BNSegment* result);
+	BINARYNINJACOREAPI bool BNGetAddressForDataOffset(BNBinaryView* view, uint64_t offset, uint64_t* addr);
 
 	BINARYNINJACOREAPI void BNAddAutoSection(BNBinaryView* view, const char* name, uint64_t start, uint64_t length,
 		const char* type, uint64_t align, uint64_t entrySize, const char* linkedSection, const char* infoSection,

@@ -3052,6 +3052,12 @@ class BinaryView(object):
 			segment.flags)
 		return result
 
+	def get_address_for_data_offset(self, offset):
+		address = ctypes.c_ulonglong()
+		if not core.BNGetAddressForDataOffset(self.handle, offset, address):
+			return None
+		return address.value
+
 	def add_auto_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
 		info_section = "", info_data = 0):
 		core.BNAddAutoSection(self.handle, name, start, length, type, align, entry_size, linked_section,

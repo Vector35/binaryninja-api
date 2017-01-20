@@ -1645,6 +1645,12 @@ bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 }
 
 
+bool BinaryView::GetAddressForDataOffset(uint64_t offset, uint64_t& addr)
+{
+	return BNGetAddressForDataOffset(m_object, offset, &addr);
+}
+
+
 void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, const string& type,
 	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
 {

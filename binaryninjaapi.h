@@ -1050,6 +1050,7 @@ namespace BinaryNinja
 		void RemoveUserSegment(uint64_t start, uint64_t length);
 		std::vector<Segment> GetSegments();
 		bool GetSegmentAt(uint64_t addr, Segment& result);
+		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",

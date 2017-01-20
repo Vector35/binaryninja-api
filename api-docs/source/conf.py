@@ -43,7 +43,7 @@ def classlist(module):
 
 
 def generaterst():
-	pythonrst = open("python.rst", "w")
+	pythonrst = open("index.rst", "w")
 	pythonrst.write('''Binary Ninja Python API Documentation
 =====================================
 
@@ -130,7 +130,7 @@ source_suffix = '.rst'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'python'
+master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja API'

@@ -31,7 +31,7 @@ The previous tools are used in the generation of our documentation, but are not 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD)
 
-* Upvector update Library
+* Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
 
 

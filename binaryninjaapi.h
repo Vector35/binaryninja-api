@@ -352,6 +352,9 @@ namespace BinaryNinja
 	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);
 
 	std::string GetVersionString();
+	std::string GetProduct();
+	std::string GetProductType();
+	int GetLicenseCount();
 	uint32_t GetBuildId();
 
 	bool AreAutoUpdatesEnabled();

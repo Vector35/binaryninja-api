@@ -86,3 +86,9 @@ core_build_id = core.BNGetBuildId()
 
 core_product = core.BNGetProduct()
 '''Product string from the license file'''
+
+core_product_type = core.BNGetProductType()
+'''Product type from the license file'''
+
+core_license_count = core.BNGetLicenseCount()
+'''License count from the license file'''

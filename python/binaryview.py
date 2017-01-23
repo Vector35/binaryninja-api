@@ -326,7 +326,11 @@ class BinaryViewType(object):
 			return None
 		for available in view.available_view_types:
 			if available.name != "Raw":
-				bv = cls[available.name].open(filename)
+				if filename.endswith(".bndb"):
+					bv = view.get_view_of_type(available.name)
+				else:
+					bv = cls[available.name].open(filename)
+
 				if update_analysis:
 					bv.update_analysis_and_wait()
 				return bv

@@ -306,6 +306,7 @@ class BinaryViewType(object):
 	def get_view_of_file(cls, filename, update_analysis=True):
 		"""
 		``get_view_of_file`` returns the first available, non-Raw `BinaryView` available.
+
 		:param str filename: Path to filename or bndb
 		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
 		:return: returns a BinaryView object for the given filename.

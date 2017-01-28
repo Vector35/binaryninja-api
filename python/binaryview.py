@@ -3591,7 +3591,7 @@ class BinaryWriter(object):
 			>>> hex(bw.offset)
 			'0x100000008L'
 			>>> bw.seek(0x100000000)
-			>>> hex(br.offset)
+			>>> hex(bw.offset)
 			'0x100000000L'
 			>>>
 		"""
@@ -3608,7 +3608,7 @@ class BinaryWriter(object):
 			>>> hex(bw.offset)
 			'0x100000008L'
 			>>> bw.seek_relative(-8)
-			>>> hex(br.offset)
+			>>> hex(bw.offset)
 			'0x100000000L'
 			>>>
 		"""

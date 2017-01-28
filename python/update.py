@@ -238,5 +238,29 @@ def get_time_since_last_update_check():
 	return core.BNGetTimeSinceLastUpdateCheck()
 
 
+def is_update_installation_pending():
+	"""
+	``is_update_installation_pending`` whether an update has been downloaded and is waiting installation
+
+	:return: boolean True if an update is pending, false if no update is pending
+	:rtype: bool
+	"""
+	return core.BNIsUpdateInstallationPending()
+
+
+def install_pending_update():
+	"""
+	``install_pending_update`` installs any pending updates
+
+	:rtype: None
+	"""
+	errors = ctypes.c_char_p()
+	core.BNInstallPendingUpdate(errors)
+	if errors:
+		error_str = errors.value
+		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+		raise IOError(error_str)
+
+
 def updates_checked():
 	core.BNUpdatesChecked()

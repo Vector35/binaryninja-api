@@ -299,7 +299,7 @@ class Type(object):
 		result = core.BNGetTypeNamedTypeReference(self.handle)
 		if result is None:
 			return None
-		return NamedTypeReference(result)
+		return NamedTypeReference(handle = result)
 
 	@property
 	def count(self):
@@ -393,11 +393,23 @@ class Type(object):
 		return Type(core.BNCreateNamedTypeReference(named_type.handle, width, align))
 
 	@classmethod
+	def named_type_from_type_and_id(self, type_id, name, t):
+		name = QualifiedName(name)._get_core_struct()
+		if t is not None:
+			t = t.handle
+		return Type(core.BNCreateNamedTypeReferenceFromTypeAndId(type_id, name, t))
+
+	@classmethod
 	def named_type_from_type(self, name, t):
 		name = QualifiedName(name)._get_core_struct()
 		if t is not None:
 			t = t.handle
-		return Type(core.BNCreateNamedTypeReferenceFromType(name, t))
+		return Type(core.BNCreateNamedTypeReferenceFromTypeAndId("", name, t))
+
+	@classmethod
+	def named_type_from_registered_type(self, view, name):
+		name = QualifiedName(name)._get_core_struct()
+		return Type(core.BNCreateNamedTypeReferenceFromType(view.handle, name))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width=None):
@@ -428,6 +440,21 @@ class Type(object):
 		return Type(core.BNCreateFunctionType(ret.handle, calling_convention, param_buf, len(params),
 			  variable_arguments))
 
+	@classmethod
+	def generate_auto_type_id(self, source, name):
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoTypeId(source, name)
+
+	@classmethod
+	def generate_auto_platform_type_id(self, name):
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoTypeId(name)
+
+	@classmethod
+	def generate_auto_demangled_type_id(self, name):
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoTypeId(name)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -436,10 +463,12 @@ class Type(object):
 
 
 class NamedTypeReference(object):
-	def __init__(self, type_class = NamedTypeReferenceClass.UnknownNamedTypeClass, name = None, handle = None):
+	def __init__(self, type_class = NamedTypeReferenceClass.UnknownNamedTypeClass, type_id = None, name = None, handle = None):
 		if handle is None:
 			self.handle = core.BNCreateNamedType()
 			core.BNSetTypeReferenceClass(self.handle, type_class)
+			if type_id is not None:
+				core.BNSetTypeReferenceId(self.handle, type_id)
 			if name is not None:
 				name = QualifiedName(name)._get_core_struct()
 				core.BNSetTypeReferenceName(self.handle, name)
@@ -451,16 +480,23 @@ class NamedTypeReference(object):
 
 	@property
 	def type_class(self):
-		return core.BNGetTypeReferenceClass(self.handle)
+		return NamedTypeReferenceClass(core.BNGetTypeReferenceClass(self.handle))
 
 	@type_class.setter
 	def type_class(self, value):
 		core.BNSetTypeReferenceClass(self.handle, value)
 
 	@property
+	def type_id(self):
+		return core.BNGetTypeReferenceId(self.handle)
+
+	@type_id.setter
+	def type_id(self, value):
+		core.BNSetTypeReferenceId(self.handle, value)
+
+	@property
 	def name(self):
-		count = ctypes.c_ulonglong()
-		name = core.BNGetTypeReferenceName(self.handle, count)
+		name = core.BNGetTypeReferenceName(self.handle)
 		result = QualifiedName._from_core_struct(name)
 		core.BNFreeQualifiedName(name)
 		return result
@@ -480,6 +516,21 @@ class NamedTypeReference(object):
 		if self.type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
 			return "<named type: enum %s>" % str(self.name)
 		return "<named type: unknown %s>" % str(self.name)
+
+	@classmethod
+	def generate_auto_type_ref(self, type_class, source, name):
+		type_id = Type.generate_auto_type_id(source, name)
+		return NamedTypeReference(type_class, type_id, name)
+
+	@classmethod
+	def generate_auto_platform_type_ref(self, type_class, source, name):
+		type_id = Type.generate_auto_platform_type_id(source, name)
+		return NamedTypeReference(type_class, type_id, name)
+
+	@classmethod
+	def generate_auto_demangled_type_ref(self, type_class, source, name):
+		type_id = Type.generate_auto_demangled_type_id(source, name)
+		return NamedTypeReference(type_class, type_id, name)
 
 
 class StructureMember(object):

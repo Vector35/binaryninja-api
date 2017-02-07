@@ -1496,6 +1496,35 @@ Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 }
 
 
+Ref<Type> BinaryView::GetTypeById(const string& id)
+{
+	BNType* type = BNGetAnalysisTypeById(m_object, id.c_str());
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+QualifiedName BinaryView::GetTypeNameById(const string& id)
+{
+	BNQualifiedName name = BNGetAnalysisTypeNameById(m_object, id.c_str());
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+string BinaryView::GetTypeId(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* id = BNGetAnalysisTypeId(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	string result = id;
+	BNFreeString(id);
+	return result;
+}
+
+
 bool BinaryView::IsTypeAutoDefined(const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
@@ -1505,11 +1534,14 @@ bool BinaryView::IsTypeAutoDefined(const QualifiedName& name)
 }
 
 
-void BinaryView::DefineType(const QualifiedName& name, Ref<Type> type)
+QualifiedName BinaryView::DefineType(const string& id, const QualifiedName& defaultName, Ref<Type> type)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
-	BNDefineAnalysisType(m_object, &nameObj, type->GetObject());
+	BNQualifiedName nameObj = defaultName.GetAPIObject();
+	BNQualifiedName regName = BNDefineAnalysisType(m_object, id.c_str(), &nameObj, type->GetObject());
 	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName result = QualifiedName::FromAPIObject(&regName);
+	BNFreeQualifiedName(&regName);
+	return result;
 }
 
 
@@ -1521,11 +1553,9 @@ void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 }
 
 
-void BinaryView::UndefineType(const QualifiedName& name)
+void BinaryView::UndefineType(const string& id)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
-	BNUndefineAnalysisType(m_object, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	BNUndefineAnalysisType(m_object, id.c_str());
 }
 
 
@@ -1534,6 +1564,16 @@ void BinaryView::UndefineUserType(const QualifiedName& name)
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNUndefineUserAnalysisType(m_object, &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& newName)
+{
+	BNQualifiedName oldNameObj = oldName.GetAPIObject();
+	BNQualifiedName newNameObj = newName.GetAPIObject();
+	BNRenameAnalysisType(m_object, &oldNameObj, &newNameObj);
+	QualifiedName::FreeAPIObject(&oldNameObj);
+	QualifiedName::FreeAPIObject(&newNameObj);
 }
 
 

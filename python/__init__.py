@@ -51,6 +51,10 @@ def shutdown():
 	core.BNShutdown()
 
 
+def get_unique_identifier():
+	return core.BNGetUniqueIdentifierString()
+
+
 class _DestructionCallbackHandler(object):
 	def __init__(self):
 		self._cb = core.BNObjectDestructionCallbacks()

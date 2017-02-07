@@ -409,6 +409,8 @@ namespace BinaryNinja
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
+	std::string GetUniqueIdentifierString();
+
 	class QualifiedName
 	{
 		std::vector<std::string> m_name;
@@ -1027,11 +1029,15 @@ namespace BinaryNinja
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
 		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetTypeById(const std::string& id);
+		std::string GetTypeId(const QualifiedName& name);
+		QualifiedName GetTypeNameById(const std::string& id);
 		bool IsTypeAutoDefined(const QualifiedName& name);
-		void DefineType(const QualifiedName& name, Ref<Type> type);
+		QualifiedName DefineType(const std::string& id, const QualifiedName& defaultName, Ref<Type> type);
 		void DefineUserType(const QualifiedName& name, Ref<Type> type);
-		void UndefineType(const QualifiedName& name);
+		void UndefineType(const std::string& id);
 		void UndefineUserType(const QualifiedName& name);
+		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
@@ -1611,12 +1617,18 @@ namespace BinaryNinja
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
+
+ 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
+		static std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
+		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -1624,12 +1636,21 @@ namespace BinaryNinja
 	{
 	public:
 		NamedTypeReference(BNNamedTypeReference* nt);
-		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass,
+		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
 			const QualifiedName& name = QualifiedName());
 		BNNamedTypeReferenceClass GetTypeClass() const;
 		void SetTypeClass(BNNamedTypeReferenceClass cls);
+		std::string GetTypeId() const;
+		void SetTypeId(const std::string& id);
 		QualifiedName GetName() const;
 		void SetName(const QualifiedName& name);
+
+		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
+			const std::string& source, const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
 	};
 
 	struct StructureMember

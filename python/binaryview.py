@@ -2881,7 +2881,7 @@ class BinaryView(object):
 		:Example:
 
 			>>> type, name = bv.parse_type_string("int foo")
-			>>> bv.define_type(name, type)
+			>>> bv.define_user_type(name, type)
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 			>>>
@@ -2891,6 +2891,71 @@ class BinaryView(object):
 		if not obj:
 			return None
 		return types.Type(obj)
+
+	def get_type_by_id(self, id):
+		"""
+		``get_type_by_id`` returns the defined type whose unique identifier corresponds with the provided ``id``
+
+		:param str id: Unique identifier to lookup
+		:return: A :py:Class:`Type` or None if the type does not exist
+		:rtype: Type or None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> type_id = Type.generate_auto_type_id("source", name)
+			>>> bv.define_type(type_id, name, type)
+			>>> bv.get_type_by_id(type_id)
+			<type: int32_t>
+			>>>
+		"""
+		obj = core.BNGetAnalysisTypeById(self.handle, id)
+		if not obj:
+			return None
+		return types.Type(obj)
+
+	def get_type_name_by_id(self, id):
+		"""
+		``get_type_name_by_id`` returns the defined type name whose unique identifier corresponds with the provided ``id``
+
+		:param str id: Unique identifier to lookup
+		:return: A QualifiedName or None if the type does not exist
+		:rtype: QualifiedName or None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> type_id = Type.generate_auto_type_id("source", name)
+			>>> bv.define_type(type_id, name, type)
+			'foo'
+			>>> bv.get_type_name_by_id(type_id)
+			'foo'
+			>>>
+		"""
+		name = core.BNGetAnalysisTypeNameById(self.handle, id)
+		result = types.QualifiedName._from_core_struct(name)
+		core.BNFreeQualifiedName(name)
+		if len(result) == 0:
+			return None
+		return result
+
+	def get_type_id(self, name):
+		"""
+		``get_type_id`` returns the unique indentifier of the defined type whose name corresponds with the
+		provided ``name``
+
+		:param QualifiedName name: Type name to lookup
+		:return: The unique identifier of the type
+		:rtype: str
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> type_id = Type.generate_auto_type_id("source", name)
+			>>> registered_name = bv.define_type(type_id, name, type)
+			>>> bv.get_type_id(registered_name) == type_id
+			True
+			>>>
+		"""
+		name = types.QualifiedName(name)._get_core_struct()
+		return core.BNGetAnalysisTypeId(self.handle, name)
 
 	def is_type_auto_defined(self, name):
 		"""
@@ -2910,23 +2975,28 @@ class BinaryView(object):
 		name = types.QualifiedName(name)._get_core_struct()
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
 
-	def define_type(self, name, type_obj):
+	def define_type(self, type_id, default_name, type_obj):
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
-		the current :py:Class:`BinaryView`.
+		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
 
-		:param QualifiedName name: Name of the type to be registered
+		:param str type_id: Unique identifier for the automatically generated type
+		:param QualifiedName default_name: Name of the type to be registered
 		:param Type type_obj: Type object to be registered
-		:rtype: None
+		:return: Registered name of the type. May not be the same as the requested name if the user has renamed types.
+		:rtype: QualifiedName
 		:Example:
 
 			>>> type, name = bv.parse_type_string("int foo")
-			>>> bv.define_type(name, type)
-			>>> bv.get_type_by_name(name)
+			>>> registered_name = bv.define_type(Type.generate_auto_type_id("source", name), name, type)
+			>>> bv.get_type_by_name(registered_name)
 			<type: int32_t>
 		"""
-		name = types.QualifiedName(name)._get_core_struct()
-		core.BNDefineAnalysisType(self.handle, name, type_obj.handle)
+		name = types.QualifiedName(default_name)._get_core_struct()
+		reg_name = core.BNDefineAnalysisType(self.handle, type_id, name, type_obj.handle)
+		result = types.QualifiedName._from_core_struct(reg_name)
+		core.BNFreeQualifiedName(reg_name)
+		return result
 
 	def define_user_type(self, name, type_obj):
 		"""
@@ -2946,24 +3016,24 @@ class BinaryView(object):
 		name = types.QualifiedName(name)._get_core_struct()
 		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
 
-	def undefine_type(self, name):
+	def undefine_type(self, type_id):
 		"""
 		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
 
-		:param QualifiedName name: Name of type to be undefined
+		:param str type_id: Unique identifier of type to be undefined
 		:rtype: None
 		:Example:
 
 			>>> type, name = bv.parse_type_string("int foo")
-			>>> bv.define_type(name, type)
+			>>> type_id = Type.generate_auto_type_id("source", name)
+			>>> bv.define_type(type_id, name, type)
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
-			>>> bv.undefine_type(name)
+			>>> bv.undefine_type(type_id)
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		name = types.QualifiedName(name)._get_core_struct()
-		core.BNUndefineAnalysisType(self.handle, name)
+		core.BNUndefineAnalysisType(self.handle, type_id)
 
 	def undefine_user_type(self, name):
 		"""
@@ -2975,15 +3045,37 @@ class BinaryView(object):
 		:Example:
 
 			>>> type, name = bv.parse_type_string("int foo")
-			>>> bv.define_type(name, type)
+			>>> bv.define_user_type(name, type)
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
-			>>> bv.undefine_type(name)
+			>>> bv.undefine_user_type(name)
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
 		name = types.QualifiedName(name)._get_core_struct()
 		core.BNUndefineUserAnalysisType(self.handle, name)
+
+	def rename_type(self, old_name, new_name):
+		"""
+		``rename_type`` renames a type in the global list of types for the current :py:Class:`BinaryView`
+
+		:param QualifiedName old_name: Existing name of type to be renamed
+		:param QualifiedName new_name: New name of type to be renamed
+		:rtype: None
+		:Example:
+
+			>>> type, name = bv.parse_type_string("int foo")
+			>>> bv.define_user_type(name, type)
+			>>> bv.get_type_by_name("foo")
+			<type: int32_t>
+			>>> bv.rename_type("foo", "bar")
+			>>> bv.get_type_by_name("bar")
+			<type: int32_t>
+			>>>
+		"""
+		old_name = types.QualifiedName(old_name)._get_core_struct()
+		new_name = types.QualifiedName(new_name)._get_core_struct()
+		core.BNRenameAnalysisType(self.handle, old_name, new_name)
 
 	def find_next_data(self, start, data, flags = 0):
 		"""

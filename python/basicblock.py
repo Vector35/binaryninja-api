@@ -215,6 +215,8 @@ class BasicBlock(object):
 		"""
 		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+		if isinstance(color, HighlightStandardColor):
+			color = highlight.HighlightColor(color)
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
 
 	def set_user_highlight(self, color):
@@ -229,4 +231,6 @@ class BasicBlock(object):
 		"""
 		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+		if isinstance(color, HighlightStandardColor):
+			color = highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())

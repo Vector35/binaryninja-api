@@ -764,7 +764,9 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		if not isinstance(color, highlight.HighlightColor):
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+		if isinstance(color, HighlightStandardColor):
 			color = highlight.HighlightColor(color = color)
 		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
@@ -784,6 +786,8 @@ class Function(object):
 			arch = self.arch
 		if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+		if isinstance(color, HighlightStandardColor):
+			color = highlight.HighlightColor(color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 

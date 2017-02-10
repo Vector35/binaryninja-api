@@ -580,17 +580,10 @@ void Type::SetFunctionCanReturn(bool canReturn)
 string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	string result = BNGenerateAutoTypeId(source.c_str(), &nameObj);
+	char* str = BNGenerateAutoTypeId(source.c_str(), &nameObj);
+	string result = str;
 	QualifiedName::FreeAPIObject(&nameObj);
-	return result;
-}
-
-
-string Type::GenerateAutoPlatformTypeId(const QualifiedName& name)
-{
-	BNQualifiedName nameObj = name.GetAPIObject();
-	string result = BNGenerateAutoPlatformTypeId(&nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
 	return result;
 }
 
@@ -598,8 +591,19 @@ string Type::GenerateAutoPlatformTypeId(const QualifiedName& name)
 string Type::GenerateAutoDemangledTypeId(const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	string result = BNGenerateAutoDemangledTypeId(&nameObj);
+	char* str = BNGenerateAutoDemangledTypeId(&nameObj);
+	string result = str;
 	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
+	return result;
+}
+
+
+string Type::GetAutoDemangledTypeIdSource()
+{
+	char* str = BNGetAutoDemangledTypeIdSource();
+	string result = str;
+	BNFreeString(str);
 	return result;
 }
 
@@ -675,14 +679,6 @@ Ref<NamedTypeReference> NamedTypeReference::GenerateAutoTypeReference(BNNamedTyp
 	const string& source, const QualifiedName& name)
 {
 	string id = Type::GenerateAutoTypeId(source, name);
-	return new NamedTypeReference(cls, id, name);
-}
-
-
-Ref<NamedTypeReference> NamedTypeReference::GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
-	const QualifiedName& name)
-{
-	string id = Type::GenerateAutoPlatformTypeId(name);
 	return new NamedTypeReference(cls, id, name);
 }
 

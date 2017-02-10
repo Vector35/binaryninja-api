@@ -1039,6 +1039,8 @@ namespace BinaryNinja
 		void UndefineUserType(const QualifiedName& name);
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
 
+		void RegisterPlatformTypes(Platform* platform);
+
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
 		void Reanalyze();
@@ -1491,12 +1493,14 @@ namespace BinaryNinja
 			std::map<QualifiedName, Ref<Type>>& types,
 			std::map<QualifiedName, Ref<Type>>& variables,
 			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>());
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
 		bool ParseTypesFromSourceFile(const std::string& fileName,
 			std::map<QualifiedName, Ref<Type>>& types,
 			std::map<QualifiedName, Ref<Type>>& variables,
 			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>());
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
 
 		void RegisterCallingConvention(CallingConvention* cc);
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
@@ -1627,8 +1631,8 @@ namespace BinaryNinja
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
-		static std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
+		static std::string GetAutoDemangledTypeIdSource();
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -1647,8 +1651,6 @@ namespace BinaryNinja
 
 		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
 			const std::string& source, const QualifiedName& name);
-		static Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
-			const QualifiedName& name);
 		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
 			const QualifiedName& name);
 	};
@@ -2339,6 +2341,11 @@ namespace BinaryNinja
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
+
+		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
+		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
+		std::string GetAutoPlatformTypeIdSource();
 	};
 
 	class ScriptingOutputListener

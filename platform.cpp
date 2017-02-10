@@ -253,3 +253,31 @@ Ref<Platform> Platform::GetAssociatedPlatformByAddress(uint64_t& addr)
 		return nullptr;
 	return new Platform(platform);
 }
+
+
+string Platform::GenerateAutoPlatformTypeId(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* str = BNGenerateAutoPlatformTypeId(m_object, &nameObj);
+	string result = str;
+	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
+	return result;
+}
+
+
+Ref<NamedTypeReference> Platform::GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
+	const QualifiedName& name)
+{
+	string id = GenerateAutoPlatformTypeId(name);
+	return new NamedTypeReference(cls, id, name);
+}
+
+
+string Platform::GetAutoPlatformTypeIdSource()
+{
+	char* str = BNGetAutoPlatformTypeIdSource(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}

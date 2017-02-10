@@ -747,7 +747,8 @@ void Architecture::SetBinaryViewTypeConstant(const string& type, const string& n
 
 bool Architecture::ParseTypesFromSource(const string& source, const string& fileName,
 	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
-	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs)
+	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs,
+	const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -761,7 +762,7 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 	functions.clear();
 
 	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
-		&errorStr, includeDirList, includeDirs.size());
+		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)
@@ -789,7 +790,7 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 
 bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
 	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
-	string& errors, const vector<string>& includeDirs)
+	string& errors, const vector<string>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -803,7 +804,7 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<Qualifie
 	functions.clear();
 
 	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
-		includeDirList, includeDirs.size());
+		includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)

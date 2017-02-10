@@ -1820,8 +1820,12 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineUserAnalysisType(BNBinaryView* view, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNRenameAnalysisType(BNBinaryView* view, BNQualifiedName* oldName, BNQualifiedName* newName);
 	BINARYNINJACOREAPI char* BNGenerateAutoTypeId(const char* source, BNQualifiedName* name);
-	BINARYNINJACOREAPI char* BNGenerateAutoPlatformTypeId(BNQualifiedName* name);
+	BINARYNINJACOREAPI char* BNGenerateAutoPlatformTypeId(BNPlatform* platform, BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGenerateAutoDemangledTypeId(BNQualifiedName* name);
+	BINARYNINJACOREAPI char* BNGetAutoPlatformTypeIdSource(BNPlatform* platform);
+	BINARYNINJACOREAPI char* BNGetAutoDemangledTypeIdSource(void);
+
+	BINARYNINJACOREAPI void BNRegisterPlatformTypes(BNBinaryView* view, BNPlatform* platform);
 
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
@@ -2063,13 +2067,13 @@ extern "C"
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
-	                                           const char** includeDirs, size_t includeDirCount);
+		const char** includeDirs, size_t includeDirCount);
 	BINARYNINJACOREAPI bool BNParseTypesFromSource(BNArchitecture* arch, const char* source, const char* fileName,
-	                                               BNTypeParserResult* result, char** errors,
-	                                               const char** includeDirs, size_t includeDirCount);
+		BNTypeParserResult* result, char** errors, const char** includeDirs, size_t includeDirCount,
+		const char* autoTypeSource);
 	BINARYNINJACOREAPI bool BNParseTypesFromSourceFile(BNArchitecture* arch, const char* fileName,
-	                                                   BNTypeParserResult* result, char** errors,
-	                                                   const char** includeDirs, size_t includeDirCount);
+		BNTypeParserResult* result, char** errors, const char** includeDirs, size_t includeDirCount,
+		const char* autoTypeSource);
 	BINARYNINJACOREAPI void BNFreeTypeParserResult(BNTypeParserResult* result);
 
 	// Updates

@@ -25,6 +25,7 @@ import _binaryninjacore as core
 import startup
 import architecture
 import callingconvention
+import types
 
 
 class _PlatformMetaClass(type):
@@ -259,3 +260,14 @@ class Platform(object):
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
 		return Platform(None, handle = result), new_addr.value
+
+	def generate_auto_platform_type_id(self, name):
+		name = types.QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoPlatformTypeId(self.handle, name)
+
+	def generate_auto_platform_type_ref(self, type_class, name):
+		type_id = self.generate_auto_platform_type_id(name)
+		return types.NamedTypeReference(type_class, type_id, name)
+
+	def get_auto_platform_type_id_source(self):
+		return core.BNGetAutoPlatformTypeIdSource(self.handle)

@@ -446,14 +446,13 @@ class Type(object):
 		return core.BNGenerateAutoTypeId(source, name)
 
 	@classmethod
-	def generate_auto_platform_type_id(self, name):
-		name = QualifiedName(name)._get_core_struct()
-		return core.BNGenerateAutoTypeId(name)
-
-	@classmethod
 	def generate_auto_demangled_type_id(self, name):
 		name = QualifiedName(name)._get_core_struct()
-		return core.BNGenerateAutoTypeId(name)
+		return core.BNGenerateAutoDemangledTypeId(name)
+
+	@classmethod
+	def get_auto_demanged_type_id_source(self):
+		return core.BNGetAutoDemangledTypeIdSource()
 
 	def __setattr__(self, name, value):
 		try:
@@ -523,13 +522,8 @@ class NamedTypeReference(object):
 		return NamedTypeReference(type_class, type_id, name)
 
 	@classmethod
-	def generate_auto_platform_type_ref(self, type_class, source, name):
-		type_id = Type.generate_auto_platform_type_id(source, name)
-		return NamedTypeReference(type_class, type_id, name)
-
-	@classmethod
-	def generate_auto_demangled_type_ref(self, type_class, source, name):
-		type_id = Type.generate_auto_demangled_type_id(source, name)
+	def generate_auto_demangled_type_ref(self, type_class, name):
+		type_id = Type.generate_auto_demangled_type_id(name)
 		return NamedTypeReference(type_class, type_id, name)
 
 

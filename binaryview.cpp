@@ -1577,6 +1577,12 @@ void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& n
 }
 
 
+void BinaryView::RegisterPlatformTypes(Platform* platform)
+{
+	BNRegisterPlatformTypes(m_object, platform->GetObject());
+}
+
+
 bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);

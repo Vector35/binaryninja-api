@@ -1585,7 +1585,7 @@ class Architecture(object):
 		"""
 		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
 
-	def parse_types_from_source(self, source, filename=None, include_dirs=[]):
+	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -1593,6 +1593,7 @@ class Architecture(object):
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
+		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -1610,7 +1611,8 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
@@ -1630,13 +1632,14 @@ class Architecture(object):
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_types_from_source_file(self, filename, include_dirs=[]):
+	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
 
 		:param str filename: filename of file to be parsed
 		:param list(str) include_dirs: optional list of string filename include directories
+		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -1654,7 +1657,8 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:

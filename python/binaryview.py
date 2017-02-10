@@ -3077,6 +3077,22 @@ class BinaryView(object):
 		new_name = types.QualifiedName(new_name)._get_core_struct()
 		core.BNRenameAnalysisType(self.handle, old_name, new_name)
 
+	def register_platform_types(self, platform):
+		"""
+		``register_platform_types`` ensures that the platform-specific types for a :py:Class:`Platform` are available
+		for the current :py:Class:`BinaryView`. This is automatically performed when adding a new function or setting
+		the default platform.
+
+		:param Platform platform: Platform containing types to be registered
+		:rtype: None
+		:Example:
+
+			>>> platform = Platform["linux-x86"]
+			>>> bv.register_platform_types(platform)
+			>>>
+		"""
+		core.BNRegisterPlatformTypes(self.handle, platform.handle)
+
 	def find_next_data(self, start, data, flags = 0):
 		"""
 		``find_next_data`` searchs for the bytes in data starting at the virtual address ``start`` either, case-sensitive,

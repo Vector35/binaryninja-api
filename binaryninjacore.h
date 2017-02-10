@@ -1197,6 +1197,9 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);
 
 	BINARYNINJACOREAPI bool BNIsLicenseValidated(void);
+	BINARYNINJACOREAPI char* BNGetProduct(void);
+	BINARYNINJACOREAPI char* BNGetProductType(void);
+	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);

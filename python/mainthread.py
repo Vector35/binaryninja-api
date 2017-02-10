@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (c) 2015-2016 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,37 +18,42 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
-# Thanks to @theqlabs from arm.ninja for the nice writeup and idea for this plugin:
-# http://arm.ninja/2016/03/08/intro-to-binary-ninja-api/
-
-import sys
-from itertools import chain
-
-from binaryninja.binaryview import BinaryViewType
-from binaryninja.enums import LowLevelILOperation
+# Binary Ninja components
+import _binaryninjacore as core
+import scriptingprovider
 
 
-def print_syscalls(fileName):
-	""" Print Syscall numbers for a provided file """
-	bv = BinaryViewType.get_view_of_file(fileName)
-	calling_convention = bv.platform.system_call_convention
-	if calling_convention is None:
-		print('Error: No syscall convention available for {:s}'.format(bv.platform))
-		return
-
-	register = calling_convention.int_arg_regs[0]
-
-	for func in bv.functions:
-		syscalls = (il for il in chain.from_iterable(func.low_level_il)
-					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
-		for il in syscalls:
-			value = func.get_reg_value_at(il.address, register).value
-			print("System call address: {:#x} - {:d}".format(il.address, value))
+def execute_on_main_thread(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	obj = core.BNExecuteOnMainThread(0, action.callback)
+	if obj:
+		return scriptingprovider.MainThreadAction(obj)
+	return None
 
 
-if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print('Usage: {} <file>'.format(sys.argv[0]))
-	else:
-		print_syscalls(sys.argv[1])
+def execute_on_main_thread_and_wait(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNExecuteOnMainThreadAndWait(0, action.callback)
+
+
+def worker_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerEnqueue(0, action.callback)
+
+
+def worker_priority_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerPriorityEnqueue(0, action.callback)
+
+
+def worker_interactive_enqueue(func):
+	action = scriptingprovider._ThreadActionContext(func)
+	core.BNWorkerInteractiveEnqueue(0, action.callback)
+
+
+def get_worker_thread_count():
+	return core.BNGetWorkerThreadCount()
+
+
+def set_worker_thread_count(count):
+	core.BNSetWorkerThreadCount(count)

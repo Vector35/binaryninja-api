@@ -255,6 +255,127 @@ Ref<Platform> Platform::GetAssociatedPlatformByAddress(uint64_t& addr)
 }
 
 
+map<QualifiedName, Ref<Type>> Platform::GetTypes()
+{
+	size_t count;
+	BNQualifiedNameAndType* types = BNGetPlatformTypes(m_object, &count);
+
+	map<QualifiedName, Ref<Type>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
+		result[name] = new Type(BNNewTypeReference(types[i].type));
+	}
+
+	BNFreeTypeList(types, count);
+	return result;
+}
+
+
+map<QualifiedName, Ref<Type>> Platform::GetVariables()
+{
+	size_t count;
+	BNQualifiedNameAndType* types = BNGetPlatformVariables(m_object, &count);
+
+	map<QualifiedName, Ref<Type>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
+		result[name] = new Type(BNNewTypeReference(types[i].type));
+	}
+
+	BNFreeTypeList(types, count);
+	return result;
+}
+
+
+map<QualifiedName, Ref<Type>> Platform::GetFunctions()
+{
+	size_t count;
+	BNQualifiedNameAndType* types = BNGetPlatformFunctions(m_object, &count);
+
+	map<QualifiedName, Ref<Type>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
+		result[name] = new Type(BNNewTypeReference(types[i].type));
+	}
+
+	BNFreeTypeList(types, count);
+	return result;
+}
+
+
+map<uint32_t, QualifiedNameAndType> Platform::GetSystemCalls()
+{
+	size_t count;
+	BNSystemCallInfo* calls = BNGetPlatformSystemCalls(m_object, &count);
+
+	map<uint32_t, QualifiedNameAndType> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		QualifiedNameAndType nt;
+		nt.name = QualifiedName::FromAPIObject(&calls[i].name);
+		nt.type = new Type(BNNewTypeReference(calls[i].type));
+		result[calls[i].number] = nt;
+	}
+
+	BNFreeSystemCallList(calls, count);
+	return result;
+}
+
+
+Ref<Type> Platform::GetTypeByName(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNType* type = BNGetPlatformTypeByName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+Ref<Type> Platform::GetVariableByName(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNType* type = BNGetPlatformVariableByName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+Ref<Type> Platform::GetFunctionByName(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNType* type = BNGetPlatformFunctionByName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+string Platform::GetSystemCallName(uint32_t n)
+{
+	char* str = BNGetPlatformSystemCallName(m_object, n);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+Ref<Type> Platform::GetSystemCallType(uint32_t n)
+{
+	BNType* type = BNGetPlatformSystemCallType(m_object, n);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
 string Platform::GenerateAutoPlatformTypeId(const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();

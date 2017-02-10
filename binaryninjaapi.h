@@ -2342,6 +2342,16 @@ namespace BinaryNinja
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		std::map<QualifiedName, Ref<Type>> GetVariables();
+		std::map<QualifiedName, Ref<Type>> GetFunctions();
+		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetVariableByName(const QualifiedName& name);
+		Ref<Type> GetFunctionByName(const QualifiedName& name);
+		std::string GetSystemCallName(uint32_t n);
+		Ref<Type> GetSystemCallType(uint32_t n);
+
 		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
 		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
 			const QualifiedName& name);

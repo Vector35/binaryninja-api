@@ -101,6 +101,8 @@ const vector<DisassemblyTextLine>& FunctionGraphBlock::GetLines()
 			token.value = lines[i].tokens[j].value;
 			token.size = lines[i].tokens[j].size;
 			token.operand = lines[i].tokens[j].operand;
+			token.context = lines[i].tokens[j].context;
+			token.address = lines[i].tokens[j].address;
 			line.tokens.push_back(token);
 		}
 		result.push_back(line);

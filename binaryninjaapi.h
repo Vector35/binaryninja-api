@@ -277,6 +277,7 @@ namespace BinaryNinja
 	class MainThreadAction;
 	class MainThreadActionHandler;
 	class InteractionHandler;
+	class QualifiedName;
 	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
@@ -371,7 +372,7 @@ namespace BinaryNinja
 	bool DemangleMS(Architecture* arch,
 	                const std::string& mangledName,
 	                Type** outType,
-	                std::vector<std::string>& outVarName);
+	                QualifiedName& outVarName);
 
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
@@ -410,6 +411,53 @@ namespace BinaryNinja
 
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
+
+	std::string GetUniqueIdentifierString();
+
+	class QualifiedName
+	{
+		std::vector<std::string> m_name;
+
+	public:
+		QualifiedName();
+		QualifiedName(const std::string& name);
+		QualifiedName(const std::vector<std::string>& name);
+		QualifiedName(const QualifiedName& name);
+
+		QualifiedName& operator=(const std::string& name);
+		QualifiedName& operator=(const std::vector<std::string>& name);
+		QualifiedName& operator=(const QualifiedName& name);
+
+		bool operator==(const QualifiedName& other) const;
+		bool operator!=(const QualifiedName& other) const;
+		bool operator<(const QualifiedName& other) const;
+
+		QualifiedName operator+(const QualifiedName& other) const;
+
+		std::string& operator[](size_t i);
+		const std::string& operator[](size_t i) const;
+		std::vector<std::string>::iterator begin();
+		std::vector<std::string>::iterator end();
+		std::vector<std::string>::const_iterator begin() const;
+		std::vector<std::string>::const_iterator end() const;
+		std::string& front();
+		const std::string& front() const;
+		std::string& back();
+		const std::string& back() const;
+		void insert(std::vector<std::string>::iterator loc, const std::string& name);
+		void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
+			std::vector<std::string>::iterator e);
+		void erase(std::vector<std::string>::iterator i);
+		void clear();
+		void push_back(const std::string& name);
+		size_t size() const;
+
+		std::string GetString() const;
+
+		BNQualifiedName GetAPIObject() const;
+		static void FreeAPIObject(BNQualifiedName* name);
+		static QualifiedName FromAPIObject(BNQualifiedName* name);
+	};
 
 	class DataBuffer
 	{
@@ -593,6 +641,8 @@ namespace BinaryNinja
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
+		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 
 	public:
 		BinaryDataNotification();
@@ -611,6 +661,8 @@ namespace BinaryNinja
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
+		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
 	};
 
 	class FileAccessor
@@ -682,10 +734,15 @@ namespace BinaryNinja
 		std::string text;
 		uint64_t value;
 		size_t size, operand;
+		BNInstructionTextTokenContext context;
+		uint64_t address;
 
 		InstructionTextToken();
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND);
+		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
+			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
+			size_t operand = BN_INVALID_OPERAND);
 	};
 
 	struct DisassemblyTextLine
@@ -749,7 +806,7 @@ namespace BinaryNinja
 		uint64_t align, entrySize;
 	};
 
-	struct NameAndType;
+	struct QualifiedNameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -971,15 +1028,21 @@ namespace BinaryNinja
 		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
 			DisassemblySettings* settings);
 
-		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
+		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 
-		std::map<std::string, Ref<Type>> GetTypes();
-		Ref<Type> GetTypeByName(const std::string& name);
-		bool IsTypeAutoDefined(const std::string& name);
-		void DefineType(const std::string& name, Ref<Type> type);
-		void DefineUserType(const std::string& name, Ref<Type> type);
-		void UndefineType(const std::string& name);
-		void UndefineUserType(const std::string& name);
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetTypeById(const std::string& id);
+		std::string GetTypeId(const QualifiedName& name);
+		QualifiedName GetTypeNameById(const std::string& id);
+		bool IsTypeAutoDefined(const QualifiedName& name);
+		QualifiedName DefineType(const std::string& id, const QualifiedName& defaultName, Ref<Type> type);
+		void DefineUserType(const QualifiedName& name, Ref<Type> type);
+		void UndefineType(const std::string& id);
+		void UndefineUserType(const QualifiedName& name);
+		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
+
+		void RegisterPlatformTypes(Platform* platform);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
@@ -998,6 +1061,7 @@ namespace BinaryNinja
 		void RemoveUserSegment(uint64_t start, uint64_t length);
 		std::vector<Segment> GetSegments();
 		bool GetSegmentAt(uint64_t addr, Segment& result);
+		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
@@ -1429,13 +1493,17 @@ namespace BinaryNinja
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-		                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
-		                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
-		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<std::string, Ref<Type>>& types,
-		                              std::map<std::string, Ref<Type>>& variables,
-		                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
+		bool ParseTypesFromSourceFile(const std::string& fileName,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
 
 		void RegisterCallingConvention(CallingConvention* cc);
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
@@ -1498,12 +1566,18 @@ namespace BinaryNinja
 	};
 
 	class Structure;
-	class UnknownType;
+	class NamedTypeReference;
 	class Enumeration;
 
 	struct NameAndType
 	{
 		std::string name;
+		Ref<Type> type;
+	};
+
+	struct QualifiedNameAndType
+	{
+		QualifiedName name;
 		Ref<Type> type;
 	};
 
@@ -1526,16 +1600,20 @@ namespace BinaryNinja
 		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
-		Ref<UnknownType> GetUnknownType() const;
+		Ref<NamedTypeReference> GetNamedTypeReference() const;
 
 		uint64_t GetElementCount() const;
 
 		void SetFunctionCanReturn(bool canReturn);
 
 		std::string GetString() const;
-		std::string GetTypeAndName(const std::vector<std::string>& name) const;
+		std::string GetTypeAndName(const QualifiedName& name) const;
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
+
+		std::vector<InstructionTextToken> GetTokens() const;
+		std::vector<InstructionTextToken> GetTokensBeforeName() const;
+		std::vector<InstructionTextToken> GetTokensAfterName() const;
 
 		Ref<Type> Duplicate() const;
 
@@ -1544,7 +1622,10 @@ namespace BinaryNinja
 		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
-		static Ref<Type> UnknownNamedType(UnknownType* unknwn);
+		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
@@ -1552,15 +1633,29 @@ namespace BinaryNinja
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 
-		static std::string GetQualifiedName(const std::vector<std::string>& names);
+ 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
+		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
+		static std::string GetAutoDemangledTypeIdSource();
 	};
 
-	class UnknownType: public CoreRefCountObject<BNUnknownType, BNNewUnknownTypeReference, BNFreeUnknownType>
+	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
+		BNFreeNamedTypeReference>
 	{
 	public:
-		UnknownType(BNUnknownType* s, std::vector<std::string> name = {});
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
+		NamedTypeReference(BNNamedTypeReference* nt);
+		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
+			const QualifiedName& name = QualifiedName());
+		BNNamedTypeReferenceClass GetTypeClass() const;
+		void SetTypeClass(BNNamedTypeReferenceClass cls);
+		std::string GetTypeId() const;
+		void SetTypeId(const std::string& id);
+		QualifiedName GetName() const;
+		void SetName(const QualifiedName& name);
+
+		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
+			const std::string& source, const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
 	};
 
 	struct StructureMember
@@ -1573,13 +1668,14 @@ namespace BinaryNinja
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	public:
+		Structure();
 		Structure(BNStructure* s);
 
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
+		void SetWidth(size_t width);
 		size_t GetAlignment() const;
+		void SetAlignment(size_t align);
 		bool IsPacked() const;
 		void SetPacked(bool packed);
 		bool IsUnion() const;
@@ -1588,6 +1684,7 @@ namespace BinaryNinja
 		void AddMember(Type* type, const std::string& name);
 		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
 		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, Type* type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -1602,13 +1699,12 @@ namespace BinaryNinja
 	public:
 		Enumeration(BNEnumeration* e);
 
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
-
 		std::vector<EnumerationMember> GetMembers() const;
 
 		void AddMember(const std::string& name);
 		void AddMemberWithValue(const std::string& name, uint64_t value);
+		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
@@ -2248,6 +2344,21 @@ namespace BinaryNinja
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
+
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		std::map<QualifiedName, Ref<Type>> GetVariables();
+		std::map<QualifiedName, Ref<Type>> GetFunctions();
+		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetVariableByName(const QualifiedName& name);
+		Ref<Type> GetFunctionByName(const QualifiedName& name);
+		std::string GetSystemCallName(uint32_t n);
+		Ref<Type> GetSystemCallType(uint32_t n);
+
+		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
+		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
+		std::string GetAutoPlatformTypeIdSource();
 	};
 
 	class ScriptingOutputListener

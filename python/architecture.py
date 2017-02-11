@@ -364,7 +364,7 @@ class Architecture(object):
 
 	def __setattr__(self, name, value):
 		if ((name == "name") or (name == "endianness") or (name == "address_size") or
-		    (name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
+			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
 			raise AttributeError("attribute '%s' is read only" % name)
 		else:
 			try:
@@ -467,6 +467,8 @@ class Architecture(object):
 				token_buf[i].value = tokens[i].value
 				token_buf[i].size = tokens[i].size
 				token_buf[i].operand = tokens[i].operand
+				token_buf[i].context = tokens[i].context
+				token_buf[i].address = tokens[i].address
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
@@ -1148,7 +1150,9 @@ class Architecture(object):
 			value = tokens[i].value
 			size = tokens[i].size
 			operand = tokens[i].operand
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand))
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -1581,7 +1585,7 @@ class Architecture(object):
 		"""
 		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
 
-	def parse_types_from_source(self, source, filename=None, include_dirs=[]):
+	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -1589,8 +1593,9 @@ class Architecture(object):
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult,str)
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
@@ -1606,32 +1611,37 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (types.TypeParserResult(type_dict, variables, functions), error_str)
+		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_types_from_source_file(self, filename, include_dirs=[]):
+	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
 
 		:param str filename: filename of file to be parsed
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult, str)
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> file = "/Users/binja/tmp.c"
@@ -1647,22 +1657,26 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			type_dict[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (types.TypeParserResult(type_dict, variables, functions), error_str)
+		return types.TypeParserResult(type_dict, variables, functions)
 
 	def register_calling_convention(self, cc):
 		"""

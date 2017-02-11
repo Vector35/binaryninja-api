@@ -257,3 +257,12 @@ void BinaryNinja::SetWorkerThreadCount(size_t count)
 {
 	BNSetWorkerThreadCount(count);
 }
+
+
+string BinaryNinja::GetUniqueIdentifierString()
+{
+	char* str = BNGetUniqueIdentifierString();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}

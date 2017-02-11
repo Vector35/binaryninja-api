@@ -26,7 +26,7 @@ import ctypes
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType)
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext)
 import architecture
 import highlight
 import associateddatastore
@@ -669,7 +669,9 @@ class Function(object):
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].tokens[j].context
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
@@ -920,7 +922,9 @@ class FunctionGraphBlock(object):
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].tokens[j].context
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -970,7 +974,9 @@ class FunctionGraphBlock(object):
 					value = lines[i].tokens[j].value
 					size = lines[i].tokens[j].size
 					operand = lines[i].tokens[j].operand
-					tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+					context = lines[i].tokens[j].context
+					address = lines[i].tokens[j].address
+					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 				yield DisassemblyTextLine(addr, tokens)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
@@ -1241,12 +1247,15 @@ class InstructionTextToken(object):
 		========================== ============================================
 
 	"""
-	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff):
+	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
+		context = InstructionTextTokenContext.NoTokenContext, address = 0):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
 		self.size = size
 		self.operand = operand
+		self.context = InstructionTextTokenContext(context)
+		self.address = address
 
 	def __str__(self):
 		return self.text

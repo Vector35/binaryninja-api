@@ -6,7 +6,7 @@ using namespace std;
 bool DemangleMS(Architecture* arch,
                 const std::string& mangledName,
                 Type** outType,
-                std::vector<std::string>& outVarName)
+                QualifiedName& outVarName)
 {
 	BNType* localType = (*outType)->GetObject();
 	char** localVarName = nullptr;
@@ -26,7 +26,7 @@ bool DemangleMS(Architecture* arch,
 bool DemangleGNU3(Architecture* arch,
                 const std::string& mangledName,
                 Type** outType,
-                std::vector<std::string>& outVarName)
+                QualifiedName& outVarName)
 {
 	BNType* localType = (*outType)->GetObject();
 	char** localVarName = nullptr;

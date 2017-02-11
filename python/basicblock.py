@@ -200,7 +200,9 @@ class BasicBlock(object):
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].tokens[j].context
+				address = lines[i].tokens[j].address
+				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 			result.append(function.DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result

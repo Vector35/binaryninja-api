@@ -42,7 +42,7 @@ QT_PLUGIN_PATH=./qt ./binaryninja
  - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python. Only a 64-bit Python 2.7 is supported at this time. Additionally, the [personal][purchase] edition does not support headless operation.
 
 [known issues]: https://github.com/Vector35/binaryninja-api/issues?q=is%3Aissue
-[libcurl-compat]: https://aur.archlinux.org/packages/libcurl-compat/
+[libcurl-compat]: https://www.archlinux.org/packages/community/x86_64/libcurl-compat/
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html

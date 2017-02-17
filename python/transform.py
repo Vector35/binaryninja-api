@@ -131,6 +131,16 @@ class Transform(object):
 	def __repr__(self):
 		return "<transform: %s>" % self.name
 
+	def __eq__(self, value):
+		if not isinstance(value, Transform):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Transform):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	def _get_parameters(self, ctxt, count):
 		try:
 			count[0] = len(self.parameters)

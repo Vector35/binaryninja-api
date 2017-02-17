@@ -177,6 +177,16 @@ class Function(object):
 			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 		core.BNFreeFunction(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, Function):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Function):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@classmethod
 	def _unregister(cls, func):
 		handle = ctypes.cast(func, ctypes.c_void_p)
@@ -856,6 +866,16 @@ class FunctionGraphBlock(object):
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, FunctionGraphBlock):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FunctionGraphBlock):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def basic_block(self):
 		"""Basic block associated with this part of the function graph (read-only)"""
@@ -1029,6 +1049,16 @@ class FunctionGraph(object):
 	def __del__(self):
 		self.abort()
 		core.BNFreeFunctionGraph(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, FunctionGraph):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FunctionGraph):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def function(self):

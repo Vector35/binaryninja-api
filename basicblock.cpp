@@ -108,6 +108,12 @@ uint64_t BasicBlock::GetLength() const
 }
 
 
+size_t BasicBlock::GetIndex() const
+{
+	return BNGetBasicBlockIndex(m_object);
+}
+
+
 vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 {
 	size_t count;
@@ -118,12 +124,30 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	{
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
-		edge.target = array[i].target;
-		edge.arch = array[i].arch ? new CoreArchitecture(array[i].arch) : nullptr;
+		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		result.push_back(edge);
 	}
 
-	BNFreeBasicBlockOutgoingEdgeList(array);
+	BNFreeBasicBlockEdgeList(array, count);
+	return result;
+}
+
+
+vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
+{
+	size_t count;
+	BNBasicBlockEdge* array = BNGetBasicBlockIncomingEdges(m_object, &count);
+
+	vector<BasicBlockEdge> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		BasicBlockEdge edge;
+		edge.type = array[i].type;
+		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
+		result.push_back(edge);
+	}
+
+	BNFreeBasicBlockEdgeList(array, count);
 	return result;
 }
 

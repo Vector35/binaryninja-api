@@ -253,6 +253,16 @@ class LowLevelILFunction(object):
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, LowLevelILFunction):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, LowLevelILFunction):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def current_address(self):
 		"""Current IL Address (read/write)"""

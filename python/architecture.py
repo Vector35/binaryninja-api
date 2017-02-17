@@ -333,6 +333,16 @@ class Architecture(object):
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 
+	def __eq__(self, value):
+		if not isinstance(value, Architecture):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Architecture):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def full_width_regs(self):
 		"""List of full width register strings (read-only)"""

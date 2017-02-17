@@ -793,8 +793,7 @@ extern "C"
 	struct BNBasicBlockEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		BNArchitecture* arch;
+		BNBasicBlock* target;
 	};
 
 	struct BNPoint
@@ -1726,8 +1725,10 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetBasicBlockEnd(BNBasicBlock* block);
 	BINARYNINJACOREAPI uint64_t BNGetBasicBlockLength(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlockEdge* BNGetBasicBlockOutgoingEdges(BNBasicBlock* block, size_t* count);
-	BINARYNINJACOREAPI void BNFreeBasicBlockOutgoingEdgeList(BNBasicBlockEdge* edges);
+	BINARYNINJACOREAPI BNBasicBlockEdge* BNGetBasicBlockIncomingEdges(BNBasicBlock* block, size_t* count);
+	BINARYNINJACOREAPI void BNFreeBasicBlockEdgeList(BNBasicBlockEdge* edges, size_t count);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
+	BINARYNINJACOREAPI size_t BNGetBasicBlockIndex(BNBasicBlock* block);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);

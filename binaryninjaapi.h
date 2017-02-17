@@ -51,6 +51,8 @@ namespace BinaryNinja
 		RefCountObject(): m_refs(0) {}
 		virtual ~RefCountObject() {}
 
+		RefCountObject* GetObject() { return this; }
+
 		void AddRef()
 		{
 #ifdef WIN32
@@ -101,7 +103,7 @@ namespace BinaryNinja
 		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~CoreRefCountObject() {}
 
-		T* GetObject() { return m_object; }
+		T* GetObject() const { return m_object; }
 
 		void AddRef()
 		{
@@ -158,7 +160,7 @@ namespace BinaryNinja
 		StaticCoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~StaticCoreRefCountObject() {}
 
-		T* GetObject() { return m_object; }
+		T* GetObject() const { return m_object; }
 
 		void AddRef()
 		{
@@ -244,6 +246,36 @@ namespace BinaryNinja
 		bool operator!() const
 		{
 			return m_obj == NULL;
+		}
+
+		bool operator==(const T* obj) const
+		{
+			return m_obj->GetObject() == obj->GetObject();
+		}
+
+		bool operator==(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() == obj.m_obj->GetObject();
+		}
+
+		bool operator!=(const T* obj) const
+		{
+			return m_obj->GetObject() != obj->GetObject();
+		}
+
+		bool operator!=(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() != obj.m_obj->GetObject();
+		}
+
+		bool operator<(const T* obj) const
+		{
+			return m_obj->GetObject() < obj->GetObject();
+		}
+
+		bool operator<(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() < obj.m_obj->GetObject();
 		}
 
 		T* GetPtr() const
@@ -1728,8 +1760,7 @@ namespace BinaryNinja
 	struct BasicBlockEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		Ref<Architecture> arch;
+		Ref<BasicBlock> target;
 	};
 
 	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
@@ -1744,7 +1775,10 @@ namespace BinaryNinja
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;
 
+		size_t GetIndex() const;
+
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
+		std::vector<BasicBlockEdge> GetIncomingEdges() const;
 		bool HasUndeterminedOutgoingEdges() const;
 
 		void MarkRecentUse();

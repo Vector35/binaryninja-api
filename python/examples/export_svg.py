@@ -80,6 +80,10 @@ def render_svg(function):
 				fill: none;
 				stroke-width: 1px;
 			}
+			.back_edge {
+				fill: none;
+				stroke-width: 2px;
+			}
 			.UnconditionalBranch, .IndirectBranch {
 				stroke: rgb(128, 198, 233);
 				color: rgb(128, 198, 233);
@@ -197,7 +201,10 @@ def render_svg(function):
 				points += str(x * widthconst) + "," + str(y * heightconst) + " "
 			x, y = edge.points[-1]
 			points += str(x * widthconst) + "," + str(y * heightconst + 0) + " "
-			edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=BranchType(edge.type).name, points=points)
+			if edge.back_edge:
+				edges += '		<polyline class="back_edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=BranchType(edge.type).name, points=points)
+			else:
+				edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(type=BranchType(edge.type).name, points=points)
 	output += ' ' + edges + '\n'
 	output += '	</g>\n'
 	output += '</svg></html>'

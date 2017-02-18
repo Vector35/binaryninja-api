@@ -847,13 +847,19 @@ class DisassemblyTextLine(object):
 
 
 class FunctionGraphEdge(object):
-	def __init__(self, branch_type, target, points):
+	def __init__(self, branch_type, source, target, points):
 		self.type = BranchType(branch_type)
+		self.source = source
 		self.target = target
 		self.points = points
 
 	def __repr__(self):
 		return "<%s: %s>" % (self.type.name, repr(self.target))
+
+	@property
+	def back_edge(self):
+		"""Whether the edge is a back edge (end of a loop)"""
+		return self.target in self.source.basic_block.dominators
 
 
 class FunctionGraphBlock(object):
@@ -967,7 +973,7 @@ class FunctionGraphBlock(object):
 			points = []
 			for j in xrange(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FunctionGraphEdge(branch_type, target, points))
+			result.append(FunctionGraphEdge(branch_type, self, target, points))
 		core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
 		return result
 

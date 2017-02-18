@@ -1802,6 +1802,8 @@ namespace BinaryNinja
 		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
 			uint8_t mix, uint8_t alpha = 255);
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+
+		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
 	};
 
 	struct StackVariable

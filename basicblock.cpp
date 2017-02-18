@@ -345,3 +345,9 @@ void BasicBlock::SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uin
 	hc.alpha = alpha;
 	SetUserBasicBlockHighlight(hc);
 }
+
+
+bool BasicBlock::IsBackEdge(BasicBlock* source, BasicBlock* target)
+{
+	return source->GetDominators().count(target) != 0;
+}

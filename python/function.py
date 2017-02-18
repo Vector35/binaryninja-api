@@ -847,16 +847,13 @@ class DisassemblyTextLine(object):
 
 
 class FunctionGraphEdge(object):
-	def __init__(self, branch_type, arch, target, points):
+	def __init__(self, branch_type, target, points):
 		self.type = BranchType(branch_type)
-		self.arch = arch
 		self.target = target
 		self.points = points
 
 	def __repr__(self):
-		if self.arch:
-			return "<%s: %s@%#x>" % (self.type.name, self.arch.name, self.target)
-		return "<%s: %#x>" % (self.type, self.target)
+		return "<%s: %s>" % (self.type.name, repr(self.target))
 
 
 class FunctionGraphBlock(object):
@@ -958,13 +955,19 @@ class FunctionGraphBlock(object):
 		for i in xrange(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
-			arch = None
-			if edges[i].arch is not None:
-				arch = architecture.Architecture(edges[i].arch)
+			if target:
+				func = core.BNGetBasicBlockFunction(target)
+				if func is None:
+					core.BNFreeBasicBlock(target)
+					target = None
+				else:
+					target = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+						core.BNNewBasicBlockReference(target))
+					core.BNFreeFunction(func)
 			points = []
 			for j in xrange(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FunctionGraphEdge(branch_type, arch, target, points))
+			result.append(FunctionGraphEdge(branch_type, target, points))
 		core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
 		return result
 

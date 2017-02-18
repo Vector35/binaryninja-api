@@ -805,8 +805,7 @@ extern "C"
 	struct BNFunctionGraphEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		BNArchitecture* arch;
+		BNBasicBlock* target;
 		BNPoint* points;
 		size_t pointCount;
 	};
@@ -1729,6 +1728,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlockEdgeList(BNBasicBlockEdge* edges, size_t count);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
 	BINARYNINJACOREAPI size_t BNGetBasicBlockIndex(BNBasicBlock* block);
+	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockDominators(BNBasicBlock* block, size_t* count);
+	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockStrictDominators(BNBasicBlock* block, size_t* count);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetBasicBlockImmediateDominator(BNBasicBlock* block);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);

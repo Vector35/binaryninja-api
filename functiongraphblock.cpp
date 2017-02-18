@@ -128,8 +128,7 @@ const vector<FunctionGraphEdge>& FunctionGraphBlock::GetOutgoingEdges()
 	{
 		FunctionGraphEdge edge;
 		edge.type = edges[i].type;
-		edge.target = edges[i].target;
-		edge.arch = edges[i].arch ? new CoreArchitecture(edges[i].arch) : nullptr;
+		edge.target = edges[i].target ? new BasicBlock(BNNewBasicBlockReference(edges[i].target)) : nullptr;
 		edge.points.insert(edge.points.begin(), &edges[i].points[0], &edges[i].points[edges[i].pointCount]);
 		result.push_back(edge);
 	}

@@ -1781,6 +1781,10 @@ namespace BinaryNinja
 		std::vector<BasicBlockEdge> GetIncomingEdges() const;
 		bool HasUndeterminedOutgoingEdges() const;
 
+		std::set<Ref<BasicBlock>> GetDominators() const;
+		std::set<Ref<BasicBlock>> GetStrictDominators() const;
+		Ref<BasicBlock> GetImmediateDominator() const;
+
 		void MarkRecentUse();
 
 		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
@@ -1970,8 +1974,7 @@ namespace BinaryNinja
 	struct FunctionGraphEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		Ref<Architecture> arch;
+		Ref<BasicBlock> target;
 		std::vector<BNPoint> points;
 	};
 

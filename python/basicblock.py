@@ -134,6 +134,36 @@ class BasicBlock(object):
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
 	@property
+	def dominators(self):
+		"""List of dominators for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominators(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def strict_dominators(self):
+		"""List of strict dominators for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def immediate_dominator(self):
+		"""Immediate dominator of this basic block (read-only)"""
+		result = core.BNGetBasicBlockImmediateDominator(self.handle)
+		if not result:
+			return None
+		return BasicBlock(self.view, result)
+
+	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
 		return self.function.get_block_annotations(self.arch, self.start)

@@ -158,6 +158,43 @@ bool BasicBlock::HasUndeterminedOutgoingEdges() const
 }
 
 
+set<Ref<BasicBlock>> BasicBlock::GetDominators() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominators(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetStrictDominators() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockStrictDominators(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+Ref<BasicBlock> BasicBlock::GetImmediateDominator() const
+{
+	BNBasicBlock* result = BNGetBasicBlockImmediateDominator(m_object);
+	if (!result)
+		return nullptr;
+	return new BasicBlock(result);
+}
+
+
 void BasicBlock::MarkRecentUse()
 {
 	BNMarkBasicBlockAsRecentlyUsed(m_object);

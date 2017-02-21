@@ -170,6 +170,28 @@ class BasicBlock(object):
 		return BasicBlock(self.view, result)
 
 	@property
+	def dominator_tree_children(self):
+		"""List of child blocks in the dominator tree for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def dominance_frontier(self):
+		"""Dominance frontier for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
 		return self.function.get_block_annotations(self.arch, self.start)
@@ -207,6 +229,21 @@ class BasicBlock(object):
 	@highlight.setter
 	def highlight(self, value):
 		self.set_user_highlight(value)
+
+	@classmethod
+	def get_iterated_dominance_frontier(self, blocks):
+		if len(blocks) == 0:
+			return []
+		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
+		for i in xrange(len(blocks)):
+			block_set[i] = blocks[i].handle
+		count = ctypes.c_ulonglong()
+		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(blocks[0].view, core.BNNewBasicBlockReference(out_blocks[i])))
+		core.BNFreeBasicBlockList(out_blocks, count.value)
+		return result
 
 	def __setattr__(self, name, value):
 		try:

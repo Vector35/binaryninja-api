@@ -1784,6 +1784,9 @@ namespace BinaryNinja
 		std::set<Ref<BasicBlock>> GetDominators() const;
 		std::set<Ref<BasicBlock>> GetStrictDominators() const;
 		Ref<BasicBlock> GetImmediateDominator() const;
+		std::set<Ref<BasicBlock>> GetDominatorTreeChildren() const;
+		std::set<Ref<BasicBlock>> GetDominanceFrontier() const;
+		static std::set<Ref<BasicBlock>> GetIteratedDominanceFrontier(const std::set<Ref<BasicBlock>>& blocks);
 
 		void MarkRecentUse();
 

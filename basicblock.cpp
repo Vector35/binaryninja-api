@@ -195,6 +195,54 @@ Ref<BasicBlock> BasicBlock::GetImmediateDominator() const
 }
 
 
+set<Ref<BasicBlock>> BasicBlock::GetDominatorTreeChildren() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominatorTreeChildren(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetDominanceFrontier() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominanceFrontier(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetIteratedDominanceFrontier(const set<Ref<BasicBlock>>& blocks)
+{
+	BNBasicBlock** blockSet = new BNBasicBlock*[blocks.size()];
+	size_t i = 0;
+	for (auto& j : blocks)
+		blockSet[i++] = j->GetObject();
+
+	size_t count;
+	BNBasicBlock** resultBlocks = BNGetBasicBlockIteratedDominanceFrontier(blockSet, blocks.size(), &count);
+	delete[] blockSet;
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(resultBlocks[i])));
+
+	BNFreeBasicBlockList(resultBlocks, count);
+	return result;
+}
+
+
 void BasicBlock::MarkRecentUse()
 {
 	BNMarkBasicBlockAsRecentlyUsed(m_object);

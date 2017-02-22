@@ -110,7 +110,26 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_TRAP: [("value", "int")],
 		LowLevelILOperation.LLIL_UNDEF: [],
 		LowLevelILOperation.LLIL_UNIMPL: [],
-		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")]
+		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg"), ("index", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg"), ("index", "int"), ("dest", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg", "index", "int")],
+		LowLevelILOperation.LLIL_REG_SSA: [("src", "reg"), ("index", "int")],
+		LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [("full_reg", "reg"), ("index", "int"), ("src", "reg")],
+		LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag"), ("index", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag"), ("index", "int")],
+		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag"), ("index", "int"), ("bit", "int")],
+		LowLevelILOperation.LLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
+		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg"), ("index", "int"), ("src_memory", "int")],
+		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("dest", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg"), ("index", "int"), ("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "reg"), ("index", "int"), ("src", "flag_ssa_list")],
+		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):
@@ -142,16 +161,41 @@ class LowLevelILInstruction(object):
 				else:
 					value = func.arch.get_reg_name(instr.operands[i])
 			elif operand_type == "flag":
-				value = func.arch.get_flag_name(instr.operands[i])
+				if (instr.operands[i] & 0x80000000) != 0:
+					value = instr.operands[i]
+				else:
+					value = func.arch.get_flag_name(instr.operands[i])
 			elif operand_type == "cond":
 				value = LowLevelILFlagCondition(instr.operands[i])
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
-				operands = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				value = []
 				for i in xrange(count.value):
-					value.append(operands[i])
-				core.BNLowLevelILFreeOperandList(operands)
+					value.append(operand_list[i])
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				value = []
+				for i in xrange(count.value / 2):
+					reg = operand_list[i * 2]
+					reg_index = operand_list[(i * 2) + 1]
+					if (reg & 0x80000000) == 0:
+						reg = func.arch.get_reg_name(reg)
+					value.append((reg, reg_index))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "flag_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				value = []
+				for i in xrange(count.value / 2):
+					flag = operand_list[i * 2]
+					flag_index = operand_list[(i * 2) + 1]
+					if (flag & 0x80000000) == 0:
+						flag = func.arch.get_flag_name(flag)
+					value.append((flag, flag_index))
+				core.BNLowLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
 			self.__dict__[name] = value
 

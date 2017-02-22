@@ -147,6 +147,12 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 }
 
 
+Ref<LowLevelILFunction> Function::GetLowLevelILSSAForm() const
+{
+	return new LowLevelILFunction(BNGetFunctionLowLevelILSSAForm(m_object));
+}
+
+
 size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);

@@ -1887,6 +1887,7 @@ namespace BinaryNinja
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		Ref<LowLevelILFunction> GetLowLevelILSSAForm() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);

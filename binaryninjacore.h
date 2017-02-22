@@ -238,17 +238,17 @@ extern "C"
 	enum BNLowLevelILOperation
 	{
 		LLIL_NOP,
-		LLIL_SET_REG,
-		LLIL_SET_REG_SPLIT,
-		LLIL_SET_FLAG,
-		LLIL_LOAD,
-		LLIL_STORE,
-		LLIL_PUSH,
-		LLIL_POP,
-		LLIL_REG,
+		LLIL_SET_REG, // Not valid in SSA form (see LLIL_SET_REG_SSA)
+		LLIL_SET_REG_SPLIT, // Not valid in SSA form (see LLIL_SET_REG_SPLIT_SSA)
+		LLIL_SET_FLAG, // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
+		LLIL_LOAD, // Not valid in SSA form (see LLIL_LOAD_SSA)
+		LLIL_STORE, // Not valid in SSA form (see LLIL_STORE_SSA)
+		LLIL_PUSH, // Not valid in SSA form (expanded)
+		LLIL_POP, // Not valid in SSA form (expanded)
+		LLIL_REG, // Not valid in SSA form (see LLIL_REG_SSA)
 		LLIL_CONST,
-		LLIL_FLAG,
-		LLIL_FLAG_BIT,
+		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
+		LLIL_FLAG_BIT, // Not valid in SSA form (see LLIL_FLAG_BIT_SSA)
 		LLIL_ADD,
 		LLIL_ADC,
 		LLIL_SUB,
@@ -285,7 +285,7 @@ extern "C"
 		LLIL_NORET,
 		LLIL_IF,
 		LLIL_GOTO,
-		LLIL_FLAG_COND,
+		LLIL_FLAG_COND, // Valid only in Lifted IL
 		LLIL_CMP_E,
 		LLIL_CMP_NE,
 		LLIL_CMP_SLT,
@@ -303,7 +303,28 @@ extern "C"
 		LLIL_TRAP,
 		LLIL_UNDEF,
 		LLIL_UNIMPL,
-		LLIL_UNIMPL_MEM
+		LLIL_UNIMPL_MEM,
+
+		// The following instructions are only used in SSA form
+		LLIL_SET_REG_SSA,
+		LLIL_SET_REG_SSA_PARTIAL,
+		LLIL_SET_REG_SPLIT_SSA,
+		LLIL_REG_SPLIT_DEST_SSA, // Only valid within an LLIL_SET_REG_SPLIT_SSA instruction
+		LLIL_REG_SSA,
+		LLIL_REG_SSA_PARTIAL,
+		LLIL_SET_FLAG_SSA,
+		LLIL_FLAG_SSA,
+		LLIL_FLAG_BIT_SSA,
+		LLIL_CALL_SSA,
+		LLIL_SYSCALL_SSA,
+		LLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_CALL_STACK_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_LOAD_SSA,
+		LLIL_STORE_SSA,
+		LLIL_REG_PHI,
+		LLIL_FLAG_PHI,
+		LLIL_MEM_PHI
 	};
 
 	enum BNLowLevelILFlagCondition
@@ -341,7 +362,8 @@ extern "C"
 	{
 		NormalFunctionGraph = 0,
 		LowLevelILFunctionGraph = 1,
-		LiftedILFunctionGraph = 2
+		LiftedILFunctionGraph = 2,
+		LowLevelILSSAFormFunctionGraph = 3
 	};
 
 	enum BNDisassemblyOption
@@ -1672,6 +1694,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksStartingAtAddress(BNBinaryView* view, uint64_t addr, size_t* count);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelIL(BNFunction* func);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelILSSAForm(BNFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI size_t* BNGetLowLevelILExitsForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                              size_t* count);

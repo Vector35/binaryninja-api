@@ -293,11 +293,6 @@ class Function(object):
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
-	def low_level_il_ssa_form(self):
-		"""Function low level IL in SSA form (read-only)"""
-		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelILSSAForm(self.handle), self)
-
-	@property
 	def lifted_il(self):
 		"""Function lifted IL (read-only)"""
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)

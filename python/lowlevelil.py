@@ -314,7 +314,12 @@ class LowLevelILFunction(object):
 
 	@current_address.setter
 	def current_address(self, value):
-		core.BNLowLevelILSetCurrentAddress(self.handle, value)
+		core.BNLowLevelILSetCurrentAddress(self.handle, self.arch.handle, value)
+
+	def set_current_address(self, value, arch = None):
+		if arch is None:
+			arch = self.arch
+		core.BNLowLevelILSetCurrentAddress(self.handle, arch.handle, value)
 
 	@property
 	def temp_reg_count(self):
@@ -339,6 +344,14 @@ class LowLevelILFunction(object):
 			result.append(LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
+
+	@property
+	def ssa_form(self):
+		"""Low level IL in SSA form (read-only)"""
+		result = core.BNGetLowLevelILSSAForm(self.handle)
+		if not result:
+			return None
+		return LowLevelILFunction(self.arch, result, self.source_function)
 
 	def __setattr__(self, name, value):
 		try:
@@ -372,6 +385,14 @@ class LowLevelILFunction(object):
 				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
+
+	def get_instruction_start(self, addr, arch = None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNLowLevelILGetInstructionStart(self.handle, arch.handle, addr)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
 
 	def clear_indirect_branches(self):
 		core.BNLowLevelILClearIndirectBranches(self.handle)

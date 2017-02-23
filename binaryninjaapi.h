@@ -1887,7 +1887,6 @@ namespace BinaryNinja
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
-		Ref<LowLevelILFunction> GetLowLevelILSSAForm() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
@@ -2057,7 +2056,8 @@ namespace BinaryNinja
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
 		uint64_t GetCurrentAddress() const;
-		void SetCurrentAddress(uint64_t addr);
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
 
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
@@ -2158,6 +2158,8 @@ namespace BinaryNinja
 		uint32_t GetTemporaryFlagCount();
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		Ref<LowLevelILFunction> GetSSAForm() const;
 	};
 
 	class FunctionRecognizer

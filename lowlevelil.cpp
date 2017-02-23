@@ -48,9 +48,15 @@ uint64_t LowLevelILFunction::GetCurrentAddress() const
 }
 
 
-void LowLevelILFunction::SetCurrentAddress(uint64_t addr)
+void LowLevelILFunction::SetCurrentAddress(Architecture* arch, uint64_t addr)
 {
-	BNLowLevelILSetCurrentAddress(m_object, addr);
+	BNLowLevelILSetCurrentAddress(m_object, arch ? arch->GetObject() : nullptr, addr);
+}
+
+
+size_t LowLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t addr)
+{
+	return BNLowLevelILGetInstructionStart(m_object, arch ? arch->GetObject() : nullptr, addr);
 }
 
 
@@ -642,4 +648,13 @@ vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
 
 	BNFreeBasicBlockList(blocks, count);
 	return result;
+}
+
+
+Ref<LowLevelILFunction> LowLevelILFunction::GetSSAForm() const
+{
+	BNLowLevelILFunction* func = BNGetLowLevelILSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
 }

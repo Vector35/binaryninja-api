@@ -59,6 +59,17 @@ void BinaryNinja::SetBundledPluginDirectory(const string& path)
 }
 
 
+string BinaryNinja::GetInstallDirectory()
+{
+	char* path = BNGetInstallDirectory();
+	if (!path)
+		return string();
+	string result = path;
+	BNFreeString(path);
+	return result;
+}
+
+
 string BinaryNinja::GetUserPluginDirectory()
 {
 	char* path = BNGetUserPluginDirectory();

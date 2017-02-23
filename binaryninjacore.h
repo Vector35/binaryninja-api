@@ -1247,9 +1247,13 @@ extern "C"
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);
 	BINARYNINJACOREAPI void BNInitUserPlugins(void);
+	BINARYNINJACOREAPI char* BNGetInstallDirectory(void);
 	BINARYNINJACOREAPI char* BNGetBundledPluginDirectory(void);
 	BINARYNINJACOREAPI void BNSetBundledPluginDirectory(const char* path);
+	BINARYNINJACOREAPI char* BNGetUserDirectory(void);
 	BINARYNINJACOREAPI char* BNGetUserPluginDirectory(void);
+
+	BINARYNINJACOREAPI void BNSaveLastRun(void);
 
 	BINARYNINJACOREAPI char* BNGetPathRelativeToBundledPluginDirectory(const char* path);
 	BINARYNINJACOREAPI char* BNGetPathRelativeToUserPluginDirectory(const char* path);

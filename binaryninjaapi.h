@@ -376,6 +376,7 @@ namespace BinaryNinja
 	void InitUserPlugins();
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
+	std::string GetInstallDirectory();
 	std::string GetUserPluginDirectory();
 
 	std::string GetPathRelativeToBundledPluginDirectory(const std::string& path);

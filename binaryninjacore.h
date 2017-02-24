@@ -63,6 +63,24 @@
 #define BN_DEFAULT_MIN_STRING_LENGTH 4
 #define BN_MAX_STRING_LENGTH         128
 
+#define LLVM_SVCS_CB_NOTE 0
+#define LLVM_SVCS_CB_WARNING 1
+#define LLVM_SVCS_CB_ERROR 2
+
+#define LLVM_SVCS_DIALECT_UNSPEC 0
+#define LLVM_SVCS_DIALECT_ATT 1
+#define LLVM_SVCS_DIALECT_INTEL 2
+
+#define LLVM_SVCS_CM_DEFAULT 0
+#define LLVM_SVCS_CM_SMALL 1
+#define LLVM_SVCS_CM_KERNEL 2
+#define LLVM_SVCS_CM_MEDIUM 3
+#define LLVM_SVCS_CM_LARGE 4
+
+#define LLVM_SVCS_RM_STATIC 0
+#define LLVM_SVCS_RM_PIC 1
+#define LLVM_SVCS_RM_DYNAMIC_NO_PIC 2
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -2338,6 +2356,15 @@ extern "C"
 	                                       char*** outVarName,
 	                                       size_t* outVarNameElements);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
+
+	// LLVM Services APIs
+	BINARYNINJACOREAPI void BNLlvmServicesInit(void);
+
+	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char *src, int dialect, const char *triplet,
+		int codeModel, int relocMode, char **outBytes, int *outBytesLen, char **err, int *errLen);
+
+	BINARYNINJACOREAPI int BNLlvmServicesAssembleFree(char *outBytes, char *err);
+
 #ifdef __cplusplus
 }
 #endif

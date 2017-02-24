@@ -2363,7 +2363,7 @@ extern "C"
 	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char *src, int dialect, const char *triplet,
 		int codeModel, int relocMode, char **outBytes, int *outBytesLen, char **err, int *errLen);
 
-	BINARYNINJACOREAPI int BNLlvmServicesAssembleFree(char *outBytes, char *err);
+	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char *outBytes, char *err);
 
 #ifdef __cplusplus
 }

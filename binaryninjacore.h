@@ -2018,6 +2018,18 @@ extern "C"
 	BINARYNINJACOREAPI BNBasicBlock** BNGetLowLevelILBasicBlockList(BNLowLevelILFunction* func, size_t* count);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILSSAForm(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILNonSSAForm(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAInstructionIndex(BNLowLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILNonSSAInstructionIndex(BNLowLevelILFunction* func, size_t instr);
+
+	BINARYNINJACOREAPI size_t BNGetLowLevelILSSARegisterDefinition(BNLowLevelILFunction* func, uint32_t reg, size_t idx);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAFlagDefinition(BNLowLevelILFunction* func, uint32_t reg, size_t idx);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAMemoryDefinition(BNLowLevelILFunction* func, size_t idx);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelILSSARegisterUses(BNLowLevelILFunction* func, uint32_t reg, size_t idx,
+		size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelILSSAFlagUses(BNLowLevelILFunction* func, uint32_t reg, size_t idx,
+		size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelILSSAMemoryUses(BNLowLevelILFunction* func, size_t idx, size_t* count);
 
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);

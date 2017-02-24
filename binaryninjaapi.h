@@ -2160,6 +2160,16 @@ namespace BinaryNinja
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 
 		Ref<LowLevelILFunction> GetSSAForm() const;
+		Ref<LowLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+
+		size_t GetSSARegisterDefinition(uint32_t reg, size_t idx) const;
+		size_t GetSSAFlagDefinition(uint32_t flag, size_t idx) const;
+		size_t GetSSAMemoryDefinition(size_t idx) const;
+		std::set<size_t> GetSSARegisterUses(uint32_t reg, size_t idx) const;
+		std::set<size_t> GetSSAFlagUses(uint32_t flag, size_t idx) const;
+		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
 	};
 
 	class FunctionRecognizer

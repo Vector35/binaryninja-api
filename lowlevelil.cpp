@@ -658,3 +658,84 @@ Ref<LowLevelILFunction> LowLevelILFunction::GetSSAForm() const
 		return nullptr;
 	return new LowLevelILFunction(func);
 }
+
+
+Ref<LowLevelILFunction> LowLevelILFunction::GetNonSSAForm() const
+{
+	BNLowLevelILFunction* func = BNGetLowLevelILNonSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+size_t LowLevelILFunction::GetSSAInstructionIndex(size_t instr) const
+{
+	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
+{
+	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetSSARegisterDefinition(uint32_t reg, size_t idx) const
+{
+	return BNGetLowLevelILSSARegisterDefinition(m_object, reg, idx);
+}
+
+
+size_t LowLevelILFunction::GetSSAFlagDefinition(uint32_t flag, size_t idx) const
+{
+	return BNGetLowLevelILSSAFlagDefinition(m_object, flag, idx);
+}
+
+
+size_t LowLevelILFunction::GetSSAMemoryDefinition(size_t idx) const
+{
+	return BNGetLowLevelILSSAMemoryDefinition(m_object, idx);
+}
+
+
+set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSARegisterUses(m_object, reg, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSAFlagUses(m_object, flag, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSAMemoryUses(m_object, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeLowLevelILInstructionList(instrs);
+	return result;
+}

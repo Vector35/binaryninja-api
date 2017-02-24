@@ -353,6 +353,14 @@ class LowLevelILFunction(object):
 			return None
 		return LowLevelILFunction(self.arch, result, self.source_function)
 
+	@property
+	def non_ssa_form(self):
+		"""Low level IL in non-SSA (default) form (read-only)"""
+		result = core.BNGetLowLevelILNonSSAForm(self.handle)
+		if not result:
+			return None
+		return LowLevelILFunction(self.arch, result, self.source_function)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -1326,6 +1334,57 @@ class LowLevelILFunction(object):
 		if label is None:
 			return None
 		return LowLevelILLabel(label)
+
+	def get_ssa_instruction_index(self, instr):
+		return core.BNGetLowLevelILSSAInstructionIndex(self.handle, instr)
+
+	def get_non_ssa_instruction_index(self, instr):
+		return core.BNGetLowLevelILNonSSAInstructionIndex(self.handle, instr)
+
+	def get_ssa_reg_definition(self, reg, index):
+		result = core.BNGetLowLevelILSSARegisterDefinition(self.handle, reg, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_flag_definition(self, flag, index):
+		result = core.BNGetLowLevelILSSAFlagDefinition(self.handle, flag, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_memory_definition(self, index):
+		result = core.BNGetLowLevelILSSAMemoryDefinition(self.handle, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_reg_uses(self, reg, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeLowLevelILInstructionList(instrs)
+		return result
+
+	def get_ssa_flag_uses(self, flag, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeLowLevelILInstructionList(instrs)
+		return result
+
+	def get_ssa_memory_uses(self, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSAMemoryUses(self.handle, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeLowLevelILInstructionList(instrs)
+		return result
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):

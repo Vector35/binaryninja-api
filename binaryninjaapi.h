@@ -1857,6 +1857,8 @@ namespace BinaryNinja
 		int64_t value; // Offset for OffsetFromEntryValue, StackFrameOffset or RangeValue, value of register for ConstantValue
 		uint64_t rangeStart, rangeEnd, rangeStep; // Range of register, inclusive
 		std::vector<LookupTableEntry> table;
+
+		static RegisterValue FromAPIObject(BNRegisterValue& value);
 	};
 
 	class FunctionGraph;
@@ -2170,6 +2172,10 @@ namespace BinaryNinja
 		std::set<size_t> GetSSARegisterUses(uint32_t reg, size_t idx) const;
 		std::set<size_t> GetSSAFlagUses(uint32_t flag, size_t idx) const;
 		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
+
+		RegisterValue GetSSARegisterValue(uint32_t reg, size_t idx);
+		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
+		RegisterValue GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size);
 	};
 
 	class FunctionRecognizer

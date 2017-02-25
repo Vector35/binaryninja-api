@@ -739,3 +739,24 @@ set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
 	BNFreeLowLevelILInstructionList(instrs);
 	return result;
 }
+
+
+RegisterValue LowLevelILFunction::GetSSARegisterValue(uint32_t reg, size_t idx)
+{
+	BNRegisterValue value = BNGetLowLevelILSSARegisterValue(m_object, reg, idx);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t idx)
+{
+	BNRegisterValue value = BNGetLowLevelILSSAFlagValue(m_object, flag, idx);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size)
+{
+	BNRegisterValue value = BNGetLowLevelILSSAStackContents(m_object, memoryIndex, offset, size);
+	return RegisterValue::FromAPIObject(value);
+}

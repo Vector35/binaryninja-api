@@ -1386,6 +1386,28 @@ class LowLevelILFunction(object):
 		core.BNFreeLowLevelILInstructionList(instrs)
 		return result
 
+	def get_ssa_reg_value(self, reg, index):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
+		value = core.BNGetLowLevelILSSARegisterValue(self.handle, reg, index)
+		result = function.RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_ssa_flag_value(self, flag, index):
+		if isinstance(flag, str):
+			flag = self.arch.get_flag_by_name(flag)
+		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, index)
+		result = function.RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_ssa_stack_contents(self, memory_index, offset, size):
+		value = core.BNGetLowLevelILSSAStackContents(self.handle, memory_index, offset, size)
+		result = function.RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):

@@ -2031,6 +2031,13 @@ extern "C"
 		size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetLowLevelILSSAMemoryUses(BNLowLevelILFunction* func, size_t idx, size_t* count);
 
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSARegisterValue(BNLowLevelILFunction* func,
+		uint32_t reg, size_t idx);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSAFlagValue(BNLowLevelILFunction* func,
+		uint32_t flag, size_t idx);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSAStackContents(BNLowLevelILFunction* func,
+		size_t memoryIndex, int64_t offset, size_t size);
+
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);
 	BINARYNINJACOREAPI BNType* BNCreateBoolType(void);

@@ -603,7 +603,8 @@ extern "C"
 		SignedRangeValue,
 		UnsignedRangeValue,
 		LookupTableValue,
-		ComparisonResultValue
+		ComparisonResultValue,
+		ReturnAddressValue
 	};
 
 	struct BNLookupTableEntry

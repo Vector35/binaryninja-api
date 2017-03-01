@@ -101,6 +101,8 @@ class RegisterValue(object):
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
 		if self.type == RegisterValueType.OffsetFromUndeterminedValue:
 			return "<undetermined with offset %#x>" % self.offset
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
 		return "<undetermined>"
 
 

@@ -53,7 +53,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
 		LowLevelILOperation.LLIL_POP: [],
 		LowLevelILOperation.LLIL_REG: [("src", "reg")],
-		LowLevelILOperation.LLIL_CONST: [("value", "int")],
+		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
@@ -107,7 +107,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL: [],
 		LowLevelILOperation.LLIL_BP: [],
-		LowLevelILOperation.LLIL_TRAP: [("value", "int")],
+		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
 		LowLevelILOperation.LLIL_UNDEF: [],
 		LowLevelILOperation.LLIL_UNIMPL: [],
 		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
@@ -235,6 +235,26 @@ class LowLevelILInstruction(object):
 			address = tokens[i].address
 			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
+		return result
+
+	@property
+	def ssa_form(self):
+		"""SSA form of expression (read-only)"""
+		return LowLevelILInstruction(self.function.ssa_form,
+			core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def non_ssa_form(self):
+		"""Non-SSA form of expression (read-only)"""
+		return LowLevelILInstruction(self.function.non_ssa_form,
+			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def value(self):
+		"""Value of expression using static data flow analysis (read-only)"""
+		value = core.BNGetLowLevelILExprValue(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
 		return result
 
 	def __setattr__(self, name, value):

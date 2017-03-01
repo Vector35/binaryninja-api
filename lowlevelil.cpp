@@ -671,13 +671,25 @@ Ref<LowLevelILFunction> LowLevelILFunction::GetNonSSAForm() const
 
 size_t LowLevelILFunction::GetSSAInstructionIndex(size_t instr) const
 {
-	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
+	return BNGetLowLevelILSSAInstructionIndex(m_object, instr);
 }
 
 
 size_t LowLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
 {
 	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetSSAExprIndex(size_t expr) const
+{
+	return BNGetLowLevelILSSAExprIndex(m_object, expr);
+}
+
+
+size_t LowLevelILFunction::GetNonSSAExprIndex(size_t expr) const
+{
+	return BNGetLowLevelILNonSSAExprIndex(m_object, expr);
 }
 
 
@@ -758,5 +770,12 @@ RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t idx)
 RegisterValue LowLevelILFunction::GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size)
 {
 	BNRegisterValue value = BNGetLowLevelILSSAStackContents(m_object, memoryIndex, offset, size);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
+{
+	BNRegisterValue value = BNGetLowLevelILExprValue(m_object, expr);
 	return RegisterValue::FromAPIObject(value);
 }

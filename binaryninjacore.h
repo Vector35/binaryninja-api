@@ -2022,6 +2022,8 @@ extern "C"
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILNonSSAForm(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAInstructionIndex(BNLowLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILNonSSAInstructionIndex(BNLowLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAExprIndex(BNLowLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILNonSSAExprIndex(BNLowLevelILFunction* func, size_t expr);
 
 	BINARYNINJACOREAPI size_t BNGetLowLevelILSSARegisterDefinition(BNLowLevelILFunction* func, uint32_t reg, size_t idx);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILSSAFlagDefinition(BNLowLevelILFunction* func, uint32_t reg, size_t idx);
@@ -2038,6 +2040,8 @@ extern "C"
 		uint32_t flag, size_t idx);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSAStackContents(BNLowLevelILFunction* func,
 		size_t memoryIndex, int64_t offset, size_t size);
+
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
 
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);

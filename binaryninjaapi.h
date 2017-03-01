@@ -2165,6 +2165,8 @@ namespace BinaryNinja
 		Ref<LowLevelILFunction> GetNonSSAForm() const;
 		size_t GetSSAInstructionIndex(size_t instr) const;
 		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
 
 		size_t GetSSARegisterDefinition(uint32_t reg, size_t idx) const;
 		size_t GetSSAFlagDefinition(uint32_t flag, size_t idx) const;
@@ -2176,6 +2178,8 @@ namespace BinaryNinja
 		RegisterValue GetSSARegisterValue(uint32_t reg, size_t idx);
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
 		RegisterValue GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size);
+
+		RegisterValue GetExprValue(size_t expr);
 	};
 
 	class FunctionRecognizer

@@ -161,7 +161,7 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 	vector<size_t> result;
 	result.insert(result.end(), exits, &exits[count]);
 
-	BNFreeLowLevelILInstructionList(exits);
+	BNFreeILInstructionList(exits);
 	return result;
 }
 
@@ -343,7 +343,7 @@ set<size_t> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -355,7 +355,7 @@ set<size_t> Function::GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag)
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -381,6 +381,12 @@ set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 	result.insert(&flags[0], &flags[count]);
 	BNFreeRegisterList(flags);
 	return result;
+}
+
+
+Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
+{
+	return new MediumLevelILFunction(BNGetFunctionMediumLevelIL(m_object));
 }
 
 

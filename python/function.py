@@ -33,6 +33,7 @@ import associateddatastore
 import types
 import basicblock
 import lowlevelil
+import mediumlevelil
 import binaryview
 import log
 
@@ -137,6 +138,14 @@ class StackVariableReference(object):
 		if self.referenced_offset != self.starting_offset:
 			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
+
+
+class ILVariable(object):
+	def __init__(self, func, var_type, index, identifier):
+		self.function = func
+		self.type = var_type
+		self.index = index
+		self.identifier = identifier
 
 
 class ConstantReference(object):
@@ -300,6 +309,11 @@ class Function(object):
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
+	def medium_level_il(self):
+		"""Function medium level IL (read-only)"""
+		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+
+	@property
 	def function_type(self):
 		"""Function type object"""
 		return types.Type(core.BNGetFunctionType(self.handle))
@@ -398,7 +412,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(exits[i])
-		core.BNFreeLowLevelILInstructionList(exits)
+		core.BNFreeILInstructionList(exits)
 		return result
 
 	def get_reg_value_at(self, addr, reg, arch=None):
@@ -597,7 +611,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_lifted_il_flag_definitions_for_use(self, i, flag):
@@ -608,7 +622,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_flags_read_by_lifted_il_instruction(self, i):

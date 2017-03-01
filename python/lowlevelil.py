@@ -124,7 +124,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg"), ("index", "int"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("dest", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg"), ("index", "int"), ("src", "reg_ssa_list")],
@@ -1385,7 +1385,7 @@ class LowLevelILFunction(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_ssa_flag_uses(self, flag, index):
@@ -1394,7 +1394,7 @@ class LowLevelILFunction(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_ssa_memory_uses(self, index):
@@ -1403,7 +1403,7 @@ class LowLevelILFunction(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_ssa_reg_value(self, reg, index):

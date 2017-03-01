@@ -1862,6 +1862,7 @@ namespace BinaryNinja
 	};
 
 	class FunctionGraph;
+	class MediumLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
@@ -1912,6 +1913,8 @@ namespace BinaryNinja
 		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
 		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
+
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 
 		Ref<Type> GetType() const;
 		void SetAutoType(Type* type);
@@ -2179,6 +2182,73 @@ namespace BinaryNinja
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
 		RegisterValue GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size);
 
+		RegisterValue GetExprValue(size_t expr);
+	};
+
+	struct MediumLevelILLabel: public BNMediumLevelILLabel
+	{
+		MediumLevelILLabel();
+	};
+
+	class MediumLevelILFunction: public CoreRefCountObject<BNMediumLevelILFunction,
+		BNNewMediumLevelILFunctionReference, BNFreeMediumLevelILFunction>
+	{
+	public:
+		MediumLevelILFunction(Architecture* arch, Function* func = nullptr);
+		MediumLevelILFunction(BNMediumLevelILFunction* func);
+
+		uint64_t GetCurrentAddress() const;
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
+
+		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size,
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddInstruction(ExprId expr);
+
+		ExprId SetVar(size_t size, const BNILVariable& var, ExprId src);
+		ExprId SetVarField(size_t size, const BNILVariable& var, int64_t offset, ExprId src);
+		ExprId SetVarSSA(size_t size, const BNILVariable& var, size_t index, ExprId src);
+		ExprId SetVarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex, ExprId src);
+		ExprId Var(size_t size, const BNILVariable& var);
+		ExprId VarField(size_t size, const BNILVariable& var, int64_t offset);
+		ExprId VarSSA(size_t size, const BNILVariable& var, size_t index);
+		ExprId VarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex);
+
+		ExprId Goto(BNMediumLevelILLabel& label);
+		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f);
+		void MarkLabel(BNMediumLevelILLabel& label);
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
+		ExprId AddOperandList(const std::vector<ExprId> operands);
+
+		BNILVariable GetVariable(ExprId i, size_t varOperand);
+
+		BNMediumLevelILInstruction operator[](size_t i) const;
+		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionCount() const;
+
+		void Finalize();
+
+		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
+		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
+			std::vector<InstructionTextToken>& tokens);
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		Ref<MediumLevelILFunction> GetSSAForm() const;
+		Ref<MediumLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
+
+		size_t GetSSAVarDefinition(const BNILVariable& var, size_t idx) const;
+		size_t GetSSAMemoryDefinition(size_t idx) const;
+		std::set<size_t> GetSSAVarUses(const BNILVariable& var, size_t idx) const;
+		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
+
+		RegisterValue GetSSAVarValue(const BNILVariable& var, size_t idx);
 		RegisterValue GetExprValue(size_t expr);
 	};
 

@@ -92,6 +92,7 @@ extern "C"
 	struct BNSymbol;
 	struct BNTemporaryFile;
 	struct BNLowLevelILFunction;
+	struct BNMediumLevelILFunction;
 	struct BNType;
 	struct BNStructure;
 	struct BNNamedTypeReference;
@@ -363,7 +364,9 @@ extern "C"
 		NormalFunctionGraph = 0,
 		LowLevelILFunctionGraph = 1,
 		LiftedILFunctionGraph = 2,
-		LowLevelILSSAFormFunctionGraph = 3
+		LowLevelILSSAFormFunctionGraph = 3,
+		MediumLevelILFunctionGraph = 4,
+		MediumLevelILSSAFormFunctionGraph = 5
 	};
 
 	enum BNDisassemblyOption
@@ -635,6 +638,115 @@ extern "C"
 		uint64_t address;
 		BNType* type;
 		bool autoDiscovered;
+	};
+
+	enum BNMediumLevelILOperation
+	{
+		MLIL_NOP,
+		MLIL_SET_VAR, // Not valid in SSA form (see MLIL_SET_VAR_SSA)
+		MLIL_SET_VAR_FIELD, // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
+		MLIL_LOAD, // Not valid in SSA form (see MLIL_LOAD_SSA)
+		MLIL_STORE, // Not valid in SSA form (see MLIL_STORE_SSA)
+		MLIL_VAR, // Not valid in SSA form (see MLIL_VAR_SSA)
+		MLIL_VAR_FIELD, // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
+		MLIL_CONST,
+		MLIL_ADD,
+		MLIL_ADC,
+		MLIL_SUB,
+		MLIL_SBB,
+		MLIL_AND,
+		MLIL_OR,
+		MLIL_XOR,
+		MLIL_LSL,
+		MLIL_LSR,
+		MLIL_ASR,
+		MLIL_ROL,
+		MLIL_RLC,
+		MLIL_ROR,
+		MLIL_RRC,
+		MLIL_MUL,
+		MLIL_MULU_DP,
+		MLIL_MULS_DP,
+		MLIL_DIVU,
+		MLIL_DIVU_DP,
+		MLIL_DIVS,
+		MLIL_DIVS_DP,
+		MLIL_MODU,
+		MLIL_MODU_DP,
+		MLIL_MODS,
+		MLIL_MODS_DP,
+		MLIL_NEG,
+		MLIL_NOT,
+		MLIL_SX,
+		MLIL_ZX,
+		MLIL_JUMP,
+		MLIL_JUMP_TO,
+		MLIL_CALL,
+		MLIL_RET,
+		MLIL_NORET,
+		MLIL_IF,
+		MLIL_GOTO,
+		MLIL_CMP_E,
+		MLIL_CMP_NE,
+		MLIL_CMP_SLT,
+		MLIL_CMP_ULT,
+		MLIL_CMP_SLE,
+		MLIL_CMP_ULE,
+		MLIL_CMP_SGE,
+		MLIL_CMP_UGE,
+		MLIL_CMP_SGT,
+		MLIL_CMP_UGT,
+		MLIL_TEST_BIT,
+		MLIL_BOOL_TO_INT,
+		MLIL_SYSCALL,
+		MLIL_BP,
+		MLIL_TRAP,
+		MLIL_UNDEF,
+		MLIL_UNIMPL,
+		MLIL_UNIMPL_MEM,
+
+		// The following instructions are only used in SSA form
+		MLIL_SET_VAR_SSA,
+		MLIL_SET_VAR_SSA_FIELD,
+		MLIL_VAR_SSA,
+		MLIL_VAR_SSA_FIELD,
+		MLIL_CALL_SSA,
+		MLIL_SYSCALL_SSA,
+		MLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		MLIL_LOAD_SSA,
+		MLIL_STORE_SSA,
+		MLIL_VAR_PHI,
+		MLIL_MEM_PHI
+	};
+
+	struct BNMediumLevelILInstruction
+	{
+		BNMediumLevelILOperation operation;
+		size_t size;
+		uint64_t operands[5];
+		uint64_t address;
+	};
+
+	struct BNMediumLevelILLabel
+	{
+		bool resolved;
+		size_t ref;
+		size_t operand;
+	};
+
+	enum BNILVariableSourceType
+	{
+		RegisterVariableSourceType,
+		FlagVariableSourceType,
+		StackVariableSourceType
+	};
+
+	struct BNILVariable
+	{
+		BNILVariableSourceType type;
+		uint32_t index;
+		int64_t identifier;
 	};
 
 	// Callbacks
@@ -1698,7 +1810,8 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetLowLevelILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI size_t* BNGetLowLevelILExitsForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 	                                                              size_t* count);
-	BINARYNINJACOREAPI void BNFreeLowLevelILInstructionList(size_t* list);
+	BINARYNINJACOREAPI void BNFreeILInstructionList(size_t* list);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionMediumLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch,
@@ -2042,6 +2155,63 @@ extern "C"
 		size_t memoryIndex, int64_t offset, size_t size);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
+
+	// Medium-level IL
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNCreateMediumLevelILFunction(BNArchitecture* arch, BNFunction* func);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNNewMediumLevelILFunctionReference(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI void BNFreeMediumLevelILFunction(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI uint64_t BNMediumLevelILGetCurrentAddress(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI void BNMediumLevelILSetCurrentAddress(BNMediumLevelILFunction* func,
+		BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI size_t BNMediumLevelILGetInstructionStart(BNMediumLevelILFunction* func,
+		BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI size_t BNMediumLevelILAddExpr(BNMediumLevelILFunction* func, BNMediumLevelILOperation operation,
+		size_t size, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e);
+	BINARYNINJACOREAPI size_t BNMediumLevelILAddInstruction(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t BNMediumLevelILGoto(BNMediumLevelILFunction* func, BNMediumLevelILLabel* label);
+	BINARYNINJACOREAPI size_t BNMediumLevelILIf(BNMediumLevelILFunction* func, uint64_t op,
+		BNMediumLevelILLabel* t, BNMediumLevelILLabel* f);
+	BINARYNINJACOREAPI void BNMediumLevelILInitLabel(BNMediumLevelILLabel* label);
+	BINARYNINJACOREAPI void BNMediumLevelILMarkLabel(BNMediumLevelILFunction* func, BNMediumLevelILLabel* label);
+	BINARYNINJACOREAPI void BNFinalizeMediumLevelILFunction(BNMediumLevelILFunction* func);
+
+	BINARYNINJACOREAPI size_t BNMediumLevelILAddLabelList(BNMediumLevelILFunction* func,
+		BNMediumLevelILLabel** labels, size_t count);
+	BINARYNINJACOREAPI size_t BNMediumLevelILAddOperandList(BNMediumLevelILFunction* func,
+		uint64_t* operands, size_t count);
+	BINARYNINJACOREAPI uint64_t* BNMediumLevelILGetOperandList(BNMediumLevelILFunction* func, size_t expr,
+		size_t operand, size_t* count);
+	BINARYNINJACOREAPI void BNMediumLevelILFreeOperandList(uint64_t* operands);
+
+	BINARYNINJACOREAPI BNMediumLevelILInstruction BNGetMediumLevelILByIndex(BNMediumLevelILFunction* func, size_t i);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILIndexForInstruction(BNMediumLevelILFunction* func, size_t i);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionCount(BNMediumLevelILFunction* func);
+
+	BINARYNINJACOREAPI bool BNGetMediumLevelILExprText(BNMediumLevelILFunction* func, BNArchitecture* arch, size_t i,
+		BNInstructionTextToken** tokens, size_t* count);
+	BINARYNINJACOREAPI bool BNGetMediumLevelILInstructionText(BNMediumLevelILFunction* il, BNFunction* func,
+		BNArchitecture* arch, size_t i, BNInstructionTextToken** tokens, size_t* count);
+
+	BINARYNINJACOREAPI BNBasicBlock** BNGetMediumLevelILBasicBlockList(BNMediumLevelILFunction* func, size_t* count);
+
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILSSAForm(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILNonSSAForm(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILNonSSAInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAExprIndex(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILNonSSAExprIndex(BNMediumLevelILFunction* func, size_t expr);
+
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarDefinition(BNMediumLevelILFunction* func,
+		const BNILVariable* var, size_t idx);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryDefinition(BNMediumLevelILFunction* func, size_t idx);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAVarUses(BNMediumLevelILFunction* func, const BNILVariable* var,
+		size_t idx, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
+		size_t idx, size_t* count);
+
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(BNMediumLevelILFunction* func,
+		const BNILVariable* var, size_t idx);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);
 
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);

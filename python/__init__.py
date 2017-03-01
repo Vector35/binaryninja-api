@@ -32,6 +32,7 @@ from .basicblock import *
 from .function import *
 from .log import *
 from .lowlevelil import *
+from .mediumlevelil import *
 from .types import *
 from .functionrecognizer import *
 from .update import *

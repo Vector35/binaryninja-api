@@ -1,0 +1,525 @@
+# Copyright (c) 2017 Vector 35 LLC
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+import ctypes
+
+# Binary Ninja components
+import _binaryninjacore as core
+from .enums import MediumLevelILOperation, InstructionTextTokenType, ILVariableSourceType
+import function
+import basicblock
+
+
+class MediumLevelILLabel(object):
+	def __init__(self, handle = None):
+		if handle is None:
+			self.handle = (core.BNMediumLevelILLabel * 1)()
+			core.BNMediumLevelILInitLabel(self.handle)
+		else:
+			self.handle = handle
+
+
+class MediumLevelILInstruction(object):
+	"""
+	``class MediumLevelILInstruction`` Medium Level Intermediate Language Instructions are infinite length tree-based
+	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.
+	Infix notation is thus more natural to read than other notations (e.g. x86 ``mov eax, 0`` vs. MLIL ``eax = 0``).
+	"""
+
+	ILOperations = {
+		MediumLevelILOperation.MLIL_NOP: [],
+		MediumLevelILOperation.MLIL_SET_VAR: [("dest", "var"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_LOAD: [("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE: [("dest", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_VAR: [("src", "var")],
+		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
+		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_AND: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_OR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_XOR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_LSL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_LSR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ASR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ROL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ROR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MUL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_NEG: [("src", "expr")],
+		MediumLevelILOperation.MLIL_NOT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_SX: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
+		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
+		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		MediumLevelILOperation.MLIL_CALL: [("dest", "expr")],
+		MediumLevelILOperation.MLIL_RET: [],
+		MediumLevelILOperation.MLIL_NORET: [],
+		MediumLevelILOperation.MLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
+		MediumLevelILOperation.MLIL_GOTO: [("dest", "int")],
+		MediumLevelILOperation.MLIL_CMP_E: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_SYSCALL: [],
+		MediumLevelILOperation.MLIL_BP: [],
+		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
+		MediumLevelILOperation.MLIL_UNDEF: [],
+		MediumLevelILOperation.MLIL_UNIMPL: [],
+		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var"), ("index", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("dest", "var"), ("index", "int"), ("offset", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var"), ("index", "int")],
+		MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [("src", "var"), ("index", "int"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("param", "expr")],
+		MediumLevelILOperation.MLIL_SYSCALL_SSA: [("output", "expr"), ("param", "expr")],
+		MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [("src", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var"), ("index", "int"), ("src", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
+	}
+
+	def __init__(self, func, expr_index, instr_index=None):
+		instr = core.BNGetMediumLevelILByIndex(func.handle, expr_index)
+		self.function = func
+		self.expr_index = expr_index
+		self.instr_index = instr_index
+		self.operation = MediumLevelILOperation(instr.operation)
+		self.size = instr.size
+		self.address = instr.address
+		operands = MediumLevelILInstruction.ILOperations[instr.operation]
+		self.operands = []
+		i = 0
+		while i < len(operands):
+			name, operand_type = operands[i]
+			if operand_type == "int":
+				value = instr.operands[i]
+			elif operand_type == "expr":
+				value = MediumLevelILInstruction(func, instr.operands[i])
+			elif operand_type == "var":
+				var_type = ILVariableSourceType(instr.operands[i] >> 32)
+				index = instr.operands[i] & 0xffffffff
+				identifier = instr.operands[i + 1]
+				i += 1
+				value = function.ILVariable(self.function, var_type, index, identifier)
+			elif operand_type == "int_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				value = []
+				for i in xrange(count.value):
+					value.append(operand_list[i])
+				core.BNMediumLevelILFreeOperandList(operand_list)
+			elif operand_type == "var_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value / 3):
+					var_type = ILVariableSourceType(operand_list[j * 3] >> 32)
+					index = operand_list[j * 3] & 0xffffffff
+					identifier = operand_list[(j * 3) + 1]
+					var_index = operand_list[(j * 3) + 2]
+					value.append((function.ILVariable(self.function, var_type, index, identifier), var_index))
+				core.BNMediumLevelILFreeOperandList(operand_list)
+			self.operands.append(value)
+			self.__dict__[name] = value
+
+	def __str__(self):
+		tokens = self.tokens
+		if tokens is None:
+			return "invalid"
+		result = ""
+		for token in tokens:
+			result += token.text
+		return result
+
+	def __repr__(self):
+		return "<il: %s>" % str(self)
+
+	@property
+	def tokens(self):
+		"""MLIL tokens (read-only)"""
+		count = ctypes.c_ulonglong()
+		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
+		if (self.instr_index is not None) and (self.function.source_function is not None):
+			if not core.BNGetMediumLevelILInstructionText(self.function.handle, self.function.source_function.handle,
+				self.function.arch.handle, self.instr_index, tokens, count):
+				return None
+		else:
+			if not core.BNGetMediumLevelILExprText(self.function.handle, self.function.arch.handle,
+				self.expr_index, tokens, count):
+				return None
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeInstructionText(tokens, count.value)
+		return result
+
+	@property
+	def ssa_form(self):
+		"""SSA form of expression (read-only)"""
+		return MediumLevelILInstruction(self.function.ssa_form,
+			core.BNGetMediumLevelILSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def non_ssa_form(self):
+		"""Non-SSA form of expression (read-only)"""
+		return MediumLevelILInstruction(self.function.non_ssa_form,
+			core.BNGetMediumLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def value(self):
+		"""Value of expression using static data flow analysis (read-only)"""
+		value = core.BNGetMediumLevelILExprValue(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
+
+
+class MediumLevelILExpr(object):
+	"""
+	``class MediumLevelILExpr`` hold the index of IL Expressions.
+
+	.. note:: This class shouldn't be instantiated directly. Rather the helper members of MediumLevelILFunction should be \
+	used instead.
+	"""
+	def __init__(self, index):
+		self.index = index
+
+
+class MediumLevelILFunction(object):
+	"""
+	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a function. MediumLevelILExpr
+	objects can be added to the MediumLevelILFunction by calling ``append`` and passing the result of the various class
+	methods which return MediumLevelILExpr objects.
+	"""
+	def __init__(self, arch, handle = None, source_func = None):
+		self.arch = arch
+		self.source_function = source_func
+		if handle is not None:
+			self.handle = core.handle_of_type(handle, core.BNMediumLevelILFunction)
+		else:
+			func_handle = None
+			if self.source_function is not None:
+				func_handle = self.source_function.handle
+			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
+
+	def __del__(self):
+		core.BNFreeMediumLevelILFunction(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, MediumLevelILFunction):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, MediumLevelILFunction):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	@property
+	def current_address(self):
+		"""Current IL Address (read/write)"""
+		return core.BNMediumLevelILGetCurrentAddress(self.handle)
+
+	@current_address.setter
+	def current_address(self, value):
+		core.BNMediumLevelILSetCurrentAddress(self.handle, self.arch.handle, value)
+
+	def set_current_address(self, value, arch = None):
+		if arch is None:
+			arch = self.arch
+		core.BNMediumLevelILSetCurrentAddress(self.handle, arch.handle, value)
+
+	@property
+	def basic_blocks(self):
+		"""list of MediumLevelILBasicBlock objects (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
+		result = []
+		view = None
+		if self.source_function is not None:
+			view = self.source_function.view
+		for i in xrange(0, count.value):
+			result.append(MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def ssa_form(self):
+		"""Medium level IL in SSA form (read-only)"""
+		result = core.BNGetMediumLevelILSSAForm(self.handle)
+		if not result:
+			return None
+		return MediumLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def non_ssa_form(self):
+		"""Medium level IL in non-SSA (default) form (read-only)"""
+		result = core.BNGetMediumLevelILNonSSAForm(self.handle)
+		if not result:
+			return None
+		return MediumLevelILFunction(self.arch, result, self.source_function)
+
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
+
+	def __len__(self):
+		return int(core.BNGetMediumLevelILInstructionCount(self.handle))
+
+	def __getitem__(self, i):
+		if isinstance(i, slice) or isinstance(i, tuple):
+			raise IndexError("expected integer instruction index")
+		if isinstance(i, MediumLevelILExpr):
+			return MediumLevelILInstruction(self, i.index)
+		if (i < 0) or (i >= len(self)):
+			raise IndexError("index out of range")
+		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
+
+	def __setitem__(self, i, j):
+		raise IndexError("instruction modification not implemented")
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
+		view = None
+		if self.source_function is not None:
+			view = self.source_function.view
+		try:
+			for i in xrange(0, count.value):
+				yield MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
+
+	def get_instruction_start(self, addr, arch = None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNMediumLevelILGetInstructionStart(self.handle, arch.handle, addr)
+		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def expr(self, operation, a = 0, b = 0, c = 0, d = 0, e = 0, size = 0):
+		if isinstance(operation, str):
+			operation = MediumLevelILOperation[operation]
+		elif isinstance(operation, MediumLevelILOperation):
+			operation = operation.value
+		return MediumLevelILExpr(core.BNMediumLevelILAddExpr(self.handle, operation, size, a, b, c, d, e))
+
+	def append(self, expr):
+		"""
+		``append`` adds the MediumLevelILExpr ``expr`` to the current MediumLevelILFunction.
+
+		:param MediumLevelILExpr expr: the MediumLevelILExpr to add to the current MediumLevelILFunction
+		:return: number of MediumLevelILExpr in the current function
+		:rtype: int
+		"""
+		return core.BNMediumLevelILAddInstruction(self.handle, expr.index)
+
+	def goto(self, label):
+		"""
+		``goto`` returns a goto expression which jumps to the provided MediumLevelILLabel.
+
+		:param MediumLevelILLabel label: Label to jump to
+		:return: the MediumLevelILExpr that jumps to the provided label
+		:rtype: MediumLevelILExpr
+		"""
+		return MediumLevelILExpr(core.BNMediumLevelILGoto(self.handle, label.handle))
+
+	def if_expr(self, operand, t, f):
+		"""
+		``if_expr`` returns the ``if`` expression which depending on condition ``operand`` jumps to the MediumLevelILLabel
+		``t`` when the condition expression ``operand`` is non-zero and ``f`` when it's zero.
+
+		:param MediumLevelILExpr operand: comparison expression to evaluate.
+		:param MediumLevelILLabel t: Label for the true branch
+		:param MediumLevelILLabel f: Label for the false branch
+		:return: the MediumLevelILExpr for the if expression
+		:rtype: MediumLevelILExpr
+		"""
+		return MediumLevelILExpr(core.BNMediumLevelILIf(self.handle, operand.index, t.handle, f.handle))
+
+	def mark_label(self, label):
+		"""
+		``mark_label`` assigns a MediumLevelILLabel to the current IL address.
+
+		:param MediumLevelILLabel label:
+		:rtype: None
+		"""
+		core.BNMediumLevelILMarkLabel(self.handle, label.handle)
+
+	def add_label_list(self, labels):
+		"""
+		``add_label_list`` returns a label list expression for the given list of MediumLevelILLabel objects.
+
+		:param list(MediumLevelILLabel) lables: the list of MediumLevelILLabel to get a label list expression from
+		:return: the label list expression
+		:rtype: MediumLevelILExpr
+		"""
+		label_list = (ctypes.POINTER(core.BNMediumLevelILLabel) * len(labels))()
+		for i in xrange(len(labels)):
+			label_list[i] = labels[i].handle
+		return MediumLevelILExpr(core.BNMediumLevelILAddLabelList(self.handle, label_list, len(labels)))
+
+	def add_operand_list(self, operands):
+		"""
+		``add_operand_list`` returns an operand list expression for the given list of integer operands.
+
+		:param list(int) operands: list of operand numbers
+		:return: an operand list expression
+		:rtype: MediumLevelILExpr
+		"""
+		operand_list = (ctypes.c_ulonglong * len(operands))()
+		for i in xrange(len(operands)):
+			operand_list[i] = operands[i]
+		return MediumLevelILExpr(core.BNMediumLevelILAddOperandList(self.handle, operand_list, len(operands)))
+
+	def operand(self, n, expr):
+		"""
+		``operand`` sets the operand number of the expression ``expr`` and passes back ``expr`` without modification.
+
+		:param int n:
+		:param MediumLevelILExpr expr:
+		:return: returns the expression ``expr`` unmodified
+		:rtype: MediumLevelILExpr
+		"""
+		core.BNMediumLevelILSetExprSourceOperand(self.handle, expr.index, n)
+		return expr
+
+	def finalize(self):
+		"""
+		``finalize`` ends the function and computes the list of basic blocks.
+
+		:rtype: None
+		"""
+		core.BNFinalizeMediumLevelILFunction(self.handle)
+
+	def get_ssa_instruction_index(self, instr):
+		return core.BNGetMediumLevelILSSAInstructionIndex(self.handle, instr)
+
+	def get_non_ssa_instruction_index(self, instr):
+		return core.BNGetMediumLevelILNonSSAInstructionIndex(self.handle, instr)
+
+	def get_ssa_var_definition(self, var, index):
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		result = core.BNGetMediumLevelILSSAVarDefinition(self.handle, var_data, index)
+		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_memory_definition(self, index):
+		result = core.BNGetMediumLevelILSSAMemoryDefinition(self.handle, index)
+		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_var_uses(self, var, index):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_memory_uses(self, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetMediumLevelILSSAMemoryUses(self.handle, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_var_value(self, var, index):
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, index)
+		result = function.RegisterValue(self.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+
+class MediumLevelILBasicBlock(basicblock.BasicBlock):
+	def __init__(self, view, handle, owner):
+		super(MediumLevelILBasicBlock, self).__init__(view, handle)
+		self.il_function = owner
+
+	def __iter__(self):
+		for idx in xrange(self.start, self.end):
+			yield self.il_function[idx]
+
+	def __getitem__(self, idx):
+		size = self.end - self.start
+		if idx > size or idx < -size:
+			raise IndexError("list index is out of range")
+		if idx >= 0:
+			return self.il_function[idx + self.start]
+		else:
+			return self.il_function[self.end + idx]

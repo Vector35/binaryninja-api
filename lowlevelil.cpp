@@ -720,7 +720,7 @@ set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t idx) con
 	for (size_t i = 0; i < count; i++)
 		result.insert(instrs[i]);
 
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -734,7 +734,7 @@ set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t idx) const
 	for (size_t i = 0; i < count; i++)
 		result.insert(instrs[i]);
 
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -748,7 +748,7 @@ set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
 	for (size_t i = 0; i < count; i++)
 		result.insert(instrs[i]);
 
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 

@@ -1422,12 +1422,6 @@ class LowLevelILFunction(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_ssa_stack_contents(self, memory_index, offset, size):
-		value = core.BNGetLowLevelILSSAStackContents(self.handle, memory_index, offset, size)
-		result = function.RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):

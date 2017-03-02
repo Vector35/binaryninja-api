@@ -767,13 +767,6 @@ RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t idx)
 }
 
 
-RegisterValue LowLevelILFunction::GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size)
-{
-	BNRegisterValue value = BNGetLowLevelILSSAStackContents(m_object, memoryIndex, offset, size);
-	return RegisterValue::FromAPIObject(value);
-}
-
-
 RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
 {
 	BNRegisterValue value = BNGetLowLevelILExprValue(m_object, expr);

@@ -2180,7 +2180,6 @@ namespace BinaryNinja
 
 		RegisterValue GetSSARegisterValue(uint32_t reg, size_t idx);
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
-		RegisterValue GetSSAStackContents(size_t memoryIndex, int64_t offset, size_t size);
 
 		RegisterValue GetExprValue(size_t expr);
 	};
@@ -2207,12 +2206,17 @@ namespace BinaryNinja
 
 		ExprId SetVar(size_t size, const BNILVariable& var, ExprId src);
 		ExprId SetVarField(size_t size, const BNILVariable& var, int64_t offset, ExprId src);
+		ExprId SetVarSplit(size_t size, const BNILVariable& high, const BNILVariable& low, ExprId src);
 		ExprId SetVarSSA(size_t size, const BNILVariable& var, size_t index, ExprId src);
 		ExprId SetVarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex, ExprId src);
+		ExprId SetVarSplitSSA(size_t size, const BNILVariable& high, size_t highIndex,
+			const BNILVariable& low, size_t lowIndex, ExprId src);
 		ExprId Var(size_t size, const BNILVariable& var);
 		ExprId VarField(size_t size, const BNILVariable& var, int64_t offset);
 		ExprId VarSSA(size_t size, const BNILVariable& var, size_t index);
 		ExprId VarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex);
+		ExprId AddressOf(size_t size, const BNILVariable& var);
+		ExprId AddressOfField(size_t size, const BNILVariable& var, int64_t offset);
 
 		ExprId Goto(BNMediumLevelILLabel& label);
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f);

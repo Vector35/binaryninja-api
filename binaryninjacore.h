@@ -645,10 +645,13 @@ extern "C"
 		MLIL_NOP,
 		MLIL_SET_VAR, // Not valid in SSA form (see MLIL_SET_VAR_SSA)
 		MLIL_SET_VAR_FIELD, // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
+		MLIL_SET_VAR_SPLIT, // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
 		MLIL_LOAD, // Not valid in SSA form (see MLIL_LOAD_SSA)
 		MLIL_STORE, // Not valid in SSA form (see MLIL_STORE_SSA)
 		MLIL_VAR, // Not valid in SSA form (see MLIL_VAR_SSA)
 		MLIL_VAR_FIELD, // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
+		MLIL_ADDRESS_OF,
+		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
 		MLIL_ADD,
 		MLIL_ADC,
@@ -708,6 +711,8 @@ extern "C"
 		// The following instructions are only used in SSA form
 		MLIL_SET_VAR_SSA,
 		MLIL_SET_VAR_SSA_FIELD,
+		MLIL_SET_VAR_SPLIT_SSA,
+		MLIL_VAR_SPLIT_DEST_SSA,
 		MLIL_VAR_SSA,
 		MLIL_VAR_SSA_FIELD,
 		MLIL_CALL_SSA,
@@ -2151,8 +2156,6 @@ extern "C"
 		uint32_t reg, size_t idx);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSAFlagValue(BNLowLevelILFunction* func,
 		uint32_t flag, size_t idx);
-	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILSSAStackContents(BNLowLevelILFunction* func,
-		size_t memoryIndex, int64_t offset, size_t size);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
 

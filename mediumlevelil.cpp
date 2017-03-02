@@ -86,6 +86,13 @@ ExprId MediumLevelILFunction::SetVarField(size_t size, const BNILVariable& var, 
 }
 
 
+ExprId MediumLevelILFunction::SetVarSplit(size_t size, const BNILVariable& high, const BNILVariable& low, ExprId src)
+{
+	return AddExpr(MLIL_SET_VAR_SPLIT, size, ((uint64_t)high.type << 32) | (uint64_t)high.index, high.identifier,
+		((uint64_t)low.type << 32) | (uint64_t)low.index, low.identifier, src);
+}
+
+
 ExprId MediumLevelILFunction::SetVarSSA(size_t size, const BNILVariable& var, size_t varIndex, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_SSA, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
@@ -98,6 +105,17 @@ ExprId MediumLevelILFunction::SetVarFieldSSA(size_t size, const BNILVariable& va
 {
 	return AddExpr(MLIL_SET_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
 		offset, varIndex, src);
+}
+
+
+ExprId MediumLevelILFunction::SetVarSplitSSA(size_t size, const BNILVariable& high, size_t highIndex,
+	const BNILVariable& low, size_t lowIndex, ExprId src)
+{
+	return AddExpr(MLIL_SET_VAR_SPLIT_SSA, size,
+		AddExpr(MLIL_VAR_SPLIT_DEST_SSA, size, ((uint64_t)high.type << 32) | (uint64_t)high.index,
+			high.identifier, highIndex),
+		AddExpr(MLIL_VAR_SPLIT_DEST_SSA, size, ((uint64_t)low.type << 32) | (uint64_t)low.index,
+			low.identifier, lowIndex), src);
 }
 
 
@@ -124,6 +142,19 @@ ExprId MediumLevelILFunction::VarFieldSSA(size_t size, const BNILVariable& var, 
 {
 	return AddExpr(MLIL_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
 		offset, varIndex);
+}
+
+
+ExprId MediumLevelILFunction::AddressOf(size_t size, const BNILVariable& var)
+{
+	return AddExpr(MLIL_ADDRESS_OF, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier);
+}
+
+
+ExprId MediumLevelILFunction::AddressOfField(size_t size, const BNILVariable& var, int64_t offset)
+{
+	return AddExpr(MLIL_ADDRESS_OF_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index,
+		var.identifier, offset);
 }
 
 

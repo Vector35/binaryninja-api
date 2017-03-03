@@ -22,10 +22,18 @@ Running Binary Ninja with debug logging will make your bug report more useful.
 
 Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][faq].
 
+### Headless Ubuntu
+
+If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requiremetns (for at least 14.04 LTS):
+
+```
+apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 libnspr4 libsm6
+```
+
 ### Arch Linux
 
- - Install python2 from the [official repositories][archrepo]
- - Install the [libcurl-compat] library from AUR, and run Binary Ninja via `LD_PRELOAD=libcurl.so.3 ~/binaryninja/binaryninja`
+ - Install python2 from the [official repositories][archrepo] (`sudo pacman -S python2`) and create a sym link: `sudo ln -s /usr/lib/libpython2.7.so.1.0 /usr/lib/libpython2.7.so.1`
+ - Install the [libcurl-compat] library with `sudo pacman -S libcurl-compat`, and run Binary Ninja via `LD_PRELOAD=libcurl.so.3 ~/binaryninja/binaryninja`
 
 ### KDE
 

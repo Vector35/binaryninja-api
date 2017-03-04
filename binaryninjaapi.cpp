@@ -41,6 +41,10 @@ void BinaryNinja::InitUserPlugins()
 	BNInitUserPlugins();
 }
 
+void BinaryNinja::InitRepoPlugins()
+{
+	BNInitRepoPlugins();
+}
 
 string BinaryNinja::GetBundledPluginDirectory()
 {

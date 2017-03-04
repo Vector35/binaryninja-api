@@ -341,6 +341,7 @@ namespace BinaryNinja
 
 	void InitCorePlugins();
 	void InitUserPlugins();
+	void InitRepoPlugins();
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
 	std::string GetUserPluginDirectory();
@@ -2424,5 +2425,87 @@ namespace BinaryNinja
 
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
+	};
+
+	typedef BNPluginOrigin PluginOrigin;
+	typedef BNPluginUpdateStatus PluginUpdateStatus;
+	typedef BNPluginType PluginType;
+	typedef BNRepositoryManifest RepositoryManifest;
+
+	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
+	{
+	public:
+		RepoPlugin(const std::string& path,
+			bool installed,
+			bool enabled,
+			const std::string& api,
+			const std::string& author,
+			const std::string& description,
+			const std::string& license,
+			const std::string& licenseText,
+			const std::string& longdescription,
+			const std::string& minimimVersions,
+			const std::string& name,
+			const std::vector<PluginType>& pluginTypes,
+			const std::string& url,
+			const std::string& version);
+		RepoPlugin(BNRepoPlugin* plugin);
+		std::string GetPath() const;
+		bool IsInstalled() const;
+		std::string GetPluginDirectory() const;
+		void SetEnabled(bool enabled);
+		bool IsEnabled() const;
+		PluginUpdateStatus GetPluginUpdateStatus() const;
+		std::string GetApi() const;
+		std::string GetAuthor() const;
+		std::string GetDescription() const;
+		std::string GetLicense() const;
+		std::string GetLicenseText() const;
+		std::string GetLongdescription() const;
+		std::string GetMinimimVersions() const;
+		std::string GetName() const;
+		std::vector<PluginType> GetPluginTypes() const;
+		std::string GetUrl() const;
+		std::string GetVersion() const;
+	};
+
+	class Repository: public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
+	{
+	public:
+		Repository(const std::string& url, // URL of the git repository containing the plugins
+			const std::string& repoPath, // Name of the directory to store this repository within the repositories directory
+			const std::string& repoManifest="plugins", // Name of the of the inner directory and .json file
+			const std::string& localReference="master",
+			const std::string& remoteReference="origin");
+		Repository(BNRepository* repository);
+		~Repository();
+		std::string GetUrl() const;
+		std::string GetRepoPath() const;
+		std::string GetLocalReference() const;
+		std::string GetRemoteReference() const;
+		std::vector<Ref<RepoPlugin>> GetPlugins() const;
+		bool IsInitialized() const;
+		std::string GetPluginDirectory() const;
+		Ref<RepoPlugin> GetPluginByPath(const std::string& pluginPath);
+		std::string GetFullPath() const;
+	};
+
+	class RepositoryManager: public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
+	{
+		bool m_core;
+	public:
+		RepositoryManager(std::vector<Ref<Repository>>& repoInfo, const std::string& enabledPluginsPath);
+		RepositoryManager(BNRepositoryManager* repoManager);
+		RepositoryManager();
+		~RepositoryManager();
+		bool CheckForUpdates();
+		std::vector<Ref<Repository>> GetRepositories();
+		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
+		bool AddRepository(Ref<Repository> repo);
+		bool EnablePlugin(const std::string& repoName, const std::string& pluginPath);
+		bool DisablePlugin(const std::string& repoName, const std::string& pluginPath);
+		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);
+		bool UninstallPlugin(const std::string& repoName, const std::string& pluginPath);
+		Ref<Repository> GetDefaultRepository();
 	};
 }

@@ -45,6 +45,12 @@
 #endif
 #endif
 
+#ifdef WIN32
+#define PATH_SEP "\\"
+#else
+#define PATH_SEP "/"
+#endif
+
 #define BN_MAX_INSTRUCTION_LENGTH   256
 #define BN_DEFAULT_NSTRUCTION_LENGTH 16
 #define BN_DEFAULT_OPCODE_DISPLAY   8
@@ -104,6 +110,11 @@ extern "C"
 	struct BNScriptingInstance;
 	struct BNMainThreadAction;
 	struct BNBackgroundTask;
+	struct BNRepository;
+	struct BNRepoPlugin;
+	struct BNRepositoryManager;
+
+	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
 	//! Console log levels
 	enum BNLogLevel
@@ -565,6 +576,27 @@ extern "C"
 		UnsignedRangeValue,
 		LookupTableValue,
 		ComparisonResultValue
+	};
+
+	enum BNPluginOrigin
+	{
+		OfficialPluginOrigin,
+		CommunityPluginOrigin,
+		OtherPluginOrigin
+	};
+
+	enum BNPluginUpdateStatus
+	{
+		UpToDatePluginStatus,
+		UpdatesAvailablePluginStatus
+	};
+
+	enum BNPluginType
+	{
+		CorePluginType,
+		UiPluginType,
+		ArchitecturePluginType,
+		BinaryViewPluginType
 	};
 
 	struct BNLookupTableEntry
@@ -1187,6 +1219,12 @@ extern "C"
 		uint64_t end;
 	};
 
+	struct BNRepositoryManifest
+	{
+		const char* ManifestFile;
+		const char* RepoDirectory;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
@@ -1204,10 +1242,13 @@ extern "C"
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);
 	BINARYNINJACOREAPI void BNInitUserPlugins(void);
+	BINARYNINJACOREAPI void BNInitRepoPlugins(void);
+
 	BINARYNINJACOREAPI char* BNGetBundledPluginDirectory(void);
 	BINARYNINJACOREAPI void BNSetBundledPluginDirectory(const char* path);
 	BINARYNINJACOREAPI char* BNGetUserPluginDirectory(void);
-
+	BINARYNINJACOREAPI char* BNGetUserDirectory(void);
+	BINARYNINJACOREAPI char* BNGetRepositoriesDirectory(void);
 	BINARYNINJACOREAPI char* BNGetPathRelativeToBundledPluginDirectory(const char* path);
 	BINARYNINJACOREAPI char* BNGetPathRelativeToUserPluginDirectory(const char* path);
 
@@ -2243,6 +2284,80 @@ extern "C"
 	                                       char*** outVarName,
 	                                       size_t* outVarNameElements);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
+
+	// Plugin repository APIs
+	BINARYNINJACOREAPI const char* BNPluginGetApi(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetAuthor(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetDescription(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetLicense(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetMinimimVersions(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetName(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetUrl(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetVersion(BNRepoPlugin* p);
+	BINARYNINJACOREAPI void BNFreePluginTypes(BNPluginType* r);
+	BINARYNINJACOREAPI BNRepoPlugin* BNCreatePlugin(const char* path,
+		bool installed,
+		bool enabled,
+		const char* api,
+		const char* author,
+		const char* description,
+		const char* license,
+		const char* licenseText,
+		const char* longdescription,
+		const char* minimimVersions,
+		const char* name,
+		const BNPluginType* pluginTypes,
+		size_t pluginTypesSize,
+		const char* url,
+		const char* version);
+	BINARYNINJACOREAPI BNRepoPlugin* BNNewPluginReference(BNRepoPlugin* r);
+	BINARYNINJACOREAPI void BNFreePlugin(BNRepoPlugin* plugin);
+	BINARYNINJACOREAPI const char* BNPluginGetPath(BNRepoPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNRepoPlugin* p);
+	BINARYNINJACOREAPI void BNPluginSetEnabled(BNRepoPlugin* p, bool enabled);
+	BINARYNINJACOREAPI bool BNPluginIsEnabled(BNRepoPlugin* p);
+	BINARYNINJACOREAPI BNPluginUpdateStatus BNPluginGetPluginUpdateStatus(BNRepoPlugin* p);
+	BINARYNINJACOREAPI BNPluginType* BNPluginGetPluginTypes(BNRepoPlugin* p, size_t* count);
+	BINARYNINJACOREAPI BNRepository* BNCreateRepository(const char* url,
+		const char* repoPath,
+		const char* localReference,
+		const char* remoteReference);
+	BINARYNINJACOREAPI BNRepository* BNNewRepositoryReference(BNRepository* r);
+	BINARYNINJACOREAPI void BNFreeRepository(BNRepository* r);
+	BINARYNINJACOREAPI char* BNRepositoryGetUrl(BNRepository* r);
+	BINARYNINJACOREAPI char* BNRepositoryGetRepoPath(BNRepository* r);
+	BINARYNINJACOREAPI char* BNRepositoryGetLocalReference(BNRepository* r);
+	BINARYNINJACOREAPI char* BNRepositoryGetRemoteReference(BNRepository* r);
+	BINARYNINJACOREAPI BNRepoPlugin** BNRepositoryGetPlugins(BNRepository* r, size_t* count);
+	BINARYNINJACOREAPI void BNFreeRepositoryPluginList(BNRepoPlugin** r);
+	BINARYNINJACOREAPI bool BNRepositoryIsInitialized(BNRepository* r);
+	BINARYNINJACOREAPI void BNRepositoryFreePluginDirectoryList(char** list, size_t count);
+	BINARYNINJACOREAPI BNRepoPlugin* BNRepositoryGetPluginByPath(BNRepository* r, const char* pluginPath);
+	BINARYNINJACOREAPI const char* BNRepositoryGetPluginsPath(BNRepository* r);
+
+	BINARYNINJACOREAPI BNRepositoryManager* BNCreateRepositoryManager(BNRepository** repos,
+		size_t reposSize,
+		const char* enabledPluginsPath);
+	BINARYNINJACOREAPI BNRepositoryManager* BNNewRepositoryManagerReference(BNRepositoryManager* r);
+	BINARYNINJACOREAPI void BNFreeRepositoryManager(BNRepositoryManager* r);
+	BINARYNINJACOREAPI bool BNRepositoryManagerCheckForUpdates(BNRepositoryManager* r);
+	BINARYNINJACOREAPI BNRepository** BNRepositoryManagerGetRepositories(BNRepositoryManager* r, size_t* count);
+	BINARYNINJACOREAPI void BNFreeRepositoryManagerRepositoriesList(BNRepository** r);
+	BINARYNINJACOREAPI bool BNRepositoryManagerAddRepository(BNRepositoryManager* r, BNRepository* repo);
+	BINARYNINJACOREAPI bool BNRepositoryManagerEnablePlugin(BNRepositoryManager* r, const char* repoName, const char* pluginPath);
+	BINARYNINJACOREAPI bool BNRepositoryManagerDisablePlugin(BNRepositoryManager* r, const char* repoName, const char* pluginPath);
+	BINARYNINJACOREAPI bool BNRepositoryManagerInstallPlugin(BNRepositoryManager* r, const char* repoName, const char* pluginPath);
+	BINARYNINJACOREAPI bool BNRepositoryManagerUninstallPlugin(BNRepositoryManager* r, const char* repoName, const char* pluginPath);
+	BINARYNINJACOREAPI bool BNRepositoryManagerUpdatePlugin(BNRepositoryManager* r, const char* repoName, const char* pluginPath);
+	BINARYNINJACOREAPI BNRepository* BNRepositoryGetRepositoryByPath(BNRepositoryManager* r, const char* repoPath);
+	BINARYNINJACOREAPI BNRepositoryManager* BNGetRepositoryManager();
+
+	BINARYNINJACOREAPI BNRepository* BNRepositoryManagerGetDefaultRepository(BNRepositoryManager* r);
+	BINARYNINJACOREAPI void BNRegisterForPluginLoading(const char* pluginApiName, BNLoadPluginCallback cb, void* ctx);
+	BINARYNINJACOREAPI bool BNLoadPluginForApi(const char* pluginApiName, const char* repoPath, const char* pluginPath);
+
 #ifdef __cplusplus
 }
 #endif

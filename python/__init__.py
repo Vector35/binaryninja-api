@@ -45,6 +45,7 @@ from .lineardisassembly import *
 from .undoaction import *
 from .highlight import *
 from .scriptingprovider import *
+from .pluginmanager import *
 
 
 def shutdown():

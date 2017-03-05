@@ -1297,12 +1297,14 @@ extern "C"
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);
 	BINARYNINJACOREAPI void BNInitUserPlugins(void);
+	BINARYNINJACOREAPI void BNInitRepoPlugins(void);
+
 	BINARYNINJACOREAPI char* BNGetInstallDirectory(void);
 	BINARYNINJACOREAPI char* BNGetBundledPluginDirectory(void);
 	BINARYNINJACOREAPI void BNSetBundledPluginDirectory(const char* path);
 	BINARYNINJACOREAPI char* BNGetUserDirectory(void);
 	BINARYNINJACOREAPI char* BNGetUserPluginDirectory(void);
-
+	BINARYNINJACOREAPI char* BNGetRepositoriesDirectory(void);
 	BINARYNINJACOREAPI void BNSaveLastRun(void);
 
 	BINARYNINJACOREAPI char* BNGetPathRelativeToBundledPluginDirectory(const char* path);
@@ -2389,15 +2391,6 @@ extern "C"
 	                                       size_t* outVarNameElements);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 
-	// LLVM Services APIs
-	BINARYNINJACOREAPI void BNLlvmServicesInit(void);
-
-	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char *src, int dialect, const char *triplet,
-		int codeModel, int relocMode, char **outBytes, int *outBytesLen, char **err, int *errLen);
-
-	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char *outBytes, char *err);
-
-
 	// Plugin repository APIs
 	BINARYNINJACOREAPI const char* BNPluginGetApi(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetAuthor(BNRepoPlugin* p);
@@ -2471,6 +2464,16 @@ extern "C"
 	BINARYNINJACOREAPI void BNRegisterForPluginLoading(const char* pluginApiName, BNLoadPluginCallback cb, void* ctx);
 	BINARYNINJACOREAPI bool BNLoadPluginForApi(const char* pluginApiName, const char* repoPath, const char* pluginPath);
 
+	// LLVM Services APIs
+	BINARYNINJACOREAPI void BNLlvmServicesInit(void);
+
+	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char *src, int dialect, const char *triplet,
+		int codeModel, int relocMode, char **outBytes, int *outBytesLen, char **err, int *errLen);
+
+	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char *outBytes, char *err);
+
+	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
+	BINARYNINJACOREAPI int BNDeleteFile(const char* path);
 #ifdef __cplusplus
 }
 #endif

@@ -2587,7 +2587,6 @@ namespace BinaryNinja
 	typedef BNPluginOrigin PluginOrigin;
 	typedef BNPluginUpdateStatus PluginUpdateStatus;
 	typedef BNPluginType PluginType;
-	typedef BNRepositoryManifest RepositoryManifest;
 
 	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
 	{

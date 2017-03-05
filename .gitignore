@@ -20,3 +20,5 @@ api-docs/build/*
 .env
 api-docs/source/binaryninja.*
 *.pyc
+api-docs/source/python.rst
+api-docs/source/index.rst

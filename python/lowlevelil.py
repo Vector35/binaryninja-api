@@ -187,7 +187,9 @@ class LowLevelILInstruction(object):
 			value = tokens[i].value
 			size = tokens[i].size
 			operand = tokens[i].operand
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand))
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
@@ -250,6 +252,16 @@ class LowLevelILFunction(object):
 
 	def __del__(self):
 		core.BNFreeLowLevelILFunction(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, LowLevelILFunction):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, LowLevelILFunction):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def current_address(self):

@@ -101,6 +101,8 @@ const vector<DisassemblyTextLine>& FunctionGraphBlock::GetLines()
 			token.value = lines[i].tokens[j].value;
 			token.size = lines[i].tokens[j].size;
 			token.operand = lines[i].tokens[j].operand;
+			token.context = lines[i].tokens[j].context;
+			token.address = lines[i].tokens[j].address;
 			line.tokens.push_back(token);
 		}
 		result.push_back(line);
@@ -126,8 +128,7 @@ const vector<FunctionGraphEdge>& FunctionGraphBlock::GetOutgoingEdges()
 	{
 		FunctionGraphEdge edge;
 		edge.type = edges[i].type;
-		edge.target = edges[i].target;
-		edge.arch = edges[i].arch ? new CoreArchitecture(edges[i].arch) : nullptr;
+		edge.target = edges[i].target ? new BasicBlock(BNNewBasicBlockReference(edges[i].target)) : nullptr;
 		edge.points.insert(edge.points.begin(), &edges[i].points[0], &edges[i].points[edges[i].pointCount]);
 		result.push_back(edge);
 	}

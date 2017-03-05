@@ -49,7 +49,23 @@ from .pluginmanager import *
 
 
 def shutdown():
+	"""
+	``shutdown`` cleanly shuts down the core, stopping all workers and closing all log files.
+	"""
 	core.BNShutdown()
+
+
+def get_unique_identifier():
+	return core.BNGetUniqueIdentifierString()
+
+
+def get_install_directory():
+	"""
+	``get_install_directory`` returns a string pointing to the installed binary currently running
+
+	.warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
+	"""
+	return core.BNGetInstallDirectory()
 
 
 class _DestructionCallbackHandler(object):
@@ -77,4 +93,16 @@ bundled_plugin_path = core.BNGetBundledPluginDirectory()
 user_plugin_path = core.BNGetUserPluginDirectory()
 
 core_version = core.BNGetVersionString()
+'''Core version'''
+
 core_build_id = core.BNGetBuildId()
+'''Build ID'''
+
+core_product = core.BNGetProduct()
+'''Product string from the license file'''
+
+core_product_type = core.BNGetProductType()
+'''Product type from the license file'''
+
+core_license_count = core.BNGetLicenseCount()
+'''License count from the license file'''

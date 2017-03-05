@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
+SOURCEDIR     = source
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -47,6 +48,8 @@ help:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm $(SOURCEDIR)/binaryninja.*.rst
+	rm $(SOURCEDIR)/python.rst
 
 .PHONY: html
 html:

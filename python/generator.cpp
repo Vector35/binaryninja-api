@@ -97,17 +97,19 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 		else
 			fprintf(out, "ctypes.c_double");
 		break;
-	case StructureTypeClass:
-		fprintf(out, "%s", type->GetQualifiedName(type->GetStructure()->GetName()).c_str());
+	case NamedTypeReferenceClass:
+		if (type->GetNamedTypeReference()->GetTypeClass() == EnumNamedTypeClass)
+		{
+			string name = type->GetNamedTypeReference()->GetName().GetString();
+			if (name.size() > 2 && name.substr(0, 2) == "BN")
+				name = name.substr(2);
+			fprintf(out, "%sEnum", name.c_str());
+		}
+		else
+		{
+			fprintf(out, "%s", type->GetNamedTypeReference()->GetName().GetString().c_str());
+		}
 		break;
-	case EnumerationTypeClass:
-	{
-		string name = type->GetQualifiedName(type->GetEnumeration()->GetName());
-		if (name.size() > 2 && name.substr(0, 2) == "BN")
-			name = name.substr(2);
-		fprintf(out, "%sEnum", name.c_str());
-		break;
-	}
 	case PointerTypeClass:
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))
 		{
@@ -161,7 +163,7 @@ int main(int argc, char* argv[])
 	Architecture::Register(new GeneratorArchitecture());
 
 	// Parse API header to get type and function information
-	map<string, Ref<Type>> types, vars, funcs;
+	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
 	bool ok = Architecture::GetByName("generator")->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 	fprintf(stderr, "%s", errors.c_str());
@@ -195,14 +197,17 @@ int main(int argc, char* argv[])
 	fprintf(out, "# Type definitions\n");
 	for (auto& i : types)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
 		if (i.second->GetClass() == StructureTypeClass)
 		{
-			fprintf(out, "class %s(ctypes.Structure):\n", i.first.c_str());
+			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
 			fprintf(out, "\tpass\n");
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
-			string name = i.first;
 			if (name.size() > 2 && name.substr(0, 2) == "BN")
 				name = name.substr(2);
 
@@ -217,7 +222,7 @@ int main(int argc, char* argv[])
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
 		         (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
 		{
-			fprintf(out, "%s = ", i.first.c_str());
+			fprintf(out, "%s = ", name.c_str());
 			OutputType(out, i.second);
 			fprintf(out, "\n");
 		}
@@ -227,9 +232,13 @@ int main(int argc, char* argv[])
 	fprintf(out, "\n# Structure definitions\n");
 	for (auto& i : types)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
 		if ((i.second->GetClass() == StructureTypeClass) && (i.second->GetStructure()->GetMembers().size() != 0))
 		{
-			fprintf(out, "%s._fields_ = [\n", i.first.c_str());
+			fprintf(out, "%s._fields_ = [\n", name.c_str());
 			for (auto& j : i.second->GetStructure()->GetMembers())
 			{
 				fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
@@ -243,6 +252,11 @@ int main(int argc, char* argv[])
 	fprintf(out, "\n# Function definitions\n");
 	for (auto& i : funcs)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
+
 		// Check for a string result, these will be automatically wrapped to free the string
 		// memory and return a Python string
 		bool stringResult = (i.second->GetChildType()->GetClass() == PointerTypeClass) &&
@@ -251,7 +265,7 @@ int main(int argc, char* argv[])
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 		bool callbackConvention = false;
-		if (i.first == "BNAllocString")
+		if (name == "BNAllocString")
 		{
 			// Don't perform automatic wrapping of string allocation, and return a void
 			// pointer so that callback functions (which is the only valid use of BNAllocString)
@@ -260,11 +274,11 @@ int main(int argc, char* argv[])
 			callbackConvention = true;
 		}
 
-		string funcName = i.first;
+		string funcName = name;
 		if (stringResult || pointerResult)
 			funcName = string("_") + funcName;
 
-		fprintf(out, "%s = core.%s\n", funcName.c_str(), i.first.c_str());
+		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
 		fprintf(out, "%s.restype = ", funcName.c_str());
 		OutputType(out, i.second->GetChildType(), true, callbackConvention);
 		fprintf(out, "\n");
@@ -274,7 +288,7 @@ int main(int argc, char* argv[])
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
-				if (i.first == "BNFreeString")
+				if (name == "BNFreeString")
 				{
 					// BNFreeString expects a pointer to a string allocated by the core, so do not use
 					// a c_char_p here, as that would be allocated by the Python runtime.  This can
@@ -293,7 +307,7 @@ int main(int argc, char* argv[])
 		if (stringResult)
 		{
 			// Emit wrapper to get Python string and free native memory
-			fprintf(out, "def %s(*args):\n", i.first.c_str());
+			fprintf(out, "def %s(*args):\n", name.c_str());
 			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tstring = ctypes.cast(result, ctypes.c_char_p).value\n");
 			fprintf(out, "\tBNFreeString(result)\n");
@@ -302,7 +316,7 @@ int main(int argc, char* argv[])
 		else if (pointerResult)
 		{
 			// Emit wrapper to return None on null pointer
-			fprintf(out, "def %s(*args):\n", i.first.c_str());
+			fprintf(out, "def %s(*args):\n", name.c_str());
 			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tif not result:\n");
 			fprintf(out, "\t\treturn None\n");

@@ -31,7 +31,7 @@ import binaryninja
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return filter(lambda x: x[0] not in ("abc", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading"), modules)
+	return filter(lambda x: x[0] not in ("abc", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading", "startup", "associateddatastore"), modules)
 
 
 def classlist(module):
@@ -43,7 +43,7 @@ def classlist(module):
 
 
 def generaterst():
-	pythonrst = open("python.rst", "w")
+	pythonrst = open("index.rst", "w")
 	pythonrst.write('''Binary Ninja Python API Documentation
 =====================================
 
@@ -53,7 +53,7 @@ def generaterst():
 ''')
 
 	for modulename, module in modulelist(binaryninja):
-		filename = 'binaryninja.{module}.rst'.format(module=modulename)
+		filename = 'binaryninja.{module}-module.rst'.format(module=modulename)
 		pythonrst.write('   {module} <{filename}>\n'.format(module=modulename, filename=filename))
 		modulefile = open(filename, "w")
 		modulefile.write('''{module} module
@@ -69,6 +69,11 @@ def generaterst():
 
 		modulefile.write('''\n.. toctree::
    :maxdepth: 2\n''')
+
+		modulefile.write('''\n\n.. automodule:: binaryninja.{module}
+   :members:
+   :undoc-members:
+   :show-inheritance:'''.format(module=modulename))
 		modulefile.close()
 
 	pythonrst.write('''.. automodule:: binaryninja
@@ -125,7 +130,7 @@ source_suffix = '.rst'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'python'
+master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja API'

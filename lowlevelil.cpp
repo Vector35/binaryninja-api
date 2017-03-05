@@ -579,6 +579,10 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 		token.type = list[i].type;
 		token.text = list[i].text;
 		token.value = list[i].value;
+		token.size = list[i].size;
+		token.operand = list[i].operand;
+		token.context = list[i].context;
+		token.address = list[i].address;
 		tokens.push_back(token);
 	}
 
@@ -603,6 +607,10 @@ bool LowLevelILFunction::GetInstructionText(Function* func, Architecture* arch, 
 		token.type = list[i].type;
 		token.text = list[i].text;
 		token.value = list[i].value;
+		token.size = list[i].size;
+		token.operand = list[i].operand;
+		token.context = list[i].context;
+		token.address = list[i].address;
 		tokens.push_back(token);
 	}
 

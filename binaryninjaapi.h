@@ -2201,20 +2201,25 @@ namespace BinaryNinja
 		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
 
 		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size,
-			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0, ExprId f = 0);
 		ExprId AddInstruction(ExprId expr);
 
 		ExprId SetVar(size_t size, const BNILVariable& var, ExprId src);
 		ExprId SetVarField(size_t size, const BNILVariable& var, int64_t offset, ExprId src);
 		ExprId SetVarSplit(size_t size, const BNILVariable& high, const BNILVariable& low, ExprId src);
 		ExprId SetVarSSA(size_t size, const BNILVariable& var, size_t index, ExprId src);
-		ExprId SetVarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex, ExprId src);
+		ExprId SetVarFieldSSA(size_t size, const BNILVariable& var, size_t varIndex, int64_t offset, ExprId src);
 		ExprId SetVarSplitSSA(size_t size, const BNILVariable& high, size_t highIndex,
 			const BNILVariable& low, size_t lowIndex, ExprId src);
+		ExprId SetVarAliased(size_t size, const BNILVariable& var, size_t destIndex, size_t srcIndex, ExprId src);
+		ExprId SetVarFieldAliased(size_t size, const BNILVariable& var, size_t destIndex, size_t srcIndex,
+			int64_t offset, ExprId src);
 		ExprId Var(size_t size, const BNILVariable& var);
 		ExprId VarField(size_t size, const BNILVariable& var, int64_t offset);
 		ExprId VarSSA(size_t size, const BNILVariable& var, size_t index);
 		ExprId VarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex);
+		ExprId VarAliased(size_t size, const BNILVariable& var, size_t memIndex);
+		ExprId VarFieldAliased(size_t size, const BNILVariable& var, int64_t offset, size_t memIndex);
 		ExprId AddressOf(size_t size, const BNILVariable& var);
 		ExprId AddressOfField(size_t size, const BNILVariable& var, int64_t offset);
 

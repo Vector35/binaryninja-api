@@ -684,8 +684,11 @@ extern "C"
 		MLIL_ZX,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
-		MLIL_CALL,
-		MLIL_RET,
+		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
+		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
+		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
+		MLIL_CALL_PARAM, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
+		MLIL_RET, // Not valid in SSA form (see MLIL_RET_SSA)
 		MLIL_NORET,
 		MLIL_IF,
 		MLIL_GOTO,
@@ -701,7 +704,8 @@ extern "C"
 		MLIL_CMP_UGT,
 		MLIL_TEST_BIT,
 		MLIL_BOOL_TO_INT,
-		MLIL_SYSCALL,
+		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
+		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
 		MLIL_BP,
 		MLIL_TRAP,
 		MLIL_UNDEF,
@@ -713,12 +717,19 @@ extern "C"
 		MLIL_SET_VAR_SSA_FIELD,
 		MLIL_SET_VAR_SPLIT_SSA,
 		MLIL_VAR_SPLIT_DEST_SSA,
+		MLIL_SET_VAR_ALIASED,
+		MLIL_SET_VAR_ALIASED_FIELD,
 		MLIL_VAR_SSA,
 		MLIL_VAR_SSA_FIELD,
+		MLIL_VAR_ALIASED,
+		MLIL_VAR_ALIASED_FIELD,
 		MLIL_CALL_SSA,
+		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
-		MLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
-		MLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		MLIL_SYSCALL_UNTYPED_SSA,
+		MLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA family instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA family instructions
+		MLIL_RET_SSA,
 		MLIL_LOAD_SSA,
 		MLIL_STORE_SSA,
 		MLIL_VAR_PHI,
@@ -729,7 +740,7 @@ extern "C"
 	{
 		BNMediumLevelILOperation operation;
 		size_t size;
-		uint64_t operands[5];
+		uint64_t operands[6];
 		uint64_t address;
 	};
 
@@ -2169,7 +2180,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNMediumLevelILGetInstructionStart(BNMediumLevelILFunction* func,
 		BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddExpr(BNMediumLevelILFunction* func, BNMediumLevelILOperation operation,
-		size_t size, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e);
+		size_t size, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddInstruction(BNMediumLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI size_t BNMediumLevelILGoto(BNMediumLevelILFunction* func, BNMediumLevelILLabel* label);
 	BINARYNINJACOREAPI size_t BNMediumLevelILIf(BNMediumLevelILFunction* func, uint64_t op,

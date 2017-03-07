@@ -729,7 +729,6 @@ extern "C"
 		MLIL_SYSCALL_UNTYPED_SSA,
 		MLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA family instructions
 		MLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA family instructions
-		MLIL_RET_SSA,
 		MLIL_LOAD_SSA,
 		MLIL_STORE_SSA,
 		MLIL_VAR_PHI,

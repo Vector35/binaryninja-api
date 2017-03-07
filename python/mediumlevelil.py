@@ -52,6 +52,8 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_STORE: [("dest", "expr"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR: [("src", "var")],
 		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")],
+		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr")],
@@ -84,11 +86,11 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
-		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "var_list")],
+		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_CALL_OUTPUT: [("dest", "var_list")],
 		MediumLevelILOperation.MLIL_CALL_PARAM: [("src", "var_list")],
-		MediumLevelILOperation.MLIL_RET: [("src", "var_list")],
+		MediumLevelILOperation.MLIL_RET: [("src", "expr_list")],
 		MediumLevelILOperation.MLIL_NORET: [],
 		MediumLevelILOperation.MLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
 		MediumLevelILOperation.MLIL_GOTO: [("dest", "int")],
@@ -104,7 +106,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")],
-		MediumLevelILOperation.MLIL_SYSCALL: [("output", "var_list"), ("params", "var_list")],
+		MediumLevelILOperation.MLIL_SYSCALL: [("output", "var_list"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [("output", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_BP: [],
 		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
@@ -121,10 +123,10 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [("src", "var"), ("index", "int"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_VAR_ALIASED: [("src", "var"), ("src_memory", "int")],
 		MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: [("src", "var"), ("src_memory", "int"), ("offset", "int")],
-		MediumLevelILOperation.MLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("param", "expr")],
-		MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [("output", "expr"), ("dest", "expr"), ("param", "expr"), ("stack", "expr")],
-		MediumLevelILOperation.MLIL_SYSCALL_SSA: [("output", "expr"), ("param", "expr")],
-		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [("output", "expr"), ("param", "expr"), ("stack", "expr")],
+		MediumLevelILOperation.MLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
+		MediumLevelILOperation.MLIL_SYSCALL_SSA: [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [("output", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [("src_memory", "int"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
@@ -185,6 +187,14 @@ class MediumLevelILInstruction(object):
 					identifier = operand_list[(j * 3) + 1]
 					var_index = operand_list[(j * 3) + 2]
 					value.append((function.ILVariable(self.function, var_type, index, identifier), var_index))
+				core.BNMediumLevelILFreeOperandList(operand_list)
+			elif operand_type == "expr_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value):
+					value.append(MediumLevelILInstruction(func, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
 			self.__dict__[name] = value

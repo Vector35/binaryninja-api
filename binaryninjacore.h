@@ -2461,7 +2461,10 @@ extern "C"
 	BINARYNINJACOREAPI BNRepositoryManager* BNGetRepositoryManager();
 
 	BINARYNINJACOREAPI BNRepository* BNRepositoryManagerGetDefaultRepository(BNRepositoryManager* r);
-	BINARYNINJACOREAPI void BNRegisterForPluginLoading(const char* pluginApiName, BNLoadPluginCallback cb, void* ctx);
+	BINARYNINJACOREAPI void BNRegisterForPluginLoading(
+		const char* pluginApiName,
+		bool (*cb)(const char* repoPath, const char* pluginPath, void* ctx),
+		void* ctx);
 	BINARYNINJACOREAPI bool BNLoadPluginForApi(const char* pluginApiName, const char* repoPath, const char* pluginPath);
 
 	// LLVM Services APIs

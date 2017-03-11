@@ -268,6 +268,12 @@ size_t MediumLevelILFunction::GetInstructionCount() const
 }
 
 
+size_t MediumLevelILFunction::GetExprCount() const
+{
+	return BNGetMediumLevelILExprCount(m_object);
+}
+
+
 void MediumLevelILFunction::Finalize()
 {
 	BNFinalizeMediumLevelILFunction(m_object);
@@ -435,4 +441,37 @@ RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 {
 	BNRegisterValue value = BNGetMediumLevelILExprValue(m_object, expr);
 	return RegisterValue::FromAPIObject(value);
+}
+
+
+size_t MediumLevelILFunction::GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const
+{
+	return BNGetMediumLevelILSSAVarIndexAtILInstruction(m_object, &var, instr);
+}
+
+
+size_t MediumLevelILFunction::GetSSAMemoryIndexAtInstruction(size_t instr) const
+{
+	return BNGetMediumLevelILSSAMemoryIndexAtILInstruction(m_object, instr);
+}
+
+
+Ref<LowLevelILFunction> MediumLevelILFunction::GetLowLevelIL() const
+{
+	BNLowLevelILFunction* func = BNGetLowLevelILForMediumLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+size_t MediumLevelILFunction::GetLowLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetLowLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t MediumLevelILFunction::GetLowLevelILExprIndex(size_t expr) const
+{
+	return BNGetLowLevelILExprIndex(m_object, expr);
 }

@@ -25,6 +25,7 @@ import _binaryninjacore as core
 from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
 import function
 import basicblock
+import mediumlevelil
 
 
 class LowLevelILLabel(object):
@@ -250,6 +251,14 @@ class LowLevelILInstruction(object):
 			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
 
 	@property
+	def mapped_medium_level_il(self):
+		"""Gets the medium level IL expression corresponding to this expression"""
+		expr = self.function.get_mapped_medium_level_il_expr_index(self.expr_index)
+		if expr is None:
+			return None
+		return mediumlevelil.MediumLevelILInstruction(self.function.mapped_medium_level_il, expr)
+
+	@property
 	def value(self):
 		"""Value of expression using static data flow analysis (read-only)"""
 		value = core.BNGetLowLevelILExprValue(self.function.handle, self.expr_index)
@@ -380,6 +389,24 @@ class LowLevelILFunction(object):
 		if not result:
 			return None
 		return LowLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def medium_level_il(self):
+		"""Medium level IL for this low level IL."""
+		result = core.BNGetMediumLevelILForLowLevelIL(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def mapped_medium_level_il(self):
+		"""Medium level IL with mappings between low level IL and medium level IL. Unused stores are not removed.
+		Typically, this should only be used to answer queries on assembly or low level IL where the query is
+		easier to perform on medium level IL."""
+		result = core.BNGetMappedMediumLevelIL(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
 
 	def __setattr__(self, name, value):
 		try:
@@ -1420,6 +1447,24 @@ class LowLevelILFunction(object):
 		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, index)
 		result = function.RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_mapped_medium_level_il_instruction_index(self, instr):
+		med_il = self.mapped_medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMappedMediumLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetMediumLevelILInstructionCount(med_il.handle):
+			return None
+		return result
+
+	def get_mapped_medium_level_il_expr_index(self, expr):
+		med_il = self.mapped_medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMappedMediumLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
+			return None
 		return result
 
 

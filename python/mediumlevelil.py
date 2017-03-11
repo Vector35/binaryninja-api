@@ -25,6 +25,7 @@ import _binaryninjacore as core
 from .enums import MediumLevelILOperation, InstructionTextTokenType, ILVariableSourceType
 import function
 import basicblock
+import lowlevelil
 
 
 class MediumLevelILLabel(object):
@@ -258,6 +259,14 @@ class MediumLevelILInstruction(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
+	@property
+	def low_level_il(self):
+		"""Low level IL form of this expression"""
+		expr = self.function.get_low_level_il_expr_index(self.expr_index)
+		if expr is None:
+			return None
+		return lowlevelil.LowLevelILInstruction(self.function.low_level_il.ssa_form, expr)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -349,6 +358,14 @@ class MediumLevelILFunction(object):
 		if not result:
 			return None
 		return MediumLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def low_level_il(self):
+		"""Low level IL for this function"""
+		result = core.BNGetLowLevelILForMediumLevelIL(self.handle)
+		if not result:
+			return None
+		return lowlevelil.LowLevelILFunction(self.arch, result, self.source_function)
 
 	def __setattr__(self, name, value):
 		try:
@@ -538,6 +555,40 @@ class MediumLevelILFunction(object):
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, index)
 		result = function.RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_ssa_var_index_at_instruction(self, var, instr):
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		return core.BNGetMediumLevelILSSAVarIndexAtILInstruction(self.handle, var_data, instr)
+
+	def get_ssa_memory_index_at_instruction(self, instr):
+		return core.BNGetMediumLevelILSSAMemoryIndexAtILInstruction(self.handle, instr)
+
+	def get_low_level_il_instruction_index(self, instr):
+		low_il = self.low_level_il
+		if low_il is None:
+			return None
+		low_il = low_il.ssa_form
+		if low_il is None:
+			return None
+		result = core.BNGetLowLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetLowLevelILInstructionCount(low_il.handle):
+			return None
+		return result
+
+	def get_low_level_il_expr_index(self, expr):
+		low_il = self.low_level_il
+		if low_il is None:
+			return None
+		low_il = low_il.ssa_form
+		if low_il is None:
+			return None
+		result = core.BNGetLowLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
+			return None
 		return result
 
 

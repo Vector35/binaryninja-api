@@ -60,6 +60,8 @@
 
 #define BN_INVALID_OPERAND          0xffffffff
 
+#define BN_INVALID_EXPR             ((size_t)-1)
+
 #define BN_DEFAULT_MIN_STRING_LENGTH 4
 #define BN_MAX_STRING_LENGTH         128
 
@@ -366,7 +368,9 @@ extern "C"
 		LiftedILFunctionGraph = 2,
 		LowLevelILSSAFormFunctionGraph = 3,
 		MediumLevelILFunctionGraph = 4,
-		MediumLevelILSSAFormFunctionGraph = 5
+		MediumLevelILSSAFormFunctionGraph = 5,
+		MappedMediumLevelILFunctionGraph = 6,
+		MappedMediumLevelILSSAFormFunctionGraph = 7
 	};
 
 	enum BNDisassemblyOption
@@ -727,8 +731,8 @@ extern "C"
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
 		MLIL_SYSCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA family instructions
-		MLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA family instructions
+		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA family instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA family instructions
 		MLIL_LOAD_SSA,
 		MLIL_STORE_SSA,
 		MLIL_VAR_PHI,
@@ -2131,6 +2135,7 @@ extern "C"
 	BINARYNINJACOREAPI BNLowLevelILInstruction BNGetLowLevelILByIndex(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILIndexForInstruction(BNLowLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILInstructionCount(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILExprCount(BNLowLevelILFunction* func);
 
 	BINARYNINJACOREAPI void BNAddLowLevelILLabelForAddress(BNLowLevelILFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNLowLevelILLabel* BNGetLowLevelILLabelForAddress(BNLowLevelILFunction* func,
@@ -2169,6 +2174,11 @@ extern "C"
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
 
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILForLowLevelIL(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMappedMediumLevelIL(BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetMappedMediumLevelILInstructionIndex(BNLowLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMappedMediumLevelILExprIndex(BNLowLevelILFunction* func, size_t expr);
+
 	// Medium-level IL
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNCreateMediumLevelILFunction(BNArchitecture* arch, BNFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNNewMediumLevelILFunctionReference(BNMediumLevelILFunction* func);
@@ -2199,6 +2209,7 @@ extern "C"
 	BINARYNINJACOREAPI BNMediumLevelILInstruction BNGetMediumLevelILByIndex(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILIndexForInstruction(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionCount(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILExprCount(BNMediumLevelILFunction* func);
 
 	BINARYNINJACOREAPI bool BNGetMediumLevelILExprText(BNMediumLevelILFunction* func, BNArchitecture* arch, size_t i,
 		BNInstructionTextToken** tokens, size_t* count);
@@ -2225,6 +2236,15 @@ extern "C"
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(BNMediumLevelILFunction* func,
 		const BNILVariable* var, size_t idx);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);
+
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarIndexAtILInstruction(BNMediumLevelILFunction* func,
+		const BNILVariable* var, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryIndexAtILInstruction(BNMediumLevelILFunction* func,
+		size_t instr);
+
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILForMediumLevelIL(BNMediumLevelILFunction* func);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
+	BINARYNINJACOREAPI size_t BNGetLowLevelILExprIndex(BNMediumLevelILFunction* func, size_t expr);
 
 	// Types
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);

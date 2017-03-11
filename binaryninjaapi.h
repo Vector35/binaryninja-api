@@ -2149,6 +2149,7 @@ namespace BinaryNinja
 		BNLowLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;
 		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
 
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
@@ -2182,6 +2183,11 @@ namespace BinaryNinja
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
 
 		RegisterValue GetExprValue(size_t expr);
+
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
+		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
+		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
 	};
 
 	struct MediumLevelILLabel: public BNMediumLevelILLabel
@@ -2236,6 +2242,7 @@ namespace BinaryNinja
 		BNMediumLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;
 		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
 
 		void Finalize();
 
@@ -2259,6 +2266,13 @@ namespace BinaryNinja
 
 		RegisterValue GetSSAVarValue(const BNILVariable& var, size_t idx);
 		RegisterValue GetExprValue(size_t expr);
+
+		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
+		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
+
+		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		size_t GetLowLevelILInstructionIndex(size_t instr) const;
+		size_t GetLowLevelILExprIndex(size_t expr) const;
 	};
 
 	class FunctionRecognizer

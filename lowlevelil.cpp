@@ -553,6 +553,12 @@ size_t LowLevelILFunction::GetInstructionCount() const
 }
 
 
+size_t LowLevelILFunction::GetExprCount() const
+{
+	return BNGetLowLevelILExprCount(m_object);
+}
+
+
 void LowLevelILFunction::AddLabelForAddress(Architecture* arch, ExprId addr)
 {
 	BNAddLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
@@ -771,4 +777,34 @@ RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
 {
 	BNRegisterValue value = BNGetLowLevelILExprValue(m_object, expr);
 	return RegisterValue::FromAPIObject(value);
+}
+
+
+Ref<MediumLevelILFunction> LowLevelILFunction::GetMediumLevelIL() const
+{
+	BNMediumLevelILFunction* func = BNGetMediumLevelILForLowLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
+}
+
+
+Ref<MediumLevelILFunction> LowLevelILFunction::GetMappedMediumLevelIL() const
+{
+	BNMediumLevelILFunction* func = BNGetMappedMediumLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
+}
+
+
+size_t LowLevelILFunction::GetMappedMediumLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetMappedMediumLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetMappedMediumLevelILExprIndex(size_t expr) const
+{
+	return BNGetMappedMediumLevelILExprIndex(m_object, expr);
 }

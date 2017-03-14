@@ -1379,6 +1379,19 @@ extern "C"
 		BNType* type;
 	};
 
+	enum BNILBranchDependence
+	{
+		NotBranchDependent,
+		TrueBranchDependent,
+		FalseBranchDependent
+	};
+
+	struct BNILBranchInstructionAndDependence
+	{
+		size_t branch;
+		BNILBranchDependence dependence;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
@@ -2241,6 +2254,12 @@ extern "C"
 		const BNILVariable* var, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryIndexAtILInstruction(BNMediumLevelILFunction* func,
 		size_t instr);
+
+	BINARYNINJACOREAPI BNILBranchDependence BNGetMediumLevelILBranchDependence(BNMediumLevelILFunction* func,
+		size_t curInstr, size_t branchInstr);
+	BINARYNINJACOREAPI BNILBranchInstructionAndDependence* BNGetAllMediumLevelILBranchDependence(
+		BNMediumLevelILFunction* func, size_t instr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeILBranchDependenceList(BNILBranchInstructionAndDependence* branches);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILForMediumLevelIL(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILInstructionIndex(BNMediumLevelILFunction* func, size_t instr);

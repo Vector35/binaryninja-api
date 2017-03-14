@@ -456,6 +456,26 @@ size_t MediumLevelILFunction::GetSSAMemoryIndexAtInstruction(size_t instr) const
 }
 
 
+BNILBranchDependence MediumLevelILFunction::GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const
+{
+	return BNGetMediumLevelILBranchDependence(m_object, curInstr, branchInstr);
+}
+
+
+map<size_t, BNILBranchDependence> MediumLevelILFunction::GetAllBranchDependenceAtInstruction(size_t instr) const
+{
+	size_t count;
+	BNILBranchInstructionAndDependence* deps = BNGetAllMediumLevelILBranchDependence(m_object, instr, &count);
+
+	map<size_t, BNILBranchDependence> result;
+	for (size_t i = 0; i < count; i++)
+		result[deps[i].branch] = deps[i].dependence;
+
+	BNFreeILBranchDependenceList(deps);
+	return result;
+}
+
+
 Ref<LowLevelILFunction> MediumLevelILFunction::GetLowLevelIL() const
 {
 	BNLowLevelILFunction* func = BNGetLowLevelILForMediumLevelIL(m_object);

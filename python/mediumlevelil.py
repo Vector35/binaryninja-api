@@ -22,7 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from .enums import MediumLevelILOperation, InstructionTextTokenType, ILVariableSourceType
+from .enums import MediumLevelILOperation, InstructionTextTokenType, ILVariableSourceType, ILBranchDependence
 import function
 import basicblock
 import lowlevelil
@@ -258,6 +258,11 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self.function.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
+
+	@property
+	def branch_dependence(self):
+		"""Set of branching instructions that must take the true or false path to reach this instruction"""
+		return self.function.get_all_branch_dependence_at_instruction(self.instr_index)
 
 	@property
 	def low_level_il(self):
@@ -566,6 +571,18 @@ class MediumLevelILFunction(object):
 
 	def get_ssa_memory_index_at_instruction(self, instr):
 		return core.BNGetMediumLevelILSSAMemoryIndexAtILInstruction(self.handle, instr)
+
+	def get_branch_dependence_at_instruction(self, cur_instr, branch_instr):
+		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self.handle, cur_instr, branch_instr))
+
+	def get_all_branch_dependence_at_instruction(self, instr):
+		count = ctypes.c_ulonglong()
+		deps = core.BNGetAllMediumLevelILBranchDependence(self.handle, instr, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[deps[i].branch] = ILBranchDependence(deps[i].dependence)
+		core.BNFreeILBranchDependenceList(deps)
+		return result
 
 	def get_low_level_il_instruction_index(self, instr):
 		low_il = self.low_level_il

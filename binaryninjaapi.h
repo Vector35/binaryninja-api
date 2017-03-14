@@ -2270,6 +2270,9 @@ namespace BinaryNinja
 		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
 		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
 
+		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
+		std::map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;
+
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILInstructionIndex(size_t instr) const;
 		size_t GetLowLevelILExprIndex(size_t expr) const;

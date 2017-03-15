@@ -1191,6 +1191,24 @@ class Architecture(object):
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
 		return length.value
 
+	def get_low_level_il_from_bytes(self, data, addr):
+		"""
+		``get_low_level_il_from_bytes`` converts the instruction in bytes to ``il`` at the given virtual address
+
+		:param str data: the bytes of the instruction
+		:param int addr: virtual address of bytes in ``data``
+		:return: the instruction
+		:rtype: LowLevelILInstruction
+		:Example:
+
+			>>> arch.get_low_level_il_from_bytes('\xeb\xfe', 0x40DEAD)
+			<il: jump(0x40dead)>
+			>>>
+		"""
+		func = lowlevelil.LowLevelILFunction(self)
+		self.get_instruction_low_level_il(data, addr, func)
+		return func[0]
+
 	def get_reg_name(self, reg):
 		"""
 		``get_reg_name`` gets a register name from a register number.

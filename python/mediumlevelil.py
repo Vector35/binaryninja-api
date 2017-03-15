@@ -140,7 +140,10 @@ class MediumLevelILInstruction(object):
 		instr = core.BNGetMediumLevelILByIndex(func.handle, expr_index)
 		self.function = func
 		self.expr_index = expr_index
-		self.instr_index = instr_index
+		if instr_index is None:
+			self.instr_index = core.BNGetMediumLevelILInstructionForExpr(func.handle, expr_index)
+		else:
+			self.instr_index = instr_index
 		self.operation = MediumLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
@@ -218,7 +221,8 @@ class MediumLevelILInstruction(object):
 		"""MLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if (self.instr_index is not None) and (self.function.source_function is not None):
+		if ((self.instr_index is not None) and (self.function.source_function is not None) and
+			(self.expr_index == core.BNGetMediumLevelILIndexForInstruction(self.function.handle, self.instr_index))):
 			if not core.BNGetMediumLevelILInstructionText(self.function.handle, self.function.source_function.handle,
 				self.function.arch.handle, self.instr_index, tokens, count):
 				return None
@@ -253,8 +257,16 @@ class MediumLevelILInstruction(object):
 
 	@property
 	def value(self):
-		"""Value of expression using static data flow analysis (read-only)"""
+		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetMediumLevelILExprValue(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	@property
+	def possible_values(self):
+		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
+		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index)
 		result = function.RegisterValue(self.function.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
@@ -271,6 +283,16 @@ class MediumLevelILInstruction(object):
 		if expr is None:
 			return None
 		return lowlevelil.LowLevelILInstruction(self.function.low_level_il.ssa_form, expr)
+
+	def get_ssa_var_possible_values(self, var, index):
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, index, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
 
 	def __setattr__(self, name, value):
 		try:

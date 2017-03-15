@@ -262,6 +262,12 @@ size_t MediumLevelILFunction::GetIndexForInstruction(size_t i) const
 }
 
 
+size_t MediumLevelILFunction::GetInstructionForExpr(size_t expr) const
+{
+	return BNGetMediumLevelILInstructionForExpr(m_object, expr);
+}
+
+
 size_t MediumLevelILFunction::GetInstructionCount() const
 {
 	return BNGetMediumLevelILInstructionCount(m_object);
@@ -440,6 +446,20 @@ RegisterValue MediumLevelILFunction::GetSSAVarValue(const BNILVariable& var, siz
 RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 {
 	BNRegisterValue value = BNGetMediumLevelILExprValue(m_object, expr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, idx, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleExprValues(size_t expr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleExprValues(m_object, expr);
 	return RegisterValue::FromAPIObject(value);
 }
 

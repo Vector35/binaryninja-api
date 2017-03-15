@@ -2241,6 +2241,7 @@ namespace BinaryNinja
 
 		BNMediumLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionForExpr(size_t expr) const;
 		size_t GetInstructionCount() const;
 		size_t GetExprCount() const;
 
@@ -2266,6 +2267,8 @@ namespace BinaryNinja
 
 		RegisterValue GetSSAVarValue(const BNILVariable& var, size_t idx);
 		RegisterValue GetExprValue(size_t expr);
+		RegisterValue GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr);
+		RegisterValue GetPossibleExprValues(size_t expr);
 
 		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
 		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;

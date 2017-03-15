@@ -2221,6 +2221,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNMediumLevelILInstruction BNGetMediumLevelILByIndex(BNMediumLevelILFunction* func, size_t i);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILIndexForInstruction(BNMediumLevelILFunction* func, size_t i);
+	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionForExpr(BNMediumLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionCount(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILExprCount(BNMediumLevelILFunction* func);
 
@@ -2249,6 +2250,9 @@ extern "C"
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(BNMediumLevelILFunction* func,
 		const BNILVariable* var, size_t idx);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleSSAVarValues(BNMediumLevelILFunction* func,
+		const BNILVariable* var, size_t idx, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleExprValues(BNMediumLevelILFunction* func, size_t expr);
 
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarIndexAtILInstruction(BNMediumLevelILFunction* func,
 		const BNILVariable* var, size_t instr);

@@ -91,6 +91,7 @@ license you like.
 # define JSONCPP_VERSION_MAJOR 1
 # define JSONCPP_VERSION_MINOR 8
 # define JSONCPP_VERSION_PATCH 0
+
 # define JSONCPP_VERSION_QUALIFIER
 # define JSONCPP_VERSION_HEXA ((JSONCPP_VERSION_MAJOR << 24) | (JSONCPP_VERSION_MINOR << 16) | (JSONCPP_VERSION_PATCH << 8))
 
@@ -124,6 +125,7 @@ license you like.
 #ifndef JSON_CONFIG_H_INCLUDED
 #define JSON_CONFIG_H_INCLUDED
 #include <stddef.h>
+
 #include <string> //typedef String
 #include <stdint.h> //typedef int64_t, uint64_t
 
@@ -199,6 +201,7 @@ license you like.
 // In c++11 the override keyword allows you to explicity define that a function
 // is intended to override the base-class version.  This makes the code more
 // managable and fixes a set of common hard-to-find bugs.
+
 #if __cplusplus >= 201103L
 # define JSONCPP_OVERRIDE override
 # define JSONCPP_NOEXCEPT noexcept
@@ -277,8 +280,10 @@ typedef unsigned int LargestUInt;
 typedef __int64 Int64;
 typedef unsigned __int64 UInt64;
 #else                 // if defined(_MSC_VER) // Other platforms, use long long
+
 typedef int64_t Int64;
 typedef uint64_t UInt64;
+
 #endif // if defined(_MSC_VER)
 typedef Int64 LargestInt;
 typedef UInt64 LargestUInt;
@@ -497,8 +502,10 @@ namespace Json {
 class JSON_API Exception : public std::exception {
 public:
   Exception(JSONCPP_STRING const& msg);
+
   ~Exception() JSONCPP_NOEXCEPT JSONCPP_OVERRIDE;
   char const* what() const JSONCPP_NOEXCEPT JSONCPP_OVERRIDE;
+
 protected:
   JSONCPP_STRING msg_;
 };
@@ -634,6 +641,7 @@ public:
 
   static const Value& null;  ///< We regret this reference to a global instance; prefer the simpler Value().
   static const Value& nullRef;  ///< just a kludge for binary-compatibility; same as null
+
   static Value const& nullSingleton(); ///< Prefer this to null or nullRef.
 
   /// Minimum signed integer value that can be stored in a Json::Value.
@@ -1767,6 +1775,7 @@ JSON_API JSONCPP_ISTREAM& operator>>(JSONCPP_ISTREAM&, Value&);
 #pragma warning(push)
 #pragma warning(disable : 4251)
 #endif // if defined(JSONCPP_DISABLE_DLL_INTERFACE_WARNING)
+
 
 #pragma pack(push, 8)
 

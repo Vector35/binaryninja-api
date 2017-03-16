@@ -1,26 +1,50 @@
 #!/usr/bin/env python
+# Copyright (c) 2015-2016 Vector 35 LLC
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
 import sys
-import binaryninja
+
+from binaryninja.update import UpdateChannel, are_auto_updates_enabled, set_auto_updates_enabled, is_update_installation_pending, install_pending_update
+from binaryninja import core_version
 import datetime
 
-chandefault = binaryninja.UpdateChannel.list[0].name
+chandefault = UpdateChannel.list[0].name
 channel = None
 versions = []
+
 
 def load_channel(newchannel):
 	global channel
 	global versions
-	if (channel != None and newchannel == channel.name):
+	if (channel is not None and newchannel == channel.name):
 		print "Same channel, not updating."
 	else:
 		try:
 			print "Loading channel %s" % newchannel
-			channel = binaryninja.UpdateChannel[newchannel]
+			channel = UpdateChannel[newchannel]
 			print "Loading versions..."
 			versions = channel.versions
 		except Exception:
 			print "%s is not a valid channel name. Defaulting to " % chandefault
-			channel = binaryninja.UpdateChannel[chandefault]
+			channel = UpdateChannel[chandefault]
+
 
 def select(version):
 	done = False
@@ -44,43 +68,50 @@ def select(version):
 				print "Requesting update to latest version."
 			else:
 				print "Requesting update to prior version."
-				if binaryninja.are_auto_updates_enabled():
+				if are_auto_updates_enabled():
 					print "Disabling automatic updates."
-					binaryninja.set_auto_updates_enabled(False)
-			if (version.version == binaryninja.core_version):
+					set_auto_updates_enabled(False)
+			if (version.version == core_version):
 				print "Already running %s" % version.version
 			else:
 				print "version.version %s" % version.version
-				print "binaryninja.core_version %s" % binaryninja.core_version
-				print "Updating..."
+				print "core_version %s" % core_version
+				print "Downloading..."
 				print version.update()
-				#forward updating won't work without reloading
+				print "Installing..."
+				if is_update_installation_pending:
+					#note that the GUI will be launched after update but should still do the upgrade headless
+					install_pending_update()
+				# forward updating won't work without reloading
 				sys.exit()
 		else:
 			print "Invalid selection"
+
 
 def list_channels():
 	done = False
 	print "\tSelect channel:\n"
 	while not done:
-		channel_list = binaryninja.UpdateChannel.list
+		channel_list = UpdateChannel.list
 		for index, item in enumerate(channel_list):
-			print "\t%d)\t%s" % (index+1, item.name)
-		print "\t%d)\t%s" % (len(channel_list)+1, "Main Menu")
+			print "\t%d)\t%s" % (index + 1, item.name)
+		print "\t%d)\t%s" % (len(channel_list) + 1, "Main Menu")
 		selection = raw_input('Choice: ')
 		if selection.isdigit():
 			selection = int(selection)
 		else:
 			selection = 0
-		if (selection <= 0 or selection > len(channel_list)+1):
+		if (selection <= 0 or selection > len(channel_list) + 1):
 			print "%s is an invalid choice." % selection
 		else:
 			done = True
 			if (selection != len(channel_list) + 1):
 				load_channel(channel_list[selection - 1].name)
 
+
 def toggle_updates():
-	binaryninja.set_auto_updates_enabled(not binaryninja.are_auto_updates_enabled())
+	set_auto_updates_enabled(not are_auto_updates_enabled())
+
 
 def main():
 	global channel
@@ -89,8 +120,8 @@ def main():
 	while not done:
 		print "\n\tBinary Ninja Version Switcher"
 		print "\t\tCurrent Channel:\t%s" % channel.name
-		print "\t\tCurrent Version:\t%s" % binaryninja.core_version
-		print "\t\tAuto-Updates On:\t%s\n" % binaryninja.are_auto_updates_enabled()
+		print "\t\tCurrent Version:\t%s" % core_version
+		print "\t\tAuto-Updates On:\t%s\n" % are_auto_updates_enabled()
 		for index, version in enumerate(versions):
 			date = datetime.datetime.fromtimestamp(version.time).strftime('%c')
 			print "\t%d)\t%s (%s)" % (index + 1, version.version, date)

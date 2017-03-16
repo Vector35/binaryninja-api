@@ -59,6 +59,17 @@ void BinaryNinja::SetBundledPluginDirectory(const string& path)
 }
 
 
+string BinaryNinja::GetInstallDirectory()
+{
+	char* path = BNGetInstallDirectory();
+	if (!path)
+		return string();
+	string result = path;
+	BNFreeString(path);
+	return result;
+}
+
+
 string BinaryNinja::GetUserPluginDirectory()
 {
 	char* path = BNGetUserPluginDirectory();
@@ -122,6 +133,26 @@ string BinaryNinja::GetVersionString()
 	return result;
 }
 
+string BinaryNinja::GetProduct()
+{
+	char* str = BNGetProduct();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+string BinaryNinja::GetProductType()
+{
+	char* str = BNGetProductType();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+int BinaryNinja::GetLicenseCount()
+{
+	return BNGetLicenseCount();
+}
 
 uint32_t BinaryNinja::GetBuildId()
 {
@@ -236,4 +267,13 @@ size_t BinaryNinja::GetWorkerThreadCount()
 void BinaryNinja::SetWorkerThreadCount(size_t count)
 {
 	BNSetWorkerThreadCount(count);
+}
+
+
+string BinaryNinja::GetUniqueIdentifierString()
+{
+	char* str = BNGetUniqueIdentifierString();
+	string result = str;
+	BNFreeString(str);
+	return result;
 }

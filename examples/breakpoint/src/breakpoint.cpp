@@ -7,10 +7,10 @@ using namespace std;
 void write_breakpoint(BinaryNinja::BinaryView *view, uint64_t start, uint64_t length)
 {
   // Sample function to show registering a plugin menu item for a range of bytes.
-    // Also possible:
-    //   register
-    //   register_for_address
-    //   register_for_function
+  // Also possible:
+  //   register
+  //   register_for_address
+  //   register_for_function
 
   Ref<Architecture> arch = view->GetDefaultArchitecture();
   string arch_name = arch->GetName();
@@ -18,9 +18,9 @@ void write_breakpoint(BinaryNinja::BinaryView *view, uint64_t start, uint64_t le
   if (arch_name.compare(0, 3, "x86") == 0) {
     string int3s = string(length, '\xcc');
     view->Write(start, int3s.c_str(), length);
-    } else {
+  } else {
     LogError("No support for breakpoint on %s", arch_name.c_str());
-    }
+  }
 }
 
 extern "C"

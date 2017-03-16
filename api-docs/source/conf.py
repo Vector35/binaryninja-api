@@ -19,14 +19,72 @@
 import os
 import sys
 import platform
+import inspect
 
 if (platform.system() == "Darwin"):
-    bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "binaryninja.app", "Contents", "Resources", "python")
+	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "binaryninja.app", "Contents", "Resources", "python")
 else:
-    bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "python")
+	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "python")
 
 sys.path.insert(0, bnpath)
 import binaryninja
+
+def modulelist(modulename):
+	modules = inspect.getmembers(modulename, inspect.ismodule)
+	return filter(lambda x: x[0] not in ("abc", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading", "startup", "associateddatastore"), modules)
+
+
+def classlist(module):
+	members = inspect.getmembers(module, inspect.isclass)
+	if module.__name__ != "binaryninja.enums":
+		members = filter(lambda x: type(x[1]) != binaryninja.enum.EnumMeta, members)
+	members.extend(inspect.getmembers(module, inspect.isfunction))
+	return map(lambda x: x[0], filter(lambda x: not x[0].startswith("_"), members))
+
+
+def generaterst():
+	pythonrst = open("index.rst", "w")
+	pythonrst.write('''Binary Ninja Python API Documentation
+=====================================
+
+.. toctree::
+   :maxdepth: 2
+
+''')
+
+	for modulename, module in modulelist(binaryninja):
+		filename = 'binaryninja.{module}-module.rst'.format(module=modulename)
+		pythonrst.write('   {module} <{filename}>\n'.format(module=modulename, filename=filename))
+		modulefile = open(filename, "w")
+		modulefile.write('''{module} module
+=====================
+
+.. autosummary::
+   :toctree:
+
+'''.format(module=modulename))
+
+		for classname in classlist(module):
+			modulefile.write("   binaryninja.{module}.{classname}\n".format(module=modulename, classname=classname))
+
+		modulefile.write('''\n.. toctree::
+   :maxdepth: 2\n''')
+
+		modulefile.write('''\n\n.. automodule:: binaryninja.{module}
+   :members:
+   :undoc-members:
+   :show-inheritance:'''.format(module=modulename))
+		modulefile.close()
+
+	pythonrst.write('''.. automodule:: binaryninja
+   :members:
+   :undoc-members:
+   :show-inheritance:
+''')
+	pythonrst.close()
+
+
+generaterst()
 
 # -- General configuration ------------------------------------------------
 
@@ -50,7 +108,7 @@ extensions = [
 ]
 
 autosummary_generate = True
-autodoc_member_order = 'groupwise'
+#autodoc_member_order = 'groupwise'
 
 breathe_projects = { "BinaryNinja": "../../xml/" }
 breathe_projects_source = {
@@ -72,7 +130,7 @@ source_suffix = '.rst'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'python'
+master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja API'
@@ -121,7 +179,7 @@ exclude_patterns = []
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 #
-add_module_names = False
+add_module_names = True
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -211,7 +269,7 @@ html_static_path = ['_static']
 
 # If false, no module index is generated.
 #
-html_domain_indices = False
+html_domain_indices = True
 
 # If false, no index is generated.
 #
@@ -223,7 +281,7 @@ html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
 #
-html_show_sourcelink = False
+html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #

@@ -1,0 +1,9 @@
+BINJA_API_INC_PATH = ..\..\ 
+BINJA_API_LIB = ..\..\bin\libbinaryninjaapi.lib
+BINJA_CORE_LIB = "c:\Program Files\Vector35\BinaryNinja\binaryninjacore.lib"
+
+FLAGS = /DWIN32 /D__WIN32__ /EHsc /I$(BINJA_API_INC_PATH) /link $(BINJA_API_LIB) $(BINJA_CORE_LIB)
+
+bininfo: ./src/bin-info.cpp
+	if not exist bin mkdir bin
+	cl ./src/bin-info.cpp $(FLAGS) /Fe:.\bin\bininfo

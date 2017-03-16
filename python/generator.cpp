@@ -97,11 +97,18 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 		else
 			fprintf(out, "ctypes.c_double");
 		break;
-	case StructureTypeClass:
-		fprintf(out, "%s", type->GetQualifiedName(type->GetStructure()->GetName()).c_str());
-		break;
-	case EnumerationTypeClass:
-		fprintf(out, "%s", type->GetQualifiedName(type->GetEnumeration()->GetName()).c_str());
+	case NamedTypeReferenceClass:
+		if (type->GetNamedTypeReference()->GetTypeClass() == EnumNamedTypeClass)
+		{
+			string name = type->GetNamedTypeReference()->GetName().GetString();
+			if (name.size() > 2 && name.substr(0, 2) == "BN")
+				name = name.substr(2);
+			fprintf(out, "%sEnum", name.c_str());
+		}
+		else
+		{
+			fprintf(out, "%s", type->GetNamedTypeReference()->GetName().GetString().c_str());
+		}
 		break;
 	case PointerTypeClass:
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))
@@ -147,16 +154,16 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 
 int main(int argc, char* argv[])
 {
-	if (argc < 3)
+	if (argc < 4)
 	{
-		fprintf(stderr, "Usage: generator <header> <output>\n");
+		fprintf(stderr, "Usage: generator <header> <output> <output_enum>\n");
 		return 1;
 	}
 
 	Architecture::Register(new GeneratorArchitecture());
 
 	// Parse API header to get type and function information
-	map<string, Ref<Type>> types, vars, funcs;
+	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
 	bool ok = Architecture::GetByName("generator")->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 	fprintf(stderr, "%s", errors.c_str());
@@ -164,83 +171,92 @@ int main(int argc, char* argv[])
 		return 1;
 
 	FILE* out = fopen(argv[2], "w");
+	FILE* enums = fopen(argv[3], "w");
 
+	fprintf(out, "from __future__ import absolute_import\n");
 	fprintf(out, "import ctypes, os\n\n");
+	fprintf(enums, "import enum");
 
 	fprintf(out, "# Load core module\n");
-#if defined(__APPLE__)
-	fprintf(out, "_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
-#else
-	fprintf(out, "_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
-#endif
-
-#ifdef WIN32
-	fprintf(out, "core = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n\n");
-#elif defined(__APPLE__)
-	fprintf(out, "core = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
-#else
-	fprintf(out, "core = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
-#endif
+	fprintf(out, "import platform\n");
+	fprintf(out, "core = None\n");
+	fprintf(out, "_base_path = None\n");
+	fprintf(out, "if platform.system() == \"Darwin\":\n");
+	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
+	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
+	fprintf(out, "elif platform.system() == \"Linux\":\n");
+	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
+	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
+	fprintf(out, "elif platform.system() == \"Windows\":\n");
+	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
+	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
+	fprintf(out, "else:\n");
+	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
-	map<string, int64_t> enumMembers;
 	for (auto& i : types)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
 		if (i.second->GetClass() == StructureTypeClass)
 		{
-			fprintf(out, "class %s(ctypes.Structure):\n", i.first.c_str());
-			fprintf(out, "    pass\n");
+			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
+			fprintf(out, "\tpass\n");
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
-			fprintf(out, "%s = ctypes.c_int\n", i.first.c_str());
+			if (name.size() > 2 && name.substr(0, 2) == "BN")
+				name = name.substr(2);
+
+			fprintf(out, "%sEnum = ctypes.c_int\n", name.c_str());
+
+			fprintf(enums, "\n\nclass %s(enum.IntEnum):\n", name.c_str());
 			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "%s = %" PRId64 "\n", j.name.c_str(), j.value);
-			fprintf(out, "%s_names = {\n", i.first.c_str());
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "    %" PRId64 ": \"%s\",\n", j.value, j.name.c_str());
-			fprintf(out, "}\n");
-			fprintf(out, "%s_by_name = {\n", i.first.c_str());
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				fprintf(out, "    \"%s\": %" PRId64 ",\n", j.name.c_str(), j.value);
-			fprintf(out, "}\n");
-			for (auto& j : i.second->GetEnumeration()->GetMembers())
-				enumMembers[j.name] = j.value;
+			{
+				fprintf(enums, "\t%s = %" PRId64 "\n", j.name.c_str(), j.value);
+			}
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
 		         (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
 		{
-			fprintf(out, "%s = ", i.first.c_str());
+			fprintf(out, "%s = ", name.c_str());
 			OutputType(out, i.second);
 			fprintf(out, "\n");
 		}
 	}
 
-	fprintf(out, "all_enum_values = {\n");
-	for (auto& i : enumMembers)
-		fprintf(out, "    \"%s\": %" PRId64 ",\n", i.first.c_str(), i.second);
-	fprintf(out, "}\n");
 
 	fprintf(out, "\n# Structure definitions\n");
 	for (auto& i : types)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
 		if ((i.second->GetClass() == StructureTypeClass) && (i.second->GetStructure()->GetMembers().size() != 0))
 		{
-			fprintf(out, "%s._fields_ = [\n", i.first.c_str());
+			fprintf(out, "%s._fields_ = [\n", name.c_str());
 			for (auto& j : i.second->GetStructure()->GetMembers())
 			{
-				fprintf(out, "        (\"%s\", ", j.name.c_str());
+				fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
 				OutputType(out, j.type);
 				fprintf(out, "),\n");
 			}
-			fprintf(out, "    ]\n");
+			fprintf(out, "\t]\n");
 		}
 	}
 
 	fprintf(out, "\n# Function definitions\n");
 	for (auto& i : funcs)
 	{
+		string name;
+		if (i.first.size() != 1)
+			continue;
+		name = i.first[0];
+
 		// Check for a string result, these will be automatically wrapped to free the string
 		// memory and return a Python string
 		bool stringResult = (i.second->GetChildType()->GetClass() == PointerTypeClass) &&
@@ -249,7 +265,7 @@ int main(int argc, char* argv[])
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 		bool callbackConvention = false;
-		if (i.first == "BNAllocString")
+		if (name == "BNAllocString")
 		{
 			// Don't perform automatic wrapping of string allocation, and return a void
 			// pointer so that callback functions (which is the only valid use of BNAllocString)
@@ -258,11 +274,11 @@ int main(int argc, char* argv[])
 			callbackConvention = true;
 		}
 
-		string funcName = i.first;
+		string funcName = name;
 		if (stringResult || pointerResult)
 			funcName = string("_") + funcName;
 
-		fprintf(out, "%s = core.%s\n", funcName.c_str(), i.first.c_str());
+		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
 		fprintf(out, "%s.restype = ", funcName.c_str());
 		OutputType(out, i.second->GetChildType(), true, callbackConvention);
 		fprintf(out, "\n");
@@ -271,8 +287,8 @@ int main(int argc, char* argv[])
 			fprintf(out, "%s.argtypes = [\n", funcName.c_str());
 			for (auto& j : i.second->GetParameters())
 			{
-				fprintf(out, "        ");
-				if (i.first == "BNFreeString")
+				fprintf(out, "\t\t");
+				if (name == "BNFreeString")
 				{
 					// BNFreeString expects a pointer to a string allocated by the core, so do not use
 					// a c_char_p here, as that would be allocated by the Python runtime.  This can
@@ -285,38 +301,39 @@ int main(int argc, char* argv[])
 				}
 				fprintf(out, ",\n");
 			}
-			fprintf(out, "    ]\n");
+			fprintf(out, "\t]\n");
 		}
 
 		if (stringResult)
 		{
 			// Emit wrapper to get Python string and free native memory
-			fprintf(out, "def %s(*args):\n", i.first.c_str());
-			fprintf(out, "    result = %s(*args)\n", funcName.c_str());
-			fprintf(out, "    string = ctypes.cast(result, ctypes.c_char_p).value\n");
-			fprintf(out, "    BNFreeString(result)\n");
-			fprintf(out, "    return string\n");
+			fprintf(out, "def %s(*args):\n", name.c_str());
+			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			fprintf(out, "\tstring = ctypes.cast(result, ctypes.c_char_p).value\n");
+			fprintf(out, "\tBNFreeString(result)\n");
+			fprintf(out, "\treturn string\n");
 		}
 		else if (pointerResult)
 		{
 			// Emit wrapper to return None on null pointer
-			fprintf(out, "def %s(*args):\n", i.first.c_str());
-			fprintf(out, "    result = %s(*args)\n", funcName.c_str());
-			fprintf(out, "    if not result:\n");
-			fprintf(out, "        return None\n");
-			fprintf(out, "    return result\n");
+			fprintf(out, "def %s(*args):\n", name.c_str());
+			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			fprintf(out, "\tif not result:\n");
+			fprintf(out, "\t\treturn None\n");
+			fprintf(out, "\treturn result\n");
 		}
 	}
 
 	fprintf(out, "\n# Helper functions\n");
 	fprintf(out, "def handle_of_type(value, handle_type):\n");
-	fprintf(out, "    if isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
-	fprintf(out, "        return ctypes.cast(value, ctypes.POINTER(handle_type))\n");
-	fprintf(out, "    raise ValueError, 'expected pointer to %%s' %% str(handle_type)\n");
+	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
+	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
+	fprintf(out, "\traise ValueError, 'expected pointer to %%s' %% str(handle_type)\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
 	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");
 
 	fclose(out);
+	fclose(enums);
 	return 0;
 }

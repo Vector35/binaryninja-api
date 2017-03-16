@@ -10,6 +10,7 @@ binaryninjacore.lib
 binaryninjacore.dll
 binaryninjaapi.lib
 python/_binaryninjacore.py
+python/enums.py
 python/generator
 python/generator.exe
 .vs
@@ -19,12 +20,13 @@ api-docs/build/*
 .env
 api-docs/source/binaryninja.*
 bin/
-
 # CMake
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
-Makefile
 cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
+*.pyc
+api-docs/source/python.rst
+api-docs/source/index.rst

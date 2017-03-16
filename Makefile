@@ -1,9 +1,9 @@
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	LIB := -L/Applications/Binary\ Ninja.app/Contents/MacOS/ -lbinaryninjacore
-else
-	LIB := -L$(HOME)/binaryninja/ -lbinaryninjacore
-endif
+#UNAME_S := $(shell uname -s)
+#ifeq ($(UNAME_S),Darwin)
+#	LIB := -L/Applications/Binary\ Ninja.app/Contents/MacOS/ -lbinaryninjacore
+#else
+#	LIB := -L$(HOME)/binaryninja/ -lbinaryninjacore
+#endif
 
 
 TARGETDIR := bin

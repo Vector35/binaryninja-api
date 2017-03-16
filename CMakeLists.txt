@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
+project(binaryninja-api)
+
 add_library(binaryninjaapi STATIC
 	architecture.cpp
 	backgroundtask.cpp
@@ -19,7 +21,7 @@ add_library(binaryninjaapi STATIC
 	functiongraphblock.cpp
 	functionrecognizer.cpp
 	interaction.cpp
-	jsoncpp.cpp
+	json/jsoncpp.cpp
 	log.cpp
 	lowlevelil.cpp
 	mainthread.cpp
@@ -31,6 +33,10 @@ add_library(binaryninjaapi STATIC
 	type.cpp
 	update.cpp
 	)
+
+set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+
+include_directories(${PROJECT_SOURCE_DIR})
 
 set_target_properties(binaryninjaapi PROPERTIES
 	CXX_STANDARD 11

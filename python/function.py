@@ -52,9 +52,6 @@ class RegisterValue(object):
 		self.type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
 			self.reg = arch.get_reg_name(value.reg)
-		elif value.state == RegisterValueType.OffsetFromEntryValue:
-			self.reg = arch.get_reg_name(value.reg)
-			self.offset = value.value
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
@@ -82,14 +79,10 @@ class RegisterValue(object):
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
-		elif value.state == RegisterValueType.OffsetFromUndeterminedValue:
-			self.offset = value.value
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == RegisterValueType.OffsetFromEntryValue:
-			return "<entry %s + %#x>" % (self.reg, self.offset)
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
@@ -100,8 +93,6 @@ class RegisterValue(object):
 			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
 		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == RegisterValueType.OffsetFromUndeterminedValue:
-			return "<undetermined with offset %#x>" % self.offset
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"

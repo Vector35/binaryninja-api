@@ -383,8 +383,7 @@ extern "C"
 		GroupLinearDisassemblyFunctions = 64,
 
 		// Debugging options
-		ShowBasicBlockRegisterState = 128,
-		ShowFlagUsage = 129
+		ShowFlagUsage = 128
 	};
 
 	enum BNTypeClass
@@ -602,15 +601,12 @@ extern "C"
 	enum BNRegisterValueType
 	{
 		EntryValue,
-		OffsetFromEntryValue,
 		ConstantValue,
 		StackFrameOffset,
 		UndeterminedValue,
-		OffsetFromUndeterminedValue,
 		SignedRangeValue,
 		UnsignedRangeValue,
 		LookupTableValue,
-		ComparisonResultValue,
 		ReturnAddressValue
 	};
 

@@ -1894,12 +1894,8 @@ namespace BinaryNinja
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
-		RegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
-		RegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
 		RegisterValue GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
 		RegisterValue GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
-		RegisterValue GetStackContentsAtLowLevelILInstruction(size_t i, int64_t offset, size_t size);
-		RegisterValue GetStackContentsAfterLowLevelILInstruction(size_t i, int64_t offset, size_t size);
 		RegisterValue GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i);
 		RegisterValue GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
@@ -2183,6 +2179,20 @@ namespace BinaryNinja
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
 
 		RegisterValue GetExprValue(size_t expr);
+		RegisterValue GetPossibleExprValues(size_t expr);
+
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
@@ -2272,6 +2282,22 @@ namespace BinaryNinja
 
 		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
 		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
+		BNILVariable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
+		BNILVariable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
+		BNILVariable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
+
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 
 		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
 		std::map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;

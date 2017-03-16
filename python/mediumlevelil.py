@@ -274,7 +274,13 @@ class MediumLevelILInstruction(object):
 	@property
 	def branch_dependence(self):
 		"""Set of branching instructions that must take the true or false path to reach this instruction"""
-		return self.function.get_all_branch_dependence_at_instruction(self.instr_index)
+		count = ctypes.c_ulonglong()
+		deps = core.BNGetAllMediumLevelILBranchDependence(self.function.handle, self.instr_index, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[deps[i].branch] = ILBranchDependence(deps[i].dependence)
+		core.BNFreeILBranchDependenceList(deps)
+		return result
 
 	@property
 	def low_level_il(self):
@@ -283,6 +289,11 @@ class MediumLevelILInstruction(object):
 		if expr is None:
 			return None
 		return lowlevelil.LowLevelILInstruction(self.function.low_level_il.ssa_form, expr)
+
+	@property
+	def ssa_memory_index(self):
+		"""Index of active memory contents in SSA form for this instruction"""
+		return core.BNGetMediumLevelILSSAMemoryIndexAtILInstruction(self.function.handle, self.instr_index)
 
 	def get_ssa_var_possible_values(self, var, index):
 		var_data = core.BNILVariable()
@@ -293,6 +304,120 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self.function.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
+
+	def get_ssa_var_index(self, var):
+		var_data = core.BNILVariable()
+		var_data.type = var.type
+		var_data.index = var.index
+		var_data.identifier = var.identifier
+		return core.BNGetMediumLevelILSSAVarIndexAtILInstruction(self.function.handle, var_data, self.instr_index)
+
+	def get_var_for_reg(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
+		return function.ILVariable(self.function.source_function, result.type, result.index, result.identifier)
+
+	def get_var_for_flag(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.regs[flag].index
+		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
+		return function.ILVariable(self.function.source_function, result.type, result.index, result.identifier)
+
+	def get_var_for_stack_location(self, offset):
+		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self.function.handle, offset, self.instr_index)
+		return function.ILVariable(self.function.source_function, result.type, result.index, result.identifier)
+
+	def get_reg_value(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_reg_value_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_reg_values(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_reg_values_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_flag_value(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_flag_value_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_flag_values(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_flag_values_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents(self, offset, size):
+		value = core.BNGetMediumLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after(self, offset, size):
+		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_stack_contents(self, offset, size):
+		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_stack_contents_after(self, offset, size):
+		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_branch_dependence(self, branch_instr):
+		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self.function.handle, self.instr_index, branch_instr))
 
 	def __setattr__(self, name, value):
 		try:
@@ -582,28 +707,6 @@ class MediumLevelILFunction(object):
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, index)
 		result = function.RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_ssa_var_index_at_instruction(self, var, instr):
-		var_data = core.BNILVariable()
-		var_data.type = var.type
-		var_data.index = var.index
-		var_data.identifier = var.identifier
-		return core.BNGetMediumLevelILSSAVarIndexAtILInstruction(self.handle, var_data, instr)
-
-	def get_ssa_memory_index_at_instruction(self, instr):
-		return core.BNGetMediumLevelILSSAMemoryIndexAtILInstruction(self.handle, instr)
-
-	def get_branch_dependence_at_instruction(self, cur_instr, branch_instr):
-		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self.handle, cur_instr, branch_instr))
-
-	def get_all_branch_dependence_at_instruction(self, instr):
-		count = ctypes.c_ulonglong()
-		deps = core.BNGetAllMediumLevelILBranchDependence(self.handle, instr, count)
-		result = {}
-		for i in xrange(0, count.value):
-			result[deps[i].branch] = ILBranchDependence(deps[i].dependence)
-		core.BNFreeILBranchDependenceList(deps)
 		return result
 
 	def get_low_level_il_instruction_index(self, instr):

@@ -1848,16 +1848,10 @@ extern "C"
 		uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, uint32_t reg);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
-	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterLowLevelILInstruction(BNFunction* func, size_t i, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, int64_t offset, size_t size);
 	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, int64_t offset, size_t size);
-	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAtLowLevelILInstruction(BNFunction* func, size_t i,
-		int64_t offset, size_t size);
-	BINARYNINJACOREAPI BNRegisterValue BNGetStackContentsAfterLowLevelILInstruction(BNFunction* func, size_t i,
-		int64_t offset, size_t size);
 	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, BNType* functionType, size_t i);
 	BINARYNINJACOREAPI BNRegisterValue BNGetParameterValueAtLowLevelILInstruction(BNFunction* func, size_t instr,
@@ -2186,6 +2180,32 @@ extern "C"
 		uint32_t flag, size_t idx);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleExprValues(BNLowLevelILFunction* func, size_t expr);
+
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILRegisterValueAtInstruction(BNLowLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILRegisterValueAfterInstruction(BNLowLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleRegisterValuesAtInstruction(BNLowLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleRegisterValuesAfterInstruction(BNLowLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILFlagValueAtInstruction(BNLowLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILFlagValueAfterInstruction(BNLowLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleFlagValuesAtInstruction(BNLowLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleFlagValuesAfterInstruction(BNLowLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILStackContentsAtInstruction(BNLowLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILStackContentsAfterInstruction(BNLowLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleStackContentsAtInstruction(BNLowLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILPossibleStackContentsAfterInstruction(BNLowLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
 
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILForLowLevelIL(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMappedMediumLevelIL(BNLowLevelILFunction* func);
@@ -2258,6 +2278,37 @@ extern "C"
 		const BNILVariable* var, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryIndexAtILInstruction(BNMediumLevelILFunction* func,
 		size_t instr);
+	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForRegisterAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForFlagAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForStackLocationAtInstruction(BNMediumLevelILFunction* func,
+		int64_t offset, size_t instr);
+
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILRegisterValueAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILRegisterValueAfterInstruction(BNMediumLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleRegisterValuesAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(BNMediumLevelILFunction* func,
+		uint32_t reg, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILFlagValueAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILFlagValueAfterInstruction(BNMediumLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleFlagValuesAtInstruction(BNMediumLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleFlagValuesAfterInstruction(BNMediumLevelILFunction* func,
+		uint32_t flag, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILStackContentsAtInstruction(BNMediumLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILStackContentsAfterInstruction(BNMediumLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleStackContentsAtInstruction(BNMediumLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
+	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILPossibleStackContentsAfterInstruction(BNMediumLevelILFunction* func,
+		int64_t offset, size_t len, size_t instr);
 
 	BINARYNINJACOREAPI BNILBranchDependence BNGetMediumLevelILBranchDependence(BNMediumLevelILFunction* func,
 		size_t curInstr, size_t branchInstr);

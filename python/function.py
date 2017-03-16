@@ -459,36 +459,6 @@ class Function(object):
 		core.BNFreeRegisterValue(value)
 		return result
 
-	def get_reg_value_at_low_level_il_instruction(self, i, reg, arch=None):
-		"""
-		``get_reg_value_at_low_level_il_instruction`` returns the value of the specified register ``reg`` at the il address
-		i
-
-		:param int i: il address of instruction to query
-		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
-		:Example:
-
-			>>> func.get_reg_value_at_low_level_il_instruction(15, 'rdi')
-			<const 0x2>
-		"""
-		if arch is None:
-			arch = self.arch
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_reg_value_after_low_level_il_instruction(self, i, reg):
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAfterLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
 	def get_stack_contents_at(self, addr, offset, size, arch=None):
 		"""
 		``get_stack_contents_at`` returns the RegisterValue for the item on the stack in the current function at the
@@ -520,18 +490,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result
 

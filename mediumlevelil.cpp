@@ -476,6 +476,108 @@ size_t MediumLevelILFunction::GetSSAMemoryIndexAtInstruction(size_t instr) const
 }
 
 
+BNILVariable MediumLevelILFunction::GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForRegisterAtInstruction(m_object, reg, instr);
+}
+
+
+BNILVariable MediumLevelILFunction::GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForFlagAtInstruction(m_object, flag, instr);
+}
+
+
+BNILVariable MediumLevelILFunction::GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const
+{
+	return BNGetMediumLevelILVariableForStackLocationAtInstruction(m_object, offset, instr);
+}
+
+
+RegisterValue MediumLevelILFunction::GetRegisterValueAtInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILRegisterValueAtInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILRegisterValueAfterInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetFlagValueAtInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILFlagValueAtInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILFlagValueAfterInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILStackContentsAtInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILStackContentsAfterInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue MediumLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
 BNILBranchDependence MediumLevelILFunction::GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const
 {
 	return BNGetMediumLevelILBranchDependence(m_object, curInstr, branchInstr);

@@ -260,8 +260,104 @@ class LowLevelILInstruction(object):
 
 	@property
 	def value(self):
-		"""Value of expression using static data flow analysis (read-only)"""
+		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetLowLevelILExprValue(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	@property
+	def possible_values(self):
+		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
+		value = core.BNGetLowLevelILPossibleExprValues(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_reg_value(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_reg_value_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_reg_values(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_reg_values_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_flag_value(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_flag_value_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_flag_values(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_flag_values_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents(self, offset, size):
+		value = core.BNGetLowLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_stack_contents_after(self, offset, size):
+		value = core.BNGetLowLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_stack_contents(self, offset, size):
+		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		core.BNFreeRegisterValue(value)
+		return result
+
+	def get_possible_stack_contents_after(self, offset, size):
+		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
 		core.BNFreeRegisterValue(value)
 		return result

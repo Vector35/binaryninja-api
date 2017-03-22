@@ -1177,6 +1177,9 @@ class Architecture(object):
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
 
+		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
+		want to be using ``Function.get_low_level_il_at``.
+
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to

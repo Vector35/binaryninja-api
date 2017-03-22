@@ -2417,7 +2417,9 @@ extern "C"
 		const BNPluginType* pluginTypes,
 		size_t pluginTypesSize,
 		const char* url,
-		const char* version);
+		const char* version,
+		const char* repoPath,
+		const char* gitModulesPath);
 	BINARYNINJACOREAPI BNRepoPlugin* BNNewPluginReference(BNRepoPlugin* r);
 	BINARYNINJACOREAPI void BNFreePlugin(BNRepoPlugin* plugin);
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNRepoPlugin* p);
@@ -2475,8 +2477,10 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char *outBytes, char *err);
 
-	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
+	// Filesystem functionality
 	BINARYNINJACOREAPI int BNDeleteFile(const char* path);
+	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
+	BINARYNINJACOREAPI int BNCreateDirectory(const char* path);
 #ifdef __cplusplus
 }
 #endif

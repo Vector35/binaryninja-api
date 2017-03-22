@@ -23,7 +23,9 @@ RepoPlugin::RepoPlugin(const string& path,
 	const string& name,
 	const vector<PluginType>& pluginTypes,
 	const string& url,
-	const string& version)
+	const string& version,
+	const string& repoPath,
+	const string& gitModulesPath)
 {
 	m_object = BNCreatePlugin(path.c_str(),
 		installed,
@@ -39,7 +41,9 @@ RepoPlugin::RepoPlugin(const string& path,
 		&pluginTypes[0],
 		pluginTypes.size(),
 		url.c_str(),
-		version.c_str());
+		version.c_str(),
+		repoPath.c_str(),
+		gitModulesPath.c_str());
 }
 
 RepoPlugin::RepoPlugin(BNRepoPlugin* plugin)

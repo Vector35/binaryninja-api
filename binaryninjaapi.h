@@ -2604,7 +2604,9 @@ namespace BinaryNinja
 			const std::string& name,
 			const std::vector<PluginType>& pluginTypes,
 			const std::string& url,
-			const std::string& version);
+			const std::string& version,
+			const std::string& repoPath,
+			const std::string& gitModulesPath);
 		RepoPlugin(BNRepoPlugin* plugin);
 		std::string GetPath() const;
 		bool IsInstalled() const;

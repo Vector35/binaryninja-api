@@ -260,15 +260,14 @@ class MediumLevelILInstruction(object):
 		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetMediumLevelILExprValue(self.function.handle, self.expr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
 		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	@property
@@ -302,7 +301,6 @@ class MediumLevelILInstruction(object):
 		var_data.identifier = var.identifier
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, index, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_ssa_var_index(self, var):
@@ -333,7 +331,6 @@ class MediumLevelILInstruction(object):
 			reg = self.function.arch.regs[reg].index
 		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_reg_value_after(self, reg):
@@ -341,23 +338,22 @@ class MediumLevelILInstruction(object):
 			reg = self.function.arch.regs[reg].index
 		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_possible_reg_values(self, reg):
 		if isinstance(reg, str):
 			reg = self.function.arch.regs[reg].index
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_reg_values_after(self, reg):
 		if isinstance(reg, str):
 			reg = self.function.arch.regs[reg].index
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_flag_value(self, flag):
@@ -365,7 +361,6 @@ class MediumLevelILInstruction(object):
 			flag = self.function.arch.flags[flag].index
 		value = core.BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_flag_value_after(self, flag):
@@ -373,47 +368,44 @@ class MediumLevelILInstruction(object):
 			flag = self.function.arch.flags[flag].index
 		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_possible_flag_values(self, flag):
 		if isinstance(flag, str):
 			flag = self.function.arch.flags[flag].index
 		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_flag_values_after(self, flag):
 		if isinstance(flag, str):
 			flag = self.function.arch.flags[flag].index
 		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_stack_contents(self, offset, size):
 		value = core.BNGetMediumLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after(self, offset, size):
 		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_possible_stack_contents(self, offset, size):
 		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_stack_contents_after(self, offset, size):
 		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
-		core.BNFreeRegisterValue(value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_branch_dependence(self, branch_instr):
@@ -706,7 +698,6 @@ class MediumLevelILFunction(object):
 		var_data.identifier = var.identifier
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, index)
 		result = function.RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_low_level_il_instruction_index(self, instr):

@@ -450,17 +450,17 @@ RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, idx, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, idx, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleExprValues(size_t expr)
+PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleExprValues(m_object, expr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleExprValues(m_object, expr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -508,17 +508,17 @@ RegisterValue MediumLevelILFunction::GetRegisterValueAfterInstruction(uint32_t r
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -536,17 +536,17 @@ RegisterValue MediumLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag,
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -564,17 +564,17 @@ RegisterValue MediumLevelILFunction::GetStackContentsAfterInstruction(int32_t of
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue MediumLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
 {
-	BNRegisterValue value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 

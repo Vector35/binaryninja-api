@@ -1853,12 +1853,20 @@ namespace BinaryNinja
 	struct RegisterValue
 	{
 		BNRegisterValueType state;
-		uint32_t reg; // For EntryValue and OffsetFromEntryValue, the original input register
-		int64_t value; // Offset for OffsetFromEntryValue, StackFrameOffset or RangeValue, value of register for ConstantValue
-		uint64_t rangeStart, rangeEnd, rangeStep; // Range of register, inclusive
-		std::vector<LookupTableEntry> table;
+		int64_t value;
 
 		static RegisterValue FromAPIObject(BNRegisterValue& value);
+	};
+
+	struct PossibleValueSet
+	{
+		BNRegisterValueType state;
+		int64_t value;
+		std::vector<BNValueRange> ranges;
+		std::set<int64_t> valueSet;
+		std::vector<LookupTableEntry> table;
+
+		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
 	};
 
 	class FunctionGraph;
@@ -2179,20 +2187,20 @@ namespace BinaryNinja
 		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
 
 		RegisterValue GetExprValue(size_t expr);
-		RegisterValue GetPossibleExprValues(size_t expr);
+		PossibleValueSet GetPossibleExprValues(size_t expr);
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
@@ -2277,8 +2285,8 @@ namespace BinaryNinja
 
 		RegisterValue GetSSAVarValue(const BNILVariable& var, size_t idx);
 		RegisterValue GetExprValue(size_t expr);
-		RegisterValue GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr);
-		RegisterValue GetPossibleExprValues(size_t expr);
+		PossibleValueSet GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr);
+		PossibleValueSet GetPossibleExprValues(size_t expr);
 
 		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
 		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
@@ -2288,16 +2296,16 @@ namespace BinaryNinja
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 
 		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
 		std::map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;

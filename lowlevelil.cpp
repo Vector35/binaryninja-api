@@ -780,10 +780,10 @@ RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleExprValues(size_t expr)
+PossibleValueSet LowLevelILFunction::GetPossibleExprValues(size_t expr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleExprValues(m_object, expr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleExprValues(m_object, expr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -801,17 +801,17 @@ RegisterValue LowLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg,
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -829,17 +829,17 @@ RegisterValue LowLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, si
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
@@ -857,17 +857,17 @@ RegisterValue LowLevelILFunction::GetStackContentsAfterInstruction(int32_t offse
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
 {
-	BNRegisterValue value = BNGetLowLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
 }
 
 

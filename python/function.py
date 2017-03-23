@@ -51,34 +51,11 @@ class RegisterValue(object):
 	def __init__(self, arch, value):
 		self.type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.reg)
+			self.reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
-		elif value.state == RegisterValueType.SignedRangeValue:
-			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
-			if self.start & (1 << 63):
-				self.start |= ~((1 << 63) - 1)
-			if self.end & (1 << 63):
-				self.end |= ~((1 << 63) - 1)
-		elif value.state == RegisterValueType.UnsignedRangeValue:
-			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
-		elif value.state == RegisterValueType.LookupTableValue:
-			self.table = []
-			self.mapping = {}
-			for i in xrange(0, value.rangeEnd):
-				from_list = []
-				for j in xrange(0, value.table[i].fromCount):
-					from_list.append(value.table[i].fromValues[j])
-					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
-				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
@@ -87,12 +64,83 @@ class RegisterValue(object):
 			return "<const %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if (self.type == RegisterValueType.SignedRangeValue) or (self.type == RegisterValueType.UnsignedRangeValue):
-			if self.step == 1:
-				return "<range: %#x to %#x>" % (self.start, self.end)
-			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
+		return "<undetermined>"
+
+
+class ValueRange(object):
+	def __init__(self, start, end, step):
+		self.start = start
+		self.end = end
+		self.step = step
+
+	def __repr__(self):
+		if self.step == 1:
+			return "<range: %#x to %#x>" % (self.start, self.end)
+		return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+
+
+class PossibleValueSet(object):
+	def __init__(self, arch, value):
+		self.type = RegisterValueType(value.state)
+		if value.state == RegisterValueType.EntryValue:
+			self.reg = arch.get_reg_name(value.value)
+		elif value.state == RegisterValueType.ConstantValue:
+			self.value = value.value
+		elif value.state == RegisterValueType.StackFrameOffset:
+			self.offset = value.value
+		elif value.state == RegisterValueType.SignedRangeValue:
+			self.offset = value.value
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				if start & (1 << 63):
+					start |= ~((1 << 63) - 1)
+				if end & (1 << 63):
+					end |= ~((1 << 63) - 1)
+				self.ranges.append(ValueRange(start, end, step))
+		elif value.state == RegisterValueType.UnsignedRangeValue:
+			self.offset = value.value
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				self.ranges.append(ValueRange(start, end, step))
+		elif value.state == RegisterValueType.LookupTableValue:
+			self.table = []
+			self.mapping = {}
+			for i in xrange(0, value.count):
+				from_list = []
+				for j in xrange(0, value.table[i].fromCount):
+					from_list.append(value.table[i].fromValues[j])
+					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
+				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
+		elif (value.state == RegisterValueType.InSetOfValues) or (value.state == RegisterValueType.NotInSetOfValues):
+			self.values = set()
+			for i in xrange(0, value.count):
+				self.values.add(value.valueSet[i])
+
+	def __repr__(self):
+		if self.type == RegisterValueType.EntryValue:
+			return "<entry %s>" % self.reg
+		if self.type == RegisterValueType.ConstantValue:
+			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.StackFrameOffset:
+			return "<stack frame offset %#x>" % self.offset
+		if self.type == RegisterValueType.SignedRangeValue:
+			return "<signed ranges: %s>" % repr(self.ranges)
+		if self.type == RegisterValueType.UnsignedRangeValue:
+			return "<unsigned ranges: %s>" % repr(self.ranges)
 		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
+		if self.type == RegisterValueType.InSetOfValues:
+			return "<in %s>" % repr(self.values)
+		if self.type == RegisterValueType.NotInSetOfValues:
+			return "<not in %s>" % repr(self.values)
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"
@@ -425,7 +473,6 @@ class Function(object):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_reg_value_after(self, addr, reg, arch=None):
@@ -447,7 +494,6 @@ class Function(object):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_at(self, addr, offset, size, arch=None):
@@ -473,7 +519,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after(self, addr, offset, size, arch=None):
@@ -481,7 +526,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at(self, addr, func_type, i, arch=None):
@@ -491,7 +535,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at_low_level_il_instruction(self, instr, func_type, i):
@@ -499,7 +542,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type, i)
 		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_regs_read_by(self, addr, arch=None):

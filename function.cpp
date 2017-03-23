@@ -170,14 +170,19 @@ RegisterValue RegisterValue::FromAPIObject(BNRegisterValue& value)
 {
 	RegisterValue result;
 	result.state = value.state;
-	result.reg = value.reg;
 	result.value = value.value;
-	result.rangeStart = value.rangeStart;
-	result.rangeEnd = value.rangeEnd;
-	result.rangeStep = value.rangeStep;
+	return result;
+}
+
+
+PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
+{
+	PossibleValueSet result;
+	result.state = value.state;
+	result.value = value.value;
 	if (value.state == LookupTableValue)
 	{
-		for (size_t i = 0; i < (size_t)value.rangeEnd; i++)
+		for (size_t i = 0; i < value.count; i++)
 		{
 			LookupTableEntry entry;
 			entry.fromValues.insert(entry.fromValues.end(), &value.table[i].fromValues[0],
@@ -186,7 +191,17 @@ RegisterValue RegisterValue::FromAPIObject(BNRegisterValue& value)
 			result.table.push_back(entry);
 		}
 	}
-	BNFreeRegisterValue(&value);
+	else if ((value.state == SignedRangeValue) || (value.state == UnsignedRangeValue))
+	{
+		for (size_t i = 0; i < value.count; i++)
+			result.ranges.push_back(value.ranges[i]);
+	}
+	else if ((value.state == InSetOfValues) || (value.state == NotInSetOfValues))
+	{
+		for (size_t i = 0; i < value.count; i++)
+			result.valueSet.insert(value.valueSet[i]);
+	}
+	BNFreePossibleValueSet(&value);
 	return result;
 }
 

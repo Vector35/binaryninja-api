@@ -12,7 +12,7 @@ TARGET := $(TARGETDIR)/$(TARGETNAME)
 
 SRCEXT = .cpp
 SOURCES = $(wildcard *$(SRCEXT))
-OBJECTS = $(SOURCES:.cpp=.o)
+OBJECTS = $(SOURCES:.cpp=.o) json.o
 
 
 CFLAGS := -c -fPIC -O2 -pipe -std=gnu++11 -Wall -W
@@ -34,6 +34,9 @@ $(TARGET).a: $(OBJECTS)
 %.o: %.cpp
 	@echo " Compiling... $@ $<"
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
+
+json.o: ./json/jsoncpp.cpp ./json/json.h ./json/json-forwards.h
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
 
 clean:
 	@echo " Cleaning...";

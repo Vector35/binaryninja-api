@@ -1,0 +1,16 @@
+BINJA_API_INC_PATH = ..\..\ 
+BINJA_API_LIB = ..\..\bin\libbinaryninjaapi.lib
+BINJA_CORE_LIB = "c:\Program Files\Vector35\BinaryNinja\binaryninjacore.lib"
+
+FLAGS = /DWIN32 /D__WIN32__ /EHsc /I$(BINJA_API_INC_PATH) /link $(BINJA_API_LIB) $(BINJA_CORE_LIB)
+
+bininfo.dll: ./src/breakpoint.cpp
+	if not exist bin mkdir bin
+	cl ./src/breakpoint.cpp /LD $(FLAGS) /OUT:.\bin\breakpoint.dll
+
+clean:
+	if exist *.obj del *.obj
+	if exist *.exp del *.exp
+	if exist *.lib del *.lib
+	if exist *.dll del *.dll
+	if exist .\bin del /S /Q bin

@@ -194,7 +194,7 @@ class BasicBlock(object):
 	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
-		return self.function.get_block_annotations(self.arch, self.start)
+		return self.function.get_block_annotations(self.start, self.arch)
 
 	@property
 	def disassembly_text(self):

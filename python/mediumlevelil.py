@@ -115,7 +115,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_UNIMPL: [],
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var"), ("index", "int"), ("src", "expr")],
-		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("dest", "var"), ("index", "int"), ("offset", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("dest", "var"), ("dest_index", "int"), ("src_index", "int"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "expr"), ("low", "expr"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("dest", "var"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "exor")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("dest", "var"), ("dest_memory", "int"), ("src_memory", "int"), ("offset", "int"), ("src", "exor")],

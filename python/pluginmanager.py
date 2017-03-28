@@ -28,7 +28,8 @@ import startup
 
 class RepoPlugin(object):
 	"""
-	``Plugin`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
+	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
+	created by parsing the plugins.json in a plugin repository.
 	"""
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
@@ -49,10 +50,24 @@ class RepoPlugin(object):
 		"""Boolean True if the plugin is installed, False otherwise"""
 		return core.BNPluginIsInstalled(self.handle)
 
+	@installed.setter
+	def installed(self, state):
+		if state:
+			return core.BNPluginInstall(self.handle)
+		else:
+			return core.BNPluginUninstall(self.handle)
+
 	@property
 	def enabled(self):
 		"""Boolean True if the plugin is currently enabled, False otherwise"""
 		return core.BNPluginIsEnabled(self.handle)
+
+	@enabled.setter
+	def enabled(self, state):
+		if state:
+			return core.BNPluginEnable(self.handle)
+		else:
+			return core.BNPluginDisable(self.handle)
 
 	@property
 	def api(self):
@@ -151,7 +166,7 @@ class Repository(object):
 
 	@property
 	def plugins(self):
-		"""List of Plugin objects contained within this repository"""
+		"""List of RepoPlugin objects contained within this repository"""
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
@@ -168,6 +183,10 @@ class Repository(object):
 
 
 class RepositoryManager(object):
+	"""
+	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
+	the plugins that are installed/unstalled enabled/disabled
+	"""
 	def __init__(self, handle=None):
 		self.handle = core.BNGetRepositoryManager()
 
@@ -236,7 +255,7 @@ class RepositoryManager(object):
 		``disable_plugin`` Disable the specified plugin, pluginpath
 
 		:param Repository or str repo: Repository containing the plugin to disable
-		:param Plugin or str plugin: Plugin to disable
+		:param RepoPlugin or str plugin: RepoPlugin to disable
 		:return: Boolean value True if the plugin was successfully disabled, False otherwise
 		:rtype: Boolean
 		:Example:
@@ -261,7 +280,7 @@ class RepositoryManager(object):
 		``install_plugin`` install the specified plugin, pluginpath
 
 		:param Repository or str repo: Repository containing the plugin to install
-		:param Plugin or str plugin: Plugin to install
+		:param RepoPlugin or str plugin: RepoPlugin to install
 		:return: Boolean value True if the plugin was successfully installed, False otherwise
 		:rtype: Boolean
 		:Example:
@@ -286,7 +305,7 @@ class RepositoryManager(object):
 		``uninstall_plugin`` uninstall the specified plugin, pluginpath
 
 		:param Repository or str repo: Repository containing the plugin to uninstall
-		:param Plugin or str plugin: Plugin to uninstall
+		:param RepoPlugin or str plugin: RepoPlugin to uninstall
 		:return: Boolean value True if the plugin was successfully uninstalled, False otherwise
 		:rtype: Boolean
 		:Example:
@@ -311,7 +330,7 @@ class RepositoryManager(object):
 		``update_plugin`` update the specified plugin, pluginpath
 
 		:param Repository or str repo: Repository containing the plugin to update
-		:param Plugin or str plugin: Plugin to update
+		:param RepoPlugin or str plugin: RepoPlugin to update
 		:return: Boolean value True if the plugin was successfully updated, False otherwise
 		:rtype: Boolean
 		:Example:
@@ -354,6 +373,5 @@ class RepositoryManager(object):
 		if not (isinstance(url, str) and isinstance(repopath, str) and
 			isinstance(localreference, str) and isinstance(remotereference, str)):
 			raise ValueError("Parameter is incorrect type")
-		repo = core.BNCreateRepository(url, repopath, localreference, remotereference)
 
-		return core.BNRepositoryManagerAddRepository(self.handle, repo)
+		return core.BNRepositoryManagerAddRepository(self.handle, url, repopath, localreference, remotereference)

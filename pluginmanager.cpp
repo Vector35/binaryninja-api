@@ -10,42 +10,6 @@ using namespace std;
 	return result; \
 }while(0)
 
-RepoPlugin::RepoPlugin(const string& path,
-	bool installed,
-	bool enabled,
-	const string& api,
-	const string& author,
-	const string& description,
-	const string& license,
-	const string& licenseText,
-	const string& longdescription,
-	const string& minimimVersions,
-	const string& name,
-	const vector<PluginType>& pluginTypes,
-	const string& url,
-	const string& version,
-	const string& repoPath,
-	const string& gitModulesPath)
-{
-	m_object = BNCreatePlugin(path.c_str(),
-		installed,
-		enabled,
-		api.c_str(),
-		author.c_str(),
-		description.c_str(),
-		license.c_str(),
-		licenseText.c_str(),
-		longdescription.c_str(),
-		minimimVersions.c_str(),
-		name.c_str(),
-		&pluginTypes[0],
-		pluginTypes.size(),
-		url.c_str(),
-		version.c_str(),
-		repoPath.c_str(),
-		gitModulesPath.c_str());
-}
-
 RepoPlugin::RepoPlugin(BNRepoPlugin* plugin)
 {
 	m_object = plugin;
@@ -139,18 +103,6 @@ string RepoPlugin::GetVersion() const
 	RETURN_STRING(BNPluginGetVersion(m_object));
 }
 
-Repository::Repository(const string& url,
-    const string& repoPath,
-    const string& repoManifest,
-    const string& localReference,
-    const string& remoteReference)
-{
-	m_object = BNCreateRepository(url.c_str(),
-		repoPath.c_str(),
-		localReference.c_str(),
-		remoteReference.c_str());
-}
-
 Repository::Repository(BNRepository* r)
 {
 	m_object = r;
@@ -205,14 +157,10 @@ string Repository::GetFullPath() const
 	RETURN_STRING(BNRepositoryGetPluginsPath(m_object));
 }
 
-RepositoryManager::RepositoryManager(vector<Ref<Repository>>& repoInfo, const string& enabledPluginsPath)
+RepositoryManager::RepositoryManager(const string& enabledPluginsPath)
 	:m_core(false)
 {
-	BNRepository** buffer = new BNRepository*[repoInfo.size()];
-	for (size_t i = 0; i < repoInfo.size(); i++)
-		buffer[i] = repoInfo[i]->m_object;
-	m_object = BNCreateRepositoryManager(buffer, repoInfo.size(), enabledPluginsPath.c_str());
-	delete[] buffer;
+	m_object = BNCreateRepositoryManager(enabledPluginsPath.c_str());
 }
 
 RepositoryManager::RepositoryManager(BNRepositoryManager* mgr)
@@ -249,9 +197,16 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 	return repos;
 }
 
-bool RepositoryManager::AddRepository(Ref<Repository> repo)
+bool RepositoryManager::AddRepository(const std::string& url,
+	const std::string& repoPath, // Relative path within the repositories directory
+	const std::string& localReference,
+	const std::string& remoteReference)
 {
-	return BNRepositoryManagerAddRepository(m_object, repo->GetObject());
+	return BNRepositoryManagerAddRepository(m_object,
+		url.c_str(),
+		repoPath.c_str(),
+		localReference.c_str(),
+		remoteReference.c_str());
 }
 
 Ref<Repository> RepositoryManager::GetRepositoryByPath(const std::string& repoPath)

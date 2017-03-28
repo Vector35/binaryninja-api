@@ -2591,22 +2591,6 @@ namespace BinaryNinja
 	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
 	{
 	public:
-		RepoPlugin(const std::string& path,
-			bool installed,
-			bool enabled,
-			const std::string& api,
-			const std::string& author,
-			const std::string& description,
-			const std::string& license,
-			const std::string& licenseText,
-			const std::string& longdescription,
-			const std::string& minimimVersions,
-			const std::string& name,
-			const std::vector<PluginType>& pluginTypes,
-			const std::string& url,
-			const std::string& version,
-			const std::string& repoPath,
-			const std::string& gitModulesPath);
 		RepoPlugin(BNRepoPlugin* plugin);
 		std::string GetPath() const;
 		bool IsInstalled() const;
@@ -2630,11 +2614,6 @@ namespace BinaryNinja
 	class Repository: public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
 	{
 	public:
-		Repository(const std::string& url, // URL of the git repository containing the plugins
-			const std::string& repoPath, // Name of the directory to store this repository within the repositories directory
-			const std::string& repoManifest="plugins", // Name of the of the inner directory and .json file
-			const std::string& localReference="master",
-			const std::string& remoteReference="origin");
 		Repository(BNRepository* repository);
 		~Repository();
 		std::string GetUrl() const;
@@ -2652,14 +2631,17 @@ namespace BinaryNinja
 	{
 		bool m_core;
 	public:
-		RepositoryManager(std::vector<Ref<Repository>>& repoInfo, const std::string& enabledPluginsPath);
+		RepositoryManager(const std::string& enabledPluginsPath);
 		RepositoryManager(BNRepositoryManager* repoManager);
 		RepositoryManager();
 		~RepositoryManager();
 		bool CheckForUpdates();
 		std::vector<Ref<Repository>> GetRepositories();
 		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
-		bool AddRepository(Ref<Repository> repo);
+		bool AddRepository(const std::string& url,
+			const std::string& repoPath, // Relative path within the repositories directory
+			const std::string& localReference="master",
+			const std::string& remoteReference="origin");
 		bool EnablePlugin(const std::string& repoName, const std::string& pluginPath);
 		bool DisablePlugin(const std::string& repoName, const std::string& pluginPath);
 		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);

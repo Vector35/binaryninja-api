@@ -258,7 +258,7 @@ class Function(object):
 	@property
 	def explicitly_defined_type(self):
 		"""Whether function has explicitly defined types (read-only)"""
-		return core.BNHasExplicitlyDefinedType(self.handle)
+		return core.BNFunctionHasExplicitlyDefinedType(self.handle)
 
 	@property
 	def needs_update(self):

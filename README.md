@@ -1,3 +1,5 @@
+[![slack](https://binaryninja-slack-hwwdinrdce.now.sh/badge.svg)](https://binaryninja-slack-hwwdinrdce.now.sh/)
+
 # Binary Ninja API
 
 This repository contains documentation and source code for the [Binary Ninja](https://binary.ninja/) reverse engineering platform API.

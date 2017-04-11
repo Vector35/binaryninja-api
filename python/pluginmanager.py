@@ -363,7 +363,7 @@ class RepositoryManager(object):
 		:Example:
 
 			>>> mgr = RepositoryManager()
-			>>> mgr.add_repository(url="https://github.com/vector35/binaryninja-plugins.git",
+			>>> mgr.add_repository(url="https://github.com/vector35/community-plugins.git",
 			                       repopath="myrepo",
 			                       repomanifest="plugins",
 			                       localreference="master", remotereference="origin")

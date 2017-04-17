@@ -2,12 +2,27 @@ code {
 	color: #000;
 }
 
-img {
-	display: inline-block;
-	float: right;
-}
-
 .admonition {
 	background: rgb(128, 198, 223);
 	color: #333;
+}
+
+img[alt$=">"] {
+  float:right;
+  display: inline-block;
+  padding-left: 10px;
+}
+
+img[alt$="<"] {
+  float:left;
+  display: inline-block;
+  padding-right: 10px;
+}
+
+img[alt$="><"] {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: auto;
+    float: none!important;
 }

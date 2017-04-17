@@ -4,6 +4,10 @@
 
 This repository contains documentation and source code for the [Binary Ninja](https://binary.ninja/) reverse engineering platform API.
 
+## Branches
+
+Please note that the [dev](/Vector35/binaryninja-api/tree/dev/) branch tracks changes on the `dev` build of binary ninja and is generally the place where all pull requests should be submitted to. However, the [master](/Vector35/binaryninja-api/tree/master/) branch tracks the `stable` build of Binary Ninja which is the default version run after installation. Online [documentation](https://api.binary.ninja/) tracks the stable branch. 
+
 ## Contributing
 
 Public contributions are welcome to this repository. All the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja).

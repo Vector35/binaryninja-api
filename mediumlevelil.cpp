@@ -73,34 +73,34 @@ ExprId MediumLevelILFunction::AddInstruction(size_t expr)
 }
 
 
-ExprId MediumLevelILFunction::SetVar(size_t size, const BNILVariable& var, ExprId src)
+ExprId MediumLevelILFunction::SetVar(size_t size, const Variable& var, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier, src);
 }
 
 
-ExprId MediumLevelILFunction::SetVarField(size_t size, const BNILVariable& var, int64_t offset, ExprId src)
+ExprId MediumLevelILFunction::SetVarField(size_t size, const Variable& var, int64_t offset, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
 		offset, src);
 }
 
 
-ExprId MediumLevelILFunction::SetVarSplit(size_t size, const BNILVariable& high, const BNILVariable& low, ExprId src)
+ExprId MediumLevelILFunction::SetVarSplit(size_t size, const Variable& high, const Variable& low, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_SPLIT, size, ((uint64_t)high.type << 32) | (uint64_t)high.index, high.identifier,
 		((uint64_t)low.type << 32) | (uint64_t)low.index, low.identifier, src);
 }
 
 
-ExprId MediumLevelILFunction::SetVarSSA(size_t size, const BNILVariable& var, size_t varIndex, ExprId src)
+ExprId MediumLevelILFunction::SetVarSSA(size_t size, const Variable& var, size_t varIndex, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_SSA, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
 		varIndex, src);
 }
 
 
-ExprId MediumLevelILFunction::SetVarFieldSSA(size_t size, const BNILVariable& var, size_t varIndex,
+ExprId MediumLevelILFunction::SetVarFieldSSA(size_t size, const Variable& var, size_t varIndex,
 	int64_t offset, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
@@ -108,8 +108,8 @@ ExprId MediumLevelILFunction::SetVarFieldSSA(size_t size, const BNILVariable& va
 }
 
 
-ExprId MediumLevelILFunction::SetVarSplitSSA(size_t size, const BNILVariable& high, size_t highIndex,
-	const BNILVariable& low, size_t lowIndex, ExprId src)
+ExprId MediumLevelILFunction::SetVarSplitSSA(size_t size, const Variable& high, size_t highIndex,
+	const Variable& low, size_t lowIndex, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_SPLIT_SSA, size,
 		AddExpr(MLIL_VAR_SPLIT_DEST_SSA, size, ((uint64_t)high.type << 32) | (uint64_t)high.index,
@@ -119,7 +119,7 @@ ExprId MediumLevelILFunction::SetVarSplitSSA(size_t size, const BNILVariable& hi
 }
 
 
-ExprId MediumLevelILFunction::SetVarAliased(size_t size, const BNILVariable& var, size_t destIndex,
+ExprId MediumLevelILFunction::SetVarAliased(size_t size, const Variable& var, size_t destIndex,
 	size_t srcIndex, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_ALIASED, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
@@ -127,7 +127,7 @@ ExprId MediumLevelILFunction::SetVarAliased(size_t size, const BNILVariable& var
 }
 
 
-ExprId MediumLevelILFunction::SetVarFieldAliased(size_t size, const BNILVariable& var, size_t destIndex,
+ExprId MediumLevelILFunction::SetVarFieldAliased(size_t size, const Variable& var, size_t destIndex,
 	size_t srcIndex, int64_t offset, ExprId src)
 {
 	return AddExpr(MLIL_SET_VAR_ALIASED_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
@@ -135,25 +135,25 @@ ExprId MediumLevelILFunction::SetVarFieldAliased(size_t size, const BNILVariable
 }
 
 
-ExprId MediumLevelILFunction::Var(size_t size, const BNILVariable& var)
+ExprId MediumLevelILFunction::Var(size_t size, const Variable& var)
 {
 	return AddExpr(MLIL_VAR, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier);
 }
 
 
-ExprId MediumLevelILFunction::VarField(size_t size, const BNILVariable& var, int64_t offset)
+ExprId MediumLevelILFunction::VarField(size_t size, const Variable& var, int64_t offset)
 {
 	return AddExpr(MLIL_VAR_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier, offset);
 }
 
 
-ExprId MediumLevelILFunction::VarSSA(size_t size, const BNILVariable& var, size_t varIndex)
+ExprId MediumLevelILFunction::VarSSA(size_t size, const Variable& var, size_t varIndex)
 {
 	return AddExpr(MLIL_VAR_SSA, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier, varIndex);
 }
 
 
-ExprId MediumLevelILFunction::VarFieldSSA(size_t size, const BNILVariable& var, int64_t offset,
+ExprId MediumLevelILFunction::VarFieldSSA(size_t size, const Variable& var, int64_t offset,
 	size_t varIndex)
 {
 	return AddExpr(MLIL_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
@@ -161,26 +161,26 @@ ExprId MediumLevelILFunction::VarFieldSSA(size_t size, const BNILVariable& var, 
 }
 
 
-ExprId MediumLevelILFunction::VarAliased(size_t size, const BNILVariable& var, size_t memIndex)
+ExprId MediumLevelILFunction::VarAliased(size_t size, const Variable& var, size_t memIndex)
 {
 	return AddExpr(MLIL_VAR_ALIASED, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier, memIndex);
 }
 
 
-ExprId MediumLevelILFunction::VarFieldAliased(size_t size, const BNILVariable& var, int64_t offset, size_t memIndex)
+ExprId MediumLevelILFunction::VarFieldAliased(size_t size, const Variable& var, int64_t offset, size_t memIndex)
 {
 	return AddExpr(MLIL_VAR_ALIASED_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier,
 		offset, memIndex);
 }
 
 
-ExprId MediumLevelILFunction::AddressOf(size_t size, const BNILVariable& var)
+ExprId MediumLevelILFunction::AddressOf(size_t size, const Variable& var)
 {
 	return AddExpr(MLIL_ADDRESS_OF, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.identifier);
 }
 
 
-ExprId MediumLevelILFunction::AddressOfField(size_t size, const BNILVariable& var, int64_t offset)
+ExprId MediumLevelILFunction::AddressOfField(size_t size, const Variable& var, int64_t offset)
 {
 	return AddExpr(MLIL_ADDRESS_OF_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index,
 		var.identifier, offset);
@@ -239,11 +239,11 @@ ExprId MediumLevelILFunction::AddOperandList(const vector<ExprId> operands)
 }
 
 
-BNILVariable MediumLevelILFunction::GetVariable(ExprId i, size_t varOperand)
+Variable MediumLevelILFunction::GetVariable(ExprId i, size_t varOperand)
 {
 	BNMediumLevelILInstruction instr = (*this)[i];
-	BNILVariable result;
-	result.type = (BNILVariableSourceType)(instr.operands[varOperand] >> 32);
+	Variable result;
+	result.type = (BNVariableSourceType)(instr.operands[varOperand] >> 32);
 	result.index = (uint32_t)instr.operands[varOperand];
 	result.identifier = instr.operands[varOperand + 1];
 	return result;
@@ -396,7 +396,7 @@ size_t MediumLevelILFunction::GetNonSSAExprIndex(size_t expr) const
 }
 
 
-size_t MediumLevelILFunction::GetSSAVarDefinition(const BNILVariable& var, size_t idx) const
+size_t MediumLevelILFunction::GetSSAVarDefinition(const Variable& var, size_t idx) const
 {
 	return BNGetMediumLevelILSSAVarDefinition(m_object, &var, idx);
 }
@@ -408,7 +408,7 @@ size_t MediumLevelILFunction::GetSSAMemoryDefinition(size_t idx) const
 }
 
 
-set<size_t> MediumLevelILFunction::GetSSAVarUses(const BNILVariable& var, size_t idx) const
+set<size_t> MediumLevelILFunction::GetSSAVarUses(const Variable& var, size_t idx) const
 {
 	size_t count;
 	size_t* instrs = BNGetMediumLevelILSSAVarUses(m_object, &var, idx, &count);
@@ -436,7 +436,7 @@ set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t idx) const
 }
 
 
-RegisterValue MediumLevelILFunction::GetSSAVarValue(const BNILVariable& var, size_t idx)
+RegisterValue MediumLevelILFunction::GetSSAVarValue(const Variable& var, size_t idx)
 {
 	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var, idx);
 	return RegisterValue::FromAPIObject(value);
@@ -450,7 +450,7 @@ RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const Variable& var, size_t idx, size_t instr)
 {
 	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, idx, instr);
 	return PossibleValueSet::FromAPIObject(value);
@@ -464,7 +464,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr)
 }
 
 
-size_t MediumLevelILFunction::GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const
+size_t MediumLevelILFunction::GetSSAVarIndexAtInstruction(const Variable& var, size_t instr) const
 {
 	return BNGetMediumLevelILSSAVarIndexAtILInstruction(m_object, &var, instr);
 }
@@ -476,19 +476,19 @@ size_t MediumLevelILFunction::GetSSAMemoryIndexAtInstruction(size_t instr) const
 }
 
 
-BNILVariable MediumLevelILFunction::GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const
+Variable MediumLevelILFunction::GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const
 {
 	return BNGetMediumLevelILVariableForRegisterAtInstruction(m_object, reg, instr);
 }
 
 
-BNILVariable MediumLevelILFunction::GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const
+Variable MediumLevelILFunction::GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const
 {
 	return BNGetMediumLevelILVariableForFlagAtInstruction(m_object, flag, instr);
 }
 
 
-BNILVariable MediumLevelILFunction::GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const
+Variable MediumLevelILFunction::GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const
 {
 	return BNGetMediumLevelILVariableForStackLocationAtInstruction(m_object, offset, instr);
 }

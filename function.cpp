@@ -24,6 +24,69 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+Variable::Variable()
+{
+	type = RegisterVariableSourceType;
+	index = 0;
+	identifier = 0;
+}
+
+
+Variable::Variable(BNVariableSourceType t, uint32_t i, uint64_t id)
+{
+	type = t;
+	index = i;
+	identifier = id;
+}
+
+
+Variable::Variable(const BNVariable& var)
+{
+	type = var.type;
+	index = var.index;
+	identifier = var.identifier;
+}
+
+
+Variable& Variable::operator=(const Variable& var)
+{
+	type = var.type;
+	index = var.index;
+	identifier = var.identifier;
+	return *this;
+}
+
+
+bool Variable::operator==(const Variable& var) const
+{
+	if (type != var.type)
+		return false;
+	if (index != var.index)
+		return false;
+	return identifier == var.identifier;
+}
+
+
+bool Variable::operator!=(const Variable& var) const
+{
+	return !((*this) == var);
+}
+
+
+bool Variable::operator<(const Variable& var) const
+{
+	if (type < var.type)
+		return true;
+	if (type > var.type)
+		return false;
+	if (index < var.index)
+		return true;
+	if (index > var.index)
+		return false;
+	return identifier < var.identifier;
+}
+
+
 Function::Function(BNFunction* func)
 {
 	m_object = func;
@@ -414,23 +477,23 @@ Ref<FunctionGraph> Function::CreateFunctionGraph()
 }
 
 
-map<int64_t, StackVariable> Function::GetStackLayout()
+map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 {
 	size_t count;
-	BNStackVariable* vars = BNGetStackLayout(m_object, &count);
+	BNVariableNameAndType* vars = BNGetStackLayout(m_object, &count);
 
-	map<int64_t, StackVariable> result;
+	map<int64_t, vector<VariableNameAndType>> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		StackVariable var;
+		VariableNameAndType var;
 		var.name = vars[i].name;
 		var.type = new Type(BNNewTypeReference(vars[i].type));
-		var.offset = vars[i].offset;
+		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
-		result[vars[i].offset] = var;
+		result[vars[i].var.identifier].push_back(var);
 	}
 
-	BNFreeStackLayout(vars, count);
+	BNFreeVariableList(vars, count);
 	return result;
 }
 
@@ -459,19 +522,83 @@ void Function::DeleteUserStackVariable(int64_t offset)
 }
 
 
-bool Function::GetStackVariableAtFrameOffset(int64_t offset, StackVariable& result)
+bool Function::GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr,
+	int64_t offset, VariableNameAndType& result)
 {
-	BNStackVariable var;
-	if (!BNGetStackVariableAtFrameOffset(m_object, offset, &var))
+	BNVariableNameAndType var;
+	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
 		return false;
 
 	result.type = new Type(BNNewTypeReference(var.type));
 	result.name = var.name;
-	result.offset = var.offset;
+	result.var = var.var;
 	result.autoDefined = var.autoDefined;
 
-	BNFreeStackVariable(&var);
+	BNFreeVariableNameAndType(&var);
 	return true;
+}
+
+
+map<Variable, VariableNameAndType> Function::GetVariables()
+{
+	size_t count;
+	BNVariableNameAndType* vars = BNGetFunctionVariables(m_object, &count);
+
+	map<Variable, VariableNameAndType> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		VariableNameAndType var;
+		var.name = vars[i].name;
+		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.var = vars[i].var;
+		var.autoDefined = vars[i].autoDefined;
+		result[vars[i].var] = var;
+	}
+
+	BNFreeVariableList(vars, count);
+	return result;
+}
+
+
+void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool singleOnly)
+{
+	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), singleOnly);
+}
+
+
+void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool singleOnly)
+{
+	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), singleOnly);
+}
+
+
+void Function::DeleteAutoVariable(const Variable& var)
+{
+	BNDeleteAutoVariable(m_object, &var);
+}
+
+
+void Function::DeleteUserVariable(const Variable& var)
+{
+	BNDeleteAutoVariable(m_object, &var);
+}
+
+
+Ref<Type> Function::GetVariableType(const Variable& var)
+{
+	BNType* type = BNGetVariableType(m_object, &var);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+string Function::GetVariableName(const Variable& var)
+{
+	char* name = BNGetVariableName(m_object, &var);
+	string result = name;
+	BNFreeString(name);
+	return result;
 }
 
 

@@ -1809,11 +1809,24 @@ namespace BinaryNinja
 		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
 	};
 
-	struct StackVariable
+	struct Variable: public BNVariable
 	{
+		Variable();
+		Variable(BNVariableSourceType type, uint32_t index, uint64_t identifier);
+		Variable(const BNVariable& var);
+
+		Variable& operator=(const Variable& var);
+
+		bool operator==(const Variable& var) const;
+		bool operator!=(const Variable& var) const;
+		bool operator<(const Variable& var) const;
+	};
+
+	struct VariableNameAndType
+	{
+		Variable var;
 		Ref<Type> type;
 		std::string name;
-		int64_t offset;
 		bool autoDefined;
 	};
 
@@ -1928,12 +1941,20 @@ namespace BinaryNinja
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 
-		std::map<int64_t, StackVariable> GetStackLayout();
+		std::map<int64_t, std::vector<VariableNameAndType>> GetStackLayout();
 		void CreateAutoStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void CreateUserStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
-		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
+		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
+
+		std::map<Variable, VariableNameAndType> GetVariables();
+		void CreateAutoVariable(const Variable& var, Ref<Type> type, const std::string& name, bool singleOnly = false);
+		void CreateUserVariable(const Variable& var, Ref<Type> type, const std::string& name, bool singleOnly = false);
+		void DeleteAutoVariable(const Variable& var);
+		void DeleteUserVariable(const Variable& var);
+		Ref<Type> GetVariableType(const Variable& var);
+		std::string GetVariableName(const Variable& var);
 
 		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 		void SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
@@ -2228,24 +2249,24 @@ namespace BinaryNinja
 			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0, ExprId f = 0);
 		ExprId AddInstruction(ExprId expr);
 
-		ExprId SetVar(size_t size, const BNILVariable& var, ExprId src);
-		ExprId SetVarField(size_t size, const BNILVariable& var, int64_t offset, ExprId src);
-		ExprId SetVarSplit(size_t size, const BNILVariable& high, const BNILVariable& low, ExprId src);
-		ExprId SetVarSSA(size_t size, const BNILVariable& var, size_t index, ExprId src);
-		ExprId SetVarFieldSSA(size_t size, const BNILVariable& var, size_t varIndex, int64_t offset, ExprId src);
-		ExprId SetVarSplitSSA(size_t size, const BNILVariable& high, size_t highIndex,
-			const BNILVariable& low, size_t lowIndex, ExprId src);
-		ExprId SetVarAliased(size_t size, const BNILVariable& var, size_t destIndex, size_t srcIndex, ExprId src);
-		ExprId SetVarFieldAliased(size_t size, const BNILVariable& var, size_t destIndex, size_t srcIndex,
+		ExprId SetVar(size_t size, const Variable& var, ExprId src);
+		ExprId SetVarField(size_t size, const Variable& var, int64_t offset, ExprId src);
+		ExprId SetVarSplit(size_t size, const Variable& high, const Variable& low, ExprId src);
+		ExprId SetVarSSA(size_t size, const Variable& var, size_t index, ExprId src);
+		ExprId SetVarFieldSSA(size_t size, const Variable& var, size_t varIndex, int64_t offset, ExprId src);
+		ExprId SetVarSplitSSA(size_t size, const Variable& high, size_t highIndex,
+			const Variable& low, size_t lowIndex, ExprId src);
+		ExprId SetVarAliased(size_t size, const Variable& var, size_t destIndex, size_t srcIndex, ExprId src);
+		ExprId SetVarFieldAliased(size_t size, const Variable& var, size_t destIndex, size_t srcIndex,
 			int64_t offset, ExprId src);
-		ExprId Var(size_t size, const BNILVariable& var);
-		ExprId VarField(size_t size, const BNILVariable& var, int64_t offset);
-		ExprId VarSSA(size_t size, const BNILVariable& var, size_t index);
-		ExprId VarFieldSSA(size_t size, const BNILVariable& var, int64_t offset, size_t varIndex);
-		ExprId VarAliased(size_t size, const BNILVariable& var, size_t memIndex);
-		ExprId VarFieldAliased(size_t size, const BNILVariable& var, int64_t offset, size_t memIndex);
-		ExprId AddressOf(size_t size, const BNILVariable& var);
-		ExprId AddressOfField(size_t size, const BNILVariable& var, int64_t offset);
+		ExprId Var(size_t size, const Variable& var);
+		ExprId VarField(size_t size, const Variable& var, int64_t offset);
+		ExprId VarSSA(size_t size, const Variable& var, size_t index);
+		ExprId VarFieldSSA(size_t size, const Variable& var, int64_t offset, size_t varIndex);
+		ExprId VarAliased(size_t size, const Variable& var, size_t memIndex);
+		ExprId VarFieldAliased(size_t size, const Variable& var, int64_t offset, size_t memIndex);
+		ExprId AddressOf(size_t size, const Variable& var);
+		ExprId AddressOfField(size_t size, const Variable& var, int64_t offset);
 
 		ExprId Goto(BNMediumLevelILLabel& label);
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f);
@@ -2255,7 +2276,7 @@ namespace BinaryNinja
 		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 
-		BNILVariable GetVariable(ExprId i, size_t varOperand);
+		Variable GetVariable(ExprId i, size_t varOperand);
 
 		BNMediumLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;
@@ -2278,21 +2299,21 @@ namespace BinaryNinja
 		size_t GetSSAExprIndex(size_t instr) const;
 		size_t GetNonSSAExprIndex(size_t instr) const;
 
-		size_t GetSSAVarDefinition(const BNILVariable& var, size_t idx) const;
+		size_t GetSSAVarDefinition(const Variable& var, size_t idx) const;
 		size_t GetSSAMemoryDefinition(size_t idx) const;
-		std::set<size_t> GetSSAVarUses(const BNILVariable& var, size_t idx) const;
+		std::set<size_t> GetSSAVarUses(const Variable& var, size_t idx) const;
 		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
 
-		RegisterValue GetSSAVarValue(const BNILVariable& var, size_t idx);
+		RegisterValue GetSSAVarValue(const Variable& var, size_t idx);
 		RegisterValue GetExprValue(size_t expr);
-		PossibleValueSet GetPossibleSSAVarValues(const BNILVariable& var, size_t idx, size_t instr);
+		PossibleValueSet GetPossibleSSAVarValues(const Variable& var, size_t idx, size_t instr);
 		PossibleValueSet GetPossibleExprValues(size_t expr);
 
-		size_t GetSSAVarIndexAtInstruction(const BNILVariable& var, size_t instr) const;
+		size_t GetSSAVarIndexAtInstruction(const Variable& var, size_t instr) const;
 		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
-		BNILVariable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
-		BNILVariable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
-		BNILVariable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
+		Variable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
+		Variable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
+		Variable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);

@@ -766,16 +766,16 @@ extern "C"
 		size_t operand;
 	};
 
-	enum BNILVariableSourceType
+	enum BNVariableSourceType
 	{
 		RegisterVariableSourceType,
 		FlagVariableSourceType,
 		StackVariableSourceType
 	};
 
-	struct BNILVariable
+	struct BNVariable
 	{
-		BNILVariableSourceType type;
+		BNVariableSourceType type;
 		uint32_t index;
 		int64_t identifier;
 	};
@@ -1129,11 +1129,11 @@ extern "C"
 		uint32_t (*getFloatReturnValueRegister)(void* ctxt);
 	};
 
-	struct BNStackVariable
+	struct BNVariableNameAndType
 	{
+		BNVariable var;
 		BNType* type;
 		char* name;
-		int64_t offset;
 		bool autoDefined;
 	};
 
@@ -1929,14 +1929,25 @@ extern "C"
 	                                                          uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStringReferenceList(BNStringReference* strings);
 
-	BINARYNINJACOREAPI BNStackVariable* BNGetStackLayout(BNFunction* func, size_t* count);
-	BINARYNINJACOREAPI void BNFreeStackLayout(BNStackVariable* vars, size_t count);
+	BINARYNINJACOREAPI BNVariableNameAndType* BNGetStackLayout(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeVariableList(BNVariableNameAndType* vars, size_t count);
 	BINARYNINJACOREAPI void BNCreateAutoStackVariable(BNFunction* func, int64_t offset, BNType* type, const char* name);
 	BINARYNINJACOREAPI void BNCreateUserStackVariable(BNFunction* func, int64_t offset, BNType* type, const char* name);
 	BINARYNINJACOREAPI void BNDeleteAutoStackVariable(BNFunction* func, int64_t offset);
 	BINARYNINJACOREAPI void BNDeleteUserStackVariable(BNFunction* func, int64_t offset);
-	BINARYNINJACOREAPI bool BNGetStackVariableAtFrameOffset(BNFunction* func, int64_t offset, BNStackVariable* var);
-	BINARYNINJACOREAPI void BNFreeStackVariable(BNStackVariable* var);
+	BINARYNINJACOREAPI bool BNGetStackVariableAtFrameOffset(BNFunction* func, BNArchitecture* arch, uint64_t addr,
+		int64_t offset, BNVariableNameAndType* var);
+	BINARYNINJACOREAPI void BNFreeVariableNameAndType(BNVariableNameAndType* var);
+
+	BINARYNINJACOREAPI BNVariableNameAndType* BNGetFunctionVariables(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNCreateAutoVariable(BNFunction* func, const BNVariable* var, BNType* type,
+		const char* name, bool singleOnly);
+	BINARYNINJACOREAPI void BNCreateUserVariable(BNFunction* func, const BNVariable* var, BNType* type,
+		const char* name, bool singleOnly);
+	BINARYNINJACOREAPI void BNDeleteAutoVariable(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI void BNDeleteUserVariable(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI BNType* BNGetVariableType(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI char* BNGetVariableName(BNFunction* func, const BNVariable* var);
 
 	BINARYNINJACOREAPI void BNSetAutoIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
 	                                                  BNArchitectureAndAddress* branches, size_t count);
@@ -2272,29 +2283,29 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILNonSSAExprIndex(BNMediumLevelILFunction* func, size_t expr);
 
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarDefinition(BNMediumLevelILFunction* func,
-		const BNILVariable* var, size_t idx);
+		const BNVariable* var, size_t idx);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryDefinition(BNMediumLevelILFunction* func, size_t idx);
-	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAVarUses(BNMediumLevelILFunction* func, const BNILVariable* var,
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAVarUses(BNMediumLevelILFunction* func, const BNVariable* var,
 		size_t idx, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
 		size_t idx, size_t* count);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(BNMediumLevelILFunction* func,
-		const BNILVariable* var, size_t idx);
+		const BNVariable* var, size_t idx);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleSSAVarValues(BNMediumLevelILFunction* func,
-		const BNILVariable* var, size_t idx, size_t instr);
+		const BNVariable* var, size_t idx, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleExprValues(BNMediumLevelILFunction* func, size_t expr);
 
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarIndexAtILInstruction(BNMediumLevelILFunction* func,
-		const BNILVariable* var, size_t instr);
+		const BNVariable* var, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAMemoryIndexAtILInstruction(BNMediumLevelILFunction* func,
 		size_t instr);
-	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForRegisterAtInstruction(BNMediumLevelILFunction* func,
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForRegisterAtInstruction(BNMediumLevelILFunction* func,
 		uint32_t reg, size_t instr);
-	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForFlagAtInstruction(BNMediumLevelILFunction* func,
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForFlagAtInstruction(BNMediumLevelILFunction* func,
 		uint32_t flag, size_t instr);
-	BINARYNINJACOREAPI BNILVariable BNGetMediumLevelILVariableForStackLocationAtInstruction(BNMediumLevelILFunction* func,
+	BINARYNINJACOREAPI BNVariable BNGetMediumLevelILVariableForStackLocationAtInstruction(BNMediumLevelILFunction* func,
 		int64_t offset, size_t instr);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILRegisterValueAtInstruction(BNMediumLevelILFunction* func,

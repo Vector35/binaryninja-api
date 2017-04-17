@@ -26,7 +26,7 @@ import ctypes
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext)
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 import architecture
 import highlight
 import associateddatastore
@@ -146,14 +146,20 @@ class PossibleValueSet(object):
 		return "<undetermined>"
 
 
-class StackVariable(object):
-	def __init__(self, ofs, name, t):
-		self.offset = ofs
+class VariableNameAndType(object):
+	def __init__(self, var, name, t):
+		self.var = var
 		self.name = name
 		self.type = t
 
 	def __repr__(self):
-		return "<var@%x: %s %s>" % (self.offset, self.type, self.name)
+		if self.var.type == VariableSourceType.StackVariableSourceType:
+			return "<stack var %x: %s %s>" % (self.var.identifier, self.type, self.name)
+		elif self.var.type == VariableSourceType.RegisterVariableSourceType:
+			return "<reg var %s: %s %s>" % (self.var.function.arch.get_reg_name(self.var.identifier), self.type, self.name)
+		elif self.var.type == VariableSourceType.FlagVariableSourceType:
+			return "<flag var %s: %s %s>" % (self.var.function.arch.get_flag_name(self.var.identifier), self.type, self.name)
+		return "<var %s: %s %s>" % (self.var, self.type, self.name)
 
 	def __str__(self):
 		return self.name
@@ -179,7 +185,7 @@ class StackVariableReference(object):
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
 
-class ILVariable(object):
+class Variable(object):
 	def __init__(self, func, var_type, index, identifier):
 		self.function = func
 		self.type = var_type
@@ -363,14 +369,27 @@ class Function(object):
 
 	@property
 	def stack_layout(self):
-		"""List of function stack (read-only)"""
+		"""List of function stack variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariable(v[i].offset, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
-		result.sort(key = lambda x: x.offset)
-		core.BNFreeStackLayout(v, count.value)
+			var = Variable(self, v[i].var.type, v[i].var.index, v[i].var.identifier)
+			result.append(VariableNameAndType(var, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.var.identifier)
+		core.BNFreeVariableList(v, count.value)
+		return result
+
+	@property
+	def vars(self):
+		"""List of function variables (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetFunctionVariables(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			var = Variable(self, v[i].var.type, v[i].var.index, v[i].var.identifier)
+			result.append(VariableNameAndType(var, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		core.BNFreeVariableList(v, count.value)
 		return result
 
 	@property

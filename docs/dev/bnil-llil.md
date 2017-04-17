@@ -1,8 +1,6 @@
 # Binary Ninja Intermediate Language Series, Part 1: Low Level IL
 
-The Binary Ninja Intermediate Language (BNIL) is a semantic representation of the assembly language instructions for a native architecture in Binary Ninja.  BNIL is actually a family of intermediate languages that work together to provide functionality at different abstraction layers. This developer guide is intended to cover the design and structure of the different ILs with the goal of helping clarify which APIs are best for answering which types of questions or changing which types of data. 
-
-In later guides, we'll look at other ILs. This one is just focused on the Low Level Intermediate Language (LLIL), the second stage intermediate language in BNIL. 
+The Binary Ninja Intermediate Language (BNIL) is a semantic representation of the assembly language instructions for a native architecture in Binary Ninja.  BNIL is actually a family of intermediate languages that work together to provide functionality at different abstraction layers. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family. 
 
 ![BNIL-LLIL Selected](/images/BNIL.png)
 
@@ -17,6 +15,7 @@ Since doing is the easiest way to learn lets start with a simple example binary 
  - Download [chal1](../files/chal1) and open it with Binary Ninja
  - Next, bring up the `Low Level IL` view by clicking in the options pane at the bottom of the screen
  (or alternatively, use the `i` key)
+ - Navigate to main (`g`, then "main", or double-click it in the function list)
  - Finally, bring up the python console using: `~`
 
 Next, enter the following in the console:
@@ -35,7 +34,7 @@ Next, enter the following in the console:
 
 This will print out all the LLIL instructions in the current function. How does this code work? 
 
-First we use the global magic variable `current_function` which gives us the python object [`function.Function`](http://api.binary.ninja/function.Function.html) for whatever function is currently selected in the UI. The variable is only usable from the python console, and shouldn't be used for headless plugins. In a script you can either use the function that was passed in if you [registered your plugin](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register_for_function) to handle functions, or you can compute the function based on [a specific address](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=get_functions_at#binaryninja.binaryview.BinaryView.get_functions_at).
+First we use the global magic variable `current_function` which gives us the python object [`function.Function`](http://api.binary.ninja/function.Function.html) for whatever function is currently selected in the UI. The variable is only usable from the python console, and shouldn't be used for headless plugins. In a script you can either use the function that was passed in if you [registered your plugin](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register_for_function) to handle functions, or you can compute the function based on [a specific address](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=get_functions_at#binaryninja.binaryview.BinaryView.get_functions_at), or maybe even just iterate over all the functions in a BinaryView (`for func in bv.functions:`).
 
 Next we get the [`lowlevelil.LowLevelILFunction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html) from the `Function` class: `current_function.low_level_il`. Iterating over the `LowLevelILFunction` class provides access to the [`lowlevelil.LowLevelILBasicBlock`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html) classes for this function. Inside the loop we can now iterate over the `LowLevelILBasicBlock` class which provides access to the individual [`lowlevelil.LowLevelILInstruction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILInstruction.html) classes.
 
@@ -222,7 +221,7 @@ As you can see from the above code labels are really just used internaly and are
 * **`LLIL_CMP_UGT`** - unsigned greater than
 
 
-### The Arithmatic & Logical Instructions
+### The Arithmetic & Logical Instructions
 
 LLIL implements the most common arithmetic as well as a host of more complicated instruction which make translating from assembly much easier. Most arithmetic and logical instruction contain `left` and `right` attributes which can themselves be other IL instructions.
 

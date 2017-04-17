@@ -7,7 +7,7 @@ site_author: 'Vector 35 LLC'
 site_favicon: 'favicon.ico'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: True
-extra_css: ['docs.css']
+extra_css: ['docs.css?1492471077']
 
 theme_dir: 'mkdocs-material/material'
 copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'

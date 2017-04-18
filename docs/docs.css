@@ -26,3 +26,7 @@ img[alt$="><"] {
     margin: auto;
     float: none!important;
 }
+
+.article pre code {
+	background: rgba(0, 0, 0, 0);
+}

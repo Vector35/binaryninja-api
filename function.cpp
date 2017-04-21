@@ -28,15 +28,15 @@ Variable::Variable()
 {
 	type = RegisterVariableSourceType;
 	index = 0;
-	identifier = 0;
+	storage = 0;
 }
 
 
-Variable::Variable(BNVariableSourceType t, uint32_t i, uint64_t id)
+Variable::Variable(BNVariableSourceType t, uint32_t i, uint64_t s)
 {
 	type = t;
 	index = i;
-	identifier = id;
+	storage = s;
 }
 
 
@@ -44,7 +44,7 @@ Variable::Variable(const BNVariable& var)
 {
 	type = var.type;
 	index = var.index;
-	identifier = var.identifier;
+	storage = var.storage;
 }
 
 
@@ -52,7 +52,7 @@ Variable& Variable::operator=(const Variable& var)
 {
 	type = var.type;
 	index = var.index;
-	identifier = var.identifier;
+	storage = var.storage;
 	return *this;
 }
 
@@ -63,7 +63,7 @@ bool Variable::operator==(const Variable& var) const
 		return false;
 	if (index != var.index)
 		return false;
-	return identifier == var.identifier;
+	return storage == var.storage;
 }
 
 
@@ -75,15 +75,19 @@ bool Variable::operator!=(const Variable& var) const
 
 bool Variable::operator<(const Variable& var) const
 {
-	if (type < var.type)
-		return true;
-	if (type > var.type)
-		return false;
-	if (index < var.index)
-		return true;
-	if (index > var.index)
-		return false;
-	return identifier < var.identifier;
+	return ToIdentifier() < var.ToIdentifier();
+}
+
+
+uint64_t Variable::ToIdentifier() const
+{
+	return BNToVariableIdentifier(this);
+}
+
+
+Variable Variable::FromIdentifier(uint64_t id)
+{
+	return BNFromVariableIdentifier(id);
 }
 
 
@@ -490,7 +494,7 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 		var.type = new Type(BNNewTypeReference(vars[i].type));
 		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
-		result[vars[i].var.identifier].push_back(var);
+		result[vars[i].var.storage].push_back(var);
 	}
 
 	BNFreeVariableList(vars, count);
@@ -560,15 +564,15 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 }
 
 
-void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool singleOnly)
+void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
 {
-	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), singleOnly);
+	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
 }
 
 
-void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool singleOnly)
+void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
 {
-	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), singleOnly);
+	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
 }
 
 

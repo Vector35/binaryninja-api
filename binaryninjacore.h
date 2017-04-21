@@ -65,6 +65,9 @@
 #define BN_DEFAULT_MIN_STRING_LENGTH 4
 #define BN_MAX_STRING_LENGTH         128
 
+#define BN_MAX_VARIABLE_OFFSET       0x7fffffffffLL
+#define BN_MAX_VARIABLE_INDEX        0xfffff
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -768,16 +771,16 @@ extern "C"
 
 	enum BNVariableSourceType
 	{
+		StackVariableSourceType,
 		RegisterVariableSourceType,
-		FlagVariableSourceType,
-		StackVariableSourceType
+		FlagVariableSourceType
 	};
 
 	struct BNVariable
 	{
 		BNVariableSourceType type;
 		uint32_t index;
-		int64_t identifier;
+		int64_t storage;
 	};
 
 	// Callbacks
@@ -1941,13 +1944,15 @@ extern "C"
 
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetFunctionVariables(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNCreateAutoVariable(BNFunction* func, const BNVariable* var, BNType* type,
-		const char* name, bool singleOnly);
+		const char* name, bool ignoreDisjointUses);
 	BINARYNINJACOREAPI void BNCreateUserVariable(BNFunction* func, const BNVariable* var, BNType* type,
-		const char* name, bool singleOnly);
+		const char* name, bool ignoreDisjointUses);
 	BINARYNINJACOREAPI void BNDeleteAutoVariable(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI void BNDeleteUserVariable(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI BNType* BNGetVariableType(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI char* BNGetVariableName(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI uint64_t BNToVariableIdentifier(const BNVariable* var);
+	BINARYNINJACOREAPI BNVariable BNFromVariableIdentifier(uint64_t id);
 
 	BINARYNINJACOREAPI void BNSetAutoIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
 	                                                  BNArchitectureAndAddress* branches, size_t count);

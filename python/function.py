@@ -146,25 +146,6 @@ class PossibleValueSet(object):
 		return "<undetermined>"
 
 
-class VariableNameAndType(object):
-	def __init__(self, var, name, t):
-		self.var = var
-		self.name = name
-		self.type = t
-
-	def __repr__(self):
-		if self.var.type == VariableSourceType.StackVariableSourceType:
-			return "<stack var %x: %s %s>" % (self.var.identifier, self.type, self.name)
-		elif self.var.type == VariableSourceType.RegisterVariableSourceType:
-			return "<reg var %s: %s %s>" % (self.var.function.arch.get_reg_name(self.var.identifier), self.type, self.name)
-		elif self.var.type == VariableSourceType.FlagVariableSourceType:
-			return "<flag var %s: %s %s>" % (self.var.function.arch.get_flag_name(self.var.identifier), self.type, self.name)
-		return "<var %s: %s %s>" % (self.var, self.type, self.name)
-
-	def __str__(self):
-		return self.name
-
-
 class StackVariableReference(object):
 	def __init__(self, src_operand, t, name, start_ofs, ref_ofs):
 		self.source_operand = src_operand
@@ -186,11 +167,40 @@ class StackVariableReference(object):
 
 
 class Variable(object):
-	def __init__(self, func, var_type, index, identifier):
+	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
 		self.function = func
-		self.type = var_type
+		self.source_type = source_type
 		self.index = index
-		self.identifier = identifier
+		self.storage = storage
+
+		var = core.BNVariable()
+		var.type = source_type
+		var.index = index
+		var.storage = storage
+		self.identifier = core.BNToVariableIdentifier(var)
+
+		if name is None:
+			name = core.BNGetVariableName(func.handle, var)
+		if var_type is None:
+			var_type = core.BNGetVariableType(func.handle, var)
+			if var_type:
+				var_type = types.Type(var_type)
+
+		self.name = name
+		self.type = var_type
+
+	@classmethod
+	def from_identifier(self, func, identifier):
+		var = core.BNFromVariableIdentifier(identifier)
+		return Variable(func, VariableSourceType(var.type), var.index, var.storage)
+
+	def __repr__(self):
+		if self.type is None:
+			return "<var %s>" % self.name
+		return "<var %s %s%s>" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+
+	def __str__(self):
+		return self.name
 
 
 class ConstantReference(object):
@@ -374,9 +384,9 @@ class Function(object):
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			var = Variable(self, v[i].var.type, v[i].var.index, v[i].var.identifier)
-			result.append(VariableNameAndType(var, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
-		result.sort(key = lambda x: x.var.identifier)
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
 
@@ -387,8 +397,9 @@ class Function(object):
 		v = core.BNGetFunctionVariables(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			var = Variable(self, v[i].var.type, v[i].var.index, v[i].var.identifier)
-			result.append(VariableNameAndType(var, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
 

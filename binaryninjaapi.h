@@ -1812,7 +1812,7 @@ namespace BinaryNinja
 	struct Variable: public BNVariable
 	{
 		Variable();
-		Variable(BNVariableSourceType type, uint32_t index, uint64_t identifier);
+		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
 		Variable(const BNVariable& var);
 
 		Variable& operator=(const Variable& var);
@@ -1820,6 +1820,9 @@ namespace BinaryNinja
 		bool operator==(const Variable& var) const;
 		bool operator!=(const Variable& var) const;
 		bool operator<(const Variable& var) const;
+
+		uint64_t ToIdentifier() const;
+		static Variable FromIdentifier(uint64_t id);
 	};
 
 	struct VariableNameAndType
@@ -1949,8 +1952,10 @@ namespace BinaryNinja
 		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
 
 		std::map<Variable, VariableNameAndType> GetVariables();
-		void CreateAutoVariable(const Variable& var, Ref<Type> type, const std::string& name, bool singleOnly = false);
-		void CreateUserVariable(const Variable& var, Ref<Type> type, const std::string& name, bool singleOnly = false);
+		void CreateAutoVariable(const Variable& var, Ref<Type> type, const std::string& name,
+			bool ignoreDisjointUses = false);
+		void CreateUserVariable(const Variable& var, Ref<Type> type, const std::string& name,
+			bool ignoreDisjointUses = false);
 		void DeleteAutoVariable(const Variable& var);
 		void DeleteUserVariable(const Variable& var);
 		Ref<Type> GetVariableType(const Variable& var);

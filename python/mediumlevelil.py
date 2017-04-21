@@ -159,9 +159,9 @@ class MediumLevelILInstruction(object):
 			elif operand_type == "var":
 				var_type = VariableSourceType(instr.operands[i] >> 32)
 				index = instr.operands[i] & 0xffffffff
-				identifier = instr.operands[i + 1]
+				storage = instr.operands[i + 1]
 				i += 1
-				value = function.Variable(self.function, var_type, index, identifier)
+				value = function.Variable(self.function.source_function, var_type, index, storage)
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
@@ -177,8 +177,8 @@ class MediumLevelILInstruction(object):
 				for j in xrange(count.value / 2):
 					var_type = VariableSourceType(operand_list[j * 2] >> 32)
 					index = operand_list[j * 2] & 0xffffffff
-					identifier = operand_list[(j * 2) + 1]
-					value.append(function.Variable(self.function, var_type, index, identifier))
+					storage = operand_list[(j * 2) + 1]
+					value.append(function.Variable(self.function.source_function, var_type, index, storage))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_ssa_list":
 				count = ctypes.c_ulonglong()
@@ -188,9 +188,9 @@ class MediumLevelILInstruction(object):
 				for j in xrange(count.value / 3):
 					var_type = VariableSourceType(operand_list[j * 3] >> 32)
 					index = operand_list[j * 3] & 0xffffffff
-					identifier = operand_list[(j * 3) + 1]
+					storage = operand_list[(j * 3) + 1]
 					var_index = operand_list[(j * 3) + 2]
-					value.append((function.Variable(self.function, var_type, index, identifier), var_index))
+					value.append((function.Variable(self.function.source_function, var_type, index, storage), var_index))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "expr_list":
 				count = ctypes.c_ulonglong()
@@ -296,35 +296,35 @@ class MediumLevelILInstruction(object):
 
 	def get_ssa_var_possible_values(self, var, index):
 		var_data = core.BNVariable()
-		var_data.type = var.type
+		var_data.type = var.source_type
 		var_data.index = var.index
-		var_data.identifier = var.identifier
+		var_data.storage = var.storage
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, index, self.instr_index)
 		result = function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_ssa_var_index(self, var):
 		var_data = core.BNVariable()
-		var_data.type = var.type
+		var_data.type = var.source_type
 		var_data.index = var.index
-		var_data.identifier = var.identifier
+		var_data.storage = var.storage
 		return core.BNGetMediumLevelILSSAVarIndexAtILInstruction(self.function.handle, var_data, self.instr_index)
 
 	def get_var_for_reg(self, reg):
 		if isinstance(reg, str):
 			reg = self.function.arch.regs[reg].index
 		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.identifier)
+		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_flag(self, flag):
 		if isinstance(flag, str):
 			flag = self.function.arch.regs[flag].index
 		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.identifier)
+		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_stack_location(self, offset):
 		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self.function.handle, offset, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.identifier)
+		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_reg_value(self, reg):
 		if isinstance(reg, str):
@@ -655,9 +655,9 @@ class MediumLevelILFunction(object):
 
 	def get_ssa_var_definition(self, var, index):
 		var_data = core.BNVariable()
-		var_data.type = var.type
+		var_data.type = var.source_type
 		var_data.index = var.index
-		var_data.identifier = var.identifier
+		var_data.storage = var.storage
 		result = core.BNGetMediumLevelILSSAVarDefinition(self.handle, var_data, index)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
 			return None
@@ -672,9 +672,9 @@ class MediumLevelILFunction(object):
 	def get_ssa_var_uses(self, var, index):
 		count = ctypes.c_ulonglong()
 		var_data = core.BNVariable()
-		var_data.type = var.type
+		var_data.type = var.source_type
 		var_data.index = var.index
-		var_data.identifier = var.identifier
+		var_data.storage = var.storage
 		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, index, count)
 		result = []
 		for i in xrange(0, count.value):
@@ -693,9 +693,9 @@ class MediumLevelILFunction(object):
 
 	def get_ssa_var_value(self, var, index):
 		var_data = core.BNVariable()
-		var_data.type = var.type
+		var_data.type = var.source_type
 		var_data.index = var.index
-		var_data.identifier = var.identifier
+		var_data.storage = var.storage
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, index)
 		result = function.RegisterValue(self.arch, value)
 		return result

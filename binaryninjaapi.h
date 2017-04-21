@@ -2251,27 +2251,8 @@ namespace BinaryNinja
 		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
 
 		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size,
-			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0, ExprId f = 0);
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
 		ExprId AddInstruction(ExprId expr);
-
-		ExprId SetVar(size_t size, const Variable& var, ExprId src);
-		ExprId SetVarField(size_t size, const Variable& var, int64_t offset, ExprId src);
-		ExprId SetVarSplit(size_t size, const Variable& high, const Variable& low, ExprId src);
-		ExprId SetVarSSA(size_t size, const Variable& var, size_t index, ExprId src);
-		ExprId SetVarFieldSSA(size_t size, const Variable& var, size_t varIndex, int64_t offset, ExprId src);
-		ExprId SetVarSplitSSA(size_t size, const Variable& high, size_t highIndex,
-			const Variable& low, size_t lowIndex, ExprId src);
-		ExprId SetVarAliased(size_t size, const Variable& var, size_t destIndex, size_t srcIndex, ExprId src);
-		ExprId SetVarFieldAliased(size_t size, const Variable& var, size_t destIndex, size_t srcIndex,
-			int64_t offset, ExprId src);
-		ExprId Var(size_t size, const Variable& var);
-		ExprId VarField(size_t size, const Variable& var, int64_t offset);
-		ExprId VarSSA(size_t size, const Variable& var, size_t index);
-		ExprId VarFieldSSA(size_t size, const Variable& var, int64_t offset, size_t varIndex);
-		ExprId VarAliased(size_t size, const Variable& var, size_t memIndex);
-		ExprId VarFieldAliased(size_t size, const Variable& var, int64_t offset, size_t memIndex);
-		ExprId AddressOf(size_t size, const Variable& var);
-		ExprId AddressOfField(size_t size, const Variable& var, int64_t offset);
 
 		ExprId Goto(BNMediumLevelILLabel& label);
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f);
@@ -2280,8 +2261,6 @@ namespace BinaryNinja
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
 		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
-
-		Variable GetVariable(ExprId i, size_t varOperand);
 
 		BNMediumLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;

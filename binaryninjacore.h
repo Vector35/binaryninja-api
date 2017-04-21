@@ -735,7 +735,6 @@ extern "C"
 		MLIL_SET_VAR_SSA,
 		MLIL_SET_VAR_SSA_FIELD,
 		MLIL_SET_VAR_SPLIT_SSA,
-		MLIL_VAR_SPLIT_DEST_SSA,
 		MLIL_SET_VAR_ALIASED,
 		MLIL_SET_VAR_ALIASED_FIELD,
 		MLIL_VAR_SSA,
@@ -758,7 +757,7 @@ extern "C"
 	{
 		BNMediumLevelILOperation operation;
 		size_t size;
-		uint64_t operands[6];
+		uint64_t operands[5];
 		uint64_t address;
 	};
 
@@ -2250,7 +2249,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNMediumLevelILGetInstructionStart(BNMediumLevelILFunction* func,
 		BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddExpr(BNMediumLevelILFunction* func, BNMediumLevelILOperation operation,
-		size_t size, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f);
+		size_t size, uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddInstruction(BNMediumLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI size_t BNMediumLevelILGoto(BNMediumLevelILFunction* func, BNMediumLevelILLabel* label);
 	BINARYNINJACOREAPI size_t BNMediumLevelILIf(BNMediumLevelILFunction* func, uint64_t op,

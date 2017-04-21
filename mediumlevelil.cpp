@@ -61,129 +61,15 @@ size_t MediumLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t a
 
 
 ExprId MediumLevelILFunction::AddExpr(BNMediumLevelILOperation operation, size_t size,
-	ExprId a, ExprId b, ExprId c, ExprId d, ExprId e, ExprId f)
+	ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
 {
-	return BNMediumLevelILAddExpr(m_object, operation, size, a, b, c, d, e, f);
+	return BNMediumLevelILAddExpr(m_object, operation, size, a, b, c, d, e);
 }
 
 
 ExprId MediumLevelILFunction::AddInstruction(size_t expr)
 {
 	return BNMediumLevelILAddInstruction(m_object, expr);
-}
-
-
-ExprId MediumLevelILFunction::SetVar(size_t size, const Variable& var, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarField(size_t size, const Variable& var, int64_t offset, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		offset, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarSplit(size_t size, const Variable& high, const Variable& low, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_SPLIT, size, ((uint64_t)high.type << 32) | (uint64_t)high.index, high.storage,
-		((uint64_t)low.type << 32) | (uint64_t)low.index, low.storage, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarSSA(size_t size, const Variable& var, size_t varIndex, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_SSA, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		varIndex, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarFieldSSA(size_t size, const Variable& var, size_t varIndex,
-	int64_t offset, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		varIndex, offset, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarSplitSSA(size_t size, const Variable& high, size_t highIndex,
-	const Variable& low, size_t lowIndex, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_SPLIT_SSA, size,
-		AddExpr(MLIL_VAR_SPLIT_DEST_SSA, size, ((uint64_t)high.type << 32) | (uint64_t)high.index,
-			high.storage, highIndex),
-		AddExpr(MLIL_VAR_SPLIT_DEST_SSA, size, ((uint64_t)low.type << 32) | (uint64_t)low.index,
-			low.storage, lowIndex), src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarAliased(size_t size, const Variable& var, size_t destIndex,
-	size_t srcIndex, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_ALIASED, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		destIndex, srcIndex, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarFieldAliased(size_t size, const Variable& var, size_t destIndex,
-	size_t srcIndex, int64_t offset, ExprId src)
-{
-	return AddExpr(MLIL_SET_VAR_ALIASED_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		destIndex, srcIndex, offset, src);
-}
-
-
-ExprId MediumLevelILFunction::Var(size_t size, const Variable& var)
-{
-	return AddExpr(MLIL_VAR, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage);
-}
-
-
-ExprId MediumLevelILFunction::VarField(size_t size, const Variable& var, int64_t offset)
-{
-	return AddExpr(MLIL_VAR_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage, offset);
-}
-
-
-ExprId MediumLevelILFunction::VarSSA(size_t size, const Variable& var, size_t varIndex)
-{
-	return AddExpr(MLIL_VAR_SSA, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage, varIndex);
-}
-
-
-ExprId MediumLevelILFunction::VarFieldSSA(size_t size, const Variable& var, int64_t offset,
-	size_t varIndex)
-{
-	return AddExpr(MLIL_VAR_SSA_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		offset, varIndex);
-}
-
-
-ExprId MediumLevelILFunction::VarAliased(size_t size, const Variable& var, size_t memIndex)
-{
-	return AddExpr(MLIL_VAR_ALIASED, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage, memIndex);
-}
-
-
-ExprId MediumLevelILFunction::VarFieldAliased(size_t size, const Variable& var, int64_t offset, size_t memIndex)
-{
-	return AddExpr(MLIL_VAR_ALIASED_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage,
-		offset, memIndex);
-}
-
-
-ExprId MediumLevelILFunction::AddressOf(size_t size, const Variable& var)
-{
-	return AddExpr(MLIL_ADDRESS_OF, size, ((uint64_t)var.type << 32) | (uint64_t)var.index, var.storage);
-}
-
-
-ExprId MediumLevelILFunction::AddressOfField(size_t size, const Variable& var, int64_t offset)
-{
-	return AddExpr(MLIL_ADDRESS_OF_FIELD, size, ((uint64_t)var.type << 32) | (uint64_t)var.index,
-		var.storage, offset);
 }
 
 
@@ -235,17 +121,6 @@ ExprId MediumLevelILFunction::AddOperandList(const vector<ExprId> operands)
 		operandList[i] = operands[i];
 	ExprId result = (ExprId)BNMediumLevelILAddOperandList(m_object, operandList, operands.size());
 	delete[] operandList;
-	return result;
-}
-
-
-Variable MediumLevelILFunction::GetVariable(ExprId i, size_t varOperand)
-{
-	BNMediumLevelILInstruction instr = (*this)[i];
-	Variable result;
-	result.type = (BNVariableSourceType)(instr.operands[varOperand] >> 32);
-	result.index = (uint32_t)instr.operands[varOperand];
-	result.storage = instr.operands[varOperand + 1];
 	return result;
 }
 

@@ -22,7 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from .enums import MediumLevelILOperation, InstructionTextTokenType, VariableSourceType, ILBranchDependence
+from .enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
 import function
 import basicblock
 import lowlevelil
@@ -119,7 +119,6 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "expr"), ("low", "expr"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("dest", "var"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "exor")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("dest", "var"), ("dest_memory", "int"), ("src_memory", "int"), ("offset", "int"), ("src", "exor")],
-		MediumLevelILOperation.MLIL_VAR_SPLIT_DEST_SSA: [("dest", "var"), ("index", "int")],
 		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var"), ("index", "int")],
 		MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [("src", "var"), ("index", "int"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_VAR_ALIASED: [("src", "var"), ("src_memory", "int")],
@@ -157,11 +156,7 @@ class MediumLevelILInstruction(object):
 			elif operand_type == "expr":
 				value = MediumLevelILInstruction(func, instr.operands[i])
 			elif operand_type == "var":
-				var_type = VariableSourceType(instr.operands[i] >> 32)
-				index = instr.operands[i] & 0xffffffff
-				storage = instr.operands[i + 1]
-				i += 1
-				value = function.Variable(self.function.source_function, var_type, index, storage)
+				value = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
@@ -174,23 +169,19 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
-					var_type = VariableSourceType(operand_list[j * 2] >> 32)
-					index = operand_list[j * 2] & 0xffffffff
-					storage = operand_list[(j * 2) + 1]
-					value.append(function.Variable(self.function.source_function, var_type, index, storage))
+				for j in operand_list:
+					value.append(function.Variable.from_identifier(self.function.source_function, j))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_ssa_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 3):
-					var_type = VariableSourceType(operand_list[j * 3] >> 32)
-					index = operand_list[j * 3] & 0xffffffff
-					storage = operand_list[(j * 3) + 1]
-					var_index = operand_list[(j * 3) + 2]
-					value.append((function.Variable(self.function.source_function, var_type, index, storage), var_index))
+				for j in xrange(count.value / 2):
+					var_id = operand_list[j * 2]
+					var_index = operand_list[(j * 2) + 2]
+					value.append((function.Variable.from_identifier(self.function.source_function,
+						var_id), var_index))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "expr_list":
 				count = ctypes.c_ulonglong()

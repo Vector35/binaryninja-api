@@ -458,20 +458,20 @@ class Function(object):
 
 	def get_low_level_il_at(self, addr, arch=None):
 		"""
-		``get_low_level_il_at`` gets the LowLevelIL instruction address corresponding to the given virtual address
+		``get_low_level_il_at`` gets the LowLevelILInstruction corresponding to the given virtual address
 
 		:param int addr: virtual address of the function to be queried
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: int
+		:rtype: LowLevelILInstruction
 		:Example:
 
 			>>> func = bv.functions[0]
 			>>> func.get_low_level_il_at(func.start)
-			0L
+			<il: push(rbp)>
 		"""
 		if arch is None:
 			arch = self.arch
-		return core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
+		return self.low_level_il[core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)]
 
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:
@@ -624,7 +624,7 @@ class Function(object):
 	def get_lifted_il_at(self, addr, arch=None):
 		if arch is None:
 			arch = self.arch
-		return core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
+		return self.lifted_il[core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)]
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
 		if isinstance(flag, str):

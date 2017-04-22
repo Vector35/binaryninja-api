@@ -1478,12 +1478,16 @@ class LowLevelILFunction(object):
 		return core.BNGetLowLevelILNonSSAInstructionIndex(self.handle, instr)
 
 	def get_ssa_reg_definition(self, reg, index):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
 		result = core.BNGetLowLevelILSSARegisterDefinition(self.handle, reg, index)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
 		return result
 
 	def get_ssa_flag_definition(self, flag, index):
+		if isinstance(flag, str):
+			flag = self.arch.get_flag_by_name(flag)
 		result = core.BNGetLowLevelILSSAFlagDefinition(self.handle, flag, index)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
@@ -1496,6 +1500,8 @@ class LowLevelILFunction(object):
 		return result
 
 	def get_ssa_reg_uses(self, reg, index):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, index, count)
 		result = []
@@ -1505,6 +1511,8 @@ class LowLevelILFunction(object):
 		return result
 
 	def get_ssa_flag_uses(self, flag, index):
+		if isinstance(flag, str):
+			flag = self.arch.get_flag_by_name(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, index, count)
 		result = []

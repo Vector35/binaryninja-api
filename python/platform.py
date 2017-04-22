@@ -110,6 +110,16 @@ class Platform(object):
 	def __del__(self):
 		core.BNFreePlatform(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, Platform):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Platform):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def default_calling_convention(self):
 		"""

@@ -48,9 +48,15 @@ uint64_t LowLevelILFunction::GetCurrentAddress() const
 }
 
 
-void LowLevelILFunction::SetCurrentAddress(uint64_t addr)
+void LowLevelILFunction::SetCurrentAddress(Architecture* arch, uint64_t addr)
 {
-	BNLowLevelILSetCurrentAddress(m_object, addr);
+	BNLowLevelILSetCurrentAddress(m_object, arch ? arch->GetObject() : nullptr, addr);
+}
+
+
+size_t LowLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t addr)
+{
+	return BNLowLevelILGetInstructionStart(m_object, arch ? arch->GetObject() : nullptr, addr);
 }
 
 
@@ -547,6 +553,12 @@ size_t LowLevelILFunction::GetInstructionCount() const
 }
 
 
+size_t LowLevelILFunction::GetExprCount() const
+{
+	return BNGetLowLevelILExprCount(m_object);
+}
+
+
 void LowLevelILFunction::AddLabelForAddress(Architecture* arch, ExprId addr)
 {
 	BNAddLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
@@ -642,4 +654,248 @@ vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
 
 	BNFreeBasicBlockList(blocks, count);
 	return result;
+}
+
+
+Ref<LowLevelILFunction> LowLevelILFunction::GetSSAForm() const
+{
+	BNLowLevelILFunction* func = BNGetLowLevelILSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+Ref<LowLevelILFunction> LowLevelILFunction::GetNonSSAForm() const
+{
+	BNLowLevelILFunction* func = BNGetLowLevelILNonSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+size_t LowLevelILFunction::GetSSAInstructionIndex(size_t instr) const
+{
+	return BNGetLowLevelILSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
+{
+	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetSSAExprIndex(size_t expr) const
+{
+	return BNGetLowLevelILSSAExprIndex(m_object, expr);
+}
+
+
+size_t LowLevelILFunction::GetNonSSAExprIndex(size_t expr) const
+{
+	return BNGetLowLevelILNonSSAExprIndex(m_object, expr);
+}
+
+
+size_t LowLevelILFunction::GetSSARegisterDefinition(uint32_t reg, size_t idx) const
+{
+	return BNGetLowLevelILSSARegisterDefinition(m_object, reg, idx);
+}
+
+
+size_t LowLevelILFunction::GetSSAFlagDefinition(uint32_t flag, size_t idx) const
+{
+	return BNGetLowLevelILSSAFlagDefinition(m_object, flag, idx);
+}
+
+
+size_t LowLevelILFunction::GetSSAMemoryDefinition(size_t idx) const
+{
+	return BNGetLowLevelILSSAMemoryDefinition(m_object, idx);
+}
+
+
+set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSARegisterUses(m_object, reg, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSAFlagUses(m_object, flag, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILSSAMemoryUses(m_object, idx, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+RegisterValue LowLevelILFunction::GetSSARegisterValue(uint32_t reg, size_t idx)
+{
+	BNRegisterValue value = BNGetLowLevelILSSARegisterValue(m_object, reg, idx);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t idx)
+{
+	BNRegisterValue value = BNGetLowLevelILSSAFlagValue(m_object, flag, idx);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
+{
+	BNRegisterValue value = BNGetLowLevelILExprValue(m_object, expr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleExprValues(size_t expr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleExprValues(m_object, expr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetRegisterValueAtInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILRegisterValueAtInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILRegisterValueAfterInstruction(m_object, reg, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetFlagValueAtInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILFlagValueAtInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILFlagValueAfterInstruction(m_object, flag, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILStackContentsAtInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+RegisterValue LowLevelILFunction::GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNRegisterValue value = BNGetLowLevelILStackContentsAfterInstruction(m_object, offset, len, instr);
+	return RegisterValue::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+{
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+Ref<MediumLevelILFunction> LowLevelILFunction::GetMediumLevelIL() const
+{
+	BNMediumLevelILFunction* func = BNGetMediumLevelILForLowLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
+}
+
+
+Ref<MediumLevelILFunction> LowLevelILFunction::GetMappedMediumLevelIL() const
+{
+	BNMediumLevelILFunction* func = BNGetMappedMediumLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
+}
+
+
+size_t LowLevelILFunction::GetMappedMediumLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetMappedMediumLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetMappedMediumLevelILExprIndex(size_t expr) const
+{
+	return BNGetMappedMediumLevelILExprIndex(m_object, expr);
 }

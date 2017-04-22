@@ -6,7 +6,8 @@ site_description: 'Documentation for the Binary Ninja reverse engineering platfo
 site_author: 'Vector 35 LLC'
 site_favicon: 'favicon.ico'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
-use_directory_urls: False
+use_directory_urls: True
+extra_css: ['docs.css?1492471077']
 
 theme_dir: 'mkdocs-material/material'
 copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'
@@ -31,6 +32,7 @@ pages:
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'
+        - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
         #- Plugin Design: 'dev/plugins.md'
         #- API: 'dev/api.md'
     - About:

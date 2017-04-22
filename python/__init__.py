@@ -32,6 +32,7 @@ from .basicblock import *
 from .function import *
 from .log import *
 from .lowlevelil import *
+from .mediumlevelil import *
 from .types import *
 from .functionrecognizer import *
 from .update import *
@@ -45,6 +46,7 @@ from .lineardisassembly import *
 from .undoaction import *
 from .highlight import *
 from .scriptingprovider import *
+from .pluginmanager import *
 
 
 def shutdown():
@@ -56,6 +58,15 @@ def shutdown():
 
 def get_unique_identifier():
 	return core.BNGetUniqueIdentifierString()
+
+
+def get_install_directory():
+	"""
+	``get_install_directory`` returns a string pointing to the installed binary currently running
+
+	.warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
+	"""
+	return core.BNGetInstallDirectory()
 
 
 class _DestructionCallbackHandler(object):

@@ -139,6 +139,16 @@ class Symbol(object):
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, Symbol):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Symbol):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def type(self):
 		"""Symbol type (read-only)"""
@@ -193,6 +203,16 @@ class Type(object):
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Type):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Type):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def type_class(self):
@@ -491,6 +511,16 @@ class NamedTypeReference(object):
 	def __del__(self):
 		core.BNFreeNamedTypeReference(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, NamedTypeReference):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, NamedTypeReference):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def type_class(self):
 		return NamedTypeReferenceClass(core.BNGetTypeReferenceClass(self.handle))
@@ -563,6 +593,16 @@ class Structure(object):
 
 	def __del__(self):
 		core.BNFreeStructure(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Structure):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Structure):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def members(self):
@@ -651,6 +691,16 @@ class Enumeration(object):
 
 	def __del__(self):
 		core.BNFreeEnumeration(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Enumeration):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Enumeration):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def members(self):

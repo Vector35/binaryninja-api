@@ -93,6 +93,16 @@ class FileMetadata(object):
 			core.BNSetFileMetadataNavigationHandler(self.handle, None)
 		core.BNFreeFileMetadata(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, FileMetadata):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FileMetadata):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@classmethod
 	def _unregister(cls, f):
 		handle = ctypes.cast(f, ctypes.c_void_p)

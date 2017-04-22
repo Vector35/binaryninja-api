@@ -41,6 +41,10 @@ void BinaryNinja::InitUserPlugins()
 	BNInitUserPlugins();
 }
 
+void BinaryNinja::InitRepoPlugins()
+{
+	BNInitRepoPlugins();
+}
 
 string BinaryNinja::GetBundledPluginDirectory()
 {
@@ -56,6 +60,17 @@ string BinaryNinja::GetBundledPluginDirectory()
 void BinaryNinja::SetBundledPluginDirectory(const string& path)
 {
 	BNSetBundledPluginDirectory(path.c_str());
+}
+
+
+string BinaryNinja::GetInstallDirectory()
+{
+	char* path = BNGetInstallDirectory();
+	if (!path)
+		return string();
+	string result = path;
+	BNFreeString(path);
+	return result;
 }
 
 

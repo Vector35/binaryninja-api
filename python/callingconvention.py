@@ -112,6 +112,16 @@ class CallingConvention(object):
 	def __del__(self):
 		core.BNFreeCallingConvention(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, CallingConvention):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, CallingConvention):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	def _get_caller_saved_regs(self, ctxt, count):
 		try:
 			regs = self.__class__.caller_saved_regs

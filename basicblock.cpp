@@ -108,6 +108,12 @@ uint64_t BasicBlock::GetLength() const
 }
 
 
+size_t BasicBlock::GetIndex() const
+{
+	return BNGetBasicBlockIndex(m_object);
+}
+
+
 vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 {
 	size_t count;
@@ -118,12 +124,30 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	{
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
-		edge.target = array[i].target;
-		edge.arch = array[i].arch ? new CoreArchitecture(array[i].arch) : nullptr;
+		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		result.push_back(edge);
 	}
 
-	BNFreeBasicBlockOutgoingEdgeList(array);
+	BNFreeBasicBlockEdgeList(array, count);
+	return result;
+}
+
+
+vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
+{
+	size_t count;
+	BNBasicBlockEdge* array = BNGetBasicBlockIncomingEdges(m_object, &count);
+
+	vector<BasicBlockEdge> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		BasicBlockEdge edge;
+		edge.type = array[i].type;
+		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
+		result.push_back(edge);
+	}
+
+	BNFreeBasicBlockEdgeList(array, count);
 	return result;
 }
 
@@ -131,6 +155,91 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 bool BasicBlock::HasUndeterminedOutgoingEdges() const
 {
 	return BNBasicBlockHasUndeterminedOutgoingEdges(m_object);
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetDominators() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominators(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetStrictDominators() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockStrictDominators(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+Ref<BasicBlock> BasicBlock::GetImmediateDominator() const
+{
+	BNBasicBlock* result = BNGetBasicBlockImmediateDominator(m_object);
+	if (!result)
+		return nullptr;
+	return new BasicBlock(result);
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetDominatorTreeChildren() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominatorTreeChildren(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetDominanceFrontier() const
+{
+	size_t count;
+	BNBasicBlock** blocks = BNGetBasicBlockDominanceFrontier(m_object, &count);
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
+
+	BNFreeBasicBlockList(blocks, count);
+	return result;
+}
+
+
+set<Ref<BasicBlock>> BasicBlock::GetIteratedDominanceFrontier(const set<Ref<BasicBlock>>& blocks)
+{
+	BNBasicBlock** blockSet = new BNBasicBlock*[blocks.size()];
+	size_t i = 0;
+	for (auto& j : blocks)
+		blockSet[i++] = j->GetObject();
+
+	size_t count;
+	BNBasicBlock** resultBlocks = BNGetBasicBlockIteratedDominanceFrontier(blockSet, blocks.size(), &count);
+	delete[] blockSet;
+
+	set<Ref<BasicBlock>> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(resultBlocks[i])));
+
+	BNFreeBasicBlockList(resultBlocks, count);
+	return result;
 }
 
 
@@ -283,4 +392,10 @@ void BasicBlock::SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uin
 	hc.b = b;
 	hc.alpha = alpha;
 	SetUserBasicBlockHighlight(hc);
+}
+
+
+bool BasicBlock::IsBackEdge(BasicBlock* source, BasicBlock* target)
+{
+	return source->GetDominators().count(target) != 0;
 }

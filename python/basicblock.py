@@ -29,19 +29,23 @@ import function
 
 
 class BasicBlockEdge(object):
-	def __init__(self, branch_type, target, arch):
+	def __init__(self, branch_type, source, target):
 		self.type = branch_type
-		if self.type != BranchType.UnresolvedBranch:
-			self.target = target
-			self.arch = arch
+		self.source = source
+		self.target = target
 
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
 			return "<%s>" % BranchType(self.type).name
-		elif self.arch:
-			return "<%s: %s@%#x>" % (self.type, self.arch.name, self.target)
+		elif self.target.arch:
+			return "<%s: %s@%#x>" % (BranchType(self.type).name, self.target.arch.name, self.target.start)
 		else:
-			return "<%s: %#x>" % (self.type, self.target)
+			return "<%s: %#x>" % (BranchType(self.type).name, self.target.start)
+
+	@property
+	def back_edge(self):
+		"""Whether the edge is a back edge (end of a loop)"""
+		return self.target in self.source.dominators
 
 
 class BasicBlock(object):
@@ -51,6 +55,16 @@ class BasicBlock(object):
 
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, BasicBlock):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, BasicBlock):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def function(self):
@@ -84,20 +98,40 @@ class BasicBlock(object):
 		return core.BNGetBasicBlockLength(self.handle)
 
 	@property
+	def index(self):
+		"""Basic block index in list of blocks for the function (read-only)"""
+		return core.BNGetBasicBlockIndex(self.handle)
+
+	@property
 	def outgoing_edges(self):
 		"""List of basic block outgoing edges (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			branch_type = edges[i].type
-			target = edges[i].target
-			if edges[i].arch:
-				arch = architecture.Architecture(edges[i].arch)
+			branch_type = BranchType(edges[i].type)
+			if edges[i].target:
+				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
-				arch = None
-			result.append(BasicBlockEdge(branch_type, target, arch))
-		core.BNFreeBasicBlockOutgoingEdgeList(edges)
+				target = None
+			result.append(BasicBlockEdge(branch_type, self, target))
+		core.BNFreeBasicBlockEdgeList(edges, count.value)
+		return result
+
+	@property
+	def incoming_edges(self):
+		"""List of basic block incoming edges (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		edges = core.BNGetBasicBlockIncomingEdges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			branch_type = BranchType(edges[i].type)
+			if edges[i].target:
+				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
+			else:
+				target = None
+			result.append(BasicBlockEdge(branch_type, self, target))
+		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 
 	@property
@@ -106,9 +140,61 @@ class BasicBlock(object):
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
 	@property
+	def dominators(self):
+		"""List of dominators for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominators(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def strict_dominators(self):
+		"""List of strict dominators for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def immediate_dominator(self):
+		"""Immediate dominator of this basic block (read-only)"""
+		result = core.BNGetBasicBlockImmediateDominator(self.handle)
+		if not result:
+			return None
+		return BasicBlock(self.view, result)
+
+	@property
+	def dominator_tree_children(self):
+		"""List of child blocks in the dominator tree for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def dominance_frontier(self):
+		"""Dominance frontier for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
-		return self.function.get_block_annotations(self.arch, self.start)
+		return self.function.get_block_annotations(self.start, self.arch)
 
 	@property
 	def disassembly_text(self):
@@ -143,6 +229,21 @@ class BasicBlock(object):
 	@highlight.setter
 	def highlight(self, value):
 		self.set_user_highlight(value)
+
+	@classmethod
+	def get_iterated_dominance_frontier(self, blocks):
+		if len(blocks) == 0:
+			return []
+		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
+		for i in xrange(len(blocks)):
+			block_set[i] = blocks[i].handle
+		count = ctypes.c_ulonglong()
+		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(BasicBlock(blocks[0].view, core.BNNewBasicBlockReference(out_blocks[i])))
+		core.BNFreeBasicBlockList(out_blocks, count.value)
+		return result
 
 	def __setattr__(self, name, value):
 		try:

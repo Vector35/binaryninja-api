@@ -299,6 +299,16 @@ class BinaryViewType(object):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
 
+	def __eq__(self, value):
+		if not isinstance(value, BinaryViewType):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, BinaryViewType):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def name(self):
 		"""BinaryView name (read-only)"""
@@ -546,6 +556,16 @@ class BinaryView(object):
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, parent_view, self._cb)
 		self.notifications = {}
 		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
+
+	def __eq__(self, value):
+		if not isinstance(value, BinaryView):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, BinaryView):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@classmethod
 	def register(cls):
@@ -3255,6 +3275,16 @@ class BinaryReader(object):
 	def __del__(self):
 		core.BNFreeBinaryReader(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, BinaryReader):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, BinaryReader):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def endianness(self):
 		"""
@@ -3562,6 +3592,16 @@ class BinaryWriter(object):
 	def __del__(self):
 		core.BNFreeBinaryWriter(self.handle)
 
+	def __eq__(self, value):
+		if not isinstance(value, BinaryWriter):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, BinaryWriter):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def endianness(self):
 		"""
@@ -3736,7 +3776,7 @@ class BinaryWriter(object):
 			>>> hex(bw.offset)
 			'0x100000008L'
 			>>> bw.seek(0x100000000)
-			>>> hex(br.offset)
+			>>> hex(bw.offset)
 			'0x100000000L'
 			>>>
 		"""
@@ -3753,7 +3793,7 @@ class BinaryWriter(object):
 			>>> hex(bw.offset)
 			'0x100000008L'
 			>>> bw.seek_relative(-8)
-			>>> hex(br.offset)
+			>>> hex(bw.offset)
 			'0x100000000L'
 			>>>
 		"""

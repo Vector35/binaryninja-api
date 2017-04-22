@@ -27,6 +27,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [discount] ([discount license] - BSD)
     - [sqlite] ([sqlite license] - public domain)
     - [llvm] ([llvm license] - BSD-style)
+    - [libgit2] ([libgit2 license] - GPLv2 with linking exception)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD)
@@ -72,6 +73,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sqlite license]: https://www.sqlite.org/copyright.html
 [llvm]: http://llvm.org/releases/3.8.1/
 [llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[libgit2]: https://libgit2.github.com/
+[libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
 [yasm]: http://yasm.tortall.net/
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [zlib]: http://www.zlib.net/

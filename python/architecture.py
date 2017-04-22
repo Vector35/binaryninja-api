@@ -333,6 +333,16 @@ class Architecture(object):
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 
+	def __eq__(self, value):
+		if not isinstance(value, Architecture):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Architecture):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def full_width_regs(self):
 		"""List of full width register strings (read-only)"""
@@ -1167,6 +1177,9 @@ class Architecture(object):
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
 
+		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
+		want to be using ``Function.get_low_level_il_at``.
+
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
@@ -1180,6 +1193,24 @@ class Architecture(object):
 		ctypes.memmove(buf, data, len(data))
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
 		return length.value
+
+	def get_low_level_il_from_bytes(self, data, addr):
+		"""
+		``get_low_level_il_from_bytes`` converts the instruction in bytes to ``il`` at the given virtual address
+
+		:param str data: the bytes of the instruction
+		:param int addr: virtual address of bytes in ``data``
+		:return: the instruction
+		:rtype: LowLevelILInstruction
+		:Example:
+
+			>>> arch.get_low_level_il_from_bytes('\xeb\xfe', 0x40DEAD)
+			<il: jump(0x40dead)>
+			>>>
+		"""
+		func = lowlevelil.LowLevelILFunction(self)
+		self.get_instruction_low_level_il(data, addr, func)
+		return func[0]
 
 	def get_reg_name(self, reg):
 		"""

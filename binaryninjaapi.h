@@ -1838,7 +1838,7 @@ namespace BinaryNinja
 		uint32_t sourceOperand;
 		Ref<Type> type;
 		std::string name;
-		int64_t startingOffset;
+		Variable var;
 		int64_t referencedOffset;
 	};
 

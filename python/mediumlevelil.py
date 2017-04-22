@@ -169,8 +169,8 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in operand_list:
-					value.append(function.Variable.from_identifier(self.function.source_function, j))
+				for j in xrange(count.value):
+					value.append(function.Variable.from_identifier(self.function.source_function, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_ssa_list":
 				count = ctypes.c_ulonglong()

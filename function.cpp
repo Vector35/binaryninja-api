@@ -355,7 +355,7 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 		ref.sourceOperand = refs[i].sourceOperand;
 		ref.type = refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr;
 		ref.name = refs[i].name;
-		ref.startingOffset = refs[i].startingOffset;
+		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
 		result.push_back(ref);
 	}
@@ -584,7 +584,7 @@ void Function::DeleteAutoVariable(const Variable& var)
 
 void Function::DeleteUserVariable(const Variable& var)
 {
-	BNDeleteAutoVariable(m_object, &var);
+	BNDeleteUserVariable(m_object, &var);
 }
 
 

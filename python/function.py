@@ -147,29 +147,29 @@ class PossibleValueSet(object):
 
 
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, start_ofs, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
-		self.starting_offset = start_ofs
+		self.var = var
 		self.referenced_offset = ref_ofs
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
 	def __repr__(self):
 		if self.source_operand is None:
-			if self.referenced_offset != self.starting_offset:
-				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.starting_offset)
+			if self.referenced_offset != self.var.storage:
+				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.var.storage)
 			return "<ref to %s>" % self.name
-		if self.referenced_offset != self.starting_offset:
-			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
+		if self.referenced_offset != self.var.storage:
+			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.var.storage)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
 
 class Variable(object):
 	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
 		self.function = func
-		self.source_type = source_type
+		self.source_type = VariableSourceType(source_type)
 		self.index = index
 		self.storage = storage
 
@@ -190,9 +190,9 @@ class Variable(object):
 		self.type = var_type
 
 	@classmethod
-	def from_identifier(self, func, identifier):
+	def from_identifier(self, func, identifier, name = None, var_type = None):
 		var = core.BNFromVariableIdentifier(identifier)
-		return Variable(func, VariableSourceType(var.type), var.index, var.storage)
+		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
 
 	def __repr__(self):
 		if self.type is None:
@@ -603,8 +603,10 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariableReference(refs[i].sourceOperand, types.Type(core.BNNewTypeReference(refs[i].type)),
-				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type))
+			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
+				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
+				refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 

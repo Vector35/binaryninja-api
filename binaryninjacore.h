@@ -188,7 +188,7 @@ extern "C"
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
 		DataSymbolToken = 65,
-		StackVariableToken = 66,
+		LocalVariableToken = 66,
 		ImportToken = 67,
 		AddressDisplayToken = 68
 	};
@@ -196,7 +196,7 @@ extern "C"
 	enum BNInstructionTextTokenContext
 	{
 		NoTokenContext = 0,
-		StackVariableTokenContext = 1,
+		LocalVariableTokenContext = 1,
 		DataVariableTokenContext = 2,
 		FunctionReturnTokenContext = 3,
 		ArgumentTokenContext = 4
@@ -212,8 +212,8 @@ extern "C"
 		FunctionHeaderStartLineType,
 		FunctionHeaderEndLineType,
 		FunctionContinuationLineType,
-		StackVariableLineType,
-		StackVariableListEndLineType,
+		LocalVariableLineType,
+		LocalVariableListEndLineType,
 		FunctionEndLineType,
 		NoteStartLineType,
 		NoteLineType,
@@ -1144,7 +1144,7 @@ extern "C"
 		uint32_t sourceOperand;
 		BNType* type;
 		char* name;
-		int64_t startingOffset;
+		uint64_t varIdentifier;
 		int64_t referencedOffset;
 	};
 

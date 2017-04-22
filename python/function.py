@@ -841,6 +841,57 @@ class Function(object):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
+	def create_auto_stack_var(self, offset, var_type, name):
+		core.BNCreateAutoStackVariable(self.handle, offset, var_type.handle, name)
+
+	def create_user_stack_var(self, offset, var_type, name):
+		core.BNCreateUserStackVariable(self.handle, offset, var_type.handle, name)
+
+	def delete_auto_stack_var(self, offset):
+		core.BNDeleteAutoStackVariable(self.handle, offset)
+
+	def delete_user_stack_var(self, offset):
+		core.BNDeleteUserStackVariable(self.handle, offset)
+
+	def create_auto_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateAutoVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def create_user_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateUserVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def delete_auto_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteAutoVariable(self.handle, var_data)
+
+	def delete_user_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteUserVariable(self.handle, var_data)
+
+	def get_stack_var_at_frame_offset(self, offset, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		found_var = core.BNVariableNameAndType()
+		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
+			return None
+		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type)))
+		core.BNFreeVariableNameAndType(found_var)
+		return result
+
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):

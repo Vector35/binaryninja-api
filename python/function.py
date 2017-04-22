@@ -26,13 +26,14 @@ import ctypes
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext)
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 import architecture
 import highlight
 import associateddatastore
 import types
 import basicblock
 import lowlevelil
+import mediumlevelil
 import binaryview
 import log
 
@@ -50,91 +51,156 @@ class RegisterValue(object):
 	def __init__(self, arch, value):
 		self.type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.reg)
-		elif value.state == RegisterValueType.OffsetFromEntryValue:
-			self.reg = arch.get_reg_name(value.reg)
+			self.reg = arch.get_reg_name(value.value)
+		elif value.state == RegisterValueType.ConstantValue:
+			self.value = value.value
+		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
+
+	def __repr__(self):
+		if self.type == RegisterValueType.EntryValue:
+			return "<entry %s>" % self.reg
+		if self.type == RegisterValueType.ConstantValue:
+			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.StackFrameOffset:
+			return "<stack frame offset %#x>" % self.offset
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
+		return "<undetermined>"
+
+
+class ValueRange(object):
+	def __init__(self, start, end, step):
+		self.start = start
+		self.end = end
+		self.step = step
+
+	def __repr__(self):
+		if self.step == 1:
+			return "<range: %#x to %#x>" % (self.start, self.end)
+		return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+
+
+class PossibleValueSet(object):
+	def __init__(self, arch, value):
+		self.type = RegisterValueType(value.state)
+		if value.state == RegisterValueType.EntryValue:
+			self.reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
 		elif value.state == RegisterValueType.SignedRangeValue:
 			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
-			if self.start & (1 << 63):
-				self.start |= ~((1 << 63) - 1)
-			if self.end & (1 << 63):
-				self.end |= ~((1 << 63) - 1)
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				if start & (1 << 63):
+					start |= ~((1 << 63) - 1)
+				if end & (1 << 63):
+					end |= ~((1 << 63) - 1)
+				self.ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.UnsignedRangeValue:
 			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				self.ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.LookupTableValue:
 			self.table = []
 			self.mapping = {}
-			for i in xrange(0, value.rangeEnd):
+			for i in xrange(0, value.count):
 				from_list = []
 				for j in xrange(0, value.table[i].fromCount):
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
-		elif value.state == RegisterValueType.OffsetFromUndeterminedValue:
-			self.offset = value.value
+		elif (value.state == RegisterValueType.InSetOfValues) or (value.state == RegisterValueType.NotInSetOfValues):
+			self.values = set()
+			for i in xrange(0, value.count):
+				self.values.add(value.valueSet[i])
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == RegisterValueType.OffsetFromEntryValue:
-			return "<entry %s + %#x>" % (self.reg, self.offset)
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if (self.type == RegisterValueType.SignedRangeValue) or (self.type == RegisterValueType.UnsignedRangeValue):
-			if self.step == 1:
-				return "<range: %#x to %#x>" % (self.start, self.end)
-			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+		if self.type == RegisterValueType.SignedRangeValue:
+			return "<signed ranges: %s>" % repr(self.ranges)
+		if self.type == RegisterValueType.UnsignedRangeValue:
+			return "<unsigned ranges: %s>" % repr(self.ranges)
 		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == RegisterValueType.OffsetFromUndeterminedValue:
-			return "<undetermined with offset %#x>" % self.offset
+		if self.type == RegisterValueType.InSetOfValues:
+			return "<in %s>" % repr(self.values)
+		if self.type == RegisterValueType.NotInSetOfValues:
+			return "<not in %s>" % repr(self.values)
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
 		return "<undetermined>"
 
 
-class StackVariable(object):
-	def __init__(self, ofs, name, t):
-		self.offset = ofs
-		self.name = name
-		self.type = t
-
-	def __repr__(self):
-		return "<var@%x: %s %s>" % (self.offset, self.type, self.name)
-
-	def __str__(self):
-		return self.name
-
-
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, start_ofs, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
-		self.starting_offset = start_ofs
+		self.var = var
 		self.referenced_offset = ref_ofs
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
 	def __repr__(self):
 		if self.source_operand is None:
-			if self.referenced_offset != self.starting_offset:
-				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.starting_offset)
+			if self.referenced_offset != self.var.storage:
+				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.var.storage)
 			return "<ref to %s>" % self.name
-		if self.referenced_offset != self.starting_offset:
-			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
+		if self.referenced_offset != self.var.storage:
+			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.var.storage)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
+
+
+class Variable(object):
+	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
+		self.function = func
+		self.source_type = VariableSourceType(source_type)
+		self.index = index
+		self.storage = storage
+
+		var = core.BNVariable()
+		var.type = source_type
+		var.index = index
+		var.storage = storage
+		self.identifier = core.BNToVariableIdentifier(var)
+
+		if name is None:
+			name = core.BNGetVariableName(func.handle, var)
+		if var_type is None:
+			var_type = core.BNGetVariableType(func.handle, var)
+			if var_type:
+				var_type = types.Type(var_type)
+
+		self.name = name
+		self.type = var_type
+
+	@classmethod
+	def from_identifier(self, func, identifier, name = None, var_type = None):
+		var = core.BNFromVariableIdentifier(identifier)
+		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
+
+	def __repr__(self):
+		if self.type is None:
+			return "<var %s>" % self.name
+		return "<var %s %s%s>" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+
+	def __str__(self):
+		return self.name
 
 
 class ConstantReference(object):
@@ -298,6 +364,11 @@ class Function(object):
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
+	def medium_level_il(self):
+		"""Function medium level IL (read-only)"""
+		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+
+	@property
 	def function_type(self):
 		"""Function type object"""
 		return types.Type(core.BNGetFunctionType(self.handle))
@@ -308,14 +379,28 @@ class Function(object):
 
 	@property
 	def stack_layout(self):
-		"""List of function stack (read-only)"""
+		"""List of function stack variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariable(v[i].offset, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
-		result.sort(key = lambda x: x.offset)
-		core.BNFreeStackLayout(v, count.value)
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
+		core.BNFreeVariableList(v, count.value)
+		return result
+
+	@property
+	def vars(self):
+		"""List of function variables (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetFunctionVariables(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
+		core.BNFreeVariableList(v, count.value)
 		return result
 
 	@property
@@ -396,7 +481,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(exits[i])
-		core.BNFreeLowLevelILInstructionList(exits)
+		core.BNFreeILInstructionList(exits)
 		return result
 
 	def get_reg_value_at(self, addr, reg, arch=None):
@@ -418,7 +503,6 @@ class Function(object):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_reg_value_after(self, addr, reg, arch=None):
@@ -440,37 +524,6 @@ class Function(object):
 			reg = arch.regs[reg].index
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_reg_value_at_low_level_il_instruction(self, i, reg, arch=None):
-		"""
-		``get_reg_value_at_low_level_il_instruction`` returns the value of the specified register ``reg`` at the il address
-		i
-
-		:param int i: il address of instruction to query
-		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
-		:Example:
-
-			>>> func.get_reg_value_at_low_level_il_instruction(15, 'rdi')
-			<const 0x2>
-		"""
-		if arch is None:
-			arch = self.arch
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_reg_value_after_low_level_il_instruction(self, i, reg):
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAfterLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_at(self, addr, offset, size, arch=None):
@@ -496,7 +549,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after(self, addr, offset, size, arch=None):
@@ -504,19 +556,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at(self, addr, func_type, i, arch=None):
@@ -526,7 +565,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at_low_level_il_instruction(self, instr, func_type, i):
@@ -534,7 +572,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type, i)
 		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_regs_read_by(self, addr, arch=None):
@@ -566,8 +603,10 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariableReference(refs[i].sourceOperand, types.Type(core.BNNewTypeReference(refs[i].type)),
-				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type))
+			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
+				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
+				refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -595,7 +634,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_lifted_il_flag_definitions_for_use(self, i, flag):
@@ -606,7 +645,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_flags_read_by_lifted_il_instruction(self, i):
@@ -801,6 +840,57 @@ class Function(object):
 		if isinstance(color, HighlightStandardColor):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+
+	def create_auto_stack_var(self, offset, var_type, name):
+		core.BNCreateAutoStackVariable(self.handle, offset, var_type.handle, name)
+
+	def create_user_stack_var(self, offset, var_type, name):
+		core.BNCreateUserStackVariable(self.handle, offset, var_type.handle, name)
+
+	def delete_auto_stack_var(self, offset):
+		core.BNDeleteAutoStackVariable(self.handle, offset)
+
+	def delete_user_stack_var(self, offset):
+		core.BNDeleteUserStackVariable(self.handle, offset)
+
+	def create_auto_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateAutoVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def create_user_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateUserVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def delete_auto_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteAutoVariable(self.handle, var_data)
+
+	def delete_user_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteUserVariable(self.handle, var_data)
+
+	def get_stack_var_at_frame_offset(self, offset, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		found_var = core.BNVariableNameAndType()
+		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
+			return None
+		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type)))
+		core.BNFreeVariableNameAndType(found_var)
+		return result
 
 
 class AdvancedFunctionAnalysisDataRequestor(object):

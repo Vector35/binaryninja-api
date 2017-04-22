@@ -25,6 +25,7 @@ import _binaryninjacore as core
 from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
 import function
 import basicblock
+import mediumlevelil
 
 
 class LowLevelILLabel(object):
@@ -53,7 +54,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
 		LowLevelILOperation.LLIL_POP: [],
 		LowLevelILOperation.LLIL_REG: [("src", "reg")],
-		LowLevelILOperation.LLIL_CONST: [("value", "int")],
+		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
@@ -107,10 +108,29 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL: [],
 		LowLevelILOperation.LLIL_BP: [],
-		LowLevelILOperation.LLIL_TRAP: [("value", "int")],
+		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
 		LowLevelILOperation.LLIL_UNDEF: [],
 		LowLevelILOperation.LLIL_UNIMPL: [],
-		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")]
+		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg"), ("index", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg"), ("index", "int"), ("dest", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg", "index", "int")],
+		LowLevelILOperation.LLIL_REG_SSA: [("src", "reg"), ("index", "int")],
+		LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [("full_reg", "reg"), ("index", "int"), ("src", "reg")],
+		LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag"), ("index", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag"), ("index", "int")],
+		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag"), ("index", "int"), ("bit", "int")],
+		LowLevelILOperation.LLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
+		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg"), ("index", "int"), ("src_memory", "int")],
+		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg"), ("index", "int"), ("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "reg"), ("index", "int"), ("src", "flag_ssa_list")],
+		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):
@@ -142,16 +162,41 @@ class LowLevelILInstruction(object):
 				else:
 					value = func.arch.get_reg_name(instr.operands[i])
 			elif operand_type == "flag":
-				value = func.arch.get_flag_name(instr.operands[i])
+				if (instr.operands[i] & 0x80000000) != 0:
+					value = instr.operands[i]
+				else:
+					value = func.arch.get_flag_name(instr.operands[i])
 			elif operand_type == "cond":
 				value = LowLevelILFlagCondition(instr.operands[i])
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
-				operands = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				value = []
 				for i in xrange(count.value):
-					value.append(operands[i])
-				core.BNLowLevelILFreeOperandList(operands)
+					value.append(operand_list[i])
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				value = []
+				for i in xrange(count.value / 2):
+					reg = operand_list[i * 2]
+					reg_index = operand_list[(i * 2) + 1]
+					if (reg & 0x80000000) == 0:
+						reg = func.arch.get_reg_name(reg)
+					value.append((reg, reg_index))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "flag_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				value = []
+				for i in xrange(count.value / 2):
+					flag = operand_list[i * 2]
+					flag_index = operand_list[(i * 2) + 1]
+					if (flag & 0x80000000) == 0:
+						flag = func.arch.get_flag_name(flag)
+					value.append((flag, flag_index))
+				core.BNLowLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
 			self.__dict__[name] = value
 
@@ -191,6 +236,123 @@ class LowLevelILInstruction(object):
 			address = tokens[i].address
 			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
+		return result
+
+	@property
+	def ssa_form(self):
+		"""SSA form of expression (read-only)"""
+		return LowLevelILInstruction(self.function.ssa_form,
+			core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def non_ssa_form(self):
+		"""Non-SSA form of expression (read-only)"""
+		return LowLevelILInstruction(self.function.non_ssa_form,
+			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
+
+	@property
+	def mapped_medium_level_il(self):
+		"""Gets the medium level IL expression corresponding to this expression"""
+		expr = self.function.get_mapped_medium_level_il_expr_index(self.expr_index)
+		if expr is None:
+			return None
+		return mediumlevelil.MediumLevelILInstruction(self.function.mapped_medium_level_il, expr)
+
+	@property
+	def value(self):
+		"""Value of expression if constant or a known value (read-only)"""
+		value = core.BNGetLowLevelILExprValue(self.function.handle, self.expr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	@property
+	def possible_values(self):
+		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
+		value = core.BNGetLowLevelILPossibleExprValues(self.function.handle, self.expr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_reg_value(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_reg_value_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_possible_reg_values(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_possible_reg_values_after(self, reg):
+		if isinstance(reg, str):
+			reg = self.function.arch.regs[reg].index
+		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_flag_value(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_flag_value_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_possible_flag_values(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_possible_flag_values_after(self, flag):
+		if isinstance(flag, str):
+			flag = self.function.arch.flags[flag].index
+		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_stack_contents(self, offset, size):
+		value = core.BNGetLowLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_stack_contents_after(self, offset, size):
+		value = core.BNGetLowLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.RegisterValue(self.function.arch, value)
+		return result
+
+	def get_possible_stack_contents(self, offset, size):
+		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_possible_stack_contents_after(self, offset, size):
+		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def __setattr__(self, name, value):
@@ -270,7 +432,12 @@ class LowLevelILFunction(object):
 
 	@current_address.setter
 	def current_address(self, value):
-		core.BNLowLevelILSetCurrentAddress(self.handle, value)
+		core.BNLowLevelILSetCurrentAddress(self.handle, self.arch.handle, value)
+
+	def set_current_address(self, value, arch = None):
+		if arch is None:
+			arch = self.arch
+		core.BNLowLevelILSetCurrentAddress(self.handle, arch.handle, value)
 
 	@property
 	def temp_reg_count(self):
@@ -295,6 +462,40 @@ class LowLevelILFunction(object):
 			result.append(LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
+
+	@property
+	def ssa_form(self):
+		"""Low level IL in SSA form (read-only)"""
+		result = core.BNGetLowLevelILSSAForm(self.handle)
+		if not result:
+			return None
+		return LowLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def non_ssa_form(self):
+		"""Low level IL in non-SSA (default) form (read-only)"""
+		result = core.BNGetLowLevelILNonSSAForm(self.handle)
+		if not result:
+			return None
+		return LowLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def medium_level_il(self):
+		"""Medium level IL for this low level IL."""
+		result = core.BNGetMediumLevelILForLowLevelIL(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def mapped_medium_level_il(self):
+		"""Medium level IL with mappings between low level IL and medium level IL. Unused stores are not removed.
+		Typically, this should only be used to answer queries on assembly or low level IL where the query is
+		easier to perform on medium level IL."""
+		result = core.BNGetMappedMediumLevelIL(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
 
 	def __setattr__(self, name, value):
 		try:
@@ -328,6 +529,14 @@ class LowLevelILFunction(object):
 				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
+
+	def get_instruction_start(self, addr, arch = None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNLowLevelILGetInstructionStart(self.handle, arch.handle, addr)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
 
 	def clear_indirect_branches(self):
 		core.BNLowLevelILClearIndirectBranches(self.handle)
@@ -1261,6 +1470,89 @@ class LowLevelILFunction(object):
 		if label is None:
 			return None
 		return LowLevelILLabel(label)
+
+	def get_ssa_instruction_index(self, instr):
+		return core.BNGetLowLevelILSSAInstructionIndex(self.handle, instr)
+
+	def get_non_ssa_instruction_index(self, instr):
+		return core.BNGetLowLevelILNonSSAInstructionIndex(self.handle, instr)
+
+	def get_ssa_reg_definition(self, reg, index):
+		result = core.BNGetLowLevelILSSARegisterDefinition(self.handle, reg, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_flag_definition(self, flag, index):
+		result = core.BNGetLowLevelILSSAFlagDefinition(self.handle, flag, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_memory_definition(self, index):
+		result = core.BNGetLowLevelILSSAMemoryDefinition(self.handle, index)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return result
+
+	def get_ssa_reg_uses(self, reg, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_flag_uses(self, flag, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_memory_uses(self, index):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILSSAMemoryUses(self.handle, index, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_reg_value(self, reg, index):
+		if isinstance(reg, str):
+			reg = self.arch.regs[reg].index
+		value = core.BNGetLowLevelILSSARegisterValue(self.handle, reg, index)
+		result = function.RegisterValue(self.arch, value)
+		return result
+
+	def get_ssa_flag_value(self, flag, index):
+		if isinstance(flag, str):
+			flag = self.arch.get_flag_by_name(flag)
+		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, index)
+		result = function.RegisterValue(self.arch, value)
+		return result
+
+	def get_mapped_medium_level_il_instruction_index(self, instr):
+		med_il = self.mapped_medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMappedMediumLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetMediumLevelILInstructionCount(med_il.handle):
+			return None
+		return result
+
+	def get_mapped_medium_level_il_expr_index(self, expr):
+		med_il = self.mapped_medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMappedMediumLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
+			return None
+		return result
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):

@@ -179,7 +179,7 @@ class MediumLevelILInstruction(object):
 				value = []
 				for j in xrange(count.value / 2):
 					var_id = operand_list[j * 2]
-					var_index = operand_list[(j * 2) + 2]
+					var_index = operand_list[(j * 2) + 1]
 					value.append((function.Variable.from_identifier(self.function.source_function,
 						var_id), var_index))
 				core.BNMediumLevelILFreeOperandList(operand_list)

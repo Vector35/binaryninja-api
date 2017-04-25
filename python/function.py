@@ -28,6 +28,7 @@ from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTok
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 import architecture
+import platform
 import highlight
 import associateddatastore
 import types
@@ -293,10 +294,10 @@ class Function(object):
 	@property
 	def platform(self):
 		"""Function platform (read-only)"""
-		platform = core.BNGetFunctionPlatform(self.handle)
-		if platform is None:
+		plat = core.BNGetFunctionPlatform(self.handle)
+		if plat is None:
 			return None
-		return platform.Platform(None, handle = platform)
+		return platform.Platform(None, handle = plat)
 
 	@property
 	def start(self):

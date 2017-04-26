@@ -254,6 +254,9 @@ class Function(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
+    def __hash__(self):
+        return hash((self.start, self.arch.name, self.platform.name))
+
 	@classmethod
 	def _unregister(cls, func):
 		handle = ctypes.cast(func, ctypes.c_void_p)

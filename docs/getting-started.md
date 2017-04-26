@@ -200,4 +200,4 @@ Most preferences are fairly intuitive. There is no advanced preference system at
 
 Vector 35 offers a number of ways to get Binary Ninja [support].
 
-[support]: https://binary.ninja/support.html
+[support]: https://binary.ninja/support/

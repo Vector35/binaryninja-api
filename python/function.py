@@ -426,6 +426,16 @@ class Function(object):
 		else:
 			return Function._associated_data[handle.value]
 
+	@property
+	def analysis_performance_info(self):
+		count = ctypes.c_ulonglong()
+		info = core.BNGetFunctionAnalysisPerformanceInfo(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[info[i].name] = info[i].seconds
+		core.BNFreeAnalysisPerformanceInfo(info, count.value)
+		return result
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)

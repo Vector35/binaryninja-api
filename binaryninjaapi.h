@@ -1997,6 +1997,8 @@ namespace BinaryNinja
 		void RequestAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData(size_t count);
+
+		std::map<std::string, double> GetAnalysisPerformanceInfo();
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor

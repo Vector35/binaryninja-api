@@ -861,6 +861,19 @@ void Function::ReleaseAdvancedAnalysisData()
 }
 
 
+map<string, double> Function::GetAnalysisPerformanceInfo()
+{
+	size_t count;
+	BNPerformanceInfo* info = BNGetFunctionAnalysisPerformanceInfo(m_object, &count);
+
+	map<string, double> result;
+	for (size_t i = 0; i < count; i++)
+		result[info[i].name] = info[i].seconds;
+	BNFreeAnalysisPerformanceInfo(info, count);
+	return result;
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
 {
 	if (m_func)

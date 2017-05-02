@@ -2206,15 +2206,15 @@ namespace BinaryNinja
 		size_t GetSSAExprIndex(size_t instr) const;
 		size_t GetNonSSAExprIndex(size_t instr) const;
 
-		size_t GetSSARegisterDefinition(uint32_t reg, size_t idx) const;
-		size_t GetSSAFlagDefinition(uint32_t flag, size_t idx) const;
-		size_t GetSSAMemoryDefinition(size_t idx) const;
-		std::set<size_t> GetSSARegisterUses(uint32_t reg, size_t idx) const;
-		std::set<size_t> GetSSAFlagUses(uint32_t flag, size_t idx) const;
-		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
+		size_t GetSSARegisterDefinition(uint32_t reg, size_t version) const;
+		size_t GetSSAFlagDefinition(uint32_t flag, size_t version) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSARegisterUses(uint32_t reg, size_t version) const;
+		std::set<size_t> GetSSAFlagUses(uint32_t flag, size_t version) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 
-		RegisterValue GetSSARegisterValue(uint32_t reg, size_t idx);
-		RegisterValue GetSSAFlagValue(uint32_t flag, size_t idx);
+		RegisterValue GetSSARegisterValue(uint32_t reg, size_t version);
+		RegisterValue GetSSAFlagValue(uint32_t flag, size_t version);
 
 		RegisterValue GetExprValue(size_t expr);
 		PossibleValueSet GetPossibleExprValues(size_t expr);
@@ -2287,18 +2287,18 @@ namespace BinaryNinja
 		size_t GetSSAExprIndex(size_t instr) const;
 		size_t GetNonSSAExprIndex(size_t instr) const;
 
-		size_t GetSSAVarDefinition(const Variable& var, size_t idx) const;
-		size_t GetSSAMemoryDefinition(size_t idx) const;
-		std::set<size_t> GetSSAVarUses(const Variable& var, size_t idx) const;
-		std::set<size_t> GetSSAMemoryUses(size_t idx) const;
+		size_t GetSSAVarDefinition(const Variable& var, size_t version) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSAVarUses(const Variable& var, size_t version) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 
-		RegisterValue GetSSAVarValue(const Variable& var, size_t idx);
+		RegisterValue GetSSAVarValue(const Variable& var, size_t version);
 		RegisterValue GetExprValue(size_t expr);
-		PossibleValueSet GetPossibleSSAVarValues(const Variable& var, size_t idx, size_t instr);
+		PossibleValueSet GetPossibleSSAVarValues(const Variable& var, size_t version, size_t instr);
 		PossibleValueSet GetPossibleExprValues(size_t expr);
 
-		size_t GetSSAVarIndexAtInstruction(const Variable& var, size_t instr) const;
-		size_t GetSSAMemoryIndexAtInstruction(size_t instr) const;
+		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
+		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
 		Variable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
 		Variable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
 		Variable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;

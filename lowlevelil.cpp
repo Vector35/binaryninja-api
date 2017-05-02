@@ -699,28 +699,28 @@ size_t LowLevelILFunction::GetNonSSAExprIndex(size_t expr) const
 }
 
 
-size_t LowLevelILFunction::GetSSARegisterDefinition(uint32_t reg, size_t idx) const
+size_t LowLevelILFunction::GetSSARegisterDefinition(uint32_t reg, size_t version) const
 {
-	return BNGetLowLevelILSSARegisterDefinition(m_object, reg, idx);
+	return BNGetLowLevelILSSARegisterDefinition(m_object, reg, version);
 }
 
 
-size_t LowLevelILFunction::GetSSAFlagDefinition(uint32_t flag, size_t idx) const
+size_t LowLevelILFunction::GetSSAFlagDefinition(uint32_t flag, size_t version) const
 {
-	return BNGetLowLevelILSSAFlagDefinition(m_object, flag, idx);
+	return BNGetLowLevelILSSAFlagDefinition(m_object, flag, version);
 }
 
 
-size_t LowLevelILFunction::GetSSAMemoryDefinition(size_t idx) const
+size_t LowLevelILFunction::GetSSAMemoryDefinition(size_t version) const
 {
-	return BNGetLowLevelILSSAMemoryDefinition(m_object, idx);
+	return BNGetLowLevelILSSAMemoryDefinition(m_object, version);
 }
 
 
-set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t idx) const
+set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t version) const
 {
 	size_t count;
-	size_t* instrs = BNGetLowLevelILSSARegisterUses(m_object, reg, idx, &count);
+	size_t* instrs = BNGetLowLevelILSSARegisterUses(m_object, reg, version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -731,10 +731,10 @@ set<size_t> LowLevelILFunction::GetSSARegisterUses(uint32_t reg, size_t idx) con
 }
 
 
-set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t idx) const
+set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t version) const
 {
 	size_t count;
-	size_t* instrs = BNGetLowLevelILSSAFlagUses(m_object, flag, idx, &count);
+	size_t* instrs = BNGetLowLevelILSSAFlagUses(m_object, flag, version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -745,10 +745,10 @@ set<size_t> LowLevelILFunction::GetSSAFlagUses(uint32_t flag, size_t idx) const
 }
 
 
-set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
+set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t version) const
 {
 	size_t count;
-	size_t* instrs = BNGetLowLevelILSSAMemoryUses(m_object, idx, &count);
+	size_t* instrs = BNGetLowLevelILSSAMemoryUses(m_object, version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -759,16 +759,16 @@ set<size_t> LowLevelILFunction::GetSSAMemoryUses(size_t idx) const
 }
 
 
-RegisterValue LowLevelILFunction::GetSSARegisterValue(uint32_t reg, size_t idx)
+RegisterValue LowLevelILFunction::GetSSARegisterValue(uint32_t reg, size_t version)
 {
-	BNRegisterValue value = BNGetLowLevelILSSARegisterValue(m_object, reg, idx);
+	BNRegisterValue value = BNGetLowLevelILSSARegisterValue(m_object, reg, version);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t idx)
+RegisterValue LowLevelILFunction::GetSSAFlagValue(uint32_t flag, size_t version)
 {
-	BNRegisterValue value = BNGetLowLevelILSSAFlagValue(m_object, flag, idx);
+	BNRegisterValue value = BNGetLowLevelILSSAFlagValue(m_object, flag, version);
 	return RegisterValue::FromAPIObject(value);
 }
 

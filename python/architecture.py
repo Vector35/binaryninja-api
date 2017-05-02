@@ -1232,6 +1232,20 @@ class Architecture(object):
 		"""
 		return core.BNGetArchitectureFlagName(self.handle, flag)
 
+	def get_reg_index(self, reg):
+		if isinstance(reg, str):
+			return self.regs[reg].index
+		elif isinstance(reg, lowlevelil.ILRegister):
+			return reg.index
+		return reg
+
+	def get_flag_index(self, flag):
+		if isinstance(flag, str):
+			return self._flags[flag]
+		elif isinstance(flag, lowlevelil.ILFlag):
+			return flag.index
+		return flag
+
 	def get_flag_write_type_name(self, write_type):
 		"""
 		``get_flag_write_type_name`` gets the flag write type name for the given flag.

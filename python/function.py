@@ -510,8 +510,7 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
+		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
 		return result
@@ -531,8 +530,7 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
+		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
 		return result
@@ -638,8 +636,7 @@ class Function(object):
 		return self.lifted_il[core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)]
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
-		if isinstance(flag, str):
-			flag = self.arch._flags[flag]
+		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagUsesForDefinition(self.handle, i, flag, count)
 		result = []
@@ -649,8 +646,7 @@ class Function(object):
 		return result
 
 	def get_lifted_il_flag_definitions_for_use(self, i, flag):
-		if isinstance(flag, str):
-			flag = self.arch._flags[flag]
+		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagDefinitionsForUse(self.handle, i, flag, count)
 		result = []

@@ -271,22 +271,22 @@ size_t MediumLevelILFunction::GetNonSSAExprIndex(size_t expr) const
 }
 
 
-size_t MediumLevelILFunction::GetSSAVarDefinition(const Variable& var, size_t idx) const
+size_t MediumLevelILFunction::GetSSAVarDefinition(const Variable& var, size_t version) const
 {
-	return BNGetMediumLevelILSSAVarDefinition(m_object, &var, idx);
+	return BNGetMediumLevelILSSAVarDefinition(m_object, &var, version);
 }
 
 
-size_t MediumLevelILFunction::GetSSAMemoryDefinition(size_t idx) const
+size_t MediumLevelILFunction::GetSSAMemoryDefinition(size_t version) const
 {
-	return BNGetMediumLevelILSSAMemoryDefinition(m_object, idx);
+	return BNGetMediumLevelILSSAMemoryDefinition(m_object, version);
 }
 
 
-set<size_t> MediumLevelILFunction::GetSSAVarUses(const Variable& var, size_t idx) const
+set<size_t> MediumLevelILFunction::GetSSAVarUses(const Variable& var, size_t version) const
 {
 	size_t count;
-	size_t* instrs = BNGetMediumLevelILSSAVarUses(m_object, &var, idx, &count);
+	size_t* instrs = BNGetMediumLevelILSSAVarUses(m_object, &var, version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -297,10 +297,10 @@ set<size_t> MediumLevelILFunction::GetSSAVarUses(const Variable& var, size_t idx
 }
 
 
-set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t idx) const
+set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t version) const
 {
 	size_t count;
-	size_t* instrs = BNGetMediumLevelILSSAMemoryUses(m_object, idx, &count);
+	size_t* instrs = BNGetMediumLevelILSSAMemoryUses(m_object, version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -311,9 +311,9 @@ set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t idx) const
 }
 
 
-RegisterValue MediumLevelILFunction::GetSSAVarValue(const Variable& var, size_t idx)
+RegisterValue MediumLevelILFunction::GetSSAVarValue(const Variable& var, size_t version)
 {
-	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var, idx);
+	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var, version);
 	return RegisterValue::FromAPIObject(value);
 }
 
@@ -325,9 +325,9 @@ RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const Variable& var, size_t idx, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const Variable& var, size_t version, size_t instr)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, idx, instr);
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, version, instr);
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -339,15 +339,15 @@ PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr)
 }
 
 
-size_t MediumLevelILFunction::GetSSAVarIndexAtInstruction(const Variable& var, size_t instr) const
+size_t MediumLevelILFunction::GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const
 {
-	return BNGetMediumLevelILSSAVarIndexAtILInstruction(m_object, &var, instr);
+	return BNGetMediumLevelILSSAVarVersionAtILInstruction(m_object, &var, instr);
 }
 
 
-size_t MediumLevelILFunction::GetSSAMemoryIndexAtInstruction(size_t instr) const
+size_t MediumLevelILFunction::GetSSAMemoryVersionAtInstruction(size_t instr) const
 {
-	return BNGetMediumLevelILSSAMemoryIndexAtILInstruction(m_object, instr);
+	return BNGetMediumLevelILSSAMemoryVersionAtILInstruction(m_object, instr);
 }
 
 

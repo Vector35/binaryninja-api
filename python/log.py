@@ -23,11 +23,6 @@
 import _binaryninjacore as core
 
 
-def redirect_output_to_log():
-	global _output_to_log
-	_output_to_log = True
-
-
 def log(level, text):
 	"""
 	``log`` writes messages to the log console for the given log level.

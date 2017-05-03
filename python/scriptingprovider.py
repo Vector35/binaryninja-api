@@ -38,6 +38,11 @@ import log
 _output_to_log = False
 
 
+def redirect_output_to_log():
+	global _output_to_log
+	_output_to_log = True
+
+
 class _ThreadActionContext(object):
 	_actions = []
 

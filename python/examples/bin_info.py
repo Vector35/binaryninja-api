@@ -38,7 +38,6 @@ def get_bininfo(bv):
 				sys.exit(1)
 
 		bv = BinaryViewType.get_view_of_file(filename)
-		log.redirect_output_to_log()
 		log.log_to_stdout(True)
 
 	contents = "## %s ##\n" % bv.file.filename

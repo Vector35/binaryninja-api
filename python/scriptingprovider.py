@@ -35,13 +35,6 @@ import basicblock
 import startup
 import log
 
-_output_to_log = False
-
-
-def redirect_output_to_log():
-	global _output_to_log
-	_output_to_log = True
-
 
 class _ThreadActionContext(object):
 	_actions = []
@@ -384,14 +377,12 @@ class _PythonScriptingInstanceOutput(object):
 		return self.write('\n'.join(lines))
 
 	def write(self, data):
-		global _output_to_log
-
 		interpreter = None
 		if "value" in dir(PythonScriptingInstance._interpreter):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if _output_to_log:
+			if log.is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')

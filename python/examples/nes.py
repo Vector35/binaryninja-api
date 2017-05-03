@@ -201,11 +201,11 @@ def indirect_load(il, value):
 
 def load_zero_page_16(il, value):
 	if il[value].operation == LowLevelILOperation.LLIL_CONST:
-		if il[value].value == 0xff:
+		if il[value].constant == 0xff:
 			lo = il.zero_extend(2, il.load(1, il.const(2, 0xff)))
 			hi = il.shift_left(2, il.zero_extend(2, il.load(1, il.const(2, 0)), il.const(2, 8)))
 			return il.or_expr(2, lo, hi)
-		return il.load(2, il.const(2, il[value].value))
+		return il.load(2, il.const(2, il[value].constant))
 	il.append(il.set_reg(1, LLIL_TEMP(0), value))
 	value = il.reg(1, LLIL_TEMP(0))
 	lo_addr = value
@@ -244,7 +244,7 @@ OperandIL = [
 def cond_branch(il, cond, dest):
 	t = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		t = il.get_label_for_address(Architecture['6502'], il[dest].value)
+		t = il.get_label_for_address(Architecture['6502'], il[dest].constant)
 	if t is None:
 		t = LowLevelILLabel()
 		indirect = True
@@ -262,7 +262,7 @@ def cond_branch(il, cond, dest):
 def jump(il, dest):
 	label = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		label = il.get_label_for_address(Architecture['6502'], il[dest].value)
+		label = il.get_label_for_address(Architecture['6502'], il[dest].constant)
 	if label is None:
 		il.append(il.jump(dest))
 	else:

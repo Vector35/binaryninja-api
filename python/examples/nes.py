@@ -469,6 +469,15 @@ class M6502(Architecture):
 
 		return length
 
+	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
+		if flag == 'c':
+			if (op == LowLevelILOperation.LLIL_SUB) or (op == LowLevelILOperation.LLIL_SBB):
+				# Subtraction carry flag is inverted from the commom implementation
+				return il.not_expr(0, self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il))
+			# Other operations use a normal carry flag
+			return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
+		return Architecture.perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
+
 	def perform_is_never_branch_patch_available(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
 			return True

@@ -1440,9 +1440,10 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
-		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
+			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
@@ -2178,6 +2179,11 @@ namespace BinaryNinja
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
 		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
+
+		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
+		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
+		ExprId GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
+			BNRegisterOrConstant* operands, size_t operandCount);
 
 		ExprId Operand(uint32_t n, ExprId expr);
 

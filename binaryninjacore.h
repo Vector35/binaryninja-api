@@ -334,6 +334,7 @@ extern "C"
 		LLIL_CMP_UGT,
 		LLIL_TEST_BIT,
 		LLIL_BOOL_TO_INT,
+		LLIL_ADD_OVERFLOW,
 		LLIL_SYSCALL,
 		LLIL_BP,
 		LLIL_TRAP,
@@ -775,6 +776,7 @@ extern "C"
 		MLIL_CMP_UGT,
 		MLIL_TEST_BIT,
 		MLIL_BOOL_TO_INT,
+		MLIL_ADD_OVERFLOW,
 		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
 		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
 		MLIL_BP,
@@ -1830,9 +1832,10 @@ extern "C"
 		size_t size, uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
 		BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetDefaultArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
-		size_t size, uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
-		BNLowLevelILFunction* il);
+		size_t size, BNFlagRole role, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetArchitectureFlagConditionLowLevelIL(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
+		BNLowLevelILFunction* il);
+	BINARYNINJACOREAPI size_t BNGetDefaultArchitectureFlagConditionLowLevelIL(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
 		BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI uint32_t* BNGetModifiedArchitectureRegistersOnWrite(BNArchitecture* arch, uint32_t reg, size_t* count);
 	BINARYNINJACOREAPI void BNFreeRegisterList(uint32_t* regs);

@@ -534,6 +534,45 @@ ExprId LowLevelILFunction::AddOperandList(const vector<ExprId> operands)
 }
 
 
+ExprId LowLevelILFunction::GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size)
+{
+	if (operand.constant)
+		return AddExpr(LLIL_CONST, size, 0, operand.value);
+	return AddExpr(LLIL_REG, size, 0, operand.reg);
+}
+
+
+ExprId LowLevelILFunction::GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size)
+{
+	if (operand.constant)
+		return AddExpr(LLIL_CONST, size, 0, -(int64_t)operand.value);
+	return AddExpr(LLIL_NEG, size, 0, AddExpr(LLIL_REG, size, 0, operand.reg));
+}
+
+
+ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
+	BNRegisterOrConstant* operands, size_t operandCount)
+{
+	if (operandCount == 0)
+		return AddExpr(op, size, 0);
+	if (operandCount == 1)
+		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size));
+	if (operandCount == 2)
+	{
+		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
+			GetExprForRegisterOrConstant(operands[1], size));
+	}
+	if (operandCount == 3)
+	{
+		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
+			GetExprForRegisterOrConstant(operands[1], size), GetExprForRegisterOrConstant(operands[2], size));
+	}
+	return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
+		GetExprForRegisterOrConstant(operands[1], size), GetExprForRegisterOrConstant(operands[2], size),
+		GetExprForRegisterOrConstant(operands[3], size));
+}
+
+
 ExprId LowLevelILFunction::Operand(uint32_t n, ExprId expr)
 {
 	BNLowLevelILSetExprSourceOperand(m_object, expr, n);

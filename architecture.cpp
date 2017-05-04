@@ -598,22 +598,30 @@ vector<uint32_t> Architecture::GetFlagsWrittenByFlagWriteType(uint32_t)
 size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
+	(void)flagWriteType;
+	BNFlagRole role = GetFlagRole(flag);
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
 		operandCount, il.GetObject());
 }
 
 
-size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
+size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
+	BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
 		operandCount, il.GetObject());
 }
 
 
-ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition, LowLevelILFunction& il)
+ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
 {
-	return il.Unimplemented();
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+}
+
+
+ExprId Architecture::GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+{
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
 }
 
 

@@ -651,11 +651,11 @@ class Architecture(object):
 			operand_list = []
 			for i in xrange(operand_count):
 				if operands[i].constant:
-					operand_list.append(("const", operands[i].value))
+					operand_list.append(operands[i].value)
 				elif lowlevelil.LLIL_REG_IS_TEMP(operands[i].reg):
-					operand_list.append(("reg", operands[i].reg))
+					operand_list.append(lowlevelil.ILRegister(self, operands[i].reg))
 				else:
-					operand_list.append(("reg", self._regs_by_index[operands[i].reg]))
+					operand_list.append(lowlevelil.ILRegister(self, operands[i].reg))
 			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
 		except (KeyError, OSError):
@@ -915,7 +915,10 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
-		return il.unimplemented()
+		flag = self.get_flag_index(flag)
+		if flag not in self._flag_roles:
+			return il.unimplemented()
+		return self.get_default_flag_write_low_level_il(op, size, self._flag_roles[flag], operands, il)
 
 	@abc.abstractmethod
 	def perform_get_flag_condition_low_level_il(self, cond, il):
@@ -927,7 +930,7 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
-		return il.unimplemented()
+		return self.get_default_flag_condition_low_level_il(cond, il)
 
 	@abc.abstractmethod
 	def perform_assemble(self, code, addr):
@@ -1276,7 +1279,7 @@ class Architecture(object):
 		"""
 		return self._flag_write_types[write_type]
 
-	def get_flag_write_low_level_il(self, op, size, write_type, operands, il):
+	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
@@ -1286,22 +1289,26 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
+		flag = self.get_flag_index(flag)
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self._flags[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]]
+			elif isinstance(operands[i], lowlevelil.ILRegister):
+				operand_list[i].constant = False
+				operand_list[i].reg = operands[i].index
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
 		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size,
-		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
+		        self._flag_write_types[write_type], flag, operand_list, len(operand_list), il.handle))
 
-	def get_default_flag_write_low_level_il(self, op, size, write_type, operands, il):
+	def get_default_flag_write_low_level_il(self, op, size, role, operands, il):
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
-		:param str write_type:
+		:param FlagRole role:
 		:param list(str or int) operands: a list of either items that are either string register names or constant \
 		integer values
 		:param LowLevelILFunction il:
@@ -1311,12 +1318,15 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self._flags[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]]
+			elif isinstance(operands[i], lowlevelil.ILRegister):
+				operand_list[i].constant = False
+				operand_list[i].reg = operands[i].index
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
 		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size,
-		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
+			role, operand_list, len(operand_list), il.handle))
 
 	def get_flag_condition_low_level_il(self, cond, il):
 		"""
@@ -1325,6 +1335,14 @@ class Architecture(object):
 		:rtype: LowLevelILExpr
 		"""
 		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
+
+	def get_default_flag_condition_low_level_il(self, cond, il):
+		"""
+		:param LowLevelILFlagCondition cond:
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
+		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
 
 	def get_modified_regs_on_write(self, reg):
 		"""

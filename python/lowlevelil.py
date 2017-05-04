@@ -153,6 +153,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_NOT: [("src", "expr")],
 		LowLevelILOperation.LLIL_SX: [("src", "expr")],
 		LowLevelILOperation.LLIL_ZX: [("src", "expr")],
+		LowLevelILOperation.LLIL_LOW_PART: [("src", "expr")],
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
@@ -1188,7 +1189,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SX, value.index, size=size, flags=flags)
 
-	def zero_extend(self, size, value):
+	def zero_extend(self, size, value, flags=None):
 		"""
 		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
 
@@ -1197,7 +1198,18 @@ class LowLevelILFunction(object):
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_ZX, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_ZX, value.index, size=size, flags=flags)
+
+	def low_part(self, size, value, flags=None):
+		"""
+		``low_part`` truncates ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to zero extend
+		:return: The expression ``(value).<size>``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_LOW_PART, value.index, size=size, flags=flags)
 
 	def jump(self, dest):
 		"""

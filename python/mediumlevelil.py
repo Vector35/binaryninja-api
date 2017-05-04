@@ -105,6 +105,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_NOT: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SX: [("src", "expr")],
 		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
+		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],

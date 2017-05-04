@@ -2144,8 +2144,9 @@ namespace BinaryNinja
 		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0);
 		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0);
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0);
-		ExprId SignExtend(size_t size, ExprId a);
-		ExprId ZeroExtend(size_t size, ExprId a);
+		ExprId SignExtend(size_t size, ExprId a, uint32_t flags = 0);
+		ExprId ZeroExtend(size_t size, ExprId a, uint32_t flags = 0);
+		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0);
 		ExprId Jump(ExprId dest);
 		ExprId Call(ExprId dest);
 		ExprId Return(size_t dest);

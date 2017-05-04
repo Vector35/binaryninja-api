@@ -326,15 +326,21 @@ ExprId LowLevelILFunction::Not(size_t size, ExprId a, uint32_t flags)
 }
 
 
-ExprId LowLevelILFunction::SignExtend(size_t size, ExprId a)
+ExprId LowLevelILFunction::SignExtend(size_t size, ExprId a, uint32_t flags)
 {
-	return AddExpr(LLIL_SX, size, 0, a);
+	return AddExpr(LLIL_SX, size, flags, a);
 }
 
 
-ExprId LowLevelILFunction::ZeroExtend(size_t size, ExprId a)
+ExprId LowLevelILFunction::ZeroExtend(size_t size, ExprId a, uint32_t flags)
 {
-	return AddExpr(LLIL_ZX, size, 0, a);
+	return AddExpr(LLIL_ZX, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::LowPart(size_t size, ExprId a, uint32_t flags)
+{
+	return AddExpr(LLIL_LOW_PART, size, flags, a);
 }
 
 

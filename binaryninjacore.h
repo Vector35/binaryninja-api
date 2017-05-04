@@ -313,6 +313,7 @@ extern "C"
 		LLIL_NOT,
 		LLIL_SX,
 		LLIL_ZX,
+		LLIL_LOW_PART,
 		LLIL_JUMP,
 		LLIL_JUMP_TO,
 		LLIL_CALL,
@@ -751,6 +752,7 @@ extern "C"
 		MLIL_NOT,
 		MLIL_SX,
 		MLIL_ZX,
+		MLIL_LOW_PART,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)

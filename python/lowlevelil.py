@@ -125,9 +125,9 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_ADC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		LowLevelILOperation.LLIL_SUB: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_SBB: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		LowLevelILOperation.LLIL_AND: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_OR: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_XOR: [("left", "expr"), ("right", "expr")],
@@ -135,9 +135,9 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_LSR: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_ASR: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_ROL: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_RLC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		LowLevelILOperation.LLIL_ROR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_RRC: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		LowLevelILOperation.LLIL_MUL: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
@@ -809,7 +809,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ADD, a.index, b.index, size=size, flags=flags)
 
-	def add_carry(self, size, a, b, flags=None):
+	def add_carry(self, size, a, b, carry, flags=None):
 		"""
 		``add_carry`` adds with carry expression ``a`` to expression ``b`` potentially setting flags ``flags`` and
 		returning an expression of ``size`` bytes.
@@ -817,11 +817,12 @@ class LowLevelILFunction(object):
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
+		:param LowLevelILExpr carry: Carry flag expression
 		:param str flags: flags to set
-		:return: The expression ``adc.<size>{<flags>}(a, b)``
+		:return: The expression ``adc.<size>{<flags>}(a, b, carry)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_ADC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_ADC, a.index, b.index, carry.index, size=size, flags=flags)
 
 	def sub(self, size, a, b, flags=None):
 		"""
@@ -837,7 +838,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SUB, a.index, b.index, size=size, flags=flags)
 
-	def sub_borrow(self, size, a, b, flags=None):
+	def sub_borrow(self, size, a, b, carry, flags=None):
 		"""
 		``sub_borrow`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -845,11 +846,12 @@ class LowLevelILFunction(object):
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
+		:param LowLevelILExpr carry: Carry flag expression
 		:param str flags: flags to set
-		:return: The expression ``sbc.<size>{<flags>}(a, b)``
+		:return: The expression ``sbb.<size>{<flags>}(a, b, carry)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_SBB, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_SBB, a.index, b.index, carry.index, size=size, flags=flags)
 
 	def and_expr(self, size, a, b, flags=None):
 		"""
@@ -949,7 +951,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROL, a.index, b.index, size=size, flags=flags)
 
-	def rotate_left_carry(self, size, a, b, flags=None):
+	def rotate_left_carry(self, size, a, b, carry, flags=None):
 		"""
 		``rotate_left_carry`` bitwise rotates left with carry expression ``a`` by expression ``b`` potentially setting
 		flags ``flags`` and returning an expression of ``size`` bytes.
@@ -957,11 +959,12 @@ class LowLevelILFunction(object):
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
+		:param LowLevelILExpr carry: Carry flag expression
 		:param str flags: optional, flags to set
-		:return: The expression ``rcl.<size>{<flags>}(a, b)``
+		:return: The expression ``rlc.<size>{<flags>}(a, b, carry)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_RLC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_RLC, a.index, b.index, carry.index, size=size, flags=flags)
 
 	def rotate_right(self, size, a, b, flags=None):
 		"""
@@ -977,7 +980,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROR, a.index, b.index, size=size, flags=flags)
 
-	def rotate_right_carry(self, size, a, b, flags=None):
+	def rotate_right_carry(self, size, a, b, carry, flags=None):
 		"""
 		``rotate_right_carry`` bitwise rotates right with carry expression ``a`` by expression ``b`` potentially setting
 		flags ``flags`` and returning an expression of ``size`` bytes.
@@ -985,11 +988,12 @@ class LowLevelILFunction(object):
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
+		:param LowLevelILExpr carry: Carry flag expression
 		:param str flags: optional, flags to set
-		:return: The expression ``rcr.<size>{<flags>}(a, b)``
+		:return: The expression ``rrc.<size>{<flags>}(a, b, carry)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_RRC, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_RRC, a.index, b.index, carry.index, size=size, flags=flags)
 
 	def mult(self, size, a, b, flags=None):
 		"""

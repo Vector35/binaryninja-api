@@ -2119,9 +2119,9 @@ namespace BinaryNinja
 		ExprId Flag(uint32_t reg);
 		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex);
 		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId AddCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId AddCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId Sub(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId SubBorrow(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId SubBorrow(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId And(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId Or(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId Xor(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
@@ -2129,9 +2129,9 @@ namespace BinaryNinja
 		ExprId LogicalShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId ArithShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId RotateLeft(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId RotateRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId Mult(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId MultDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId MultDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
@@ -2182,6 +2182,7 @@ namespace BinaryNinja
 
 		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
 		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
+		ExprId GetExprForFlagOrConstant(const BNRegisterOrConstant& operand);
 		ExprId GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
 			BNRegisterOrConstant* operands, size_t operandCount);
 

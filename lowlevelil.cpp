@@ -170,9 +170,9 @@ ExprId LowLevelILFunction::Add(size_t size, ExprId a, ExprId b, uint32_t flags)
 }
 
 
-ExprId LowLevelILFunction::AddCarry(size_t size, ExprId a, ExprId b, uint32_t flags)
+ExprId LowLevelILFunction::AddCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags)
 {
-	return AddExpr(LLIL_ADC, size, flags, a, b);
+	return AddExpr(LLIL_ADC, size, flags, a, b, carry);
 }
 
 
@@ -182,9 +182,9 @@ ExprId LowLevelILFunction::Sub(size_t size, ExprId a, ExprId b, uint32_t flags)
 }
 
 
-ExprId LowLevelILFunction::SubBorrow(size_t size, ExprId a, ExprId b, uint32_t flags)
+ExprId LowLevelILFunction::SubBorrow(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags)
 {
-	return AddExpr(LLIL_SBB, size, flags, a, b);
+	return AddExpr(LLIL_SBB, size, flags, a, b, carry);
 }
 
 
@@ -230,9 +230,9 @@ ExprId LowLevelILFunction::RotateLeft(size_t size, ExprId a, ExprId b, uint32_t 
 }
 
 
-ExprId LowLevelILFunction::RotateLeftCarry(size_t size, ExprId a, ExprId b, uint32_t flags)
+ExprId LowLevelILFunction::RotateLeftCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags)
 {
-	return AddExpr(LLIL_RLC, size, flags, a, b);
+	return AddExpr(LLIL_RLC, size, flags, a, b, carry);
 }
 
 
@@ -242,9 +242,9 @@ ExprId LowLevelILFunction::RotateRight(size_t size, ExprId a, ExprId b, uint32_t
 }
 
 
-ExprId LowLevelILFunction::RotateRightCarry(size_t size, ExprId a, ExprId b, uint32_t flags)
+ExprId LowLevelILFunction::RotateRightCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags)
 {
-	return AddExpr(LLIL_RRC, size, flags, a, b);
+	return AddExpr(LLIL_RRC, size, flags, a, b, carry);
 }
 
 
@@ -550,6 +550,14 @@ ExprId LowLevelILFunction::GetNegExprForRegisterOrConstant(const BNRegisterOrCon
 }
 
 
+ExprId LowLevelILFunction::GetExprForFlagOrConstant(const BNRegisterOrConstant& operand)
+{
+	if (operand.constant)
+		return AddExpr(LLIL_CONST, 0, 0, operand.value);
+	return AddExpr(LLIL_FLAG, 0, 0, operand.reg);
+}
+
+
 ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
 	BNRegisterOrConstant* operands, size_t operandCount)
 {
@@ -564,6 +572,11 @@ ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOpe
 	}
 	if (operandCount == 3)
 	{
+		if ((op == LLIL_ADC) || (op == LLIL_SBB) || (op == LLIL_RLC) || (op == LLIL_RRC))
+		{
+			return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
+				GetExprForRegisterOrConstant(operands[1], size), GetExprForFlagOrConstant(operands[2]));
+		}
 		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
 			GetExprForRegisterOrConstant(operands[1], size), GetExprForRegisterOrConstant(operands[2], size));
 	}

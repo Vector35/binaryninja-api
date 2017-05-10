@@ -2145,6 +2145,8 @@ class BinaryView(object):
 		"""
 		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
 
+		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
+
 		:param Symbol sym: the symbol to define
 		:rtype: None
 		"""
@@ -2153,6 +2155,8 @@ class BinaryView(object):
 	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None):
 		"""
 		``define_auto_symbol_and_var_or_function``
+
+		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
 		:param SymbolType sym_type: Type of symbol being defined
@@ -2179,6 +2183,8 @@ class BinaryView(object):
 	def define_user_symbol(self, sym):
 		"""
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
+
+		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
 		:rtype: None

@@ -279,6 +279,42 @@ bool Type::IsFloat() const
 }
 
 
+BNMemberScope Type::GetScope() const
+{
+	return BNTypeGetMemberScope(m_object);
+}
+
+
+void Type::SetScope(BNMemberScope scope)
+{
+	return BNTypeSetMemberScope(m_object, scope);
+}
+
+
+BNMemberAccess Type::GetAccess() const
+{
+	return BNTypeGetMemberAccess(m_object);
+}
+
+
+void Type::SetAccess(BNMemberAccess access)
+{
+	return BNTypeSetMemberAccess(m_object, access);
+}
+
+
+void Type::SetConst(bool cnst)
+{
+	BNTypeSetConst(m_object, cnst);
+}
+
+
+void Type::SetVolatile(bool vltl)
+{
+	BNTypeSetVolatile(m_object, vltl);
+}
+
+
 Ref<Type> Type::GetChildType() const
 {
 	BNType* type = BNGetChildType(m_object);
@@ -547,6 +583,12 @@ Ref<Type> Type::PointerType(Architecture* arch, Type* type, bool cnst, bool vltl
 }
 
 
+Ref<Type> Type::PointerType(size_t width, Type* type, bool cnst, bool vltl, BNReferenceType refType)
+{
+	return new Type(BNCreatePointerTypeOfWidth(width, type->GetObject(), cnst, vltl, refType));
+}
+
+
 Ref<Type> Type::ArrayType(Type* type, uint64_t elem)
 {
 	return new Type(BNCreateArrayType(type->GetObject(), elem));
@@ -605,6 +647,43 @@ string Type::GetAutoDemangledTypeIdSource()
 	string result = str;
 	BNFreeString(str);
 	return result;
+}
+
+
+string Type::GenerateAutoDebugTypeId(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* str = BNGenerateAutoDebugTypeId(&nameObj);
+	string result = str;
+	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
+	return result;
+}
+
+
+string Type::GetAutoDebugTypeIdSource()
+{
+	char* str = BNGetAutoDebugTypeIdSource();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+QualifiedName Type::GetTypeName() const
+{
+	BNQualifiedName name = BNTypeGetTypeName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+void Type::SetTypeName(const QualifiedName& names)
+{
+	BNQualifiedName nameObj = names.GetAPIObject();
+	BNTypeSetTypeName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -691,9 +770,23 @@ Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDemangledTypeReference(B
 }
 
 
+Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDebugTypeReference(BNNamedTypeReferenceClass cls,
+	const QualifiedName& name)
+{
+	string id = Type::GenerateAutoDebugTypeId(name);
+	return new NamedTypeReference(cls, id, name);
+}
+
+
 Structure::Structure()
 {
 	m_object = BNCreateStructure();
+}
+
+
+Structure::Structure(BNStructureType type, bool isUnion, bool packed)
+{
+	m_object = BNCreateStructureWithOptions(type, isUnion, packed);
 }
 
 
@@ -798,6 +891,12 @@ void Structure::ReplaceMember(size_t idx, Type* type, const std::string& name)
 Enumeration::Enumeration(BNEnumeration* e)
 {
 	m_object = e;
+}
+
+
+Enumeration::Enumeration()
+{
+	m_object = BNCreateEnumeration();
 }
 
 

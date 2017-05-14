@@ -407,6 +407,10 @@ namespace BinaryNinja
 	                const std::string& mangledName,
 	                Type** outType,
 	                QualifiedName& outVarName);
+	bool DemangleGNU3(Architecture* arch,
+	                  const std::string& mangledName,
+	                  Type** outType,
+	                  QualifiedName& outVarName);
 
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
@@ -1624,6 +1628,7 @@ namespace BinaryNinja
 		BNTypeClass GetClass() const;
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
+		QualifiedName GetTypeName() const;
 		bool IsSigned() const;
 		bool IsConst() const;
 		bool IsVolatile() const;
@@ -1636,6 +1641,13 @@ namespace BinaryNinja
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
+		BNMemberScope GetScope() const;
+		void SetScope(BNMemberScope scope);
+		BNMemberAccess GetAccess() const;
+		void SetAccess(BNMemberAccess access);
+		void SetConst(bool cnst);
+		void SetVolatile(bool vltl);
+		void SetTypeName(const QualifiedName& name);
 
 		uint64_t GetElementCount() const;
 
@@ -1664,6 +1676,8 @@ namespace BinaryNinja
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
+		static Ref<Type> PointerType(size_t width, Type* type, bool cnst = false, bool vltl = false,
+		                             BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
@@ -1671,6 +1685,8 @@ namespace BinaryNinja
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 		static std::string GetAutoDemangledTypeIdSource();
+		static std::string GenerateAutoDebugTypeId(const QualifiedName& name);
+		static std::string GetAutoDebugTypeIdSource();
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -1691,6 +1707,8 @@ namespace BinaryNinja
 			const std::string& source, const QualifiedName& name);
 		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
 			const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDebugTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
 	};
 
 	struct StructureMember
@@ -1705,6 +1723,7 @@ namespace BinaryNinja
 	public:
 		Structure();
 		Structure(BNStructure* s);
+		Structure(BNStructureType type, bool isUnion = false, bool packed = false);
 
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
@@ -1732,6 +1751,7 @@ namespace BinaryNinja
 	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
 	public:
+		Enumeration();
 		Enumeration(BNEnumeration* e);
 
 		std::vector<EnumerationMember> GetMembers() const;

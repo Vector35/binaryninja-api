@@ -457,7 +457,8 @@ extern "C"
 		NoScope,
 		StaticScope,
 		VirtualScope,
-		ThunkScope
+		ThunkScope,
+		FriendScope
 	};
 
 	enum BNMemberAccess
@@ -2097,6 +2098,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGenerateAutoDemangledTypeId(BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGetAutoPlatformTypeIdSource(BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetAutoDemangledTypeIdSource(void);
+	BINARYNINJACOREAPI char* BNGenerateAutoDebugTypeId(BNQualifiedName* name);
+	BINARYNINJACOREAPI char* BNGetAutoDebugTypeIdSource(void);
 
 	BINARYNINJACOREAPI void BNRegisterPlatformTypes(BNBinaryView* view, BNPlatform* platform);
 
@@ -2428,6 +2431,8 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNCreateEnumerationType(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
 	BINARYNINJACOREAPI BNType* BNCreatePointerType(BNArchitecture* arch, BNType* type, bool cnst, bool vltl,
 	                                               BNReferenceType refType);
+	BINARYNINJACOREAPI BNType* BNCreatePointerTypeOfWidth(size_t width, BNType* type, bool cnst, bool vltl,
+	                                               BNReferenceType refType);
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNType* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNType* returnValue, BNCallingConvention* callingConvention,
 	                                                BNNameAndType* params, size_t paramCount, bool varArg);
@@ -2436,6 +2441,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNFreeType(BNType* type);
 
+	BINARYNINJACOREAPI BNQualifiedName BNTypeGetTypeName(BNType* nt);
+	BINARYNINJACOREAPI void BNTypeSetTypeName(BNType* type, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeClass(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeWidth(BNType* type);
 	BINARYNINJACOREAPI size_t BNGetTypeAlignment(BNType* type);
@@ -2454,6 +2461,12 @@ extern "C"
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionCanReturn(BNType* type, bool canReturn);
+	BINARYNINJACOREAPI BNMemberScope BNTypeGetMemberScope(BNType* type);
+	BINARYNINJACOREAPI void BNTypeSetMemberScope(BNType* type, BNMemberScope scope);
+	BINARYNINJACOREAPI BNMemberAccess BNTypeGetMemberAccess(BNType* type);
+	BINARYNINJACOREAPI void BNTypeSetMemberAccess(BNType* type, BNMemberAccess access);
+	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, bool cnst);
+	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, bool vltl);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
@@ -2478,6 +2491,7 @@ extern "C"
 	BINARYNINJACOREAPI BNNamedTypeReference* BNNewNamedTypeReference(BNNamedTypeReference* nt);
 
 	BINARYNINJACOREAPI BNStructure* BNCreateStructure(void);
+	BINARYNINJACOREAPI BNStructure* BNCreateStructureWithOptions(BNStructureType type, bool isUnion, bool packed);
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
 

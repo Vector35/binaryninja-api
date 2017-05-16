@@ -1292,6 +1292,7 @@ extern "C"
 	{
 		int64_t value;
 		size_t size;
+		bool pointer, intermediate;
 	};
 
 	enum BNHighlightColorStyle

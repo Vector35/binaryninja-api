@@ -205,11 +205,15 @@ class Variable(object):
 
 
 class ConstantReference(object):
-	def __init__(self, val, size):
+	def __init__(self, val, size, ptr, intermediate):
 		self.value = val
 		self.size = size
+		self.pointer = ptr
+		self.intermediate = intermediate
 
 	def __repr__(self):
+		if self.pointer:
+			return "<constant pointer %#x>" % self.value
 		if self.size == 0:
 			return "<constant %#x>" % self.value
 		return "<constant %#x size %d>" % (self.value, self.size)
@@ -626,7 +630,7 @@ class Function(object):
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(ConstantReference(refs[i].value, refs[i].size))
+			result.append(ConstantReference(refs[i].value, refs[i].size, refs[i].pointer, refs[i].intermediate))
 		core.BNFreeConstantReferenceList(refs)
 		return result
 

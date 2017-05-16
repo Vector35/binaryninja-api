@@ -122,6 +122,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_POP: [],
 		LowLevelILOperation.LLIL_REG: [("src", "reg")],
 		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
+		LowLevelILOperation.LLIL_CONST_PTR: [("constant", "int")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
@@ -772,6 +773,17 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CONST, value, size=size)
+
+	def const_pointer(self, size, value):
+		"""
+		``const_pointer`` returns an expression for the constant pointer ``value`` with size ``size``
+
+		:param int size: the size of the pointer in bytes
+		:param int value: address referenced by pointer
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_CONST_PTR, value, size=size)
 
 	def flag(self, reg):
 		"""

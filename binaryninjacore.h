@@ -282,6 +282,7 @@ extern "C"
 		LLIL_POP, // Not valid in SSA form (expanded)
 		LLIL_REG, // Not valid in SSA form (see LLIL_REG_SSA)
 		LLIL_CONST,
+		LLIL_CONST_PTR,
 		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
 		LLIL_FLAG_BIT, // Not valid in SSA form (see LLIL_FLAG_BIT_SSA)
 		LLIL_ADD,
@@ -598,7 +599,8 @@ extern "C"
 		UnsignedDecimalDisplayType,
 		SignedHexadecimalDisplayType,
 		UnsignedHexadecimalDisplayType,
-		CharacterConstantDisplayType
+		CharacterConstantDisplayType,
+		PointerDisplayType
 	};
 
 	struct BNLowLevelILInstruction
@@ -638,6 +640,7 @@ extern "C"
 		UndeterminedValue,
 		EntryValue,
 		ConstantValue,
+		ConstantPointerValue,
 		StackFrameOffset,
 		ReturnAddressValue,
 
@@ -725,6 +728,7 @@ extern "C"
 		MLIL_ADDRESS_OF,
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
+		MLIL_CONST_PTR,
 		MLIL_ADD,
 		MLIL_ADC,
 		MLIL_SUB,

@@ -152,6 +152,12 @@ ExprId LowLevelILFunction::Const(size_t size, uint64_t val)
 }
 
 
+ExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t val)
+{
+	return AddExpr(LLIL_CONST_PTR, size, 0, val);
+}
+
+
 ExprId LowLevelILFunction::Flag(uint32_t reg)
 {
 	return AddExpr(LLIL_FLAG, 0, 0, reg);

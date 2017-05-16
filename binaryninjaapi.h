@@ -2136,6 +2136,7 @@ namespace BinaryNinja
 		ExprId Pop(size_t size);
 		ExprId Register(size_t size, uint32_t reg);
 		ExprId Const(size_t size, uint64_t val);
+		ExprId ConstPointer(size_t size, uint64_t val);
 		ExprId Flag(uint32_t reg);
 		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex);
 		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0);

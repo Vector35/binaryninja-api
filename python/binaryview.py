@@ -641,7 +641,7 @@ class BinaryView(object):
 	@classmethod
 	def set_default_session_data(cls, name, value):
 		"""
-		```set_default_session_data``` saves a variable to the BinaryView.
+		``set_default_session_data`` saves a variable to the BinaryView.
 		:param name: name of the variable to be saved
 		:param value: value of the variable to be saved
 
@@ -1329,7 +1329,7 @@ class BinaryView(object):
 
 	def perform_is_offset_executable(self, addr):
 		"""
-		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is executable.
+		``perform_is_offset_executable`` implements a check if a virtual address ``addr`` is executable.
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
 		data without overriding this method.
@@ -1410,7 +1410,7 @@ class BinaryView(object):
 
 	def create_database(self, filename, progress_func=None):
 		"""
-		``perform_get_database`` writes the current database (.bndb) file out to the specified file.
+		``create_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callable() progress_func: optional function to be called with the current progress and total count.
@@ -1851,7 +1851,7 @@ class BinaryView(object):
 
 	def define_user_data_var(self, addr, var_type):
 		"""
-		``define_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
+		``define_user_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
 		:param binaryninja.Type var_type: type to be defined at the given virtual address
@@ -1881,7 +1881,7 @@ class BinaryView(object):
 
 	def undefine_user_data_var(self, addr):
 		"""
-		``undefine_data_var`` removes the user data variable at the virtual address ``addr``.
+		``undefine_user_data_var`` removes the user data variable at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the data variable to be removed
 		:rtype: None

@@ -14,6 +14,10 @@ Once the license key is installed, you can change it, back it up, or otherwise i
 - Linux: `~/.binaryninja`
 - Windows: `%APPDATA%\Binary Ninja`
 
+## Linux Setup
+
+Because linux install locations can vary widely, we do not assume a Binary Ninja has been installed in any particular folder on linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.
+
 ## Loading Files
 
 You can load files in many ways:
@@ -185,6 +189,16 @@ By default the interactive python prompt has a number of convenient helper funct
 Note
 !!! Tip "Note"
     The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who with to implement their own bindings.
+
+## Using Plugins
+
+Plugins can be installed by one of two methods. First, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
+
+- OS X: `~/Library/Application Support/Binary Ninja/plugins/`
+- Linux: `~/.binaryninja/plugins/`
+- Windows: `%APPDATA%\Binary Ninja\plugins`
+
+Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
 
 ## Preferences/Updates
 

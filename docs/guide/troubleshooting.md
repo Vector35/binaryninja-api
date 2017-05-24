@@ -3,7 +3,7 @@
 ## Basics
 
  - Have you searched [known issues]?
- - Is your computer powered on?
+ - Have you tried rebooting? (Kidding!)
  - Did you read all the items on this page?
  - Then you should contact [support]!
 
@@ -12,6 +12,10 @@ Running Binary Ninja with debug logging will make your bug report more useful.
 ```
 ./binaryninja --debug --stderr-log
 ```
+
+## Plugin Troubleshooting
+
+While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most importat is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
 
 ## License Problems
 

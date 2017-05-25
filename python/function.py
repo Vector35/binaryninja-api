@@ -753,7 +753,7 @@ class Function(object):
 		:param int instr_addr:
 		:param int value:
 		:param int operand:
-		:param IntegerDisplayTypeEnum display_type:
+		:param enums.IntegerDisplayType display_type:
 		:param Architecture arch: (optional)
 		"""
 		if arch is None:

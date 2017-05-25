@@ -22,7 +22,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType
+from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType
 import callingconvention
 import function
 
@@ -646,9 +646,13 @@ class Structure(object):
 	def union(self):
 		return core.BNIsStructureUnion(self.handle)
 
-	@union.setter
-	def union(self, value):
-		core.BNSetStructureUnion(self.handle, value)
+	@property
+	def type(self):
+		return StructureType(core.BNGetStructureType(self.handle))
+
+	@type.setter
+	def type(self, value):
+		core.BNSetStructureType(self.handle, value)
 
 	def __setattr__(self, name, value):
 		try:

@@ -784,9 +784,9 @@ Structure::Structure()
 }
 
 
-Structure::Structure(BNStructureType type, bool isUnion, bool packed)
+Structure::Structure(BNStructureType type, bool packed)
 {
-	m_object = BNCreateStructureWithOptions(type, isUnion, packed);
+	m_object = BNCreateStructureWithOptions(type, packed);
 }
 
 
@@ -858,9 +858,15 @@ bool Structure::IsUnion() const
 }
 
 
-void Structure::SetUnion(bool u)
+void Structure::SetStructureType(BNStructureType t)
 {
-	BNSetStructureUnion(m_object, u);
+	BNSetStructureType(m_object, t);
+}
+
+
+BNStructureType Structure::GetStructureType() const
+{
+	return BNGetStructureType(m_object);
 }
 
 

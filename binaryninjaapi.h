@@ -1723,7 +1723,7 @@ namespace BinaryNinja
 	public:
 		Structure();
 		Structure(BNStructure* s);
-		Structure(BNStructureType type, bool isUnion = false, bool packed = false);
+		Structure(BNStructureType type, bool packed = false);
 
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
@@ -1733,8 +1733,8 @@ namespace BinaryNinja
 		bool IsPacked() const;
 		void SetPacked(bool packed);
 		bool IsUnion() const;
-		void SetUnion(bool u);
-
+		void SetStructureType(BNStructureType type);
+		BNStructureType GetStructureType() const;
 		void AddMember(Type* type, const std::string& name);
 		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
 		void RemoveMember(size_t idx);

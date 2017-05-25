@@ -2496,7 +2496,7 @@ extern "C"
 	BINARYNINJACOREAPI BNNamedTypeReference* BNNewNamedTypeReference(BNNamedTypeReference* nt);
 
 	BINARYNINJACOREAPI BNStructure* BNCreateStructure(void);
-	BINARYNINJACOREAPI BNStructure* BNCreateStructureWithOptions(BNStructureType type, bool isUnion, bool packed);
+	BINARYNINJACOREAPI BNStructure* BNCreateStructureWithOptions(BNStructureType type, bool packed);
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
 
@@ -2509,7 +2509,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsStructurePacked(BNStructure* s);
 	BINARYNINJACOREAPI void BNSetStructurePacked(BNStructure* s, bool packed);
 	BINARYNINJACOREAPI bool BNIsStructureUnion(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructureUnion(BNStructure* s, bool u);
+	BINARYNINJACOREAPI void BNSetStructureType(BNStructure* s, BNStructureType type);
+	BINARYNINJACOREAPI BNStructureType BNGetStructureType(BNStructure* s);
 
 	BINARYNINJACOREAPI void BNAddStructureMember(BNStructure* s, BNType* type, const char* name);
 	BINARYNINJACOREAPI void BNAddStructureMemberAtOffset(BNStructure* s, BNType* type, const char* name, uint64_t offset);

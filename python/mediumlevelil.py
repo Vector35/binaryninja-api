@@ -138,7 +138,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "expr"), ("low", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "ssa_var"), ("low", "ssa_var"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")],
@@ -154,7 +154,8 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		MediumLevelILOperation.MLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
-		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
+		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")],
+		MediumLevelILOperation.MLIL_ADD_OVERFLOW: [("params", "expr_list")],
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):

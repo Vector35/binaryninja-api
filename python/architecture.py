@@ -1128,13 +1128,12 @@ class Architecture(object):
 		result.length = info.length
 		result.branch_delay = info.branchDelay
 		for i in xrange(0, info.branchCount):
-			branch_type = BranchType(info.branchType[i]).name
 			target = info.branchTarget[i]
 			if info.branchArch[i]:
 				arch = Architecture(info.branchArch[i])
 			else:
 				arch = None
-			result.add_branch(branch_type, target, arch)
+			result.add_branch(BranchType(info.branchType[i]), target, arch)
 		return result
 
 	def get_instruction_text(self, data, addr):

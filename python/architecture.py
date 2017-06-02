@@ -128,7 +128,7 @@ class Architecture(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNArchitecture)
 			self.__dict__["name"] = core.BNGetArchitectureName(self.handle)
-			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle)).name
+			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle))
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
 			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
@@ -146,7 +146,7 @@ class Architecture(object):
 				info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 				full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
 				self.regs[name] = function.RegisterInfo(full_width_reg, info.size, info.offset,
-					ImplicitRegisterExtend(info.extend).name, regs[i])
+					ImplicitRegisterExtend(info.extend), regs[i])
 			core.BNFreeRegisterList(regs)
 
 			count = ctypes.c_ulonglong()

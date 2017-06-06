@@ -129,6 +129,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_SYSCALL: [("output", "var_list"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [("output", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_BP: [],

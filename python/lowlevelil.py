@@ -175,6 +175,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
+		LowLevelILOperation.LLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL: [],
 		LowLevelILOperation.LLIL_BP: [],
 		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],

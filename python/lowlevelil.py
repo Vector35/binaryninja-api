@@ -57,6 +57,9 @@ class ILRegister(object):
 	def __repr__(self):
 		return self.name
 
+	def __eq__(self, other):
+		return self.info == other.info
+
 
 class ILFlag(object):
 	def __init__(self, arch, flag):

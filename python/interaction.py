@@ -191,7 +191,7 @@ class DirectoryNameField(object):
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = DirectoryNameField
+		value.type = FormInputFieldType.DirectoryNameFormField
 		value.prompt = self.prompt
 		value.defaultName = self.default_name
 
@@ -360,7 +360,7 @@ class InteractionHandler(object):
 					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext))
 				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
 					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName))
-				elif fields[i].type == DirectoryNameField:
+				elif fields[i].type == FormInputFieldType.DirectoryNameFormField:
 					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName))
 				else:
 					field_objs.append(LabelField(fields[i].prompt))

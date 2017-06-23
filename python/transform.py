@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -130,6 +130,16 @@ class Transform(object):
 
 	def __repr__(self):
 		return "<transform: %s>" % self.name
+
+	def __eq__(self, value):
+		if not isinstance(value, Transform):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Transform):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	def _get_parameters(self, ctxt, count):
 		try:

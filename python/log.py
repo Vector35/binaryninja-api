@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -23,9 +23,17 @@
 import _binaryninjacore as core
 
 
+_output_to_log = False
+
+
 def redirect_output_to_log():
 	global _output_to_log
 	_output_to_log = True
+
+
+def is_output_redirected_to_log():
+	global _output_to_log
+	return _output_to_log
 
 
 def log(level, text):

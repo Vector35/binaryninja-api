@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -129,6 +129,24 @@ void BinaryDataNotification::StringRemovedCallback(void* ctxt, BNBinaryView* obj
 }
 
 
+void BinaryDataNotification::TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+	notify->OnTypeDefined(view, QualifiedName::FromAPIObject(name), typeObj);
+}
+
+
+void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+	notify->OnTypeUndefined(view, QualifiedName::FromAPIObject(name), typeObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -143,6 +161,8 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
+	m_callbacks.typeDefined = TypeDefinedCallback;
+	m_callbacks.typeUndefined = TypeUndefinedCallback;
 }
 
 
@@ -1366,6 +1386,8 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 			token.value = lines[i].contents.tokens[j].value;
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
+			token.context = lines[i].contents.tokens[j].context;
+			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}
 		result.push_back(line);
@@ -1409,6 +1431,8 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 			token.value = lines[i].contents.tokens[j].value;
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
+			token.context = lines[i].contents.tokens[j].context;
+			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}
 		result.push_back(line);
@@ -1423,9 +1447,9 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 }
 
 
-bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string& errors)
+bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& result, string& errors)
 {
-	BNNameAndType nt;
+	BNQualifiedNameAndType nt;
 	char* errorStr;
 
 	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr))
@@ -1435,64 +1459,127 @@ bool BinaryView::ParseTypeString(const string& text, NameAndType& result, string
 		return false;
 	}
 
-	result.name = nt.name;
-	result.type = new Type(nt.type);
+	result.name = QualifiedName::FromAPIObject(&nt.name);
+	result.type = new Type(BNNewTypeReference(nt.type));
 	errors = "";
-	BNFreeString(nt.name);
+	BNFreeQualifiedNameAndType(&nt);
 	return true;
 }
 
 
-map<string, Ref<Type>> BinaryView::GetTypes()
+map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 {
 	size_t count;
-	BNNameAndType* types = BNGetAnalysisTypeList(m_object, &count);
+	BNQualifiedNameAndType* types = BNGetAnalysisTypeList(m_object, &count);
 
-	map<string, Ref<Type>> result;
+	map<QualifiedName, Ref<Type>> result;
 	for (size_t i = 0; i < count; i++)
-		result[types[i].name] = new Type(BNNewTypeReference(types[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
+		result[name] = new Type(BNNewTypeReference(types[i].type));
+	}
 
 	BNFreeTypeList(types, count);
 	return result;
 }
 
 
-Ref<Type> BinaryView::GetTypeByName(const string& name)
+Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 {
-	BNType* type = BNGetAnalysisTypeByName(m_object, name.c_str());
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNType* type = BNGetAnalysisTypeByName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+
 	if (!type)
 		return nullptr;
 	return new Type(type);
 }
 
 
-bool BinaryView::IsTypeAutoDefined(const std::string& name)
+Ref<Type> BinaryView::GetTypeById(const string& id)
 {
-	return BNIsAnalysisTypeAutoDefined(m_object, name.c_str());
+	BNType* type = BNGetAnalysisTypeById(m_object, id.c_str());
+	if (!type)
+		return nullptr;
+	return new Type(type);
 }
 
 
-void BinaryView::DefineType(const std::string& name, Ref<Type> type)
+QualifiedName BinaryView::GetTypeNameById(const string& id)
 {
-	BNDefineAnalysisType(m_object, name.c_str(), type->GetObject());
+	BNQualifiedName name = BNGetAnalysisTypeNameById(m_object, id.c_str());
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
 }
 
 
-void BinaryView::DefineUserType(const std::string& name, Ref<Type> type)
+string BinaryView::GetTypeId(const QualifiedName& name)
 {
-	BNDefineUserAnalysisType(m_object, name.c_str(), type->GetObject());
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* id = BNGetAnalysisTypeId(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	string result = id;
+	BNFreeString(id);
+	return result;
 }
 
 
-void BinaryView::UndefineType(const std::string& name)
+bool BinaryView::IsTypeAutoDefined(const QualifiedName& name)
 {
-	BNUndefineAnalysisType(m_object, name.c_str());
+	BNQualifiedName nameObj = name.GetAPIObject();
+	bool result = BNIsAnalysisTypeAutoDefined(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	return result;
 }
 
 
-void BinaryView::UndefineUserType(const std::string& name)
+QualifiedName BinaryView::DefineType(const string& id, const QualifiedName& defaultName, Ref<Type> type)
 {
-	BNUndefineUserAnalysisType(m_object, name.c_str());
+	BNQualifiedName nameObj = defaultName.GetAPIObject();
+	BNQualifiedName regName = BNDefineAnalysisType(m_object, id.c_str(), &nameObj, type->GetObject());
+	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName result = QualifiedName::FromAPIObject(&regName);
+	BNFreeQualifiedName(&regName);
+	return result;
+}
+
+
+void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNDefineUserAnalysisType(m_object, &nameObj, type->GetObject());
+	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+void BinaryView::UndefineType(const string& id)
+{
+	BNUndefineAnalysisType(m_object, id.c_str());
+}
+
+
+void BinaryView::UndefineUserType(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNUndefineUserAnalysisType(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& newName)
+{
+	BNQualifiedName oldNameObj = oldName.GetAPIObject();
+	BNQualifiedName newNameObj = newName.GetAPIObject();
+	BNRenameAnalysisType(m_object, &oldNameObj, &newNameObj);
+	QualifiedName::FreeAPIObject(&oldNameObj);
+	QualifiedName::FreeAPIObject(&newNameObj);
+}
+
+
+void BinaryView::RegisterPlatformTypes(Platform* platform)
+{
+	BNRegisterPlatformTypes(m_object, platform->GetObject());
 }
 
 
@@ -1601,6 +1688,12 @@ bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 	result.dataLength = segment.dataLength;
 	result.flags = segment.flags;
 	return true;
+}
+
+
+bool BinaryView::GetAddressForDataOffset(uint64_t offset, uint64_t& addr)
+{
+	return BNGetAddressForDataOffset(m_object, offset, &addr);
 }
 
 

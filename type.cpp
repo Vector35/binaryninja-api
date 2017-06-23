@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,219 @@
 
 using namespace BinaryNinja;
 using namespace std;
+
+
+QualifiedName::QualifiedName()
+{
+}
+
+
+QualifiedName::QualifiedName(const string& name)
+{
+	m_name.push_back(name);
+}
+
+
+QualifiedName::QualifiedName(const vector<string>& name): m_name(name)
+{
+}
+
+
+QualifiedName::QualifiedName(const QualifiedName& name): m_name(name.m_name)
+{
+}
+
+
+QualifiedName& QualifiedName::operator=(const string& name)
+{
+	m_name = vector<string>{name};
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const vector<string>& name)
+{
+	m_name = name;
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const QualifiedName& name)
+{
+	m_name = name.m_name;
+	return *this;
+}
+
+
+bool QualifiedName::operator==(const QualifiedName& other) const
+{
+	return m_name == other.m_name;
+}
+
+
+bool QualifiedName::operator!=(const QualifiedName& other) const
+{
+	return m_name != other.m_name;
+}
+
+
+bool QualifiedName::operator<(const QualifiedName& other) const
+{
+	return m_name < other.m_name;
+}
+
+
+QualifiedName QualifiedName::operator+(const QualifiedName& other) const
+{
+	QualifiedName result(*this);
+	result.m_name.insert(result.m_name.end(), other.m_name.begin(), other.m_name.end());
+	return result;
+}
+
+
+string& QualifiedName::operator[](size_t i)
+{
+	return m_name[i];
+}
+
+
+const string& QualifiedName::operator[](size_t i) const
+{
+	return m_name[i];
+}
+
+
+vector<string>::iterator QualifiedName::begin()
+{
+	return m_name.begin();
+}
+
+
+vector<string>::iterator QualifiedName::end()
+{
+	return m_name.end();
+}
+
+
+vector<string>::const_iterator QualifiedName::begin() const
+{
+	return m_name.begin();
+}
+
+
+vector<string>::const_iterator QualifiedName::end() const
+{
+	return m_name.end();
+}
+
+
+string& QualifiedName::front()
+{
+	return m_name.front();
+}
+
+
+const string& QualifiedName::front() const
+{
+	return m_name.front();
+}
+
+
+string& QualifiedName::back()
+{
+	return m_name.back();
+}
+
+
+const string& QualifiedName::back() const
+{
+	return m_name.back();
+}
+
+
+void QualifiedName::insert(vector<string>::iterator loc, const string& name)
+{
+	m_name.insert(loc, name);
+}
+
+
+void QualifiedName::insert(vector<string>::iterator loc, vector<string>::iterator b, vector<string>::iterator e)
+{
+	m_name.insert(loc, b, e);
+}
+
+
+void QualifiedName::erase(vector<string>::iterator i)
+{
+	m_name.erase(i);
+}
+
+
+void QualifiedName::clear()
+{
+	m_name.clear();
+}
+
+
+void QualifiedName::push_back(const string& name)
+{
+	m_name.push_back(name);
+}
+
+
+size_t QualifiedName::size() const
+{
+	return m_name.size();
+}
+
+
+string QualifiedName::GetString() const
+{
+	bool first = true;
+	string out;
+	for (auto &name : m_name)
+	{
+		if (!first)
+		{
+			out += "::" + name;
+		}
+		else
+		{
+			out += name;
+		}
+		if (name.length() != 0)
+			first = false;
+	}
+	return out;
+}
+
+
+BNQualifiedName QualifiedName::GetAPIObject() const
+{
+	BNQualifiedName result;
+	result.nameCount = m_name.size();
+	result.name = new char*[m_name.size()];
+	for (size_t i = 0; i < m_name.size(); i++)
+		result.name[i] = BNAllocString(m_name[i].c_str());
+	return result;
+}
+
+
+void QualifiedName::FreeAPIObject(BNQualifiedName* name)
+{
+	for (size_t i = 0; i < name->nameCount; i++)
+		BNFreeString(name->name[i]);
+	delete[] name->name;
+}
+
+
+QualifiedName QualifiedName::FromAPIObject(BNQualifiedName* name)
+{
+	QualifiedName result;
+	for (size_t i = 0; i < name->nameCount; i++)
+		result.push_back(name->name[i]);
+	return result;
+}
 
 
 Type::Type(BNType* type)
@@ -63,6 +276,42 @@ bool Type::IsConst() const
 bool Type::IsFloat() const
 {
 	return BNIsTypeFloatingPoint(m_object);
+}
+
+
+BNMemberScope Type::GetScope() const
+{
+	return BNTypeGetMemberScope(m_object);
+}
+
+
+void Type::SetScope(BNMemberScope scope)
+{
+	return BNTypeSetMemberScope(m_object, scope);
+}
+
+
+BNMemberAccess Type::GetAccess() const
+{
+	return BNTypeGetMemberAccess(m_object);
+}
+
+
+void Type::SetAccess(BNMemberAccess access)
+{
+	return BNTypeSetMemberAccess(m_object, access);
+}
+
+
+void Type::SetConst(bool cnst)
+{
+	BNTypeSetConst(m_object, cnst);
+}
+
+
+void Type::SetVolatile(bool vltl)
+{
+	BNTypeSetVolatile(m_object, vltl);
 }
 
 
@@ -133,30 +382,18 @@ Ref<Enumeration> Type::GetEnumeration() const
 }
 
 
-uint64_t Type::GetElementCount() const
+Ref<NamedTypeReference> Type::GetNamedTypeReference() const
 {
-	return BNGetTypeElementCount(m_object);
+	BNNamedTypeReference* ref = BNGetTypeNamedTypeReference(m_object);
+	if (ref)
+		return new NamedTypeReference(ref);
+	return nullptr;
 }
 
 
-string Type::GetQualifiedName(const vector<string>& names)
+uint64_t Type::GetElementCount() const
 {
-	bool first = true;
-	string out;
-	for (auto &name : names)
-	{
-		if (!first)
-		{
-			out += "::" + name;
-		}
-		else
-		{
-			out += name;
-		}
-		if (name.length() != 0)
-			first = false;
-	}
-	return out;
+	return BNGetTypeElementCount(m_object);
 }
 
 
@@ -169,15 +406,11 @@ string Type::GetString() const
 }
 
 
-string Type::GetTypeAndName(const vector<string>& nameList) const
+string Type::GetTypeAndName(const QualifiedName& nameList) const
 {
-	const char ** str = new const char*[nameList.size()];
-	for (size_t i = 0; i < nameList.size(); i++)
-	{
-		str[i] = nameList[i].c_str();
-	}
-	char* outName = BNGetTypeAndName(m_object, str, nameList.size());
-	delete [] str;
+	BNQualifiedName name = nameList.GetAPIObject();
+	char* outName = BNGetTypeAndName(m_object, &name);
+	QualifiedName::FreeAPIObject(&name);
 	return outName;
 }
 
@@ -195,6 +428,78 @@ string Type::GetStringAfterName() const
 	char* str = BNGetTypeStringAfterName(m_object);
 	string result = str;
 	BNFreeString(str);
+	return result;
+}
+
+
+vector<InstructionTextToken> Type::GetTokens() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokens(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
+	return result;
+}
+
+
+vector<InstructionTextToken> Type::GetTokensBeforeName() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokensBeforeName(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
+	return result;
+}
+
+
+vector<InstructionTextToken> Type::GetTokensAfterName() const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeTokensAfterName(m_object, &count);
+
+	vector<InstructionTextToken> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		InstructionTextToken token;
+		token.type = tokens[i].type;
+		token.text = tokens[i].text;
+		token.value = tokens[i].value;
+		token.size = tokens[i].size;
+		token.operand = tokens[i].operand;
+		token.context = tokens[i].context;
+		token.address = tokens[i].address;
+		result.push_back(token);
+	}
+
+	BNFreeTokenList(tokens, count);
 	return result;
 }
 
@@ -235,9 +540,34 @@ Ref<Type> Type::StructureType(Structure* strct)
 }
 
 
-Ref<Type> Type::UnknownNamedType(UnknownType* unknwn)
+Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align)
 {
-	return new Type(BNCreateUnknownNamedType(unknwn->GetObject()));
+	return new Type(BNCreateNamedTypeReference(ref->GetObject(), width, align));
+}
+
+
+Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
+{
+	return NamedType("", name, type);
+}
+
+
+Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* type)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	Type* result = new Type(BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj,
+		type ? type->GetObject() : nullptr));
+	QualifiedName::FreeAPIObject(&nameObj);
+	return result;
+}
+
+
+Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	Type* result = new Type(BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj));
+	QualifiedName::FreeAPIObject(&nameObj);
+	return result;
 }
 
 
@@ -250,6 +580,12 @@ Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t wid
 Ref<Type> Type::PointerType(Architecture* arch, Type* type, bool cnst, bool vltl, BNReferenceType refType)
 {
 	return new Type(BNCreatePointerType(arch->GetObject(), type->GetObject(), cnst, vltl, refType));
+}
+
+
+Ref<Type> Type::PointerType(size_t width, Type* type, bool cnst, bool vltl, BNReferenceType refType)
+{
+	return new Type(BNCreatePointerTypeOfWidth(width, type->GetObject(), cnst, vltl, refType));
 }
 
 
@@ -283,76 +619,180 @@ void Type::SetFunctionCanReturn(bool canReturn)
 }
 
 
-UnknownType::UnknownType(BNUnknownType* ut, vector<string> names)
+string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
-	m_object = ut;
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetUnknownTypeName(ut, nameList, names.size());
-	delete [] nameList;
-}
-
-
-void UnknownType::SetName(const vector<string>& names)
-{
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetUnknownTypeName(m_object, nameList, names.size());
-	delete [] nameList;
-}
-
-
-vector<string> UnknownType::GetName() const
-{
-	size_t size;
-	char** name = BNGetUnknownTypeName(m_object, &size);
-	vector<string> result;
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* str = BNGenerateAutoTypeId(source.c_str(), &nameObj);
+	string result = str;
+	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
 	return result;
+}
+
+
+string Type::GenerateAutoDemangledTypeId(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* str = BNGenerateAutoDemangledTypeId(&nameObj);
+	string result = str;
+	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
+	return result;
+}
+
+
+string Type::GetAutoDemangledTypeIdSource()
+{
+	char* str = BNGetAutoDemangledTypeIdSource();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string Type::GenerateAutoDebugTypeId(const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	char* str = BNGenerateAutoDebugTypeId(&nameObj);
+	string result = str;
+	QualifiedName::FreeAPIObject(&nameObj);
+	BNFreeString(str);
+	return result;
+}
+
+
+string Type::GetAutoDebugTypeIdSource()
+{
+	char* str = BNGetAutoDebugTypeIdSource();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+QualifiedName Type::GetTypeName() const
+{
+	BNQualifiedName name = BNTypeGetTypeName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+void Type::SetTypeName(const QualifiedName& names)
+{
+	BNQualifiedName nameObj = names.GetAPIObject();
+	BNTypeSetTypeName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
+{
+	m_object = nt;
+}
+
+
+NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const string& id, const QualifiedName& names)
+{
+	m_object = BNCreateNamedType();
+	BNSetTypeReferenceClass(m_object, cls);
+	if (id.size() != 0)
+	{
+		BNSetTypeReferenceId(m_object, id.c_str());
+	}
+	if (names.size() != 0)
+	{
+		BNQualifiedName nameObj = names.GetAPIObject();
+		BNSetTypeReferenceName(m_object, &nameObj);
+		QualifiedName::FreeAPIObject(&nameObj);
+	}
+}
+
+
+void NamedTypeReference::SetTypeClass(BNNamedTypeReferenceClass cls)
+{
+	BNSetTypeReferenceClass(m_object, cls);
+}
+
+
+BNNamedTypeReferenceClass NamedTypeReference::GetTypeClass() const
+{
+	return BNGetTypeReferenceClass(m_object);
+}
+
+
+string NamedTypeReference::GetTypeId() const
+{
+	char* str = BNGetTypeReferenceId(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+void NamedTypeReference::SetTypeId(const string& id)
+{
+	BNSetTypeReferenceId(m_object, id.c_str());
+}
+
+
+void NamedTypeReference::SetName(const QualifiedName& names)
+{
+	BNQualifiedName nameObj = names.GetAPIObject();
+	BNSetTypeReferenceName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+QualifiedName NamedTypeReference::GetName() const
+{
+	BNQualifiedName name = BNGetTypeReferenceName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+Ref<NamedTypeReference> NamedTypeReference::GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
+	const string& source, const QualifiedName& name)
+{
+	string id = Type::GenerateAutoTypeId(source, name);
+	return new NamedTypeReference(cls, id, name);
+}
+
+
+Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
+	const QualifiedName& name)
+{
+	string id = Type::GenerateAutoDemangledTypeId(name);
+	return new NamedTypeReference(cls, id, name);
+}
+
+
+Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDebugTypeReference(BNNamedTypeReferenceClass cls,
+	const QualifiedName& name)
+{
+	string id = Type::GenerateAutoDebugTypeId(name);
+	return new NamedTypeReference(cls, id, name);
+}
+
+
+Structure::Structure()
+{
+	m_object = BNCreateStructure();
+}
+
+
+Structure::Structure(BNStructureType type, bool packed)
+{
+	m_object = BNCreateStructureWithOptions(type, packed);
 }
 
 
 Structure::Structure(BNStructure* s)
 {
 	m_object = s;
-}
-
-
-vector<string> Structure::GetName() const
-{
-	size_t size;
-	char** name = BNGetStructureName(m_object, &size);
-	vector<string> result;
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
-	return result;
-}
-
-
-void Structure::SetName(const vector<string>& names)
-{
-	const char ** nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetStructureName(m_object, nameList, names.size());
-	delete [] nameList;
 }
 
 
@@ -382,9 +822,21 @@ uint64_t Structure::GetWidth() const
 }
 
 
+void Structure::SetWidth(size_t width)
+{
+	BNSetStructureWidth(m_object, width);
+}
+
+
 size_t Structure::GetAlignment() const
 {
 	return BNGetStructureAlignment(m_object);
+}
+
+
+void Structure::SetAlignment(size_t align)
+{
+	BNSetStructureAlignment(m_object, align);
 }
 
 
@@ -406,9 +858,15 @@ bool Structure::IsUnion() const
 }
 
 
-void Structure::SetUnion(bool u)
+void Structure::SetStructureType(BNStructureType t)
 {
-	BNSetStructureUnion(m_object, u);
+	BNSetStructureType(m_object, t);
+}
+
+
+BNStructureType Structure::GetStructureType() const
+{
+	return BNGetStructureType(m_object);
 }
 
 
@@ -430,35 +888,21 @@ void Structure::RemoveMember(size_t idx)
 }
 
 
+void Structure::ReplaceMember(size_t idx, Type* type, const std::string& name)
+{
+	BNReplaceStructureMember(m_object, idx, type->GetObject(), name.c_str());
+}
+
+
 Enumeration::Enumeration(BNEnumeration* e)
 {
 	m_object = e;
 }
 
 
-vector<string> Enumeration::GetName() const
+Enumeration::Enumeration()
 {
-	vector<string> result;
-	size_t size;
-	char** name = BNGetEnumerationName(m_object, &size);
-	for (size_t i = 0; i < size; i++)
-	{
-		result.push_back(name[i]);
-		BNFreeString(name[i]);
-	}
-	delete [] name;
-	return result;
-}
-
-void Enumeration::SetName(const vector<string>& names)
-{
-	const char **const nameList = new const char*[names.size()];
-	for (size_t i = 0; i < names.size(); i++)
-	{
-		nameList[i] = names[i].c_str();
-	}
-	BNSetEnumerationName(m_object, nameList, names.size());
-	delete [] nameList;
+	m_object = BNCreateEnumeration();
 }
 
 
@@ -491,6 +935,18 @@ void Enumeration::AddMember(const string& name)
 void Enumeration::AddMemberWithValue(const string& name, uint64_t value)
 {
 	BNAddEnumerationMemberWithValue(m_object, name.c_str(), value);
+}
+
+
+void Enumeration::RemoveMember(size_t idx)
+{
+	BNRemoveEnumerationMember(m_object, idx);
+}
+
+
+void Enumeration::ReplaceMember(size_t idx, const string& name, uint64_t value)
+{
+	BNReplaceEnumerationMember(m_object, idx, name.c_str(), value);
 }
 
 

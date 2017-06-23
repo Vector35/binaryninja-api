@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -48,8 +48,8 @@ def demangle_ms(arch, mangled_name):
 
 	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
 	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
-	:return: returns a Type object for the mangled name
-	:rtype: Type
+	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
+	:rtype: Tuple
 	:Example:
 
 		>>> demangle_ms(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")

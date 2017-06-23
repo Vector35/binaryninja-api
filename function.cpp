@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,73 @@
 
 using namespace BinaryNinja;
 using namespace std;
+
+
+Variable::Variable()
+{
+	type = RegisterVariableSourceType;
+	index = 0;
+	storage = 0;
+}
+
+
+Variable::Variable(BNVariableSourceType t, uint32_t i, uint64_t s)
+{
+	type = t;
+	index = i;
+	storage = s;
+}
+
+
+Variable::Variable(const BNVariable& var)
+{
+	type = var.type;
+	index = var.index;
+	storage = var.storage;
+}
+
+
+Variable& Variable::operator=(const Variable& var)
+{
+	type = var.type;
+	index = var.index;
+	storage = var.storage;
+	return *this;
+}
+
+
+bool Variable::operator==(const Variable& var) const
+{
+	if (type != var.type)
+		return false;
+	if (index != var.index)
+		return false;
+	return storage == var.storage;
+}
+
+
+bool Variable::operator!=(const Variable& var) const
+{
+	return !((*this) == var);
+}
+
+
+bool Variable::operator<(const Variable& var) const
+{
+	return ToIdentifier() < var.ToIdentifier();
+}
+
+
+uint64_t Variable::ToIdentifier() const
+{
+	return BNToVariableIdentifier(this);
+}
+
+
+Variable Variable::FromIdentifier(uint64_t id)
+{
+	return BNFromVariableIdentifier(id);
+}
 
 
 Function::Function(BNFunction* func)
@@ -161,23 +228,28 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 	vector<size_t> result;
 	result.insert(result.end(), exits, &exits[count]);
 
-	BNFreeLowLevelILInstructionList(exits);
+	BNFreeILInstructionList(exits);
 	return result;
 }
 
 
-static RegisterValue GetRegisterValueFromAPIObject(BNRegisterValue& value)
+RegisterValue RegisterValue::FromAPIObject(BNRegisterValue& value)
 {
 	RegisterValue result;
 	result.state = value.state;
-	result.reg = value.reg;
 	result.value = value.value;
-	result.rangeStart = value.rangeStart;
-	result.rangeEnd = value.rangeEnd;
-	result.rangeStep = value.rangeStep;
+	return result;
+}
+
+
+PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
+{
+	PossibleValueSet result;
+	result.state = value.state;
+	result.value = value.value;
 	if (value.state == LookupTableValue)
 	{
-		for (size_t i = 0; i < (size_t)value.rangeEnd; i++)
+		for (size_t i = 0; i < value.count; i++)
 		{
 			LookupTableEntry entry;
 			entry.fromValues.insert(entry.fromValues.end(), &value.table[i].fromValues[0],
@@ -186,7 +258,17 @@ static RegisterValue GetRegisterValueFromAPIObject(BNRegisterValue& value)
 			result.table.push_back(entry);
 		}
 	}
-	BNFreeRegisterValue(&value);
+	else if ((value.state == SignedRangeValue) || (value.state == UnsignedRangeValue))
+	{
+		for (size_t i = 0; i < value.count; i++)
+			result.ranges.push_back(value.ranges[i]);
+	}
+	else if ((value.state == InSetOfValues) || (value.state == NotInSetOfValues))
+	{
+		for (size_t i = 0; i < value.count; i++)
+			result.valueSet.insert(value.valueSet[i]);
+	}
+	BNFreePossibleValueSet(&value);
 	return result;
 }
 
@@ -194,56 +276,28 @@ static RegisterValue GetRegisterValueFromAPIObject(BNRegisterValue& value)
 RegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
 	BNRegisterValue value = BNGetRegisterValueAtInstruction(m_object, arch->GetObject(), addr, reg);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
 RegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
 	BNRegisterValue value = BNGetRegisterValueAfterInstruction(m_object, arch->GetObject(), addr, reg);
-	return GetRegisterValueFromAPIObject(value);
-}
-
-
-RegisterValue Function::GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg)
-{
-	BNRegisterValue value = BNGetRegisterValueAtLowLevelILInstruction(m_object, i, reg);
-	return GetRegisterValueFromAPIObject(value);
-}
-
-
-RegisterValue Function::GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg)
-{
-	BNRegisterValue value = BNGetRegisterValueAfterLowLevelILInstruction(m_object, i, reg);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
 RegisterValue Function::GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
 {
 	BNRegisterValue value = BNGetStackContentsAtInstruction(m_object, arch->GetObject(), addr, offset, size);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
 RegisterValue Function::GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
 {
 	BNRegisterValue value = BNGetStackContentsAfterInstruction(m_object, arch->GetObject(), addr, offset, size);
-	return GetRegisterValueFromAPIObject(value);
-}
-
-
-RegisterValue Function::GetStackContentsAtLowLevelILInstruction(size_t i, int64_t offset, size_t size)
-{
-	BNRegisterValue value = BNGetStackContentsAtLowLevelILInstruction(m_object, i, offset, size);
-	return GetRegisterValueFromAPIObject(value);
-}
-
-
-RegisterValue Function::GetStackContentsAfterLowLevelILInstruction(size_t i, int64_t offset, size_t size)
-{
-	BNRegisterValue value = BNGetStackContentsAfterLowLevelILInstruction(m_object, i, offset, size);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
@@ -251,7 +305,7 @@ RegisterValue Function::GetParameterValueAtInstruction(Architecture* arch, uint6
 {
 	BNRegisterValue value = BNGetParameterValueAtInstruction(m_object, arch->GetObject(), addr,
 		functionType ? functionType->GetObject() : nullptr, i);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
@@ -259,7 +313,7 @@ RegisterValue Function::GetParameterValueAtLowLevelILInstruction(size_t instr, T
 {
 	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(m_object, instr,
 		functionType ? functionType->GetObject() : nullptr, i);
-	return GetRegisterValueFromAPIObject(value);
+	return RegisterValue::FromAPIObject(value);
 }
 
 
@@ -301,7 +355,7 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 		ref.sourceOperand = refs[i].sourceOperand;
 		ref.type = refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr;
 		ref.name = refs[i].name;
-		ref.startingOffset = refs[i].startingOffset;
+		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
 		result.push_back(ref);
 	}
@@ -343,7 +397,7 @@ set<size_t> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -355,7 +409,7 @@ set<size_t> Function::GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag)
 
 	set<size_t> result;
 	result.insert(&instrs[0], &instrs[count]);
-	BNFreeLowLevelILInstructionList(instrs);
+	BNFreeILInstructionList(instrs);
 	return result;
 }
 
@@ -381,6 +435,12 @@ set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 	result.insert(&flags[0], &flags[count]);
 	BNFreeRegisterList(flags);
 	return result;
+}
+
+
+Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
+{
+	return new MediumLevelILFunction(BNGetFunctionMediumLevelIL(m_object));
 }
 
 
@@ -421,23 +481,23 @@ Ref<FunctionGraph> Function::CreateFunctionGraph()
 }
 
 
-map<int64_t, StackVariable> Function::GetStackLayout()
+map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 {
 	size_t count;
-	BNStackVariable* vars = BNGetStackLayout(m_object, &count);
+	BNVariableNameAndType* vars = BNGetStackLayout(m_object, &count);
 
-	map<int64_t, StackVariable> result;
+	map<int64_t, vector<VariableNameAndType>> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		StackVariable var;
+		VariableNameAndType var;
 		var.name = vars[i].name;
 		var.type = new Type(BNNewTypeReference(vars[i].type));
-		var.offset = vars[i].offset;
+		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
-		result[vars[i].offset] = var;
+		result[vars[i].var.storage].push_back(var);
 	}
 
-	BNFreeStackLayout(vars, count);
+	BNFreeVariableList(vars, count);
 	return result;
 }
 
@@ -466,19 +526,83 @@ void Function::DeleteUserStackVariable(int64_t offset)
 }
 
 
-bool Function::GetStackVariableAtFrameOffset(int64_t offset, StackVariable& result)
+bool Function::GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr,
+	int64_t offset, VariableNameAndType& result)
 {
-	BNStackVariable var;
-	if (!BNGetStackVariableAtFrameOffset(m_object, offset, &var))
+	BNVariableNameAndType var;
+	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
 		return false;
 
 	result.type = new Type(BNNewTypeReference(var.type));
 	result.name = var.name;
-	result.offset = var.offset;
+	result.var = var.var;
 	result.autoDefined = var.autoDefined;
 
-	BNFreeStackVariable(&var);
+	BNFreeVariableNameAndType(&var);
 	return true;
+}
+
+
+map<Variable, VariableNameAndType> Function::GetVariables()
+{
+	size_t count;
+	BNVariableNameAndType* vars = BNGetFunctionVariables(m_object, &count);
+
+	map<Variable, VariableNameAndType> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		VariableNameAndType var;
+		var.name = vars[i].name;
+		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.var = vars[i].var;
+		var.autoDefined = vars[i].autoDefined;
+		result[vars[i].var] = var;
+	}
+
+	BNFreeVariableList(vars, count);
+	return result;
+}
+
+
+void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+{
+	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+}
+
+
+void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+{
+	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+}
+
+
+void Function::DeleteAutoVariable(const Variable& var)
+{
+	BNDeleteAutoVariable(m_object, &var);
+}
+
+
+void Function::DeleteUserVariable(const Variable& var)
+{
+	BNDeleteUserVariable(m_object, &var);
+}
+
+
+Ref<Type> Function::GetVariableType(const Variable& var)
+{
+	BNType* type = BNGetVariableType(m_object, &var);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+string Function::GetVariableName(const Variable& var)
+{
+	char* name = BNGetVariableName(m_object, &var);
+	string result = name;
+	BNFreeString(name);
+	return result;
 }
 
 
@@ -567,6 +691,10 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 			token.type = lines[i].tokens[j].type;
 			token.text = lines[i].tokens[j].text;
 			token.value = lines[i].tokens[j].value;
+			token.size = lines[i].tokens[j].size;
+			token.operand = lines[i].tokens[j].operand;
+			token.context = lines[i].tokens[j].context;
+			token.address = lines[i].tokens[j].address;
 			line.push_back(token);
 		}
 		result.push_back(line);
@@ -730,6 +858,19 @@ void Function::ReleaseAdvancedAnalysisData()
 #else
 	__sync_fetch_and_add(&m_advancedAnalysisRequests, -1);
 #endif
+}
+
+
+map<string, double> Function::GetAnalysisPerformanceInfo()
+{
+	size_t count;
+	BNPerformanceInfo* info = BNGetFunctionAnalysisPerformanceInfo(m_object, &count);
+
+	map<string, double> result;
+	for (size_t i = 0; i < count; i++)
+		result[info[i].name] = info[i].seconds;
+	BNFreeAnalysisPerformanceInfo(info, count);
+	return result;
 }
 
 

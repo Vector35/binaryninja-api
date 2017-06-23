@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -25,6 +25,7 @@ import _binaryninjacore as core
 import startup
 import architecture
 import callingconvention
+import types
 
 
 class _PlatformMetaClass(type):
@@ -108,6 +109,16 @@ class Platform(object):
 
 	def __del__(self):
 		core.BNFreePlatform(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Platform):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Platform):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def default_calling_convention(self):
@@ -215,6 +226,55 @@ class Platform(object):
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
 
+	@property
+	def types(self):
+		"""List of platform-specific types (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		type_list = core.BNGetPlatformTypes(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+		core.BNFreeTypeList(type_list, count.value)
+		return result
+
+	@property
+	def variables(self):
+		"""List of platform-specific variable definitions (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		type_list = core.BNGetPlatformVariables(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+		core.BNFreeTypeList(type_list, count.value)
+		return result
+
+	@property
+	def functions(self):
+		"""List of platform-specific function definitions (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		type_list = core.BNGetPlatformFunctions(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+		core.BNFreeTypeList(type_list, count.value)
+		return result
+
+	@property
+	def system_calls(self):
+		"""List of system calls for this platform (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		call_list = core.BNGetPlatformSystemCalls(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			name = types.QualifiedName._from_core_struct(call_list[i].name)
+			t = types.Type(core.BNNewTypeReference(call_list[i].type))
+			result[call_list[i].number] = (name, t)
+		core.BNFreeSystemCallList(call_list, count.value)
+		return result
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -259,3 +319,44 @@ class Platform(object):
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
 		return Platform(None, handle = result), new_addr.value
+
+	def get_type_by_name(self, name):
+		name = types.QualifiedName(name)._get_core_struct()
+		obj = core.BNGetPlatformTypeByName(self.handle, name)
+		if not obj:
+			return None
+		return types.Type(obj)
+
+	def get_variable_by_name(self, name):
+		name = types.QualifiedName(name)._get_core_struct()
+		obj = core.BNGetPlatformVariableByName(self.handle, name)
+		if not obj:
+			return None
+		return types.Type(obj)
+
+	def get_function_by_name(self, name):
+		name = types.QualifiedName(name)._get_core_struct()
+		obj = core.BNGetPlatformFunctionByName(self.handle, name)
+		if not obj:
+			return None
+		return types.Type(obj)
+
+	def get_system_call_name(self, number):
+		return core.BNGetPlatformSystemCallName(self.handle, number)
+
+	def get_system_call_type(self, number):
+		obj = core.BNGetPlatformSystemCallType(self.handle, number)
+		if not obj:
+			return None
+		return types.Type(obj)
+
+	def generate_auto_platform_type_id(self, name):
+		name = types.QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoPlatformTypeId(self.handle, name)
+
+	def generate_auto_platform_type_ref(self, type_class, name):
+		type_id = self.generate_auto_platform_type_id(name)
+		return types.NamedTypeReference(type_class, type_id, name)
+
+	def get_auto_platform_type_id_source(self):
+		return core.BNGetAutoPlatformTypeIdSource(self.handle)

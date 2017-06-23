@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -26,13 +26,15 @@ import ctypes
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType)
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 import architecture
+import platform
 import highlight
 import associateddatastore
 import types
 import basicblock
 import lowlevelil
+import mediumlevelil
 import binaryview
 import log
 
@@ -50,99 +52,168 @@ class RegisterValue(object):
 	def __init__(self, arch, value):
 		self.type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.reg)
-		elif value.state == RegisterValueType.OffsetFromEntryValue:
-			self.reg = arch.get_reg_name(value.reg)
+			self.reg = arch.get_reg_name(value.value)
+		elif value.state == RegisterValueType.ConstantValue:
+			self.value = value.value
+		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
+
+	def __repr__(self):
+		if self.type == RegisterValueType.EntryValue:
+			return "<entry %s>" % self.reg
+		if self.type == RegisterValueType.ConstantValue:
+			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.StackFrameOffset:
+			return "<stack frame offset %#x>" % self.offset
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
+		return "<undetermined>"
+
+
+class ValueRange(object):
+	def __init__(self, start, end, step):
+		self.start = start
+		self.end = end
+		self.step = step
+
+	def __repr__(self):
+		if self.step == 1:
+			return "<range: %#x to %#x>" % (self.start, self.end)
+		return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+
+
+class PossibleValueSet(object):
+	def __init__(self, arch, value):
+		self.type = RegisterValueType(value.state)
+		if value.state == RegisterValueType.EntryValue:
+			self.reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
 		elif value.state == RegisterValueType.SignedRangeValue:
 			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
-			if self.start & (1 << 63):
-				self.start |= ~((1 << 63) - 1)
-			if self.end & (1 << 63):
-				self.end |= ~((1 << 63) - 1)
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				if start & (1 << 63):
+					start |= ~((1 << 63) - 1)
+				if end & (1 << 63):
+					end |= ~((1 << 63) - 1)
+				self.ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.UnsignedRangeValue:
 			self.offset = value.value
-			self.start = value.rangeStart
-			self.end = value.rangeEnd
-			self.step = value.rangeStep
+			self.ranges = []
+			for i in xrange(0, value.count):
+				start = value.ranges[i].start
+				end = value.ranges[i].end
+				step = value.ranges[i].step
+				self.ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.LookupTableValue:
 			self.table = []
 			self.mapping = {}
-			for i in xrange(0, value.rangeEnd):
+			for i in xrange(0, value.count):
 				from_list = []
 				for j in xrange(0, value.table[i].fromCount):
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
-		elif value.state == RegisterValueType.OffsetFromUndeterminedValue:
-			self.offset = value.value
+		elif (value.state == RegisterValueType.InSetOfValues) or (value.state == RegisterValueType.NotInSetOfValues):
+			self.values = set()
+			for i in xrange(0, value.count):
+				self.values.add(value.valueSet[i])
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == RegisterValueType.OffsetFromEntryValue:
-			return "<entry %s + %#x>" % (self.reg, self.offset)
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if (self.type == RegisterValueType.SignedRangeValue) or (self.type == RegisterValueType.UnsignedRangeValue):
-			if self.step == 1:
-				return "<range: %#x to %#x>" % (self.start, self.end)
-			return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
+		if self.type == RegisterValueType.SignedRangeValue:
+			return "<signed ranges: %s>" % repr(self.ranges)
+		if self.type == RegisterValueType.UnsignedRangeValue:
+			return "<unsigned ranges: %s>" % repr(self.ranges)
 		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == RegisterValueType.OffsetFromUndeterminedValue:
-			return "<undetermined with offset %#x>" % self.offset
+		if self.type == RegisterValueType.InSetOfValues:
+			return "<in %s>" % repr(self.values)
+		if self.type == RegisterValueType.NotInSetOfValues:
+			return "<not in %s>" % repr(self.values)
+		if self.type == RegisterValueType.ReturnAddressValue:
+			return "<return address>"
 		return "<undetermined>"
 
 
-class StackVariable(object):
-	def __init__(self, ofs, name, t):
-		self.offset = ofs
-		self.name = name
-		self.type = t
-
-	def __repr__(self):
-		return "<var@%x: %s %s>" % (self.offset, self.type, self.name)
-
-	def __str__(self):
-		return self.name
-
-
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, start_ofs, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
-		self.starting_offset = start_ofs
+		self.var = var
 		self.referenced_offset = ref_ofs
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
 	def __repr__(self):
 		if self.source_operand is None:
-			if self.referenced_offset != self.starting_offset:
-				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.starting_offset)
+			if self.referenced_offset != self.var.storage:
+				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.var.storage)
 			return "<ref to %s>" % self.name
-		if self.referenced_offset != self.starting_offset:
-			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.referenced_offset)
+		if self.referenced_offset != self.var.storage:
+			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.var.storage)
 		return "<operand %d ref to %s>" % (self.source_operand, self.name)
 
 
-class ConstantReference(object):
-	def __init__(self, val, size):
-		self.value = val
-		self.size = size
+class Variable(object):
+	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
+		self.function = func
+		self.source_type = VariableSourceType(source_type)
+		self.index = index
+		self.storage = storage
+
+		var = core.BNVariable()
+		var.type = source_type
+		var.index = index
+		var.storage = storage
+		self.identifier = core.BNToVariableIdentifier(var)
+
+		if name is None:
+			name = core.BNGetVariableName(func.handle, var)
+		if var_type is None:
+			var_type = core.BNGetVariableType(func.handle, var)
+			if var_type:
+				var_type = types.Type(var_type)
+
+		self.name = name
+		self.type = var_type
+
+	@classmethod
+	def from_identifier(self, func, identifier, name = None, var_type = None):
+		var = core.BNFromVariableIdentifier(identifier)
+		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
 
 	def __repr__(self):
+		if self.type is None:
+			return "<var %s>" % self.name
+		return "<var %s %s%s>" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+
+	def __str__(self):
+		return self.name
+
+
+class ConstantReference(object):
+	def __init__(self, val, size, ptr, intermediate):
+		self.value = val
+		self.size = size
+		self.pointer = ptr
+		self.intermediate = intermediate
+
+	def __repr__(self):
+		if self.pointer:
+			return "<constant pointer %#x>" % self.value
 		if self.size == 0:
 			return "<constant %#x>" % self.value
 		return "<constant %#x size %d>" % (self.value, self.size)
@@ -176,6 +247,16 @@ class Function(object):
 		if self._advanced_analysis_requests > 0:
 			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 		core.BNFreeFunction(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Function):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Function):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@classmethod
 	def _unregister(cls, func):
@@ -217,10 +298,10 @@ class Function(object):
 	@property
 	def platform(self):
 		"""Function platform (read-only)"""
-		platform = core.BNGetFunctionPlatform(self.handle)
-		if platform is None:
+		plat = core.BNGetFunctionPlatform(self.handle)
+		if plat is None:
 			return None
-		return platform.Platform(None, handle = platform)
+		return platform.Platform(None, handle = plat)
 
 	@property
 	def start(self):
@@ -248,7 +329,7 @@ class Function(object):
 	@property
 	def explicitly_defined_type(self):
 		"""Whether function has explicitly defined types (read-only)"""
-		return core.BNHasExplicitlyDefinedType(self.handle)
+		return core.BNFunctionHasExplicitlyDefinedType(self.handle)
 
 	@property
 	def needs_update(self):
@@ -279,13 +360,18 @@ class Function(object):
 
 	@property
 	def low_level_il(self):
-		"""Function low level IL (read-only)"""
+		"""returns LowLevelILFunction used to represent Function low level IL (read-only)"""
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
 	def lifted_il(self):
-		"""Function lifted IL (read-only)"""
+		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
 		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
+
+	@property
+	def medium_level_il(self):
+		"""Function medium level IL (read-only)"""
+		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
 
 	@property
 	def function_type(self):
@@ -298,14 +384,28 @@ class Function(object):
 
 	@property
 	def stack_layout(self):
-		"""List of function stack (read-only)"""
+		"""List of function stack variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariable(v[i].offset, v[i].name, types.Type(handle = core.BNNewTypeReference(v[i].type))))
-		result.sort(key = lambda x: x.offset)
-		core.BNFreeStackLayout(v, count.value)
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
+		core.BNFreeVariableList(v, count.value)
+		return result
+
+	@property
+	def vars(self):
+		"""List of function variables (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetFunctionVariables(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
+				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+		result.sort(key = lambda x: x.identifier)
+		core.BNFreeVariableList(v, count.value)
 		return result
 
 	@property
@@ -329,6 +429,16 @@ class Function(object):
 			return obj
 		else:
 			return Function._associated_data[handle.value]
+
+	@property
+	def analysis_performance_info(self):
+		count = ctypes.c_ulonglong()
+		info = core.BNGetFunctionAnalysisPerformanceInfo(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[info[i].name] = info[i].seconds
+		core.BNFreeAnalysisPerformanceInfo(info, count.value)
+		return result
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -363,20 +473,20 @@ class Function(object):
 
 	def get_low_level_il_at(self, addr, arch=None):
 		"""
-		``get_low_level_il_at`` gets the LowLevelIL instruction address corresponding to the given virtual address
+		``get_low_level_il_at`` gets the LowLevelILInstruction corresponding to the given virtual address
 
 		:param int addr: virtual address of the function to be queried
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: int
+		:rtype: LowLevelILInstruction
 		:Example:
 
 			>>> func = bv.functions[0]
 			>>> func.get_low_level_il_at(func.start)
-			0L
+			<il: push(rbp)>
 		"""
 		if arch is None:
 			arch = self.arch
-		return core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
+		return self.low_level_il[core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)]
 
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:
@@ -386,7 +496,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(exits[i])
-		core.BNFreeLowLevelILInstructionList(exits)
+		core.BNFreeILInstructionList(exits)
 		return result
 
 	def get_reg_value_at(self, addr, reg, arch=None):
@@ -404,11 +514,9 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
+		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_reg_value_after(self, addr, reg, arch=None):
@@ -426,41 +534,9 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		if isinstance(reg, str):
-			reg = arch.regs[reg].index
+		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_reg_value_at_low_level_il_instruction(self, i, reg, arch=None):
-		"""
-		``get_reg_value_at_low_level_il_instruction`` returns the value of the specified register ``reg`` at the il address
-		i
-
-		:param int i: il address of instruction to query
-		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
-		:Example:
-
-			>>> func.get_reg_value_at_low_level_il_instruction(15, 'rdi')
-			<const 0x2>
-		"""
-		if arch is None:
-			arch = self.arch
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAtLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_reg_value_after_low_level_il_instruction(self, i, reg):
-		if isinstance(reg, str):
-			reg = self.arch.regs[reg].index
-		value = core.BNGetRegisterValueAfterLowLevelILInstruction(self.handle, i, reg)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_at(self, addr, offset, size, arch=None):
@@ -486,7 +562,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_stack_contents_after(self, addr, offset, size, arch=None):
@@ -494,19 +569,6 @@ class Function(object):
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_at_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAtLowLevelILInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
-		return result
-
-	def get_stack_contents_after_low_level_il_instruction(self, i, offset, size):
-		value = core.BNGetStackContentsAfterInstruction(self.handle, i, offset, size)
-		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at(self, addr, func_type, i, arch=None):
@@ -516,7 +578,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, func_type, i)
 		result = RegisterValue(arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_parameter_at_low_level_il_instruction(self, instr, func_type, i):
@@ -524,7 +585,6 @@ class Function(object):
 			func_type = func_type.handle
 		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, func_type, i)
 		result = RegisterValue(self.arch, value)
-		core.BNFreeRegisterValue(value)
 		return result
 
 	def get_regs_read_by(self, addr, arch=None):
@@ -556,8 +616,10 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StackVariableReference(refs[i].sourceOperand, types.Type(core.BNNewTypeReference(refs[i].type)),
-				refs[i].name, refs[i].startingOffset, refs[i].referencedOffset))
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type))
+			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
+				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
+				refs[i].referencedOffset))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -568,35 +630,33 @@ class Function(object):
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(ConstantReference(refs[i].value, refs[i].size))
+			result.append(ConstantReference(refs[i].value, refs[i].size, refs[i].pointer, refs[i].intermediate))
 		core.BNFreeConstantReferenceList(refs)
 		return result
 
 	def get_lifted_il_at(self, addr, arch=None):
 		if arch is None:
 			arch = self.arch
-		return core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
+		return self.lifted_il[core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)]
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
-		if isinstance(flag, str):
-			flag = self.arch._flags[flag]
+		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagUsesForDefinition(self.handle, i, flag, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_lifted_il_flag_definitions_for_use(self, i, flag):
-		if isinstance(flag, str):
-			flag = self.arch._flags[flag]
+		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagDefinitionsForUse(self.handle, i, flag, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])
-		core.BNFreeLowLevelILInstructionList(instrs)
+		core.BNFreeILInstructionList(instrs)
 		return result
 
 	def get_flags_read_by_lifted_il_instruction(self, i):
@@ -669,7 +729,9 @@ class Function(object):
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].tokens[j].context
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
@@ -691,7 +753,7 @@ class Function(object):
 		:param int instr_addr:
 		:param int value:
 		:param int operand:
-		:param IntegerDisplayTypeEnum display_type:
+		:param enums.IntegerDisplayType display_type:
 		:param Architecture arch: (optional)
 		"""
 		if arch is None:
@@ -790,6 +852,57 @@ class Function(object):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
+	def create_auto_stack_var(self, offset, var_type, name):
+		core.BNCreateAutoStackVariable(self.handle, offset, var_type.handle, name)
+
+	def create_user_stack_var(self, offset, var_type, name):
+		core.BNCreateUserStackVariable(self.handle, offset, var_type.handle, name)
+
+	def delete_auto_stack_var(self, offset):
+		core.BNDeleteAutoStackVariable(self.handle, offset)
+
+	def delete_user_stack_var(self, offset):
+		core.BNDeleteUserStackVariable(self.handle, offset)
+
+	def create_auto_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateAutoVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def create_user_var(self, var, var_type, name, ignore_disjoint_uses = False):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNCreateUserVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+
+	def delete_auto_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteAutoVariable(self.handle, var_data)
+
+	def delete_user_var(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNDeleteUserVariable(self.handle, var_data)
+
+	def get_stack_var_at_frame_offset(self, offset, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		found_var = core.BNVariableNameAndType()
+		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
+			return None
+		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type)))
+		core.BNFreeVariableNameAndType(found_var)
+		return result
+
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):
@@ -835,16 +948,19 @@ class DisassemblyTextLine(object):
 
 
 class FunctionGraphEdge(object):
-	def __init__(self, branch_type, arch, target, points):
+	def __init__(self, branch_type, source, target, points):
 		self.type = BranchType(branch_type)
-		self.arch = arch
+		self.source = source
 		self.target = target
 		self.points = points
 
 	def __repr__(self):
-		if self.arch:
-			return "<%s: %s@%#x>" % (self.type.name, self.arch.name, self.target)
-		return "<%s: %#x>" % (self.type, self.target)
+		return "<%s: %s>" % (self.type.name, repr(self.target))
+
+	@property
+	def back_edge(self):
+		"""Whether the edge is a back edge (end of a loop)"""
+		return self.target in self.source.basic_block.dominators
 
 
 class FunctionGraphBlock(object):
@@ -853,6 +969,16 @@ class FunctionGraphBlock(object):
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, FunctionGraphBlock):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FunctionGraphBlock):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def basic_block(self):
@@ -920,7 +1046,9 @@ class FunctionGraphBlock(object):
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+				context = lines[i].tokens[j].context
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -934,13 +1062,19 @@ class FunctionGraphBlock(object):
 		for i in xrange(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
-			arch = None
-			if edges[i].arch is not None:
-				arch = architecture.Architecture(edges[i].arch)
+			if target:
+				func = core.BNGetBasicBlockFunction(target)
+				if func is None:
+					core.BNFreeBasicBlock(target)
+					target = None
+				else:
+					target = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+						core.BNNewBasicBlockReference(target))
+					core.BNFreeFunction(func)
 			points = []
 			for j in xrange(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FunctionGraphEdge(branch_type, arch, target, points))
+			result.append(FunctionGraphEdge(branch_type, self, target, points))
 		core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
 		return result
 
@@ -970,7 +1104,9 @@ class FunctionGraphBlock(object):
 					value = lines[i].tokens[j].value
 					size = lines[i].tokens[j].size
 					operand = lines[i].tokens[j].operand
-					tokens.append(InstructionTextToken(token_type, text, value, size, operand))
+					context = lines[i].tokens[j].context
+					address = lines[i].tokens[j].address
+					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
 				yield DisassemblyTextLine(addr, tokens)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
@@ -1023,6 +1159,16 @@ class FunctionGraph(object):
 	def __del__(self):
 		self.abort()
 		core.BNFreeFunctionGraph(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, FunctionGraph):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FunctionGraph):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def function(self):
@@ -1241,12 +1387,15 @@ class InstructionTextToken(object):
 		========================== ============================================
 
 	"""
-	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff):
+	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
+		context = InstructionTextTokenContext.NoTokenContext, address = 0):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
 		self.size = size
 		self.operand = operand
+		self.context = InstructionTextTokenContext(context)
+		self.address = address
 
 	def __str__(self):
 		return self.text

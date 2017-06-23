@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -52,7 +52,14 @@ InstructionTextToken::InstructionTextToken(): type(TextToken), value(0)
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
-	size_t s, size_t o) : type(t), text(txt), value(val), size(s), operand(o)
+	size_t s, size_t o) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext), address(0)
+{
+}
+
+
+InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstructionTextTokenContext ctxt,
+	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o):
+	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), address(a)
 {
 }
 
@@ -153,6 +160,8 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 		(*result)[i].value = tokens[i].value;
 		(*result)[i].size = tokens[i].size;
 		(*result)[i].operand = tokens[i].operand;
+		(*result)[i].context = tokens[i].context;
+		(*result)[i].address = tokens[i].address;
 	}
 	return true;
 }
@@ -589,22 +598,30 @@ vector<uint32_t> Architecture::GetFlagsWrittenByFlagWriteType(uint32_t)
 size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
+	(void)flagWriteType;
+	BNFlagRole role = GetFlagRole(flag);
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
 		operandCount, il.GetObject());
 }
 
 
-size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
+size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
+	BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,
+	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
 		operandCount, il.GetObject());
 }
 
 
-ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition, LowLevelILFunction& il)
+ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
 {
-	return il.Unimplemented();
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+}
+
+
+ExprId Architecture::GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+{
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
 }
 
 
@@ -737,9 +754,9 @@ void Architecture::SetBinaryViewTypeConstant(const string& type, const string& n
 
 
 bool Architecture::ParseTypesFromSource(const string& source, const string& fileName,
-                                        map<string, Ref<Type>>& types, map<string, Ref<Type>>& variables,
-                                        map<string, Ref<Type>>& functions, string& errors,
-                                        const vector<string>& includeDirs)
+	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
+	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs,
+	const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -753,26 +770,35 @@ bool Architecture::ParseTypesFromSource(const string& source, const string& file
 	functions.clear();
 
 	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
-	                                 &errorStr, includeDirList, includeDirs.size());
+		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)
 		return false;
 
 	for (size_t i = 0; i < result.typeCount; i++)
-		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
 	for (size_t i = 0; i < result.variableCount; i++)
-		types[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
+		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
 	for (size_t i = 0; i < result.functionCount; i++)
-		types[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
+		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
 	BNFreeTypeParserResult(&result);
 	return true;
 }
 
 
-bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, Ref<Type>>& types,
-                                            map<string, Ref<Type>>& variables, map<string, Ref<Type>>& functions,
-                                            string& errors, const vector<string>& includeDirs)
+bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
+	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
+	string& errors, const vector<string>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -786,18 +812,27 @@ bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<string, 
 	functions.clear();
 
 	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
-	                                     includeDirList, includeDirs.size());
+		includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	if (!ok)
 		return false;
 
 	for (size_t i = 0; i < result.typeCount; i++)
-		types[result.types[i].name] = new Type(BNNewTypeReference(result.types[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
 	for (size_t i = 0; i < result.variableCount; i++)
-		variables[result.variables[i].name] = new Type(BNNewTypeReference(result.variables[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
+		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
 	for (size_t i = 0; i < result.functionCount; i++)
-		functions[result.functions[i].name] = new Type(BNNewTypeReference(result.functions[i].type));
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
+		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
 	BNFreeTypeParserResult(&result);
 	return true;
 }
@@ -954,8 +989,8 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 	for (size_t i = 0; i < count; i++)
 	{
-		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].text, tokens[i].value,
-			tokens[i].size, tokens[i].operand));
+		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
+			tokens[i].value, tokens[i].size, tokens[i].operand));
 	}
 
 	BNFreeInstructionText(tokens, count);

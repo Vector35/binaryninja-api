@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -34,8 +34,6 @@ import function
 import basicblock
 import startup
 import log
-
-_output_to_log = False
 
 
 class _ThreadActionContext(object):
@@ -379,14 +377,12 @@ class _PythonScriptingInstanceOutput(object):
 		return self.write('\n'.join(lines))
 
 	def write(self, data):
-		global _output_to_log
-
 		interpreter = None
 		if "value" in dir(PythonScriptingInstance._interpreter):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if _output_to_log:
+			if log.is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')

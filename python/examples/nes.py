@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -191,21 +191,21 @@ OperandTokens = [
 
 def indirect_load(il, value):
 	if (value & 0xff) == 0xff:
-		lo_addr = il.const(2, value)
-		hi_addr = il.const(2, (value & 0xff00) | ((value + 1) & 0xff))
+		lo_addr = il.const_pointer(2, value)
+		hi_addr = il.const_pointer(2, (value & 0xff00) | ((value + 1) & 0xff))
 		lo = il.zero_extend(2, il.load(1, lo_addr))
 		hi = il.shift_left(2, il.zero_extend(2, il.load(1, hi_addr)), il.const(2, 8))
 		return il.or_expr(2, lo, hi)
-	return il.load(2, il.const(2, value))
+	return il.load(2, il.const_pointer(2, value))
 
 
 def load_zero_page_16(il, value):
 	if il[value].operation == LowLevelILOperation.LLIL_CONST:
-		if il[value].value == 0xff:
-			lo = il.zero_extend(2, il.load(1, il.const(2, 0xff)))
-			hi = il.shift_left(2, il.zero_extend(2, il.load(1, il.const(2, 0)), il.const(2, 8)))
+		if il[value].constant == 0xff:
+			lo = il.zero_extend(2, il.load(1, il.const_pointer(2, 0xff)))
+			hi = il.shift_left(2, il.zero_extend(2, il.load(1, il.const_pointer(2, 0)), il.const(2, 8)))
 			return il.or_expr(2, lo, hi)
-		return il.load(2, il.const(2, il[value].value))
+		return il.load(2, il.const_pointer(2, il[value].constant))
 	il.append(il.set_reg(1, LLIL_TEMP(0), value))
 	value = il.reg(1, LLIL_TEMP(0))
 	lo_addr = value
@@ -217,23 +217,23 @@ def load_zero_page_16(il, value):
 
 OperandIL = [
 	lambda il, value: None,  # NONE
-	lambda il, value: il.load(1, il.const(2, value)),  # ABS
+	lambda il, value: il.load(1, il.const_pointer(2, value)),  # ABS
 	lambda il, value: il.const(2, value),  # ABS_DEST
 	lambda il, value: il.load(1, il.add(2, il.const(2, value), il.zero_extend(2, il.reg(1, "x")))),  # ABS_X
 	lambda il, value: il.add(2, il.const(2, value), il.zero_extend(2, il.reg(1, "x"))),  # ABS_X_DEST
 	lambda il, value: il.load(1, il.add(2, il.const(2, value), il.zero_extend(2, il.reg(1, "y")))),  # ABS_Y
 	lambda il, value: il.add(2, il.const(2, value), il.zero_extend(2, il.reg(1, "y"))),  # ABS_Y_DEST
 	lambda il, value: il.reg(1, "a"),  # ACCUM
-	lambda il, value: il.const(2, value),  # ADDR
+	lambda il, value: il.const_pointer(2, value),  # ADDR
 	lambda il, value: il.const(1, value),  # IMMED
 	lambda il, value: indirect_load(il, value),  # IND
 	lambda il, value: il.load(1, load_zero_page_16(il, il.add(1, il.const(1, value), il.reg(1, "x")))),  # IND_X
 	lambda il, value: load_zero_page_16(il, il.add(1, il.const(1, value), il.reg(1, "x"))),  # IND_X_DEST
 	lambda il, value: il.load(1, il.add(2, load_zero_page_16(il, il.const(1, value)), il.reg(1, "y"))),  # IND_Y
 	lambda il, value: il.add(2, load_zero_page_16(il, il.const(1, value)), il.reg(1, "y")),  # IND_Y_DEST
-	lambda il, value: il.const(2, value),  # REL
-	lambda il, value: il.load(1, il.const(2, value)),  # ZERO
-	lambda il, value: il.const(2, value),  # ZERO_DEST
+	lambda il, value: il.const_pointer(2, value),  # REL
+	lambda il, value: il.load(1, il.const_pointer(2, value)),  # ZERO
+	lambda il, value: il.const_pointer(2, value),  # ZERO_DEST
 	lambda il, value: il.load(1, il.zero_extend(2, il.add(1, il.const(1, value), il.reg(1, "x")))),  # ZERO_X
 	lambda il, value: il.zero_extend(2, il.add(1, il.const(1, value), il.reg(1, "x"))),  # ZERO_X_DEST
 	lambda il, value: il.load(1, il.zero_extend(2, il.add(1, il.const(1, value), il.reg(1, "y")))),  # ZERO_Y
@@ -244,7 +244,7 @@ OperandIL = [
 def cond_branch(il, cond, dest):
 	t = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		t = il.get_label_for_address(Architecture['6502'], il[dest].value)
+		t = il.get_label_for_address(Architecture['6502'], il[dest].constant)
 	if t is None:
 		t = LowLevelILLabel()
 		indirect = True
@@ -262,7 +262,7 @@ def cond_branch(il, cond, dest):
 def jump(il, dest):
 	label = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		label = il.get_label_for_address(Architecture['6502'], il[dest].value)
+		label = il.get_label_for_address(Architecture['6502'], il[dest].constant)
 	if label is None:
 		il.append(il.jump(dest))
 	else:
@@ -300,7 +300,7 @@ def rti(il):
 
 
 InstructionIL = {
-	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, flags = "*")),
+	"adc": lambda il, operand: il.set_reg(1, "a", il.add_carry(1, il.reg(1, "a"), operand, il.flag("c"), flags = "*")),
 	"asl": lambda il, operand: il.store(1, operand, il.shift_left(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
 	"asl@": lambda il, operand: il.set_reg(1, "a", il.shift_left(1, operand, il.const(1, 1), flags = "czs")),
 	"and": lambda il, operand: il.set_reg(1, "a", il.and_expr(1, il.reg(1, "a"), operand, flags = "zs")),
@@ -341,13 +341,13 @@ InstructionIL = {
 	"php": lambda il, operand: il.push(1, get_p_value(il)),
 	"pla": lambda il, operand: il.set_reg(1, "a", il.pop(1), flags = "zs"),
 	"plp": lambda il, operand: set_p_value(il, il.pop(1)),
-	"rol": lambda il, operand: il.store(1, operand, il.rotate_left_carry(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"rol@": lambda il, operand: il.set_reg(1, "a", il.rotate_left_carry(1, il.reg(1, "a"), il.const(1, 1), flags = "czs")),
-	"ror": lambda il, operand: il.store(1, operand, il.rotate_right_carry(1, il.load(1, operand), il.const(1, 1), flags = "czs")),
-	"ror@": lambda il, operand: il.set_reg(1, "a", il.rotate_right_carry(1, il.reg(1, "a"), il.const(1, 1), flags = "czs")),
+	"rol": lambda il, operand: il.store(1, operand, il.rotate_left_carry(1, il.load(1, operand), il.const(1, 1), il.flag("c"), flags = "czs")),
+	"rol@": lambda il, operand: il.set_reg(1, "a", il.rotate_left_carry(1, il.reg(1, "a"), il.const(1, 1), il.flag("c"), flags = "czs")),
+	"ror": lambda il, operand: il.store(1, operand, il.rotate_right_carry(1, il.load(1, operand), il.const(1, 1), il.flag("c"), flags = "czs")),
+	"ror@": lambda il, operand: il.set_reg(1, "a", il.rotate_right_carry(1, il.reg(1, "a"), il.const(1, 1), il.flag("c"), flags = "czs")),
 	"rti": lambda il, operand: rti(il),
 	"rts": lambda il, operand: il.ret(il.add(2, il.pop(2), il.const(2, 1))),
-	"sbc": lambda il, operand: il.set_reg(1, "a", il.sub_borrow(1, il.reg(1, "a"), operand, flags = "*")),
+	"sbc": lambda il, operand: il.set_reg(1, "a", il.sub_borrow(1, il.reg(1, "a"), operand, il.flag("c"), flags = "*")),
 	"sec": lambda il, operand: il.set_flag("c", il.const(0, 1)),
 	"sed": lambda il, operand: il.set_flag("d", il.const(0, 1)),
 	"sei": lambda il, operand: il.set_flag("i", il.const(0, 1)),
@@ -468,6 +468,15 @@ class M6502(Architecture):
 			il.append(instr)
 
 		return length
+
+	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
+		if flag == 'c':
+			if (op == LowLevelILOperation.LLIL_SUB) or (op == LowLevelILOperation.LLIL_SBB):
+				# Subtraction carry flag is inverted from the commom implementation
+				return il.not_expr(0, self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il))
+			# Other operations use a normal carry flag
+			return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
+		return Architecture.perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
 
 	def perform_is_never_branch_patch_available(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):

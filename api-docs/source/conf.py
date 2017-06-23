@@ -41,6 +41,8 @@ def classlist(module):
 	members.extend(inspect.getmembers(module, inspect.isfunction))
 	return map(lambda x: x[0], filter(lambda x: not x[0].startswith("_"), members))
 
+def setup(app):
+    app.add_stylesheet('css/other.css')
 
 def generaterst():
 	pythonrst = open("index.rst", "w")

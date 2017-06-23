@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -22,9 +22,92 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import SymbolType, TypeClass
+from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType
 import callingconvention
-import demangle
+import function
+
+
+class QualifiedName(object):
+	def __init__(self, name = []):
+		if isinstance(name, str):
+			self.name = [name]
+		elif isinstance(name, QualifiedName):
+			self.name = name.name
+		else:
+			self.name = name
+
+	def __str__(self):
+		return "::".join(self.name)
+
+	def __repr__(self):
+		return repr(str(self))
+
+	def __len__(self):
+		return len(self.name)
+
+	def __hash__(self):
+		return hash(str(self))
+
+	def __eq__(self, other):
+		if isinstance(other, str):
+			return str(self) == other
+		elif isinstance(other, list):
+			return self.name == other
+		elif isinstance(other, QualifiedName):
+			return self.name == other.name
+		return False
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __lt__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name < other.name
+		return False
+
+	def __le__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name <= other.name
+		return False
+
+	def __gt__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name > other.name
+		return False
+
+	def __ge__(self, other):
+		if isinstance(other, QualifiedName):
+			return self.name >= other.name
+		return False
+
+	def __cmp__(self, other):
+		if self == other:
+			return 0
+		if self < other:
+			return -1
+		return 1
+
+	def __getitem__(self, key):
+		return self.name[key]
+
+	def __iter__(self):
+		return iter(self.name)
+
+	def _get_core_struct(self):
+		result = core.BNQualifiedName()
+		name_list = (ctypes.c_char_p * len(self.name))()
+		for i in xrange(0, len(self.name)):
+			name_list[i] = self.name[i]
+		result.name = name_list
+		result.nameCount = len(self.name)
+		return result
+
+	@classmethod
+	def _from_core_struct(cls, name):
+		result = []
+		for i in xrange(0, name.nameCount):
+			result.append(name.name[i])
+		return QualifiedName(result)
 
 
 class Symbol(object):
@@ -55,6 +138,16 @@ class Symbol(object):
 
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Symbol):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Symbol):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def type(self):
@@ -110,6 +203,16 @@ class Type(object):
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Type):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Type):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def type_class(self):
@@ -210,6 +313,14 @@ class Type(object):
 			return None
 		return Enumeration(result)
 
+ 	@property
+	def named_type_reference(self):
+		"""Reference to a named type (read-only)"""
+		result = core.BNGetTypeNamedTypeReference(self.handle)
+		if result is None:
+			return None
+		return NamedTypeReference(handle = result)
+
 	@property
 	def count(self):
 		"""Type count (read-only)"""
@@ -226,6 +337,56 @@ class Type(object):
 
 	def get_string_after_name(self):
 		return core.BNGetTypeStringAfterName(self.handle)
+
+	@property
+	def tokens(self):
+		"""Type string as a list of tokens (read-only)"""
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokens(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
+
+	def get_tokens_before_name(self):
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokensBeforeName(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
+
+	def get_tokens_after_name(self):
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetTypeTokensAfterName(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			token_type = InstructionTextTokenType(tokens[i].type)
+			text = tokens[i].text
+			value = tokens[i].value
+			size = tokens[i].size
+			operand = tokens[i].operand
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+		core.BNFreeTokenList(tokens, count.value)
+		return result
 
 	@classmethod
 	def void(cls):
@@ -254,8 +415,27 @@ class Type(object):
 		return Type(core.BNCreateStructureType(structure_type.handle))
 
 	@classmethod
-	def unknown_type(self, unknown_type):
-		return Type(core.BNCreateUnknownType(unknown_type.handle))
+	def named_type(self, named_type, width = 0, align = 1):
+		return Type(core.BNCreateNamedTypeReference(named_type.handle, width, align))
+
+	@classmethod
+	def named_type_from_type_and_id(self, type_id, name, t):
+		name = QualifiedName(name)._get_core_struct()
+		if t is not None:
+			t = t.handle
+		return Type(core.BNCreateNamedTypeReferenceFromTypeAndId(type_id, name, t))
+
+	@classmethod
+	def named_type_from_type(self, name, t):
+		name = QualifiedName(name)._get_core_struct()
+		if t is not None:
+			t = t.handle
+		return Type(core.BNCreateNamedTypeReferenceFromTypeAndId("", name, t))
+
+	@classmethod
+	def named_type_from_registered_type(self, view, name):
+		name = QualifiedName(name)._get_core_struct()
+		return Type(core.BNCreateNamedTypeReferenceFromType(view.handle, name))
 
 	@classmethod
 	def enumeration_type(self, arch, e, width=None):
@@ -294,6 +474,20 @@ class Type(object):
 		return Type(core.BNCreateFunctionType(ret.handle, calling_convention, param_buf, len(params),
 			  variable_arguments))
 
+	@classmethod
+	def generate_auto_type_id(self, source, name):
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoTypeId(source, name)
+
+	@classmethod
+	def generate_auto_demangled_type_id(self, name):
+		name = QualifiedName(name)._get_core_struct()
+		return core.BNGenerateAutoDemangledTypeId(name)
+
+	@classmethod
+	def get_auto_demanged_type_id_source(self):
+		return core.BNGetAutoDemangledTypeIdSource()
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -301,28 +495,80 @@ class Type(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class UnknownType(object):
-	def __init__(self, handle=None):
+class NamedTypeReference(object):
+	def __init__(self, type_class = NamedTypeReferenceClass.UnknownNamedTypeClass, type_id = None, name = None, handle = None):
 		if handle is None:
-			self.handle = core.BNCreateUnknownType()
+			self.handle = core.BNCreateNamedType()
+			core.BNSetTypeReferenceClass(self.handle, type_class)
+			if type_id is not None:
+				core.BNSetTypeReferenceId(self.handle, type_id)
+			if name is not None:
+				name = QualifiedName(name)._get_core_struct()
+				core.BNSetTypeReferenceName(self.handle, name)
 		else:
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeUnknownType(self.handle)
+		core.BNFreeNamedTypeReference(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, NamedTypeReference):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, NamedTypeReference):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	@property
+	def type_class(self):
+		return NamedTypeReferenceClass(core.BNGetTypeReferenceClass(self.handle))
+
+	@type_class.setter
+	def type_class(self, value):
+		core.BNSetTypeReferenceClass(self.handle, value)
+
+	@property
+	def type_id(self):
+		return core.BNGetTypeReferenceId(self.handle)
+
+	@type_id.setter
+	def type_id(self, value):
+		core.BNSetTypeReferenceId(self.handle, value)
 
 	@property
 	def name(self):
-		count = ctypes.c_ulonglong()
-		nameList = core.BNGetUnknownTypeName(self.handle, count)
-		result = []
-		for i in xrange(count.value):
-			result.append(nameList[i])
-		return demangle.get_qualified_name(result)
+		name = core.BNGetTypeReferenceName(self.handle)
+		result = QualifiedName._from_core_struct(name)
+		core.BNFreeQualifiedName(name)
+		return result
 
 	@name.setter
 	def name(self, value):
-		core.BNSetUnknownTypeName(self.handle, value)
+		value = QualifiedName(value)._get_core_struct()
+		core.BNSetTypeReferenceName(self.handle, value)
+
+	def __repr__(self):
+		if self.type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
+			return "<named type: typedef %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.StructNamedTypeClass:
+			return "<named type: struct %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
+			return "<named type: union %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
+			return "<named type: enum %s>" % str(self.name)
+		return "<named type: unknown %s>" % str(self.name)
+
+	@classmethod
+	def generate_auto_type_ref(self, type_class, source, name):
+		type_id = Type.generate_auto_type_id(source, name)
+		return NamedTypeReference(type_class, type_id, name)
+
+	@classmethod
+	def generate_auto_demangled_type_ref(self, type_class, name):
+		type_id = Type.generate_auto_demangled_type_id(name)
+		return NamedTypeReference(type_class, type_id, name)
 
 
 class StructureMember(object):
@@ -348,18 +594,15 @@ class Structure(object):
 	def __del__(self):
 		core.BNFreeStructure(self.handle)
 
-	@property
-	def name(self):
-		count = ctypes.c_ulonglong()
-		nameList = core.BNGetStructureName(self.handle, count)
-		result = []
-		for i in xrange(count.value):
-			result.append(nameList[i])
-		return demangle.get_qualified_name(result)
+	def __eq__(self, value):
+		if not isinstance(value, Structure):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
 
-	@name.setter
-	def name(self, value):
-		core.BNSetStructureName(self.handle, value)
+	def __ne__(self, value):
+		if not isinstance(value, Structure):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def members(self):
@@ -375,13 +618,21 @@ class Structure(object):
 
 	@property
 	def width(self):
-		"""Structure width (read-only)"""
+		"""Structure width"""
 		return core.BNGetStructureWidth(self.handle)
+
+	@width.setter
+	def width(self, new_width):
+		core.BNSetStructureWidth(self.handle, new_width)
 
 	@property
 	def alignment(self):
-		"""Structure alignment (read-only)"""
+		"""Structure alignment"""
 		return core.BNGetStructureAlignment(self.handle)
+
+	@alignment.setter
+	def alignment(self, align):
+		core.BNSetStructureAlignment(self.handle, align)
 
 	@property
 	def packed(self):
@@ -395,9 +646,13 @@ class Structure(object):
 	def union(self):
 		return core.BNIsStructureUnion(self.handle)
 
-	@union.setter
-	def union(self, value):
-		core.BNSetStructureUnion(self.handle, value)
+	@property
+	def type(self):
+		return StructureType(core.BNGetStructureType(self.handle))
+
+	@type.setter
+	def type(self, value):
+		core.BNSetStructureType(self.handle, value)
 
 	def __setattr__(self, name, value):
 		try:
@@ -406,8 +661,6 @@ class Structure(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __repr__(self):
-		if len(self.name) > 0:
-			return "<struct: %s>" % self.name
 		return "<struct: size %#x>" % self.width
 
 	def append(self, t, name = ""):
@@ -418,6 +671,9 @@ class Structure(object):
 
 	def remove(self, i):
 		core.BNRemoveStructureMember(self.handle, i)
+
+	def replace(self, i, t, name = ""):
+		core.BNReplaceStructureMember(self.handle, i, t.handle, name)
 
 
 class EnumerationMember(object):
@@ -440,13 +696,15 @@ class Enumeration(object):
 	def __del__(self):
 		core.BNFreeEnumeration(self.handle)
 
-	@property
-	def name(self):
-		return core.BNGetEnumerationName(self.handle)
+	def __eq__(self, value):
+		if not isinstance(value, Enumeration):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
 
-	@name.setter
-	def name(self, value):
-		core.BNSetEnumerationName(self.handle, value)
+	def __ne__(self, value):
+		if not isinstance(value, Enumeration):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
 	def members(self):
@@ -466,8 +724,6 @@ class Enumeration(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __repr__(self):
-		if len(self.name) > 0:
-			return "<enum: %s>" % self.name
 		return "<enum: %s>" % repr(self.members)
 
 	def append(self, name, value = None):
@@ -475,6 +731,12 @@ class Enumeration(object):
 			core.BNAddEnumerationMember(self.handle, name)
 		else:
 			core.BNAddEnumerationMemberWithValue(self.handle, name, value)
+
+	def remove(self, i):
+		core.BNRemoveEnumerationMember(self.handle, i)
+
+	def replace(self, i, name, value):
+		core.BNReplaceEnumerationMember(self.handle, i, name, value)
 
 
 class TypeParserResult(object):

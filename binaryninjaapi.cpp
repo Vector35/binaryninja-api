@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -41,6 +41,10 @@ void BinaryNinja::InitUserPlugins()
 	BNInitUserPlugins();
 }
 
+void BinaryNinja::InitRepoPlugins()
+{
+	BNInitRepoPlugins();
+}
 
 string BinaryNinja::GetBundledPluginDirectory()
 {
@@ -56,6 +60,17 @@ string BinaryNinja::GetBundledPluginDirectory()
 void BinaryNinja::SetBundledPluginDirectory(const string& path)
 {
 	BNSetBundledPluginDirectory(path.c_str());
+}
+
+
+string BinaryNinja::GetInstallDirectory()
+{
+	char* path = BNGetInstallDirectory();
+	if (!path)
+		return string();
+	string result = path;
+	BNFreeString(path);
+	return result;
 }
 
 
@@ -256,4 +271,13 @@ size_t BinaryNinja::GetWorkerThreadCount()
 void BinaryNinja::SetWorkerThreadCount(size_t count)
 {
 	BNSetWorkerThreadCount(count);
+}
+
+
+string BinaryNinja::GetUniqueIdentifierString()
+{
+	char* str = BNGetUniqueIdentifierString();
+	string result = str;
+	BNFreeString(str);
+	return result;
 }

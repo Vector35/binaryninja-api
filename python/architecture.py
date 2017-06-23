@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -128,7 +128,7 @@ class Architecture(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNArchitecture)
 			self.__dict__["name"] = core.BNGetArchitectureName(self.handle)
-			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle)).name
+			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle))
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
 			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
@@ -146,7 +146,7 @@ class Architecture(object):
 				info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 				full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
 				self.regs[name] = function.RegisterInfo(full_width_reg, info.size, info.offset,
-					ImplicitRegisterExtend(info.extend).name, regs[i])
+					ImplicitRegisterExtend(info.extend), regs[i])
 			core.BNFreeRegisterList(regs)
 
 			count = ctypes.c_ulonglong()
@@ -333,6 +333,16 @@ class Architecture(object):
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 
+	def __eq__(self, value):
+		if not isinstance(value, Architecture):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Architecture):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def full_width_regs(self):
 		"""List of full width register strings (read-only)"""
@@ -364,7 +374,7 @@ class Architecture(object):
 
 	def __setattr__(self, name, value):
 		if ((name == "name") or (name == "endianness") or (name == "address_size") or
-		    (name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
+			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
 			raise AttributeError("attribute '%s' is read only" % name)
 		else:
 			try:
@@ -467,6 +477,8 @@ class Architecture(object):
 				token_buf[i].value = tokens[i].value
 				token_buf[i].size = tokens[i].size
 				token_buf[i].operand = tokens[i].operand
+				token_buf[i].context = tokens[i].context
+				token_buf[i].address = tokens[i].address
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
@@ -639,11 +651,11 @@ class Architecture(object):
 			operand_list = []
 			for i in xrange(operand_count):
 				if operands[i].constant:
-					operand_list.append(("const", operands[i].value))
+					operand_list.append(operands[i].value)
 				elif lowlevelil.LLIL_REG_IS_TEMP(operands[i].reg):
-					operand_list.append(("reg", operands[i].reg))
+					operand_list.append(lowlevelil.ILRegister(self, operands[i].reg))
 				else:
-					operand_list.append(("reg", self._regs_by_index[operands[i].reg]))
+					operand_list.append(lowlevelil.ILRegister(self, operands[i].reg))
 			return self.perform_get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
 		except (KeyError, OSError):
@@ -903,7 +915,10 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
-		return il.unimplemented()
+		flag = self.get_flag_index(flag)
+		if flag not in self._flag_roles:
+			return il.unimplemented()
+		return self.get_default_flag_write_low_level_il(op, size, self._flag_roles[flag], operands, il)
 
 	@abc.abstractmethod
 	def perform_get_flag_condition_low_level_il(self, cond, il):
@@ -915,7 +930,7 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
-		return il.unimplemented()
+		return self.get_default_flag_condition_low_level_il(cond, il)
 
 	@abc.abstractmethod
 	def perform_assemble(self, code, addr):
@@ -1113,13 +1128,12 @@ class Architecture(object):
 		result.length = info.length
 		result.branch_delay = info.branchDelay
 		for i in xrange(0, info.branchCount):
-			branch_type = BranchType(info.branchType[i]).name
 			target = info.branchTarget[i]
 			if info.branchArch[i]:
 				arch = Architecture(info.branchArch[i])
 			else:
 				arch = None
-			result.add_branch(branch_type, target, arch)
+			result.add_branch(BranchType(info.branchType[i]), target, arch)
 		return result
 
 	def get_instruction_text(self, data, addr):
@@ -1148,7 +1162,9 @@ class Architecture(object):
 			value = tokens[i].value
 			size = tokens[i].size
 			operand = tokens[i].operand
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand))
+			context = tokens[i].context
+			address = tokens[i].address
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -1163,6 +1179,9 @@ class Architecture(object):
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
 
+		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
+		want to be using ``Function.get_low_level_il_at``.
+
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
@@ -1176,6 +1195,24 @@ class Architecture(object):
 		ctypes.memmove(buf, data, len(data))
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
 		return length.value
+
+	def get_low_level_il_from_bytes(self, data, addr):
+		"""
+		``get_low_level_il_from_bytes`` converts the instruction in bytes to ``il`` at the given virtual address
+
+		:param str data: the bytes of the instruction
+		:param int addr: virtual address of bytes in ``data``
+		:return: the instruction
+		:rtype: LowLevelILInstruction
+		:Example:
+
+			>>> arch.get_low_level_il_from_bytes('\xeb\xfe', 0x40DEAD)
+			<il: jump(0x40dead)>
+			>>>
+		"""
+		func = lowlevelil.LowLevelILFunction(self)
+		self.get_instruction_low_level_il(data, addr, func)
+		return func[0]
 
 	def get_reg_name(self, reg):
 		"""
@@ -1196,6 +1233,20 @@ class Architecture(object):
 		:rtype: str
 		"""
 		return core.BNGetArchitectureFlagName(self.handle, flag)
+
+	def get_reg_index(self, reg):
+		if isinstance(reg, str):
+			return self.regs[reg].index
+		elif isinstance(reg, lowlevelil.ILRegister):
+			return reg.index
+		return reg
+
+	def get_flag_index(self, flag):
+		if isinstance(flag, str):
+			return self._flags[flag]
+		elif isinstance(flag, lowlevelil.ILFlag):
+			return flag.index
+		return flag
 
 	def get_flag_write_type_name(self, write_type):
 		"""
@@ -1227,7 +1278,7 @@ class Architecture(object):
 		"""
 		return self._flag_write_types[write_type]
 
-	def get_flag_write_low_level_il(self, op, size, write_type, operands, il):
+	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
@@ -1237,22 +1288,26 @@ class Architecture(object):
 		:param LowLevelILFunction il:
 		:rtype: LowLevelILExpr
 		"""
+		flag = self.get_flag_index(flag)
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self._flags[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]]
+			elif isinstance(operands[i], lowlevelil.ILRegister):
+				operand_list[i].constant = False
+				operand_list[i].reg = operands[i].index
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
 		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size,
-		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
+		        self._flag_write_types[write_type], flag, operand_list, len(operand_list), il.handle))
 
-	def get_default_flag_write_low_level_il(self, op, size, write_type, operands, il):
+	def get_default_flag_write_low_level_il(self, op, size, role, operands, il):
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
-		:param str write_type:
+		:param FlagRole role:
 		:param list(str or int) operands: a list of either items that are either string register names or constant \
 		integer values
 		:param LowLevelILFunction il:
@@ -1262,12 +1317,15 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self._flags[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]]
+			elif isinstance(operands[i], lowlevelil.ILRegister):
+				operand_list[i].constant = False
+				operand_list[i].reg = operands[i].index
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operands[i]
 		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size,
-		        self._flag_write_types[write_type], operand_list, len(operand_list), il.handle))
+			role, operand_list, len(operand_list), il.handle))
 
 	def get_flag_condition_low_level_il(self, cond, il):
 		"""
@@ -1276,6 +1334,14 @@ class Architecture(object):
 		:rtype: LowLevelILExpr
 		"""
 		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
+
+	def get_default_flag_condition_low_level_il(self, cond, il):
+		"""
+		:param LowLevelILFlagCondition cond:
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
+		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
 
 	def get_modified_regs_on_write(self, reg):
 		"""
@@ -1581,7 +1647,7 @@ class Architecture(object):
 		"""
 		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
 
-	def parse_types_from_source(self, source, filename=None, include_dirs=[]):
+	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -1589,8 +1655,9 @@ class Architecture(object):
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult,str)
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
@@ -1606,32 +1673,37 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			types[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (types.TypeParserResult(type_dict, variables, functions), error_str)
+		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_types_from_source_file(self, filename, include_dirs=[]):
+	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
 
 		:param str filename: filename of file to be parsed
 		:param list(str) include_dirs: optional list of string filename include directories
-		:return: a tuple of py:class:`TypeParserResult` and error string
-		:rtype: tuple(TypeParserResult, str)
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
 		:Example:
 
 			>>> file = "/Users/binja/tmp.c"
@@ -1647,22 +1719,26 @@ class Architecture(object):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf, len(include_dirs))
+		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
 		error_str = errors.value
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
-			return (None, error_str)
+			raise SyntaxError(error_str)
 		type_dict = {}
 		variables = {}
 		functions = {}
 		for i in xrange(0, parse.typeCount):
-			type_dict[parse.types[i].name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
 		for i in xrange(0, parse.variableCount):
-			variables[parse.variables[i].name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
 		for i in xrange(0, parse.functionCount):
-			functions[parse.functions[i].name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
 		core.BNFreeTypeParserResult(parse)
-		return (types.TypeParserResult(type_dict, variables, functions), error_str)
+		return types.TypeParserResult(type_dict, variables, functions)
 
 	def register_calling_convention(self, cc):
 		"""

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 Vector 35 LLC
+// Copyright (c) 2015-2017 Vector 35 LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -51,6 +51,8 @@ namespace BinaryNinja
 		RefCountObject(): m_refs(0) {}
 		virtual ~RefCountObject() {}
 
+		RefCountObject* GetObject() { return this; }
+
 		void AddRef()
 		{
 #ifdef WIN32
@@ -101,7 +103,7 @@ namespace BinaryNinja
 		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~CoreRefCountObject() {}
 
-		T* GetObject() { return m_object; }
+		T* GetObject() const { return m_object; }
 
 		void AddRef()
 		{
@@ -158,7 +160,7 @@ namespace BinaryNinja
 		StaticCoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~StaticCoreRefCountObject() {}
 
-		T* GetObject() { return m_object; }
+		T* GetObject() const { return m_object; }
 
 		void AddRef()
 		{
@@ -246,6 +248,36 @@ namespace BinaryNinja
 			return m_obj == NULL;
 		}
 
+		bool operator==(const T* obj) const
+		{
+			return m_obj->GetObject() == obj->GetObject();
+		}
+
+		bool operator==(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() == obj.m_obj->GetObject();
+		}
+
+		bool operator!=(const T* obj) const
+		{
+			return m_obj->GetObject() != obj->GetObject();
+		}
+
+		bool operator!=(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() != obj.m_obj->GetObject();
+		}
+
+		bool operator<(const T* obj) const
+		{
+			return m_obj->GetObject() < obj->GetObject();
+		}
+
+		bool operator<(const Ref<T>& obj) const
+		{
+			return m_obj->GetObject() < obj.m_obj->GetObject();
+		}
+
 		T* GetPtr() const
 		{
 			return m_obj;
@@ -277,6 +309,7 @@ namespace BinaryNinja
 	class MainThreadAction;
 	class MainThreadActionHandler;
 	class InteractionHandler;
+	class QualifiedName;
 	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
@@ -341,8 +374,10 @@ namespace BinaryNinja
 
 	void InitCorePlugins();
 	void InitUserPlugins();
+	void InitRepoPlugins();
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
+	std::string GetInstallDirectory();
 	std::string GetUserPluginDirectory();
 
 	std::string GetPathRelativeToBundledPluginDirectory(const std::string& path);
@@ -371,7 +406,11 @@ namespace BinaryNinja
 	bool DemangleMS(Architecture* arch,
 	                const std::string& mangledName,
 	                Type** outType,
-	                std::vector<std::string>& outVarName);
+	                QualifiedName& outVarName);
+	bool DemangleGNU3(Architecture* arch,
+	                  const std::string& mangledName,
+	                  Type** outType,
+	                  QualifiedName& outVarName);
 
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
@@ -410,6 +449,53 @@ namespace BinaryNinja
 
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
+
+	std::string GetUniqueIdentifierString();
+
+	class QualifiedName
+	{
+		std::vector<std::string> m_name;
+
+	public:
+		QualifiedName();
+		QualifiedName(const std::string& name);
+		QualifiedName(const std::vector<std::string>& name);
+		QualifiedName(const QualifiedName& name);
+
+		QualifiedName& operator=(const std::string& name);
+		QualifiedName& operator=(const std::vector<std::string>& name);
+		QualifiedName& operator=(const QualifiedName& name);
+
+		bool operator==(const QualifiedName& other) const;
+		bool operator!=(const QualifiedName& other) const;
+		bool operator<(const QualifiedName& other) const;
+
+		QualifiedName operator+(const QualifiedName& other) const;
+
+		std::string& operator[](size_t i);
+		const std::string& operator[](size_t i) const;
+		std::vector<std::string>::iterator begin();
+		std::vector<std::string>::iterator end();
+		std::vector<std::string>::const_iterator begin() const;
+		std::vector<std::string>::const_iterator end() const;
+		std::string& front();
+		const std::string& front() const;
+		std::string& back();
+		const std::string& back() const;
+		void insert(std::vector<std::string>::iterator loc, const std::string& name);
+		void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
+			std::vector<std::string>::iterator e);
+		void erase(std::vector<std::string>::iterator i);
+		void clear();
+		void push_back(const std::string& name);
+		size_t size() const;
+
+		std::string GetString() const;
+
+		BNQualifiedName GetAPIObject() const;
+		static void FreeAPIObject(BNQualifiedName* name);
+		static QualifiedName FromAPIObject(BNQualifiedName* name);
+	};
 
 	class DataBuffer
 	{
@@ -593,6 +679,8 @@ namespace BinaryNinja
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
+		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 
 	public:
 		BinaryDataNotification();
@@ -611,6 +699,8 @@ namespace BinaryNinja
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
+		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
 	};
 
 	class FileAccessor
@@ -682,10 +772,15 @@ namespace BinaryNinja
 		std::string text;
 		uint64_t value;
 		size_t size, operand;
+		BNInstructionTextTokenContext context;
+		uint64_t address;
 
 		InstructionTextToken();
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND);
+		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
+			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
+			size_t operand = BN_INVALID_OPERAND);
 	};
 
 	struct DisassemblyTextLine
@@ -749,7 +844,7 @@ namespace BinaryNinja
 		uint64_t align, entrySize;
 	};
 
-	struct NameAndType;
+	struct QualifiedNameAndType;
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -971,15 +1066,21 @@ namespace BinaryNinja
 		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
 			DisassemblySettings* settings);
 
-		bool ParseTypeString(const std::string& text, NameAndType& result, std::string& errors);
+		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 
-		std::map<std::string, Ref<Type>> GetTypes();
-		Ref<Type> GetTypeByName(const std::string& name);
-		bool IsTypeAutoDefined(const std::string& name);
-		void DefineType(const std::string& name, Ref<Type> type);
-		void DefineUserType(const std::string& name, Ref<Type> type);
-		void UndefineType(const std::string& name);
-		void UndefineUserType(const std::string& name);
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetTypeById(const std::string& id);
+		std::string GetTypeId(const QualifiedName& name);
+		QualifiedName GetTypeNameById(const std::string& id);
+		bool IsTypeAutoDefined(const QualifiedName& name);
+		QualifiedName DefineType(const std::string& id, const QualifiedName& defaultName, Ref<Type> type);
+		void DefineUserType(const QualifiedName& name, Ref<Type> type);
+		void UndefineType(const std::string& id);
+		void UndefineUserType(const QualifiedName& name);
+		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
+
+		void RegisterPlatformTypes(Platform* platform);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
 
@@ -998,6 +1099,7 @@ namespace BinaryNinja
 		void RemoveUserSegment(uint64_t start, uint64_t length);
 		std::vector<Segment> GetSegments();
 		bool GetSegmentAt(uint64_t addr, Segment& result);
+		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
@@ -1342,9 +1444,10 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
-		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
+			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
@@ -1429,13 +1532,17 @@ namespace BinaryNinja
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-		                          std::map<std::string, Ref<Type>>& types, std::map<std::string, Ref<Type>>& variables,
-		                          std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                          const std::vector<std::string>& includeDirs = std::vector<std::string>());
-		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<std::string, Ref<Type>>& types,
-		                              std::map<std::string, Ref<Type>>& variables,
-		                              std::map<std::string, Ref<Type>>& functions, std::string& errors,
-		                              const std::vector<std::string>& includeDirs = std::vector<std::string>());
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
+		bool ParseTypesFromSourceFile(const std::string& fileName,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
 
 		void RegisterCallingConvention(CallingConvention* cc);
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
@@ -1498,12 +1605,18 @@ namespace BinaryNinja
 	};
 
 	class Structure;
-	class UnknownType;
+	class NamedTypeReference;
 	class Enumeration;
 
 	struct NameAndType
 	{
 		std::string name;
+		Ref<Type> type;
+	};
+
+	struct QualifiedNameAndType
+	{
+		QualifiedName name;
 		Ref<Type> type;
 	};
 
@@ -1515,6 +1628,7 @@ namespace BinaryNinja
 		BNTypeClass GetClass() const;
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
+		QualifiedName GetTypeName() const;
 		bool IsSigned() const;
 		bool IsConst() const;
 		bool IsVolatile() const;
@@ -1526,16 +1640,27 @@ namespace BinaryNinja
 		bool CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
-		Ref<UnknownType> GetUnknownType() const;
+		Ref<NamedTypeReference> GetNamedTypeReference() const;
+		BNMemberScope GetScope() const;
+		void SetScope(BNMemberScope scope);
+		BNMemberAccess GetAccess() const;
+		void SetAccess(BNMemberAccess access);
+		void SetConst(bool cnst);
+		void SetVolatile(bool vltl);
+		void SetTypeName(const QualifiedName& name);
 
 		uint64_t GetElementCount() const;
 
 		void SetFunctionCanReturn(bool canReturn);
 
 		std::string GetString() const;
-		std::string GetTypeAndName(const std::vector<std::string>& name) const;
+		std::string GetTypeAndName(const QualifiedName& name) const;
 		std::string GetStringBeforeName() const;
 		std::string GetStringAfterName() const;
+
+		std::vector<InstructionTextToken> GetTokens() const;
+		std::vector<InstructionTextToken> GetTokensBeforeName() const;
+		std::vector<InstructionTextToken> GetTokensAfterName() const;
 
 		Ref<Type> Duplicate() const;
 
@@ -1544,23 +1669,46 @@ namespace BinaryNinja
 		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
-		static Ref<Type> UnknownNamedType(UnknownType* unknwn);
+		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
+		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
 		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
+		                             BNReferenceType refType = PointerReferenceType);
+		static Ref<Type> PointerType(size_t width, Type* type, bool cnst = false, bool vltl = false,
 		                             BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(Type* type, uint64_t elem);
 		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
 		                              const std::vector<NameAndType>& params, bool varArg = false);
 
-		static std::string GetQualifiedName(const std::vector<std::string>& names);
+ 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
+		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
+		static std::string GetAutoDemangledTypeIdSource();
+		static std::string GenerateAutoDebugTypeId(const QualifiedName& name);
+		static std::string GetAutoDebugTypeIdSource();
 	};
 
-	class UnknownType: public CoreRefCountObject<BNUnknownType, BNNewUnknownTypeReference, BNFreeUnknownType>
+	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
+		BNFreeNamedTypeReference>
 	{
 	public:
-		UnknownType(BNUnknownType* s, std::vector<std::string> name = {});
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
+		NamedTypeReference(BNNamedTypeReference* nt);
+		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
+			const QualifiedName& name = QualifiedName());
+		BNNamedTypeReferenceClass GetTypeClass() const;
+		void SetTypeClass(BNNamedTypeReferenceClass cls);
+		std::string GetTypeId() const;
+		void SetTypeId(const std::string& id);
+		QualifiedName GetName() const;
+		void SetName(const QualifiedName& name);
+
+		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
+			const std::string& source, const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDebugTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
 	};
 
 	struct StructureMember
@@ -1573,21 +1721,24 @@ namespace BinaryNinja
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	public:
+		Structure();
 		Structure(BNStructure* s);
+		Structure(BNStructureType type, bool packed = false);
 
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
 		std::vector<StructureMember> GetMembers() const;
 		uint64_t GetWidth() const;
+		void SetWidth(size_t width);
 		size_t GetAlignment() const;
+		void SetAlignment(size_t align);
 		bool IsPacked() const;
 		void SetPacked(bool packed);
 		bool IsUnion() const;
-		void SetUnion(bool u);
-
+		void SetStructureType(BNStructureType type);
+		BNStructureType GetStructureType() const;
 		void AddMember(Type* type, const std::string& name);
 		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
 		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, Type* type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -1600,15 +1751,15 @@ namespace BinaryNinja
 	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
 	public:
+		Enumeration();
 		Enumeration(BNEnumeration* e);
-
-		std::vector<std::string> GetName() const;
-		void SetName(const std::vector<std::string>& name);
 
 		std::vector<EnumerationMember> GetMembers() const;
 
 		void AddMember(const std::string& name);
 		void AddMemberWithValue(const std::string& name, uint64_t value);
+		void RemoveMember(size_t idx);
+		void ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
@@ -1632,8 +1783,7 @@ namespace BinaryNinja
 	struct BasicBlockEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		Ref<Architecture> arch;
+		Ref<BasicBlock> target;
 	};
 
 	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
@@ -1648,8 +1798,18 @@ namespace BinaryNinja
 		uint64_t GetEnd() const;
 		uint64_t GetLength() const;
 
+		size_t GetIndex() const;
+
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
+		std::vector<BasicBlockEdge> GetIncomingEdges() const;
 		bool HasUndeterminedOutgoingEdges() const;
+
+		std::set<Ref<BasicBlock>> GetDominators() const;
+		std::set<Ref<BasicBlock>> GetStrictDominators() const;
+		Ref<BasicBlock> GetImmediateDominator() const;
+		std::set<Ref<BasicBlock>> GetDominatorTreeChildren() const;
+		std::set<Ref<BasicBlock>> GetDominanceFrontier() const;
+		static std::set<Ref<BasicBlock>> GetIteratedDominanceFrontier(const std::set<Ref<BasicBlock>>& blocks);
 
 		void MarkRecentUse();
 
@@ -1668,13 +1828,31 @@ namespace BinaryNinja
 		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
 			uint8_t mix, uint8_t alpha = 255);
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+
+		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
 	};
 
-	struct StackVariable
+	struct Variable: public BNVariable
 	{
+		Variable();
+		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
+		Variable(const BNVariable& var);
+
+		Variable& operator=(const Variable& var);
+
+		bool operator==(const Variable& var) const;
+		bool operator!=(const Variable& var) const;
+		bool operator<(const Variable& var) const;
+
+		uint64_t ToIdentifier() const;
+		static Variable FromIdentifier(uint64_t id);
+	};
+
+	struct VariableNameAndType
+	{
+		Variable var;
 		Ref<Type> type;
 		std::string name;
-		int64_t offset;
 		bool autoDefined;
 	};
 
@@ -1683,7 +1861,7 @@ namespace BinaryNinja
 		uint32_t sourceOperand;
 		Ref<Type> type;
 		std::string name;
-		int64_t startingOffset;
+		Variable var;
 		int64_t referencedOffset;
 	};
 
@@ -1714,13 +1892,24 @@ namespace BinaryNinja
 	struct RegisterValue
 	{
 		BNRegisterValueType state;
-		uint32_t reg; // For EntryValue and OffsetFromEntryValue, the original input register
-		int64_t value; // Offset for OffsetFromEntryValue, StackFrameOffset or RangeValue, value of register for ConstantValue
-		uint64_t rangeStart, rangeEnd, rangeStep; // Range of register, inclusive
+		int64_t value;
+
+		static RegisterValue FromAPIObject(BNRegisterValue& value);
+	};
+
+	struct PossibleValueSet
+	{
+		BNRegisterValueType state;
+		int64_t value;
+		std::vector<BNValueRange> ranges;
+		std::set<int64_t> valueSet;
 		std::vector<LookupTableEntry> table;
+
+		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
 	};
 
 	class FunctionGraph;
+	class MediumLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
@@ -1752,12 +1941,8 @@ namespace BinaryNinja
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
-		RegisterValue GetRegisterValueAtLowLevelILInstruction(size_t i, uint32_t reg);
-		RegisterValue GetRegisterValueAfterLowLevelILInstruction(size_t i, uint32_t reg);
 		RegisterValue GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
 		RegisterValue GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
-		RegisterValue GetStackContentsAtLowLevelILInstruction(size_t i, int64_t offset, size_t size);
-		RegisterValue GetStackContentsAfterLowLevelILInstruction(size_t i, int64_t offset, size_t size);
 		RegisterValue GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i);
 		RegisterValue GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
@@ -1772,6 +1957,8 @@ namespace BinaryNinja
 		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+
 		Ref<Type> GetType() const;
 		void SetAutoType(Type* type);
 		void SetUserType(Type* type);
@@ -1780,12 +1967,22 @@ namespace BinaryNinja
 
 		Ref<FunctionGraph> CreateFunctionGraph();
 
-		std::map<int64_t, StackVariable> GetStackLayout();
+		std::map<int64_t, std::vector<VariableNameAndType>> GetStackLayout();
 		void CreateAutoStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void CreateUserStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
-		bool GetStackVariableAtFrameOffset(int64_t offset, StackVariable& var);
+		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
+
+		std::map<Variable, VariableNameAndType> GetVariables();
+		void CreateAutoVariable(const Variable& var, Ref<Type> type, const std::string& name,
+			bool ignoreDisjointUses = false);
+		void CreateUserVariable(const Variable& var, Ref<Type> type, const std::string& name,
+			bool ignoreDisjointUses = false);
+		void DeleteAutoVariable(const Variable& var);
+		void DeleteUserVariable(const Variable& var);
+		Ref<Type> GetVariableType(const Variable& var);
+		std::string GetVariableName(const Variable& var);
 
 		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 		void SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
@@ -1821,6 +2018,8 @@ namespace BinaryNinja
 		void RequestAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData(size_t count);
+
+		std::map<std::string, double> GetAnalysisPerformanceInfo();
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -1840,8 +2039,7 @@ namespace BinaryNinja
 	struct FunctionGraphEdge
 	{
 		BNBranchType type;
-		uint64_t target;
-		Ref<Architecture> arch;
+		Ref<BasicBlock> target;
 		std::vector<BNPoint> points;
 	};
 
@@ -1918,7 +2116,8 @@ namespace BinaryNinja
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
 		uint64_t GetCurrentAddress() const;
-		void SetCurrentAddress(uint64_t addr);
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
 
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
@@ -1937,12 +2136,13 @@ namespace BinaryNinja
 		ExprId Pop(size_t size);
 		ExprId Register(size_t size, uint32_t reg);
 		ExprId Const(size_t size, uint64_t val);
+		ExprId ConstPointer(size_t size, uint64_t val);
 		ExprId Flag(uint32_t reg);
 		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex);
 		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId AddCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId AddCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId Sub(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId SubBorrow(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId SubBorrow(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId And(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId Or(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId Xor(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
@@ -1950,9 +2150,9 @@ namespace BinaryNinja
 		ExprId LogicalShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId ArithShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId RotateLeft(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId RotateRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
-		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
+		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0);
 		ExprId Mult(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId MultDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
 		ExprId MultDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0);
@@ -1966,8 +2166,9 @@ namespace BinaryNinja
 		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0);
 		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0);
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0);
-		ExprId SignExtend(size_t size, ExprId a);
-		ExprId ZeroExtend(size_t size, ExprId a);
+		ExprId SignExtend(size_t size, ExprId a, uint32_t flags = 0);
+		ExprId ZeroExtend(size_t size, ExprId a, uint32_t flags = 0);
+		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0);
 		ExprId Jump(ExprId dest);
 		ExprId Call(ExprId dest);
 		ExprId Return(size_t dest);
@@ -2000,11 +2201,18 @@ namespace BinaryNinja
 		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 
+		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
+		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
+		ExprId GetExprForFlagOrConstant(const BNRegisterOrConstant& operand);
+		ExprId GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
+			BNRegisterOrConstant* operands, size_t operandCount);
+
 		ExprId Operand(uint32_t n, ExprId expr);
 
 		BNLowLevelILInstruction operator[](size_t i) const;
 		size_t GetIndexForInstruction(size_t i) const;
 		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
 
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
@@ -2019,6 +2227,130 @@ namespace BinaryNinja
 		uint32_t GetTemporaryFlagCount();
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		Ref<LowLevelILFunction> GetSSAForm() const;
+		Ref<LowLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
+
+		size_t GetSSARegisterDefinition(uint32_t reg, size_t version) const;
+		size_t GetSSAFlagDefinition(uint32_t flag, size_t version) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSARegisterUses(uint32_t reg, size_t version) const;
+		std::set<size_t> GetSSAFlagUses(uint32_t flag, size_t version) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
+
+		RegisterValue GetSSARegisterValue(uint32_t reg, size_t version);
+		RegisterValue GetSSAFlagValue(uint32_t flag, size_t version);
+
+		RegisterValue GetExprValue(size_t expr);
+		PossibleValueSet GetPossibleExprValues(size_t expr);
+
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
+		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
+		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
+	};
+
+	struct MediumLevelILLabel: public BNMediumLevelILLabel
+	{
+		MediumLevelILLabel();
+	};
+
+	class MediumLevelILFunction: public CoreRefCountObject<BNMediumLevelILFunction,
+		BNNewMediumLevelILFunctionReference, BNFreeMediumLevelILFunction>
+	{
+	public:
+		MediumLevelILFunction(Architecture* arch, Function* func = nullptr);
+		MediumLevelILFunction(BNMediumLevelILFunction* func);
+
+		uint64_t GetCurrentAddress() const;
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
+
+		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size,
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddInstruction(ExprId expr);
+
+		ExprId Goto(BNMediumLevelILLabel& label);
+		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f);
+		void MarkLabel(BNMediumLevelILLabel& label);
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
+		ExprId AddOperandList(const std::vector<ExprId> operands);
+
+		BNMediumLevelILInstruction operator[](size_t i) const;
+		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionForExpr(size_t expr) const;
+		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
+
+		void Finalize();
+
+		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
+		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
+			std::vector<InstructionTextToken>& tokens);
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+
+		Ref<MediumLevelILFunction> GetSSAForm() const;
+		Ref<MediumLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
+
+		size_t GetSSAVarDefinition(const Variable& var, size_t version) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSAVarUses(const Variable& var, size_t version) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
+
+		RegisterValue GetSSAVarValue(const Variable& var, size_t version);
+		RegisterValue GetExprValue(size_t expr);
+		PossibleValueSet GetPossibleSSAVarValues(const Variable& var, size_t version, size_t instr);
+		PossibleValueSet GetPossibleExprValues(size_t expr);
+
+		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
+		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
+		Variable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
+		Variable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
+		Variable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
+
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+
+		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
+		std::map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;
+
+		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		size_t GetLowLevelILInstructionIndex(size_t instr) const;
+		size_t GetLowLevelILExprIndex(size_t expr) const;
 	};
 
 	class FunctionRecognizer
@@ -2248,6 +2580,21 @@ namespace BinaryNinja
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
+
+		std::map<QualifiedName, Ref<Type>> GetTypes();
+		std::map<QualifiedName, Ref<Type>> GetVariables();
+		std::map<QualifiedName, Ref<Type>> GetFunctions();
+		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
+		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetVariableByName(const QualifiedName& name);
+		Ref<Type> GetFunctionByName(const QualifiedName& name);
+		std::string GetSystemCallName(uint32_t n);
+		Ref<Type> GetSystemCallType(uint32_t n);
+
+		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
+		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
+			const QualifiedName& name);
+		std::string GetAutoPlatformTypeIdSource();
 	};
 
 	class ScriptingOutputListener
@@ -2427,5 +2774,70 @@ namespace BinaryNinja
 
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
+	};
+
+	typedef BNPluginOrigin PluginOrigin;
+	typedef BNPluginUpdateStatus PluginUpdateStatus;
+	typedef BNPluginType PluginType;
+
+	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
+	{
+	public:
+		RepoPlugin(BNRepoPlugin* plugin);
+		std::string GetPath() const;
+		bool IsInstalled() const;
+		std::string GetPluginDirectory() const;
+		void SetEnabled(bool enabled);
+		bool IsEnabled() const;
+		PluginUpdateStatus GetPluginUpdateStatus() const;
+		std::string GetApi() const;
+		std::string GetAuthor() const;
+		std::string GetDescription() const;
+		std::string GetLicense() const;
+		std::string GetLicenseText() const;
+		std::string GetLongdescription() const;
+		std::string GetMinimimVersions() const;
+		std::string GetName() const;
+		std::vector<PluginType> GetPluginTypes() const;
+		std::string GetUrl() const;
+		std::string GetVersion() const;
+	};
+
+	class Repository: public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
+	{
+	public:
+		Repository(BNRepository* repository);
+		~Repository();
+		std::string GetUrl() const;
+		std::string GetRepoPath() const;
+		std::string GetLocalReference() const;
+		std::string GetRemoteReference() const;
+		std::vector<Ref<RepoPlugin>> GetPlugins() const;
+		bool IsInitialized() const;
+		std::string GetPluginDirectory() const;
+		Ref<RepoPlugin> GetPluginByPath(const std::string& pluginPath);
+		std::string GetFullPath() const;
+	};
+
+	class RepositoryManager: public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
+	{
+		bool m_core;
+	public:
+		RepositoryManager(const std::string& enabledPluginsPath);
+		RepositoryManager(BNRepositoryManager* repoManager);
+		RepositoryManager();
+		~RepositoryManager();
+		bool CheckForUpdates();
+		std::vector<Ref<Repository>> GetRepositories();
+		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
+		bool AddRepository(const std::string& url,
+			const std::string& repoPath, // Relative path within the repositories directory
+			const std::string& localReference="master",
+			const std::string& remoteReference="origin");
+		bool EnablePlugin(const std::string& repoName, const std::string& pluginPath);
+		bool DisablePlugin(const std::string& repoName, const std::string& pluginPath);
+		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);
+		bool UninstallPlugin(const std::string& repoName, const std::string& pluginPath);
+		Ref<Repository> GetDefaultRepository();
 	};
 }

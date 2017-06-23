@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -92,6 +92,16 @@ class FileMetadata(object):
 		if self.navigation is not None:
 			core.BNSetFileMetadataNavigationHandler(self.handle, None)
 		core.BNFreeFileMetadata(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, FileMetadata):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, FileMetadata):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@classmethod
 	def _unregister(cls, f):

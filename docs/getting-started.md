@@ -2,7 +2,7 @@
 
 Welcome to Binary Ninja. This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja.
 
-![license popup](/images/license-popup.png "License Popup")
+![license popup >](/images/license-popup.png "License Popup")
 
 ## License
 
@@ -13,6 +13,10 @@ Once the license key is installed, you can change it, back it up, or otherwise i
 - OS X: `~/Library/Application Support/Binary Ninja`
 - Linux: `~/.binaryninja`
 - Windows: `%APPDATA%\Binary Ninja`
+
+## Linux Setup
+
+Because linux install locations can vary widely, we do not assume a Binary Ninja has been installed in any particular folder on linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.
 
 ## Loading Files
 
@@ -30,7 +34,7 @@ You can load files in many ways:
 
 ## Analysis
 
-![auto analysis](/images/analysis.png "Auto Analysis")
+![auto analysis ><](/images/analysis.png "Auto Analysis")
 
 As soon as you open a file, Binary Ninja begins its auto-analysis.
 
@@ -79,7 +83,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
 
 The default view in Binary Ninja when opening a binary is a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
 
-![graph view context](/images/graphcontext.png "Graph View Contet Menu")
+![graph view context >](/images/graphcontext.png "Graph View Contet Menu")
 
 Features of the graph view include:
 
@@ -93,7 +97,7 @@ Features of the graph view include:
 
 ### View Options
 
-![options](/images/options.png "options")
+![options ><](/images/options.png "options")
 
 Each of the views (Hex, Graph, Linear) have a variety of options configurable in the bottom-right of the UI.
 
@@ -126,7 +130,7 @@ Current options include:
 
 ### Hex View
 
-![hex](/images/hex.png "hex view")
+![hex >](/images/hex.png "hex view")
 
 The hexadecimal view is useful for view raw binary files that may or may not even be executable binaries. The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that `Transform` menu options will transform the data in-place, and that these options will only work when the Hex View is in the `Raw` mode as opposd to any of the binary views (such as "ELF", "Mach-O", or "PE").
 
@@ -134,7 +138,7 @@ Note that any changes made in the Hex view will take effect immediately in any o
 
 ### Xrefs View
 
-![xrefs](/images/xrefs.png "xrefs")
+![xrefs >](/images/xrefs.png "xrefs")
 
 The xrefs view in the lower-left shows all cross-references to a given location or reference. Note that the cross-references pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected.
 
@@ -151,7 +155,7 @@ Linear view is most commonly used for identifying and adding type information fo
 
 ### Function List
 
-![function list](/images/functionlist.png "Function List")
+![function list >](/images/functionlist.png "Function List")
 
 The function list in Binary Ninja shows the list of functions currently identified. As large binaries are analyzed, the list may grow during analysis. The function list starts with known functions such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions.
 
@@ -162,7 +166,7 @@ The function list also highlights imports, and functions identified with symbols
 
 ### Script (Python) Console
 
-![console](/images/console.png "Console")
+![console >](/images/console.png "Console")
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
@@ -186,9 +190,19 @@ Note
 !!! Tip "Note"
     The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who with to implement their own bindings.
 
+## Using Plugins
+
+Plugins can be installed by one of two methods. First, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
+
+- OS X: `~/Library/Application Support/Binary Ninja/plugins/`
+- Linux: `~/.binaryninja/plugins/`
+- Windows: `%APPDATA%\Binary Ninja\plugins`
+
+Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
+
 ## Preferences/Updates
 
-![preferences](/images/preferences.png "Preferences")
+![preferences >](/images/preferences.png "Preferences")
 
 Binary Ninja automatically updates itself by default. This functionality can be disabled in the preferences by turning off the `Update to latest version automatically` option. Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 
@@ -200,4 +214,4 @@ Most preferences are fairly intuitive. There is no advanced preference system at
 
 Vector 35 offers a number of ways to get Binary Ninja [support].
 
-[support]: https://binary.ninja/support.html
+[support]: https://binary.ninja/support/

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2015-2016 Vector 35 LLC
+# Copyright (c) 2015-2017 Vector 35 LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -38,7 +38,6 @@ def get_bininfo(bv):
 				sys.exit(1)
 
 		bv = BinaryViewType.get_view_of_file(filename)
-		log.redirect_output_to_log()
 		log.log_to_stdout(True)
 
 	contents = "## %s ##\n" % bv.file.filename

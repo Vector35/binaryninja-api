@@ -375,6 +375,7 @@ namespace BinaryNinja
 	void InitCorePlugins();
 	void InitUserPlugins();
 	void InitRepoPlugins();
+
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
 	std::string GetInstallDirectory();
@@ -845,6 +846,15 @@ namespace BinaryNinja
 	};
 
 	struct QualifiedNameAndType;
+	class Metadata;
+
+	class QueryMetadataException: public std::exception
+	{
+		const std::string m_error;
+	public:
+		QueryMetadataException(const std::string& error): std::exception(), m_error(error) {}
+		virtual const char* what() const NOEXCEPT { return m_error.c_str(); }
+	};
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -1116,6 +1126,12 @@ namespace BinaryNinja
 		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
 
 		std::vector<BNAddressRange> GetAllocatedRanges();
+
+		void StoreMetadata(const std::string& key, Metadata* inValue);
+		bool QueryMetadata(const std::string& key, Metadata** outValue);
+		std::string GetStringMetadata(const std::string& key);
+		std::vector<uint8_t> GetRawMetadata(const std::string& key);
+		uint64_t GetUIntMetadata(const std::string& key);
 	};
 
 	class BinaryData: public BinaryView
@@ -1195,7 +1211,11 @@ namespace BinaryNinja
 
 		void Read(void* dest, size_t len);
 		DataBuffer Read(size_t len);
+		template <typename T> T Read();
+		template <typename T> std::vector<T> ReadVector(size_t count);
 		std::string ReadString(size_t len);
+		std::string ReadCString(size_t maxLength=-1);
+
 		uint8_t Read8();
 		uint16_t Read16();
 		uint32_t Read32();
@@ -2841,5 +2861,89 @@ namespace BinaryNinja
 		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);
 		bool UninstallPlugin(const std::string& repoName, const std::string& pluginPath);
 		Ref<Repository> GetDefaultRepository();
+	};
+
+	class Setting
+	{
+	public:
+		static bool ProcessMainSettingsFile();
+		static bool GetBool(const std::string& settingGroup, const std::string& name, bool defaultValue);
+		static uint64_t GetInteger(const std::string& settingGroup, const std::string& name, uint64_t defaultValue=0);
+		static std::string GetString(const std::string& settingGroup, const std::string& name, const std::string& defaultValue="");
+		static std::vector<uint64_t> GetIntegerList(const std::string& settingGroup, const std::string& name, const std::vector<uint64_t>& defaultValue={});
+		static std::vector<std::string> GetStringList(const std::string& settingGroup, const std::string& name, const std::vector<std::string>& defaultValue={});
+		static double GetDouble(const std::string& settingGroup, const std::string& name, double defaultValue=0.0);
+
+		static bool IsPresent(const std::string& settingGroup, const std::string& name);
+		static bool IsBool(const std::string& settingGroup, const std::string& name);
+		static bool IsInteger(const std::string& settingGroup, const std::string& name);
+		static bool IsString(const std::string& settingGroup, const std::string& name);
+		static bool IsIntegerList(const std::string& settingGroup, const std::string& name);
+		static bool IsStringList(const std::string& settingGroup, const std::string& name);
+		static bool IsDouble(const std::string& settingGroup, const std::string& name);
+	};
+
+	class CoreSetting
+	{
+	public:
+		static bool GetBool(const std::string& name, bool defaultValue);
+		static uint64_t GetInteger(const std::string& name, uint64_t defaultValue=0);
+		static std::string GetString(const std::string& name, const std::string& defaultValue="");
+		static std::vector<uint64_t> GetIntegerList(const std::string& name, const std::vector<uint64_t>& defaultValue={});
+		static std::vector<std::string> GetStringList(const std::string& name, const std::vector<std::string>& defaultValue={});
+		static double GetDouble(const std::string& name, double defaultValue=0.0);
+
+		static bool IsPresent(const std::string& name);
+		static bool IsBool(const std::string& name);
+		static bool IsInteger(const std::string& name);
+		static bool IsString(const std::string& name);
+		static bool IsIntegerList(const std::string& name);
+		static bool IsStringList(const std::string& name);
+		static bool IsDouble(const std::string& name);
+	};
+
+	typedef BNMetadataType MetadataType;
+
+	class Metadata: public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
+	{
+	public:
+		Metadata(BNMetadata* structuredData);
+		Metadata(bool data);
+		Metadata(const std::string& data);
+		Metadata(uint64_t data);
+		Metadata(int64_t data);
+		Metadata(double data);
+		Metadata(const std::vector<bool>& data);
+		Metadata(const std::vector<std::string>& data);
+		Metadata(const std::vector<uint64_t>& data);
+		Metadata(const std::vector<int64_t>& data);
+		Metadata(const std::vector<double>& data);
+		Metadata(const std::vector<uint8_t>& data);
+		virtual ~Metadata() {}
+
+		MetadataType GetType() const;
+		bool GetBoolean() const;
+		std::string GetString() const;
+		uint64_t GetUnsignedInteger() const;
+		int64_t GetSignedInteger() const;
+		double GetDouble() const;
+		std::vector<bool> GetBooleanList() const;
+		std::vector<std::string> GetStringList() const;
+		std::vector<uint64_t> GetUnsignedIntegerList() const;
+		std::vector<int64_t> GetSignedIntegerList() const;
+		std::vector<double> GetDoubleList() const;
+		std::vector<uint8_t> GetRaw() const;
+
+		bool IsBoolean() const;
+		bool IsString() const;
+		bool IsUnsignedInteger() const;
+		bool IsSignedInteger() const;
+		bool IsDouble() const;
+		bool IsBooleanList() const;
+		bool IsStringList() const;
+		bool IsUnsignedIntegerList() const;
+		bool IsSignedIntegerList() const;
+		bool IsDoubleList() const;
+		bool IsRaw() const;
 	};
 }

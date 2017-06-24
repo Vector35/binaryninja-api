@@ -47,6 +47,7 @@ from .undoaction import *
 from .highlight import *
 from .scriptingprovider import *
 from .pluginmanager import *
+from .setting import *
 
 
 def shutdown():

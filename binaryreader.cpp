@@ -266,3 +266,40 @@ bool BinaryReader::IsEndOfFile() const
 {
 	return BNIsEndOfFile(m_stream);
 }
+
+
+template <typename T>
+T BinaryReader::Read()
+{
+	T value;
+	Read((char*)&value, sizeof(T));
+	return value;
+}
+
+template<typename T>
+vector<T> BinaryReader::ReadVector(size_t count)
+{
+	T* buff = new T[count];
+	Read((char*)buff, count * sizeof(T));
+	std::vector<T> out(buff, buff + count);
+	return out;
+}
+
+
+string BinaryReader::ReadCString(size_t maxSize)
+{
+	string result;
+	try
+	{
+		for (size_t i = 0; i < maxSize; i++)
+		{
+			char cur = Read8();
+			if (cur == 0)
+				break;
+			result.push_back(cur);
+		}
+	}
+	catch (ReadException& r)
+	{;}
+	return result;
+}

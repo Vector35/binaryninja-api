@@ -1826,6 +1826,57 @@ vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 }
 
 
+void BinaryView::StoreMetadata(const std::string& key, Metadata* inValue)
+{
+	if (!inValue)
+		return;
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
+}
+
+
+bool BinaryView::QueryMetadata(const std::string& key, Metadata** outValue)
+{
+	BNMetadata* value = nullptr;
+	bool status = BNBinaryViewQueryMetadata(m_object, key.c_str(), &value);
+	if (!status)
+	{
+		*outValue = nullptr;
+		return false;
+	}
+	*outValue = new Metadata(value);
+	return true;
+}
+
+string BinaryView::GetStringMetadata(const string& key)
+{
+	Metadata* data;
+	if (!QueryMetadata(key, &data) || !data || data->IsString())
+		throw QueryMetadataException("Failed to find key: " + key);
+	auto result = data->GetString();
+	delete data;
+	return result;
+}
+
+vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
+{
+	Metadata* data;
+	if (!QueryMetadata(key, &data) || !data || data->IsRaw())
+		throw QueryMetadataException("Failed to find key: " + key);
+	auto result = data->GetRaw();
+	delete data;
+	return result;
+}
+
+uint64_t BinaryView::GetUIntMetadata(const string& key)
+{
+	Metadata* data;
+	if (!QueryMetadata(key, &data) || !data || data->IsUnsignedInteger())
+		throw QueryMetadataException("Failed to find key: " + key);
+	auto result = data->GetUnsignedInteger();
+	delete data;
+	return result;
+}
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

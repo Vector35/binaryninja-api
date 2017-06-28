@@ -28,7 +28,6 @@ def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
 		_plugin_init = True
-		core.BNProcessMainSettingsFile()
 		core.BNInitCorePlugins()
 		core.BNInitUserPlugins()
 		core.BNInitRepoPlugins()

@@ -1493,6 +1493,7 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
+	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
@@ -2883,7 +2884,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
 
 	// Settings APIs
-	BINARYNINJACOREAPI bool BNProcessMainSettingsFile();
 	BINARYNINJACOREAPI bool BNSettingGetBool(const char* settingGroup, const char* name, bool defaultValue);
 	BINARYNINJACOREAPI uint64_t BNSettingGetInteger(const char* settingGroup, const char* name, uint64_t defaultValue);
 	BINARYNINJACOREAPI char* BNSettingGetString(const char* settingGroup, const char* name, const char* defaultValue);
@@ -2893,7 +2893,6 @@ extern "C"
 	BINARYNINJACOREAPI const char** BNSettingGetStringList(const char* settingGroup, const char* name, const char** defaultValue, size_t* inoutSize);
 	BINARYNINJACOREAPI double BNSettingGetDouble(const char* settingGroup, const char* name, double defaultValue);
 
-	BINARYNINJACOREAPI void BNFreeSettingStringList(char** stringList, size_t size);
 	BINARYNINJACOREAPI void BNFreeSettingIntegerList(uint64_t* integerList);
 	//Check the type of a core setting
 	BINARYNINJACOREAPI bool BNSettingIsBool(const char* name, const char* settingGroup);

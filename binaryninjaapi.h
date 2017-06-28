@@ -2866,7 +2866,6 @@ namespace BinaryNinja
 	class Setting
 	{
 	public:
-		static bool ProcessMainSettingsFile();
 		static bool GetBool(const std::string& settingGroup, const std::string& name, bool defaultValue);
 		static uint64_t GetInteger(const std::string& settingGroup, const std::string& name, uint64_t defaultValue=0);
 		static std::string GetString(const std::string& settingGroup, const std::string& name, const std::string& defaultValue="");
@@ -2881,25 +2880,6 @@ namespace BinaryNinja
 		static bool IsIntegerList(const std::string& settingGroup, const std::string& name);
 		static bool IsStringList(const std::string& settingGroup, const std::string& name);
 		static bool IsDouble(const std::string& settingGroup, const std::string& name);
-	};
-
-	class CoreSetting
-	{
-	public:
-		static bool GetBool(const std::string& name, bool defaultValue);
-		static uint64_t GetInteger(const std::string& name, uint64_t defaultValue=0);
-		static std::string GetString(const std::string& name, const std::string& defaultValue="");
-		static std::vector<uint64_t> GetIntegerList(const std::string& name, const std::vector<uint64_t>& defaultValue={});
-		static std::vector<std::string> GetStringList(const std::string& name, const std::vector<std::string>& defaultValue={});
-		static double GetDouble(const std::string& name, double defaultValue=0.0);
-
-		static bool IsPresent(const std::string& name);
-		static bool IsBool(const std::string& name);
-		static bool IsInteger(const std::string& name);
-		static bool IsString(const std::string& name);
-		static bool IsIntegerList(const std::string& name);
-		static bool IsStringList(const std::string& name);
-		static bool IsDouble(const std::string& name);
 	};
 
 	typedef BNMetadataType MetadataType;

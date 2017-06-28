@@ -1784,6 +1784,7 @@ namespace BinaryNinja
 	{
 		BNBranchType type;
 		Ref<BasicBlock> target;
+		bool backEdge;
 	};
 
 	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
@@ -2041,6 +2042,7 @@ namespace BinaryNinja
 		BNBranchType type;
 		Ref<BasicBlock> target;
 		std::vector<BNPoint> points;
+		bool backEdge;
 	};
 
 	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,

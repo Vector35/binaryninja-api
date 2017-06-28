@@ -29,10 +29,11 @@ import function
 
 
 class BasicBlockEdge(object):
-	def __init__(self, branch_type, source, target):
+	def __init__(self, branch_type, source, target, back_edge):
 		self.type = branch_type
 		self.source = source
 		self.target = target
+		self.back_edge = back_edge
 
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
@@ -41,11 +42,6 @@ class BasicBlockEdge(object):
 			return "<%s: %s@%#x>" % (BranchType(self.type).name, self.target.arch.name, self.target.start)
 		else:
 			return "<%s: %#x>" % (BranchType(self.type).name, self.target.start)
-
-	@property
-	def back_edge(self):
-		"""Whether the edge is a back edge (end of a loop)"""
-		return self.target in self.source.dominators
 
 
 class BasicBlock(object):
@@ -114,7 +110,7 @@ class BasicBlock(object):
 				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
-			result.append(BasicBlockEdge(branch_type, self, target))
+			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
 		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 
@@ -130,7 +126,7 @@ class BasicBlock(object):
 				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
-			result.append(BasicBlockEdge(branch_type, self, target))
+			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
 		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 

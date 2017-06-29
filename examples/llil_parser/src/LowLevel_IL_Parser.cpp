@@ -5,6 +5,7 @@ LLIL Parser - Binary Ninja C++ API Sample
 
 #include "LowLevel_IL_Parser.h"
 #include <iostream>
+#include <sstream>
 
 int main(int argc, char* argv[])
 {
@@ -238,7 +239,7 @@ std::string get_plugins_directory()
     if (!dladdr((void *)BNGetBundledPluginDirectory, &info))
         return NULL;
 
-    stringstream ss;
+    std::stringstream ss;
     ss << dirname((char *)info.dli_fname) << "/plugins/";
     return ss.str();
 }

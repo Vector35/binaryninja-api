@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 
 		if (argc != 2)
 		{
-			printf("Usage: %s <input file>", argv[0]);
+			printf("Usage: %s <input file>\n", argv[0]);
 			exit(-1);
 		}
 
@@ -231,17 +231,9 @@ void ShowBanner()
 }
 
 #ifndef _WIN32
-#include <libgen.h>
-#include <dlfcn.h>
 std::string get_plugins_directory()
 {
-    Dl_info info;
-    if (!dladdr((void *)BNGetBundledPluginDirectory, &info))
-        return NULL;
-
-    std::stringstream ss;
-    ss << dirname((char *)info.dli_fname) << "/plugins/";
-    return ss.str();
+	return "~/binaryninja/plugins";
 }
 #else
 std::string get_plugins_directory()

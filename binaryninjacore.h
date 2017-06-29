@@ -1021,6 +1021,7 @@ extern "C"
 	{
 		BNBranchType type;
 		BNBasicBlock* target;
+		bool backEdge;
 	};
 
 	struct BNPoint
@@ -1035,6 +1036,7 @@ extern "C"
 		BNBasicBlock* target;
 		BNPoint* points;
 		size_t pointCount;
+		bool backEdge;
 	};
 
 	struct BNDisassemblyTextLine

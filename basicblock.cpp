@@ -125,6 +125,7 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
+		edge.backEdge = array[i].backEdge;
 		result.push_back(edge);
 	}
 
@@ -144,6 +145,7 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
+		edge.backEdge = array[i].backEdge;
 		result.push_back(edge);
 	}
 
@@ -397,5 +399,10 @@ void BasicBlock::SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uin
 
 bool BasicBlock::IsBackEdge(BasicBlock* source, BasicBlock* target)
 {
-	return source->GetDominators().count(target) != 0;
+	for (auto& i : source->GetOutgoingEdges())
+	{
+		if (i.target->GetObject() == target->GetObject())
+			return i.backEdge;
+	}
+	return false;
 }

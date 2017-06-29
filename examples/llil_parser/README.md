@@ -41,6 +41,10 @@ If you get an error about `BINJA_API_LIBRARY` check the API has built properly a
 
 If you get an error about `BINJA_CORE_LIBRARY` then the file C:\Program Files\Vector35\BinaryNinja\binaryninjacore.lib is missing see [Create .lib file from .dll](https://adrianhenke.wordpress.com/2008/12/05/create-lib-file-from-dll/) on details about how to create this lib file from the dll file located in that directory
 
+> Building under the linux is almost exactly the same however you need not use the `-G` parameter and you build with the `make` command instead of `cmake --build` another important note is that i had to execute `cp ~/binaryninja/libbinaryninjacore.so.1 ~/binaryninja/libbinaryninjacore.so` before linking would work
+
+Note i do not have access to a MAC so i havent tested this nor does the .cpp file correctly locate the binaryninja path
+
 Using the example
 ===
 

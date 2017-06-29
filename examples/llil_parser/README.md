@@ -13,6 +13,8 @@ Example of building under windows from scratch
 * https://cmake.org/ Required for this example
 * We will be using Visual Studio 2017 however if want to use a different version simply run the `cmake -G` command to find the alternative name to use in the cmake commands below, be sure to use the Win64 version.
 
+Note: if you havent installed binary ninja into a default location then you will need to edit the cmake file and also the `std::string get_plugins_directory()` function in the `.cpp` file
+
 # Building the BinaryNinja API
 ```
 git clone https://github.com/Vector35/binaryninja-api.git
@@ -43,7 +45,7 @@ If you get an error about `BINJA_CORE_LIBRARY` then the file C:\Program Files\Ve
 
 > Building under the linux is almost exactly the same however you need not use the `-G` parameter and you build with the `make` command instead of `cmake --build` another important note is that i had to execute `cp ~/binaryninja/libbinaryninjacore.so.1 ~/binaryninja/libbinaryninjacore.so` before linking would work
 
-Note i do not have access to a MAC so i havent tested this nor does the .cpp file correctly locate the binaryninja path
+Note i do not have access to a MAC so i havent tested this.
 
 Using the example
 ===

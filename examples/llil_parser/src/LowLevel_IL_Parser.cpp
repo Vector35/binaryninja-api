@@ -6,6 +6,20 @@ LLIL Parser - Binary Ninja C++ API Sample
 #include "LowLevel_IL_Parser.h"
 #include <iostream>
 #include <sstream>
+#include <condition_variable>
+
+std::mutex mtx;
+std::condition_variable cv;
+
+void UpdateAndWaitForAnalysis(BinaryNinja::BinaryView *bv)
+{
+	AnalysisCompletionEvent analysisCompletionEvent(bv, [&](){ cv.notify_one(); } );
+	bv->UpdateAnalysis();
+
+	std::unique_lock<std::mutex> lck(mtx);
+	cv.wait(lck);
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -40,10 +54,12 @@ int main(int argc, char* argv[])
 		}
 
 		printf("[i] Starting analysis\n");
-		bv->UpdateAnalysis();
+		UpdateAndWaitForAnalysis(bv);
 
-		while (bv->GetAnalysisProgress().state != IdleState);
-		printf("[i] Analysis done\n");
+		printf("[i] Analysis done - %zd Functions\n", bv->GetAnalysisFunctionList().size());
+
+		if (bv->GetAnalysisFunctionList().size() < 1)
+			throw std::runtime_error("Error no functions found\n");
 
 		LlilParser myParser(bv);
 		myParser.decodeWholeFunction(bv->GetAnalysisFunctionList()[0]);
@@ -106,7 +122,8 @@ void LlilParser::analysisInstruction(const BNLowLevelILInstruction& insn)
 		if (operand.type == OperandType::kExpr)
 		{
 			// In this case the value in the operands[x] field is a new instruction & expression index value
-			BNLowLevelILInstruction nextInstruction = llil->operator[](insn.operands[operandId]);
+			BNLowLevelILInstruction nextInstruction = (*llil)[insn.operands[operandId]];
+
 			analysisInstruction(nextInstruction); // recursion begins :)
 		}
 		else if (operand.type == OperandType::kReg)
@@ -164,7 +181,7 @@ void LlilParser::decodeIndexInFunction(uint64_t functionAddress, int indexIl)
 	BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> llil = function->GetLowLevelIL();
 
 	m_currentInstructionId = indexIl;
-	BNLowLevelILInstruction currentInstruction = llil->operator[](llil->GetIndexForInstruction(indexIl));
+	BNLowLevelILInstruction currentInstruction = (*llil)[llil->GetIndexForInstruction(indexIl)];
 
 
 	analysisInstruction(currentInstruction);
@@ -183,7 +200,7 @@ void LlilParser::decodeWholeFunction(BinaryNinja::Function *function)
 	{
 		
 		m_currentInstructionId = i;
-		BNLowLevelILInstruction currentInstruction = llil->operator[](llil->GetIndexForInstruction(i));
+		BNLowLevelILInstruction currentInstruction = (*llil)[llil->GetIndexForInstruction(i)];
 		
 		printf("\n[%zx][%zd]---------------------------------------------------------------------------\n", currentInstruction.address, i);
 
@@ -208,7 +225,8 @@ void LlilParser::decodeWholeFunction(uint64_t functionAddress)
 	for (size_t i = 0; i < llil->GetInstructionCount(); i++)
 	{
 		m_currentInstructionId = i;
-		BNLowLevelILInstruction currentInstruction = llil->operator[](llil->GetIndexForInstruction(i));
+		BNLowLevelILInstruction currentInstruction = (*llil)[llil->GetIndexForInstruction(i)];
+
 		printf("\n[%zx][%zd]---------------------------------------------------------------------------\n", currentInstruction.address, i);
 
 		analysisInstruction(currentInstruction);
@@ -230,15 +248,20 @@ void ShowBanner()
 
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
 std::string get_plugins_directory()
 {
-	return "~/binaryninja/plugins";
+	return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
+}
+#elif __APPLE__ 
+std::string get_plugins_directory()
+{
+	return "/Applications/Binary Ninja.app/Contents/MacOS/plugins/";
 }
 #else
 std::string get_plugins_directory()
 {
-    return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
+	return "~/binaryninja/plugins";
 }
 #endif
 

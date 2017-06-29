@@ -5,6 +5,8 @@ LLIL Parser - Binary Ninja C++ API Sample
 
 LLIL Parser is a simple example for demonstrating how to use the BinaryNinja C++ API
 
+![ScreenShot](https://user-images.githubusercontent.com/1876966/27665067-58d34dd0-5c6b-11e7-9361-6efd01cfa0af.JPG)
+
 Example of building under windows from scratch
 ===
 

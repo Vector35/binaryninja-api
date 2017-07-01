@@ -24,6 +24,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [discount] ([discount license] - BSD)
     - [libcurl] ([libcurl license] - MIT/X derivative)
     - [libgit2] ([libgit2 license] - GPLv2 with linking exception)
+    - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
     - [openssl] ([openssl license] - openssl license)
@@ -64,12 +65,14 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
-[libcurl license]: https://curl.haxx.se/docs/copyright.html 
 [libcurl]: https://curl.haxx.se/
-[libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
+[libcurl license]: https://curl.haxx.se/docs/copyright.html 
 [libgit2]: https://libgit2.github.com/
-[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
+[libmspack]: https://www.cabextract.org.uk/libmspack/
+[libmspack license]: https://www.cabextract.org.uk/libmspack/#license
 [llvm]: http://llvm.org/releases/3.8.1/
+[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
 [lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
 [mkdocs license]: https://github.com/mkdocs/mkdocs/blob/master/LICENSE

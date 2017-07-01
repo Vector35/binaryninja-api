@@ -96,3 +96,69 @@ bool Setting::IsDouble(const std::string& pluginName, const std::string& name)
 {
 	return BNSettingIsDouble(pluginName.c_str(), name.c_str());
 }
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	bool value,
+	bool autoFlush)
+{
+	return BNSettingSetBool(settingGroup.c_str(), name.c_str(), value, autoFlush);
+}
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	uint64_t value,
+	bool autoFlush)
+{
+	return BNSettingSetInteger(settingGroup.c_str(), name.c_str(), value, autoFlush);
+}
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	const std::string& value,
+	bool autoFlush)
+{
+	return BNSettingSetString(settingGroup.c_str(), name.c_str(), value.c_str(), autoFlush);
+}
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	const std::vector<uint64_t>& value,
+	bool autoFlush)
+{
+	return BNSettingSetIntegerList(settingGroup.c_str(), name.c_str(), &value[0], value.size(), autoFlush);
+}
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	const std::vector<std::string>& value,
+	bool autoFlush)
+{
+	char** buffer = new char*[value.size()];
+	if (!buffer)
+		return false;
+	for (size_t i = 0; i < value.size(); i++)
+		buffer[i] = BNAllocString(value[i].c_str());
+
+	bool result = BNSettingSetStringList(settingGroup.c_str(),
+			name.c_str(),
+			(const char**)buffer,
+			value.size(),
+			autoFlush);
+
+	BNFreeStringList(buffer, value.size());
+	return result;
+}
+
+bool Setting::Set(const std::string& settingGroup,
+	const std::string& name,
+	double value,
+	bool autoFlush)
+{
+	return BNSettingSetDouble(settingGroup.c_str(), name.c_str(), value, autoFlush);
+}
+
+bool Setting::FlushSettings()
+{
+	return BNSettingFlushSettings();
+}

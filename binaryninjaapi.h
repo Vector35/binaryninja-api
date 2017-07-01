@@ -2881,6 +2881,32 @@ namespace BinaryNinja
 		static bool IsIntegerList(const std::string& settingGroup, const std::string& name);
 		static bool IsStringList(const std::string& settingGroup, const std::string& name);
 		static bool IsDouble(const std::string& settingGroup, const std::string& name);
+
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			bool value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			uint64_t value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::string& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::vector<uint64_t>& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::vector<std::string>& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			double value,
+			bool autoFlush=true);
+		static bool FlushSettings();
 	};
 
 	typedef BNMetadataType MetadataType;

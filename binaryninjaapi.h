@@ -1128,7 +1128,7 @@ namespace BinaryNinja
 		std::vector<BNAddressRange> GetAllocatedRanges();
 
 		void StoreMetadata(const std::string& key, Metadata* inValue);
-		bool QueryMetadata(const std::string& key, Metadata** outValue);
+		std::unique_ptr<Metadata> QueryMetadata(const std::string& key);
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);

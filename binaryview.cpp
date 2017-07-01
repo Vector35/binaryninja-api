@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -1833,48 +1834,37 @@ void BinaryView::StoreMetadata(const std::string& key, Metadata* inValue)
 	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
 }
 
-
-bool BinaryView::QueryMetadata(const std::string& key, Metadata** outValue)
+unique_ptr<Metadata> BinaryView::QueryMetadata(const std::string& key)
 {
-	BNMetadata* value = nullptr;
-	bool status = BNBinaryViewQueryMetadata(m_object, key.c_str(), &value);
-	if (!status)
-	{
-		*outValue = nullptr;
-		return false;
-	}
-	*outValue = new Metadata(value);
-	return true;
+	BNMetadata* value = BNBinaryViewQueryMetadata(m_object, key.c_str());
+	if (!value)
+		return nullptr;
+	auto a = new Metadata(value);
+	return unique_ptr<Metadata>(a);
 }
 
 string BinaryView::GetStringMetadata(const string& key)
 {
-	Metadata* data;
-	if (!QueryMetadata(key, &data) || !data || data->IsString())
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsString())
 		throw QueryMetadataException("Failed to find key: " + key);
-	auto result = data->GetString();
-	delete data;
-	return result;
+	return data->GetString();
 }
 
 vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
 {
-	Metadata* data;
-	if (!QueryMetadata(key, &data) || !data || data->IsRaw())
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsRaw())
 		throw QueryMetadataException("Failed to find key: " + key);
-	auto result = data->GetRaw();
-	delete data;
-	return result;
+	return data->GetRaw();
 }
 
 uint64_t BinaryView::GetUIntMetadata(const string& key)
 {
-	Metadata* data;
-	if (!QueryMetadata(key, &data) || !data || data->IsUnsignedInteger())
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsUnsignedInteger())
 		throw QueryMetadataException("Failed to find key: " + key);
-	auto result = data->GetUnsignedInteger();
-	delete data;
-	return result;
+	return data->GetUnsignedInteger();
 }
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))

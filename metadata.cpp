@@ -3,34 +3,34 @@
 using namespace std;
 using namespace BinaryNinja;
 
-Metadata::Metadata(BNMetadata* structuredData)
+Metadata::Metadata(BNMetadata* metadata)
 {
-	m_object = structuredData;
+	m_object = metadata;
 }
 
 Metadata::Metadata(bool data)
 {
-	m_object = BNCreateStructuredBooleanData(data);
+	m_object = BNCreateMetadataBooleanData(data);
 }
 
 Metadata::Metadata(const string& data)
 {
-	m_object = BNCreateStructuredStringData(data.c_str());
+	m_object = BNCreateMetadataStringData(data.c_str());
 }
 
 Metadata::Metadata(uint64_t data)
 {
-	m_object = BNCreateStructuredUnsignedIntegerData(data);
+	m_object = BNCreateMetadataUnsignedIntegerData(data);
 }
 
 Metadata::Metadata(int64_t data)
 {
-	m_object = BNCreateStructuredSignedIntegerData(data);
+	m_object = BNCreateMetadataSignedIntegerData(data);
 }
 
 Metadata::Metadata(double data)
 {
-	m_object = BNCreateStructuredDoubleData(data);
+	m_object = BNCreateMetadataDoubleData(data);
 }
 
 Metadata::Metadata(const vector<bool>& data)
@@ -39,7 +39,7 @@ Metadata::Metadata(const vector<bool>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = data[i];
 
-	m_object = BNCreateStructuredBooleanListData(input, data.size());
+	m_object = BNCreateMetadataBooleanListData(input, data.size());
 	delete[] input;
 }
 
@@ -49,7 +49,7 @@ Metadata::Metadata(const vector<string>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = BNAllocString(data[i].c_str());
 
-	m_object = BNCreateStructuredStringListData((const char**)input, data.size());
+	m_object = BNCreateMetadataStringListData((const char**)input, data.size());
 
 	for (size_t i = 0; i < data.size(); i++)
 		BNFreeString(input[i]);
@@ -62,7 +62,7 @@ Metadata::Metadata(const vector<uint64_t>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = data[i];
 
-	m_object = BNCreateStructuredUnsignedIntegerListData(input, data.size());
+	m_object = BNCreateMetadataUnsignedIntegerListData(input, data.size());
 	delete[] input;
 }
 
@@ -72,7 +72,7 @@ Metadata::Metadata(const vector<int64_t>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = data[i];
 
-	m_object = BNCreateStructuredSignedIntegerListData(input, data.size());
+	m_object = BNCreateMetadataSignedIntegerListData(input, data.size());
 	delete[] input;
 }
 
@@ -82,7 +82,7 @@ Metadata::Metadata(const vector<double>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = data[i];
 
-	m_object = BNCreateStructuredDoubleListData(input, data.size());
+	m_object = BNCreateMetadataDoubleListData(input, data.size());
 	delete[] input;
 }
 
@@ -92,7 +92,7 @@ Metadata::Metadata(const vector<uint8_t>& data)
 	for (size_t i = 0; i < data.size(); i++)
 		input[i] = data[i];
 
-	m_object = BNCreateStructuredRawData(input, data.size());
+	m_object = BNCreateMetadataRawData(input, data.size());
 	delete[] input;
 }
 

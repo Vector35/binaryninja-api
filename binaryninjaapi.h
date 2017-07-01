@@ -32,6 +32,7 @@
 #include <functional>
 #include <set>
 #include <mutex>
+#include <memory>
 #include "binaryninjacore.h"
 #include "json/json.h"
 

@@ -40,7 +40,7 @@ class Setting(object):
 	def get_integer_list(self, name):
 		length = ctypes.c_ulonglong()
 		length.value = 0
-		default_list = ctypes.POINTER(ctypes.c_ulonglong)()
+		default_list = ctypes.POINTER(ctypes.c_longlong)()
 		result = core.BNSettingGetIntegerList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
 		for i in xrange(length.value):
@@ -56,7 +56,7 @@ class Setting(object):
 		out_list = []
 		for i in xrange(length.value):
 			out_list.append(result[i])
-		core.BNFreeSettingStringList(result, length)
+		core.BNFreeStringList(result, length)
 		return out_list
 
 	def get_double(self, name, default_value=0.0):
@@ -92,16 +92,16 @@ class Setting(object):
 	def set_string(self, name, value, auto_flush=True):
 		return core.BNSettingSetString(self.plugin_name, name, value, auto_flush)
 
-	def set_integerList(self, name, value, auto_flush=True):
+	def set_integer_list(self, name, value, auto_flush=True):
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
-		default_list = (ctypes.c_ulonglong * len(value))()
+		default_list = (ctypes.c_longlong * len(value))()
 		for i in xrange(len(value)):
 			default_list[i] = value[i]
 
 		return core.BNSettingSetIntegerList(self.plugin_name, name, default_list, length, auto_flush)
 
-	def set_stringList(self, name, value, auto_flush=True):
+	def set_string_list(self, name, value, auto_flush=True):
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
 		default_list = (ctypes.c_char_p * len(value))()
@@ -112,3 +112,26 @@ class Setting(object):
 
 	def set_double(self, name, value, auto_flush=True):
 		return core.BNSettingSetDouble(self.plugin_name, name, value, auto_flush)
+
+	def set(self, name, value, auto_flush=True):
+		if isinstance(value, bool):
+			return self.set_bool(name, value, auto_flush)
+		elif isinstance(value, int):
+			return self.set_integer(name, value, auto_flush)
+		elif isinstance(value, str):
+			return self.set_string(name, value, auto_flush)
+		elif isinstance(value, list) and len(value) == 0:
+			return self.set_integer_list(name, value, auto_flush)
+		elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], int):
+			return self.set_integer_list(name, value, auto_flush)
+		elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], str):
+			return self.set_string_list(name, value, auto_flush)
+		elif isinstance(value, float):
+			return self.set_double(name, value, auto_flush)
+		raise ValueError("value is not one of (int, bool, float, str, [int], [str]) types")
+
+	def remove_setting_group(self, auto_flush=True):
+		core.BNSettingRemoveSettingGroup(self.plugin_name, auto_flush)
+
+	def remove_setting(self, setting, auto_flush=True):
+		core.BNSettingRemoveSetting(self.plugin_name, setting, auto_flush)

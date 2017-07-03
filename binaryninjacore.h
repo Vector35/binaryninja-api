@@ -2885,15 +2885,15 @@ extern "C"
 
 	// Settings APIs
 	BINARYNINJACOREAPI bool BNSettingGetBool(const char* settingGroup, const char* name, bool defaultValue);
-	BINARYNINJACOREAPI uint64_t BNSettingGetInteger(const char* settingGroup, const char* name, uint64_t defaultValue);
+	BINARYNINJACOREAPI int64_t BNSettingGetInteger(const char* settingGroup, const char* name, int64_t defaultValue);
 	BINARYNINJACOREAPI char* BNSettingGetString(const char* settingGroup, const char* name, const char* defaultValue);
 	// intoutSize is number of elements in defaultValue one entry and number of elements in return type on exit
-	BINARYNINJACOREAPI uint64_t* BNSettingGetIntegerList(const char* settingGroup, const char* name, uint64_t* defaultValue, size_t* inoutSize);
+	BINARYNINJACOREAPI int64_t* BNSettingGetIntegerList(const char* settingGroup, const char* name, int64_t* defaultValue, size_t* inoutSize);
 	// intoutSize is number of elements in defaultValue one entry and number of elements in return type on exit
 	BINARYNINJACOREAPI const char** BNSettingGetStringList(const char* settingGroup, const char* name, const char** defaultValue, size_t* inoutSize);
 	BINARYNINJACOREAPI double BNSettingGetDouble(const char* settingGroup, const char* name, double defaultValue);
 
-	BINARYNINJACOREAPI void BNFreeSettingIntegerList(uint64_t* integerList);
+	BINARYNINJACOREAPI void BNFreeSettingIntegerList(int64_t* integerList);
 	//Check the type of a core setting
 	BINARYNINJACOREAPI bool BNSettingIsBool(const char* name, const char* settingGroup);
 	BINARYNINJACOREAPI bool BNSettingIsInteger(const char* name, const char* settingGroup);
@@ -2905,12 +2905,14 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSettingIsPresent(const char* settingGroup, const char* name);
 
 	BINARYNINJACOREAPI bool BNSettingSetBool(const char* settingGroup, const char* name, bool value, bool autoFlush);
-	BINARYNINJACOREAPI bool BNSettingSetInteger(const char* settingGroup, const char* name, uint64_t value, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetInteger(const char* settingGroup, const char* name, int64_t value, bool autoFlush);
 	BINARYNINJACOREAPI bool BNSettingSetString(const char* settingGroup, const char* name, const char* value, bool autoFlush);
 	BINARYNINJACOREAPI bool BNSettingSetDouble(const char* settingGroup, const char* name, double value, bool autoFlush);
-	BINARYNINJACOREAPI bool BNSettingSetIntegerList(const char* settingGroup, const char* name, const uint64_t* value, size_t size, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetIntegerList(const char* settingGroup, const char* name, const int64_t* value, size_t size, bool autoFlush);
 	BINARYNINJACOREAPI bool BNSettingSetStringList(const char* settingGroup, const char* name, const char** value, size_t size, bool autoFlush);
 
+	BINARYNINJACOREAPI bool BNSettingRemoveSetting(const char* settingGroup, const char* setting, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingRemoveSettingGroup(const char* settingGroup, bool autoFlush);
 	BINARYNINJACOREAPI bool BNSettingFlushSettings();
 
 	//Metadata APIs

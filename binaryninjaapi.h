@@ -2868,9 +2868,9 @@ namespace BinaryNinja
 	{
 	public:
 		static bool GetBool(const std::string& settingGroup, const std::string& name, bool defaultValue);
-		static uint64_t GetInteger(const std::string& settingGroup, const std::string& name, uint64_t defaultValue=0);
+		static int64_t GetInteger(const std::string& settingGroup, const std::string& name, int64_t defaultValue=0);
 		static std::string GetString(const std::string& settingGroup, const std::string& name, const std::string& defaultValue="");
-		static std::vector<uint64_t> GetIntegerList(const std::string& settingGroup, const std::string& name, const std::vector<uint64_t>& defaultValue={});
+		static std::vector<int64_t> GetIntegerList(const std::string& settingGroup, const std::string& name, const std::vector<int64_t>& defaultValue={});
 		static std::vector<std::string> GetStringList(const std::string& settingGroup, const std::string& name, const std::vector<std::string>& defaultValue={});
 		static double GetDouble(const std::string& settingGroup, const std::string& name, double defaultValue=0.0);
 
@@ -2888,7 +2888,7 @@ namespace BinaryNinja
 			bool autoFlush=true);
 		static bool Set(const std::string& settingGroup,
 			const std::string& name,
-			uint64_t value,
+			int64_t value,
 			bool autoFlush=true);
 		static bool Set(const std::string& settingGroup,
 			const std::string& name,
@@ -2896,7 +2896,7 @@ namespace BinaryNinja
 			bool autoFlush=true);
 		static bool Set(const std::string& settingGroup,
 			const std::string& name,
-			const std::vector<uint64_t>& value,
+			const std::vector<int64_t>& value,
 			bool autoFlush=true);
 		static bool Set(const std::string& settingGroup,
 			const std::string& name,
@@ -2906,6 +2906,9 @@ namespace BinaryNinja
 			const std::string& name,
 			double value,
 			bool autoFlush=true);
+
+		static bool RemoveSettingGroup(const std::string& settingGroup, bool autoFlush=true);
+		static bool RemoveSetting(const std::string& settingGroup, const std::string& setting, bool autoFlush=true);
 		static bool FlushSettings();
 	};
 

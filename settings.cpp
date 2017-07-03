@@ -10,7 +10,7 @@ bool Setting::GetBool(const std::string& pluginName, const std::string& name, bo
 	return BNSettingGetBool(pluginName.c_str(), name.c_str(), defaultValue);
 }
 
-uint64_t Setting::GetInteger(const std::string& pluginName, const std::string& name, uint64_t defaultValue)
+int64_t Setting::GetInteger(const std::string& pluginName, const std::string& name, int64_t defaultValue)
 {
 	return BNSettingGetInteger(pluginName.c_str(), name.c_str(), defaultValue);
 }
@@ -25,17 +25,17 @@ double Setting::GetDouble(const std::string& pluginName, const std::string& name
 	return BNSettingGetDouble(pluginName.c_str(), name.c_str(), defaultValue);
 }
 
-std::vector<uint64_t> Setting::GetIntegerList(const std::string& pluginName,
+std::vector<int64_t> Setting::GetIntegerList(const std::string& pluginName,
 	const std::string& name,
-	const std::vector<uint64_t>& defaultValue)
+	const std::vector<int64_t>& defaultValue)
 {
-	uint64_t* buffer = new uint64_t[defaultValue.size()];
-	memcpy(&buffer[0], &defaultValue[0], sizeof(uint64_t) * defaultValue.size());
+	int64_t* buffer = new int64_t[defaultValue.size()];
+	memcpy(&buffer[0], &defaultValue[0], sizeof(int64_t) * defaultValue.size());
 	size_t size = defaultValue.size();
-	uint64_t* outBuffer = BNSettingGetIntegerList(pluginName.c_str(), name.c_str(), buffer, &size);
+	int64_t* outBuffer = BNSettingGetIntegerList(pluginName.c_str(), name.c_str(), buffer, &size);
 	delete[] buffer;
 
-	vector<uint64_t> out(outBuffer, outBuffer + size);
+	vector<int64_t> out(outBuffer, outBuffer + size);
 	BNFreeSettingIntegerList(buffer);
 	return out;
 }
@@ -107,7 +107,7 @@ bool Setting::Set(const std::string& settingGroup,
 
 bool Setting::Set(const std::string& settingGroup,
 	const std::string& name,
-	uint64_t value,
+	int64_t value,
 	bool autoFlush)
 {
 	return BNSettingSetInteger(settingGroup.c_str(), name.c_str(), value, autoFlush);
@@ -123,7 +123,7 @@ bool Setting::Set(const std::string& settingGroup,
 
 bool Setting::Set(const std::string& settingGroup,
 	const std::string& name,
-	const std::vector<uint64_t>& value,
+	const std::vector<int64_t>& value,
 	bool autoFlush)
 {
 	return BNSettingSetIntegerList(settingGroup.c_str(), name.c_str(), &value[0], value.size(), autoFlush);
@@ -156,6 +156,16 @@ bool Setting::Set(const std::string& settingGroup,
 	bool autoFlush)
 {
 	return BNSettingSetDouble(settingGroup.c_str(), name.c_str(), value, autoFlush);
+}
+
+bool Setting::RemoveSettingGroup(const std::string& settingGroup, bool autoFlush)
+{
+	return BNSettingRemoveSettingGroup(settingGroup.c_str(), autoFlush);
+}
+
+bool Setting::RemoveSetting(const std::string& settingGroup, const std::string& setting, bool autoFlush)
+{
+	return BNSettingRemoveSetting(settingGroup.c_str(), setting.c_str(), autoFlush);
 }
 
 bool Setting::FlushSettings()

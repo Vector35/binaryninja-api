@@ -36,6 +36,15 @@ class SSAVariable(object):
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self.var), self.version)
 
+	def __eq__(self, other):
+		return (
+			(self.var.identifier, self.version) == 
+			(other.var.identifier, other.version)
+		)
+
+	def __hash__(self):
+		return hash(self.var.identifier, self.version)
+
 
 class MediumLevelILLabel(object):
 	def __init__(self, handle = None):

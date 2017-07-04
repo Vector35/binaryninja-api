@@ -37,21 +37,25 @@ class Setting(object):
 	def get_string(self, name, default_value=""):
 		return core.BNSettingGetString(self.plugin_name, name, default_value)
 
-	def get_integer_list(self, name):
+	def get_integer_list(self, name, default_value=[]):
 		length = ctypes.c_ulonglong()
-		length.value = 0
-		default_list = ctypes.POINTER(ctypes.c_longlong)()
+		length.value = len(default_value)
+		default_list = (ctypes.c_longlong * len(default_value))()
+		for i in range(len(default_value)):
+			default_list[i] = default_value[i]
 		result = core.BNSettingGetIntegerList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
 		for i in xrange(length.value):
 			out_list.append(result[i])
-		core.BNFreeSettingIntegerList(result, length)
+		core.BNFreeSettingIntegerList(result)
 		return out_list
 
-	def get_string_list(self, name):
+	def get_string_list(self, name, default_value=[]):
 		length = ctypes.c_ulonglong()
-		length.value = 0
-		default_list = ctypes.POINTER(ctypes.c_char_p)()
+		length.value = len(default_value)
+		default_list = (ctypes.c_char_p * len(default_value))()
+		for i in range(len(default_value)):
+			default_list[i] = default_value[i]
 		result = core.BNSettingGetStringList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
 		for i in xrange(length.value):

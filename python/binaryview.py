@@ -115,6 +115,10 @@ class AnalysisCompletionEvent(object):
 		pass
 
 	def cancel(self):
+		"""
+		.. warning: This method should only be used when the system is being
+		shut down and no further analysis should be done afterward.
+		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 

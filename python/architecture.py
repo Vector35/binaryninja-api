@@ -478,6 +478,7 @@ class Architecture(object):
 				token_buf[i].size = tokens[i].size
 				token_buf[i].operand = tokens[i].operand
 				token_buf[i].context = tokens[i].context
+				token_buf[i].confidence = tokens[i].confidence
 				token_buf[i].address = tokens[i].address
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
@@ -1163,8 +1164,9 @@ class Architecture(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 

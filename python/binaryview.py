@@ -211,7 +211,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_added(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -220,7 +220,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_removed(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -229,7 +229,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_updated(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -854,7 +854,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			addr = var_list[i].address
-			var_type = types.Type(core.BNNewTypeReference(var_list[i].type))
+			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), confidence = var_list[i].typeConfidence)
 			auto_discovered = var_list[i].autoDiscovered
 			result[addr] = DataVariable(addr, var_type, auto_discovered)
 		core.BNFreeDataVariables(var_list, count.value)
@@ -1847,7 +1847,10 @@ class BinaryView(object):
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNDefineDataVariable(self.handle, addr, tc)
 
 	def define_user_data_var(self, addr, var_type):
 		"""
@@ -1864,7 +1867,10 @@ class BinaryView(object):
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNDefineUserDataVariable(self.handle, addr, tc)
 
 	def undefine_data_var(self, addr):
 		"""
@@ -1910,7 +1916,7 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable(var.address, types.Type(var.type), var.autoDiscovered)
+		return DataVariable(var.address, types.Type(var.type, confidence = var.typeConfidence), var.autoDiscovered)
 
 	def get_function_at(self, addr, plat=None):
 		"""
@@ -2781,8 +2787,9 @@ class BinaryView(object):
 				size = lines[i].contents.tokens[j].size
 				operand = lines[i].contents.tokens[j].operand
 				context = lines[i].contents.tokens[j].context
+				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			contents = function.DisassemblyTextLine(addr, tokens)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 

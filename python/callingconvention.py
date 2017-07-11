@@ -25,6 +25,7 @@ import ctypes
 import _binaryninjacore as core
 import architecture
 import log
+import types
 
 
 class CallingConvention(object):
@@ -40,7 +41,7 @@ class CallingConvention(object):
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch, handle = None):
+	def __init__(self, arch, handle = None, confidence = types.Type.max_confidence):
 		if handle is None:
 			self.arch = arch
 			self._pending_reg_lists = {}
@@ -108,6 +109,8 @@ class CallingConvention(object):
 				self.__dict__["float_return_reg"] = None
 			else:
 				self.__dict__["float_return_reg"] = self.arch.get_reg_name(reg)
+
+		self.confidence = confidence
 
 	def __del__(self):
 		core.BNFreeCallingConvention(self.handle)
@@ -220,3 +223,7 @@ class CallingConvention(object):
 
 	def __str__(self):
 		return self.name
+
+	def with_confidence(self, confidence):
+		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
+			confidence = confidence)

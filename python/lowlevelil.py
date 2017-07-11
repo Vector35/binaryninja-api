@@ -309,8 +309,9 @@ class LowLevelILInstruction(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 

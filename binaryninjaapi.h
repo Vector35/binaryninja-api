@@ -285,6 +285,174 @@ namespace BinaryNinja
 		}
 	};
 
+	class ConfidenceBase
+	{
+	protected:
+		uint8_t m_confidence;
+
+	public:
+		ConfidenceBase(): m_confidence(0)
+		{
+		}
+
+		ConfidenceBase(uint8_t conf): m_confidence(conf)
+		{
+		}
+
+		uint8_t GetConfidence() const { return m_confidence; }
+		void SetConfidence(uint8_t conf) { m_confidence = conf; }
+		bool IsUnknown() const { return m_confidence == 0; }
+	};
+
+	template <class T>
+	class Confidence: public ConfidenceBase
+	{
+		T m_value;
+
+	public:
+		Confidence()
+		{
+		}
+
+		Confidence(const T& value): ConfidenceBase(BN_FULL_CONFIDENCE), m_value(value)
+		{
+		}
+
+		Confidence(const T& value, uint8_t conf): ConfidenceBase(conf), m_value(value)
+		{
+		}
+
+		Confidence(const Confidence<T>& v): ConfidenceBase(v.m_confidence), m_value(v.m_value)
+		{
+		}
+
+		operator T() { return m_value; }
+		const operator T() const { return m_value; }
+		T* operator->() { return &m_value; }
+		const T* operator->() const { return &m_value; }
+
+		T& GetValue() { return m_value; }
+		const T& GetValue() const { return m_value; }
+		void SetValue(const T& value) { m_value = value; }
+
+		Confidence<T>& operator=(const Confidence<T>& v)
+		{
+			m_value = v.m_value;
+			m_confidence = v.m_confidence;
+			return *this;
+		}
+
+		Confidence<T>& operator=(const T& value)
+		{
+			m_value = value;
+			m_confidence = BN_FULL_CONFIDENCE;
+			return *this;
+		}
+
+		bool operator<(const Confidence<T>& a) const
+		{
+			if (m_value < a.m_value)
+				return true;
+			if (a.m_value < m_value)
+				return false;
+			return m_confidence < a.m_confidence;
+		}
+
+		bool operator==(const Confidence<T>& a) const
+		{
+			if (m_confidence != a.m_confidence)
+				return false;
+			return m_confidence == a.m_confidence;
+		}
+
+		bool operator!=(const Confidence<T>& a) const
+		{
+			return !(*this == a);
+		}
+	};
+
+	template <class T>
+	class Confidence<Ref<T>>: public ConfidenceBase
+	{
+		Ref<T> m_value;
+
+	public:
+		Confidence()
+		{
+		}
+
+		Confidence(T* value): ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value)
+		{
+		}
+
+		Confidence(T* value, uint8_t conf): ConfidenceBase(conf), m_value(value)
+		{
+		}
+
+		Confidence(const Ref<T>& value): ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value)
+		{
+		}
+
+		Confidence(const Ref<T>& value, uint8_t conf): ConfidenceBase(conf), m_value(value)
+		{
+		}
+
+		Confidence(const Confidence<Ref<T>>& v): ConfidenceBase(v.m_confidence), m_value(v.m_value)
+		{
+		}
+
+		operator Ref<T>() const { return m_value; }
+		operator T*() const { return m_value.GetPtr(); }
+		T* operator->() const { return m_value.GetPtr(); }
+		bool operator!() const { return !m_value; }
+
+		const Ref<T>& GetValue() const { return m_value; }
+		void SetValue(T* value) { m_value = value; }
+		void SetValue(const Ref<T>& value) { m_value = value; }
+
+		Confidence<Ref<T>>& operator=(const Confidence<Ref<T>>& v)
+		{
+			m_value = v.m_value;
+			m_confidence = v.m_confidence;
+			return *this;
+		}
+
+		Confidence<Ref<T>>& operator=(T* value)
+		{
+			m_value = value;
+			m_confidence = value ? BN_FULL_CONFIDENCE : 0;
+			return *this;
+		}
+
+		Confidence<Ref<T>>& operator=(const Ref<T>& value)
+		{
+			m_value = value;
+			m_confidence = value ? BN_FULL_CONFIDENCE : 0;
+			return *this;
+		}
+
+		bool operator<(const Confidence<Ref<T>>& a) const
+		{
+			if (m_value < a.m_value)
+				return true;
+			if (a.m_value < m_value)
+				return false;
+			return m_confidence < a.m_confidence;
+		}
+
+		bool operator==(const Confidence<Ref<T>>& a) const
+		{
+			if (m_confidence != a.m_confidence)
+				return false;
+			return m_confidence == a.m_confidence;
+		}
+
+		bool operator!=(const Confidence<Ref<T>>& a) const
+		{
+			return !(*this == a);
+		}
+	};
+
 	class LogListener
 	{
 		static void LogMessageCallback(void* ctxt, BNLogLevel level, const char* msg);
@@ -775,14 +943,17 @@ namespace BinaryNinja
 		uint64_t value;
 		size_t size, operand;
 		BNInstructionTextTokenContext context;
+		uint8_t confidence;
 		uint64_t address;
 
 		InstructionTextToken();
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
-			size_t size = 0, size_t operand = BN_INVALID_OPERAND);
+			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
 			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
-			size_t operand = BN_INVALID_OPERAND);
+			size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE);
+
+		InstructionTextToken WithConfidence(uint8_t conf);
 	};
 
 	struct DisassemblyTextLine
@@ -826,7 +997,7 @@ namespace BinaryNinja
 	struct DataVariable
 	{
 		uint64_t address;
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 		bool autoDiscovered;
 	};
 
@@ -1004,8 +1175,8 @@ namespace BinaryNinja
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
-		void DefineDataVariable(uint64_t addr, Type* type);
-		void DefineUserDataVariable(uint64_t addr, Type* type);
+		void DefineDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type);
+		void DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type);
 		void UndefineDataVariable(uint64_t addr);
 		void UndefineUserDataVariable(uint64_t addr);
 
@@ -1632,7 +1803,7 @@ namespace BinaryNinja
 	struct NameAndType
 	{
 		std::string name;
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 	};
 
 	struct QualifiedNameAndType
@@ -1650,29 +1821,29 @@ namespace BinaryNinja
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
 		QualifiedName GetTypeName() const;
-		bool IsSigned() const;
-		bool IsConst() const;
-		bool IsVolatile() const;
+		Confidence<bool> IsSigned() const;
+		Confidence<bool> IsConst() const;
+		Confidence<bool> IsVolatile() const;
 		bool IsFloat() const;
-		Ref<Type> GetChildType() const;
-		Ref<CallingConvention> GetCallingConvention() const;
+		Confidence<Ref<Type>> GetChildType() const;
+		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		std::vector<NameAndType> GetParameters() const;
 		bool HasVariableArguments() const;
-		bool CanReturn() const;
+		Confidence<bool> CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
-		BNMemberScope GetScope() const;
-		void SetScope(BNMemberScope scope);
-		BNMemberAccess GetAccess() const;
-		void SetAccess(BNMemberAccess access);
-		void SetConst(bool cnst);
-		void SetVolatile(bool vltl);
+		Confidence<BNMemberScope> GetScope() const;
+		void SetScope(const Confidence<BNMemberScope>& scope);
+		Confidence<BNMemberAccess> GetAccess() const;
+		void SetAccess(const Confidence<BNMemberAccess>& access);
+		void SetConst(const Confidence<bool>& cnst);
+		void SetVolatile(const Confidence<bool>& vltl);
 		void SetTypeName(const QualifiedName& name);
 
 		uint64_t GetElementCount() const;
 
-		void SetFunctionCanReturn(bool canReturn);
+		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
 
 		std::string GetString() const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
@@ -1687,7 +1858,7 @@ namespace BinaryNinja
 
 		static Ref<Type> VoidType();
 		static Ref<Type> BoolType();
-		static Ref<Type> IntegerType(size_t width, bool sign, const std::string& altName = "");
+		static Ref<Type> IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
@@ -1695,19 +1866,24 @@ namespace BinaryNinja
 		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
 		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
-		static Ref<Type> PointerType(Architecture* arch, Type* type, bool cnst = false, bool vltl = false,
-		                             BNReferenceType refType = PointerReferenceType);
-		static Ref<Type> PointerType(size_t width, Type* type, bool cnst = false, bool vltl = false,
-		                             BNReferenceType refType = PointerReferenceType);
-		static Ref<Type> ArrayType(Type* type, uint64_t elem);
-		static Ref<Type> FunctionType(Type* returnValue, CallingConvention* callingConvention,
-		                              const std::vector<NameAndType>& params, bool varArg = false);
+		static Ref<Type> PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static Ref<Type> PointerType(size_t width, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
+		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
+			const Confidence<Ref<CallingConvention>>& callingConvention,
+			const std::vector<NameAndType>& params, bool varArg = false);
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 		static std::string GetAutoDemangledTypeIdSource();
 		static std::string GenerateAutoDebugTypeId(const QualifiedName& name);
 		static std::string GetAutoDebugTypeIdSource();
+
+		Confidence<Ref<Type>> WithConfidence(uint8_t conf);
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -1756,10 +1932,10 @@ namespace BinaryNinja
 		bool IsUnion() const;
 		void SetStructureType(BNStructureType type);
 		BNStructureType GetStructureType() const;
-		void AddMember(Type* type, const std::string& name);
-		void AddMemberAtOffset(Type* type, const std::string& name, uint64_t offset);
+		void AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
+		void AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
 		void RemoveMember(size_t idx);
-		void ReplaceMember(size_t idx, Type* type, const std::string& name);
+		void ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -1873,7 +2049,7 @@ namespace BinaryNinja
 	struct VariableNameAndType
 	{
 		Variable var;
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 		std::string name;
 		bool autoDefined;
 	};
@@ -1881,7 +2057,7 @@ namespace BinaryNinja
 	struct StackVariableReference
 	{
 		uint32_t sourceOperand;
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 		std::string name;
 		Variable var;
 		int64_t referencedOffset;
@@ -1990,20 +2166,20 @@ namespace BinaryNinja
 		Ref<FunctionGraph> CreateFunctionGraph();
 
 		std::map<int64_t, std::vector<VariableNameAndType>> GetStackLayout();
-		void CreateAutoStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
-		void CreateUserStackVariable(int64_t offset, Ref<Type> type, const std::string& name);
+		void CreateAutoStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const std::string& name);
+		void CreateUserStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const std::string& name);
 		void DeleteAutoStackVariable(int64_t offset);
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
 
 		std::map<Variable, VariableNameAndType> GetVariables();
-		void CreateAutoVariable(const Variable& var, Ref<Type> type, const std::string& name,
+		void CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
 			bool ignoreDisjointUses = false);
-		void CreateUserVariable(const Variable& var, Ref<Type> type, const std::string& name,
+		void CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
 			bool ignoreDisjointUses = false);
 		void DeleteAutoVariable(const Variable& var);
 		void DeleteUserVariable(const Variable& var);
-		Ref<Type> GetVariableType(const Variable& var);
+		Confidence<Ref<Type>> GetVariableType(const Variable& var);
 		std::string GetVariableName(const Variable& var);
 
 		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);

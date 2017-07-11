@@ -84,7 +84,7 @@ void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView*
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableAdded(view, varObj);
 }
@@ -96,7 +96,7 @@ void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryVie
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableRemoved(view, varObj);
 }
@@ -108,7 +108,7 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableUpdated(view, varObj);
 }
@@ -884,15 +884,21 @@ void BinaryView::AbortAnalysis()
 }
 
 
-void BinaryView::DefineDataVariable(uint64_t addr, Type* type)
+void BinaryView::DefineDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type)
 {
-	BNDefineDataVariable(m_object, addr, type->GetObject());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNDefineDataVariable(m_object, addr, &tc);
 }
 
 
-void BinaryView::DefineUserDataVariable(uint64_t addr, Type* type)
+void BinaryView::DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type)
 {
-	BNDefineUserDataVariable(m_object, addr, type->GetObject());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNDefineUserDataVariable(m_object, addr, &tc);
 }
 
 
@@ -918,7 +924,7 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 	{
 		DataVariable var;
 		var.address = vars[i].address;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.autoDiscovered = vars[i].autoDiscovered;
 		result[var.address] = var;
 	}
@@ -931,7 +937,7 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 {
 	var.address = 0;
-	var.type = nullptr;
+	var.type = Confidence<Ref<Type>>(nullptr, 0);
 	var.autoDiscovered = false;
 
 	BNDataVariable result;
@@ -939,7 +945,7 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 		return false;
 
 	var.address = result.address;
-	var.type = new Type(result.type);
+	var.type = Confidence<Ref<Type>>(new Type(result.type), result.typeConfidence);
 	var.autoDiscovered = result.autoDiscovered;
 	return true;
 }
@@ -1388,6 +1394,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
 			token.context = lines[i].contents.tokens[j].context;
+			token.confidence = lines[i].contents.tokens[j].confidence;
 			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}
@@ -1433,6 +1440,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
 			token.context = lines[i].contents.tokens[j].context;
+			token.confidence = lines[i].contents.tokens[j].confidence;
 			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}

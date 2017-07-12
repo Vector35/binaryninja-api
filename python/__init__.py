@@ -48,6 +48,7 @@ from .highlight import *
 from .scriptingprovider import *
 from .pluginmanager import *
 from .setting import *
+from .metadata import *
 
 
 def shutdown():

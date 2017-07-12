@@ -876,7 +876,7 @@ namespace BinaryNinja
 
 		    \param dest the address to write len number of bytes.
 		    \param offset the virtual offset to find and read len bytes from
-		....\param len the number of bytes to read from offset and write to dest
+		    \param len the number of bytes to read from offset and write to dest
 		*/
 		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
@@ -1128,8 +1128,8 @@ namespace BinaryNinja
 
 		std::vector<BNAddressRange> GetAllocatedRanges();
 
-		void StoreMetadata(const std::string& key, Metadata* inValue);
-		std::unique_ptr<Metadata> QueryMetadata(const std::string& key);
+		void StoreMetadata(const std::string& key, Ref<Metadata> value);
+		Ref<Metadata> QueryMetadata(const std::string& key);
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
@@ -2929,7 +2929,14 @@ namespace BinaryNinja
 		Metadata(const std::vector<int64_t>& data);
 		Metadata(const std::vector<double>& data);
 		Metadata(const std::vector<uint8_t>& data);
+		Metadata(const std::vector<Ref<Metadata>>& data);
+		Metadata(const std::map<std::string, Ref<Metadata>>& data);
+		Metadata(MetadataType type);
 		virtual ~Metadata() {}
+
+		bool operator==(const Metadata& rhs);
+		Ref<Metadata> operator[](const std::string& key);
+		Ref<Metadata> operator[](size_t idx);
 
 		MetadataType GetType() const;
 		bool GetBoolean() const;
@@ -2943,6 +2950,18 @@ namespace BinaryNinja
 		std::vector<int64_t> GetSignedIntegerList() const;
 		std::vector<double> GetDoubleList() const;
 		std::vector<uint8_t> GetRaw() const;
+		std::vector<Ref<Metadata>> GetArray();
+		std::map<std::string, Ref<Metadata>> GetKeyValueStore();
+
+		//For key-value data only
+		Ref<Metadata> Get(const std::string& key);
+		bool SetValueForKey(const std::string& key, Ref<Metadata> data);
+
+		//For array data only
+		Ref<Metadata> Get(size_t idx);
+		bool Append(Ref<Metadata> data);
+
+		size_t Size() const;
 
 		bool IsBoolean() const;
 		bool IsString() const;
@@ -2955,5 +2974,7 @@ namespace BinaryNinja
 		bool IsSignedIntegerList() const;
 		bool IsDoubleList() const;
 		bool IsRaw() const;
+		bool IsArray() const;
+		bool IsKeyValueStore() const;
 	};
 }

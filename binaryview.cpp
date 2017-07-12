@@ -1827,20 +1827,19 @@ vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 }
 
 
-void BinaryView::StoreMetadata(const std::string& key, Metadata* inValue)
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue)
 {
 	if (!inValue)
 		return;
 	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
 }
 
-unique_ptr<Metadata> BinaryView::QueryMetadata(const std::string& key)
+Ref<Metadata> BinaryView::QueryMetadata(const std::string& key)
 {
 	BNMetadata* value = BNBinaryViewQueryMetadata(m_object, key.c_str());
 	if (!value)
 		return nullptr;
-	auto a = new Metadata(value);
-	return unique_ptr<Metadata>(a);
+	return new Metadata(value);
 }
 
 string BinaryView::GetStringMetadata(const string& key)

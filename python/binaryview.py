@@ -26,7 +26,8 @@ import threading
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import AnalysisState, SymbolType, InstructionTextTokenType, Endianness, ModificationStatus, StringType, SegmentFlag
+from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
+	Endianness, ModificationStatus, StringType, SegmentFlag, MetadataType)
 import function
 import startup
 import architecture
@@ -39,6 +40,7 @@ import databuffer
 import basicblock
 import types
 import lineardisassembly
+import metadata
 
 
 class BinaryDataNotification(object):
@@ -1689,11 +1691,25 @@ class BinaryView(object):
 		return core.BNSaveToFilename(self.handle, str(dest))
 
 	def register_notification(self, notify):
+		"""
+		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
+		list of callbacks can be seen in :py:Class:`BinaryDataNotification`.
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		cb = BinaryDataNotificationCallbacks(self, notify)
 		cb._register()
 		self.notifications[notify] = cb
 
 	def unregister_notification(self, notify):
+		"""
+		`unregister_notification` unregisters the :py:Class:`BinaryDataNotification` object passed to
+		`register_notification`
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		if notify in self.notifications:
 			self.notifications[notify]._unregister()
 			del self.notifications[notify]
@@ -1827,6 +1843,7 @@ class BinaryView(object):
 		event = AnalysisCompletionEvent(self, lambda: wait.complete())
 		core.BNUpdateAnalysis(self.handle)
 		wait.wait()
+		del event  # Get rid of unused variable warning
 
 	def abort_analysis(self):
 		"""
@@ -3246,6 +3263,54 @@ class BinaryView(object):
 			result.append(str(outgoing_names[i]))
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result
+
+	def query_metadata(self, key):
+		"""
+		`query_metadata` retrieves a Metadata object stored in the current BinaryView.
+
+		:param string key: key to query
+		:rtype: Metadata object
+		:Example:
+
+			>>> bv.store_metadata("integer", Metadata(1337))
+			>>> int(bv.query_metadata("integer"))
+			1337L
+			>>> bv.store_metadata("list", Metadata([1,2,3]))
+			>>> map(int, list(bv.query_metadata("list")))
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", Metadata("my_data"))
+			>>> str(bv.query_metadata("string"))
+			'my_data'
+		"""
+		md_handle = core.BNBinaryViewQueryMetadata(self.handle, key)
+		if md_handle is None:
+			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle)
+
+	def store_metadata(self, key, md):
+		"""
+		`store_metadata` stores a Metadata object for the given key in the current BinaryView.
+		Metadata objects stored using this `store_metadata` are stored in the database and can be retrieved when
+		the database is reopend.
+
+		:param string key: key value to associate the Metadata object with
+		:param Metadata md: Metadata object to store
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", Metadata(1337))
+			>>> int(bv.query_metadata("integer"))
+			1337L
+			>>> bv.store_metadata("list", Metadata([1,2,3]))
+			>>> map(int, list(bv.query_metadata("list")))
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", Metadata("my_data"))
+			>>> str(bv.query_metadata("string"))
+			'my_data'
+		"""
+		if not isinstance(md, metadata.Metadata):
+			raise ValueError("metadata argument must be of type Metadata")
+		core.BNBinaryViewStoreMetadata(self.handle, key, md.handle)
 
 	def __setattr__(self, name, value):
 		try:

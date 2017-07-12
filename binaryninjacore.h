@@ -1299,6 +1299,13 @@ extern "C"
 		bool pointer, intermediate;
 	};
 
+	struct BNMetadataValueStore
+	{
+		size_t size;
+		char** keys;
+		BNMetadata** values;
+	};
+
 	enum BNHighlightColorStyle
 	{
 		StandardHighlightColor = 0,
@@ -1478,17 +1485,15 @@ extern "C"
 
 	enum BNMetadataType
 	{
+		InvalidDataType,
 		BooleanDataType,
 		StringDataType,
 		UnsignedIntegerDataType,
 		SignedIntegerDataType,
 		DoubleDataType,
-		BooleanListDataType,
-		StringListDataType,
-		UnsignedIntegerListDataType,
-		SignedIntegerListDataType,
-		DoubleListDataType,
-		RawDataType
+		RawDataType,
+		KeyValueDataType,
+		ArrayDataType
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2924,18 +2929,22 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataUnsignedIntegerData(uint64_t data);
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataSignedIntegerData(int64_t data);
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataDoubleData(double data);
-	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataBooleanListData(const bool* data, size_t size);
-	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataStringListData(const char** data, size_t size);
-	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataUnsignedIntegerListData(const uint64_t* data, size_t size);
-	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataSignedIntegerListData(const int64_t* data, size_t size);
-	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataDoubleListData(const double* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataOfType(BNMetadataType type);
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataRawData(const uint8_t* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataArray(BNMetadata** data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataValueStore(const char** keys, BNMetadata** values, size_t size);
+
+	BINARYNINJACOREAPI bool BNMetadataIsEqual(BNMetadata* lhs, BNMetadata* rhs);
+
+	BINARYNINJACOREAPI bool BNMetadataSetValueForKey(BNMetadata* data, const char* key, BNMetadata* md);
+	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForKey(BNMetadata* data, const char* key);
+	BINARYNINJACOREAPI bool BNMetadataArrayAppend(BNMetadata* data, BNMetadata* md);
+	BINARYNINJACOREAPI size_t BNMetadataSize(BNMetadata* data);
+	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForIdx(BNMetadata* data, size_t idx);
+
+	BINARYNINJACOREAPI void BNFreeMetadataArray(BNMetadata** data);
+	BINARYNINJACOREAPI void BNFreeMetadataValueStore(BNMetadataValueStore* data);
 	BINARYNINJACOREAPI void BNFreeMetadata(BNMetadata* data);
-	BINARYNINJACOREAPI void BNFreeMetadataBooleanList(bool* data);
-	BINARYNINJACOREAPI void BNFreeMetadataStringList(char** data, size_t size);
-	BINARYNINJACOREAPI void BNFreeMetadataUnsignedIntegerList(uint64_t* data);
-	BINARYNINJACOREAPI void BNFreeMetadataSignedIntegerList(int64_t* data);
-	BINARYNINJACOREAPI void BNFreeMetadataDoubleList(double* data);
 	BINARYNINJACOREAPI void BNFreeMetadataRaw(uint8_t* data);
 	// Retrieve Structured Data
 	BINARYNINJACOREAPI bool BNMetadataGetBoolean(BNMetadata* data);
@@ -2943,12 +2952,10 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNMetadataGetUnsignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI int64_t BNMetadataGetSignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI double BNMetadataGetDouble(BNMetadata* data);
-	BINARYNINJACOREAPI bool* BNMetadataGetBooleanList(BNMetadata* data, size_t* size);
-	BINARYNINJACOREAPI char** BNMetadataGetStringList(BNMetadata* data, size_t* size);
-	BINARYNINJACOREAPI uint64_t* BNMetadataGetUnsignedIntegerList(BNMetadata* data, size_t* size);
-	BINARYNINJACOREAPI int64_t* BNMetadataGetSignedIntegerList(BNMetadata* data, size_t* size);
-	BINARYNINJACOREAPI double* BNMetadataGetDoubleList(BNMetadata* data, size_t* size);
 	BINARYNINJACOREAPI uint8_t* BNMetadataGetRaw(BNMetadata* data, size_t* size);
+	BINARYNINJACOREAPI BNMetadata** BNMetadataGetArray(BNMetadata* data, size_t* size);
+	BINARYNINJACOREAPI BNMetadataValueStore* BNMetadataGetValueStore(BNMetadata* data);
+
 	//Query type of Metadata
 	BINARYNINJACOREAPI BNMetadataType BNMetadataGetType(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsBoolean(BNMetadata* data);
@@ -2956,12 +2963,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNMetadataIsUnsignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsSignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsDouble(BNMetadata* data);
-	BINARYNINJACOREAPI bool BNMetadataIsBooleanList(BNMetadata* data);
-	BINARYNINJACOREAPI bool BNMetadataIsStringList(BNMetadata* data);
-	BINARYNINJACOREAPI bool BNMetadataIsUnsignedIntegerList(BNMetadata* data);
-	BINARYNINJACOREAPI bool BNMetadataIsSignedIntegerList(BNMetadata* data);
-	BINARYNINJACOREAPI bool BNMetadataIsDoubleList(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsRaw(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsArray(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsKeyValueStore(BNMetadata* data);
 
 	// Store/Query structured data to/from a BinaryView
 	BINARYNINJACOREAPI void BNBinaryViewStoreMetadata(BNBinaryView* view, const char* key, BNMetadata* value);

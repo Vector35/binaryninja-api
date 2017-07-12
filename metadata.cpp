@@ -33,57 +33,9 @@ Metadata::Metadata(double data)
 	m_object = BNCreateMetadataDoubleData(data);
 }
 
-Metadata::Metadata(const vector<bool>& data)
+Metadata::Metadata(MetadataType type)
 {
-	auto input = new bool[data.size()];
-	for (size_t i = 0; i < data.size(); i++)
-		input[i] = data[i];
-
-	m_object = BNCreateMetadataBooleanListData(input, data.size());
-	delete[] input;
-}
-
-Metadata::Metadata(const vector<string>& data)
-{
-	char** input = new char*[data.size()];
-	for (size_t i = 0; i < data.size(); i++)
-		input[i] = BNAllocString(data[i].c_str());
-
-	m_object = BNCreateMetadataStringListData((const char**)input, data.size());
-
-	for (size_t i = 0; i < data.size(); i++)
-		BNFreeString(input[i]);
-	delete[] input;
-}
-
-Metadata::Metadata(const vector<uint64_t>& data)
-{
-	auto input = new uint64_t[data.size()];
-	for (size_t i = 0; i < data.size(); i++)
-		input[i] = data[i];
-
-	m_object = BNCreateMetadataUnsignedIntegerListData(input, data.size());
-	delete[] input;
-}
-
-Metadata::Metadata(const vector<int64_t>& data)
-{
-	auto input = new int64_t[data.size()];
-	for (size_t i = 0; i < data.size(); i++)
-		input[i] = data[i];
-
-	m_object = BNCreateMetadataSignedIntegerListData(input, data.size());
-	delete[] input;
-}
-
-Metadata::Metadata(const vector<double>& data)
-{
-	auto input = new double[data.size()];
-	for (size_t i = 0; i < data.size(); i++)
-		input[i] = data[i];
-
-	m_object = BNCreateMetadataDoubleListData(input, data.size());
-	delete[] input;
+	m_object = BNCreateMetadataOfType(type);
 }
 
 Metadata::Metadata(const vector<uint8_t>& data)
@@ -94,6 +46,53 @@ Metadata::Metadata(const vector<uint8_t>& data)
 
 	m_object = BNCreateMetadataRawData(input, data.size());
 	delete[] input;
+}
+
+Metadata::Metadata(const std::vector<Ref<Metadata>>& data)
+{
+	BNMetadata** dataList = new BNMetadata*[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		dataList[i] = data[i]->m_object;
+
+	m_object = BNCreateMetadataArray(dataList, data.size());
+}
+
+Metadata::Metadata(const std::map<std::string, Ref<Metadata>>& data)
+{
+	char** keys = new char*[data.size()];
+	BNMetadata** values = new BNMetadata*[data.size()];
+
+	size_t i = 0;
+	for (auto &elm : data)
+	{
+		keys[i] = BNAllocString(elm.first.c_str());
+		values[i++] = elm.second->m_object;
+	}
+	m_object = BNCreateMetadataValueStore((const char**)keys, values, data.size());
+	for (size_t j = 0; j < data.size(); j++)
+		BNFreeString(keys[j]);
+	delete[] keys;
+	delete[] values;
+}
+
+bool Metadata::operator==(const Metadata& rhs)
+{
+	return BNMetadataIsEqual(m_object, rhs.m_object);
+}
+
+Ref<Metadata> Metadata::operator[](const std::string& key)
+{
+	return new Metadata(BNMetadataGetForKey(m_object, key.c_str()));
+}
+
+Ref<Metadata> Metadata::operator[](size_t idx)
+{
+	return new Metadata(BNMetadataGetForIdx(m_object, idx));
+}
+
+bool Metadata::SetValueForKey(const string& key, Ref<Metadata> data)
+{
+	return BNMetadataSetValueForKey(m_object, key.c_str(), data->m_object);
 }
 
 MetadataType Metadata::GetType() const
@@ -126,53 +125,6 @@ double Metadata::GetDouble() const
 	return BNMetadataGetDouble(m_object);
 }
 
-vector<bool> Metadata::GetBooleanList() const
-{
-	size_t outSize;
-	bool* outList = BNMetadataGetBooleanList(m_object, &outSize);
-	vector<bool> result(outList, outList + outSize);
-	BNFreeMetadataBooleanList(outList);
-	return result;
-}
-
-vector<string> Metadata::GetStringList() const
-{
-	size_t outSize;
-	char** outList = BNMetadataGetStringList(m_object, &outSize);
-	vector<string> result;
-	for (size_t i = 0; i < outSize; i++)
-		result.push_back(string(outList[i]));
-	BNFreeMetadataStringList(outList, outSize);
-	return result;
-}
-
-vector<uint64_t> Metadata::GetUnsignedIntegerList() const
-{
-	size_t outSize;
-	uint64_t* outList = BNMetadataGetUnsignedIntegerList(m_object, &outSize);
-	vector<uint64_t> result(outList, outList + outSize);
-	BNFreeMetadataUnsignedIntegerList(outList);
-	return result;
-}
-
-vector<int64_t> Metadata::GetSignedIntegerList() const
-{
-	size_t outSize;
-	int64_t* outList = BNMetadataGetSignedIntegerList(m_object, &outSize);
-	vector<int64_t> result(outList, outList + outSize);
-	BNFreeMetadataSignedIntegerList(outList);
-	return result;
-}
-
-vector<double> Metadata::GetDoubleList() const
-{
-	size_t outSize;
-	double* outList = BNMetadataGetDoubleList(m_object, &outSize);
-	vector<double> result(outList, outList + outSize);
-	BNFreeMetadataDoubleList(outList);
-	return result;
-}
-
 vector<uint8_t> Metadata::GetRaw() const
 {
 	size_t outSize;
@@ -180,6 +132,37 @@ vector<uint8_t> Metadata::GetRaw() const
 	vector<uint8_t> result(outList, outList + outSize);
 	BNFreeMetadataRaw(outList);
 	return result;
+}
+
+vector<Ref<Metadata>> Metadata::GetArray()
+{
+	size_t size = 0;
+	BNMetadata** data = BNMetadataGetArray(m_object, &size);
+	vector<Ref<Metadata>> result;
+	for (size_t i = 0; i < size; i++)
+		result.push_back(new Metadata(data[i]));
+	return result;
+}
+
+map<string, Ref<Metadata>> Metadata::GetKeyValueStore()
+{
+	BNMetadataValueStore* data = BNMetadataGetValueStore(m_object);
+	map<string, Ref<Metadata>> result;
+	for (size_t i = 0; i < data->size; i++)
+	{
+		result[data->keys[i]] = new Metadata(data->values[i]);
+	}
+	return result;
+}
+
+bool Metadata::Append(Ref<Metadata> data)
+{
+	return BNMetadataArrayAppend(m_object, data->m_object);
+}
+
+size_t Metadata::Size() const
+{
+	return BNMetadataSize(m_object);
 }
 
 bool Metadata::IsBoolean() const
@@ -207,32 +190,17 @@ bool Metadata::IsDouble() const
 	return BNMetadataIsDouble(m_object);
 }
 
-bool Metadata::IsBooleanList() const
-{
-	return BNMetadataIsBooleanList(m_object);
-}
-
-bool Metadata::IsStringList() const
-{
-	return BNMetadataIsStringList(m_object);
-}
-
-bool Metadata::IsUnsignedIntegerList() const
-{
-	return BNMetadataIsUnsignedIntegerList(m_object);
-}
-
-bool Metadata::IsSignedIntegerList() const
-{
-	return BNMetadataIsSignedIntegerList(m_object);
-}
-
-bool Metadata::IsDoubleList() const
-{
-	return BNMetadataIsDoubleList(m_object);
-}
-
 bool Metadata::IsRaw() const
 {
 	return BNMetadataIsRaw(m_object);
+}
+
+bool Metadata::IsArray() const
+{
+	return BNMetadataIsArray(m_object);
+}
+
+bool Metadata::IsKeyValueStore() const
+{
+	return BNMetadataIsKeyValueStore(m_object);
 }

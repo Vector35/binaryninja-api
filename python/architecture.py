@@ -1293,7 +1293,7 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]].index
 			elif isinstance(operands[i], lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operands[i].index
@@ -1317,7 +1317,7 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]].index
 			elif isinstance(operands[i], lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operands[i].index

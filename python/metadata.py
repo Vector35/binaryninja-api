@@ -71,8 +71,16 @@ class Metadata(object):
 		elif self.is_array:
 			return list(self)
 		elif self.is_dict:
-			return dict(self)
-		raise NotImplementedError()
+			return self.get_dict()
+		raise TypeError()
+
+	def get_dict(self):
+		if not self.is_dict:
+			raise TypeError()
+		result = {}
+		for key in self:
+			result[key] = self[key]
+		return result
 
 	@property
 	def type(self):
@@ -130,7 +138,7 @@ class Metadata(object):
 	def __iter__(self):
 		if self.is_array:
 			for i in xrange(core.BNMetadataSize(self.handle)):
-				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i))
+				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
 		elif self.is_dict:
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
@@ -147,14 +155,16 @@ class Metadata(object):
 				raise ValueError("Metadata object only supports integers for indexing")
 			if value >= len(self):
 				raise IndexError("Index value out of range")
-			return Metadata(handle=core.BNMetadataGetForIndex(self.handle, value))
+			return Metadata(handle=core.BNMetadataGetForIndex(self.handle, value)).value
 		if self.is_dict:
 			if not isinstance(value, str):
 				raise ValueError("Metadata object only supports strings for indexing")
 			handle = core.BNMetadataGetForKey(self.handle, value)
 			if handle is None:
 				raise KeyError(value)
-			return Metadata(handle=handle)
+			return Metadata(handle=handle).value
+
+		raise NotImplementedError("Metadata object doesn't support indexing")
 
 	def __str__(self):
 		if self.is_string:

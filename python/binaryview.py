@@ -3266,61 +3266,61 @@ class BinaryView(object):
 
 	def query_metadata(self, key):
 		"""
-		`query_metadata` retrieves a Metadata object stored in the current BinaryView.
+		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.
 
 		:param string key: key to query
-		:rtype: Metadata object
+		:rtype: metadata associated with the key
 		:Example:
 
-			>>> bv.store_metadata("integer", Metadata(1337))
-			>>> int(bv.query_metadata("integer"))
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
 			1337L
-			>>> bv.store_metadata("list", Metadata([1,2,3]))
-			>>> map(int, list(bv.query_metadata("list")))
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
 			[1L, 2L, 3L]
-			>>> bv.store_metadata("string", Metadata("my_data"))
-			>>> str(bv.query_metadata("string"))
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
 			'my_data'
 		"""
 		md_handle = core.BNBinaryViewQueryMetadata(self.handle, key)
 		if md_handle is None:
 			raise KeyError(key)
-		return metadata.Metadata(handle=md_handle)
+		return metadata.Metadata(handle=md_handle).value
 
 	def store_metadata(self, key, md):
 		"""
-		`store_metadata` stores a Metadata object for the given key in the current BinaryView.
-		Metadata objects stored using this `store_metadata` are stored in the database and can be retrieved when
-		the database is reopend.
+		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using 
+		`store_metadata` can be retrieved when the database is reopend. Objects stored are not arbitrary python 
+		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata` 
+		for more information. Python objects could obviously be serialized using pickle but this intentionally
+		a task left to the user since there is the potential security issues.
 
 		:param string key: key value to associate the Metadata object with
-		:param Metadata md: Metadata object to store
+		:param Varies md: object to store.
 		:rtype: None
 		:Example:
 
-			>>> bv.store_metadata("integer", Metadata(1337))
-			>>> int(bv.query_metadata("integer"))
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
 			1337L
-			>>> bv.store_metadata("list", Metadata([1,2,3]))
-			>>> map(int, list(bv.query_metadata("list")))
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
 			[1L, 2L, 3L]
-			>>> bv.store_metadata("string", Metadata("my_data"))
-			>>> str(bv.query_metadata("string"))
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
 			'my_data'
 		"""
-		if not isinstance(md, metadata.Metadata):
-			raise ValueError("metadata argument must be of type Metadata")
-		core.BNBinaryViewStoreMetadata(self.handle, key, md.handle)
+		core.BNBinaryViewStoreMetadata(self.handle, key, metadata.Metadata(md).handle)
 
 	def remove_metadata(self, key):
 		"""
-		`remove_metadata` removes the Metadata object associated with key from the current BinaryView
+		`remove_metadata` removes the metadata associated with key from the current BinaryView.
 
-		:param string key: key to remove from the BinaryView
+		:param string key: key associated with metadata to remove from the BinaryView
 		:rtype: None
 		:Example:
 
-			>>> bv.store_metadata("integer", Metadata(1337))
+			>>> bv.store_metadata("integer", 1337)
 			>>> bv.remove_metadata("integer")
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)

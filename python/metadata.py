@@ -114,6 +114,14 @@ class Metadata(object):
 	def is_dict(self):
 		return core.BNMetadataIsKeyValueStore(self.handle)
 
+	def remove(self, key_or_index):
+		if isinstance(key_or_index, str) and self.is_dict:
+			core.BNMetadataRemoveKey(self.handle, key_or_index)
+		elif isinstance(key_or_index, int) and self.is_array:
+			core.BNMetadataRemoveIndex(self.handle, key_or_index)
+		else:
+			raise TypeError("remove only valid for dict and array objects")
+
 	def __len__(self):
 		if self.is_array or self.is_dict or self.is_string or self.is_raw:
 			return core.BNMetadataSize(self.handle)
@@ -122,7 +130,7 @@ class Metadata(object):
 	def __iter__(self):
 		if self.is_array:
 			for i in xrange(core.BNMetadataSize(self.handle)):
-				yield Metadata(handle=core.BNMetadataGetForIdx(self.handle, i))
+				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i))
 		elif self.is_dict:
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
@@ -139,7 +147,7 @@ class Metadata(object):
 				raise ValueError("Metadata object only supports integers for indexing")
 			if value >= len(self):
 				raise IndexError("Index value out of range")
-			return Metadata(handle=core.BNMetadataGetForIdx(self.handle, value))
+			return Metadata(handle=core.BNMetadataGetForIndex(self.handle, value))
 		if self.is_dict:
 			if not isinstance(value, str):
 				raise ValueError("Metadata object only supports strings for indexing")

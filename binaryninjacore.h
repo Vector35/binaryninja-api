@@ -2939,8 +2939,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNMetadataSetValueForKey(BNMetadata* data, const char* key, BNMetadata* md);
 	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForKey(BNMetadata* data, const char* key);
 	BINARYNINJACOREAPI bool BNMetadataArrayAppend(BNMetadata* data, BNMetadata* md);
+	BINARYNINJACOREAPI void BNMetadataRemoveKey(BNMetadata* data, const char* key);
 	BINARYNINJACOREAPI size_t BNMetadataSize(BNMetadata* data);
-	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForIdx(BNMetadata* data, size_t idx);
+	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForIndex(BNMetadata* data, size_t index);
+	BINARYNINJACOREAPI void BNMetadataRemoveIndex(BNMetadata* data, size_t index);
 
 	BINARYNINJACOREAPI void BNFreeMetadataArray(BNMetadata** data);
 	BINARYNINJACOREAPI void BNFreeMetadataValueStore(BNMetadataValueStore* data);
@@ -2970,6 +2972,8 @@ extern "C"
 	// Store/Query structured data to/from a BinaryView
 	BINARYNINJACOREAPI void BNBinaryViewStoreMetadata(BNBinaryView* view, const char* key, BNMetadata* value);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
+	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
+
 #ifdef __cplusplus
 }
 #endif

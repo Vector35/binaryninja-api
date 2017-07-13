@@ -27,7 +27,7 @@ import threading
 # Binary Ninja components
 import _binaryninjacore as core
 from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag, MetadataType)
+	Endianness, ModificationStatus, StringType, SegmentFlag)
 import function
 import startup
 import architecture
@@ -3311,6 +3311,19 @@ class BinaryView(object):
 		if not isinstance(md, metadata.Metadata):
 			raise ValueError("metadata argument must be of type Metadata")
 		core.BNBinaryViewStoreMetadata(self.handle, key, md.handle)
+
+	def remove_metadata(self, key):
+		"""
+		`remove_metadata` removes the Metadata object associated with key from the current BinaryView
+
+		:param string key: key to remove from the BinaryView
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", Metadata(1337))
+			>>> bv.remove_metadata("integer")
+		"""
+		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
 	def __setattr__(self, name, value):
 		try:

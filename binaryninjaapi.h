@@ -1130,6 +1130,7 @@ namespace BinaryNinja
 
 		void StoreMetadata(const std::string& key, Ref<Metadata> value);
 		Ref<Metadata> QueryMetadata(const std::string& key);
+		void RemoveMetadata(const std::string& key);
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
@@ -2956,11 +2957,12 @@ namespace BinaryNinja
 		//For key-value data only
 		Ref<Metadata> Get(const std::string& key);
 		bool SetValueForKey(const std::string& key, Ref<Metadata> data);
+		void RemoveKey(const std::string& key);
 
 		//For array data only
-		Ref<Metadata> Get(size_t idx);
+		Ref<Metadata> Get(size_t index);
 		bool Append(Ref<Metadata> data);
-
+		void RemoveIndex(size_t index);
 		size_t Size() const;
 
 		bool IsBoolean() const;

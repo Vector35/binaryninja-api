@@ -87,12 +87,17 @@ Ref<Metadata> Metadata::operator[](const std::string& key)
 
 Ref<Metadata> Metadata::operator[](size_t idx)
 {
-	return new Metadata(BNMetadataGetForIdx(m_object, idx));
+	return new Metadata(BNMetadataGetForIndex(m_object, idx));
 }
 
 bool Metadata::SetValueForKey(const string& key, Ref<Metadata> data)
 {
 	return BNMetadataSetValueForKey(m_object, key.c_str(), data->m_object);
+}
+
+void Metadata::RemoveKey(const string& key)
+{
+	return BNMetadataRemoveKey(m_object, key.c_str());
 }
 
 MetadataType Metadata::GetType() const
@@ -158,6 +163,11 @@ map<string, Ref<Metadata>> Metadata::GetKeyValueStore()
 bool Metadata::Append(Ref<Metadata> data)
 {
 	return BNMetadataArrayAppend(m_object, data->m_object);
+}
+
+void Metadata::RemoveIndex(size_t index)
+{
+	BNMetadataRemoveIndex(m_object, index);
 }
 
 size_t Metadata::Size() const

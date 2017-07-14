@@ -42,7 +42,7 @@ from binaryninja.binaryview import BinaryView
 from binaryninja.plugin import BackgroundTaskThread, PluginCommand
 from binaryninja.interaction import show_plain_text_report, show_message_box
 from binaryninja.highlight import HighlightColor
-from binaryninja.enums import HighlightStandardColor, MessageBoxButtonSet
+from binaryninja.enums import HighlightStandardColor, MessageBoxButtonSet, MessageBoxIcon
 
 # Disable warning logs as they show up as errors in the UI
 logging.disable(logging.WARNING)
@@ -137,7 +137,7 @@ def solve(bv):
 	if len(bv.session_data.angr_find) == 0:
 		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
 			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
-			"continue.", MessageBoxButtonSet.OKButtonSet, MessageBoxButtonSet.ErrorIcon)
+			"continue.", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
 		return
 
 	# Start a solver thread for the path associated with the view

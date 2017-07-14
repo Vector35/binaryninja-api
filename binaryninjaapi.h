@@ -2550,6 +2550,8 @@ namespace BinaryNinja
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILInstructionIndex(size_t instr) const;
 		size_t GetLowLevelILExprIndex(size_t expr) const;
+
+		Confidence<Ref<Type>> GetExprType(size_t expr);
 	};
 
 	class FunctionRecognizer

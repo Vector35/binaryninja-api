@@ -26,6 +26,7 @@ from .enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDep
 import function
 import basicblock
 import lowlevelil
+import types
 
 
 class SSAVariable(object):
@@ -396,6 +397,14 @@ class MediumLevelILInstruction(object):
 			elif isinstance(operand, MediumLevelILInstruction):
 				result += operand.vars_read
 		return result
+
+	@property
+	def expr_type(self):
+		"""Type of expression"""
+		result = core.BNGetMediumLevelILExprType(self.function.handle, self.expr_index)
+		if result.type:
+			return types.Type(result.type, confidence = result.confidence)
+		return None
 
 	def get_ssa_var_possible_values(self, ssa_var):
 		var_data = core.BNVariable()

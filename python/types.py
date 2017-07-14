@@ -18,6 +18,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+max_confidence = 255
+
 import ctypes
 
 # Binary Ninja components
@@ -198,8 +200,6 @@ class Symbol(object):
 
 
 class Type(object):
-	max_confidence = 255
-
 	def __init__(self, handle, confidence = max_confidence):
 		self.handle = handle
 		self.confidence = confidence
@@ -336,8 +336,8 @@ class Type(object):
 		return core.BNGetTypeString(self.handle)
 
 	def __repr__(self):
-		if self.confidence < Type.max_confidence:
-			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / Type.max_confidence)
+		if self.confidence < max_confidence:
+			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
@@ -560,7 +560,7 @@ class Type(object):
 
 
 class BoolWithConfidence(object):
-	def __init__(self, value, confidence = Type.max_confidence):
+	def __init__(self, value, confidence = max_confidence):
 		self.value = value
 		self.confidence = confidence
 
@@ -578,7 +578,7 @@ class BoolWithConfidence(object):
 
 
 class ReferenceTypeWithConfidence(object):
-	def __init__(self, value, confidence = Type.max_confidence):
+	def __init__(self, value, confidence = max_confidence):
 		self.value = value
 		self.confidence = confidence
 

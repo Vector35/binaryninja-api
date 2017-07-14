@@ -41,7 +41,7 @@ class CallingConvention(object):
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch, handle = None, confidence = types.Type.max_confidence):
+	def __init__(self, arch, handle = None, confidence = types.max_confidence):
 		if handle is None:
 			self.arch = arch
 			self._pending_reg_lists = {}

@@ -185,7 +185,7 @@ class Variable(object):
 		if var_type is None:
 			var_type_conf = core.BNGetVariableType(func.handle, var)
 			if var_type_conf.type:
-				var_type = types.Type(var_type, confidence = var_type_conf.confidence)
+				var_type = types.Type(var_type_conf.type, confidence = var_type_conf.confidence)
 			else:
 				var_type = None
 
@@ -1401,7 +1401,7 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.Type.max_confidence):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value

@@ -2435,6 +2435,11 @@ extern "C"
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
 		size_t version, size_t* count);
 
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
+		const BNVariable* var, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableUses(BNMediumLevelILFunction* func,
+		const BNVariable* var, size_t* count);
+
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t version);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);

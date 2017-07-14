@@ -2520,6 +2520,9 @@ namespace BinaryNinja
 		std::set<size_t> GetSSAVarUses(const Variable& var, size_t version) const;
 		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 
+		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
+		std::set<size_t> GetVariableUses(const Variable& var) const;
+
 		RegisterValue GetSSAVarValue(const Variable& var, size_t version);
 		RegisterValue GetExprValue(size_t expr);
 		PossibleValueSet GetPossibleSSAVarValues(const Variable& var, size_t version, size_t instr);

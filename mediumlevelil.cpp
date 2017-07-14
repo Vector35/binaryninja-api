@@ -313,6 +313,34 @@ set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t version) const
 }
 
 
+set<size_t> MediumLevelILFunction::GetVariableDefinitions(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetMediumLevelILVariableDefinitions(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> MediumLevelILFunction::GetVariableUses(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetMediumLevelILVariableUses(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
 RegisterValue MediumLevelILFunction::GetSSAVarValue(const Variable& var, size_t version)
 {
 	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var, version);

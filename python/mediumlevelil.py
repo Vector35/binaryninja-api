@@ -793,6 +793,32 @@ class MediumLevelILFunction(object):
 		core.BNFreeILInstructionList(instrs)
 		return result
 
+	def get_var_definitions(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_var_uses(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def get_ssa_var_value(self, ssa_var):
 		var_data = core.BNVariable()
 		var_data.type = ssa_var.var.source_type

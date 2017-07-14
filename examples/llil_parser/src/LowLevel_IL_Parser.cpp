@@ -6,20 +6,6 @@ LLIL Parser - Binary Ninja C++ API Sample
 #include "LowLevel_IL_Parser.h"
 #include <iostream>
 #include <sstream>
-#include <condition_variable>
-
-std::mutex mtx;
-std::condition_variable cv;
-
-void UpdateAndWaitForAnalysis(BinaryNinja::BinaryView *bv)
-{
-	AnalysisCompletionEvent analysisCompletionEvent(bv, [&](){ cv.notify_one(); } );
-	bv->UpdateAnalysis();
-
-	std::unique_lock<std::mutex> lck(mtx);
-	cv.wait(lck);
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -54,7 +40,7 @@ int main(int argc, char* argv[])
 		}
 
 		printf("[i] Starting analysis\n");
-		UpdateAndWaitForAnalysis(bv);
+		bv->UpdateAnalysisAndWait();
 
 		printf("[i] Analysis done - %zd Functions\n", bv->GetAnalysisFunctionList().size());
 

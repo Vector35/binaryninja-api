@@ -722,17 +722,18 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LOAD, addr.index, size=size)
 
-	def store(self, size, addr, value):
+	def store(self, size, addr, value, flags=0):
 		"""
 		``store`` Writes ``size`` bytes to expression ``addr`` read from expression ``value``
 
 		:param int size: number of bytes to write
 		:param LowLevelILExpr addr: the expression to write to
 		:param LowLevelILExpr value: the expression to be written
+		:param str flags: which flags are set by this operation
 		:return: The expression ``[addr].size = value``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size, flags=flags)
 
 	def push(self, size, value):
 		"""

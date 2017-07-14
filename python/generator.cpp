@@ -165,8 +165,15 @@ int main(int argc, char* argv[])
 	// Parse API header to get type and function information
 	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
-	bool ok = Architecture::GetByName("generator")->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
-	fprintf(stderr, "%s", errors.c_str());
+	auto arch = Architecture::GetByName("generator");
+	if (!arch)
+	{
+		printf("ERROR: License file validation failed (most likely)\n");
+		return 1;
+	}
+
+	bool ok = arch->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
+	fprintf(stderr, "Errors: %s", errors.c_str());
 	if (!ok)
 		return 1;
 

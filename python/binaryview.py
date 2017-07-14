@@ -1821,29 +1821,7 @@ class BinaryView(object):
 
 		:rtype: None
 		"""
-		class WaitEvent(object):
-			def __init__(self):
-				self.cond = threading.Condition()
-				self.done = False
-
-			def complete(self):
-				self.cond.acquire()
-				self.done = True
-				self.cond.notify()
-				self.cond.release()
-
-			def wait(self):
-				self.cond.acquire()
-				while not self.done:
-					self.cond.wait()
-				self.cond.release()
-
-		wait = WaitEvent()
-		# TODO: figure out if we actually need this 'event' variable, likely we do
-		event = AnalysisCompletionEvent(self, lambda: wait.complete())
-		core.BNUpdateAnalysis(self.handle)
-		wait.wait()
-		del event  # Get rid of unused variable warning
+		core.BNUpdateAnalysisAndWait(self.handle)
 
 	def abort_analysis(self):
 		"""

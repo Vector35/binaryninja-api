@@ -203,6 +203,12 @@ class Variable(object):
 	def __str__(self):
 		return self.name
 
+	def __eq__(self, other):
+		return self.identifier == other.identifier
+
+	def __hash__(self):
+		return hash(self.identifier)
+
 
 class ConstantReference(object):
 	def __init__(self, val, size, ptr, intermediate):

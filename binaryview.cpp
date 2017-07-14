@@ -872,6 +872,12 @@ void BinaryView::RemoveUserFunction(Function* func)
 }
 
 
+void BinaryView::UpdateAnalysisAndWait()
+{
+	BNUpdateAnalysisAndWait(m_object);
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_object);
@@ -1319,6 +1325,10 @@ uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
 	return BNGetNextDataAfterAddress(m_object, addr);
 }
 
+uint64_t BinaryView::GetNextDataVariableAfterAddress(uint64_t addr)
+{
+	return BNGetNextDataVariableAfterAddress(m_object, addr);
+}
 
 uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
 {

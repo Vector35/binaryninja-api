@@ -1001,6 +1001,7 @@ namespace BinaryNinja
 		void RemoveAnalysisFunction(Function* func);
 		void CreateUserFunction(Platform* platform, uint64_t start);
 		void RemoveUserFunction(Function* func);
+		void UpdateAnalysisAndWait();
 		void UpdateAnalysis();
 		void AbortAnalysis();
 

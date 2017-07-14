@@ -1910,6 +1910,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI void BNCreateUserFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
+	BINARYNINJACOREAPI void BNUpdateAnalysisAndWait(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);

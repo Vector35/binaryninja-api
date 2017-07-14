@@ -897,7 +897,7 @@ class Architecture(object):
 		:param str data: bytes to be interpreted as low-level IL instructions
 		:param int addr: virtual address of start of ``data``
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:rtype: None
+		:rtype: length of bytes read on success, None on failure
 		"""
 		raise NotImplementedError
 

@@ -1911,11 +1911,27 @@ class BinaryView(object):
 			return None
 		return DataVariable(var.address, types.Type(var.type), var.autoDiscovered)
 
+	def get_functions_containing(self, addr):
+		"""
+		``get_functions_containing`` returns a list of functions which contain the given address or None on failure.
+
+		:param int addr: virtual address to query.
+		:rtype: list of Function objects or None
+		"""
+		basic_blocks = self.get_basic_blocks_at(addr)
+		if len(basic_blocks) == 0:
+			return None
+
+		result = []
+		for block in basic_blocks:
+			result.append(block.function)
+		return result
+
 	def get_function_at(self, addr, plat=None):
 		"""
-		``get_function_at`` gets a binaryninja.Function object for the function at the virtual address ``addr``:
+		``get_function_at`` gets a Function object for the function that starts at virtual address ``addr``:
 
-		:param int addr: virtual address of the desired function
+		:param int addr: starting virtual address of the desired function
 		:param Platform plat: plat of the desired function
 		:return: returns a Function object or None for the function at the virtual address provided
 		:rtype: Function

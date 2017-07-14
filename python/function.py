@@ -477,7 +477,11 @@ class Function(object):
 	def get_comment_at(self, addr):
 		return core.BNGetCommentForAddress(self.handle, addr)
 
+	def set_comment_at(self, addr, comment):
+		core.BNSetCommentForAddress(self.handle, addr, comment)
+
 	def set_comment(self, addr, comment):
+		"""Deprecated"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def get_low_level_il_at(self, addr, arch=None):

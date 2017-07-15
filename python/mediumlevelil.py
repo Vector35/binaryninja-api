@@ -43,7 +43,7 @@ class SSAVariable(object):
 		)
 
 	def __hash__(self):
-		return hash(self.var.identifier, self.version)
+		return hash((self.var.identifier, self.version))
 
 
 class MediumLevelILLabel(object):

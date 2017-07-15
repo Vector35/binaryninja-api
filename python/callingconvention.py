@@ -40,7 +40,7 @@ class CallingConvention(object):
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch, handle = None):
+	def __init__(self, arch, name, handle = None):
 		if handle is None:
 			self.arch = arch
 			self._pending_reg_lists = {}
@@ -55,7 +55,7 @@ class CallingConvention(object):
 			self._cb.getIntegerReturnValueRegister = self._cb.getIntegerReturnValueRegister.__class__(self._get_int_return_reg)
 			self._cb.getHighIntegerReturnValueRegister = self._cb.getHighIntegerReturnValueRegister.__class__(self._get_high_int_return_reg)
 			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(self._get_float_return_reg)
-			self.handle = core.BNCreateCallingConvention(arch.handle, self.__class__.name, self._cb)
+			self.handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
 			self.handle = handle

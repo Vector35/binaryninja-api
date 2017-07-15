@@ -29,6 +29,9 @@ import log
 
 
 class LabelField(object):
+	"""
+	``LabelField`` adds a text label to the display.
+	"""
 	def __init__(self, text):
 		self.text = text
 
@@ -44,6 +47,9 @@ class LabelField(object):
 
 
 class SeparatorField(object):
+	"""
+	``SeparatorField`` adds vertical separation to the display.
+	"""
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.SeparatorFormField
 
@@ -55,6 +61,9 @@ class SeparatorField(object):
 
 
 class TextLineField(object):
+	"""
+	``TextLineField`` Adds prompt for text string input. Result is stored in self.result as a string on completion.
+	"""
 	def __init__(self, prompt):
 		self.prompt = prompt
 		self.result = None
@@ -71,6 +80,10 @@ class TextLineField(object):
 
 
 class MultilineTextField(object):
+	"""
+	``MultilineTextField`` add multi-line text string input field. Result is stored in self.result
+	as a string. This option is not supported on the command line.
+	"""
 	def __init__(self, prompt):
 		self.prompt = prompt
 		self.result = None
@@ -87,6 +100,9 @@ class MultilineTextField(object):
 
 
 class IntegerField(object):
+	"""
+	``IntegerField`` add prompt for integer. Result is stored in self.result as an int.
+	"""
 	def __init__(self, prompt):
 		self.prompt = prompt
 		self.result = None
@@ -103,7 +119,15 @@ class IntegerField(object):
 
 
 class AddressField(object):
-	def __init__(self, prompt, view = None, current_address = 0):
+	"""
+	``AddressField`` prompts the user for an address. By passing the optional view and current_address parameters
+	offsets can be used instead of just an address. Th reslut is stored as in int in self.result.
+
+	Note: This API currenlty functions differently on the command line, as the view and current_address are
+	      disregarded. Additionally where as in the ui the result defaults to hexidecimal on the command line 0x must be 
+	      specified.
+	"""
+	def __init__(self, prompt, view=None, current_address=0):
 		self.prompt = prompt
 		self.view = view
 		self.current_address = current_address
@@ -125,6 +149,10 @@ class AddressField(object):
 
 
 class ChoiceField(object):
+	"""
+	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored
+	in self.result as an index in to the coices array.
+	"""
 	def __init__(self, prompt, choices):
 		self.prompt = prompt
 		self.choices = choices
@@ -147,7 +175,10 @@ class ChoiceField(object):
 
 
 class OpenFileNameField(object):
-	def __init__(self, prompt, ext = ""):
+	"""
+	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
+	"""
+	def __init__(self, prompt, ext=""):
 		self.prompt = prompt
 		self.ext = ext
 		self.result = None
@@ -165,7 +196,10 @@ class OpenFileNameField(object):
 
 
 class SaveFileNameField(object):
-	def __init__(self, prompt, ext = "", default_name = ""):
+	"""
+	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a string.
+	"""
+	def __init__(self, prompt, ext="", default_name=""):
 		self.prompt = prompt
 		self.ext = ext
 		self.default_name = default_name
@@ -185,13 +219,17 @@ class SaveFileNameField(object):
 
 
 class DirectoryNameField(object):
-	def __init__(self, prompt, default_name = ""):
+	"""
+	``DirectoryNameField`` prompts the user to specify a directory name to open. Result is stored in self.result as
+	a string.
+	"""
+	def __init__(self, prompt, default_name=""):
 		self.prompt = prompt
 		self.default_name = default_name
 		self.result = None
 
 	def _fill_core_struct(self, value):
-		value.type = DirectoryNameField
+		value.type = FormInputFieldType.DirectoryNameFormField
 		value.prompt = self.prompt
 		value.defaultName = self.default_name
 
@@ -353,14 +391,14 @@ class InteractionHandler(object):
 					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
 				elif fields[i].type == FormInputFieldType.ChoiceFormField:
 					choices = []
-					for i in xrange(0, fields[i].count):
-						choices.append(fields[i].choices[i])
+					for j in xrange(0, fields[i].count):
+						choices.append(fields[i].choices[j])
 					field_objs.append(ChoiceField(fields[i].prompt, choices))
 				elif fields[i].type == FormInputFieldType.OpenFileNameFormField:
 					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext))
 				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
 					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName))
-				elif fields[i].type == DirectoryNameField:
+				elif fields[i].type == FormInputFieldType.DirectoryNameFormField:
 					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName))
 				else:
 					field_objs.append(LabelField(fields[i].prompt))
@@ -424,22 +462,86 @@ class InteractionHandler(object):
 
 
 def markdown_to_html(contents):
+	"""
+	``markdown_to_html`` converts the provided markdown to HTML.
+
+	:param string contents: Markdown contents to convert to HTML.
+	:rtype: string
+	:Example:
+		>>> markdown_to_html("##Yay")
+		'<h2>Yay</h2>'
+	"""
 	return core.BNMarkdownToHTML(contents)
 
 
 def show_plain_text_report(title, contents):
+	"""
+	``show_plain_text_report`` displays contents to the user in the UI or on the command line.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str title: title to display in the UI popup.
+	:param str contents: plain text contents to display
+	:rtype: None
+	:Example:
+		>>> show_plain_text_report("title", "contents")
+		contents
+	"""
 	core.BNShowPlainTextReport(None, title, contents)
 
 
-def show_markdown_report(title, contents, plaintext = ""):
+def show_markdown_report(title, contents, plaintext=""):
+	"""
+	``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command line
+	applications.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str contents: markdown contents to display
+	:param str plaintext: Plain text version to display (used on the command line)
+	:rtype: None
+	:Example:
+		>>> show_markdown_report("title", "##Contents", "Plain text contents")
+		Plain text contents
+	"""
 	core.BNShowMarkdownReport(None, title, contents, plaintext)
 
 
-def show_html_report(title, contents, plaintext = ""):
+def show_html_report(title, contents, plaintext=""):
+	"""
+	``show_html_report`` displays the html contents in UI applications and plaintext in command line
+	applications.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str contents: HTML contents to display
+	:param str plaintext: Plain text version to display (used on the command line)
+	:rtype: None
+	:Example"
+		>>> show_html_report("title", "<h1>Contents</h1>", "Plain text contents")
+		Plain text contents
+	"""
 	core.BNShowHTMLReport(None, title, contents, plaintext)
 
 
 def get_text_line_input(prompt, title):
+	"""
+	``get_text_line_input`` prompts the user to input a string with the given prompt and title.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str prompt: String to prompt with.
+	:param str title: Title of the window when executed in the UI.
+	:rtype: string containing the input without trailing newline character.
+	:Example:
+		>>> get_text_line_input("PROMPT>", "getinfo")
+		PROMPT> Input!
+		'Input!'
+	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetTextLineInput(value, prompt, title):
 		return None
@@ -449,6 +551,20 @@ def get_text_line_input(prompt, title):
 
 
 def get_int_input(prompt, title):
+	"""
+	``get_int_input`` prompts the user to input a integer with the given prompt and title.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str prompt: String to prompt with.
+	:param str title: Title of the window when executed in the UI.
+	:rtype: integer value input by the user.
+	:Example:
+		>>> get_int_input("PROMPT>", "getinfo")
+		PROMPT> 10
+		10
+	"""
 	value = ctypes.c_longlong()
 	if not core.BNGetIntegerInput(value, prompt, title):
 		return None
@@ -456,6 +572,20 @@ def get_int_input(prompt, title):
 
 
 def get_address_input(prompt, title):
+	"""
+	``get_address_input`` prompts the user for an address with the given prompt and title.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used.
+
+	:param str prompt: String to prompt with.
+	:param str title: Title of the window when executed in the UI.
+	:rtype: integer value input by the user.
+	:Example:
+		>>> get_address_input("PROMPT>", "getinfo")
+		PROMPT> 10
+		10L
+	"""
 	value = ctypes.c_ulonglong()
 	if not core.BNGetAddressInput(value, prompt, title, None, 0):
 		return None
@@ -463,6 +593,25 @@ def get_address_input(prompt, title):
 
 
 def get_choice_input(prompt, title, choices):
+	"""
+	``get_choice_input`` prompts the user to select the one of the provided choices.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used. The ui uses a combo box.
+
+	:param str prompt: String to prompt with.
+	:param str title: Title of the window when executed in the UI.
+	:param list choices: A list of strings for the user to choose from.
+	:rtype: integer array index of the selected option
+	:Example:
+		>>> get_choice_input("PROMPT>", "choices", ["Yes", "No", "Maybe"])
+		choices
+		1) Yes
+		2) No
+		3) Maybe
+		PROMPT> 1
+		0L
+	"""
 	choice_buf = (ctypes.c_char_p * len(choices))()
 	for i in xrange(0, len(choices)):
 		choice_buf[i] = str(choices[i])
@@ -472,7 +621,20 @@ def get_choice_input(prompt, title, choices):
 	return value.value
 
 
-def get_open_filename_input(prompt, ext = ""):
+def get_open_filename_input(prompt, ext=""):
+	"""
+	``get_open_filename_input`` prompts the user for a file name to open.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used. The ui uses the native window popup for file selection.
+
+	:param str prompt: Prompt to display.
+	:param str ext: Optional, file extension
+	:Example:
+		>>> get_open_filename_input("filename:", "exe")
+		filename: foo.exe
+		'foo.exe'
+	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetOpenFileNameInput(value, prompt, ext):
 		return None
@@ -481,7 +643,22 @@ def get_open_filename_input(prompt, ext = ""):
 	return result
 
 
-def get_save_filename_input(prompt, ext = "", default_name = ""):
+def get_save_filename_input(prompt, ext="", default_name=""):
+	"""
+	``get_save_filename_input`` prompts the user for a file name to save as, optionally providing a file extension and
+	default_name.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used. The ui uses the native window popup for file selection.
+
+	:param str prompt: Prompt to display.
+	:param str ext: Optional, file extension
+	:param str default_name: Optional, default file name.
+	:Example:
+		>>> get_save_filename_input("filename:", "exe", "foo.exe")
+		filename: foo.exe
+		'foo.exe'
+	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetSaveFileNameInput(value, prompt, ext, default_name):
 		return None
@@ -490,7 +667,22 @@ def get_save_filename_input(prompt, ext = "", default_name = ""):
 	return result
 
 
-def get_directory_name_input(prompt, default_name = ""):
+def get_directory_name_input(prompt, default_name=""):
+	"""
+	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing and
+	default_name.
+
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
+	      a simple text prompt is used. The ui uses the native window popup for file selection.
+
+	:param str prompt: Prompt to display.
+	:param str default_name: Optional, default directory name.
+	:rtype: str
+	:Example:
+		>>> get_directory_name_input("prompt")
+		prompt dirname
+		'dirname'
+	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetDirectoryNameInput(value, prompt, default_name):
 		return None
@@ -500,6 +692,43 @@ def get_directory_name_input(prompt, default_name = ""):
 
 
 def get_form_input(fields, title):
+	"""
+	``get_from_input`` Prompts the user for a set of inputs specified in ``fields`` with given title.
+	The fields parameter is a list which can contain the following types:
+		- str  - an alias for LabelField
+		- None - an alias for SeparatorField
+		- LabelField         - Text output
+		- SeparatorField     - Vertical spacing
+		- TextLineField      - Prompt for a string value
+		- MultilineTextField - Prompt for multi-line string value
+		- IntegerField       - Prompt for an integer
+		- AddressField       - Prompt for an address
+		- ChoiceField        - Prompt for a choice from provided options
+		- OpenFileNameField  - Prompt for file to open
+		- SaveFileNameField  - Prompt for file to save to
+		- DirectoryNameField - Prompt for directory name
+	This API is flexible and works both in the UI via a popup dialog and on the command line.
+	:params list fields: A list containing of the above specified classes, strings or None
+	:params str title: The title of the popup dialog.
+	:Example:
+
+		>>> int_f = IntegerField("Specify Integer")
+		>>> tex_f = TextLineField("Specify name")
+		>>> choice_f = ChoiceField("Options", ["Yes", "No", "Maybe"])
+		>>> get_form_input(["Get Data", None, int_f, tex_f, choice_f], "The options")
+		Get Data
+
+		Specify Integer 1337
+		Specify name Peter
+		The options
+		1) Yes
+		2) No
+		3) Maybe
+		Options 1
+		>>> True
+		>>> print tex_f.result, int_f.result, choice_f.result
+		Peter 1337 0
+	"""
 	value = (core.BNFormInputField * len(fields))()
 	for i in xrange(0, len(fields)):
 		if isinstance(fields[i], str):
@@ -517,7 +746,7 @@ def get_form_input(fields, title):
 	return True
 
 
-def show_message_box(title, text, buttons = MessageBoxButtonSet.OKButtonSet, icon = MessageBoxIcon.InformationIcon):
+def show_message_box(title, text, buttons=MessageBoxButtonSet.OKButtonSet, icon=MessageBoxIcon.InformationIcon):
 	"""
 	``show_message_box`` Displays a configurable message box in the UI, or prompts on the console as appropriate
 	retrieves a list of all Symbol objects of the provided symbol type in the optionally

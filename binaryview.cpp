@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -871,6 +872,12 @@ void BinaryView::RemoveUserFunction(Function* func)
 }
 
 
+void BinaryView::UpdateAnalysisAndWait()
+{
+	BNUpdateAnalysisAndWait(m_object);
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_object);
@@ -1318,6 +1325,10 @@ uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
 	return BNGetNextDataAfterAddress(m_object, addr);
 }
 
+uint64_t BinaryView::GetNextDataVariableAfterAddress(uint64_t addr)
+{
+	return BNGetNextDataVariableAfterAddress(m_object, addr);
+}
 
 uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
 {
@@ -1825,6 +1836,50 @@ vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 	return result;
 }
 
+
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue)
+{
+	if (!inValue)
+		return;
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
+}
+
+Ref<Metadata> BinaryView::QueryMetadata(const std::string& key)
+{
+	BNMetadata* value = BNBinaryViewQueryMetadata(m_object, key.c_str());
+	if (!value)
+		return nullptr;
+	return new Metadata(value);
+}
+
+void BinaryView::RemoveMetadata(const std::string& key)
+{
+	BNBinaryViewRemoveMetadata(m_object, key.c_str());
+}
+
+string BinaryView::GetStringMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsString())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetString();
+}
+
+vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsRaw())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetRaw();
+}
+
+uint64_t BinaryView::GetUIntMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsUnsignedInteger())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetUnsignedInteger();
+}
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {

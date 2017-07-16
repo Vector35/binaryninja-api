@@ -203,6 +203,12 @@ class Variable(object):
 	def __str__(self):
 		return self.name
 
+	def __eq__(self, other):
+		return self.identifier == other.identifier
+
+	def __hash__(self):
+		return hash(self.identifier)
+
 
 class ConstantReference(object):
 	def __init__(self, val, size, ptr, intermediate):
@@ -257,6 +263,9 @@ class Function(object):
 		if not isinstance(value, Function):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def __hash__(self):
+		return hash((self.start, self.arch.name, self.platform.name))
 
 	@classmethod
 	def _unregister(cls, func):
@@ -468,7 +477,11 @@ class Function(object):
 	def get_comment_at(self, addr):
 		return core.BNGetCommentForAddress(self.handle, addr)
 
+	def set_comment_at(self, addr, comment):
+		core.BNSetCommentForAddress(self.handle, addr, comment)
+
 	def set_comment(self, addr, comment):
+		"""Deprecated"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def get_low_level_il_at(self, addr, arch=None):

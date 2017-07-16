@@ -335,7 +335,7 @@ class _PythonScriptingInstanceOutput(object):
 		self.buffer = ""
 		self.encoding = 'UTF-8'
 		self.errors = None
-		self.isatty = False
+		self.isatty = lambda: False
 		self.mode = 'w'
 		self.name = 'PythonScriptingInstanceOutput'
 		self.newlines = None

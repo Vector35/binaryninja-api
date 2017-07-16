@@ -36,6 +36,15 @@ class SSAVariable(object):
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self.var), self.version)
 
+	def __eq__(self, other):
+		return (
+			(self.var.identifier, self.version) == 
+			(other.var.identifier, other.version)
+		)
+
+	def __hash__(self):
+		return hash((self.var.identifier, self.version))
+
 
 class MediumLevelILLabel(object):
 	def __init__(self, handle = None):
@@ -139,7 +148,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "expr"), ("low", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "ssa_var"), ("low", "ssa_var"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")],

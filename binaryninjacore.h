@@ -137,6 +137,7 @@ extern "C"
 	struct BNRepository;
 	struct BNRepoPlugin;
 	struct BNRepositoryManager;
+	struct BNMetadata;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
@@ -1257,6 +1258,7 @@ extern "C"
 		SuccessfulScriptExecution
 	};
 
+
 	struct BNScriptingInstanceCallbacks
 	{
 		void* context;
@@ -1295,6 +1297,13 @@ extern "C"
 		int64_t value;
 		size_t size;
 		bool pointer, intermediate;
+	};
+
+	struct BNMetadataValueStore
+	{
+		size_t size;
+		char** keys;
+		BNMetadata** values;
 	};
 
 	enum BNHighlightColorStyle
@@ -1474,8 +1483,22 @@ extern "C"
 		double seconds;
 	};
 
+	enum BNMetadataType
+	{
+		InvalidDataType,
+		BooleanDataType,
+		StringDataType,
+		UnsignedIntegerDataType,
+		SignedIntegerDataType,
+		DoubleDataType,
+		RawDataType,
+		KeyValueDataType,
+		ArrayDataType
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
+	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
@@ -1504,6 +1527,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetUserDirectory(void);
 	BINARYNINJACOREAPI char* BNGetUserPluginDirectory(void);
 	BINARYNINJACOREAPI char* BNGetRepositoriesDirectory(void);
+	BINARYNINJACOREAPI char* BNGetSettingsFileName(void);
 	BINARYNINJACOREAPI void BNSaveLastRun(void);
 
 	BINARYNINJACOREAPI char* BNGetPathRelativeToBundledPluginDirectory(const char* path);
@@ -1886,6 +1910,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI void BNCreateUserFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
+	BINARYNINJACOREAPI void BNUpdateAnalysisAndWait(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNUpdateAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNAbortAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNIsFunctionUpdateNeeded(BNFunction* func);
@@ -2859,7 +2884,97 @@ extern "C"
 	// Filesystem functionality
 	BINARYNINJACOREAPI int BNDeleteFile(const char* path);
 	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
-	BINARYNINJACOREAPI int BNCreateDirectory(const char* path);
+	BINARYNINJACOREAPI bool BNCreateDirectory(const char* path, bool createSubdirectories);
+	BINARYNINJACOREAPI bool BNPathExists(const char* path);
+	BINARYNINJACOREAPI bool BNIsPathDirectory(const char* path);
+	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
+
+	// Settings APIs
+	BINARYNINJACOREAPI bool BNSettingGetBool(const char* settingGroup, const char* name, bool defaultValue);
+	BINARYNINJACOREAPI int64_t BNSettingGetInteger(const char* settingGroup, const char* name, int64_t defaultValue);
+	BINARYNINJACOREAPI char* BNSettingGetString(const char* settingGroup, const char* name, const char* defaultValue);
+	// intoutSize is number of elements in defaultValue one entry and number of elements in return type on exit
+	BINARYNINJACOREAPI int64_t* BNSettingGetIntegerList(const char* settingGroup, const char* name, int64_t* defaultValue, size_t* inoutSize);
+	// intoutSize is number of elements in defaultValue one entry and number of elements in return type on exit
+	BINARYNINJACOREAPI const char** BNSettingGetStringList(const char* settingGroup, const char* name, const char** defaultValue, size_t* inoutSize);
+	BINARYNINJACOREAPI double BNSettingGetDouble(const char* settingGroup, const char* name, double defaultValue);
+
+	BINARYNINJACOREAPI void BNFreeSettingIntegerList(int64_t* integerList);
+	//Check the type of a core setting
+	BINARYNINJACOREAPI bool BNSettingIsBool(const char* name, const char* settingGroup);
+	BINARYNINJACOREAPI bool BNSettingIsInteger(const char* name, const char* settingGroup);
+	BINARYNINJACOREAPI bool BNSettingIsString(const char* name, const char* settingGroup);
+	BINARYNINJACOREAPI bool BNSettingIsStringList(const char* name, const char* settingGroup);
+	BINARYNINJACOREAPI bool BNSettingIsIntegerList(const char* name, const char* settingGroup);
+	BINARYNINJACOREAPI bool BNSettingIsDouble(const char* name, const char* settingGroup);
+	// Check if a plugin setting is present
+	BINARYNINJACOREAPI bool BNSettingIsPresent(const char* settingGroup, const char* name);
+
+	BINARYNINJACOREAPI bool BNSettingSetBool(const char* settingGroup, const char* name, bool value, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetInteger(const char* settingGroup, const char* name, int64_t value, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetString(const char* settingGroup, const char* name, const char* value, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetDouble(const char* settingGroup, const char* name, double value, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetIntegerList(const char* settingGroup, const char* name, const int64_t* value, size_t size, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingSetStringList(const char* settingGroup, const char* name, const char** value, size_t size, bool autoFlush);
+
+	BINARYNINJACOREAPI bool BNSettingRemoveSetting(const char* settingGroup, const char* setting, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingRemoveSettingGroup(const char* settingGroup, bool autoFlush);
+	BINARYNINJACOREAPI bool BNSettingFlushSettings();
+
+	//Metadata APIs
+
+	// Create Metadata of various types
+	BINARYNINJACOREAPI BNMetadata* BNNewMetadataReference(BNMetadata* data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataBooleanData(bool data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataStringData(const char* data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataUnsignedIntegerData(uint64_t data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataSignedIntegerData(int64_t data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataDoubleData(double data);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataOfType(BNMetadataType type);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataRawData(const uint8_t* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataArray(BNMetadata** data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataValueStore(const char** keys, BNMetadata** values, size_t size);
+
+	BINARYNINJACOREAPI bool BNMetadataIsEqual(BNMetadata* lhs, BNMetadata* rhs);
+
+	BINARYNINJACOREAPI bool BNMetadataSetValueForKey(BNMetadata* data, const char* key, BNMetadata* md);
+	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForKey(BNMetadata* data, const char* key);
+	BINARYNINJACOREAPI bool BNMetadataArrayAppend(BNMetadata* data, BNMetadata* md);
+	BINARYNINJACOREAPI void BNMetadataRemoveKey(BNMetadata* data, const char* key);
+	BINARYNINJACOREAPI size_t BNMetadataSize(BNMetadata* data);
+	BINARYNINJACOREAPI BNMetadata* BNMetadataGetForIndex(BNMetadata* data, size_t index);
+	BINARYNINJACOREAPI void BNMetadataRemoveIndex(BNMetadata* data, size_t index);
+
+	BINARYNINJACOREAPI void BNFreeMetadataArray(BNMetadata** data);
+	BINARYNINJACOREAPI void BNFreeMetadataValueStore(BNMetadataValueStore* data);
+	BINARYNINJACOREAPI void BNFreeMetadata(BNMetadata* data);
+	BINARYNINJACOREAPI void BNFreeMetadataRaw(uint8_t* data);
+	// Retrieve Structured Data
+	BINARYNINJACOREAPI bool BNMetadataGetBoolean(BNMetadata* data);
+	BINARYNINJACOREAPI char* BNMetadataGetString(BNMetadata* data);
+	BINARYNINJACOREAPI uint64_t BNMetadataGetUnsignedInteger(BNMetadata* data);
+	BINARYNINJACOREAPI int64_t BNMetadataGetSignedInteger(BNMetadata* data);
+	BINARYNINJACOREAPI double BNMetadataGetDouble(BNMetadata* data);
+	BINARYNINJACOREAPI uint8_t* BNMetadataGetRaw(BNMetadata* data, size_t* size);
+	BINARYNINJACOREAPI BNMetadata** BNMetadataGetArray(BNMetadata* data, size_t* size);
+	BINARYNINJACOREAPI BNMetadataValueStore* BNMetadataGetValueStore(BNMetadata* data);
+
+	//Query type of Metadata
+	BINARYNINJACOREAPI BNMetadataType BNMetadataGetType(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsBoolean(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsString(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsUnsignedInteger(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsSignedInteger(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsDouble(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsRaw(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsArray(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsKeyValueStore(BNMetadata* data);
+
+	// Store/Query structured data to/from a BinaryView
+	BINARYNINJACOREAPI void BNBinaryViewStoreMetadata(BNBinaryView* view, const char* key, BNMetadata* value);
+	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
+	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
+
 #ifdef __cplusplus
 }
 #endif

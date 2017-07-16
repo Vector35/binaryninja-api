@@ -32,6 +32,7 @@
 #include <functional>
 #include <set>
 #include <mutex>
+#include <memory>
 #include "binaryninjacore.h"
 #include "json/json.h"
 
@@ -375,6 +376,7 @@ namespace BinaryNinja
 	void InitCorePlugins();
 	void InitUserPlugins();
 	void InitRepoPlugins();
+
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
 	std::string GetInstallDirectory();
@@ -845,6 +847,15 @@ namespace BinaryNinja
 	};
 
 	struct QualifiedNameAndType;
+	class Metadata;
+
+	class QueryMetadataException: public std::exception
+	{
+		const std::string m_error;
+	public:
+		QueryMetadataException(const std::string& error): std::exception(), m_error(error) {}
+		virtual const char* what() const NOEXCEPT { return m_error.c_str(); }
+	};
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
@@ -865,7 +876,7 @@ namespace BinaryNinja
 
 		    \param dest the address to write len number of bytes.
 		    \param offset the virtual offset to find and read len bytes from
-		....\param len the number of bytes to read from offset and write to dest
+		    \param len the number of bytes to read from offset and write to dest
 		*/
 		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
@@ -990,6 +1001,7 @@ namespace BinaryNinja
 		void RemoveAnalysisFunction(Function* func);
 		void CreateUserFunction(Platform* platform, uint64_t start);
 		void RemoveUserFunction(Function* func);
+		void UpdateAnalysisAndWait();
 		void UpdateAnalysis();
 		void AbortAnalysis();
 
@@ -1116,6 +1128,13 @@ namespace BinaryNinja
 		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
 
 		std::vector<BNAddressRange> GetAllocatedRanges();
+
+		void StoreMetadata(const std::string& key, Ref<Metadata> value);
+		Ref<Metadata> QueryMetadata(const std::string& key);
+		void RemoveMetadata(const std::string& key);
+		std::string GetStringMetadata(const std::string& key);
+		std::vector<uint8_t> GetRawMetadata(const std::string& key);
+		uint64_t GetUIntMetadata(const std::string& key);
 	};
 
 	class BinaryData: public BinaryView
@@ -1195,7 +1214,11 @@ namespace BinaryNinja
 
 		void Read(void* dest, size_t len);
 		DataBuffer Read(size_t len);
+		template <typename T> T Read();
+		template <typename T> std::vector<T> ReadVector(size_t count);
 		std::string ReadString(size_t len);
+		std::string ReadCString(size_t maxLength=-1);
+
 		uint8_t Read8();
 		uint16_t Read16();
 		uint32_t Read32();
@@ -2841,5 +2864,120 @@ namespace BinaryNinja
 		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);
 		bool UninstallPlugin(const std::string& repoName, const std::string& pluginPath);
 		Ref<Repository> GetDefaultRepository();
+	};
+
+	class Setting
+	{
+	public:
+		static bool GetBool(const std::string& settingGroup, const std::string& name, bool defaultValue);
+		static int64_t GetInteger(const std::string& settingGroup, const std::string& name, int64_t defaultValue=0);
+		static std::string GetString(const std::string& settingGroup, const std::string& name, const std::string& defaultValue="");
+		static std::vector<int64_t> GetIntegerList(const std::string& settingGroup, const std::string& name, const std::vector<int64_t>& defaultValue={});
+		static std::vector<std::string> GetStringList(const std::string& settingGroup, const std::string& name, const std::vector<std::string>& defaultValue={});
+		static double GetDouble(const std::string& settingGroup, const std::string& name, double defaultValue=0.0);
+
+		static bool IsPresent(const std::string& settingGroup, const std::string& name);
+		static bool IsBool(const std::string& settingGroup, const std::string& name);
+		static bool IsInteger(const std::string& settingGroup, const std::string& name);
+		static bool IsString(const std::string& settingGroup, const std::string& name);
+		static bool IsIntegerList(const std::string& settingGroup, const std::string& name);
+		static bool IsStringList(const std::string& settingGroup, const std::string& name);
+		static bool IsDouble(const std::string& settingGroup, const std::string& name);
+
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			bool value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			int64_t value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::string& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::vector<int64_t>& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			const std::vector<std::string>& value,
+			bool autoFlush=true);
+		static bool Set(const std::string& settingGroup,
+			const std::string& name,
+			double value,
+			bool autoFlush=true);
+
+		static bool RemoveSettingGroup(const std::string& settingGroup, bool autoFlush=true);
+		static bool RemoveSetting(const std::string& settingGroup, const std::string& setting, bool autoFlush=true);
+		static bool FlushSettings();
+	};
+
+	typedef BNMetadataType MetadataType;
+
+	class Metadata: public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
+	{
+	public:
+		Metadata(BNMetadata* structuredData);
+		Metadata(bool data);
+		Metadata(const std::string& data);
+		Metadata(uint64_t data);
+		Metadata(int64_t data);
+		Metadata(double data);
+		Metadata(const std::vector<bool>& data);
+		Metadata(const std::vector<std::string>& data);
+		Metadata(const std::vector<uint64_t>& data);
+		Metadata(const std::vector<int64_t>& data);
+		Metadata(const std::vector<double>& data);
+		Metadata(const std::vector<uint8_t>& data);
+		Metadata(const std::vector<Ref<Metadata>>& data);
+		Metadata(const std::map<std::string, Ref<Metadata>>& data);
+		Metadata(MetadataType type);
+		virtual ~Metadata() {}
+
+		bool operator==(const Metadata& rhs);
+		Ref<Metadata> operator[](const std::string& key);
+		Ref<Metadata> operator[](size_t idx);
+
+		MetadataType GetType() const;
+		bool GetBoolean() const;
+		std::string GetString() const;
+		uint64_t GetUnsignedInteger() const;
+		int64_t GetSignedInteger() const;
+		double GetDouble() const;
+		std::vector<bool> GetBooleanList() const;
+		std::vector<std::string> GetStringList() const;
+		std::vector<uint64_t> GetUnsignedIntegerList() const;
+		std::vector<int64_t> GetSignedIntegerList() const;
+		std::vector<double> GetDoubleList() const;
+		std::vector<uint8_t> GetRaw() const;
+		std::vector<Ref<Metadata>> GetArray();
+		std::map<std::string, Ref<Metadata>> GetKeyValueStore();
+
+		//For key-value data only
+		Ref<Metadata> Get(const std::string& key);
+		bool SetValueForKey(const std::string& key, Ref<Metadata> data);
+		void RemoveKey(const std::string& key);
+
+		//For array data only
+		Ref<Metadata> Get(size_t index);
+		bool Append(Ref<Metadata> data);
+		void RemoveIndex(size_t index);
+		size_t Size() const;
+
+		bool IsBoolean() const;
+		bool IsString() const;
+		bool IsUnsignedInteger() const;
+		bool IsSignedInteger() const;
+		bool IsDouble() const;
+		bool IsBooleanList() const;
+		bool IsStringList() const;
+		bool IsUnsignedIntegerList() const;
+		bool IsSignedIntegerList() const;
+		bool IsDoubleList() const;
+		bool IsRaw() const;
+		bool IsArray() const;
+		bool IsKeyValueStore() const;
 	};
 }

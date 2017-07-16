@@ -200,6 +200,8 @@ Plugins can be installed by one of two methods. First, they can be manually inst
 
 Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
 
+For more detailed information, see the [plugin guide](/guide/plugins).
+
 ## Preferences/Updates
 
 ![preferences >](/images/preferences.png "Preferences")

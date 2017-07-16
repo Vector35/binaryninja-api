@@ -26,7 +26,8 @@ import threading
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import AnalysisState, SymbolType, InstructionTextTokenType, Endianness, ModificationStatus, StringType, SegmentFlag
+from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
+	Endianness, ModificationStatus, StringType, SegmentFlag)
 import function
 import startup
 import architecture
@@ -39,6 +40,7 @@ import databuffer
 import basicblock
 import types
 import lineardisassembly
+import metadata
 
 
 class BinaryDataNotification(object):
@@ -115,6 +117,10 @@ class AnalysisCompletionEvent(object):
 		pass
 
 	def cancel(self):
+		"""
+		.. warning: This method should only be used when the system is being
+		shut down and no further analysis should be done afterward.
+		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 
@@ -1685,11 +1691,25 @@ class BinaryView(object):
 		return core.BNSaveToFilename(self.handle, str(dest))
 
 	def register_notification(self, notify):
+		"""
+		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
+		list of callbacks can be seen in :py:Class:`BinaryDataNotification`.
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		cb = BinaryDataNotificationCallbacks(self, notify)
 		cb._register()
 		self.notifications[notify] = cb
 
 	def unregister_notification(self, notify):
+		"""
+		`unregister_notification` unregisters the :py:Class:`BinaryDataNotification` object passed to
+		`register_notification`
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		if notify in self.notifications:
 			self.notifications[notify]._unregister()
 			del self.notifications[notify]
@@ -1801,28 +1821,7 @@ class BinaryView(object):
 
 		:rtype: None
 		"""
-		class WaitEvent(object):
-			def __init__(self):
-				self.cond = threading.Condition()
-				self.done = False
-
-			def complete(self):
-				self.cond.acquire()
-				self.done = True
-				self.cond.notify()
-				self.cond.release()
-
-			def wait(self):
-				self.cond.acquire()
-				while not self.done:
-					self.cond.wait()
-				self.cond.release()
-
-		wait = WaitEvent()
-		# TODO: figure out if we actually need this 'event' variable, likely we do
-		event = AnalysisCompletionEvent(self, lambda: wait.complete())
-		core.BNUpdateAnalysis(self.handle)
-		wait.wait()
+		core.BNUpdateAnalysisAndWait(self.handle)
 
 	def abort_analysis(self):
 		"""
@@ -1912,11 +1911,27 @@ class BinaryView(object):
 			return None
 		return DataVariable(var.address, types.Type(var.type), var.autoDiscovered)
 
+	def get_functions_containing(self, addr):
+		"""
+		``get_functions_containing`` returns a list of functions which contain the given address or None on failure.
+
+		:param int addr: virtual address to query.
+		:rtype: list of Function objects or None
+		"""
+		basic_blocks = self.get_basic_blocks_at(addr)
+		if len(basic_blocks) == 0:
+			return None
+
+		result = []
+		for block in basic_blocks:
+			result.append(block.function)
+		return result
+
 	def get_function_at(self, addr, plat=None):
 		"""
-		``get_function_at`` gets a binaryninja.Function object for the function at the virtual address ``addr``:
+		``get_function_at`` gets a Function object for the function that starts at virtual address ``addr``:
 
-		:param int addr: virtual address of the desired function
+		:param int addr: starting virtual address of the desired function
 		:param Platform plat: plat of the desired function
 		:return: returns a Function object or None for the function at the virtual address provided
 		:rtype: Function
@@ -3242,6 +3257,67 @@ class BinaryView(object):
 			result.append(str(outgoing_names[i]))
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result
+
+	def query_metadata(self, key):
+		"""
+		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.
+
+		:param string key: key to query
+		:rtype: metadata associated with the key
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
+			1337L
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
+			'my_data'
+		"""
+		md_handle = core.BNBinaryViewQueryMetadata(self.handle, key)
+		if md_handle is None:
+			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle).value
+
+	def store_metadata(self, key, md):
+		"""
+		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using 
+		`store_metadata` can be retrieved when the database is reopend. Objects stored are not arbitrary python 
+		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata` 
+		for more information. Python objects could obviously be serialized using pickle but this intentionally
+		a task left to the user since there is the potential security issues.
+
+		:param string key: key value to associate the Metadata object with
+		:param Varies md: object to store.
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
+			1337L
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
+			'my_data'
+		"""
+		core.BNBinaryViewStoreMetadata(self.handle, key, metadata.Metadata(md).handle)
+
+	def remove_metadata(self, key):
+		"""
+		`remove_metadata` removes the metadata associated with key from the current BinaryView.
+
+		:param string key: key associated with metadata to remove from the BinaryView
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.remove_metadata("integer")
+		"""
+		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
 	def __setattr__(self, name, value):
 		try:

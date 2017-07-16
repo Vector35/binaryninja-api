@@ -25,9 +25,13 @@ add_library(binaryninjaapi STATIC
 	log.cpp
 	lowlevelil.cpp
 	mainthread.cpp
+    mediumlevelil.cpp
+    metadata.cpp
 	platform.cpp
 	plugin.cpp
+    pluginmanager.cpp
 	scriptingprovider.cpp
+    settings.cpp
 	tempfile.cpp
 	transform.cpp
 	type.cpp

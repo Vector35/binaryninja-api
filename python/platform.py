@@ -132,7 +132,7 @@ class Platform(object):
 		result = core.BNGetPlatformDefaultCallingConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@default_calling_convention.setter
 	def default_calling_convention(self, value):
@@ -150,7 +150,7 @@ class Platform(object):
 		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@cdecl_calling_convention.setter
 	def cdecl_calling_convention(self, value):
@@ -168,7 +168,7 @@ class Platform(object):
 		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@stdcall_calling_convention.setter
 	def stdcall_calling_convention(self, value):
@@ -186,7 +186,7 @@ class Platform(object):
 		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@fastcall_calling_convention.setter
 	def fastcall_calling_convention(self, value):
@@ -204,7 +204,7 @@ class Platform(object):
 		result = core.BNGetPlatformSystemCallConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@system_call_convention.setter
 	def system_call_convention(self, value):
@@ -222,7 +222,7 @@ class Platform(object):
 		cc = core.BNGetPlatformCallingConventions(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(callingconvention.CallingConvention(None, core.BNNewCallingConventionReference(cc[i])))
+			result.append(callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i])))
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
 

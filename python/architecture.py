@@ -361,7 +361,7 @@ class Architecture(object):
 		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			obj = callingconvention.CallingConvention(None, core.BNNewCallingConventionReference(cc[i]))
+			obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
 			result[obj.name] = obj
 		core.BNFreeCallingConventionList(cc, count)
 		return result

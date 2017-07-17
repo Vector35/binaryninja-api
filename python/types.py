@@ -274,7 +274,7 @@ class Type(object):
 		result = core.BNGetTypeCallingConvention(self.handle)
 		if result is None:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@property
 	def parameters(self):
@@ -746,7 +746,7 @@ class TypeParserResult(object):
 		self.functions = functions
 
 	def __repr__(self):
-		return "{types: %s, variables: %s, functions: %s}" % (self.types, self.variables, self.functions)
+		return "<types: %s, variables: %s, functions: %s>" % (self.types, self.variables, self.functions)
 
 
 def preprocess_source(source, filename=None, include_dirs=[]):

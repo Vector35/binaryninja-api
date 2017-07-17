@@ -40,8 +40,10 @@ class CallingConvention(object):
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch, name, handle = None):
+	def __init__(self, arch=None, name=None, handle=None):
 		if handle is None:
+			if arch is None or name is None:
+				raise ValueError("Must specify either handle or architecture and name")
 			self.arch = arch
 			self._pending_reg_lists = {}
 			self._cb = core.BNCustomCallingConvention()

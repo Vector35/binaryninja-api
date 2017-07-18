@@ -414,6 +414,12 @@ uint64_t Type::GetElementCount() const
 }
 
 
+uint64_t Type::GetOffset() const
+{
+	return BNGetTypeOffset(m_object);
+}
+
+
 string Type::GetString() const
 {
 	char* str = BNGetTypeString(m_object);

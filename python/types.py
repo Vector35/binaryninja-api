@@ -332,6 +332,11 @@ class Type(object):
 		"""Type count (read-only)"""
 		return core.BNGetTypeElementCount(self.handle)
 
+	@property
+	def offset(self):
+		"""Offset into structure (read-only)"""
+		return core.BNGetTypeOffset(self.handle)
+
 	def __str__(self):
 		return core.BNGetTypeString(self.handle)
 

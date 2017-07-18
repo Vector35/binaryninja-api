@@ -1842,6 +1842,7 @@ namespace BinaryNinja
 		void SetTypeName(const QualifiedName& name);
 
 		uint64_t GetElementCount() const;
+		uint64_t GetOffset() const;
 
 		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
 

@@ -726,7 +726,9 @@ extern "C"
 		MLIL_SET_VAR_FIELD, // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
 		MLIL_SET_VAR_SPLIT, // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
 		MLIL_LOAD, // Not valid in SSA form (see MLIL_LOAD_SSA)
+		MLIL_LOAD_STRUCT, // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
 		MLIL_STORE, // Not valid in SSA form (see MLIL_STORE_SSA)
+		MLIL_STORE_STRUCT, // Not valid in SSA form (see MLIL_STORE_STRUCT_SSA)
 		MLIL_VAR, // Not valid in SSA form (see MLIL_VAR_SSA)
 		MLIL_VAR_FIELD, // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
 		MLIL_ADDRESS_OF,
@@ -811,7 +813,9 @@ extern "C"
 		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA family instructions
 		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA family instructions
 		MLIL_LOAD_SSA,
+		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
+		MLIL_STORE_STRUCT_SSA,
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI
 	};
@@ -2534,6 +2538,7 @@ extern "C"
 	BINARYNINJACOREAPI BNEnumeration* BNGetTypeEnumeration(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeOffset(BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionCanReturn(BNType* type, BNBoolWithConfidence* canReturn);
 	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeGetMemberScope(BNType* type);
 	BINARYNINJACOREAPI void BNTypeSetMemberScope(BNType* type, BNMemberScopeWithConfidence* scope);

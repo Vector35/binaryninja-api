@@ -1510,6 +1510,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetProduct(void);
 	BINARYNINJACOREAPI char* BNGetProductType(void);
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
+	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);

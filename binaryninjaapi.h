@@ -392,6 +392,7 @@ namespace BinaryNinja
 	std::string GetProduct();
 	std::string GetProductType();
 	int GetLicenseCount();
+	bool IsUIEnabled();
 	uint32_t GetBuildId();
 
 	bool AreAutoUpdatesEnabled();

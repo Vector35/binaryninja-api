@@ -41,10 +41,12 @@ void BinaryNinja::InitUserPlugins()
 	BNInitUserPlugins();
 }
 
+
 void BinaryNinja::InitRepoPlugins()
 {
 	BNInitRepoPlugins();
 }
+
 
 string BinaryNinja::GetBundledPluginDirectory()
 {
@@ -137,6 +139,7 @@ string BinaryNinja::GetVersionString()
 	return result;
 }
 
+
 string BinaryNinja::GetProduct()
 {
 	char* str = BNGetProduct();
@@ -144,6 +147,7 @@ string BinaryNinja::GetProduct()
 	BNFreeString(str);
 	return result;
 }
+
 
 string BinaryNinja::GetProductType()
 {
@@ -153,10 +157,18 @@ string BinaryNinja::GetProductType()
 	return result;
 }
 
+
 int BinaryNinja::GetLicenseCount()
 {
 	return BNGetLicenseCount();
 }
+
+
+bool BinaryNinja::IsUIEnabled()
+{
+	return BNIsUIEnabled();
+}
+
 
 uint32_t BinaryNinja::GetBuildId()
 {

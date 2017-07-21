@@ -416,6 +416,9 @@ extern "C"
 		ShowAddress = 0,
 		ShowOpcode = 1,
 		ExpandLongOpcode = 2,
+		ShowVariablesAtTopOfGraph = 3,
+		ShowVariableTypesWhenAssigned = 4,
+		ShowDefaultRegisterTypes = 5,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,

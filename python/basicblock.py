@@ -48,6 +48,8 @@ class BasicBlock(object):
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
+		self._arch = None
+		self._func = None
 
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
@@ -65,18 +67,26 @@ class BasicBlock(object):
 	@property
 	def function(self):
 		"""Basic block function (read-only)"""
+		if self._func is not None:
+			return self._func
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		return function.Function(self.view, func)
+		self._func = function.Function(self.view, func)
+		return self._func
 
 	@property
 	def arch(self):
 		"""Basic block architecture (read-only)"""
+		# The arch for a BasicBlock isn't going to change so just cache
+		# it the first time we need it
+		if self._arch is not None:
+			return self._arch
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.Architecture(arch)
+		self._arch = architecture.Architecture(arch)
+		return self._arch
 
 	@property
 	def start(self):

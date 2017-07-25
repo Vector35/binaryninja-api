@@ -358,6 +358,7 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 		ref.name = refs[i].name;
 		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
+		ref.size = refs[i].size;
 		result.push_back(ref);
 	}
 

@@ -174,6 +174,7 @@ class MediumLevelILInstruction(object):
 		self.operation = MediumLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
+		self.source_operand = instr.sourceOperand
 		operands = MediumLevelILInstruction.ILOperations[instr.operation]
 		self.operands = []
 		i = 0

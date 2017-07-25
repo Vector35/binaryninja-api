@@ -826,6 +826,7 @@ extern "C"
 	struct BNMediumLevelILInstruction
 	{
 		BNMediumLevelILOperation operation;
+		uint32_t sourceOperand;
 		size_t size;
 		uint64_t operands[5];
 		uint64_t address;
@@ -1253,6 +1254,7 @@ extern "C"
 		char* name;
 		uint64_t varIdentifier;
 		int64_t referencedOffset;
+		size_t size;
 	};
 
 	struct BNIndirectBranchInfo

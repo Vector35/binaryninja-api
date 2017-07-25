@@ -2062,6 +2062,7 @@ namespace BinaryNinja
 		std::string name;
 		Variable var;
 		int64_t referencedOffset;
+		size_t size;
 	};
 
 	struct IndirectBranchInfo

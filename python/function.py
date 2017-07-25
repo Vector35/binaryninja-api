@@ -148,12 +148,13 @@ class PossibleValueSet(object):
 
 
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, var, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs, size):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
 		self.var = var
 		self.referenced_offset = ref_ofs
+		self.size = size
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
@@ -621,7 +622,7 @@ class Function(object):
 			var_type = types.Type(core.BNNewTypeReference(refs[i].type), confidence = refs[i].typeConfidence)
 			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
 				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
-				refs[i].referencedOffset))
+				refs[i].referencedOffset, refs[i].size))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 

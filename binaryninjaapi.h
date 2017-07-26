@@ -2464,6 +2464,8 @@ namespace BinaryNinja
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
+		size_t GetMediumLevelILInstructionIndex(size_t instr) const;
+		size_t GetMediumLevelILExprIndex(size_t expr) const;
 		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
 	};

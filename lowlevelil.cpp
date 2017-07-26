@@ -955,6 +955,18 @@ Ref<MediumLevelILFunction> LowLevelILFunction::GetMappedMediumLevelIL() const
 }
 
 
+size_t LowLevelILFunction::GetMediumLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetMediumLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetMediumLevelILExprIndex(size_t expr) const
+{
+	return BNGetMediumLevelILExprIndex(m_object, expr);
+}
+
+
 size_t LowLevelILFunction::GetMappedMediumLevelILInstructionIndex(size_t instr) const
 {
 	return BNGetMappedMediumLevelILInstructionIndex(m_object, instr);

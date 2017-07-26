@@ -326,8 +326,7 @@ namespace BinaryNinja
 		{
 		}
 
-		operator T() { return m_value; }
-		const operator T() const { return m_value; }
+		operator T() const { return m_value; }
 		T* operator->() { return &m_value; }
 		const T* operator->() const { return &m_value; }
 

@@ -148,12 +148,13 @@ class PossibleValueSet(object):
 
 
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, var, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs, size):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
 		self.var = var
 		self.referenced_offset = ref_ofs
+		self.size = size
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
@@ -183,9 +184,11 @@ class Variable(object):
 		if name is None:
 			name = core.BNGetVariableName(func.handle, var)
 		if var_type is None:
-			var_type = core.BNGetVariableType(func.handle, var)
-			if var_type:
-				var_type = types.Type(var_type)
+			var_type_conf = core.BNGetVariableType(func.handle, var)
+			if var_type_conf.type:
+				var_type = types.Type(var_type_conf.type, confidence = var_type_conf.confidence)
+			else:
+				var_type = None
 
 		self.name = name
 		self.type = var_type
@@ -399,7 +402,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -412,7 +415,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -629,10 +632,10 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			var_type = types.Type(core.BNNewTypeReference(refs[i].type))
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type), confidence = refs[i].typeConfidence)
 			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
 				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
-				refs[i].referencedOffset))
+				refs[i].referencedOffset, refs[i].size))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -743,8 +746,9 @@ class Function(object):
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
 				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
@@ -866,10 +870,16 @@ class Function(object):
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 	def create_auto_stack_var(self, offset, var_type, name):
-		core.BNCreateAutoStackVariable(self.handle, offset, var_type.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateAutoStackVariable(self.handle, offset, tc, name)
 
 	def create_user_stack_var(self, offset, var_type, name):
-		core.BNCreateUserStackVariable(self.handle, offset, var_type.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateUserStackVariable(self.handle, offset, tc, name)
 
 	def delete_auto_stack_var(self, offset):
 		core.BNDeleteAutoStackVariable(self.handle, offset)
@@ -882,14 +892,20 @@ class Function(object):
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		core.BNCreateAutoVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateAutoVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
 
 	def create_user_var(self, var, var_type, name, ignore_disjoint_uses = False):
 		var_data = core.BNVariable()
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		core.BNCreateUserVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateUserVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
 
 	def delete_auto_var(self, var):
 		var_data = core.BNVariable()
@@ -912,7 +928,7 @@ class Function(object):
 		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
 			return None
 		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
-			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type)))
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), confidence = found_var.typeConfidence))
 		core.BNFreeVariableNameAndType(found_var)
 		return result
 
@@ -1056,8 +1072,9 @@ class FunctionGraphBlock(object):
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
 				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -1114,8 +1131,9 @@ class FunctionGraphBlock(object):
 					size = lines[i].tokens[j].size
 					operand = lines[i].tokens[j].operand
 					context = lines[i].tokens[j].context
+					confidence = lines[i].tokens[j].confidence
 					address = lines[i].tokens[j].address
-					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 				yield DisassemblyTextLine(addr, tokens)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
@@ -1397,13 +1415,14 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
 		self.size = size
 		self.operand = operand
 		self.context = InstructionTextTokenContext(context)
+		self.confidence = confidence
 		self.address = address
 
 	def __str__(self):

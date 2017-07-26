@@ -178,6 +178,7 @@ bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<
 		token.size = list[i].size;
 		token.operand = list[i].operand;
 		token.context = list[i].context;
+		token.confidence = list[i].confidence;
 		token.address = list[i].address;
 		tokens.push_back(token);
 	}
@@ -206,6 +207,7 @@ bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arc
 		token.size = list[i].size;
 		token.operand = list[i].operand;
 		token.context = list[i].context;
+		token.confidence = list[i].confidence;
 		token.address = list[i].address;
 		tokens.push_back(token);
 	}
@@ -301,6 +303,34 @@ set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t version) const
 {
 	size_t count;
 	size_t* instrs = BNGetMediumLevelILSSAMemoryUses(m_object, version, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> MediumLevelILFunction::GetVariableDefinitions(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetMediumLevelILVariableDefinitions(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> MediumLevelILFunction::GetVariableUses(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetMediumLevelILVariableUses(m_object, &var, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -491,4 +521,13 @@ size_t MediumLevelILFunction::GetLowLevelILInstructionIndex(size_t instr) const
 size_t MediumLevelILFunction::GetLowLevelILExprIndex(size_t expr) const
 {
 	return BNGetLowLevelILExprIndex(m_object, expr);
+}
+
+
+Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(size_t expr)
+{
+	BNTypeWithConfidence result = BNGetMediumLevelILExprType(m_object, expr);
+	if (!result.type)
+		return nullptr;
+	return Confidence<Ref<Type>>(new Type(result.type), result.confidence);
 }

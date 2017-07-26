@@ -26,6 +26,7 @@ from .enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDep
 import function
 import basicblock
 import lowlevelil
+import types
 
 
 class SSAVariable(object):
@@ -79,7 +80,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SPLIT: [("high", "var"), ("low", "var"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_LOAD: [("src", "expr")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT: [("src", "expr"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_STORE: [("dest", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR: [("src", "var")],
 		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")],
@@ -162,7 +165,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [("src_memory", "int"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
 		MediumLevelILOperation.MLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: [("dest", "expr"), ("offset", "int"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
@@ -178,6 +183,7 @@ class MediumLevelILInstruction(object):
 		self.operation = MediumLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
+		self.source_operand = instr.sourceOperand
 		operands = MediumLevelILInstruction.ILOperations[instr.operation]
 		self.operands = []
 		i = 0
@@ -274,8 +280,9 @@ class MediumLevelILInstruction(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
@@ -404,6 +411,14 @@ class MediumLevelILInstruction(object):
 			elif isinstance(operand, MediumLevelILInstruction):
 				result += operand.vars_read
 		return result
+
+	@property
+	def expr_type(self):
+		"""Type of expression"""
+		result = core.BNGetMediumLevelILExprType(self.function.handle, self.expr_index)
+		if result.type:
+			return types.Type(result.type, confidence = result.confidence)
+		return None
 
 	def get_ssa_var_possible_values(self, ssa_var):
 		var_data = core.BNVariable()
@@ -786,6 +801,32 @@ class MediumLevelILFunction(object):
 	def get_ssa_memory_uses(self, version):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetMediumLevelILSSAMemoryUses(self.handle, version, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_var_definitions(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_var_uses(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
 		result = []
 		for i in xrange(0, count.value):
 			result.append(instrs[i])

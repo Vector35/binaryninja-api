@@ -658,6 +658,7 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 		token.size = list[i].size;
 		token.operand = list[i].operand;
 		token.context = list[i].context;
+		token.confidence = list[i].confidence;
 		token.address = list[i].address;
 		tokens.push_back(token);
 	}
@@ -686,6 +687,7 @@ bool LowLevelILFunction::GetInstructionText(Function* func, Architecture* arch, 
 		token.size = list[i].size;
 		token.operand = list[i].operand;
 		token.context = list[i].context;
+		token.confidence = list[i].confidence;
 		token.address = list[i].address;
 		tokens.push_back(token);
 	}
@@ -950,6 +952,18 @@ Ref<MediumLevelILFunction> LowLevelILFunction::GetMappedMediumLevelIL() const
 	if (!func)
 		return nullptr;
 	return new MediumLevelILFunction(func);
+}
+
+
+size_t LowLevelILFunction::GetMediumLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetMediumLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t LowLevelILFunction::GetMediumLevelILExprIndex(size_t expr) const
+{
+	return BNGetMediumLevelILExprIndex(m_object, expr);
 }
 
 

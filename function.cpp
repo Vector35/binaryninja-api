@@ -353,10 +353,12 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	{
 		StackVariableReference ref;
 		ref.sourceOperand = refs[i].sourceOperand;
-		ref.type = refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr;
+		ref.type = Confidence<Ref<Type>>(refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr,
+			refs[i].typeConfidence);
 		ref.name = refs[i].name;
 		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
+		ref.size = refs[i].size;
 		result.push_back(ref);
 	}
 
@@ -491,7 +493,7 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 	{
 		VariableNameAndType var;
 		var.name = vars[i].name;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
 		result[vars[i].var.storage].push_back(var);
@@ -502,15 +504,21 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 }
 
 
-void Function::CreateAutoStackVariable(int64_t offset, Ref<Type> type, const string& name)
+void Function::CreateAutoStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const string& name)
 {
-	BNCreateAutoStackVariable(m_object, offset, type->GetObject(), name.c_str());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateAutoStackVariable(m_object, offset, &tc, name.c_str());
 }
 
 
-void Function::CreateUserStackVariable(int64_t offset, Ref<Type> type, const string& name)
+void Function::CreateUserStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const string& name)
 {
-	BNCreateUserStackVariable(m_object, offset, type->GetObject(), name.c_str());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateUserStackVariable(m_object, offset, &tc, name.c_str());
 }
 
 
@@ -533,7 +541,7 @@ bool Function::GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr,
 	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
 		return false;
 
-	result.type = new Type(BNNewTypeReference(var.type));
+	result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var.type)), var.typeConfidence);
 	result.name = var.name;
 	result.var = var.var;
 	result.autoDefined = var.autoDefined;
@@ -553,7 +561,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 	{
 		VariableNameAndType var;
 		var.name = vars[i].name;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
 		result[vars[i].var] = var;
@@ -564,15 +572,23 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 }
 
 
-void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type,
+	const string& name, bool ignoreDisjointUses)
 {
-	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateAutoVariable(m_object, &var, &tc, name.c_str(), ignoreDisjointUses);
 }
 
 
-void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+void Function::CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type,
+	const string& name, bool ignoreDisjointUses)
 {
-	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateUserVariable(m_object, &var, &tc, name.c_str(), ignoreDisjointUses);
 }
 
 
@@ -588,12 +604,12 @@ void Function::DeleteUserVariable(const Variable& var)
 }
 
 
-Ref<Type> Function::GetVariableType(const Variable& var)
+Confidence<Ref<Type>> Function::GetVariableType(const Variable& var)
 {
-	BNType* type = BNGetVariableType(m_object, &var);
-	if (!type)
+	BNTypeWithConfidence type = BNGetVariableType(m_object, &var);
+	if (!type.type)
 		return nullptr;
-	return new Type(type);
+	return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 }
 
 
@@ -694,6 +710,7 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 			token.size = lines[i].tokens[j].size;
 			token.operand = lines[i].tokens[j].operand;
 			token.context = lines[i].tokens[j].context;
+			token.confidence = lines[i].tokens[j].confidence;
 			token.address = lines[i].tokens[j].address;
 			line.push_back(token);
 		}

@@ -309,8 +309,9 @@ class LowLevelILInstruction(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
@@ -327,8 +328,16 @@ class LowLevelILInstruction(object):
 			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
 
 	@property
+	def medium_level_il(self):
+		"""Gets the medium level IL expression corresponding to this expression (may be None for eliminated instructions)"""
+		expr = self.function.get_medium_level_il_expr_index(self.expr_index)
+		if expr is None:
+			return None
+		return mediumlevelil.MediumLevelILInstruction(self.function.medium_level_il, expr)
+
+	@property
 	def mapped_medium_level_il(self):
-		"""Gets the medium level IL expression corresponding to this expression"""
+		"""Gets the mapped medium level IL expression corresponding to this expression"""
 		expr = self.function.get_mapped_medium_level_il_expr_index(self.expr_index)
 		if expr is None:
 			return None
@@ -1650,6 +1659,24 @@ class LowLevelILFunction(object):
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, flag_ssa.version)
 		result = function.RegisterValue(self.arch, value)
+		return result
+
+	def get_medium_level_il_instruction_index(self, instr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMediumLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetMediumLevelILInstructionCount(med_il.handle):
+			return None
+		return result
+
+	def get_medium_level_il_expr_index(self, expr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMediumLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
+			return None
 		return result
 
 	def get_mapped_medium_level_il_instruction_index(self, instr):

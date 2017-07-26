@@ -46,21 +46,28 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture
 }
 
 
-InstructionTextToken::InstructionTextToken(): type(TextToken), value(0)
+InstructionTextToken::InstructionTextToken(): type(TextToken), value(0), confidence(BN_FULL_CONFIDENCE)
 {
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
-	size_t s, size_t o) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext), address(0)
+	size_t s, size_t o, uint8_t c) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext),
+	confidence(c), address(0)
 {
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstructionTextTokenContext ctxt,
-	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o):
-	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), address(a)
+	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c):
+	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), confidence(c), address(a)
 {
+}
+
+
+InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
+{
+	return InstructionTextToken(type, context, text, address, value, size, operand, conf);
 }
 
 
@@ -161,6 +168,7 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 		(*result)[i].size = tokens[i].size;
 		(*result)[i].operand = tokens[i].operand;
 		(*result)[i].context = tokens[i].context;
+		(*result)[i].confidence = tokens[i].confidence;
 		(*result)[i].address = tokens[i].address;
 	}
 	return true;
@@ -990,7 +998,7 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
-			tokens[i].value, tokens[i].size, tokens[i].operand));
+			tokens[i].value, tokens[i].size, tokens[i].operand, tokens[i].confidence));
 	}
 
 	BNFreeInstructionText(tokens, count);

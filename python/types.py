@@ -18,11 +18,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+max_confidence = 255
+
 import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType
+from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType
 import callingconvention
 import function
 
@@ -198,8 +200,9 @@ class Symbol(object):
 
 
 class Type(object):
-	def __init__(self, handle):
+	def __init__(self, handle, confidence = max_confidence):
 		self.handle = handle
+		self.confidence = confidence
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
@@ -232,12 +235,14 @@ class Type(object):
 	@property
 	def signed(self):
 		"""Wether type is signed (read-only)"""
-		return core.BNIsTypeSigned(self.handle)
+		result = core.BNIsTypeSigned(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def const(self):
 		"""Whether type is const (read-only)"""
-		return core.BNIsTypeConst(self.handle)
+		result = core.BNIsTypeConst(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def modified(self):
@@ -248,33 +253,33 @@ class Type(object):
 	def target(self):
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, confidence = result.confidence)
 
 	@property
 	def element_type(self):
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, confidence = result.confidence)
 
 	@property
 	def return_value(self):
 		"""Return value (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, confidence = result.confidence)
 
 	@property
 	def calling_convention(self):
 		"""Calling convention (read-only)"""
 		result = core.BNGetTypeCallingConvention(self.handle)
-		if result is None:
+		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(None, handle = result, confidence = result.confidence)
 
 	@property
 	def parameters(self):
@@ -283,7 +288,7 @@ class Type(object):
 		params = core.BNGetTypeParameters(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append((Type(core.BNNewTypeReference(params[i].type)), params[i].name))
+			result.append((Type(core.BNNewTypeReference(params[i].type), confidence = params[i].typeConfidence), params[i].name))
 		core.BNFreeTypeParameterList(params, count.value)
 		return result
 
@@ -295,7 +300,8 @@ class Type(object):
 	@property
 	def can_return(self):
 		"""Whether type can return (read-only)"""
-		return core.BNFunctionTypeCanReturn(self.handle)
+		result = core.BNFunctionTypeCanReturn(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def structure(self):
@@ -326,10 +332,17 @@ class Type(object):
 		"""Type count (read-only)"""
 		return core.BNGetTypeElementCount(self.handle)
 
+	@property
+	def offset(self):
+		"""Offset into structure (read-only)"""
+		return core.BNGetTypeOffset(self.handle)
+
 	def __str__(self):
 		return core.BNGetTypeString(self.handle)
 
 	def __repr__(self):
+		if self.confidence < max_confidence:
+			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
@@ -351,8 +364,9 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -367,8 +381,9 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -383,8 +398,9 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -397,14 +413,23 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
-	def int(self, width, sign = True, altname=""):
+	def int(self, width, sign = None, altname=""):
 		"""
 		``int`` class method for creating an int Type.
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
 		"""
-		return Type(core.BNCreateIntegerType(width, sign, altname))
+		if sign is None:
+			sign = BoolWithConfidence(True, confidence = 0)
+		elif not isinstance(sign, BoolWithConfidence):
+			sign = BoolWithConfidence(sign)
+
+		sign_conf = core.BNBoolWithConfidence()
+		sign_conf.value = sign.value
+		sign_conf.confidence = sign.confidence
+
+		return Type(core.BNCreateIntegerType(width, sign_conf, altname))
 
 	@classmethod
 	def float(self, width):
@@ -444,12 +469,40 @@ class Type(object):
 		return Type(core.BNCreateEnumerationType(e.handle, width))
 
 	@classmethod
-	def pointer(self, arch, t, const=False):
-		return Type(core.BNCreatePointerType(arch.handle, t.handle, const))
+	def pointer(self, arch, t, const=None, volatile=None, ref_type=None):
+		if const is None:
+			const = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(const, BoolWithConfidence):
+			const = BoolWithConfidence(const)
+
+		if volatile is None:
+			volatile = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(volatile, BoolWithConfidence):
+			volatile = BoolWithConfidence(volatile)
+
+		if ref_type is None:
+			ref_type = ReferenceType.PointerReferenceType
+
+		type_conf = core.BNTypeWithConfidence()
+		type_conf.type = t.handle
+		type_conf.confidence = t.confidence
+
+		const_conf = core.BNBoolWithConfidence()
+		const_conf.value = const.value
+		const_conf.confidence = const.confidence
+
+		volatile_conf = core.BNBoolWithConfidence()
+		volatile_conf.value = volatile.value
+		volatile_conf.confidence = volatile.confidence
+
+		return Type(core.BNCreatePointerType(arch.handle, type_conf, const_conf, volatile_conf, ref_type))
 
 	@classmethod
 	def array(self, t, count):
-		return Type(core.BNCreateArrayType(t.handle, count))
+		type_conf = core.BNTypeWithConfidence()
+		type_conf.type = t.handle
+		type_conf.confidence = t.confidence
+		return Type(core.BNCreateArrayType(type_conf, count))
 
 	@classmethod
 	def function(self, ret, params, calling_convention=None, variable_arguments=False):
@@ -466,13 +519,26 @@ class Type(object):
 			if isinstance(params[i], Type):
 				param_buf[i].name = ""
 				param_buf[i].type = params[i].handle
+				param_buf[i].typeConfidence = params[i].confidence
 			else:
 				param_buf[i].name = params[i][1]
-				param_buf[i].type = params[i][0]
-		if calling_convention is not None:
-			calling_convention = calling_convention.handle
-		return Type(core.BNCreateFunctionType(ret.handle, calling_convention, param_buf, len(params),
-			  variable_arguments))
+				param_buf[i].type = params[i][0].handle
+				param_buf[i].typeConfidence = params[i][0].confidence
+
+		ret_conf = core.BNTypeWithConfidence()
+		ret_conf.type = ret.handle
+		ret_conf.confidence = ret.confidence
+
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if calling_convention is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = calling_convention.handle
+			conv_conf.confidence = calling_convention.confidence
+
+		return Type(core.BNCreateFunctionType(ret_conf, conv_conf, param_buf, len(params),
+			variable_arguments))
 
 	@classmethod
 	def generate_auto_type_id(self, source, name):
@@ -488,11 +554,44 @@ class Type(object):
 	def get_auto_demanged_type_id_source(self):
 		return core.BNGetAutoDemangledTypeIdSource()
 
+	def with_confidence(self, confidence):
+		return Type(handle = core.BNNewTypeReference(self.handle), confidence = confidence)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
+
+
+class BoolWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
+
+	def __bool__(self):
+		return self.value
+
+	def __nonzero__(self):
+		return self.value
+
+
+class ReferenceTypeWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
 
 
 class NamedTypeReference(object):
@@ -611,7 +710,7 @@ class Structure(object):
 		members = core.BNGetStructureMembers(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type)),
+			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type), confidence = members[i].typeConfidence),
 				members[i].name, members[i].offset))
 		core.BNFreeStructureMemberList(members, count.value)
 		return result
@@ -664,16 +763,25 @@ class Structure(object):
 		return "<struct: size %#x>" % self.width
 
 	def append(self, t, name = ""):
-		core.BNAddStructureMember(self.handle, t.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNAddStructureMember(self.handle, tc, name)
 
 	def insert(self, offset, t, name = ""):
-		core.BNAddStructureMemberAtOffset(self.handle, t.handle, name, offset)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNAddStructureMemberAtOffset(self.handle, tc, name, offset)
 
 	def remove(self, i):
 		core.BNRemoveStructureMember(self.handle, i)
 
 	def replace(self, i, t, name = ""):
-		core.BNReplaceStructureMember(self.handle, i, t.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNReplaceStructureMember(self.handle, i, tc, name)
 
 
 class EnumerationMember(object):

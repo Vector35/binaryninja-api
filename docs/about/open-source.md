@@ -27,6 +27,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
+    - [jemalloc] ([jemalloc license] - BSD)
     - [openssl] ([openssl license] - openssl license)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
@@ -73,6 +74,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [libmspack license]: https://www.cabextract.org.uk/libmspack/#license
 [llvm]: http://llvm.org/releases/3.8.1/
 [llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[jemalloc]: http://jemalloc.net/
+[jemalloc license]: https://github.com/jemalloc/jemalloc/blob/dev/COPYING
 [lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
 [mkdocs license]: https://github.com/mkdocs/mkdocs/blob/master/LICENSE

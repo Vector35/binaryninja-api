@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 
+import atexit
 # Binary Ninja components
 import _binaryninjacore as core
 from .enums import *
@@ -56,6 +57,9 @@ def shutdown():
 	``shutdown`` cleanly shuts down the core, stopping all workers and closing all log files.
 	"""
 	core.BNShutdown()
+
+
+atexit.register(shutdown)
 
 
 def get_unique_identifier():

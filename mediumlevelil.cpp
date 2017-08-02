@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "mediumlevelilinstruction.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -42,6 +43,24 @@ MediumLevelILFunction::MediumLevelILFunction(BNMediumLevelILFunction* func)
 }
 
 
+Ref<Function> MediumLevelILFunction::GetFunction() const
+{
+	BNFunction* func = BNGetMediumLevelILOwnerFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new Function(func);
+}
+
+
+Ref<Architecture> MediumLevelILFunction::GetArchitecture() const
+{
+	Ref<Function> func = GetFunction();
+	if (!func)
+		return nullptr;
+	return func->GetArchitecture();
+}
+
+
 uint64_t MediumLevelILFunction::GetCurrentAddress() const
 {
 	return BNMediumLevelILGetCurrentAddress(m_object);
@@ -60,9 +79,46 @@ size_t MediumLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t a
 }
 
 
+void MediumLevelILFunction::PrepareToCopyFunction(MediumLevelILFunction* func)
+{
+	BNPrepareToCopyMediumLevelILFunction(m_object, func->GetObject());
+}
+
+
+void MediumLevelILFunction::PrepareToCopyBlock(BasicBlock* block)
+{
+	BNPrepareToCopyMediumLevelILBasicBlock(m_object, block->GetObject());
+}
+
+
+BNMediumLevelILLabel* MediumLevelILFunction::GetLabelForSourceInstruction(size_t i)
+{
+	return BNGetLabelForMediumLevelILSourceInstruction(m_object, i);
+}
+
+
 ExprId MediumLevelILFunction::AddExpr(BNMediumLevelILOperation operation, size_t size,
 	ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
 {
+	return BNMediumLevelILAddExpr(m_object, operation, size, a, b, c, d, e);
+}
+
+
+ExprId MediumLevelILFunction::AddExprWithLocation(BNMediumLevelILOperation operation, uint64_t addr,
+	uint32_t sourceOperand, size_t size, ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
+{
+	return BNMediumLevelILAddExprWithLocation(m_object, operation, addr, sourceOperand, size, a, b, c, d, e);
+}
+
+
+ExprId MediumLevelILFunction::AddExprWithLocation(BNMediumLevelILOperation operation, const ILSourceLocation& loc,
+	size_t size, ExprId a, ExprId b, ExprId c, ExprId d, ExprId e)
+{
+	if (loc.valid)
+	{
+		return BNMediumLevelILAddExprWithLocation(m_object, operation, loc.address, loc.sourceOperand,
+			size, a, b, c, d, e);
+	}
 	return BNMediumLevelILAddExpr(m_object, operation, size, a, b, c, d, e);
 }
 
@@ -73,14 +129,19 @@ ExprId MediumLevelILFunction::AddInstruction(size_t expr)
 }
 
 
-ExprId MediumLevelILFunction::Goto(BNMediumLevelILLabel& label)
+ExprId MediumLevelILFunction::Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc)
 {
+	if (loc.valid)
+		return BNMediumLevelILGotoWithLocation(m_object, &label, loc.address, loc.sourceOperand);
 	return BNMediumLevelILGoto(m_object, &label);
 }
 
 
-ExprId MediumLevelILFunction::If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f)
+ExprId MediumLevelILFunction::If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f,
+	const ILSourceLocation& loc)
 {
+	if (loc.valid)
+		return BNMediumLevelILIfWithLocation(m_object, operand, &t, &f, loc.address, loc.sourceOperand);
 	return BNMediumLevelILIf(m_object, operand, &t, &f);
 }
 
@@ -125,9 +186,64 @@ ExprId MediumLevelILFunction::AddOperandList(const vector<ExprId> operands)
 }
 
 
-BNMediumLevelILInstruction MediumLevelILFunction::operator[](size_t i) const
+ExprId MediumLevelILFunction::AddIndexList(const vector<size_t>& operands)
+{
+	uint64_t* operandList = new uint64_t[operands.size()];
+	for (size_t i = 0; i < operands.size(); i++)
+		operandList[i] = operands[i];
+	ExprId result = (ExprId)BNMediumLevelILAddOperandList(m_object, operandList, operands.size());
+	delete[] operandList;
+	return result;
+}
+
+
+ExprId MediumLevelILFunction::AddVariableList(const vector<Variable>& vars)
+{
+	uint64_t* operandList = new uint64_t[vars.size()];
+	for (size_t i = 0; i < vars.size(); i++)
+		operandList[i] = vars[i].ToIdentifier();
+	ExprId result = (ExprId)BNMediumLevelILAddOperandList(m_object, operandList, vars.size());
+	delete[] operandList;
+	return result;
+}
+
+
+ExprId MediumLevelILFunction::AddSSAVariableList(const vector<SSAVariable>& vars)
+{
+	uint64_t* operandList = new uint64_t[vars.size() * 2];
+	for (size_t i = 0; i < vars.size(); i++)
+	{
+		operandList[i * 2] = vars[i].var.ToIdentifier();
+		operandList[(i * 2) + 1] = vars[i].version;
+	}
+	ExprId result = (ExprId)BNMediumLevelILAddOperandList(m_object, operandList, vars.size() * 2);
+	delete[] operandList;
+	return result;
+}
+
+
+BNMediumLevelILInstruction MediumLevelILFunction::GetRawExpr(size_t i) const
 {
 	return BNGetMediumLevelILByIndex(m_object, i);
+}
+
+
+MediumLevelILInstruction MediumLevelILFunction::operator[](size_t i)
+{
+	return GetInstruction(i);
+}
+
+
+MediumLevelILInstruction MediumLevelILFunction::GetInstruction(size_t i)
+{
+	size_t expr = GetIndexForInstruction(i);
+	return MediumLevelILInstruction(this, GetRawExpr(expr), expr, i);
+}
+
+
+MediumLevelILInstruction MediumLevelILFunction::GetExpr(size_t i)
+{
+	return MediumLevelILInstruction(this, GetRawExpr(i), i, GetInstructionForExpr(i));
 }
 
 
@@ -155,9 +271,50 @@ size_t MediumLevelILFunction::GetExprCount() const
 }
 
 
+void MediumLevelILFunction::UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value)
+{
+	BNUpdateMediumLevelILOperand(m_object, i, operandIndex, value);
+}
+
+
+void MediumLevelILFunction::MarkInstructionForRemoval(size_t i)
+{
+	BNMarkMediumLevelILInstructionForRemoval(m_object, i);
+}
+
+
+void MediumLevelILFunction::ReplaceInstruction(size_t i, ExprId expr)
+{
+	BNReplaceMediumLevelILInstruction(m_object, i, expr);
+}
+
+
+void MediumLevelILFunction::ReplaceExpr(size_t expr, size_t newExpr)
+{
+	BNReplaceMediumLevelILExpr(m_object, expr, newExpr);
+}
+
+
 void MediumLevelILFunction::Finalize()
 {
 	BNFinalizeMediumLevelILFunction(m_object);
+}
+
+
+void MediumLevelILFunction::GenerateSSAForm(bool analyzeConditionals, bool handleAliases,
+	const set<Variable>& knownAliases)
+{
+	BNVariable* vars = new BNVariable[knownAliases.size()];
+	size_t i = 0;
+	for (auto& j : knownAliases)
+	{
+		vars[i].type = j.type;
+		vars[i].index = j.index;
+		vars[i].storage = j.storage;
+	}
+
+	BNGenerateMediumLevelILSSAForm(m_object, analyzeConditionals, handleAliases, vars, knownAliases.size());
+	delete[] vars;
 }
 
 
@@ -217,6 +374,26 @@ bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arc
 }
 
 
+void MediumLevelILFunction::VisitInstructions(
+	const function<void(BasicBlock* block, const MediumLevelILInstruction& instr)>& func)
+{
+	for (auto& i : GetBasicBlocks())
+		for (size_t j = i->GetStart(); j < i->GetEnd(); j++)
+			func(i, GetInstruction(j));
+}
+
+
+void MediumLevelILFunction::VisitAllExprs(
+	const function<bool(BasicBlock* block, const MediumLevelILInstruction& expr)>& func)
+{
+	VisitInstructions([&](BasicBlock* block, const MediumLevelILInstruction& instr) {
+		instr.VisitExprs([&](const MediumLevelILInstruction& expr) {
+			return func(block, expr);
+		});
+	});
+}
+
+
 vector<Ref<BasicBlock>> MediumLevelILFunction::GetBasicBlocks() const
 {
 	size_t count;
@@ -273,9 +450,9 @@ size_t MediumLevelILFunction::GetNonSSAExprIndex(size_t expr) const
 }
 
 
-size_t MediumLevelILFunction::GetSSAVarDefinition(const Variable& var, size_t version) const
+size_t MediumLevelILFunction::GetSSAVarDefinition(const SSAVariable& var) const
 {
-	return BNGetMediumLevelILSSAVarDefinition(m_object, &var, version);
+	return BNGetMediumLevelILSSAVarDefinition(m_object, &var.var, var.version);
 }
 
 
@@ -285,10 +462,10 @@ size_t MediumLevelILFunction::GetSSAMemoryDefinition(size_t version) const
 }
 
 
-set<size_t> MediumLevelILFunction::GetSSAVarUses(const Variable& var, size_t version) const
+set<size_t> MediumLevelILFunction::GetSSAVarUses(const SSAVariable& var) const
 {
 	size_t count;
-	size_t* instrs = BNGetMediumLevelILSSAVarUses(m_object, &var, version, &count);
+	size_t* instrs = BNGetMediumLevelILSSAVarUses(m_object, &var.var, var.version, &count);
 
 	set<size_t> result;
 	for (size_t i = 0; i < count; i++)
@@ -341,9 +518,9 @@ set<size_t> MediumLevelILFunction::GetVariableUses(const Variable& var) const
 }
 
 
-RegisterValue MediumLevelILFunction::GetSSAVarValue(const Variable& var, size_t version)
+RegisterValue MediumLevelILFunction::GetSSAVarValue(const SSAVariable& var)
 {
-	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var, version);
+	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var.var, var.version);
 	return RegisterValue::FromAPIObject(value);
 }
 
@@ -355,9 +532,15 @@ RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const Variable& var, size_t version, size_t instr)
+RegisterValue MediumLevelILFunction::GetExprValue(const MediumLevelILInstruction& expr)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var, version, instr);
+	return GetExprValue(expr.exprIndex);
+}
+
+
+PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const SSAVariable& var, size_t instr)
+{
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var.var, var.version, instr);
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -366,6 +549,12 @@ PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr)
 {
 	BNPossibleValueSet value = BNGetMediumLevelILPossibleExprValues(m_object, expr);
 	return PossibleValueSet::FromAPIObject(value);
+}
+
+
+PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(const MediumLevelILInstruction& expr)
+{
+	return GetPossibleExprValues(expr.exprIndex);
 }
 
 
@@ -489,12 +678,12 @@ BNILBranchDependence MediumLevelILFunction::GetBranchDependenceAtInstruction(siz
 }
 
 
-map<size_t, BNILBranchDependence> MediumLevelILFunction::GetAllBranchDependenceAtInstruction(size_t instr) const
+unordered_map<size_t, BNILBranchDependence> MediumLevelILFunction::GetAllBranchDependenceAtInstruction(size_t instr) const
 {
 	size_t count;
 	BNILBranchInstructionAndDependence* deps = BNGetAllMediumLevelILBranchDependence(m_object, instr, &count);
 
-	map<size_t, BNILBranchDependence> result;
+	unordered_map<size_t, BNILBranchDependence> result;
 	for (size_t i = 0; i < count; i++)
 		result[deps[i].branch] = deps[i].dependence;
 
@@ -530,4 +719,10 @@ Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(size_t expr)
 	if (!result.type)
 		return nullptr;
 	return Confidence<Ref<Type>>(new Type(result.type), result.confidence);
+}
+
+
+Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(const MediumLevelILInstruction& expr)
+{
+	return GetExprType(expr.exprIndex);
 }

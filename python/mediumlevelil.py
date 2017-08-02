@@ -39,7 +39,7 @@ class SSAVariable(object):
 
 	def __eq__(self, other):
 		return (
-			(self.var.identifier, self.version) == 
+			(self.var.identifier, self.version) ==
 			(other.var.identifier, other.version)
 		)
 
@@ -90,9 +90,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_AND: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_OR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_XOR: [("left", "expr"), ("right", "expr")],
@@ -100,9 +100,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_LSR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ASR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ROL: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_ROR: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_MUL: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
@@ -151,7 +151,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "ssa_var"), ("low", "ssa_var"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")],

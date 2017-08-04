@@ -36,7 +36,7 @@ std::vector<int64_t> Setting::GetIntegerList(const std::string& pluginName,
 	delete[] buffer;
 
 	vector<int64_t> out(outBuffer, outBuffer + size);
-	BNFreeSettingIntegerList(buffer);
+	BNFreeSettingIntegerList(outBuffer);
 	return out;
 }
 

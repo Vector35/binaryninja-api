@@ -274,8 +274,8 @@ class BasicBlock(object):
 		idx = start
 		while idx < end:
 			data = self.view.read(idx, 16)
-			inst_info = self.view.arch.get_instruction_info(data, idx)
-			inst_text = self.view.arch.get_instruction_text(data, idx)
+			inst_info = self.arch.get_instruction_info(data, idx)
+			inst_text = self.arch.get_instruction_text(data, idx)
 
 			yield inst_text
 			idx += inst_info.length

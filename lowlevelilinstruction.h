@@ -806,7 +806,7 @@ namespace BinaryNinja
 		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
 		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
-		ssize_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
 		LowLevelILSSARegisterList GetParameterSSARegisters() const { return GetRawOperandAsExpr(3).GetRawOperandAsSSARegisterList(0); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(2, version); }
@@ -819,7 +819,7 @@ namespace BinaryNinja
 		LowLevelILSSARegisterList GetOutputSSARegisters() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterList(1); }
 		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
 		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(1).GetRawOperandAsSSARegister(0); }
-		ssize_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(1).GetRawOperandAsIndex(2); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(1).GetRawOperandAsIndex(2); }
 		LowLevelILSSARegisterList GetParameterSSARegisters() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegisterList(0); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(2, version); }

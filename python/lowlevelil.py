@@ -1716,6 +1716,9 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
+	def _create_instance(self, view, handle):
+		"""Internal method by super to instantiante child instances"""
+		return LowLevelILBasicBlock(view, handle, self.il_function)
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

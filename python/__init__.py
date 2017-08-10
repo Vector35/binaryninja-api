@@ -20,6 +20,8 @@
 
 
 import atexit
+import sys
+
 # Binary Ninja components
 import _binaryninjacore as core
 from .enums import *
@@ -73,6 +75,46 @@ def get_install_directory():
 	..warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
 	"""
 	return core.BNGetInstallDirectory()
+
+
+_plugin_api_name = "python2"
+
+
+class PluginManagerLoadPluginCallback(object):
+	"""Callback for BNLoadPluginForApi("python2", ...), dynamicly loads python plugins."""
+	def __init__(self):
+		self.cb = ctypes.CFUNCTYPE(
+			ctypes.c_bool,
+			ctypes.c_char_p,
+			ctypes.c_char_p,
+			ctypes.c_void_p)(self._load_plugin)
+
+	def _load_plugin(self, repo_path, plugin_path, ctx):
+		try:
+			repo = RepositoryManager()[repo_path]
+			plugin = repo[plugin_path]
+
+			if plugin.api != _plugin_api_name:
+				raise ValueError("Plugin api name is not " + _plugin_api_name)
+
+			if not plugin.installed:
+				plugin.installed = True
+
+			if repo.full_path not in sys.path:
+				sys.path.append(repo.full_path)
+
+			__import__(plugin.path)
+			log_info("Successfully loaded plugin: {}/{}: ".format(repo_path, plugin_path))
+			return True
+		except KeyError:
+			log_error("Failed to find python plugin: {}/{}".format(repo_path, plugin_path))
+		except ImportError as ie:
+			log_error("Failed to import python plugin: {}/{}: {}".format(repo_path, plugin_path, ie))
+		return False
+
+
+load_plugin = PluginManagerLoadPluginCallback()
+core.BNRegisterForPluginLoading(_plugin_api_name, load_plugin.cb, 0)
 
 
 class _DestructionCallbackHandler(object):

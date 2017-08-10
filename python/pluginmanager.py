@@ -144,6 +144,12 @@ class Repository(object):
 	def __repr__(self):
 		return "<{} - {}/{}>".format(self.path, self.remote_reference, self.local_reference)
 
+	def __getitem__(self, plugin_path):
+		for plugin in self.plugins:
+			if plugin_path == plugin.path:
+				return plugin
+		raise KeyError()
+
 	@property
 	def url(self):
 		"""String url of the git repository where the plugin repository's are stored"""
@@ -153,6 +159,11 @@ class Repository(object):
 	def path(self):
 		"""String local path to store the given plugin repository"""
 		return core.BNRepositoryGetRepoPath(self.handle)
+
+	@property
+	def full_path(self):
+		"""String full path the repository"""
+		return core.BNRepositoryGetPluginsPath(self.handle)
 
 	@property
 	def local_reference(self):
@@ -189,6 +200,12 @@ class RepositoryManager(object):
 	"""
 	def __init__(self, handle=None):
 		self.handle = core.BNGetRepositoryManager()
+
+	def __getitem__(self, repo_path):
+		for repo in self.repositories:
+			if repo_path == repo.path:
+				return repo
+		raise KeyError()
 
 	def check_for_updates(self):
 		"""Check for updates for all managed Repository objects"""

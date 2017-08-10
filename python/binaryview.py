@@ -1429,7 +1429,7 @@ class BinaryView(object):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
-		.. note:: :py:method:`create_database` should have been called prior to executing this method
+		.. note:: :py:meth:`create_database` should have been called prior to executing this method
 
 		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: True if it successfully saved the snapshot, False otherwise
@@ -2743,7 +2743,7 @@ class BinaryView(object):
 	def get_linear_disassembly_position_at(self, addr, settings):
 		"""
 		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition` object for use in
-		:py:method:`get_previous_linear_disassembly_lines` or :py:method:`get_next_linear_disassembly_lines`.
+		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
 		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object

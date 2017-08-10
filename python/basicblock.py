@@ -290,9 +290,11 @@ class BasicBlock(object):
 	def get_disassembly_text(self, settings=None):
 		"""
 		``get_disassembly_text`` returns a list of function.DisassemblyTextLine objects for the current basic block.
+
+		:param DisassemblySettings settings: (optional) DisassemblySettings object
 		:Example:
 
-			>>>current_basic_block.get_disassembly_text()
+			>>> current_basic_block.get_disassembly_text()
 			[<0x100000f30: _main:>, <0x100000f30: push    rbp>, ... ]
 		"""
 		settings_obj = None
@@ -323,7 +325,7 @@ class BasicBlock(object):
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 
-		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		..warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		"""

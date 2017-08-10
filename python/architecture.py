@@ -1658,7 +1658,7 @@ class Architecture(object):
 		:param str filename: optional source filename
 		:param list(str) include_dirs: optional list of string filename include directories
 		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
 
@@ -1704,7 +1704,7 @@ class Architecture(object):
 		:param str filename: filename of file to be parsed
 		:param list(str) include_dirs: optional list of string filename include directories
 		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
 

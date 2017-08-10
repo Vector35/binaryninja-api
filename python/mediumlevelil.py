@@ -426,7 +426,8 @@ class MediumLevelILInstruction(object):
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, ssa_var.version, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_ssa_var_version(self, var):

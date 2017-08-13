@@ -202,6 +202,15 @@ Alternatively, plugins can be installed with the new [pluginmanager](https://api
 
 For more detailed information, see the [plugin guide](/guide/plugins).
 
+## PDB Plugin
+
+Binary Ninja supports loading PDB files through the built in PDB plugin. When selected from the plugin menu it attempts to find where the corresponding PDB file is located using the following search order:
+
+1. Look for in the same directory as the opened file/bndb (e.g. If you ahve `c:\foo.exe` or `c:\foo.bndb` open the pdb plugin looks for `c:\foo.pdb`)
+2. Look in the local symbol store. This is the directory specified by the settings: `local-store-relative` or `local-store-absolute`. The format of this directory is `foo.pdb\<guid>\foo.pdb`.
+3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
+4. Prompt the user for the pdb.
+
 ## Preferences/Updates
 
 ![preferences >](/images/preferences.png "Preferences")
@@ -210,8 +219,37 @@ Binary Ninja automatically updates itself by default. This functionality can be 
 
 On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version. On OS X and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
-Most preferences are fairly intuitive. There is no advanced preference system at this time, but it is [expected](https://github.com/Vector35/binaryninja-api/issues/126) to be added soon.
+## Settings
 
+Settings are stored in the _user_ directory in the file `settings.json`. Each top level object in this file is represents a different plugin.  As of build 860 the following settings are available:
+
+|Plugin | Setting                  | Type         | Default                                        | Description                                                                                   |
+|------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
+| ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
+| ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
+| pdb   | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
+| pdb   | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
+| pdb   | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
+| pdb   | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
+
+Below is an example `settings.json` setting various options:
+```
+{
+	"ui" :
+	{
+		"activeContent" : false,
+		"colorblind" : false,
+		"debug" : true
+	}
+    "pdb" :
+    {
+        "local-store-absolute" : "C:\Symbols",
+        "local-store-relative" : "",
+        "symbol-server-list" : ["http://mysymbolserver.company.lan"]
+    }
+}
+```
 ## Getting Support
 
 Vector 35 offers a number of ways to get Binary Ninja [support].

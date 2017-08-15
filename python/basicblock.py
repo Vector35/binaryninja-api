@@ -57,12 +57,21 @@ class BasicBlock(object):
 	def __eq__(self, value):
 		if not isinstance(value, BasicBlock):
 			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+		return (
+			(self.arch, self.start, self.end) ==
+			(value.arch, value.start, value.end)
+		)
 
 	def __ne__(self, value):
 		if not isinstance(value, BasicBlock):
 			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+		return (
+			(self.arch, self.start, self.end) !=
+			(value.arch, value.start, value.end)
+		)
+	
+	def __hash__(self):
+		return hash((self.arch, self.start, self.end))
 
 	def _create_instance(self, view, handle):
 		"""Internal method used to instantiante child instances"""

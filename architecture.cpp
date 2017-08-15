@@ -346,6 +346,19 @@ uint32_t Architecture::GetLinkRegisterCallback(void* ctxt)
 }
 
 
+uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetGlobalRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -453,6 +466,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
 	callbacks.getLinkRegister = GetLinkRegisterCallback;
+	callbacks.getGlobalRegisters = GetGlobalRegistersCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -653,6 +667,18 @@ uint32_t Architecture::GetStackPointerRegister()
 uint32_t Architecture::GetLinkRegister()
 {
 	return BN_INVALID_REGISTER;
+}
+
+
+vector<uint32_t> Architecture::GetGlobalRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+bool Architecture::IsGlobalRegister(uint32_t reg)
+{
+	return BNIsArchitectureGlobalRegister(m_object, reg);
 }
 
 
@@ -1158,6 +1184,20 @@ uint32_t CoreArchitecture::GetStackPointerRegister()
 uint32_t CoreArchitecture::GetLinkRegister()
 {
 	return BNGetArchitectureLinkRegister(m_object);
+}
+
+
+vector<uint32_t> CoreArchitecture::GetGlobalRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetArchitectureGlobalRegisters(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
 }
 
 

@@ -279,7 +279,7 @@ class Type(object):
 		result = core.BNGetTypeCallingConvention(self.handle)
 		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, handle = result, confidence = result.confidence)
+		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@property
 	def parameters(self):
@@ -295,7 +295,8 @@ class Type(object):
 	@property
 	def has_variable_arguments(self):
 		"""Whether type has variable arguments (read-only)"""
-		return core.BNTypeHasVariableArguments(self.handle)
+		result = core.BNTypeHasVariableArguments(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def can_return(self):
@@ -505,7 +506,7 @@ class Type(object):
 		return Type(core.BNCreateArrayType(type_conf, count))
 
 	@classmethod
-	def function(self, ret, params, calling_convention=None, variable_arguments=False):
+	def function(self, ret, params, calling_convention=None, variable_arguments=None):
 		"""
 		``function`` class method for creating an function Type.
 
@@ -537,8 +538,17 @@ class Type(object):
 			conv_conf.convention = calling_convention.handle
 			conv_conf.confidence = calling_convention.confidence
 
+		if variable_arguments is None:
+			variable_arguments = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(variable_arguments, BoolWithConfidence):
+			variable_arguments = BoolWithConfidence(variable_arguments)
+
+		vararg_conf = core.BNBoolWithConfidence()
+		vararg_conf.value = variable_arguments.value
+		vararg_conf.confidence = variable_arguments.confidence
+
 		return Type(core.BNCreateFunctionType(ret_conf, conv_conf, param_buf, len(params),
-			variable_arguments))
+			vararg_conf))
 
 	@classmethod
 	def generate_auto_type_id(self, source, name):

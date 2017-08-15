@@ -92,7 +92,9 @@
 #define BN_MAX_VARIABLE_OFFSET       0x7fffffffffLL
 #define BN_MAX_VARIABLE_INDEX        0xfffff
 
-#define BN_FULL_CONFIDENCE 255
+#define BN_FULL_CONFIDENCE      255
+#define BN_MINIMUM_CONFIDENCE   1
+#define BN_HEURISTIC_CONFIDENCE 192
 
 #ifdef __cplusplus
 extern "C"
@@ -230,8 +232,7 @@ extern "C"
 		NoTokenContext = 0,
 		LocalVariableTokenContext = 1,
 		DataVariableTokenContext = 2,
-		FunctionReturnTokenContext = 3,
-		ArgumentTokenContext = 4
+		FunctionReturnTokenContext = 3
 	};
 
 	enum BNLinearDisassemblyLineType
@@ -419,6 +420,7 @@ extern "C"
 		ShowVariablesAtTopOfGraph = 3,
 		ShowVariableTypesWhenAssigned = 4,
 		ShowDefaultRegisterTypes = 5,
+		ShowCallParameterNames = 6,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,
@@ -1015,6 +1017,7 @@ extern "C"
 		void (*getRegisterInfo)(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		uint32_t (*getStackPointerRegister)(void* ctxt);
 		uint32_t (*getLinkRegister)(void* ctxt);
+		uint32_t* (*getGlobalRegisters)(void* ctxt, size_t* count);
 
 		bool (*assemble)(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
@@ -1119,6 +1122,13 @@ extern "C"
 	struct BNMemberAccessWithConfidence
 	{
 		BNMemberAccess value;
+		uint8_t confidence;
+	};
+
+	struct BNParameterVariablesWithConfidence
+	{
+		BNVariable* vars;
+		size_t count;
 		uint8_t confidence;
 	};
 
@@ -1235,6 +1245,11 @@ extern "C"
 		uint32_t (*getIntegerReturnValueRegister)(void* ctxt);
 		uint32_t (*getHighIntegerReturnValueRegister)(void* ctxt);
 		uint32_t (*getFloatReturnValueRegister)(void* ctxt);
+		uint32_t (*getGlobalPointerRegister)(void* ctxt);
+
+		uint32_t* (*getImplicitlyDefinedRegisters)(void* ctxt, size_t* count);
+		BNRegisterValue (*getIncomingRegisterValue)(void* ctxt, uint32_t reg, BNFunction* func);
+		BNRegisterValue (*getIncomingFlagValue)(void* ctxt, uint32_t flag, BNFunction* func);
 	};
 
 	struct BNVariableNameAndType
@@ -1922,6 +1937,8 @@ extern "C"
 	BINARYNINJACOREAPI BNRegisterInfo BNGetArchitectureRegisterInfo(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureStackPointerRegister(BNArchitecture* arch);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinkRegister(BNArchitecture* arch);
+	BINARYNINJACOREAPI uint32_t* BNGetArchitectureGlobalRegisters(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI bool BNIsArchitectureGlobalRegister(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterByName(BNArchitecture* arch, const char* name);
 
 	BINARYNINJACOREAPI bool BNAssemble(BNArchitecture* arch, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
@@ -1982,7 +1999,7 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetFunctionStart(BNFunction* func);
 	BINARYNINJACOREAPI BNSymbol* BNGetFunctionSymbol(BNFunction* func);
 	BINARYNINJACOREAPI bool BNWasFunctionAutomaticallyDiscovered(BNFunction* func);
-	BINARYNINJACOREAPI bool BNCanFunctionReturn(BNFunction* func);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNCanFunctionReturn(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
 
@@ -2038,9 +2055,30 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetFlagsWrittenByLiftedILInstruction(BNFunction* func, size_t i, size_t* count);
 
 	BINARYNINJACOREAPI BNType* BNGetFunctionType(BNFunction* func);
+	BINARYNINJACOREAPI BNTypeWithConfidence BNGetFunctionReturnType(BNFunction* func);
+	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetFunctionCallingConvention(BNFunction* func);
+	BINARYNINJACOREAPI BNParameterVariablesWithConfidence BNGetFunctionParameterVariables(BNFunction* func);
+	BINARYNINJACOREAPI void BNFreeParameterVariables(BNParameterVariablesWithConfidence* vars);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionHasVariableArguments(BNFunction* func);
+
+	BINARYNINJACOREAPI void BNSetAutoFunctionReturnType(BNFunction* func, BNTypeWithConfidence* type);
+	BINARYNINJACOREAPI void BNSetAutoFunctionCallingConvention(BNFunction* func, BNCallingConventionWithConfidence* convention);
+	BINARYNINJACOREAPI void BNSetAutoFunctionParameterVariables(BNFunction* func, BNParameterVariablesWithConfidence* vars);
+	BINARYNINJACOREAPI void BNSetAutoFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
+	BINARYNINJACOREAPI void BNSetAutoFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
+
+	BINARYNINJACOREAPI void BNSetUserFunctionReturnType(BNFunction* func, BNTypeWithConfidence* type);
+	BINARYNINJACOREAPI void BNSetUserFunctionCallingConvention(BNFunction* func, BNCallingConventionWithConfidence* convention);
+	BINARYNINJACOREAPI void BNSetUserFunctionParameterVariables(BNFunction* func, BNParameterVariablesWithConfidence* vars);
+	BINARYNINJACOREAPI void BNSetUserFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
+	BINARYNINJACOREAPI void BNSetUserFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
+
 	BINARYNINJACOREAPI void BNApplyImportedTypes(BNFunction* func, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNApplyAutoDiscoveredFunctionType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI bool BNFunctionHasExplicitlyDefinedType(BNFunction* func);
+
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFunctionTypeTokens(BNFunction* func,
+		BNDisassemblySettings* settings, size_t* count);
 
 	BINARYNINJACOREAPI BNFunction* BNGetBasicBlockFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNArchitecture* BNGetBasicBlockArchitecture(BNBasicBlock* block);
@@ -2565,7 +2603,7 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNTypeWithConfidence* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNTypeWithConfidence* returnValue,
 		BNCallingConventionWithConfidence* callingConvention, BNNameAndType* params,
-		size_t paramCount, bool varArg);
+		size_t paramCount, BNBoolWithConfidence* varArg);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
@@ -2584,14 +2622,14 @@ extern "C"
 	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetTypeCallingConvention(BNType* type);
 	BINARYNINJACOREAPI BNNameAndType* BNGetTypeParameters(BNType* type, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeParameterList(BNNameAndType* types, size_t count);
-	BINARYNINJACOREAPI bool BNTypeHasVariableArguments(BNType* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeHasVariableArguments(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeCanReturn(BNType* type);
 	BINARYNINJACOREAPI BNStructure* BNGetTypeStructure(BNType* type);
 	BINARYNINJACOREAPI BNEnumeration* BNGetTypeEnumeration(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeOffset(BNType* type);
-	BINARYNINJACOREAPI void BNSetFunctionCanReturn(BNType* type, BNBoolWithConfidence* canReturn);
+	BINARYNINJACOREAPI void BNSetFunctionTypeCanReturn(BNType* type, BNBoolWithConfidence* canReturn);
 	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeGetMemberScope(BNType* type);
 	BINARYNINJACOREAPI void BNTypeSetMemberScope(BNType* type, BNMemberScopeWithConfidence* scope);
 	BINARYNINJACOREAPI BNMemberAccessWithConfidence BNTypeGetMemberAccess(BNType* type);
@@ -2745,6 +2783,11 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetHighIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetFloatReturnValueRegister(BNCallingConvention* cc);
+	BINARYNINJACOREAPI uint32_t BNGetGlobalPointerRegister(BNCallingConvention* cc);
+
+	BINARYNINJACOREAPI uint32_t* BNGetImplicitlyDefinedRegisters(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingRegisterValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
+	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingFlagValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 
 	BINARYNINJACOREAPI BNCallingConvention* BNGetArchitectureDefaultCallingConvention(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetArchitectureCdeclCallingConvention(BNArchitecture* arch);

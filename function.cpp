@@ -91,6 +91,20 @@ Variable Variable::FromIdentifier(uint64_t id)
 }
 
 
+RegisterValue::RegisterValue(): state(UndeterminedValue), value(0)
+{
+}
+
+
+BNRegisterValue RegisterValue::ToAPIObject()
+{
+	BNRegisterValue result;
+	result.state = state;
+	result.value = value;
+	return result;
+}
+
+
 Function::Function(BNFunction* func)
 {
 	m_object = func;
@@ -135,9 +149,10 @@ bool Function::WasAutomaticallyDiscovered() const
 }
 
 
-bool Function::CanReturn() const
+Confidence<bool> Function::CanReturn() const
 {
-	return BNCanFunctionReturn(m_object);
+	BNBoolWithConfidence bc = BNCanFunctionReturn(m_object);
+	return Confidence<bool>(bc.value, bc.confidence);
 }
 
 
@@ -233,7 +248,7 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 }
 
 
-RegisterValue RegisterValue::FromAPIObject(BNRegisterValue& value)
+RegisterValue RegisterValue::FromAPIObject(const BNRegisterValue& value)
 {
 	RegisterValue result;
 	result.state = value.state;
@@ -452,15 +467,164 @@ Ref<Type> Function::GetType() const
 }
 
 
+Confidence<Ref<Type>> Function::GetReturnType() const
+{
+	BNTypeWithConfidence tc = BNGetFunctionReturnType(m_object);
+	Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+	return Confidence<Ref<Type>>(type, tc.confidence);
+}
+
+
+Confidence<Ref<CallingConvention>> Function::GetCallingConvention() const
+{
+	BNCallingConventionWithConfidence cc = BNGetFunctionCallingConvention(m_object);
+	Ref<CallingConvention> convention = cc.convention ? new CoreCallingConvention(cc.convention) : nullptr;
+	return Confidence<Ref<CallingConvention>>(convention, cc.confidence);
+}
+
+
+Confidence<vector<Variable>> Function::GetParameterVariables() const
+{
+	BNParameterVariablesWithConfidence vars = BNGetFunctionParameterVariables(m_object);
+	vector<Variable> varList;
+	for (size_t i = 0; i < vars.count; i++)
+	{
+		Variable var;
+		var.type = vars.vars[i].type;
+		var.index = vars.vars[i].index;
+		var.storage = vars.vars[i].storage;
+		varList.push_back(var);
+	}
+	Confidence<vector<Variable>> result(varList, vars.confidence);
+	BNFreeParameterVariables(&vars);
+	return result;
+}
+
+
+Confidence<bool> Function::HasVariableArguments() const
+{
+	BNBoolWithConfidence bc = BNFunctionHasVariableArguments(m_object);
+	return Confidence<bool>(bc.value, bc.confidence);
+}
+
+
 void Function::SetAutoType(Type* type)
 {
 	BNSetFunctionAutoType(m_object, type->GetObject());
 }
 
 
+void Function::SetAutoReturnType(const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type ? type->GetObject() : nullptr;
+	tc.confidence = type.GetConfidence();
+	BNSetAutoFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>& convention)
+{
+	BNCallingConventionWithConfidence cc;
+	cc.convention = convention ? convention->GetObject() : nullptr;
+	cc.confidence = convention.GetConfidence();
+	BNSetAutoFunctionCallingConvention(m_object, &cc);
+}
+
+
+void Function::SetAutoParameterVariables(const Confidence<vector<Variable>>& vars)
+{
+	BNParameterVariablesWithConfidence varConf;
+	varConf.vars = new BNVariable[vars.GetValue().size()];
+	varConf.count = vars.GetValue().size();
+	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	{
+		varConf.vars[i].type = vars.GetValue()[i].type;
+		varConf.vars[i].index = vars.GetValue()[i].index;
+		varConf.vars[i].storage = vars.GetValue()[i].storage;
+	}
+	varConf.confidence = vars.GetConfidence();
+
+	BNSetAutoFunctionParameterVariables(m_object, &varConf);
+	delete[] varConf.vars;
+}
+
+
+void Function::SetAutoHasVariableArguments(const Confidence<bool>& varArgs)
+{
+	BNBoolWithConfidence bc;
+	bc.value = varArgs.GetValue();
+	bc.confidence = varArgs.GetConfidence();
+	BNSetAutoFunctionHasVariableArguments(m_object, &bc);
+}
+
+
+void Function::SetAutoCanReturn(const Confidence<bool>& returns)
+{
+	BNBoolWithConfidence bc;
+	bc.value = returns.GetValue();
+	bc.confidence = returns.GetConfidence();
+	BNSetAutoFunctionCanReturn(m_object, &bc);
+}
+
+
 void Function::SetUserType(Type* type)
 {
 	BNSetFunctionUserType(m_object, type->GetObject());
+}
+
+
+void Function::SetReturnType(const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type ? type->GetObject() : nullptr;
+	tc.confidence = type.GetConfidence();
+	BNSetUserFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetCallingConvention(const Confidence<Ref<CallingConvention>>& convention)
+{
+	BNCallingConventionWithConfidence cc;
+	cc.convention = convention ? convention->GetObject() : nullptr;
+	cc.confidence = convention.GetConfidence();
+	BNSetUserFunctionCallingConvention(m_object, &cc);
+}
+
+
+void Function::SetParameterVariables(const Confidence<vector<Variable>>& vars)
+{
+	BNParameterVariablesWithConfidence varConf;
+	varConf.vars = new BNVariable[vars.GetValue().size()];
+	varConf.count = vars.GetValue().size();
+	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	{
+		varConf.vars[i].type = vars.GetValue()[i].type;
+		varConf.vars[i].index = vars.GetValue()[i].index;
+		varConf.vars[i].storage = vars.GetValue()[i].storage;
+	}
+	varConf.confidence = vars.GetConfidence();
+
+	BNSetUserFunctionParameterVariables(m_object, &varConf);
+	delete[] varConf.vars;
+}
+
+
+void Function::SetHasVariableArguments(const Confidence<bool>& varArgs)
+{
+	BNBoolWithConfidence bc;
+	bc.value = varArgs.GetValue();
+	bc.confidence = varArgs.GetConfidence();
+	BNSetUserFunctionHasVariableArguments(m_object, &bc);
+}
+
+
+void Function::SetCanReturn(const Confidence<bool>& returns)
+{
+	BNBoolWithConfidence bc;
+	bc.value = returns.GetValue();
+	bc.confidence = returns.GetConfidence();
+	BNSetUserFunctionCanReturn(m_object, &bc);
 }
 
 
@@ -887,6 +1051,38 @@ map<string, double> Function::GetAnalysisPerformanceInfo()
 	for (size_t i = 0; i < count; i++)
 		result[info[i].name] = info[i].seconds;
 	BNFreeAnalysisPerformanceInfo(info, count);
+	return result;
+}
+
+
+vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* settings)
+{
+	size_t count;
+	BNDisassemblyTextLine* lines = BNGetFunctionTypeTokens(m_object,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<DisassemblyTextLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = lines[i].addr;
+		for (size_t j = 0; j < lines[i].count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].tokens[j].type;
+			token.text = lines[i].tokens[j].text;
+			token.value = lines[i].tokens[j].value;
+			token.size = lines[i].tokens[j].size;
+			token.operand = lines[i].tokens[j].operand;
+			token.context = lines[i].tokens[j].context;
+			token.confidence = lines[i].tokens[j].confidence;
+			token.address = lines[i].tokens[j].address;
+			line.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
 

@@ -521,6 +521,8 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { As<N>().SetParameterSSAVariables(vars); }
 		template <BNMediumLevelILOperation N> void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
 		template <BNMediumLevelILOperation N> void SetParameterExprs(const std::vector<ExprId>& params) { As<N>().SetParameterExprs(params); }
+		template <BNMediumLevelILOperation N> void SetSourceExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
+		template <BNMediumLevelILOperation N> void SetSourceExprs(const std::vector<ExprId>& params) { As<N>().SetSourceExprs(params); }
 
 		bool GetOperandIndexForUsage(MediumLevelILOperandUsage usage, size_t& operandIndex) const;
 
@@ -894,6 +896,7 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RET>: public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstructionList GetSourceExprs() const { return GetRawOperandAsExprList(0); }
+		void SetSourceExprs(const std::vector<ExprId>& exprs) { UpdateRawOperandAsExprList(0, exprs); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_IF>: public MediumLevelILInstructionBase

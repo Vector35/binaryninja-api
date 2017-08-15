@@ -116,6 +116,7 @@ class Architecture(object):
 	regs = {}
 	stack_pointer = None
 	link_reg = None
+	global_regs = []
 	flags = []
 	flag_write_types = []
 	flag_roles = {}
@@ -208,6 +209,13 @@ class Architecture(object):
 				core.BNFreeRegisterList(flags)
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flag_indexes
 				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetArchitectureGlobalRegisters(self.handle, count)
+			self.__dict__["global_regs"] = []
+			for i in xrange(0, count.value):
+				self.global_regs.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+			core.BNFreeRegisterList(regs)
 		else:
 			startup._init_plugins()
 
@@ -250,6 +258,7 @@ class Architecture(object):
 			self._cb.getStackPointerRegister = self._cb.getStackPointerRegister.__class__(
 				self._get_stack_pointer_register)
 			self._cb.getLinkRegister = self._cb.getLinkRegister.__class__(self._get_link_register)
+			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_registers)
 			self._cb.assemble = self._cb.assemble.__class__(self._assemble)
 			self._cb.isNeverBranchPatchAvailable = self._cb.isNeverBranchPatchAvailable.__class__(
 				self._is_never_branch_patch_available)
@@ -329,6 +338,8 @@ class Architecture(object):
 				for flag in self.__class__.flags_written_by_flag_write_type[write_type]:
 					flags.append(self._flags[flag])
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flags
+
+			self.__dict__["global_regs"] = self.__class__.global_regs
 
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
@@ -718,6 +729,20 @@ class Architecture(object):
 		except KeyError:
 			log.log_error(traceback.format_exc())
 			return 0
+
+	def _get_global_registers(self, ctxt, count):
+		try:
+			count[0] = len(self.__class__.global_regs)
+			reg_buf = (ctypes.c_uint * len(self.__class__.global_regs))()
+			for i in xrange(0, len(self.__class__.global_regs)):
+				reg_buf[i] = self._all_regs[self.__class__.global_regs[i]]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
 
 	def _assemble(self, ctxt, code, addr, result, errors):
 		try:

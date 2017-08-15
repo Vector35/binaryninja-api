@@ -300,7 +300,17 @@ namespace BinaryNinja
 		{
 		}
 
+		static uint8_t Combine(uint8_t a, uint8_t b)
+		{
+			uint8_t result = (uint8_t)(((uint32_t)a * (uint32_t)b) / BN_FULL_CONFIDENCE);
+			if ((a >= BN_MINIMUM_CONFIDENCE) && (b >= BN_MINIMUM_CONFIDENCE) &&
+				(result < BN_MINIMUM_CONFIDENCE))
+				result = BN_MINIMUM_CONFIDENCE;
+			return result;
+		}
+
 		uint8_t GetConfidence() const { return m_confidence; }
+		uint8_t GetCombinedConfidence(uint8_t base) const { return Combine(m_confidence, base); }
 		void SetConfidence(uint8_t conf) { m_confidence = conf; }
 		bool IsUnknown() const { return m_confidence == 0; }
 	};
@@ -331,8 +341,12 @@ namespace BinaryNinja
 		T* operator->() { return &m_value; }
 		const T* operator->() const { return &m_value; }
 
-		T& GetValue() { return m_value; }
-		const T& GetValue() const { return m_value; }
+		// This MUST be a copy. There are subtle compiler scoping bugs that will cause nondeterministic failures
+		// when using one of these objects as a temporary if a reference is returned here. Unfortunately, this has
+		// negative performance implications. Make a local copy first if the template argument is a complex
+		// object and it is needed repeatedly.
+		T GetValue() const { return m_value; }
+
 		void SetValue(const T& value) { m_value = value; }
 
 		Confidence<T>& operator=(const Confidence<T>& v)
@@ -1584,6 +1598,7 @@ namespace BinaryNinja
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
+		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -1646,6 +1661,8 @@ namespace BinaryNinja
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
+		virtual std::vector<uint32_t> GetGlobalRegisters();
+		bool IsGlobalRegister(uint32_t reg);
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
 
@@ -1784,6 +1801,7 @@ namespace BinaryNinja
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
+		virtual std::vector<uint32_t> GetGlobalRegisters() override;
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
@@ -1831,7 +1849,7 @@ namespace BinaryNinja
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		std::vector<NameAndType> GetParameters() const;
-		bool HasVariableArguments() const;
+		Confidence<bool> HasVariableArguments() const;
 		Confidence<bool> CanReturn() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
@@ -1879,7 +1897,7 @@ namespace BinaryNinja
 		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 			const Confidence<Ref<CallingConvention>>& callingConvention,
-			const std::vector<NameAndType>& params, bool varArg = false);
+			const std::vector<NameAndType>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0));
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -2097,7 +2115,9 @@ namespace BinaryNinja
 		BNRegisterValueType state;
 		int64_t value;
 
-		static RegisterValue FromAPIObject(BNRegisterValue& value);
+		RegisterValue();
+		static RegisterValue FromAPIObject(const BNRegisterValue& value);
+		BNRegisterValue ToAPIObject();
 	};
 
 	struct PossibleValueSet
@@ -2127,7 +2147,7 @@ namespace BinaryNinja
 		uint64_t GetStart() const;
 		Ref<Symbol> GetSymbol() const;
 		bool WasAutomaticallyDiscovered() const;
-		bool CanReturn() const;
+		Confidence<bool> CanReturn() const;
 		bool HasExplicitlyDefinedType() const;
 		bool NeedsUpdate() const;
 
@@ -2163,8 +2183,25 @@ namespace BinaryNinja
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 
 		Ref<Type> GetType() const;
+		Confidence<Ref<Type>> GetReturnType() const;
+		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+		Confidence<std::vector<Variable>> GetParameterVariables() const;
+		Confidence<bool> HasVariableArguments() const;
+
 		void SetAutoType(Type* type);
+		void SetAutoReturnType(const Confidence<Ref<Type>>& type);
+		void SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
+		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
+		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
+		void SetAutoCanReturn(const Confidence<bool>& returns);
+
 		void SetUserType(Type* type);
+		void SetReturnType(const Confidence<Ref<Type>>& type);
+		void SetCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
+		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
+		void SetHasVariableArguments(const Confidence<bool>& varArgs);
+		void SetCanReturn(const Confidence<bool>& returns);
+
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
 
@@ -2223,6 +2260,8 @@ namespace BinaryNinja
 		void ReleaseAdvancedAnalysisData(size_t count);
 
 		std::map<std::string, double> GetAnalysisPerformanceInfo();
+
+		std::vector<DisassemblyTextLine> GetTypeTokens(DisassemblySettings* settings = nullptr);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -3036,6 +3075,11 @@ namespace BinaryNinja
 		static uint32_t GetIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetHighIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetFloatReturnValueRegisterCallback(void* ctxt);
+		static uint32_t GetGlobalPointerRegisterCallback(void* ctxt);
+
+		static uint32_t* GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count);
+		static BNRegisterValue GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func);
+		static BNRegisterValue GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func);
 
 	public:
 		Ref<Architecture> GetArchitecture() const;
@@ -3051,6 +3095,11 @@ namespace BinaryNinja
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
 		virtual uint32_t GetHighIntegerReturnValueRegister();
 		virtual uint32_t GetFloatReturnValueRegister();
+		virtual uint32_t GetGlobalPointerRegister();
+
+		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters();
+		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func);
+		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func);
 	};
 
 	class CoreCallingConvention: public CallingConvention
@@ -3068,6 +3117,11 @@ namespace BinaryNinja
 		virtual uint32_t GetIntegerReturnValueRegister() override;
 		virtual uint32_t GetHighIntegerReturnValueRegister() override;
 		virtual uint32_t GetFloatReturnValueRegister() override;
+		virtual uint32_t GetGlobalPointerRegister() override;
+
+		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters() override;
+		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override;
+		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func) override;
 	};
 
 	/*!

@@ -37,6 +37,7 @@ import lowlevelil
 import mediumlevelil
 import binaryview
 import log
+import callingconvention
 
 
 class LookupTableEntry(object):
@@ -49,25 +50,49 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
-	def __init__(self, arch, value):
-		self.type = RegisterValueType(value.state)
-		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.value)
-		elif value.state == RegisterValueType.ConstantValue:
-			self.value = value.value
-		elif value.state == RegisterValueType.StackFrameOffset:
-			self.offset = value.value
+	def __init__(self, arch = None, value = None):
+		if value is None:
+			self.type = RegisterValueType.UndeterminedValue
+		else:
+			self.type = RegisterValueType(value.state)
+			if value.state == RegisterValueType.EntryValue:
+				self.arch = arch
+				if arch is not None:
+					self.reg = arch.get_reg_name(value.value)
+				else:
+					self.reg = value.value
+			elif (value.state == RegisterValueType.ConstantValue) or (value.state == RegisterValueType.ConstantPointerValue):
+				self.value = value.value
+			elif value.state == RegisterValueType.StackFrameOffset:
+				self.offset = value.value
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.ConstantPointerValue:
+			return "<const ptr %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"
+
+	def _to_api_object(self):
+		result = core.BNRegisterValue()
+		result.state = self.type
+		result.value = 0
+		if self.type == RegisterValueType.EntryValue:
+			if self.arch is not None:
+				result.value = self.arch.get_reg_index(self.reg)
+			else:
+				result.value = self.reg
+		elif (self.type == RegisterValueType.ConstantValue) or (self.type == RegisterValueType.ConstantPointerValue):
+			result.value = self.value
+		elif self.type == RegisterValueType.StackFrameOffset:
+			result.value = self.offset
+		return result
 
 
 class ValueRange(object):
@@ -240,6 +265,25 @@ class IndirectBranchInfo(object):
 		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
 
 
+class ParameterVariables(object):
+	def __init__(self, var_list, confidence = types.max_confidence):
+		self.vars = var_list
+		self.confidence = confidence
+
+	def __repr__(self):
+		return repr(self.vars)
+
+	def __iter__(self):
+		for var in self.vars:
+			yield var
+
+	def __getitem__(self, idx):
+		return self.vars[idx]
+
+	def with_confidence(self, confidence):
+		return ParameterVariables(list(self.vars), confidence = confidence)
+
+
 class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
@@ -335,8 +379,19 @@ class Function(object):
 
 	@property
 	def can_return(self):
-		"""Whether function can return (read-only)"""
-		return core.BNCanFunctionReturn(self.handle)
+		"""Whether function can return"""
+		result = core.BNCanFunctionReturn(self.handle)
+		return types.BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@can_return.setter
+	def can_return(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetUserFunctionCanReturn(self.handle, bc)
 
 	@property
 	def explicitly_defined_type(self):
@@ -451,6 +506,97 @@ class Function(object):
 			result[info[i].name] = info[i].seconds
 		core.BNFreeAnalysisPerformanceInfo(info, count.value)
 		return result
+
+	@property
+	def type_tokens(self):
+		"""Text tokens for this function's prototype"""
+		return self.get_type_tokens()[0].tokens
+
+	@property
+	def return_type(self):
+		"""Return type of the function"""
+		result = core.BNGetFunctionReturnType(self.handle)
+		if not result.type:
+			return None
+		return types.Type(result.type, confidence = result.confidence)
+
+	@return_type.setter
+	def return_type(self, value):
+		type_conf = core.BNTypeWithConfidence()
+		if value is None:
+			type_conf.type = None
+			type_conf.confidence = 0
+		else:
+			type_conf.type = value.handle
+			type_conf.confidence = value.confidence
+		core.BNSetUserFunctionReturnType(self.handle, type_conf)
+
+	@property
+	def calling_convention(self):
+		"""Calling convention used by the function"""
+		result = core.BNGetFunctionCallingConvention(self.handle)
+		if not result.convention:
+			return None
+		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+
+	@calling_convention.setter
+	def calling_convention(self, value):
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if value is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = value.handle
+			conv_conf.confidence = value.confidence
+		core.BNSetUserFunctionCallingConvention(self.handle, conv_conf)
+
+	@property
+	def parameter_vars(self):
+		"""List of variables for the incoming function parameters"""
+		result = core.BNGetFunctionParameterVariables(self.handle)
+		var_list = []
+		for i in xrange(0, result.count):
+			var_list.append(Variable(self, result.vars[i].type, result.vars[i].index, result.vars[i].storage))
+		confidence = result.confidence
+		core.BNFreeParameterVariables(result)
+		return ParameterVariables(var_list, confidence = confidence)
+
+	@parameter_vars.setter
+	def parameter_vars(self, value):
+		if value is None:
+			var_list = []
+		else:
+			var_list = list(value)
+		var_conf = core.BNParameterVariablesWithConfidence()
+		var_conf.vars = (core.BNVariable * len(var_list))()
+		var_conf.count = len(var_list)
+		for i in xrange(0, len(var_list)):
+			var_conf.vars[i].type = var_list[i].source_type
+			var_conf.vars[i].index = var_list[i].index
+			var_conf.vars[i].storage = var_list[i].storage
+		if value is None:
+			var_conf.confidence = 0
+		elif hasattr(value, 'confidence'):
+			var_conf.confidence = value.confidence
+		else:
+			var_conf.confidence = types.max_confidence
+		core.BNSetUserFunctionParameterVariables(self.handle, var_conf)
+
+	@property
+	def has_variable_arguments(self):
+		"""Whether the function takes a variable number of arguments"""
+		result = core.BNFunctionHasVariableArguments(self.handle)
+		return types.BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@has_variable_arguments.setter
+	def has_variable_arguments(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetUserFunctionHasVariableArguments(self.handle, bc)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -759,6 +905,64 @@ class Function(object):
 	def set_user_type(self, value):
 		core.BNSetFunctionUserType(self.handle, value.handle)
 
+	def set_auto_return_type(self, value):
+		type_conf = core.BNTypeWithConfidence()
+		if value is None:
+			type_conf.type = None
+			type_conf.confidence = 0
+		else:
+			type_conf.type = value.handle
+			type_conf.confidence = value.confidence
+		core.BNSetAutoFunctionReturnType(self.handle, type_conf)
+
+	def set_auto_calling_convention(self, value):
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if value is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = value.handle
+			conv_conf.confidence = value.confidence
+		core.BNSetAutoFunctionCallingConvention(self.handle, conv_conf)
+
+	def set_auto_parameter_vars(self, value):
+		if value is None:
+			var_list = []
+		else:
+			var_list = list(value)
+		var_conf = core.BNParameterVariablesWithConfidence()
+		var_conf.vars = (core.BNVariable * len(var_list))()
+		var_conf.count = len(var_list)
+		for i in xrange(0, len(var_list)):
+			var_conf.vars[i].type = var_list[i].source_type
+			var_conf.vars[i].index = var_list[i].index
+			var_conf.vars[i].storage = var_list[i].storage
+		if value is None:
+			var_conf.confidence = 0
+		elif hasattr(value, 'confidence'):
+			var_conf.confidence = value.confidence
+		else:
+			var_conf.confidence = types.max_confidence
+		core.BNSetAutoFunctionParameterVariables(self.handle, var_conf)
+
+	def set_auto_has_variable_arguments(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetAutoFunctionHasVariableArguments(self.handle, bc)
+
+	def set_auto_can_return(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetAutoFunctionCanReturn(self.handle, bc)
+
 	def get_int_display_type(self, instr_addr, value, operand, arch=None):
 		if arch is None:
 			arch = self.arch
@@ -930,6 +1134,29 @@ class Function(object):
 		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
 			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), confidence = found_var.typeConfidence))
 		core.BNFreeVariableNameAndType(found_var)
+		return result
+
+	def get_type_tokens(self, settings=None):
+		if settings is not None:
+			settings = settings.handle
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetFunctionTypeTokens(self.handle, settings, count)
+		result = []
+		for i in xrange(0, count.value):
+			addr = lines[i].addr
+			tokens = []
+			for j in xrange(0, lines[i].count):
+				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
+				text = lines[i].tokens[j].text
+				value = lines[i].tokens[j].value
+				size = lines[i].tokens[j].size
+				operand = lines[i].tokens[j].operand
+				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(DisassemblyTextLine(addr, tokens))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
 

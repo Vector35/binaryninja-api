@@ -368,9 +368,10 @@ vector<NameAndType> Type::GetParameters() const
 }
 
 
-bool Type::HasVariableArguments() const
+Confidence<bool> Type::HasVariableArguments() const
 {
-	return BNTypeHasVariableArguments(m_object);
+	BNBoolWithConfidence result = BNTypeHasVariableArguments(m_object);
+	return Confidence<bool>(result.value, result.confidence);
 }
 
 
@@ -655,7 +656,7 @@ Ref<Type> Type::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
 
 Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention,
-	const std::vector<NameAndType>& params, bool varArg)
+	const std::vector<NameAndType>& params, const Confidence<bool>& varArg)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -673,8 +674,12 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 		paramArray[i].typeConfidence = params[i].type.GetConfidence();
 	}
 
+	BNBoolWithConfidence varArgConf;
+	varArgConf.value = varArg.GetValue();
+	varArgConf.confidence = varArg.GetConfidence();
+
 	Type* type = new Type(BNCreateFunctionType(&returnValueConf, &callingConventionConf,
-		paramArray, params.size(), varArg));
+		paramArray, params.size(), &varArgConf));
 	delete[] paramArray;
 	return type;
 }
@@ -685,7 +690,7 @@ void Type::SetFunctionCanReturn(const Confidence<bool>& canReturn)
 	BNBoolWithConfidence bc;
 	bc.value = canReturn.GetValue();
 	bc.confidence = canReturn.GetConfidence();
-	BNSetFunctionCanReturn(m_object, &bc);
+	BNSetFunctionTypeCanReturn(m_object, &bc);
 }
 
 

@@ -335,7 +335,6 @@ class _PythonScriptingInstanceOutput(object):
 		self.buffer = ""
 		self.encoding = 'UTF-8'
 		self.errors = None
-		self.isatty = lambda: False
 		self.mode = 'w'
 		self.name = 'PythonScriptingInstanceOutput'
 		self.newlines = None
@@ -348,6 +347,9 @@ class _PythonScriptingInstanceOutput(object):
 
 	def flush(self):
 		pass
+
+	def isatty(self):
+		return False
 
 	def next(self):
 		raise IOError("File not open for reading")
@@ -411,6 +413,9 @@ class _PythonScriptingInstanceOutput(object):
 class _PythonScriptingInstanceInput(object):
 	def __init__(self, orig):
 		self.orig = orig
+
+	def isatty(self):
+		return False
 
 	def read(self, size):
 		interpreter = None

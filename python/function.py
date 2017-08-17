@@ -648,7 +648,13 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		return self.low_level_il[core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)]
+
+		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.low_level_il):
+			return None
+
+		return self.low_level_il[idx]
 
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:
@@ -799,7 +805,13 @@ class Function(object):
 	def get_lifted_il_at(self, addr, arch=None):
 		if arch is None:
 			arch = self.arch
-		return self.lifted_il[core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)]
+
+		idx = core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.lifted_il):
+			return None
+
+		return self.lifted_il[idx]
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
 		flag = self.arch.get_flag_index(flag)

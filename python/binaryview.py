@@ -217,7 +217,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_added(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -226,7 +226,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_removed(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -235,7 +235,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_updated(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -256,14 +256,14 @@ class BinaryDataNotificationCallbacks(object):
 	def _type_defined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -860,7 +860,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			addr = var_list[i].address
-			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), confidence = var_list[i].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), platform = self.platform, confidence = var_list[i].typeConfidence)
 			auto_discovered = var_list[i].autoDiscovered
 			result[addr] = DataVariable(addr, var_type, auto_discovered)
 		core.BNFreeDataVariables(var_list, count.value)
@@ -874,7 +874,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -1915,7 +1915,7 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable(var.address, types.Type(var.type, confidence = var.typeConfidence), var.autoDiscovered)
+		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered)
 
 	def get_functions_containing(self, addr):
 		"""
@@ -2918,7 +2918,7 @@ class BinaryView(object):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError(error_str)
-		type_obj = types.Type(core.BNNewTypeReference(result.type))
+		type_obj = types.Type(core.BNNewTypeReference(result.type), platform = self.platform)
 		name = types.QualifiedName._from_core_struct(result.name)
 		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
@@ -2942,7 +2942,7 @@ class BinaryView(object):
 		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self.platform)
 
 	def get_type_by_id(self, id):
 		"""
@@ -2963,7 +2963,7 @@ class BinaryView(object):
 		obj = core.BNGetAnalysisTypeById(self.handle, id)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self.platform)
 
 	def get_type_name_by_id(self, id):
 		"""

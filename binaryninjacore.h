@@ -1132,11 +1132,13 @@ extern "C"
 		uint8_t confidence;
 	};
 
-	struct BNNameAndType
+	struct BNFunctionParameter
 	{
 		char* name;
 		BNType* type;
 		uint8_t typeConfidence;
+		bool defaultLocation;
+		BNVariable location;
 	};
 
 	struct BNQualifiedNameAndType
@@ -2197,7 +2199,6 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text,
 		BNQualifiedNameAndType* result, char** errors);
-	BINARYNINJACOREAPI void BNFreeNameAndType(BNNameAndType* obj);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
@@ -2602,7 +2603,7 @@ extern "C"
 		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNTypeWithConfidence* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNTypeWithConfidence* returnValue,
-		BNCallingConventionWithConfidence* callingConvention, BNNameAndType* params,
+		BNCallingConventionWithConfidence* callingConvention, BNFunctionParameter* params,
 		size_t paramCount, BNBoolWithConfidence* varArg);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
@@ -2620,8 +2621,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsTypeFloatingPoint(BNType* type);
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetChildType(BNType* type);
 	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetTypeCallingConvention(BNType* type);
-	BINARYNINJACOREAPI BNNameAndType* BNGetTypeParameters(BNType* type, size_t* count);
-	BINARYNINJACOREAPI void BNFreeTypeParameterList(BNNameAndType* types, size_t count);
+	BINARYNINJACOREAPI BNFunctionParameter* BNGetTypeParameters(BNType* type, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeParameterList(BNFunctionParameter* types, size_t count);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeHasVariableArguments(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeCanReturn(BNType* type);
 	BINARYNINJACOREAPI BNStructure* BNGetTypeStructure(BNType* type);
@@ -2637,12 +2638,15 @@ extern "C"
 	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, BNBoolWithConfidence* vltl);
 
-	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type);
-	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type);
-	BINARYNINJACOREAPI char* BNGetTypeStringAfterName(BNType* type);
-	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokens(BNType* type, size_t* count);
-	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensBeforeName(BNType* type, size_t* count);
-	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensAfterName(BNType* type, size_t* count);
+	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type, BNPlatform* platform);
+	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type, BNPlatform* platform);
+	BINARYNINJACOREAPI char* BNGetTypeStringAfterName(BNType* type, BNPlatform* platform);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokens(BNType* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensBeforeName(BNType* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensAfterName(BNType* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTokenList(BNInstructionTextToken* tokens, size_t count);
 
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReference(BNNamedTypeReference* nt, size_t width, size_t align);
@@ -2698,10 +2702,10 @@ extern "C"
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
 		const char** includeDirs, size_t includeDirCount);
-	BINARYNINJACOREAPI bool BNParseTypesFromSource(BNArchitecture* arch, const char* source, const char* fileName,
+	BINARYNINJACOREAPI bool BNParseTypesFromSource(BNPlatform* platform, const char* source, const char* fileName,
 		BNTypeParserResult* result, char** errors, const char** includeDirs, size_t includeDirCount,
 		const char* autoTypeSource);
-	BINARYNINJACOREAPI bool BNParseTypesFromSourceFile(BNArchitecture* arch, const char* fileName,
+	BINARYNINJACOREAPI bool BNParseTypesFromSourceFile(BNPlatform* platform, const char* fileName,
 		BNTypeParserResult* result, char** errors, const char** includeDirs, size_t includeDirCount,
 		const char* autoTypeSource);
 	BINARYNINJACOREAPI void BNFreeTypeParserResult(BNTypeParserResult* result);

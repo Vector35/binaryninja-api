@@ -211,7 +211,7 @@ class Variable(object):
 		if var_type is None:
 			var_type_conf = core.BNGetVariableType(func.handle, var)
 			if var_type_conf.type:
-				var_type = types.Type(var_type_conf.type, confidence = var_type_conf.confidence)
+				var_type = types.Type(var_type_conf.type, platform = func.platform, confidence = var_type_conf.confidence)
 			else:
 				var_type = None
 
@@ -443,7 +443,7 @@ class Function(object):
 	@property
 	def function_type(self):
 		"""Function type object"""
-		return types.Type(core.BNGetFunctionType(self.handle))
+		return types.Type(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
 	def function_type(self, value):
@@ -457,7 +457,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type), confidence = v[i].typeConfidence)))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -470,7 +470,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type), confidence = v[i].typeConfidence)))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -518,7 +518,7 @@ class Function(object):
 		result = core.BNGetFunctionReturnType(self.handle)
 		if not result.type:
 			return None
-		return types.Type(result.type, confidence = result.confidence)
+		return types.Type(result.type, platform = self.platform, confidence = result.confidence)
 
 	@return_type.setter
 	def return_type(self, value):
@@ -778,7 +778,7 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			var_type = types.Type(core.BNNewTypeReference(refs[i].type), confidence = refs[i].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
 			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
 				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
 				refs[i].referencedOffset, refs[i].size))
@@ -1132,7 +1132,8 @@ class Function(object):
 		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
 			return None
 		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
-			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), confidence = found_var.typeConfidence))
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), platform = self.platform,
+			confidence = found_var.typeConfidence))
 		core.BNFreeVariableNameAndType(found_var)
 		return result
 

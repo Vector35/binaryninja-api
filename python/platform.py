@@ -234,7 +234,7 @@ class Platform(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -246,7 +246,7 @@ class Platform(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -258,7 +258,7 @@ class Platform(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -270,7 +270,7 @@ class Platform(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(call_list[i].name)
-			t = types.Type(core.BNNewTypeReference(call_list[i].type))
+			t = types.Type(core.BNNewTypeReference(call_list[i].type), platform = self)
 			result[call_list[i].number] = (name, t)
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
@@ -325,21 +325,21 @@ class Platform(object):
 		obj = core.BNGetPlatformTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self)
 
 	def get_variable_by_name(self, name):
 		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformVariableByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self)
 
 	def get_function_by_name(self, name):
 		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformFunctionByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self)
 
 	def get_system_call_name(self, number):
 		return core.BNGetPlatformSystemCallName(self.handle, number)
@@ -348,7 +348,7 @@ class Platform(object):
 		obj = core.BNGetPlatformSystemCallType(self.handle, number)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self)
 
 	def generate_auto_platform_type_id(self, name):
 		name = types.QualifiedName(name)._get_core_struct()
@@ -360,3 +360,96 @@ class Platform(object):
 
 	def get_auto_platform_type_id_source(self):
 		return core.BNGetAutoPlatformTypeIdSource(self.handle)
+
+	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
+		"""
+		``parse_types_from_source`` parses the source string and any needed headers searching for them in
+		the optional list of directories provided in ``include_dirs``.
+
+		:param str source: source string to be parsed
+		:param str filename: optional source filename
+		:param list(str) include_dirs: optional list of string filename include directories
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
+		:Example:
+
+			>>> platform.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
+			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:{'bar':
+			<type: int32_t(int32_t x)>}}, '')
+			>>>
+		"""
+
+		if filename is None:
+			filename = "input"
+		dir_buf = (ctypes.c_char_p * len(include_dirs))()
+		for i in xrange(0, len(include_dirs)):
+			dir_buf[i] = str(include_dirs[i])
+		parse = core.BNTypeParserResult()
+		errors = ctypes.c_char_p()
+		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
+		error_str = errors.value
+		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+		if not result:
+			raise SyntaxError(error_str)
+		type_dict = {}
+		variables = {}
+		functions = {}
+		for i in xrange(0, parse.typeCount):
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+		for i in xrange(0, parse.variableCount):
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+		for i in xrange(0, parse.functionCount):
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+		core.BNFreeTypeParserResult(parse)
+		return types.TypeParserResult(type_dict, variables, functions)
+
+	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
+		"""
+		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
+		the optional list of directories provided in ``include_dirs``.
+
+		:param str filename: filename of file to be parsed
+		:param list(str) include_dirs: optional list of string filename include directories
+		:param str auto_type_source: optional source of types if used for automatically generated types
+		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
+		:Example:
+
+			>>> file = "/Users/binja/tmp.c"
+			>>> open(file).read()
+			'int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n'
+			>>> platform.parse_types_from_source_file(file)
+			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
+			{'bar': <type: int32_t(int32_t x)>}}, '')
+			>>>
+		"""
+		dir_buf = (ctypes.c_char_p * len(include_dirs))()
+		for i in xrange(0, len(include_dirs)):
+			dir_buf[i] = str(include_dirs[i])
+		parse = core.BNTypeParserResult()
+		errors = ctypes.c_char_p()
+		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
+			len(include_dirs), auto_type_source)
+		error_str = errors.value
+		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+		if not result:
+			raise SyntaxError(error_str)
+		type_dict = {}
+		variables = {}
+		functions = {}
+		for i in xrange(0, parse.typeCount):
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+		for i in xrange(0, parse.variableCount):
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+		for i in xrange(0, parse.functionCount):
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+		core.BNFreeTypeParserResult(parse)
+		return types.TypeParserResult(type_dict, variables, functions)

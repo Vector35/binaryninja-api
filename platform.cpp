@@ -402,3 +402,88 @@ string Platform::GetAutoPlatformTypeIdSource()
 	BNFreeString(str);
 	return result;
 }
+
+
+bool Platform::ParseTypesFromSource(const string& source, const string& fileName,
+	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
+	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs,
+	const string& autoTypeSource)
+{
+	BNTypeParserResult result;
+	char* errorStr;
+	const char** includeDirList = new const char*[includeDirs.size()];
+
+	for (size_t i = 0; i < includeDirs.size(); i++)
+		includeDirList[i] = includeDirs[i].c_str();
+
+	types.clear();
+	variables.clear();
+	functions.clear();
+
+	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
+		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
+	errors = errorStr;
+	BNFreeString(errorStr);
+	if (!ok)
+		return false;
+
+	for (size_t i = 0; i < result.typeCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
+	for (size_t i = 0; i < result.variableCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
+		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
+	for (size_t i = 0; i < result.functionCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
+		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
+	BNFreeTypeParserResult(&result);
+	return true;
+}
+
+
+bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
+	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
+	string& errors, const vector<string>& includeDirs, const string& autoTypeSource)
+{
+	BNTypeParserResult result;
+	char* errorStr;
+	const char** includeDirList = new const char*[includeDirs.size()];
+
+	for (size_t i = 0; i < includeDirs.size(); i++)
+		includeDirList[i] = includeDirs[i].c_str();
+
+	types.clear();
+	variables.clear();
+	functions.clear();
+
+	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
+		includeDirList, includeDirs.size(), autoTypeSource.c_str());
+	errors = errorStr;
+	BNFreeString(errorStr);
+	if (!ok)
+		return false;
+
+	for (size_t i = 0; i < result.typeCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
+	}
+	for (size_t i = 0; i < result.variableCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
+		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
+	for (size_t i = 0; i < result.functionCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
+		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
+	BNFreeTypeParserResult(&result);
+	return true;
+}

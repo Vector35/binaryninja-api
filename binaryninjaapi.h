@@ -1743,19 +1743,6 @@ namespace BinaryNinja
 		                                   uint64_t defaultValue = 0);
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
-		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-			std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables,
-			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
-			const std::string& autoTypeSource = "");
-		bool ParseTypesFromSourceFile(const std::string& fileName,
-			std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables,
-			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
-			const std::string& autoTypeSource = "");
-
 		void RegisterCallingConvention(CallingConvention* cc);
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
 		Ref<CallingConvention> GetCallingConventionByName(const std::string& name);
@@ -1821,10 +1808,28 @@ namespace BinaryNinja
 	class NamedTypeReference;
 	class Enumeration;
 
-	struct NameAndType
+	struct Variable: public BNVariable
+	{
+		Variable();
+		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
+		Variable(const BNVariable& var);
+
+		Variable& operator=(const Variable& var);
+
+		bool operator==(const Variable& var) const;
+		bool operator!=(const Variable& var) const;
+		bool operator<(const Variable& var) const;
+
+		uint64_t ToIdentifier() const;
+		static Variable FromIdentifier(uint64_t id);
+	};
+
+	struct FunctionParameter
 	{
 		std::string name;
 		Confidence<Ref<Type>> type;
+		bool defaultLocation;
+		Variable location;
 	};
 
 	struct QualifiedNameAndType
@@ -1848,7 +1853,7 @@ namespace BinaryNinja
 		bool IsFloat() const;
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
-		std::vector<NameAndType> GetParameters() const;
+		std::vector<FunctionParameter> GetParameters() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<bool> CanReturn() const;
 		Ref<Structure> GetStructure() const;
@@ -1867,14 +1872,17 @@ namespace BinaryNinja
 
 		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
 
-		std::string GetString() const;
+		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
-		std::string GetStringBeforeName() const;
-		std::string GetStringAfterName() const;
+		std::string GetStringBeforeName(Platform* platform = nullptr) const;
+		std::string GetStringAfterName(Platform* platform = nullptr) const;
 
-		std::vector<InstructionTextToken> GetTokens() const;
-		std::vector<InstructionTextToken> GetTokensBeforeName() const;
-		std::vector<InstructionTextToken> GetTokensAfterName() const;
+		std::vector<InstructionTextToken> GetTokens(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensBeforeName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensAfterName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
 
 		Ref<Type> Duplicate() const;
 
@@ -1897,7 +1905,7 @@ namespace BinaryNinja
 		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 			const Confidence<Ref<CallingConvention>>& callingConvention,
-			const std::vector<NameAndType>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0));
+			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0));
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -2050,22 +2058,6 @@ namespace BinaryNinja
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 
 		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
-	};
-
-	struct Variable: public BNVariable
-	{
-		Variable();
-		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
-		Variable(const BNVariable& var);
-
-		Variable& operator=(const Variable& var);
-
-		bool operator==(const Variable& var) const;
-		bool operator!=(const Variable& var) const;
-		bool operator<(const Variable& var) const;
-
-		uint64_t ToIdentifier() const;
-		static Variable FromIdentifier(uint64_t id);
 	};
 
 	struct VariableNameAndType
@@ -3178,6 +3170,19 @@ namespace BinaryNinja
 		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
 			const QualifiedName& name);
 		std::string GetAutoPlatformTypeIdSource();
+
+		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
+		bool ParseTypesFromSourceFile(const std::string& fileName,
+			std::map<QualifiedName, Ref<Type>>& types,
+			std::map<QualifiedName, Ref<Type>>& variables,
+			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+			const std::string& autoTypeSource = "");
 	};
 
 	class ScriptingOutputListener

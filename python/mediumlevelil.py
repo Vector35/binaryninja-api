@@ -417,7 +417,10 @@ class MediumLevelILInstruction(object):
 		"""Type of expression"""
 		result = core.BNGetMediumLevelILExprType(self.function.handle, self.expr_index)
 		if result.type:
-			return types.Type(result.type, confidence = result.confidence)
+			platform = None
+			if self.function.source_function:
+				platform = self.function.source_function.platform
+			return types.Type(result.type, platform = platform, confidence = result.confidence)
 		return None
 
 	def get_ssa_var_possible_values(self, ssa_var):

@@ -349,17 +349,21 @@ Confidence<Ref<CallingConvention>> Type::GetCallingConvention() const
 }
 
 
-vector<NameAndType> Type::GetParameters() const
+vector<FunctionParameter> Type::GetParameters() const
 {
 	size_t count;
-	BNNameAndType* types = BNGetTypeParameters(m_object, &count);
+	BNFunctionParameter* types = BNGetTypeParameters(m_object, &count);
 
-	vector<NameAndType> result;
+	vector<FunctionParameter> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		NameAndType param;
+		FunctionParameter param;
 		param.name = types[i].name;
 		param.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(types[i].type)), types[i].typeConfidence);
+		param.defaultLocation = types[i].defaultLocation;
+		param.location.type = types[i].location.type;
+		param.location.index = types[i].location.index;
+		param.location.storage = types[i].location.storage;
 		result.push_back(param);
 	}
 
@@ -421,9 +425,9 @@ uint64_t Type::GetOffset() const
 }
 
 
-string Type::GetString() const
+string Type::GetString(Platform* platform) const
 {
-	char* str = BNGetTypeString(m_object);
+	char* str = BNGetTypeString(m_object, platform ? platform->GetObject() : nullptr);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -438,28 +442,29 @@ string Type::GetTypeAndName(const QualifiedName& nameList) const
 	return outName;
 }
 
-string Type::GetStringBeforeName() const
+string Type::GetStringBeforeName(Platform* platform) const
 {
-	char* str = BNGetTypeStringBeforeName(m_object);
+	char* str = BNGetTypeStringBeforeName(m_object, platform ? platform->GetObject() : nullptr);
 	string result = str;
 	BNFreeString(str);
 	return result;
 }
 
 
-string Type::GetStringAfterName() const
+string Type::GetStringAfterName(Platform* platform) const
 {
-	char* str = BNGetTypeStringAfterName(m_object);
+	char* str = BNGetTypeStringAfterName(m_object, platform ? platform->GetObject() : nullptr);
 	string result = str;
 	BNFreeString(str);
 	return result;
 }
 
 
-vector<InstructionTextToken> Type::GetTokens() const
+vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseConfidence) const
 {
 	size_t count;
-	BNInstructionTextToken* tokens = BNGetTypeTokens(m_object, &count);
+	BNInstructionTextToken* tokens = BNGetTypeTokens(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
@@ -481,10 +486,11 @@ vector<InstructionTextToken> Type::GetTokens() const
 }
 
 
-vector<InstructionTextToken> Type::GetTokensBeforeName() const
+vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8_t baseConfidence) const
 {
 	size_t count;
-	BNInstructionTextToken* tokens = BNGetTypeTokensBeforeName(m_object, &count);
+	BNInstructionTextToken* tokens = BNGetTypeTokensBeforeName(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
@@ -506,10 +512,11 @@ vector<InstructionTextToken> Type::GetTokensBeforeName() const
 }
 
 
-vector<InstructionTextToken> Type::GetTokensAfterName() const
+vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_t baseConfidence) const
 {
 	size_t count;
-	BNInstructionTextToken* tokens = BNGetTypeTokensAfterName(m_object, &count);
+	BNInstructionTextToken* tokens = BNGetTypeTokensAfterName(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
@@ -656,7 +663,7 @@ Ref<Type> Type::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
 
 Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention,
-	const std::vector<NameAndType>& params, const Confidence<bool>& varArg)
+	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -666,12 +673,16 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	callingConventionConf.convention = callingConvention ? callingConvention->GetObject() : nullptr;
 	callingConventionConf.confidence = callingConvention.GetConfidence();
 
-	BNNameAndType* paramArray = new BNNameAndType[params.size()];
+	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
 	for (size_t i = 0; i < params.size(); i++)
 	{
 		paramArray[i].name = (char*)params[i].name.c_str();
 		paramArray[i].type = params[i].type->GetObject();
 		paramArray[i].typeConfidence = params[i].type.GetConfidence();
+		paramArray[i].defaultLocation = params[i].defaultLocation;
+		paramArray[i].location.type = params[i].location.type;
+		paramArray[i].location.index = params[i].location.index;
+		paramArray[i].location.storage = params[i].location.storage;
 	}
 
 	BNBoolWithConfidence varArgConf;

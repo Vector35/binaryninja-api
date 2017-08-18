@@ -267,25 +267,29 @@ class CallingConvention(object):
 			count[0] = 0
 			return None
 
-	def _get_incoming_reg_value(self, ctxt, reg, func):
+	def _get_incoming_reg_value(self, ctxt, reg, func, result):
 		try:
 			func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 				core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
-			return self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
+			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			return function.RegisterValue()._to_api_object()
+			api_obj = function.RegisterValue()._to_api_object()
+		result[0].state = api_obj.state
+		result[0].value = api_obj.value
 
-	def _get_incoming_flag_value(self, ctxt, reg, func):
+	def _get_incoming_flag_value(self, ctxt, reg, func, result):
 		try:
 			func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 				core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
-			return self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
+			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			return function.RegisterValue()._to_api_object()
+			api_obj = function.RegisterValue()._to_api_object()
+		result[0].state = api_obj.state
+		result[0].value = api_obj.value
 
 	def __repr__(self):
 		return "<calling convention: %s %s>" % (self.arch.name, self.name)

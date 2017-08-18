@@ -3075,8 +3075,8 @@ namespace BinaryNinja
 		static uint32_t GetGlobalPointerRegisterCallback(void* ctxt);
 
 		static uint32_t* GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count);
-		static BNRegisterValue GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func);
-		static BNRegisterValue GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func);
+		static void GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
+		static void GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 
 	public:
 		Ref<Architecture> GetArchitecture() const;

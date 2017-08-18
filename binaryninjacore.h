@@ -1250,8 +1250,8 @@ extern "C"
 		uint32_t (*getGlobalPointerRegister)(void* ctxt);
 
 		uint32_t* (*getImplicitlyDefinedRegisters)(void* ctxt, size_t* count);
-		BNRegisterValue (*getIncomingRegisterValue)(void* ctxt, uint32_t reg, BNFunction* func);
-		BNRegisterValue (*getIncomingFlagValue)(void* ctxt, uint32_t flag, BNFunction* func);
+		void (*getIncomingRegisterValue)(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
+		void (*getIncomingFlagValue)(void* ctxt, uint32_t flag, BNFunction* func, BNRegisterValue* result);
 	};
 
 	struct BNVariableNameAndType

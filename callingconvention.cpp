@@ -161,23 +161,23 @@ uint32_t* CallingConvention::GetImplicitlyDefinedRegistersCallback(void* ctxt, s
 }
 
 
-BNRegisterValue CallingConvention::GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func)
+void CallingConvention::GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));
-	return cc->GetIncomingRegisterValue(reg, funcObj).ToAPIObject();
+	*result = cc->GetIncomingRegisterValue(reg, funcObj).ToAPIObject();
 }
 
 
-BNRegisterValue CallingConvention::GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func)
+void CallingConvention::GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));
-	return cc->GetIncomingFlagValue(reg, funcObj).ToAPIObject();
+	*result = cc->GetIncomingFlagValue(reg, funcObj).ToAPIObject();
 }
 
 

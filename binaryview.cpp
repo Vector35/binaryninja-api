@@ -758,6 +758,18 @@ bool BinaryView::IsOffsetBackedByFile(uint64_t offset) const
 }
 
 
+bool BinaryView::IsOffsetCodeSemantics(uint64_t offset) const
+{
+	return BNIsOffsetCodeSemantics(m_object, offset);
+}
+
+
+bool BinaryView::IsOffsetWritableSemantics(uint64_t offset) const
+{
+	return BNIsOffsetWritableSemantics(m_object, offset);
+}
+
+
 uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
 {
 	return BNGetNextValidOffset(m_object, offset);
@@ -1716,11 +1728,12 @@ bool BinaryView::GetAddressForDataOffset(uint64_t offset, uint64_t& addr)
 }
 
 
-void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, const string& type,
-	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+	const string& type, uint64_t align, uint64_t entrySize, const string& linkedSection,
+	const string& infoSection, uint64_t infoData)
 {
-	BNAddAutoSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
-		infoSection.c_str(), infoData);
+	BNAddAutoSection(m_object, name.c_str(), start, length, semantics, type.c_str(), align, entrySize,
+		linkedSection.c_str(), infoSection.c_str(), infoData);
 }
 
 
@@ -1730,11 +1743,12 @@ void BinaryView::RemoveAutoSection(const string& name)
 }
 
 
-void BinaryView::AddUserSection(const string& name, uint64_t start, uint64_t length, const string& type,
-	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+void BinaryView::AddUserSection(const string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+	const string& type, uint64_t align, uint64_t entrySize, const string& linkedSection,
+	const string& infoSection, uint64_t infoData)
 {
-	BNAddUserSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
-		infoSection.c_str(), infoData);
+	BNAddUserSection(m_object, name.c_str(), start, length, semantics, type.c_str(), align, entrySize,
+		linkedSection.c_str(), infoSection.c_str(), infoData);
 }
 
 
@@ -1762,6 +1776,7 @@ vector<Section> BinaryView::GetSections()
 		section.infoData = sections[i].infoData;
 		section.align = sections[i].align;
 		section.entrySize = sections[i].entrySize;
+		section.semantics = sections[i].semantics;
 		result.push_back(section);
 	}
 
@@ -1788,6 +1803,7 @@ vector<Section> BinaryView::GetSectionsAt(uint64_t addr)
 		section.infoData = sections[i].infoData;
 		section.align = sections[i].align;
 		section.entrySize = sections[i].entrySize;
+		section.semantics = sections[i].semantics;
 		result.push_back(section);
 	}
 
@@ -1811,6 +1827,7 @@ bool BinaryView::GetSectionByName(const string& name, Section& result)
 	result.infoData = section.infoData;
 	result.align = section.align;
 	result.entrySize = section.entrySize;
+	result.semantics = section.semantics;
 
 	BNFreeSection(&section);
 	return true;

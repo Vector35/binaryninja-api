@@ -27,7 +27,7 @@ import threading
 # Binary Ninja components
 import _binaryninjacore as core
 from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag)
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
 import function
 import startup
 import architecture
@@ -422,7 +422,7 @@ class Segment(object):
 
 
 class Section(object):
-	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size):
+	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics):
 		self.name = name
 		self.type = section_type
 		self.start = start
@@ -432,6 +432,7 @@ class Section(object):
 		self.info_data = info_data
 		self.align = align
 		self.entry_size = entry_size
+		self.semantics = SectionSemantics(semantics)
 
 	@property
 	def end(self):
@@ -899,7 +900,8 @@ class BinaryView(object):
 		for i in xrange(0, count.value):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize)
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
+				section_list[i].semantics)
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -1677,6 +1679,28 @@ class BinaryView(object):
 		:rtype: bool
 		"""
 		return core.BNIsOffsetExecutable(self.handle, addr)
+
+	def is_offset_code_semantics(self, addr):
+		"""
+		``is_offset_code_semantics`` checks if an virtual address ``addr`` is semantically valid for code.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetCodeSemantics(self.handle, addr)
+
+	def is_offset_writable_semantics(self, addr):
+		"""
+		``is_offset_writable_semantics`` checks if an virtual address ``addr`` is semantically writable. Some sections
+		may have writable permissions for linking purposes but can be treated as read-only for the purposes of
+		analysis.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetWritableSemantics(self.handle, addr)
 
 	def save(self, dest):
 		"""
@@ -3218,17 +3242,17 @@ class BinaryView(object):
 			return None
 		return address.value
 
-	def add_auto_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
-		info_section = "", info_data = 0):
-		core.BNAddAutoSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+	def add_auto_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
+		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+		core.BNAddAutoSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
 	def remove_auto_section(self, name):
 		core.BNRemoveAutoSection(self.handle, name)
 
-	def add_user_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
-		info_section = "", info_data = 0):
-		core.BNAddUserSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+	def add_user_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
+		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+		core.BNAddUserSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
 	def remove_user_section(self, name):
@@ -3241,7 +3265,8 @@ class BinaryView(object):
 		for i in xrange(0, count.value):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize))
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
+				section_list[i].semantics))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3250,7 +3275,7 @@ class BinaryView(object):
 		if not core.BNGetSectionByName(self.handle, name, section):
 			return None
 		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
-			section.infoSection, section.infoData, section.align, section.entrySize)
+			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics)
 		core.BNFreeSection(section)
 		return result
 

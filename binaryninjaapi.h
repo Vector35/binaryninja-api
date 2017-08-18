@@ -1030,6 +1030,7 @@ namespace BinaryNinja
 		std::string linkedSection, infoSection;
 		uint64_t infoData;
 		uint64_t align, entrySize;
+		BNSectionSemantics semantics;
 	};
 
 	struct QualifiedNameAndType;
@@ -1159,6 +1160,8 @@ namespace BinaryNinja
 		bool IsOffsetWritable(uint64_t offset) const;
 		bool IsOffsetExecutable(uint64_t offset) const;
 		bool IsOffsetBackedByFile(uint64_t offset) const;
+		bool IsOffsetCodeSemantics(uint64_t offset) const;
+		bool IsOffsetWritableSemantics(uint64_t offset) const;
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
 		uint64_t GetStart() const;
@@ -1299,11 +1302,13 @@ namespace BinaryNinja
 		bool GetSegmentAt(uint64_t addr, Segment& result);
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
-		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length,
+			BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "",
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
 			const std::string& infoSection = "", uint64_t infoData = 0);
 		void RemoveAutoSection(const std::string& name);
-		void AddUserSection(const std::string& name, uint64_t start, uint64_t length, const std::string& type = "",
+		void AddUserSection(const std::string& name, uint64_t start, uint64_t length,
+			BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "",
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
 			const std::string& infoSection = "", uint64_t infoData = 0);
 		void RemoveUserSection(const std::string& name);

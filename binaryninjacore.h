@@ -1504,6 +1504,14 @@ extern "C"
 		uint32_t flags;
 	};
 
+	enum BNSectionSemantics
+	{
+		DefaultSectionSemantics,
+		ReadOnlyCodeSectionSemantics,
+		ReadOnlyDataSectionSemantics,
+		ReadWriteDataSectionSemantics
+	};
+
 	struct BNSection
 	{
 		char* name;
@@ -1513,6 +1521,7 @@ extern "C"
 		char* infoSection;
 		uint64_t infoData;
 		uint64_t align, entrySize;
+		BNSectionSemantics semantics;
 	};
 
 	struct BNAddressRange
@@ -1727,6 +1736,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsOffsetWritable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetExecutable(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetBackedByFile(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI bool BNIsOffsetCodeSemantics(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI bool BNIsOffsetWritableSemantics(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetNextValidOffset(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetStartOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetEndOffset(BNBinaryView* view);
@@ -1777,12 +1788,12 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetAddressForDataOffset(BNBinaryView* view, uint64_t offset, uint64_t* addr);
 
 	BINARYNINJACOREAPI void BNAddAutoSection(BNBinaryView* view, const char* name, uint64_t start, uint64_t length,
-		const char* type, uint64_t align, uint64_t entrySize, const char* linkedSection, const char* infoSection,
-		uint64_t infoData);
+		BNSectionSemantics semantics, const char* type, uint64_t align, uint64_t entrySize,
+		const char* linkedSection, const char* infoSection, uint64_t infoData);
 	BINARYNINJACOREAPI void BNRemoveAutoSection(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNAddUserSection(BNBinaryView* view, const char* name, uint64_t start, uint64_t length,
-		const char* type, uint64_t align, uint64_t entrySize, const char* linkedSection, const char* infoSection,
-		uint64_t infoData);
+		BNSectionSemantics semantics, const char* type, uint64_t align, uint64_t entrySize,
+		const char* linkedSection, const char* infoSection, uint64_t infoData);
 	BINARYNINJACOREAPI void BNRemoveUserSection(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI BNSection* BNGetSections(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNSection* BNGetSectionsAt(BNBinaryView* view, uint64_t addr, size_t* count);

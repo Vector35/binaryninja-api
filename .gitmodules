@@ -1,0 +1,3 @@
+[submodule "examples/x86_extension/src/asmx86"]
+	path = examples/x86_extension/src/asmx86
+	url = https://github.com/Vector35/asmx86.git

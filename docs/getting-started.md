@@ -2,17 +2,44 @@
 
 Welcome to Binary Ninja. This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja.
 
+## Directories
+
+Binary Ninja uses two main locations. The first is the install path of the binary itself and the second is the user folders for user-installed content.
+
+### Binary Path
+
+Binaries are installed in the following locations by default:
+
+- OS X: `/Applications/Binary Ninja.app`
+- Windows: `C:\Program Files\Vector35\BinaryNinja`
+- Linux: Wherever you extract it! (No standard location)
+
+!!! Warning "Warning"
+    Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja may replace any files included in these folders. 
+
+### User Folder
+
+The base locations of user folders are: 
+
+- OS X: `~/Library/Application Support/Binary Ninja`
+- Linux: `~/.binaryninja`
+- Windows: `%APPDATA%\Binary Ninja`
+
+Contents of the user folder includes:
+
+- `settings.json`: Advanced settings (see [settings](#settings))
+- `lastrun`: A text file containing the directory of the last BinaryNinja binary path -- very useful for plugins to resolve the install locations in non-default settings or on linux.
+- `plugins/`: Folder containing all manually installed user plugins
+- `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
+
 ![license popup >](/images/license-popup.png "License Popup")
 
 ## License
 
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support].
 
-Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking in:
+Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
 
-- OS X: `~/Library/Application Support/Binary Ninja`
-- Linux: `~/.binaryninja`
-- Windows: `%APPDATA%\Binary Ninja`
 
 ## Linux Setup
 
@@ -252,6 +279,4 @@ Below is an example `settings.json` setting various options:
 ```
 ## Getting Support
 
-Vector 35 offers a number of ways to get Binary Ninja [support].
-
-[support]: https://binary.ninja/support/
+Vector 35 offers a number of ways to get Binary Ninja [support](https://binary.ninja/support/).

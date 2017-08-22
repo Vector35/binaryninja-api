@@ -2,7 +2,7 @@
 
 # Note is setup script currently does four things:
 #
-# 1. It creates a binaryninja.desktop file in ~/.local/share/applications and
+# 1. It creates a binaryninja.desktop file in ${HOME}/.local/share/applications and
 #    copies it to the desktop
 # 2. It creates a .xml file to add a mime type for .bndb files.
 # 3. It adds a binaryninja: url handler.
@@ -23,7 +23,7 @@ setvars()
 		SHARE="/usr/share" #For system
 		SUDO="sudo "       #For system
 	else
-		SHARE="~/.local/share" #For user only
+		SHARE="${HOME}/.local/share" #For user only
 		SUDO=""                #For user only
 	fi
 	DESKTOPFILE="${SHARE}/applications/${APP}.desktop"
@@ -34,8 +34,8 @@ setvars()
 usage()
 {
 	echo "Usage: $0 -[ulpdmrsh]
-	-u: For uninstall, removes all associations (does NOT remove ~/.binaryninja)
-	-l: Disable creation ~/.binaryninja/lastrun file
+	-u: For uninstall, removes all associations (does NOT remove ${HOME}/.binaryninja)
+	-l: Disable creation ${HOME}/.binaryninja/lastrun file
 	-p: Disable adding python path .pth file
 	-d: Disable adding desktop launcher
 	-m: Disable adding mime associations
@@ -50,11 +50,11 @@ lastrun()
 {
 	#Contains the last run location, but on systems without a UI this ensures
 	#the UI doesn't have to run once for the core to be available.
-	if [ -f ~/.binaryninja/lastrun ]
+	if [ -f ${HOME}/.binaryninja/lastrun ]
 	then
 		echo lastrun already exists, remove to create a new one
 	else
-		echo ${BNPATH} > ~/.binaryninja/lastrun
+		echo ${BNPATH} > ${HOME}/.binaryninja/lastrun
 	fi
 }
 
@@ -87,14 +87,14 @@ EOF
 		$SUDO chmod +x ${DESKTOPFILE}
 		$SUDO update-desktop-database ${SHARE}/applications
 	else
-		echo ${DESKTOP} > ~/Desktop/${APP}.desktop
+		echo ${DESKTOP} > ${HOME}/Desktop/${APP}.desktop
 	fi
 }
 
 createmime()
 {
 	echo Creating MIME settings
-	if [ ! -f ${DESKTOPFILE} -a ! -f ~/Desktop/${APP}.desktop ]
+	if [ ! -f ${DESKTOPFILE} -a ! -f ${HOME}/Desktop/${APP}.desktop ]
 	then
 		createdesktopfile
 	fi
@@ -122,7 +122,7 @@ createmime()
 
 addtodesktop()
 {
-	cp $DESKTOPFILE ~/Desktop
+	cp $DESKTOPFILE ${HOME}/Desktop
 }
 
 uninstall()

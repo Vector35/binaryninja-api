@@ -150,6 +150,11 @@ class BasicBlock(object):
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
 	@property
+	def can_exit(self):
+		"""Whether basic block can return or is tagged as 'No Return' (read-only)"""
+		return core.BNBasicBlockCanExit(self.handle)
+
+	@property
 	def dominators(self):
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()

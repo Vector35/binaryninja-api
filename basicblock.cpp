@@ -160,6 +160,12 @@ bool BasicBlock::HasUndeterminedOutgoingEdges() const
 }
 
 
+bool BasicBlock::CanExit() const
+{
+	return BNBasicBlockCanExit(m_object);
+}
+
+
 set<Ref<BasicBlock>> BasicBlock::GetDominators() const
 {
 	size_t count;

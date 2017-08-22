@@ -2036,6 +2036,7 @@ namespace BinaryNinja
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
 		std::vector<BasicBlockEdge> GetIncomingEdges() const;
 		bool HasUndeterminedOutgoingEdges() const;
+		bool CanExit() const;
 
 		std::set<Ref<BasicBlock>> GetDominators() const;
 		std::set<Ref<BasicBlock>> GetStrictDominators() const;

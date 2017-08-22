@@ -48,6 +48,15 @@ cd ~/binaryninja
 QT_PLUGIN_PATH=./qt ./binaryninja
 ```
 
+### Debian
+
+For Debian variants that (Kali, eg) don't match packages with Ubuntu LTS or the latest stable, the following might fix problems with libssl and libcrypto:
+
+```
+$ cd binaryninja/plugins
+$ ln -s libssl.so libssl.so.1.0.0
+$ ln -s libcrypto.so libcrypto.so.1.0.0
+```
 
 ## API
 

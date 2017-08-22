@@ -58,6 +58,10 @@ $ ln -s libssl.so libssl.so.1.0.0
 $ ln -s libcrypto.so libcrypto.so.1.0.0
 ```
 
+### Gentoo
+
+One Gentoo user [reported][issue672] a failed SSL certificate when trying to update. The solution was to copy over `/etc/ssl/certs/ca-certificates.crt` from another Linux distribution.
+
 ## API
 
  - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python. Only a 64-bit Python 2.7 is supported at this time. Additionally, the [personal][purchase] edition does not support headless operation.
@@ -69,3 +73,4 @@ $ ln -s libcrypto.so libcrypto.so.1.0.0
 [support]: https://binary.ninja/support.html
 [faq]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
+[issue672]: https://github.com/Vector35/binaryninja-api/issues/672

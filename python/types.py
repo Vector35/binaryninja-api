@@ -650,6 +650,43 @@ class BoolWithConfidence(object):
 		return self.value
 
 
+class SizeWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
+
+	def __int__(self):
+		return self.value
+
+
+class RegisterSet(object):
+	def __init__(self, reg_list, confidence = max_confidence):
+		self.regs = reg_list
+		self.confidence = confidence
+
+	def __repr__(self):
+		return repr(self.regs)
+
+	def __iter__(self):
+		for reg in self.regs:
+			yield reg
+
+	def __getitem__(self, idx):
+		return self.regs[idx]
+
+	def __len__(self):
+		return len(self.regs)
+
+	def with_confidence(self, confidence):
+		return RegisterSet(list(self.regs), confidence = confidence)
+
+
 class ReferenceTypeWithConfidence(object):
 	def __init__(self, value, confidence = max_confidence):
 		self.value = value

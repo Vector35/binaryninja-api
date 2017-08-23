@@ -37,6 +37,7 @@ class CallingConvention(object):
 	float_arg_regs = []
 	arg_regs_share_index = False
 	stack_reserved_for_arg_regs = False
+	stack_adjusted_on_return = False
 	int_return_reg = None
 	high_int_return_reg = None
 	float_return_reg = None
@@ -59,6 +60,7 @@ class CallingConvention(object):
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(self._arg_regs_share_index)
 			self._cb.isStackReservedForArgumentRegisters = self._cb.isStackReservedForArgumentRegisters.__class__(self._stack_reserved_for_arg_regs)
+			self._cb.isStackAdjustedOnReturn = self._cb.isStackAdjustedOnReturn.__class__(self._stack_adjusted_on_return)
 			self._cb.getIntegerReturnValueRegister = self._cb.getIntegerReturnValueRegister.__class__(self._get_int_return_reg)
 			self._cb.getHighIntegerReturnValueRegister = self._cb.getHighIntegerReturnValueRegister.__class__(self._get_high_int_return_reg)
 			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(self._get_float_return_reg)
@@ -74,6 +76,7 @@ class CallingConvention(object):
 			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
+			self.__dict__["stack_adjusted_on_return"] = core.BNIsStackAdjustedOnReturn(self.handle)
 
 			count = ctypes.c_ulonglong()
 			regs = core.BNGetCallerSavedRegisters(self.handle, count)
@@ -214,6 +217,13 @@ class CallingConvention(object):
 	def _stack_reserved_for_arg_regs(self, ctxt):
 		try:
 			return self.__class__.stack_reserved_for_arg_regs
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def _stack_adjusted_on_return(self, ctxt):
+		try:
+			return self.__class__.stack_adjusted_on_return
 		except:
 			log.log_error(traceback.format_exc())
 			return False

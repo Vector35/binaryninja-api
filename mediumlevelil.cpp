@@ -302,19 +302,31 @@ void MediumLevelILFunction::Finalize()
 
 
 void MediumLevelILFunction::GenerateSSAForm(bool analyzeConditionals, bool handleAliases,
-	const set<Variable>& knownAliases)
+	const set<Variable>& knownNotAliases, const set<Variable>& knownAliases)
 {
-	BNVariable* vars = new BNVariable[knownAliases.size()];
+	BNVariable* knownNotAlias = new BNVariable[knownNotAliases.size()];
+	BNVariable* knownAlias = new BNVariable[knownAliases.size()];
+
 	size_t i = 0;
-	for (auto& j : knownAliases)
+	for (auto& j : knownNotAliases)
 	{
-		vars[i].type = j.type;
-		vars[i].index = j.index;
-		vars[i].storage = j.storage;
+		knownNotAlias[i].type = j.type;
+		knownNotAlias[i].index = j.index;
+		knownNotAlias[i].storage = j.storage;
 	}
 
-	BNGenerateMediumLevelILSSAForm(m_object, analyzeConditionals, handleAliases, vars, knownAliases.size());
-	delete[] vars;
+	i = 0;
+	for (auto& j : knownAliases)
+	{
+		knownAlias[i].type = j.type;
+		knownAlias[i].index = j.index;
+		knownAlias[i].storage = j.storage;
+	}
+
+	BNGenerateMediumLevelILSSAForm(m_object, analyzeConditionals, handleAliases, knownNotAlias, knownNotAliases.size(),
+		knownAlias, knownAliases.size());
+	delete[] knownNotAlias;
+	delete[] knownAlias;
 }
 
 

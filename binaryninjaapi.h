@@ -2185,6 +2185,8 @@ namespace BinaryNinja
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
+		Confidence<size_t> GetStackAdjustment() const;
+		Confidence<std::set<uint32_t>> GetClobberedRegisters() const;
 
 		void SetAutoType(Type* type);
 		void SetAutoReturnType(const Confidence<Ref<Type>>& type);
@@ -2192,6 +2194,8 @@ namespace BinaryNinja
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
+		void SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void SetUserType(Type* type);
 		void SetReturnType(const Confidence<Ref<Type>>& type);
@@ -2199,6 +2203,8 @@ namespace BinaryNinja
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
+		void SetStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
@@ -2260,6 +2266,9 @@ namespace BinaryNinja
 		std::map<std::string, double> GetAnalysisPerformanceInfo();
 
 		std::vector<DisassemblyTextLine> GetTypeTokens(DisassemblySettings* settings = nullptr);
+
+		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -2856,6 +2865,7 @@ namespace BinaryNinja
 
 		void Finalize();
 		void GenerateSSAForm(bool analyzeConditionals = true, bool handleAliases = true,
+			const std::set<Variable>& knownNotAliases = std::set<Variable>(),
 			const std::set<Variable>& knownAliases = std::set<Variable>());
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
@@ -3069,6 +3079,7 @@ namespace BinaryNinja
 
 		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
 		static bool IsStackReservedForArgumentRegistersCallback(void* ctxt);
+		static bool IsStackAdjustedOnReturnCallback(void* ctxt);
 
 		static uint32_t GetIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetHighIntegerReturnValueRegisterCallback(void* ctxt);
@@ -3089,6 +3100,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
 		virtual bool AreArgumentRegistersSharedIndex();
 		virtual bool IsStackReservedForArgumentRegisters();
+		virtual bool IsStackAdjustedOnReturn();
 
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
 		virtual uint32_t GetHighIntegerReturnValueRegister();
@@ -3111,6 +3123,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters() override;
 		virtual bool AreArgumentRegistersSharedIndex() override;
 		virtual bool IsStackReservedForArgumentRegisters() override;
+		virtual bool IsStackAdjustedOnReturn() override;
 
 		virtual uint32_t GetIntegerReturnValueRegister() override;
 		virtual uint32_t GetHighIntegerReturnValueRegister() override;

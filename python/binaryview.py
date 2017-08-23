@@ -927,6 +927,12 @@ class BinaryView(object):
 		else:
 			return BinaryView._associated_data[handle.value]
 
+	@property
+	def global_pointer_value(self):
+		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
+		result = core.BNGetGlobalPointerValue(self.handle)
+		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
 

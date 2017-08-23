@@ -41,6 +41,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.freeRegisterList = FreeRegisterListCallback;
 	cc.areArgumentRegistersSharedIndex = AreArgumentRegistersSharedIndexCallback;
 	cc.isStackReservedForArgumentRegisters = IsStackReservedForArgumentRegistersCallback;
+	cc.isStackAdjustedOnReturn = IsStackAdjustedOnReturnCallback;
 	cc.getIntegerReturnValueRegister = GetIntegerReturnValueRegisterCallback;
 	cc.getHighIntegerReturnValueRegister = GetHighIntegerReturnValueRegisterCallback;
 	cc.getFloatReturnValueRegister = GetFloatReturnValueRegisterCallback;
@@ -117,6 +118,13 @@ bool CallingConvention::IsStackReservedForArgumentRegistersCallback(void* ctxt)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	return cc->IsStackReservedForArgumentRegisters();
+}
+
+
+bool CallingConvention::IsStackAdjustedOnReturnCallback(void* ctxt)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	return cc->IsStackAdjustedOnReturn();
 }
 
 
@@ -226,6 +234,12 @@ bool CallingConvention::IsStackReservedForArgumentRegisters()
 }
 
 
+bool CallingConvention::IsStackAdjustedOnReturn()
+{
+	return false;
+}
+
+
 uint32_t CallingConvention::GetHighIntegerReturnValueRegister()
 {
 	return BN_INVALID_REGISTER;
@@ -309,6 +323,12 @@ bool CoreCallingConvention::AreArgumentRegistersSharedIndex()
 bool CoreCallingConvention::IsStackReservedForArgumentRegisters()
 {
 	return BNIsStackReservedForArgumentRegisters(m_object);
+}
+
+
+bool CoreCallingConvention::IsStackAdjustedOnReturn()
+{
+	return BNIsStackAdjustedOnReturn(m_object);
 }
 
 

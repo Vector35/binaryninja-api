@@ -508,6 +508,25 @@ Confidence<bool> Function::HasVariableArguments() const
 }
 
 
+Confidence<size_t> Function::GetStackAdjustment() const
+{
+	BNSizeWithConfidence sc = BNGetFunctionStackAdjustment(m_object);
+	return Confidence<size_t>(sc.value, sc.confidence);
+}
+
+
+Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
+{
+	BNRegisterSetWithConfidence regs = BNGetFunctionClobberedRegisters(m_object);
+	set<uint32_t> regSet;
+	for (size_t i = 0; i < regs.count; i++)
+		regSet.insert(regs.regs[i]);
+	Confidence<set<uint32_t>> result(regSet, regs.confidence);
+	BNFreeClobberedRegisters(&regs);
+	return result;
+}
+
+
 void Function::SetAutoType(Type* type)
 {
 	BNSetFunctionAutoType(m_object, type->GetObject());
@@ -568,6 +587,29 @@ void Function::SetAutoCanReturn(const Confidence<bool>& returns)
 }
 
 
+void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
+{
+	BNSizeWithConfidence sc;
+	sc.value = stackAdjust.GetValue();
+	sc.confidence = stackAdjust.GetConfidence();
+	BNSetAutoFunctionStackAdjustment(m_object, &sc);
+}
+
+
+void Function::SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[clobbered.GetValue().size()];
+	regs.count = clobbered.GetValue().size();
+	size_t i = 0;
+	for (auto reg : clobbered.GetValue())
+		regs.regs[i++] = reg;
+	regs.confidence = clobbered.GetConfidence();
+	BNSetAutoFunctionClobberedRegisters(m_object, &regs);
+	delete[] regs.regs;
+}
+
+
 void Function::SetUserType(Type* type)
 {
 	BNSetFunctionUserType(m_object, type->GetObject());
@@ -625,6 +667,29 @@ void Function::SetCanReturn(const Confidence<bool>& returns)
 	bc.value = returns.GetValue();
 	bc.confidence = returns.GetConfidence();
 	BNSetUserFunctionCanReturn(m_object, &bc);
+}
+
+
+void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
+{
+	BNSizeWithConfidence sc;
+	sc.value = stackAdjust.GetValue();
+	sc.confidence = stackAdjust.GetConfidence();
+	BNSetUserFunctionStackAdjustment(m_object, &sc);
+}
+
+
+void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[clobbered.GetValue().size()];
+	regs.count = clobbered.GetValue().size();
+	size_t i = 0;
+	for (auto reg : clobbered.GetValue())
+		regs.regs[i++] = reg;
+	regs.confidence = clobbered.GetConfidence();
+	BNSetUserFunctionClobberedRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 
@@ -1011,6 +1076,20 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, ui
 	hc.b = b;
 	hc.alpha = alpha;
 	SetUserInstructionHighlight(arch, addr, hc);
+}
+
+
+Confidence<RegisterValue> Function::GetGlobalPointerValue() const
+{
+	BNRegisterValueWithConfidence value = BNGetFunctionGlobalPointerValue(m_object);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+}
+
+
+Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
+{
+	BNRegisterValueWithConfidence value = BNGetFunctionRegisterValueAtExit(m_object, reg);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
 }
 
 

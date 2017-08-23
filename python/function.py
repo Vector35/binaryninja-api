@@ -50,11 +50,12 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
-	def __init__(self, arch = None, value = None):
+	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
 		if value is None:
 			self.type = RegisterValueType.UndeterminedValue
 		else:
 			self.type = RegisterValueType(value.state)
+			self.is_constant = False
 			if value.state == RegisterValueType.EntryValue:
 				self.arch = arch
 				if arch is not None:
@@ -63,8 +64,10 @@ class RegisterValue(object):
 					self.reg = value.value
 			elif (value.state == RegisterValueType.ConstantValue) or (value.state == RegisterValueType.ConstantPointerValue):
 				self.value = value.value
+				self.is_constant = True
 			elif value.state == RegisterValueType.StackFrameOffset:
 				self.offset = value.value
+		self.confidence = confidence
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
@@ -279,6 +282,9 @@ class ParameterVariables(object):
 
 	def __getitem__(self, idx):
 		return self.vars[idx]
+
+	def __len__(self):
+		return len(self.vars)
 
 	def with_confidence(self, confidence):
 		return ParameterVariables(list(self.vars), confidence = confidence)
@@ -597,6 +603,52 @@ class Function(object):
 		else:
 			bc.confidence = types.max_confidence
 		core.BNSetUserFunctionHasVariableArguments(self.handle, bc)
+
+	@property
+	def stack_adjustment(self):
+		"""Number of bytes removed from the stack after return"""
+		result = core.BNGetFunctionStackAdjustment(self.handle)
+		return types.SizeWithConfidence(result.value, confidence = result.confidence)
+
+	@stack_adjustment.setter
+	def stack_adjustment(self, value):
+		sc = core.BNSizeWithConfidence()
+		sc.value = int(value)
+		if hasattr(value, 'confidence'):
+			sc.confidence = value.confidence
+		else:
+			sc.confidence = types.max_confidence
+		core.BNSetUserFunctionStackAdjustment(self.handle, sc)
+
+	@property
+	def clobbered_regs(self):
+		"""Registers that are modified by this function"""
+		result = core.BNGetFunctionClobberedRegisters(self.handle)
+		reg_set = []
+		for i in xrange(0, result.count):
+			reg_set.append(self.arch.get_reg_name(result.regs[i]))
+		regs = types.RegisterSet(reg_set, confidence = result.confidence)
+		core.BNFreeClobberedRegisters(result)
+		return regs
+
+	@clobbered_regs.setter
+	def clobbered_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetUserFunctionClobberedRegisters(self.handle, regs)
+
+	@property
+	def global_pointer_value(self):
+		"""Discovered value of the global pointer register, if the function uses one (read-only)"""
+		result = core.BNGetFunctionGlobalPointerValue(self.handle)
+		return RegisterValue(self.arch, result.value, confidence = result.confidence)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -963,6 +1015,27 @@ class Function(object):
 			bc.confidence = types.max_confidence
 		core.BNSetAutoFunctionCanReturn(self.handle, bc)
 
+	def set_auto_stack_adjustment(self, value):
+		sc = core.BNSizeWithConfidence()
+		sc.value = int(value)
+		if hasattr(value, 'confidence'):
+			sc.confidence = value.confidence
+		else:
+			sc.confidence = types.max_confidence
+		core.BNSetAutoFunctionStackAdjustment(self.handle, sc)
+
+	def set_auto_clobbered_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetAutoFunctionClobberedRegisters(self.handle, regs)
+
 	def get_int_display_type(self, instr_addr, value, operand, arch=None):
 		if arch is None:
 			arch = self.arch
@@ -1159,6 +1232,10 @@ class Function(object):
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
+
+	def get_reg_value_at_exit(self, reg):
+		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
+		return RegisterValue(self.arch, result.value, confidence = result.confidence)
 
 
 class AdvancedFunctionAnalysisDataRequestor(object):

@@ -2727,6 +2727,7 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
 			const ILSourceLocation& loc = ILSourceLocation());

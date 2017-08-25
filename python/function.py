@@ -67,6 +67,8 @@ class RegisterValue(object):
 				self.is_constant = True
 			elif value.state == RegisterValueType.StackFrameOffset:
 				self.offset = value.value
+			elif value.state == RegisterValueType.ImportedAddressValue:
+				self.value = value.value
 		self.confidence = confidence
 
 	def __repr__(self):
@@ -80,6 +82,8 @@ class RegisterValue(object):
 			return "<stack frame offset %#x>" % self.offset
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
+		if self.type == RegisterValueType.ImportedAddressValue:
+			return "<imported address from entry %#x>" % self.value
 		return "<undetermined>"
 
 	def _to_api_object(self):
@@ -95,6 +99,8 @@ class RegisterValue(object):
 			result.value = self.value
 		elif self.type == RegisterValueType.StackFrameOffset:
 			result.value = self.offset
+		elif self.type == RegisterValueType.ImportedAddressValue:
+			result.value = self.value
 		return result
 
 

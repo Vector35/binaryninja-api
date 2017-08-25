@@ -89,6 +89,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
+		MediumLevelILOperation.MLIL_IMPORT: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")],

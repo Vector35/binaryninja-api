@@ -224,7 +224,8 @@ extern "C"
 		DataSymbolToken = 65,
 		LocalVariableToken = 66,
 		ImportToken = 67,
-		AddressDisplayToken = 68
+		AddressDisplayToken = 68,
+		IndirectImportToken = 69
 	};
 
 	enum BNInstructionTextTokenContext
@@ -651,6 +652,7 @@ extern "C"
 		ConstantPointerValue,
 		StackFrameOffset,
 		ReturnAddressValue,
+		ImportedAddressValue,
 
 		// The following are only valid in BNPossibleValueSet
 		SignedRangeValue,
@@ -746,6 +748,7 @@ extern "C"
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
 		MLIL_CONST_PTR,
+		MLIL_IMPORT,
 		MLIL_ADD,
 		MLIL_ADC,
 		MLIL_SUB,

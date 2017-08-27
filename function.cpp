@@ -197,6 +197,15 @@ void Function::MarkRecentUse()
 }
 
 
+string Function::GetComment() const
+{
+	char* comment = BNGetFunctionComment(m_object);
+	string result = comment;
+	BNFreeString(comment);
+	return result;
+}
+
+
 string Function::GetCommentForAddress(uint64_t addr) const
 {
 	char* comment = BNGetCommentForAddress(m_object, addr);
@@ -214,6 +223,12 @@ vector<uint64_t> Function::GetCommentedAddresses() const
 	result.insert(result.end(), addrs, &addrs[count]);
 	BNFreeAddressList(addrs);
 	return result;
+}
+
+
+void Function::SetComment(const string& comment)
+{
+	BNSetFunctionComment(m_object, comment.c_str());
 }
 
 

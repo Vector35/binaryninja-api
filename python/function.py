@@ -656,6 +656,16 @@ class Function(object):
 		result = core.BNGetFunctionGlobalPointerValue(self.handle)
 		return RegisterValue(self.arch, result.value, confidence = result.confidence)
 
+	@property
+	def comment(self):
+		"""Gets the comment for the current function"""
+		return core.BNGetFunctionComment(self.handle)
+
+	@comment.setter
+	def comment(self, comment):
+		"""Sets a comment for the current function"""
+		return core.BNSetFunctionComment(self.handle, comment)
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
@@ -684,11 +694,22 @@ class Function(object):
 	def get_comment_at(self, addr):
 		return core.BNGetCommentForAddress(self.handle, addr)
 
-	def set_comment_at(self, addr, comment):
+	def set_comment(self, addr, comment):
+		"""Deprecated use set_comment_at instead"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
-	def set_comment(self, addr, comment):
-		"""Deprecated"""
+	def set_comment_at(self, addr, comment):
+		"""
+		``set_comment_at`` sets a comment for the current function at the address specified
+
+		:param addr int: virtual address within the current function to apply the comment to
+		:param comment str: string comment to apply
+		:rtype: None
+		:Example:
+
+			>>> current_function.set_comment_at(here, "hi")
+
+		"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def get_low_level_il_at(self, addr, arch=None):

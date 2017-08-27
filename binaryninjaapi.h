@@ -2153,8 +2153,10 @@ namespace BinaryNinja
 		Ref<BasicBlock> GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const;
 		void MarkRecentUse();
 
+		std::string GetComment() const;
 		std::string GetCommentForAddress(uint64_t addr) const;
 		std::vector<uint64_t> GetCommentedAddresses() const;
+		void SetComment(const std::string& comment);
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;

@@ -2041,9 +2041,11 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
 
+	BINARYNINJACOREAPI char* BNGetFunctionComment(BNFunction* func);
 	BINARYNINJACOREAPI char* BNGetCommentForAddress(BNFunction* func, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t* BNGetCommentedAddresses(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeAddressList(uint64_t* addrs);
+	BINARYNINJACOREAPI void BNSetFunctionComment(BNFunction* func, const char* comment);
 	BINARYNINJACOREAPI void BNSetCommentForAddress(BNFunction* func, uint64_t addr, const char* comment);
 
 	BINARYNINJACOREAPI BNBasicBlock* BNNewBasicBlockReference(BNBasicBlock* block);

@@ -1831,6 +1831,22 @@ class BinaryView(object):
 		"""
 		core.BNRemoveUserFunction(self.handle, func.handle)
 
+	def add_analysis_option(self, name):
+		"""
+		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
+		start analysis by calling either ``update_analysis()`` or ``update_analysis_and_wait()``.
+
+		:param str name: name of the analysis option. Available options:
+				"linearsweep" : apply linearsweep analysis during the next analysis update (run-once semantics)
+
+		:rtype: None
+		:Example:
+
+			>>> bv.add_analysis_option("linearsweep")
+			>>> bv.update_analysis_and_wait()
+		"""
+		core.BNAddAnalysisOption(self.handle, name)
+
 	def update_analysis(self):
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews

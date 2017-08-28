@@ -854,6 +854,12 @@ bool BinaryView::Save(FileAccessor* file)
 }
 
 
+void BinaryView::AddAnalysisOption(const string& name)
+{
+	BNAddAnalysisOption(m_object, name.c_str());
+}
+
+
 void BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr)
 {
 	BNAddFunctionForAnalysis(m_object, platform->GetObject(), addr);

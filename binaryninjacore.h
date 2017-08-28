@@ -2008,6 +2008,7 @@ extern "C"
 	                                                                const char* name, uint64_t value);
 
 	// Analysis
+	BINARYNINJACOREAPI void BNAddAnalysisOption(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNAddFunctionForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNAddEntryPointForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func);

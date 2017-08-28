@@ -1185,6 +1185,7 @@ namespace BinaryNinja
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 
+		void AddAnalysisOption(const std::string& name);
 		void AddFunctionForAnalysis(Platform* platform, uint64_t addr);
 		void AddEntryPointForAnalysis(Platform* platform, uint64_t start);
 		void RemoveAnalysisFunction(Function* func);

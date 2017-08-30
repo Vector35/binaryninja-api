@@ -9,6 +9,303 @@ using namespace BinaryNinja;
 using namespace std;
 using namespace asmx86;
 
+
+#define IL_FLAG_C 0
+#define IL_FLAG_P 2
+#define IL_FLAG_A 4
+#define IL_FLAG_Z 6
+#define IL_FLAG_S 7
+#define IL_FLAG_D 10
+#define IL_FLAG_O 11
+
+#define IL_FLAGWRITE_ALL     1
+#define IL_FLAGWRITE_NOCARRY 2
+#define IL_FLAGWRITE_CO      3
+
+#define REG_FSBASE 0x100
+#define REG_GSBASE 0x101
+
+#define TRAP_DIV       0
+#define TRAP_ICEBP     1
+#define TRAP_NMI       2
+#define TRAP_BP        3
+#define TRAP_OVERFLOW  4
+#define TRAP_BOUND     5
+#define TRAP_ILL       6
+#define TRAP_NOT_AVAIL 7
+#define TRAP_DOUBLE    8
+#define TRAP_TSS       10
+#define TRAP_NO_SEG    11
+#define TRAP_STACK     12
+#define TRAP_GPF       13
+#define TRAP_PAGE      14
+#define TRAP_FPU       16
+#define TRAP_ALIGN     17
+#define TRAP_MCE       18
+#define TRAP_SIMD      19
+
+static uint8_t GetShiftCountForScale(uint8_t scale)
+{
+	switch (scale)
+	{
+	case 2:
+		return 1;
+	case 4:
+		return 2;
+	case 8:
+		return 3;
+	default:
+		return 0;
+	}
+}
+
+
+static uint32_t GetStackPointer(size_t addrSize)
+{
+	switch (addrSize)
+	{
+	case 2:
+		return REG_SP;
+	case 4:
+		return REG_ESP;
+	default:
+		return REG_RSP;
+	}
+}
+
+
+static uint32_t GetFramePointer(size_t addrSize)
+{
+	switch (addrSize)
+	{
+	case 2:
+		return REG_BP;
+	case 4:
+		return REG_EBP;
+	default:
+		return REG_RBP;
+	}
+}
+
+
+static uint32_t GetCountRegister(size_t addrSize)
+{
+	switch (addrSize)
+	{
+	case 2:
+		return REG_CX;
+	case 4:
+		return REG_ECX;
+	default:
+		return REG_RCX;
+	}
+}
+
+
+static size_t GetILOperandMemoryAddress(LowLevelILFunction& il, InstructionOperand& operand, size_t i, size_t addrSize)
+{
+	size_t offset;
+	if (operand.operand != MEM)
+		offset = il.Operand(i, il.Undefined());
+	else if ((operand.components[0] == NONE) && (operand.components[1] == NONE) && operand.relative)
+		offset = il.Operand(i, il.ConstPointer(addrSize, operand.immediate));
+	else if ((operand.components[0] == NONE) && (operand.components[1] == NONE))
+		offset = il.Operand(i, il.Const(addrSize, operand.immediate));
+	else if ((operand.components[1] == NONE) && (operand.immediate == 0))
+		offset = il.Operand(i, il.Register(addrSize, operand.components[0]));
+	else if (operand.components[1] == NONE)
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Register(addrSize, operand.components[0]),
+			il.Const(addrSize, operand.immediate)));
+	}
+	else if ((operand.components[0] == NONE) && (operand.scale == 1) && (operand.immediate == 0))
+		offset = il.Operand(i, il.Register(addrSize, operand.components[1]));
+	else if ((operand.components[0] == NONE) && (operand.scale == 1))
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Register(addrSize, operand.components[1]),
+			il.Const(addrSize, operand.immediate)));
+	}
+	else if ((operand.components[0] == NONE) && (operand.immediate == 0))
+	{
+		offset = il.Operand(i, il.ShiftLeft(addrSize, il.Register(addrSize, operand.components[1]),
+			il.Const(1, GetShiftCountForScale(operand.scale))));
+	}
+	else if (operand.components[0] == NONE)
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.ShiftLeft(addrSize, il.Register(addrSize, operand.components[1]),
+			il.Const(1, GetShiftCountForScale(operand.scale))), il.Const(addrSize, operand.immediate)));
+	}
+	else if ((operand.scale == 1) && (operand.immediate == 0))
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Register(addrSize, operand.components[0]),
+			il.Register(addrSize, operand.components[1])));
+	}
+	else if (operand.scale == 1)
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Add(addrSize, il.Register(addrSize, operand.components[0]),
+			il.Register(addrSize, operand.components[1])), il.Const(addrSize, operand.immediate)));
+	}
+	else if (operand.immediate == 0)
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Register(addrSize, operand.components[0]),
+			il.ShiftLeft(addrSize, il.Register(addrSize, operand.components[1]),
+			il.Const(1, GetShiftCountForScale(operand.scale)))));
+	}
+	else
+	{
+		offset = il.Operand(i, il.Add(addrSize, il.Add(addrSize, il.Register(addrSize, operand.components[0]),
+			il.ShiftLeft(addrSize, il.Register(addrSize, operand.components[1]),
+			il.Const(1, GetShiftCountForScale(operand.scale)))), il.Const(addrSize, operand.immediate)));
+	}
+
+	if (operand.segment == SEG_FS)
+		return il.Operand(i, il.Add(addrSize, il.Register(addrSize, REG_FSBASE), offset));
+	if (operand.segment == SEG_GS)
+		return il.Operand(i, il.Add(addrSize, il.Register(addrSize, REG_GSBASE), offset));
+	return offset;
+}
+
+
+static size_t ReadILOperand(LowLevelILFunction& il, Instruction& instr, size_t i, size_t addrSize, bool isAddress = false)
+{
+	InstructionOperand& operand = instr.operands[i];
+	switch (operand.operand)
+	{
+	case NONE:
+		return il.Undefined();
+	case IMM:
+		if (isAddress)
+			return il.Operand(i, il.ConstPointer(operand.size, operand.immediate));
+		else
+			return il.Operand(i, il.Const(operand.size, operand.immediate));
+	case MEM:
+		return il.Operand(i, il.Load(operand.size, GetILOperandMemoryAddress(il, operand, i, addrSize)));
+	default:
+		return il.Operand(i, il.Register(operand.size, operand.operand));
+	}
+}
+
+
+static size_t WriteILOperand(LowLevelILFunction& il, Instruction& instr, size_t i, size_t addrSize, size_t value)
+{
+	InstructionOperand& operand = instr.operands[i];
+	switch (operand.operand)
+	{
+	case NONE:
+	case IMM:
+		return il.Undefined();
+	case MEM:
+		return il.Operand(i, il.Store(operand.size, GetILOperandMemoryAddress(il, operand, i, addrSize), value));
+	default:
+		return il.Operand(i, il.SetRegister(operand.size, operand.operand, value));
+	}
+}
+
+
+static size_t DirectJump(Architecture* arch, LowLevelILFunction& il, uint64_t target, size_t addrSize)
+{
+	BNLowLevelILLabel* label = il.GetLabelForAddress(arch, target);
+	if (label)
+		return il.Goto(*label);
+	else
+		return il.Jump(il.ConstPointer(addrSize, target));
+}
+
+
+static void ConditionalJump(Architecture* arch, LowLevelILFunction& il, size_t cond, size_t addrSize, uint64_t t, uint64_t f)
+{
+	BNLowLevelILLabel* trueLabel = il.GetLabelForAddress(arch, t);
+	BNLowLevelILLabel* falseLabel = il.GetLabelForAddress(arch, f);
+
+	if (trueLabel && falseLabel)
+	{
+		il.AddInstruction(il.If(cond, *trueLabel, *falseLabel));
+		return;
+	}
+
+	LowLevelILLabel trueCode, falseCode;
+
+	if (trueLabel)
+	{
+		il.AddInstruction(il.If(cond, *trueLabel, falseCode));
+		il.MarkLabel(falseCode);
+		il.AddInstruction(il.Jump(il.ConstPointer(addrSize, f)));
+		return;
+	}
+
+	if (falseLabel)
+	{
+		il.AddInstruction(il.If(cond, trueCode, *falseLabel));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.Jump(il.ConstPointer(addrSize, t)));
+		return;
+	}
+
+	il.AddInstruction(il.If(cond, trueCode, falseCode));
+	il.MarkLabel(trueCode);
+	il.AddInstruction(il.Jump(il.ConstPointer(addrSize, t)));
+	il.MarkLabel(falseCode);
+	il.AddInstruction(il.Jump(il.ConstPointer(addrSize, f)));
+}
+
+
+static void DirFlagIf(size_t addrSize,
+	LowLevelILFunction& il,
+	std::function<void (size_t addrSize, LowLevelILFunction& il)> addPreTestIl,
+	std::function<void (size_t addrSize, LowLevelILFunction& il)> addDirFlagSetIl,
+	std::function<void (size_t addrSize, LowLevelILFunction& il)> addDirFlagClearIl)
+{
+	LowLevelILLabel dirFlagSet, dirFlagClear, dirFlagDone;
+
+	addPreTestIl(addrSize, il);
+
+	il.AddInstruction(il.If(il.Flag(IL_FLAG_D), dirFlagSet, dirFlagClear));
+	il.MarkLabel(dirFlagSet);
+
+	addDirFlagSetIl(addrSize, il);
+
+	il.AddInstruction(il.Goto(dirFlagDone));
+	il.MarkLabel(dirFlagClear);
+
+	addDirFlagClearIl(addrSize, il);
+
+	il.AddInstruction(il.Goto(dirFlagDone));
+	il.MarkLabel(dirFlagDone);
+}
+
+
+static void Repeat(size_t addrSize,
+	Instruction& instr,
+	LowLevelILFunction& il,
+	std::function<void (size_t addrSize, LowLevelILFunction& il)> addil)
+{
+	LowLevelILLabel trueLabel, falseLabel, doneLabel;
+	if (instr.flags & X86_FLAG_ANY_REP)
+	{
+		il.AddInstruction(il.Goto(trueLabel));
+		il.MarkLabel(trueLabel);
+		il.AddInstruction(il.If(il.CompareEqual(addrSize, il.Register(addrSize, GetCountRegister(addrSize)),
+												il.Const(addrSize, 0)), doneLabel, falseLabel));
+		il.MarkLabel(falseLabel);
+	}
+
+	addil(addrSize, il);
+
+	if (instr.flags & X86_FLAG_ANY_REP)
+	{
+		il.AddInstruction(il.SetRegister(addrSize, GetCountRegister(addrSize),
+											il.Sub(addrSize, il.Register(addrSize, GetCountRegister(addrSize)),
+												il.Const(addrSize, 1))));
+		if (instr.flags & X86_FLAG_REPE)
+			il.AddInstruction(il.If(il.FlagCondition(LLFC_E), trueLabel, doneLabel));
+		else if (instr.flags & X86_FLAG_REPNE)
+			il.AddInstruction(il.If(il.FlagCondition(LLFC_NE), trueLabel, doneLabel));
+		else
+			il.AddInstruction(il.Goto(trueLabel));
+		il.MarkLabel(doneLabel);
+	}
+}
+
 // This is a wrapper for the x86 architecture. Its useful for extending and improving
 // the existing core x86 architecture.
 class x86ArchitectureExtension: public Architecture

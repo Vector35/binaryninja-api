@@ -28,7 +28,7 @@ SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o)) src/asmx86/libasmx86.a
 
 LIBS := -L$(BINJAPATH) -lbinaryninjacore
-CFLAGS := -c -std=gnu++11 -O2 -Wall -W -fPIC -pipe
+CFLAGS := -c -std=gnu++11 -O2 -Wall -W -fPIC -pipe -Wno-unused-function
 
 all: $(TARGET)
 

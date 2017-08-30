@@ -1872,6 +1872,7 @@ namespace BinaryNinja
 		void SetConst(const Confidence<bool>& cnst);
 		void SetVolatile(const Confidence<bool>& vltl);
 		void SetTypeName(const QualifiedName& name);
+		Confidence<size_t> GetStackAdjustment() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
@@ -1911,7 +1912,8 @@ namespace BinaryNinja
 		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 			const Confidence<Ref<CallingConvention>>& callingConvention,
-			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0));
+			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
+			const Confidence<size_t>& stackAdjust = Confidence<size_t>(0, 0));
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -2517,6 +2519,7 @@ namespace BinaryNinja
 		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallStackAdjust(ExprId dest, size_t adjust, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<SSARegister>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());

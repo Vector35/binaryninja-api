@@ -425,6 +425,13 @@ uint64_t Type::GetOffset() const
 }
 
 
+Confidence<size_t> Type::GetStackAdjustment() const
+{
+	BNSizeWithConfidence result = BNGetTypeStackAdjustment(m_object);
+	return Confidence<size_t>(result.value, result.confidence);
+}
+
+
 string Type::GetString(Platform* platform) const
 {
 	char* str = BNGetTypeString(m_object, platform ? platform->GetObject() : nullptr);
@@ -663,7 +670,8 @@ Ref<Type> Type::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
 
 Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention,
-	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg)
+	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg,
+	const Confidence<size_t>& stackAdjust)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -689,8 +697,12 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	varArgConf.value = varArg.GetValue();
 	varArgConf.confidence = varArg.GetConfidence();
 
+	BNSizeWithConfidence stackAdjustConf;
+	stackAdjustConf.value = stackAdjust.GetValue();
+	stackAdjustConf.confidence = stackAdjust.GetConfidence();
+
 	Type* type = new Type(BNCreateFunctionType(&returnValueConf, &callingConventionConf,
-		paramArray, params.size(), &varArgConf));
+		paramArray, params.size(), &varArgConf, &stackAdjustConf));
 	delete[] paramArray;
 	return type;
 }

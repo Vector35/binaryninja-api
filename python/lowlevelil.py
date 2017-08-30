@@ -161,6 +161,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
+		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int")],
 		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
@@ -1261,6 +1262,18 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CALL, dest.index)
+
+	def call_stack_adjust(self, dest, stack_adjust):
+		"""
+		``call_stack_adjust`` returns an expression which first pushes the address of the next instruction onto the stack
+		then jumps (branches) to the expression ``dest``. After the function exits, ``stack_adjust`` is added to the
+		stack pointer register.
+
+		:param LowLevelILExpr dest: the expression to call
+		:return: The expression ``call(dest), stack += stack_adjust``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_CALL_STACK_ADJUST, dest.index, stack_adjust)
 
 	def ret(self, dest):
 		"""

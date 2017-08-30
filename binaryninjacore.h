@@ -323,6 +323,7 @@ extern "C"
 		LLIL_JUMP,
 		LLIL_JUMP_TO,
 		LLIL_CALL,
+		LLIL_CALL_STACK_ADJUST,
 		LLIL_RET,
 		LLIL_NORET,
 		LLIL_IF,
@@ -2655,7 +2656,7 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNTypeWithConfidence* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNTypeWithConfidence* returnValue,
 		BNCallingConventionWithConfidence* callingConvention, BNFunctionParameter* params,
-		size_t paramCount, BNBoolWithConfidence* varArg);
+		size_t paramCount, BNBoolWithConfidence* varArg, BNSizeWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
@@ -2688,6 +2689,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNTypeSetMemberAccess(BNType* type, BNMemberAccessWithConfidence* access);
 	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, BNBoolWithConfidence* vltl);
+	BINARYNINJACOREAPI BNSizeWithConfidence BNGetTypeStackAdjustment(BNType* type);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type, BNPlatform* platform);

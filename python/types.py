@@ -362,6 +362,12 @@ class Type(object):
 		"""Offset into structure (read-only)"""
 		return core.BNGetTypeOffset(self.handle)
 
+	@property
+	def stack_adjustment(self):
+		"""Stack adjustment for function (read-only)"""
+		result = core.BNGetTypeStackAdjustment(self.handle)
+		return SizeWithConfidence(result.value, confidence = result.confidence)
+
 	def __str__(self):
 		platform = None
 		if self.platform is not None:
@@ -551,7 +557,7 @@ class Type(object):
 		return Type(core.BNCreateArrayType(type_conf, count))
 
 	@classmethod
-	def function(self, ret, params, calling_convention=None, variable_arguments=None):
+	def function(self, ret, params, calling_convention=None, variable_arguments=None, stack_adjust=None):
 		"""
 		``function`` class method for creating an function Type.
 
@@ -605,8 +611,17 @@ class Type(object):
 		vararg_conf.value = variable_arguments.value
 		vararg_conf.confidence = variable_arguments.confidence
 
+		if stack_adjust is None:
+			stack_adjust = SizeWithConfidence(0, confidence = 0)
+		elif not isinstance(stack_adjust, SizeWithConfidence):
+			stack_adjust = SizeWithConfidence(stack_adjust)
+
+		stack_adjust_conf = core.BNSizeWithConfidence()
+		stack_adjust_conf.value = stack_adjust.value
+		stack_adjust_conf.confidence = stack_adjust.confidence
+
 		return Type(core.BNCreateFunctionType(ret_conf, conv_conf, param_buf, len(params),
-			vararg_conf))
+			vararg_conf, stack_adjust_conf))
 
 	@classmethod
 	def generate_auto_type_id(self, source, name):

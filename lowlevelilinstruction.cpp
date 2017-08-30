@@ -60,6 +60,7 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType>
 		{LowSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
 		{ConstantLowLevelOperandUsage, IntegerLowLevelOperand},
 		{VectorLowLevelOperandUsage, IntegerLowLevelOperand},
+		{StackAdjustmentLowLevelOperandUsage, IntegerLowLevelOperand},
 		{TargetLowLevelOperandUsage, IndexLowLevelOperand},
 		{TrueTargetLowLevelOperandUsage, IndexLowLevelOperand},
 		{FalseTargetLowLevelOperandUsage, IndexLowLevelOperand},
@@ -111,6 +112,7 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_JUMP, {DestExprLowLevelOperandUsage}},
 		{LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetListLowLevelOperandUsage}},
 		{LLIL_CALL, {DestExprLowLevelOperandUsage}},
+		{LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage}},
 		{LLIL_RET, {DestExprLowLevelOperandUsage}},
 		{LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage,
 			FalseTargetLowLevelOperandUsage}},
@@ -1020,7 +1022,7 @@ LowLevelILInstruction LowLevelILInstructionBase::GetSSAForm() const
 		return *this;
 	size_t expr = GetSSAExprIndex();
 	size_t instr = GetSSAInstructionIndex();
-	return LowLevelILInstruction(ssa, ssa->GetRawExpr(GetSSAExprIndex()), expr, instr);
+	return LowLevelILInstruction(ssa, ssa->GetRawExpr(expr), expr, instr);
 }
 
 
@@ -1031,7 +1033,7 @@ LowLevelILInstruction LowLevelILInstructionBase::GetNonSSAForm() const
 		return *this;
 	size_t expr = GetNonSSAExprIndex();
 	size_t instr = GetNonSSAInstructionIndex();
-	return LowLevelILInstruction(nonSsa, nonSsa->GetRawExpr(GetSSAExprIndex()), expr, instr);
+	return LowLevelILInstruction(nonSsa, nonSsa->GetRawExpr(expr), expr, instr);
 }
 
 
@@ -1159,6 +1161,9 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		break;
 	case LLIL_CALL:
 		GetDestExpr<LLIL_CALL>().VisitExprs(func);
+		break;
+	case LLIL_CALL_STACK_ADJUST:
+		GetDestExpr<LLIL_CALL_STACK_ADJUST>().VisitExprs(func);
 		break;
 	case LLIL_CALL_SSA:
 		GetDestExpr<LLIL_CALL_SSA>().VisitExprs(func);
@@ -1301,6 +1306,9 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 		return dest->Jump(subExprHandler(GetDestExpr<LLIL_JUMP>()), *this);
 	case LLIL_CALL:
 		return dest->Call(subExprHandler(GetDestExpr<LLIL_CALL>()), *this);
+	case LLIL_CALL_STACK_ADJUST:
+		return dest->CallStackAdjust(subExprHandler(GetDestExpr<LLIL_CALL_STACK_ADJUST>()),
+			GetStackAdjustment<LLIL_CALL_STACK_ADJUST>(), *this);
 	case LLIL_RET:
 		return dest->Return(subExprHandler(GetDestExpr<LLIL_RET>()), *this);
 	case LLIL_JUMP_TO:
@@ -1643,6 +1651,15 @@ int64_t LowLevelILInstruction::GetVector() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(VectorLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
+	throw LowLevelILInstructionAccessException();
+}
+
+
+size_t LowLevelILInstruction::GetStackAdjustment() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(StackAdjustmentLowLevelOperandUsage, operandIndex))
+		return (size_t)GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -2130,6 +2147,12 @@ ExprId LowLevelILFunction::JumpTo(ExprId dest, const vector<BNLowLevelILLabel*>&
 ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CALL, loc, 0, 0, dest);
+}
+
+
+ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, size_t adjust, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CALL_STACK_ADJUST, loc, 0, 0, dest, adjust);
 }
 
 

@@ -161,6 +161,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
+		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int")],
 		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
@@ -309,8 +310,9 @@ class LowLevelILInstruction(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
@@ -327,8 +329,16 @@ class LowLevelILInstruction(object):
 			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
 
 	@property
+	def medium_level_il(self):
+		"""Gets the medium level IL expression corresponding to this expression (may be None for eliminated instructions)"""
+		expr = self.function.get_medium_level_il_expr_index(self.expr_index)
+		if expr is None:
+			return None
+		return mediumlevelil.MediumLevelILInstruction(self.function.medium_level_il, expr)
+
+	@property
 	def mapped_medium_level_il(self):
-		"""Gets the medium level IL expression corresponding to this expression"""
+		"""Gets the mapped medium level IL expression corresponding to this expression"""
 		expr = self.function.get_mapped_medium_level_il_expr_index(self.expr_index)
 		if expr is None:
 			return None
@@ -722,17 +732,18 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LOAD, addr.index, size=size)
 
-	def store(self, size, addr, value):
+	def store(self, size, addr, value, flags=None):
 		"""
 		``store`` Writes ``size`` bytes to expression ``addr`` read from expression ``value``
 
 		:param int size: number of bytes to write
 		:param LowLevelILExpr addr: the expression to write to
 		:param LowLevelILExpr value: the expression to be written
+		:param str flags: which flags are set by this operation
 		:return: The expression ``[addr].size = value``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size)
+		return self.expr(LowLevelILOperation.LLIL_STORE, addr.index, value.index, size=size, flags=flags)
 
 	def push(self, size, value):
 		"""
@@ -1252,6 +1263,18 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CALL, dest.index)
 
+	def call_stack_adjust(self, dest, stack_adjust):
+		"""
+		``call_stack_adjust`` returns an expression which first pushes the address of the next instruction onto the stack
+		then jumps (branches) to the expression ``dest``. After the function exits, ``stack_adjust`` is added to the
+		stack pointer register.
+
+		:param LowLevelILExpr dest: the expression to call
+		:return: The expression ``call(dest), stack += stack_adjust``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_CALL_STACK_ADJUST, dest.index, stack_adjust)
+
 	def ret(self, dest):
 		"""
 		``ret`` returns an expression which jumps (branches) to the expression ``dest``. ``ret`` is a special alias for
@@ -1651,6 +1674,24 @@ class LowLevelILFunction(object):
 		result = function.RegisterValue(self.arch, value)
 		return result
 
+	def get_medium_level_il_instruction_index(self, instr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMediumLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetMediumLevelILInstructionCount(med_il.handle):
+			return None
+		return result
+
+	def get_medium_level_il_expr_index(self, expr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		result = core.BNGetMediumLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
+			return None
+		return result
+
 	def get_mapped_medium_level_il_instruction_index(self, instr):
 		med_il = self.mapped_medium_level_il
 		if med_il is None:
@@ -1688,6 +1729,9 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
+	def _create_instance(self, view, handle):
+		"""Internal method by super to instantiante child instances"""
+		return LowLevelILBasicBlock(view, handle, self.il_function)
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

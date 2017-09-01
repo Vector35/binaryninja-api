@@ -91,6 +91,20 @@ Variable Variable::FromIdentifier(uint64_t id)
 }
 
 
+RegisterValue::RegisterValue(): state(UndeterminedValue), value(0)
+{
+}
+
+
+BNRegisterValue RegisterValue::ToAPIObject()
+{
+	BNRegisterValue result;
+	result.state = state;
+	result.value = value;
+	return result;
+}
+
+
 Function::Function(BNFunction* func)
 {
 	m_object = func;
@@ -135,9 +149,10 @@ bool Function::WasAutomaticallyDiscovered() const
 }
 
 
-bool Function::CanReturn() const
+Confidence<bool> Function::CanReturn() const
 {
-	return BNCanFunctionReturn(m_object);
+	BNBoolWithConfidence bc = BNCanFunctionReturn(m_object);
+	return Confidence<bool>(bc.value, bc.confidence);
 }
 
 
@@ -182,6 +197,15 @@ void Function::MarkRecentUse()
 }
 
 
+string Function::GetComment() const
+{
+	char* comment = BNGetFunctionComment(m_object);
+	string result = comment;
+	BNFreeString(comment);
+	return result;
+}
+
+
 string Function::GetCommentForAddress(uint64_t addr) const
 {
 	char* comment = BNGetCommentForAddress(m_object, addr);
@@ -199,6 +223,12 @@ vector<uint64_t> Function::GetCommentedAddresses() const
 	result.insert(result.end(), addrs, &addrs[count]);
 	BNFreeAddressList(addrs);
 	return result;
+}
+
+
+void Function::SetComment(const string& comment)
+{
+	BNSetFunctionComment(m_object, comment.c_str());
 }
 
 
@@ -233,7 +263,7 @@ vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, ui
 }
 
 
-RegisterValue RegisterValue::FromAPIObject(BNRegisterValue& value)
+RegisterValue RegisterValue::FromAPIObject(const BNRegisterValue& value)
 {
 	RegisterValue result;
 	result.state = value.state;
@@ -353,10 +383,12 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	{
 		StackVariableReference ref;
 		ref.sourceOperand = refs[i].sourceOperand;
-		ref.type = refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr;
+		ref.type = Confidence<Ref<Type>>(refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr,
+			refs[i].typeConfidence);
 		ref.name = refs[i].name;
 		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
+		ref.size = refs[i].size;
 		result.push_back(ref);
 	}
 
@@ -450,15 +482,229 @@ Ref<Type> Function::GetType() const
 }
 
 
+Confidence<Ref<Type>> Function::GetReturnType() const
+{
+	BNTypeWithConfidence tc = BNGetFunctionReturnType(m_object);
+	Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+	return Confidence<Ref<Type>>(type, tc.confidence);
+}
+
+
+Confidence<Ref<CallingConvention>> Function::GetCallingConvention() const
+{
+	BNCallingConventionWithConfidence cc = BNGetFunctionCallingConvention(m_object);
+	Ref<CallingConvention> convention = cc.convention ? new CoreCallingConvention(cc.convention) : nullptr;
+	return Confidence<Ref<CallingConvention>>(convention, cc.confidence);
+}
+
+
+Confidence<vector<Variable>> Function::GetParameterVariables() const
+{
+	BNParameterVariablesWithConfidence vars = BNGetFunctionParameterVariables(m_object);
+	vector<Variable> varList;
+	for (size_t i = 0; i < vars.count; i++)
+	{
+		Variable var;
+		var.type = vars.vars[i].type;
+		var.index = vars.vars[i].index;
+		var.storage = vars.vars[i].storage;
+		varList.push_back(var);
+	}
+	Confidence<vector<Variable>> result(varList, vars.confidence);
+	BNFreeParameterVariables(&vars);
+	return result;
+}
+
+
+Confidence<bool> Function::HasVariableArguments() const
+{
+	BNBoolWithConfidence bc = BNFunctionHasVariableArguments(m_object);
+	return Confidence<bool>(bc.value, bc.confidence);
+}
+
+
+Confidence<size_t> Function::GetStackAdjustment() const
+{
+	BNSizeWithConfidence sc = BNGetFunctionStackAdjustment(m_object);
+	return Confidence<size_t>(sc.value, sc.confidence);
+}
+
+
+Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
+{
+	BNRegisterSetWithConfidence regs = BNGetFunctionClobberedRegisters(m_object);
+	set<uint32_t> regSet;
+	for (size_t i = 0; i < regs.count; i++)
+		regSet.insert(regs.regs[i]);
+	Confidence<set<uint32_t>> result(regSet, regs.confidence);
+	BNFreeClobberedRegisters(&regs);
+	return result;
+}
+
+
 void Function::SetAutoType(Type* type)
 {
 	BNSetFunctionAutoType(m_object, type->GetObject());
 }
 
 
+void Function::SetAutoReturnType(const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type ? type->GetObject() : nullptr;
+	tc.confidence = type.GetConfidence();
+	BNSetAutoFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>& convention)
+{
+	BNCallingConventionWithConfidence cc;
+	cc.convention = convention ? convention->GetObject() : nullptr;
+	cc.confidence = convention.GetConfidence();
+	BNSetAutoFunctionCallingConvention(m_object, &cc);
+}
+
+
+void Function::SetAutoParameterVariables(const Confidence<vector<Variable>>& vars)
+{
+	BNParameterVariablesWithConfidence varConf;
+	varConf.vars = new BNVariable[vars.GetValue().size()];
+	varConf.count = vars.GetValue().size();
+	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	{
+		varConf.vars[i].type = vars.GetValue()[i].type;
+		varConf.vars[i].index = vars.GetValue()[i].index;
+		varConf.vars[i].storage = vars.GetValue()[i].storage;
+	}
+	varConf.confidence = vars.GetConfidence();
+
+	BNSetAutoFunctionParameterVariables(m_object, &varConf);
+	delete[] varConf.vars;
+}
+
+
+void Function::SetAutoHasVariableArguments(const Confidence<bool>& varArgs)
+{
+	BNBoolWithConfidence bc;
+	bc.value = varArgs.GetValue();
+	bc.confidence = varArgs.GetConfidence();
+	BNSetAutoFunctionHasVariableArguments(m_object, &bc);
+}
+
+
+void Function::SetAutoCanReturn(const Confidence<bool>& returns)
+{
+	BNBoolWithConfidence bc;
+	bc.value = returns.GetValue();
+	bc.confidence = returns.GetConfidence();
+	BNSetAutoFunctionCanReturn(m_object, &bc);
+}
+
+
+void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
+{
+	BNSizeWithConfidence sc;
+	sc.value = stackAdjust.GetValue();
+	sc.confidence = stackAdjust.GetConfidence();
+	BNSetAutoFunctionStackAdjustment(m_object, &sc);
+}
+
+
+void Function::SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[clobbered.GetValue().size()];
+	regs.count = clobbered.GetValue().size();
+	size_t i = 0;
+	for (auto reg : clobbered.GetValue())
+		regs.regs[i++] = reg;
+	regs.confidence = clobbered.GetConfidence();
+	BNSetAutoFunctionClobberedRegisters(m_object, &regs);
+	delete[] regs.regs;
+}
+
+
 void Function::SetUserType(Type* type)
 {
 	BNSetFunctionUserType(m_object, type->GetObject());
+}
+
+
+void Function::SetReturnType(const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type ? type->GetObject() : nullptr;
+	tc.confidence = type.GetConfidence();
+	BNSetUserFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetCallingConvention(const Confidence<Ref<CallingConvention>>& convention)
+{
+	BNCallingConventionWithConfidence cc;
+	cc.convention = convention ? convention->GetObject() : nullptr;
+	cc.confidence = convention.GetConfidence();
+	BNSetUserFunctionCallingConvention(m_object, &cc);
+}
+
+
+void Function::SetParameterVariables(const Confidence<vector<Variable>>& vars)
+{
+	BNParameterVariablesWithConfidence varConf;
+	varConf.vars = new BNVariable[vars.GetValue().size()];
+	varConf.count = vars.GetValue().size();
+	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	{
+		varConf.vars[i].type = vars.GetValue()[i].type;
+		varConf.vars[i].index = vars.GetValue()[i].index;
+		varConf.vars[i].storage = vars.GetValue()[i].storage;
+	}
+	varConf.confidence = vars.GetConfidence();
+
+	BNSetUserFunctionParameterVariables(m_object, &varConf);
+	delete[] varConf.vars;
+}
+
+
+void Function::SetHasVariableArguments(const Confidence<bool>& varArgs)
+{
+	BNBoolWithConfidence bc;
+	bc.value = varArgs.GetValue();
+	bc.confidence = varArgs.GetConfidence();
+	BNSetUserFunctionHasVariableArguments(m_object, &bc);
+}
+
+
+void Function::SetCanReturn(const Confidence<bool>& returns)
+{
+	BNBoolWithConfidence bc;
+	bc.value = returns.GetValue();
+	bc.confidence = returns.GetConfidence();
+	BNSetUserFunctionCanReturn(m_object, &bc);
+}
+
+
+void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
+{
+	BNSizeWithConfidence sc;
+	sc.value = stackAdjust.GetValue();
+	sc.confidence = stackAdjust.GetConfidence();
+	BNSetUserFunctionStackAdjustment(m_object, &sc);
+}
+
+
+void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[clobbered.GetValue().size()];
+	regs.count = clobbered.GetValue().size();
+	size_t i = 0;
+	for (auto reg : clobbered.GetValue())
+		regs.regs[i++] = reg;
+	regs.confidence = clobbered.GetConfidence();
+	BNSetUserFunctionClobberedRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 
@@ -491,7 +737,7 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 	{
 		VariableNameAndType var;
 		var.name = vars[i].name;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
 		result[vars[i].var.storage].push_back(var);
@@ -502,15 +748,21 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 }
 
 
-void Function::CreateAutoStackVariable(int64_t offset, Ref<Type> type, const string& name)
+void Function::CreateAutoStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const string& name)
 {
-	BNCreateAutoStackVariable(m_object, offset, type->GetObject(), name.c_str());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateAutoStackVariable(m_object, offset, &tc, name.c_str());
 }
 
 
-void Function::CreateUserStackVariable(int64_t offset, Ref<Type> type, const string& name)
+void Function::CreateUserStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const string& name)
 {
-	BNCreateUserStackVariable(m_object, offset, type->GetObject(), name.c_str());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateUserStackVariable(m_object, offset, &tc, name.c_str());
 }
 
 
@@ -533,7 +785,7 @@ bool Function::GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr,
 	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
 		return false;
 
-	result.type = new Type(BNNewTypeReference(var.type));
+	result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var.type)), var.typeConfidence);
 	result.name = var.name;
 	result.var = var.var;
 	result.autoDefined = var.autoDefined;
@@ -553,7 +805,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 	{
 		VariableNameAndType var;
 		var.name = vars[i].name;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.var = vars[i].var;
 		var.autoDefined = vars[i].autoDefined;
 		result[vars[i].var] = var;
@@ -564,15 +816,23 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 }
 
 
-void Function::CreateAutoVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type,
+	const string& name, bool ignoreDisjointUses)
 {
-	BNCreateAutoVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateAutoVariable(m_object, &var, &tc, name.c_str(), ignoreDisjointUses);
 }
 
 
-void Function::CreateUserVariable(const Variable& var, Ref<Type> type, const string& name, bool ignoreDisjointUses)
+void Function::CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type,
+	const string& name, bool ignoreDisjointUses)
 {
-	BNCreateUserVariable(m_object, &var, type->GetObject(), name.c_str(), ignoreDisjointUses);
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNCreateUserVariable(m_object, &var, &tc, name.c_str(), ignoreDisjointUses);
 }
 
 
@@ -588,12 +848,12 @@ void Function::DeleteUserVariable(const Variable& var)
 }
 
 
-Ref<Type> Function::GetVariableType(const Variable& var)
+Confidence<Ref<Type>> Function::GetVariableType(const Variable& var)
 {
-	BNType* type = BNGetVariableType(m_object, &var);
-	if (!type)
+	BNTypeWithConfidence type = BNGetVariableType(m_object, &var);
+	if (!type.type)
 		return nullptr;
-	return new Type(type);
+	return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 }
 
 
@@ -694,6 +954,7 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 			token.size = lines[i].tokens[j].size;
 			token.operand = lines[i].tokens[j].operand;
 			token.context = lines[i].tokens[j].context;
+			token.confidence = lines[i].tokens[j].confidence;
 			token.address = lines[i].tokens[j].address;
 			line.push_back(token);
 		}
@@ -833,6 +1094,20 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, ui
 }
 
 
+Confidence<RegisterValue> Function::GetGlobalPointerValue() const
+{
+	BNRegisterValueWithConfidence value = BNGetFunctionGlobalPointerValue(m_object);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+}
+
+
+Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
+{
+	BNRegisterValueWithConfidence value = BNGetFunctionRegisterValueAtExit(m_object, reg);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+}
+
+
 void Function::Reanalyze()
 {
 	BNReanalyzeFunction(m_object);
@@ -870,6 +1145,38 @@ map<string, double> Function::GetAnalysisPerformanceInfo()
 	for (size_t i = 0; i < count; i++)
 		result[info[i].name] = info[i].seconds;
 	BNFreeAnalysisPerformanceInfo(info, count);
+	return result;
+}
+
+
+vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* settings)
+{
+	size_t count;
+	BNDisassemblyTextLine* lines = BNGetFunctionTypeTokens(m_object,
+		settings ? settings->GetObject() : nullptr, &count);
+
+	vector<DisassemblyTextLine> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = lines[i].addr;
+		for (size_t j = 0; j < lines[i].count; j++)
+		{
+			InstructionTextToken token;
+			token.type = lines[i].tokens[j].type;
+			token.text = lines[i].tokens[j].text;
+			token.value = lines[i].tokens[j].value;
+			token.size = lines[i].tokens[j].size;
+			token.operand = lines[i].tokens[j].operand;
+			token.context = lines[i].tokens[j].context;
+			token.confidence = lines[i].tokens[j].confidence;
+			token.address = lines[i].tokens[j].address;
+			line.tokens.push_back(token);
+		}
+		result.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
 

@@ -160,6 +160,12 @@ bool BasicBlock::HasUndeterminedOutgoingEdges() const
 }
 
 
+bool BasicBlock::CanExit() const
+{
+	return BNBasicBlockCanExit(m_object);
+}
+
+
 set<Ref<BasicBlock>> BasicBlock::GetDominators() const
 {
 	size_t count;
@@ -276,6 +282,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 			token.size = lines[i].tokens[j].size;
 			token.operand = lines[i].tokens[j].operand;
 			token.context = lines[i].tokens[j].context;
+			token.confidence = lines[i].tokens[j].confidence;
 			token.address = lines[i].tokens[j].address;
 			line.tokens.push_back(token);
 		}

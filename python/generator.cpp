@@ -165,8 +165,15 @@ int main(int argc, char* argv[])
 	// Parse API header to get type and function information
 	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
-	bool ok = Architecture::GetByName("generator")->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
-	fprintf(stderr, "%s", errors.c_str());
+	auto arch = Architecture::GetByName("generator");
+	if (!arch)
+	{
+		printf("ERROR: License file validation failed (most likely)\n");
+		return 1;
+	}
+
+	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
+	fprintf(stderr, "Errors: %s", errors.c_str());
 	if (!ok)
 		return 1;
 
@@ -230,22 +237,61 @@ int main(int argc, char* argv[])
 
 
 	fprintf(out, "\n# Structure definitions\n");
+	set<QualifiedName> structsToProcess;
+	set<QualifiedName> finishedStructs;
 	for (auto& i : types)
+		structsToProcess.insert(i.first);
+	while (structsToProcess.size() != 0)
 	{
-		string name;
-		if (i.first.size() != 1)
-			continue;
-		name = i.first[0];
-		if ((i.second->GetClass() == StructureTypeClass) && (i.second->GetStructure()->GetMembers().size() != 0))
+		set<QualifiedName> currentStructList = structsToProcess;
+		structsToProcess.clear();
+		bool processedSome = false;
+		for (auto& i : currentStructList)
 		{
-			fprintf(out, "%s._fields_ = [\n", name.c_str());
-			for (auto& j : i.second->GetStructure()->GetMembers())
+			string name;
+			if (i.size() != 1)
+				continue;
+			Ref<Type> type = types[i];
+			name = i[0];
+			if ((type->GetClass() == StructureTypeClass) && (type->GetStructure()->GetMembers().size() != 0))
 			{
-				fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
-				OutputType(out, j.type);
-				fprintf(out, "),\n");
+				bool requiresDependency = false;
+				for (auto& j : type->GetStructure()->GetMembers())
+				{
+					if ((j.type->GetClass() == NamedTypeReferenceClass) &&
+						(types[j.type->GetNamedTypeReference()->GetName()]->GetClass() == StructureTypeClass) &&
+						(finishedStructs.count(j.type->GetNamedTypeReference()->GetName()) == 0))
+					{
+						// This structure needs another structure that isn't fully defined yet, need to wait
+						// for the dependencies to be defined
+						structsToProcess.insert(i);
+						requiresDependency = true;
+						break;
+					}
+				}
+
+				if (requiresDependency)
+					continue;
+
+				fprintf(out, "%s._fields_ = [\n", name.c_str());
+				for (auto& j : type->GetStructure()->GetMembers())
+				{
+					fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
+					OutputType(out, j.type);
+					fprintf(out, "),\n");
+				}
+				fprintf(out, "\t]\n");
+				finishedStructs.insert(i);
+				processedSome = true;
 			}
-			fprintf(out, "\t]\n");
+		}
+
+		if (!processedSome)
+		{
+			fprintf(stderr, "Detected dependency cycle in structures\n");
+			for (auto& i : structsToProcess)
+				fprintf(stderr, "%s\n", i.GetString().c_str());
+			return 1;
 		}
 	}
 

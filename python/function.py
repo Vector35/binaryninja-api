@@ -37,6 +37,7 @@ import lowlevelil
 import mediumlevelil
 import binaryview
 import log
+import callingconvention
 
 
 class LookupTableEntry(object):
@@ -49,25 +50,58 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
-	def __init__(self, arch, value):
-		self.type = RegisterValueType(value.state)
-		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.value)
-		elif value.state == RegisterValueType.ConstantValue:
-			self.value = value.value
-		elif value.state == RegisterValueType.StackFrameOffset:
-			self.offset = value.value
+	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
+		if value is None:
+			self.type = RegisterValueType.UndeterminedValue
+		else:
+			self.type = RegisterValueType(value.state)
+			self.is_constant = False
+			if value.state == RegisterValueType.EntryValue:
+				self.arch = arch
+				if arch is not None:
+					self.reg = arch.get_reg_name(value.value)
+				else:
+					self.reg = value.value
+			elif (value.state == RegisterValueType.ConstantValue) or (value.state == RegisterValueType.ConstantPointerValue):
+				self.value = value.value
+				self.is_constant = True
+			elif value.state == RegisterValueType.StackFrameOffset:
+				self.offset = value.value
+			elif value.state == RegisterValueType.ImportedAddressValue:
+				self.value = value.value
+		self.confidence = confidence
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.ConstantPointerValue:
+			return "<const ptr %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
+		if self.type == RegisterValueType.ImportedAddressValue:
+			return "<imported address from entry %#x>" % self.value
 		return "<undetermined>"
+
+	def _to_api_object(self):
+		result = core.BNRegisterValue()
+		result.state = self.type
+		result.value = 0
+		if self.type == RegisterValueType.EntryValue:
+			if self.arch is not None:
+				result.value = self.arch.get_reg_index(self.reg)
+			else:
+				result.value = self.reg
+		elif (self.type == RegisterValueType.ConstantValue) or (self.type == RegisterValueType.ConstantPointerValue):
+			result.value = self.value
+		elif self.type == RegisterValueType.StackFrameOffset:
+			result.value = self.offset
+		elif self.type == RegisterValueType.ImportedAddressValue:
+			result.value = self.value
+		return result
 
 
 class ValueRange(object):
@@ -148,12 +182,13 @@ class PossibleValueSet(object):
 
 
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, var, ref_ofs):
+	def __init__(self, src_operand, t, name, var, ref_ofs, size):
 		self.source_operand = src_operand
 		self.type = t
 		self.name = name
 		self.var = var
 		self.referenced_offset = ref_ofs
+		self.size = size
 		if self.source_operand == 0xffffffff:
 			self.source_operand = None
 
@@ -183,9 +218,11 @@ class Variable(object):
 		if name is None:
 			name = core.BNGetVariableName(func.handle, var)
 		if var_type is None:
-			var_type = core.BNGetVariableType(func.handle, var)
-			if var_type:
-				var_type = types.Type(var_type)
+			var_type_conf = core.BNGetVariableType(func.handle, var)
+			if var_type_conf.type:
+				var_type = types.Type(var_type_conf.type, platform = func.platform, confidence = var_type_conf.confidence)
+			else:
+				var_type = None
 
 		self.name = name
 		self.type = var_type
@@ -202,6 +239,12 @@ class Variable(object):
 
 	def __str__(self):
 		return self.name
+
+	def __eq__(self, other):
+		return self.identifier == other.identifier
+
+	def __hash__(self):
+		return hash(self.identifier)
 
 
 class ConstantReference(object):
@@ -231,6 +274,28 @@ class IndirectBranchInfo(object):
 		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
 
 
+class ParameterVariables(object):
+	def __init__(self, var_list, confidence = types.max_confidence):
+		self.vars = var_list
+		self.confidence = confidence
+
+	def __repr__(self):
+		return repr(self.vars)
+
+	def __iter__(self):
+		for var in self.vars:
+			yield var
+
+	def __getitem__(self, idx):
+		return self.vars[idx]
+
+	def __len__(self):
+		return len(self.vars)
+
+	def with_confidence(self, confidence):
+		return ParameterVariables(list(self.vars), confidence = confidence)
+
+
 class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
@@ -257,6 +322,9 @@ class Function(object):
 		if not isinstance(value, Function):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def __hash__(self):
+		return hash((self.start, self.arch.name, self.platform.name))
 
 	@classmethod
 	def _unregister(cls, func):
@@ -323,8 +391,19 @@ class Function(object):
 
 	@property
 	def can_return(self):
-		"""Whether function can return (read-only)"""
-		return core.BNCanFunctionReturn(self.handle)
+		"""Whether function can return"""
+		result = core.BNCanFunctionReturn(self.handle)
+		return types.BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@can_return.setter
+	def can_return(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetUserFunctionCanReturn(self.handle, bc)
 
 	@property
 	def explicitly_defined_type(self):
@@ -376,7 +455,7 @@ class Function(object):
 	@property
 	def function_type(self):
 		"""Function type object"""
-		return types.Type(core.BNGetFunctionType(self.handle))
+		return types.Type(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
 	def function_type(self, value):
@@ -390,7 +469,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -403,7 +482,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-				types.Type(handle = core.BNNewTypeReference(v[i].type))))
+				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
 		return result
@@ -440,6 +519,153 @@ class Function(object):
 		core.BNFreeAnalysisPerformanceInfo(info, count.value)
 		return result
 
+	@property
+	def type_tokens(self):
+		"""Text tokens for this function's prototype"""
+		return self.get_type_tokens()[0].tokens
+
+	@property
+	def return_type(self):
+		"""Return type of the function"""
+		result = core.BNGetFunctionReturnType(self.handle)
+		if not result.type:
+			return None
+		return types.Type(result.type, platform = self.platform, confidence = result.confidence)
+
+	@return_type.setter
+	def return_type(self, value):
+		type_conf = core.BNTypeWithConfidence()
+		if value is None:
+			type_conf.type = None
+			type_conf.confidence = 0
+		else:
+			type_conf.type = value.handle
+			type_conf.confidence = value.confidence
+		core.BNSetUserFunctionReturnType(self.handle, type_conf)
+
+	@property
+	def calling_convention(self):
+		"""Calling convention used by the function"""
+		result = core.BNGetFunctionCallingConvention(self.handle)
+		if not result.convention:
+			return None
+		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+
+	@calling_convention.setter
+	def calling_convention(self, value):
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if value is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = value.handle
+			conv_conf.confidence = value.confidence
+		core.BNSetUserFunctionCallingConvention(self.handle, conv_conf)
+
+	@property
+	def parameter_vars(self):
+		"""List of variables for the incoming function parameters"""
+		result = core.BNGetFunctionParameterVariables(self.handle)
+		var_list = []
+		for i in xrange(0, result.count):
+			var_list.append(Variable(self, result.vars[i].type, result.vars[i].index, result.vars[i].storage))
+		confidence = result.confidence
+		core.BNFreeParameterVariables(result)
+		return ParameterVariables(var_list, confidence = confidence)
+
+	@parameter_vars.setter
+	def parameter_vars(self, value):
+		if value is None:
+			var_list = []
+		else:
+			var_list = list(value)
+		var_conf = core.BNParameterVariablesWithConfidence()
+		var_conf.vars = (core.BNVariable * len(var_list))()
+		var_conf.count = len(var_list)
+		for i in xrange(0, len(var_list)):
+			var_conf.vars[i].type = var_list[i].source_type
+			var_conf.vars[i].index = var_list[i].index
+			var_conf.vars[i].storage = var_list[i].storage
+		if value is None:
+			var_conf.confidence = 0
+		elif hasattr(value, 'confidence'):
+			var_conf.confidence = value.confidence
+		else:
+			var_conf.confidence = types.max_confidence
+		core.BNSetUserFunctionParameterVariables(self.handle, var_conf)
+
+	@property
+	def has_variable_arguments(self):
+		"""Whether the function takes a variable number of arguments"""
+		result = core.BNFunctionHasVariableArguments(self.handle)
+		return types.BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@has_variable_arguments.setter
+	def has_variable_arguments(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetUserFunctionHasVariableArguments(self.handle, bc)
+
+	@property
+	def stack_adjustment(self):
+		"""Number of bytes removed from the stack after return"""
+		result = core.BNGetFunctionStackAdjustment(self.handle)
+		return types.SizeWithConfidence(result.value, confidence = result.confidence)
+
+	@stack_adjustment.setter
+	def stack_adjustment(self, value):
+		sc = core.BNSizeWithConfidence()
+		sc.value = int(value)
+		if hasattr(value, 'confidence'):
+			sc.confidence = value.confidence
+		else:
+			sc.confidence = types.max_confidence
+		core.BNSetUserFunctionStackAdjustment(self.handle, sc)
+
+	@property
+	def clobbered_regs(self):
+		"""Registers that are modified by this function"""
+		result = core.BNGetFunctionClobberedRegisters(self.handle)
+		reg_set = []
+		for i in xrange(0, result.count):
+			reg_set.append(self.arch.get_reg_name(result.regs[i]))
+		regs = types.RegisterSet(reg_set, confidence = result.confidence)
+		core.BNFreeClobberedRegisters(result)
+		return regs
+
+	@clobbered_regs.setter
+	def clobbered_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetUserFunctionClobberedRegisters(self.handle, regs)
+
+	@property
+	def global_pointer_value(self):
+		"""Discovered value of the global pointer register, if the function uses one (read-only)"""
+		result = core.BNGetFunctionGlobalPointerValue(self.handle)
+		return RegisterValue(self.arch, result.value, confidence = result.confidence)
+
+	@property
+	def comment(self):
+		"""Gets the comment for the current function"""
+		return core.BNGetFunctionComment(self.handle)
+
+	@comment.setter
+	def comment(self, comment):
+		"""Sets a comment for the current function"""
+		return core.BNSetFunctionComment(self.handle, comment)
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
@@ -469,6 +695,21 @@ class Function(object):
 		return core.BNGetCommentForAddress(self.handle, addr)
 
 	def set_comment(self, addr, comment):
+		"""Deprecated use set_comment_at instead"""
+		core.BNSetCommentForAddress(self.handle, addr, comment)
+
+	def set_comment_at(self, addr, comment):
+		"""
+		``set_comment_at`` sets a comment for the current function at the address specified
+
+		:param addr int: virtual address within the current function to apply the comment to
+		:param comment str: string comment to apply
+		:rtype: None
+		:Example:
+
+			>>> current_function.set_comment_at(here, "hi")
+
+		"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def get_low_level_il_at(self, addr, arch=None):
@@ -616,10 +857,10 @@ class Function(object):
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			var_type = types.Type(core.BNNewTypeReference(refs[i].type))
+			var_type = types.Type(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
 			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
 				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
-				refs[i].referencedOffset))
+				refs[i].referencedOffset, refs[i].size))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
@@ -730,8 +971,9 @@ class Function(object):
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
 				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			result.append(tokens)
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
@@ -741,6 +983,85 @@ class Function(object):
 
 	def set_user_type(self, value):
 		core.BNSetFunctionUserType(self.handle, value.handle)
+
+	def set_auto_return_type(self, value):
+		type_conf = core.BNTypeWithConfidence()
+		if value is None:
+			type_conf.type = None
+			type_conf.confidence = 0
+		else:
+			type_conf.type = value.handle
+			type_conf.confidence = value.confidence
+		core.BNSetAutoFunctionReturnType(self.handle, type_conf)
+
+	def set_auto_calling_convention(self, value):
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if value is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = value.handle
+			conv_conf.confidence = value.confidence
+		core.BNSetAutoFunctionCallingConvention(self.handle, conv_conf)
+
+	def set_auto_parameter_vars(self, value):
+		if value is None:
+			var_list = []
+		else:
+			var_list = list(value)
+		var_conf = core.BNParameterVariablesWithConfidence()
+		var_conf.vars = (core.BNVariable * len(var_list))()
+		var_conf.count = len(var_list)
+		for i in xrange(0, len(var_list)):
+			var_conf.vars[i].type = var_list[i].source_type
+			var_conf.vars[i].index = var_list[i].index
+			var_conf.vars[i].storage = var_list[i].storage
+		if value is None:
+			var_conf.confidence = 0
+		elif hasattr(value, 'confidence'):
+			var_conf.confidence = value.confidence
+		else:
+			var_conf.confidence = types.max_confidence
+		core.BNSetAutoFunctionParameterVariables(self.handle, var_conf)
+
+	def set_auto_has_variable_arguments(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetAutoFunctionHasVariableArguments(self.handle, bc)
+
+	def set_auto_can_return(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = types.max_confidence
+		core.BNSetAutoFunctionCanReturn(self.handle, bc)
+
+	def set_auto_stack_adjustment(self, value):
+		sc = core.BNSizeWithConfidence()
+		sc.value = int(value)
+		if hasattr(value, 'confidence'):
+			sc.confidence = value.confidence
+		else:
+			sc.confidence = types.max_confidence
+		core.BNSetAutoFunctionStackAdjustment(self.handle, sc)
+
+	def set_auto_clobbered_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetAutoFunctionClobberedRegisters(self.handle, regs)
 
 	def get_int_display_type(self, instr_addr, value, operand, arch=None):
 		if arch is None:
@@ -818,7 +1139,7 @@ class Function(object):
 		"""
 		``set_auto_instr_highlight`` highlights the instruction at the specified address with the supplied color
 
-		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		..warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param int addr: virtual address of the instruction to be highlighted
 		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
@@ -853,10 +1174,16 @@ class Function(object):
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 	def create_auto_stack_var(self, offset, var_type, name):
-		core.BNCreateAutoStackVariable(self.handle, offset, var_type.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateAutoStackVariable(self.handle, offset, tc, name)
 
 	def create_user_stack_var(self, offset, var_type, name):
-		core.BNCreateUserStackVariable(self.handle, offset, var_type.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateUserStackVariable(self.handle, offset, tc, name)
 
 	def delete_auto_stack_var(self, offset):
 		core.BNDeleteAutoStackVariable(self.handle, offset)
@@ -869,14 +1196,20 @@ class Function(object):
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		core.BNCreateAutoVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateAutoVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
 
 	def create_user_var(self, var, var_type, name, ignore_disjoint_uses = False):
 		var_data = core.BNVariable()
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		core.BNCreateUserVariable(self.handle, var_data, var_type.handle, name, ignore_disjoint_uses)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNCreateUserVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
 
 	def delete_auto_var(self, var):
 		var_data = core.BNVariable()
@@ -899,9 +1232,37 @@ class Function(object):
 		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
 			return None
 		result = Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
-			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type)))
+			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), platform = self.platform,
+			confidence = found_var.typeConfidence))
 		core.BNFreeVariableNameAndType(found_var)
 		return result
+
+	def get_type_tokens(self, settings=None):
+		if settings is not None:
+			settings = settings.handle
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetFunctionTypeTokens(self.handle, settings, count)
+		result = []
+		for i in xrange(0, count.value):
+			addr = lines[i].addr
+			tokens = []
+			for j in xrange(0, lines[i].count):
+				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
+				text = lines[i].tokens[j].text
+				value = lines[i].tokens[j].value
+				size = lines[i].tokens[j].size
+				operand = lines[i].tokens[j].operand
+				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
+				address = lines[i].tokens[j].address
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(DisassemblyTextLine(addr, tokens))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
+		return result
+
+	def get_reg_value_at_exit(self, reg):
+		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
+		return RegisterValue(self.arch, result.value, confidence = result.confidence)
 
 
 class AdvancedFunctionAnalysisDataRequestor(object):
@@ -1043,8 +1404,9 @@ class FunctionGraphBlock(object):
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
 				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			result.append(DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -1101,8 +1463,9 @@ class FunctionGraphBlock(object):
 					size = lines[i].tokens[j].size
 					operand = lines[i].tokens[j].operand
 					context = lines[i].tokens[j].context
+					confidence = lines[i].tokens[j].confidence
 					address = lines[i].tokens[j].address
-					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address))
+					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 				yield DisassemblyTextLine(addr, tokens)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
@@ -1384,13 +1747,14 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
 		self.size = size
 		self.operand = operand
 		self.context = InstructionTextTokenContext(context)
+		self.confidence = confidence
 		self.address = address
 
 	def __str__(self):

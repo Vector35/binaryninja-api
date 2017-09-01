@@ -2,17 +2,44 @@
 
 Welcome to Binary Ninja. This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja.
 
+## Directories
+
+Binary Ninja uses two main locations. The first is the install path of the binary itself and the second is the user folders for user-installed content.
+
+### Binary Path
+
+Binaries are installed in the following locations by default:
+
+- OS X: `/Applications/Binary Ninja.app`
+- Windows: `C:\Program Files\Vector35\BinaryNinja`
+- Linux: Wherever you extract it! (No standard location)
+
+!!! Warning "Warning"
+    Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja may replace any files included in these folders. 
+
+### User Folder
+
+The base locations of user folders are: 
+
+- OS X: `~/Library/Application Support/Binary Ninja`
+- Linux: `~/.binaryninja`
+- Windows: `%APPDATA%\Binary Ninja`
+
+Contents of the user folder includes:
+
+- `settings.json`: Advanced settings (see [settings](#settings))
+- `lastrun`: A text file containing the directory of the last BinaryNinja binary path -- very useful for plugins to resolve the install locations in non-default settings or on linux.
+- `plugins/`: Folder containing all manually installed user plugins
+- `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
+
 ![license popup >](/images/license-popup.png "License Popup")
 
 ## License
 
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support].
 
-Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking in:
+Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
 
-- OS X: `~/Library/Application Support/Binary Ninja`
-- Linux: `~/.binaryninja`
-- Windows: `%APPDATA%\Binary Ninja`
 
 ## Linux Setup
 
@@ -200,6 +227,17 @@ Plugins can be installed by one of two methods. First, they can be manually inst
 
 Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
 
+For more detailed information, see the [plugin guide](/guide/plugins).
+
+## PDB Plugin
+
+Binary Ninja supports loading PDB files through the built in PDB plugin. When selected from the plugin menu it attempts to find where the corresponding PDB file is located using the following search order:
+
+1. Look for in the same directory as the opened file/bndb (e.g. If you ahve `c:\foo.exe` or `c:\foo.bndb` open the pdb plugin looks for `c:\foo.pdb`)
+2. Look in the local symbol store. This is the directory specified by the settings: `local-store-relative` or `local-store-absolute`. The format of this directory is `foo.pdb\<guid>\foo.pdb`.
+3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
+4. Prompt the user for the pdb.
+
 ## Preferences/Updates
 
 ![preferences >](/images/preferences.png "Preferences")
@@ -208,10 +246,37 @@ Binary Ninja automatically updates itself by default. This functionality can be 
 
 On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version. On OS X and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
-Most preferences are fairly intuitive. There is no advanced preference system at this time, but it is [expected](https://github.com/Vector35/binaryninja-api/issues/126) to be added soon.
+## Settings
 
+Settings are stored in the _user_ directory in the file `settings.json`. Each top level object in this file is represents a different plugin.  As of build 860 the following settings are available:
+
+|Plugin | Setting                  | Type         | Default                                        | Description                                                                                   |
+|------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
+| ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
+| ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
+| pdb   | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
+| pdb   | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
+| pdb   | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
+| pdb   | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
+
+Below is an example `settings.json` setting various options:
+```
+{
+	"ui" :
+	{
+		"activeContent" : false,
+		"colorblind" : false,
+		"debug" : true
+	}
+    "pdb" :
+    {
+        "local-store-absolute" : "C:\Symbols",
+        "local-store-relative" : "",
+        "symbol-server-list" : ["http://mysymbolserver.company.lan"]
+    }
+}
+```
 ## Getting Support
 
-Vector 35 offers a number of ways to get Binary Ninja [support].
-
-[support]: https://binary.ninja/support/
+Vector 35 offers a number of ways to get Binary Ninja [support](https://binary.ninja/support/).

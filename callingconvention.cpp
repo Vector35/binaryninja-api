@@ -41,9 +41,14 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.freeRegisterList = FreeRegisterListCallback;
 	cc.areArgumentRegistersSharedIndex = AreArgumentRegistersSharedIndexCallback;
 	cc.isStackReservedForArgumentRegisters = IsStackReservedForArgumentRegistersCallback;
+	cc.isStackAdjustedOnReturn = IsStackAdjustedOnReturnCallback;
 	cc.getIntegerReturnValueRegister = GetIntegerReturnValueRegisterCallback;
 	cc.getHighIntegerReturnValueRegister = GetHighIntegerReturnValueRegisterCallback;
 	cc.getFloatReturnValueRegister = GetFloatReturnValueRegisterCallback;
+	cc.getGlobalPointerRegister = GetGlobalPointerRegisterCallback;
+	cc.getImplicitlyDefinedRegisters = GetImplicitlyDefinedRegistersCallback;
+	cc.getIncomingRegisterValue = GetIncomingRegisterValueCallback;
+	cc.getIncomingFlagValue = GetIncomingFlagValueCallback;
 
 	AddRefForRegistration();
 	m_object = BNCreateCallingConvention(arch->GetObject(), name.c_str(), &cc);
@@ -116,6 +121,13 @@ bool CallingConvention::IsStackReservedForArgumentRegistersCallback(void* ctxt)
 }
 
 
+bool CallingConvention::IsStackAdjustedOnReturnCallback(void* ctxt)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	return cc->IsStackAdjustedOnReturn();
+}
+
+
 uint32_t CallingConvention::GetIntegerReturnValueRegisterCallback(void* ctxt)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
@@ -134,6 +146,46 @@ uint32_t CallingConvention::GetFloatReturnValueRegisterCallback(void* ctxt)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	return cc->GetFloatReturnValueRegister();
+}
+
+
+uint32_t CallingConvention::GetGlobalPointerRegisterCallback(void* ctxt)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	return cc->GetGlobalPointerRegister();
+}
+
+
+uint32_t* CallingConvention::GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	vector<uint32_t> regs = cc->GetImplicitlyDefinedRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+void CallingConvention::GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	Ref<Function> funcObj;
+	if (func)
+		funcObj = new Function(BNNewFunctionReference(func));
+	*result = cc->GetIncomingRegisterValue(reg, funcObj).ToAPIObject();
+}
+
+
+void CallingConvention::GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	Ref<Function> funcObj;
+	if (func)
+		funcObj = new Function(BNNewFunctionReference(func));
+	*result = cc->GetIncomingFlagValue(reg, funcObj).ToAPIObject();
 }
 
 
@@ -182,6 +234,12 @@ bool CallingConvention::IsStackReservedForArgumentRegisters()
 }
 
 
+bool CallingConvention::IsStackAdjustedOnReturn()
+{
+	return false;
+}
+
+
 uint32_t CallingConvention::GetHighIntegerReturnValueRegister()
 {
 	return BN_INVALID_REGISTER;
@@ -191,6 +249,30 @@ uint32_t CallingConvention::GetHighIntegerReturnValueRegister()
 uint32_t CallingConvention::GetFloatReturnValueRegister()
 {
 	return BN_INVALID_REGISTER;
+}
+
+
+uint32_t CallingConvention::GetGlobalPointerRegister()
+{
+	return BN_INVALID_REGISTER;
+}
+
+
+vector<uint32_t> CallingConvention::GetImplicitlyDefinedRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+RegisterValue CallingConvention::GetIncomingRegisterValue(uint32_t, Function*)
+{
+	return RegisterValue();
+}
+
+
+RegisterValue CallingConvention::GetIncomingFlagValue(uint32_t, Function*)
+{
+	return RegisterValue();
 }
 
 
@@ -244,6 +326,12 @@ bool CoreCallingConvention::IsStackReservedForArgumentRegisters()
 }
 
 
+bool CoreCallingConvention::IsStackAdjustedOnReturn()
+{
+	return BNIsStackAdjustedOnReturn(m_object);
+}
+
+
 uint32_t CoreCallingConvention::GetIntegerReturnValueRegister()
 {
 	return BNGetIntegerReturnValueRegister(m_object);
@@ -259,4 +347,33 @@ uint32_t CoreCallingConvention::GetHighIntegerReturnValueRegister()
 uint32_t CoreCallingConvention::GetFloatReturnValueRegister()
 {
 	return BNGetFloatReturnValueRegister(m_object);
+}
+
+
+uint32_t CoreCallingConvention::GetGlobalPointerRegister()
+{
+	return BNGetGlobalPointerRegister(m_object);
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetImplicitlyDefinedRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetImplicitlyDefinedRegisters(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+RegisterValue CoreCallingConvention::GetIncomingRegisterValue(uint32_t reg, Function* func)
+{
+	return RegisterValue::FromAPIObject(BNGetIncomingRegisterValue(m_object, reg, func ? func->GetObject() : nullptr));
+}
+
+
+RegisterValue CoreCallingConvention::GetIncomingFlagValue(uint32_t flag, Function* func)
+{
+	return RegisterValue::FromAPIObject(BNGetIncomingFlagValue(m_object, flag, func ? func->GetObject() : nullptr));
 }

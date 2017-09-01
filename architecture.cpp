@@ -46,21 +46,28 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture
 }
 
 
-InstructionTextToken::InstructionTextToken(): type(TextToken), value(0)
+InstructionTextToken::InstructionTextToken(): type(TextToken), value(0), confidence(BN_FULL_CONFIDENCE)
 {
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
-	size_t s, size_t o) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext), address(0)
+	size_t s, size_t o, uint8_t c) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext),
+	confidence(c), address(0)
 {
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstructionTextTokenContext ctxt,
-	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o):
-	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), address(a)
+	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c):
+	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), confidence(c), address(a)
 {
+}
+
+
+InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
+{
+	return InstructionTextToken(type, context, text, address, value, size, operand, conf);
 }
 
 
@@ -161,6 +168,7 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 		(*result)[i].size = tokens[i].size;
 		(*result)[i].operand = tokens[i].operand;
 		(*result)[i].context = tokens[i].context;
+		(*result)[i].confidence = tokens[i].confidence;
 		(*result)[i].address = tokens[i].address;
 	}
 	return true;
@@ -338,6 +346,19 @@ uint32_t Architecture::GetLinkRegisterCallback(void* ctxt)
 }
 
 
+uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetGlobalRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -445,6 +466,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
 	callbacks.getLinkRegister = GetLinkRegisterCallback;
+	callbacks.getGlobalRegisters = GetGlobalRegistersCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -648,6 +670,18 @@ uint32_t Architecture::GetLinkRegister()
 }
 
 
+vector<uint32_t> Architecture::GetGlobalRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+bool Architecture::IsGlobalRegister(uint32_t reg)
+{
+	return BNIsArchitectureGlobalRegister(m_object, reg);
+}
+
+
 vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
 {
 	size_t count;
@@ -750,91 +784,6 @@ uint64_t Architecture::GetBinaryViewTypeConstant(const string& type, const strin
 void Architecture::SetBinaryViewTypeConstant(const string& type, const string& name, uint64_t value)
 {
 	BNSetBinaryViewTypeArchitectureConstant(m_object, type.c_str(), name.c_str(), value);
-}
-
-
-bool Architecture::ParseTypesFromSource(const string& source, const string& fileName,
-	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
-	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs,
-	const string& autoTypeSource)
-{
-	BNTypeParserResult result;
-	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
-
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
-
-	types.clear();
-	variables.clear();
-	functions.clear();
-
-	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
-		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
-	errors = errorStr;
-	BNFreeString(errorStr);
-	if (!ok)
-		return false;
-
-	for (size_t i = 0; i < result.typeCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
-		types[name] = new Type(BNNewTypeReference(result.types[i].type));
-	}
-	for (size_t i = 0; i < result.variableCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
-		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
-	}
-	for (size_t i = 0; i < result.functionCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
-		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
-	}
-	BNFreeTypeParserResult(&result);
-	return true;
-}
-
-
-bool Architecture::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
-	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
-	string& errors, const vector<string>& includeDirs, const string& autoTypeSource)
-{
-	BNTypeParserResult result;
-	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
-
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
-
-	types.clear();
-	variables.clear();
-	functions.clear();
-
-	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
-		includeDirList, includeDirs.size(), autoTypeSource.c_str());
-	errors = errorStr;
-	BNFreeString(errorStr);
-	if (!ok)
-		return false;
-
-	for (size_t i = 0; i < result.typeCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
-		types[name] = new Type(BNNewTypeReference(result.types[i].type));
-	}
-	for (size_t i = 0; i < result.variableCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
-		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
-	}
-	for (size_t i = 0; i < result.functionCount; i++)
-	{
-		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
-		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
-	}
-	BNFreeTypeParserResult(&result);
-	return true;
 }
 
 
@@ -990,7 +939,7 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
-			tokens[i].value, tokens[i].size, tokens[i].operand));
+			tokens[i].value, tokens[i].size, tokens[i].operand, tokens[i].confidence));
 	}
 
 	BNFreeInstructionText(tokens, count);
@@ -1150,6 +1099,20 @@ uint32_t CoreArchitecture::GetStackPointerRegister()
 uint32_t CoreArchitecture::GetLinkRegister()
 {
 	return BNGetArchitectureLinkRegister(m_object);
+}
+
+
+vector<uint32_t> CoreArchitecture::GetGlobalRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetArchitectureGlobalRegisters(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
 }
 
 

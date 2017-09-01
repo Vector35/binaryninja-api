@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -83,7 +84,7 @@ void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView*
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableAdded(view, varObj);
 }
@@ -95,7 +96,7 @@ void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryVie
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableRemoved(view, varObj);
 }
@@ -107,7 +108,7 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
 	DataVariable varObj;
 	varObj.address = var->address;
-	varObj.type = new Type(BNNewTypeReference(var->type));
+	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
 	varObj.autoDiscovered = var->autoDiscovered;
 	notify->OnDataVariableUpdated(view, varObj);
 }
@@ -757,6 +758,18 @@ bool BinaryView::IsOffsetBackedByFile(uint64_t offset) const
 }
 
 
+bool BinaryView::IsOffsetCodeSemantics(uint64_t offset) const
+{
+	return BNIsOffsetCodeSemantics(m_object, offset);
+}
+
+
+bool BinaryView::IsOffsetWritableSemantics(uint64_t offset) const
+{
+	return BNIsOffsetWritableSemantics(m_object, offset);
+}
+
+
 uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
 {
 	return BNGetNextValidOffset(m_object, offset);
@@ -841,6 +854,12 @@ bool BinaryView::Save(FileAccessor* file)
 }
 
 
+void BinaryView::AddAnalysisOption(const string& name)
+{
+	BNAddAnalysisOption(m_object, name.c_str());
+}
+
+
 void BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr)
 {
 	BNAddFunctionForAnalysis(m_object, platform->GetObject(), addr);
@@ -871,6 +890,12 @@ void BinaryView::RemoveUserFunction(Function* func)
 }
 
 
+void BinaryView::UpdateAnalysisAndWait()
+{
+	BNUpdateAnalysisAndWait(m_object);
+}
+
+
 void BinaryView::UpdateAnalysis()
 {
 	BNUpdateAnalysis(m_object);
@@ -883,15 +908,21 @@ void BinaryView::AbortAnalysis()
 }
 
 
-void BinaryView::DefineDataVariable(uint64_t addr, Type* type)
+void BinaryView::DefineDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type)
 {
-	BNDefineDataVariable(m_object, addr, type->GetObject());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNDefineDataVariable(m_object, addr, &tc);
 }
 
 
-void BinaryView::DefineUserDataVariable(uint64_t addr, Type* type)
+void BinaryView::DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type)
 {
-	BNDefineUserDataVariable(m_object, addr, type->GetObject());
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNDefineUserDataVariable(m_object, addr, &tc);
 }
 
 
@@ -917,7 +948,7 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 	{
 		DataVariable var;
 		var.address = vars[i].address;
-		var.type = new Type(BNNewTypeReference(vars[i].type));
+		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
 		var.autoDiscovered = vars[i].autoDiscovered;
 		result[var.address] = var;
 	}
@@ -930,7 +961,7 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 {
 	var.address = 0;
-	var.type = nullptr;
+	var.type = Confidence<Ref<Type>>(nullptr, 0);
 	var.autoDiscovered = false;
 
 	BNDataVariable result;
@@ -938,7 +969,7 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 		return false;
 
 	var.address = result.address;
-	var.type = new Type(result.type);
+	var.type = Confidence<Ref<Type>>(new Type(result.type), result.typeConfidence);
 	var.autoDiscovered = result.autoDiscovered;
 	return true;
 }
@@ -1318,6 +1349,10 @@ uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
 	return BNGetNextDataAfterAddress(m_object, addr);
 }
 
+uint64_t BinaryView::GetNextDataVariableAfterAddress(uint64_t addr)
+{
+	return BNGetNextDataVariableAfterAddress(m_object, addr);
+}
 
 uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
 {
@@ -1387,6 +1422,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
 			token.context = lines[i].contents.tokens[j].context;
+			token.confidence = lines[i].contents.tokens[j].confidence;
 			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}
@@ -1432,6 +1468,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 			token.size = lines[i].contents.tokens[j].size;
 			token.operand = lines[i].contents.tokens[j].operand;
 			token.context = lines[i].contents.tokens[j].context;
+			token.confidence = lines[i].contents.tokens[j].confidence;
 			token.address = lines[i].contents.tokens[j].address;
 			line.contents.tokens.push_back(token);
 		}
@@ -1697,11 +1734,12 @@ bool BinaryView::GetAddressForDataOffset(uint64_t offset, uint64_t& addr)
 }
 
 
-void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, const string& type,
-	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+void BinaryView::AddAutoSection(const string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+	const string& type, uint64_t align, uint64_t entrySize, const string& linkedSection,
+	const string& infoSection, uint64_t infoData)
 {
-	BNAddAutoSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
-		infoSection.c_str(), infoData);
+	BNAddAutoSection(m_object, name.c_str(), start, length, semantics, type.c_str(), align, entrySize,
+		linkedSection.c_str(), infoSection.c_str(), infoData);
 }
 
 
@@ -1711,11 +1749,12 @@ void BinaryView::RemoveAutoSection(const string& name)
 }
 
 
-void BinaryView::AddUserSection(const string& name, uint64_t start, uint64_t length, const string& type,
-	uint64_t align, uint64_t entrySize, const string& linkedSection, const string& infoSection, uint64_t infoData)
+void BinaryView::AddUserSection(const string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+	const string& type, uint64_t align, uint64_t entrySize, const string& linkedSection,
+	const string& infoSection, uint64_t infoData)
 {
-	BNAddUserSection(m_object, name.c_str(), start, length, type.c_str(), align, entrySize, linkedSection.c_str(),
-		infoSection.c_str(), infoData);
+	BNAddUserSection(m_object, name.c_str(), start, length, semantics, type.c_str(), align, entrySize,
+		linkedSection.c_str(), infoSection.c_str(), infoData);
 }
 
 
@@ -1743,6 +1782,7 @@ vector<Section> BinaryView::GetSections()
 		section.infoData = sections[i].infoData;
 		section.align = sections[i].align;
 		section.entrySize = sections[i].entrySize;
+		section.semantics = sections[i].semantics;
 		result.push_back(section);
 	}
 
@@ -1769,6 +1809,7 @@ vector<Section> BinaryView::GetSectionsAt(uint64_t addr)
 		section.infoData = sections[i].infoData;
 		section.align = sections[i].align;
 		section.entrySize = sections[i].entrySize;
+		section.semantics = sections[i].semantics;
 		result.push_back(section);
 	}
 
@@ -1792,6 +1833,7 @@ bool BinaryView::GetSectionByName(const string& name, Section& result)
 	result.infoData = section.infoData;
 	result.align = section.align;
 	result.entrySize = section.entrySize;
+	result.semantics = section.semantics;
 
 	BNFreeSection(&section);
 	return true;
@@ -1825,6 +1867,50 @@ vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 	return result;
 }
 
+
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue)
+{
+	if (!inValue)
+		return;
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
+}
+
+Ref<Metadata> BinaryView::QueryMetadata(const std::string& key)
+{
+	BNMetadata* value = BNBinaryViewQueryMetadata(m_object, key.c_str());
+	if (!value)
+		return nullptr;
+	return new Metadata(value);
+}
+
+void BinaryView::RemoveMetadata(const std::string& key)
+{
+	BNBinaryViewRemoveMetadata(m_object, key.c_str());
+}
+
+string BinaryView::GetStringMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsString())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetString();
+}
+
+vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsRaw())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetRaw();
+}
+
+uint64_t BinaryView::GetUIntMetadata(const string& key)
+{
+	auto data = QueryMetadata(key);
+	if (!data || !data->IsUnsignedInteger())
+		throw QueryMetadataException("Failed to find key: " + key);
+	return data->GetUnsignedInteger();
+}
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {

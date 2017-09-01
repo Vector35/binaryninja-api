@@ -4,7 +4,12 @@ code {
 
 .admonition {
 	background: rgb(128, 198, 223);
-	color: #333;
+	color: #fff;
+}
+
+.tip {
+	background: rgb(110, 110, 110);
+	color: #fff;
 }
 
 img[alt$=">"] {

@@ -116,6 +116,7 @@ class Architecture(object):
 	regs = {}
 	stack_pointer = None
 	link_reg = None
+	global_regs = []
 	flags = []
 	flag_write_types = []
 	flag_roles = {}
@@ -208,6 +209,13 @@ class Architecture(object):
 				core.BNFreeRegisterList(flags)
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flag_indexes
 				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetArchitectureGlobalRegisters(self.handle, count)
+			self.__dict__["global_regs"] = []
+			for i in xrange(0, count.value):
+				self.global_regs.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+			core.BNFreeRegisterList(regs)
 		else:
 			startup._init_plugins()
 
@@ -250,6 +258,7 @@ class Architecture(object):
 			self._cb.getStackPointerRegister = self._cb.getStackPointerRegister.__class__(
 				self._get_stack_pointer_register)
 			self._cb.getLinkRegister = self._cb.getLinkRegister.__class__(self._get_link_register)
+			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_registers)
 			self._cb.assemble = self._cb.assemble.__class__(self._assemble)
 			self._cb.isNeverBranchPatchAvailable = self._cb.isNeverBranchPatchAvailable.__class__(
 				self._is_never_branch_patch_available)
@@ -330,6 +339,8 @@ class Architecture(object):
 					flags.append(self._flags[flag])
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flags
 
+			self.__dict__["global_regs"] = self.__class__.global_regs
+
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 
@@ -361,7 +372,7 @@ class Architecture(object):
 		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			obj = callingconvention.CallingConvention(None, core.BNNewCallingConventionReference(cc[i]))
+			obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
 			result[obj.name] = obj
 		core.BNFreeCallingConventionList(cc, count)
 		return result
@@ -478,6 +489,7 @@ class Architecture(object):
 				token_buf[i].size = tokens[i].size
 				token_buf[i].operand = tokens[i].operand
 				token_buf[i].context = tokens[i].context
+				token_buf[i].confidence = tokens[i].confidence
 				token_buf[i].address = tokens[i].address
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
@@ -718,6 +730,20 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return 0
 
+	def _get_global_registers(self, ctxt, count):
+		try:
+			count[0] = len(self.__class__.global_regs)
+			reg_buf = (ctypes.c_uint * len(self.__class__.global_regs))()
+			for i in xrange(0, len(self.__class__.global_regs)):
+				reg_buf[i] = self._all_regs[self.__class__.global_regs[i]]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
 	def _assemble(self, ctxt, code, addr, result, errors):
 		try:
 			data, error_str = self.perform_assemble(code, addr)
@@ -897,7 +923,7 @@ class Architecture(object):
 		:param str data: bytes to be interpreted as low-level IL instructions
 		:param int addr: virtual address of start of ``data``
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:rtype: None
+		:rtype: length of bytes read on success, None on failure
 		"""
 		raise NotImplementedError
 
@@ -1163,8 +1189,9 @@ class Architecture(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -1293,7 +1320,7 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]].index
 			elif isinstance(operands[i], lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operands[i].index
@@ -1317,7 +1344,7 @@ class Architecture(object):
 		for i in xrange(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operands[i]]
+				operand_list[i].reg = self.regs[operands[i]].index
 			elif isinstance(operands[i], lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operands[i].index
@@ -1646,99 +1673,6 @@ class Architecture(object):
 			>>>
 		"""
 		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
-
-	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
-		"""
-		``parse_types_from_source`` parses the source string and any needed headers searching for them in
-		the optional list of directories provided in ``include_dirs``.
-
-		:param str source: source string to be parsed
-		:param str filename: optional source filename
-		:param list(str) include_dirs: optional list of string filename include directories
-		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
-		:rtype: TypeParserResult
-		:Example:
-
-			>>> arch.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
-			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:{'bar':
-			<type: int32_t(int32_t x)>}}, '')
-			>>>
-		"""
-
-		if filename is None:
-			filename = "input"
-		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in xrange(0, len(include_dirs)):
-			dir_buf[i] = str(include_dirs[i])
-		parse = core.BNTypeParserResult()
-		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
-			len(include_dirs), auto_type_source)
-		error_str = errors.value
-		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-		if not result:
-			raise SyntaxError(error_str)
-		type_dict = {}
-		variables = {}
-		functions = {}
-		for i in xrange(0, parse.typeCount):
-			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
-		for i in xrange(0, parse.variableCount):
-			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
-		for i in xrange(0, parse.functionCount):
-			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
-		core.BNFreeTypeParserResult(parse)
-		return types.TypeParserResult(type_dict, variables, functions)
-
-	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
-		"""
-		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
-		the optional list of directories provided in ``include_dirs``.
-
-		:param str filename: filename of file to be parsed
-		:param list(str) include_dirs: optional list of string filename include directories
-		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
-		:rtype: TypeParserResult
-		:Example:
-
-			>>> file = "/Users/binja/tmp.c"
-			>>> open(file).read()
-			'int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n'
-			>>> arch.parse_types_from_source_file(file)
-			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:
-			{'bar': <type: int32_t(int32_t x)>}}, '')
-			>>>
-		"""
-		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in xrange(0, len(include_dirs)):
-			dir_buf[i] = str(include_dirs[i])
-		parse = core.BNTypeParserResult()
-		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
-			len(include_dirs), auto_type_source)
-		error_str = errors.value
-		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-		if not result:
-			raise SyntaxError(error_str)
-		type_dict = {}
-		variables = {}
-		functions = {}
-		for i in xrange(0, parse.typeCount):
-			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type))
-		for i in xrange(0, parse.variableCount):
-			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type))
-		for i in xrange(0, parse.functionCount):
-			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type))
-		core.BNFreeTypeParserResult(parse)
-		return types.TypeParserResult(type_dict, variables, functions)
 
 	def register_calling_convention(self, cc):
 		"""

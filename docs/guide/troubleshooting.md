@@ -9,17 +9,31 @@
 
 ## Bug Reproduction
 Running Binary Ninja with debug logging will make your bug report more useful.
+
 ```
 ./binaryninja --debug --stderr-log
 ```
 
+Alternatively, it might be easier to save debug logs to a file instead:
+
+```
+./binaryninja -d -l logfile.txt
+```
+
+(note that both long and short-form of the command-line arguments are demonstrated in the above examples)
+
 ## Plugin Troubleshooting
 
-While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most importat is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
+While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
+
+Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you'er running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
+
+Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](/getting-started/#directories).
+
 
 ## License Problems
 
-- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/index.html#license).
+- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
 ## Linux
@@ -48,6 +62,19 @@ cd ~/binaryninja
 QT_PLUGIN_PATH=./qt ./binaryninja
 ```
 
+### Debian
+
+For Debian variants that (Kali, eg) don't match packages with Ubuntu LTS or the latest stable, the following might fix problems with libssl and libcrypto:
+
+```
+$ cd binaryninja/plugins
+$ ln -s libssl.so libssl.so.1.0.0
+$ ln -s libcrypto.so libcrypto.so.1.0.0
+```
+
+### Gentoo
+
+One Gentoo user [reported][issue672] a failed SSL certificate when trying to update. The solution was to copy over `/etc/ssl/certs/ca-certificates.crt` from another Linux distribution.
 
 ## API
 
@@ -60,3 +87,4 @@ QT_PLUGIN_PATH=./qt ./binaryninja
 [support]: https://binary.ninja/support.html
 [faq]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
+[issue672]: https://github.com/Vector35/binaryninja-api/issues/672

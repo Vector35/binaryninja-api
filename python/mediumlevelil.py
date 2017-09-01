@@ -26,6 +26,7 @@ from .enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDep
 import function
 import basicblock
 import lowlevelil
+import types
 
 
 class SSAVariable(object):
@@ -35,6 +36,15 @@ class SSAVariable(object):
 
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self.var), self.version)
+
+	def __eq__(self, other):
+		return (
+			(self.var.identifier, self.version) ==
+			(other.var.identifier, other.version)
+		)
+
+	def __hash__(self):
+		return hash((self.var.identifier, self.version))
 
 
 class MediumLevelILLabel(object):
@@ -70,17 +80,20 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SPLIT: [("high", "var"), ("low", "var"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_LOAD: [("src", "expr")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT: [("src", "expr"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_STORE: [("dest", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR: [("src", "var")],
 		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")],
 		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
+		MediumLevelILOperation.MLIL_IMPORT: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_AND: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_OR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_XOR: [("left", "expr"), ("right", "expr")],
@@ -88,9 +101,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_LSR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ASR: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ROL: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_ROR: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
 		MediumLevelILOperation.MLIL_MUL: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
@@ -139,7 +152,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "expr"), ("low", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")],
@@ -153,7 +166,9 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [("src_memory", "int"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
 		MediumLevelILOperation.MLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: [("dest", "expr"), ("offset", "int"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
@@ -169,6 +184,7 @@ class MediumLevelILInstruction(object):
 		self.operation = MediumLevelILOperation(instr.operation)
 		self.size = instr.size
 		self.address = instr.address
+		self.source_operand = instr.sourceOperand
 		operands = MediumLevelILInstruction.ILOperations[instr.operation]
 		self.operands = []
 		i = 0
@@ -265,8 +281,9 @@ class MediumLevelILInstruction(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
@@ -396,13 +413,25 @@ class MediumLevelILInstruction(object):
 				result += operand.vars_read
 		return result
 
+	@property
+	def expr_type(self):
+		"""Type of expression"""
+		result = core.BNGetMediumLevelILExprType(self.function.handle, self.expr_index)
+		if result.type:
+			platform = None
+			if self.function.source_function:
+				platform = self.function.source_function.platform
+			return types.Type(result.type, platform = platform, confidence = result.confidence)
+		return None
+
 	def get_ssa_var_possible_values(self, ssa_var):
 		var_data = core.BNVariable()
 		var_data.type = ssa_var.var.source_type
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, ssa_var.version, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = function.PossibleValueSet(self.function.arch, value)
+		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_ssa_var_version(self, var):
@@ -783,6 +812,32 @@ class MediumLevelILFunction(object):
 		core.BNFreeILInstructionList(instrs)
 		return result
 
+	def get_var_definitions(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_var_uses(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append(instrs[i])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def get_ssa_var_value(self, ssa_var):
 		var_data = core.BNVariable()
 		var_data.type = ssa_var.var.source_type
@@ -834,3 +889,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 			return self.il_function[idx + self.start]
 		else:
 			return self.il_function[self.end + idx]
+
+	def _create_instance(self, view, handle):
+		"""Internal method by super to instantiante child instances"""
+		return MediumLevelILBasicBlock(view, handle, self.il_function)

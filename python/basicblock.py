@@ -48,6 +48,8 @@ class BasicBlock(object):
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
+		self._arch = None
+		self._func = None
 
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
@@ -62,21 +64,33 @@ class BasicBlock(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
+	def _create_instance(self, view, handle):
+		"""Internal method used to instantiante child instances"""
+		return BasicBlock(view, handle)
+
 	@property
 	def function(self):
 		"""Basic block function (read-only)"""
+		if self._func is not None:
+			return self._func
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		return function.Function(self.view, func)
+		self._func = function.Function(self.view, func)
+		return self._func
 
 	@property
 	def arch(self):
 		"""Basic block architecture (read-only)"""
+		# The arch for a BasicBlock isn't going to change so just cache
+		# it the first time we need it
+		if self._arch is not None:
+			return self._arch
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.Architecture(arch)
+		self._arch = architecture.Architecture(arch)
+		return self._arch
 
 	@property
 	def start(self):
@@ -107,7 +121,7 @@ class BasicBlock(object):
 		for i in xrange(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
+				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
@@ -123,7 +137,7 @@ class BasicBlock(object):
 		for i in xrange(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = BasicBlock(self.view, core.BNNewBasicBlockReference(edges[i].target))
+				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
@@ -136,13 +150,18 @@ class BasicBlock(object):
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
 	@property
+	def can_exit(self):
+		"""Whether basic block can return or is tagged as 'No Return' (read-only)"""
+		return core.BNBasicBlockCanExit(self.handle)
+
+	@property
 	def dominators(self):
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -153,7 +172,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -163,7 +182,7 @@ class BasicBlock(object):
 		result = core.BNGetBasicBlockImmediateDominator(self.handle)
 		if not result:
 			return None
-		return BasicBlock(self.view, result)
+		return self._create_instance(self.view, result)
 
 	@property
 	def dominator_tree_children(self):
@@ -172,7 +191,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -183,7 +202,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BasicBlock(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -264,8 +283,8 @@ class BasicBlock(object):
 		idx = start
 		while idx < end:
 			data = self.view.read(idx, 16)
-			inst_info = self.view.arch.get_instruction_info(data, idx)
-			inst_text = self.view.arch.get_instruction_text(data, idx)
+			inst_info = self.arch.get_instruction_info(data, idx)
+			inst_text = self.arch.get_instruction_text(data, idx)
 
 			yield inst_text
 			idx += inst_info.length
@@ -276,9 +295,11 @@ class BasicBlock(object):
 	def get_disassembly_text(self, settings=None):
 		"""
 		``get_disassembly_text`` returns a list of function.DisassemblyTextLine objects for the current basic block.
+
+		:param DisassemblySettings settings: (optional) DisassemblySettings object
 		:Example:
 
-			>>>current_basic_block.get_disassembly_text()
+			>>> current_basic_block.get_disassembly_text()
 			[<0x100000f30: _main:>, <0x100000f30: push    rbp>, ... ]
 		"""
 		settings_obj = None
@@ -298,8 +319,9 @@ class BasicBlock(object):
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
 				context = lines[i].tokens[j].context
+				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			result.append(function.DisassemblyTextLine(addr, tokens))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -308,7 +330,7 @@ class BasicBlock(object):
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 
-		.warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		..warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		"""

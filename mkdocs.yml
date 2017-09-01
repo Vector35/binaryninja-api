@@ -28,7 +28,7 @@ pages:
         #- Patching: 'guide/patching.md'
         #- SCC: 'guide/scc.md'
         #- Types Library: 'guide/type.md'
-        #- Using Plugins: 'guide/plugins.md'
+        - Using and Writing Plugins: 'guide/plugins.md'
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'

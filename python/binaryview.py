@@ -26,7 +26,8 @@ import threading
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import AnalysisState, SymbolType, InstructionTextTokenType, Endianness, ModificationStatus, StringType, SegmentFlag
+from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
 import function
 import startup
 import architecture
@@ -39,6 +40,7 @@ import databuffer
 import basicblock
 import types
 import lineardisassembly
+import metadata
 
 
 class BinaryDataNotification(object):
@@ -115,6 +117,10 @@ class AnalysisCompletionEvent(object):
 		pass
 
 	def cancel(self):
+		"""
+		.. warning: This method should only be used when the system is being
+		shut down and no further analysis should be done afterward.
+		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 
@@ -211,7 +217,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_added(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -220,7 +226,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_removed(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -229,7 +235,7 @@ class BinaryDataNotificationCallbacks(object):
 	def _data_var_updated(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type))
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered))
 		except:
@@ -250,14 +256,14 @@ class BinaryDataNotificationCallbacks(object):
 	def _type_defined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj)))
+			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -416,7 +422,7 @@ class Segment(object):
 
 
 class Section(object):
-	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size):
+	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics):
 		self.name = name
 		self.type = section_type
 		self.start = start
@@ -426,6 +432,7 @@ class Section(object):
 		self.info_data = info_data
 		self.align = align
 		self.entry_size = entry_size
+		self.semantics = SectionSemantics(semantics)
 
 	@property
 	def end(self):
@@ -854,7 +861,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			addr = var_list[i].address
-			var_type = types.Type(core.BNNewTypeReference(var_list[i].type))
+			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), platform = self.platform, confidence = var_list[i].typeConfidence)
 			auto_discovered = var_list[i].autoDiscovered
 			result[addr] = DataVariable(addr, var_type, auto_discovered)
 		core.BNFreeDataVariables(var_list, count.value)
@@ -868,7 +875,7 @@ class BinaryView(object):
 		result = {}
 		for i in xrange(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type))
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -893,7 +900,8 @@ class BinaryView(object):
 		for i in xrange(0, count.value):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize)
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
+				section_list[i].semantics)
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -918,6 +926,12 @@ class BinaryView(object):
 			return obj
 		else:
 			return BinaryView._associated_data[handle.value]
+
+	@property
+	def global_pointer_value(self):
+		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
+		result = core.BNGetGlobalPointerValue(self.handle)
+		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -1423,7 +1437,7 @@ class BinaryView(object):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
-		.. note:: :py:method:`create_database` should have been called prior to executing this method
+		.. note:: :py:meth:`create_database` should have been called prior to executing this method
 
 		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: True if it successfully saved the snapshot, False otherwise
@@ -1672,6 +1686,28 @@ class BinaryView(object):
 		"""
 		return core.BNIsOffsetExecutable(self.handle, addr)
 
+	def is_offset_code_semantics(self, addr):
+		"""
+		``is_offset_code_semantics`` checks if an virtual address ``addr`` is semantically valid for code.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetCodeSemantics(self.handle, addr)
+
+	def is_offset_writable_semantics(self, addr):
+		"""
+		``is_offset_writable_semantics`` checks if an virtual address ``addr`` is semantically writable. Some sections
+		may have writable permissions for linking purposes but can be treated as read-only for the purposes of
+		analysis.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetWritableSemantics(self.handle, addr)
+
 	def save(self, dest):
 		"""
 		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
@@ -1685,11 +1721,25 @@ class BinaryView(object):
 		return core.BNSaveToFilename(self.handle, str(dest))
 
 	def register_notification(self, notify):
+		"""
+		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
+		list of callbacks can be seen in :py:Class:`BinaryDataNotification`.
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		cb = BinaryDataNotificationCallbacks(self, notify)
 		cb._register()
 		self.notifications[notify] = cb
 
 	def unregister_notification(self, notify):
+		"""
+		`unregister_notification` unregisters the :py:Class:`BinaryDataNotification` object passed to
+		`register_notification`
+
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:rtype: None
+		"""
 		if notify in self.notifications:
 			self.notifications[notify]._unregister()
 			del self.notifications[notify]
@@ -1781,6 +1831,22 @@ class BinaryView(object):
 		"""
 		core.BNRemoveUserFunction(self.handle, func.handle)
 
+	def add_analysis_option(self, name):
+		"""
+		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
+		start analysis by calling either ``update_analysis()`` or ``update_analysis_and_wait()``.
+
+		:param str name: name of the analysis option. Available options:
+				"linearsweep" : apply linearsweep analysis during the next analysis update (run-once semantics)
+
+		:rtype: None
+		:Example:
+
+			>>> bv.add_analysis_option("linearsweep")
+			>>> bv.update_analysis_and_wait()
+		"""
+		core.BNAddAnalysisOption(self.handle, name)
+
 	def update_analysis(self):
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
@@ -1801,28 +1867,7 @@ class BinaryView(object):
 
 		:rtype: None
 		"""
-		class WaitEvent(object):
-			def __init__(self):
-				self.cond = threading.Condition()
-				self.done = False
-
-			def complete(self):
-				self.cond.acquire()
-				self.done = True
-				self.cond.notify()
-				self.cond.release()
-
-			def wait(self):
-				self.cond.acquire()
-				while not self.done:
-					self.cond.wait()
-				self.cond.release()
-
-		wait = WaitEvent()
-		# TODO: figure out if we actually need this 'event' variable, likely we do
-		event = AnalysisCompletionEvent(self, lambda: wait.complete())
-		core.BNUpdateAnalysis(self.handle)
-		wait.wait()
+		core.BNUpdateAnalysisAndWait(self.handle)
 
 	def abort_analysis(self):
 		"""
@@ -1847,7 +1892,10 @@ class BinaryView(object):
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		core.BNDefineDataVariable(self.handle, addr, var_type.handle)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNDefineDataVariable(self.handle, addr, tc)
 
 	def define_user_data_var(self, addr, var_type):
 		"""
@@ -1864,7 +1912,10 @@ class BinaryView(object):
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		core.BNDefineUserDataVariable(self.handle, addr, var_type.handle)
+		tc = core.BNTypeWithConfidence()
+		tc.type = var_type.handle
+		tc.confidence = var_type.confidence
+		core.BNDefineUserDataVariable(self.handle, addr, tc)
 
 	def undefine_data_var(self, addr):
 		"""
@@ -1910,13 +1961,29 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable(var.address, types.Type(var.type), var.autoDiscovered)
+		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered)
+
+	def get_functions_containing(self, addr):
+		"""
+		``get_functions_containing`` returns a list of functions which contain the given address or None on failure.
+
+		:param int addr: virtual address to query.
+		:rtype: list of Function objects or None
+		"""
+		basic_blocks = self.get_basic_blocks_at(addr)
+		if len(basic_blocks) == 0:
+			return None
+
+		result = []
+		for block in basic_blocks:
+			result.append(block.function)
+		return result
 
 	def get_function_at(self, addr, plat=None):
 		"""
-		``get_function_at`` gets a binaryninja.Function object for the function at the virtual address ``addr``:
+		``get_function_at`` gets a Function object for the function that starts at virtual address ``addr``:
 
-		:param int addr: virtual address of the desired function
+		:param int addr: starting virtual address of the desired function
 		:param Platform plat: plat of the desired function
 		:return: returns a Function object or None for the function at the virtual address provided
 		:rtype: Function
@@ -2722,7 +2789,7 @@ class BinaryView(object):
 	def get_linear_disassembly_position_at(self, addr, settings):
 		"""
 		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition` object for use in
-		:py:method:`get_previous_linear_disassembly_lines` or :py:method:`get_next_linear_disassembly_lines`.
+		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
 		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object
@@ -2781,8 +2848,9 @@ class BinaryView(object):
 				size = lines[i].contents.tokens[j].size
 				operand = lines[i].contents.tokens[j].operand
 				context = lines[i].contents.tokens[j].context
+				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 			contents = function.DisassemblyTextLine(addr, tokens)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
@@ -2896,7 +2964,7 @@ class BinaryView(object):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError(error_str)
-		type_obj = types.Type(core.BNNewTypeReference(result.type))
+		type_obj = types.Type(core.BNNewTypeReference(result.type), platform = self.platform)
 		name = types.QualifiedName._from_core_struct(result.name)
 		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
@@ -2920,7 +2988,7 @@ class BinaryView(object):
 		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self.platform)
 
 	def get_type_by_id(self, id):
 		"""
@@ -2941,7 +3009,7 @@ class BinaryView(object):
 		obj = core.BNGetAnalysisTypeById(self.handle, id)
 		if not obj:
 			return None
-		return types.Type(obj)
+		return types.Type(obj, platform = self.platform)
 
 	def get_type_name_by_id(self, id):
 		"""
@@ -3196,17 +3264,17 @@ class BinaryView(object):
 			return None
 		return address.value
 
-	def add_auto_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
-		info_section = "", info_data = 0):
-		core.BNAddAutoSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+	def add_auto_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
+		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+		core.BNAddAutoSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
 	def remove_auto_section(self, name):
 		core.BNRemoveAutoSection(self.handle, name)
 
-	def add_user_section(self, name, start, length, type = "", align = 1, entry_size = 1, linked_section = "",
-		info_section = "", info_data = 0):
-		core.BNAddUserSection(self.handle, name, start, length, type, align, entry_size, linked_section,
+	def add_user_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
+		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+		core.BNAddUserSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
 	def remove_user_section(self, name):
@@ -3219,7 +3287,8 @@ class BinaryView(object):
 		for i in xrange(0, count.value):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize))
+				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
+				section_list[i].semantics))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3228,7 +3297,7 @@ class BinaryView(object):
 		if not core.BNGetSectionByName(self.handle, name, section):
 			return None
 		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
-			section.infoSection, section.infoData, section.align, section.entrySize)
+			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics)
 		core.BNFreeSection(section)
 		return result
 
@@ -3242,6 +3311,67 @@ class BinaryView(object):
 			result.append(str(outgoing_names[i]))
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result
+
+	def query_metadata(self, key):
+		"""
+		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.
+
+		:param string key: key to query
+		:rtype: metadata associated with the key
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
+			1337L
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
+			'my_data'
+		"""
+		md_handle = core.BNBinaryViewQueryMetadata(self.handle, key)
+		if md_handle is None:
+			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle).value
+
+	def store_metadata(self, key, md):
+		"""
+		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using 
+		`store_metadata` can be retrieved when the database is reopend. Objects stored are not arbitrary python 
+		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata` 
+		for more information. Python objects could obviously be serialized using pickle but this intentionally
+		a task left to the user since there is the potential security issues.
+
+		:param string key: key value to associate the Metadata object with
+		:param Varies md: object to store.
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.query_metadata("integer")
+			1337L
+			>>> bv.store_metadata("list", [1,2,3])
+			>>> bv.query_metadata("list")
+			[1L, 2L, 3L]
+			>>> bv.store_metadata("string", "my_data")
+			>>> bv.query_metadata("string")
+			'my_data'
+		"""
+		core.BNBinaryViewStoreMetadata(self.handle, key, metadata.Metadata(md).handle)
+
+	def remove_metadata(self, key):
+		"""
+		`remove_metadata` removes the metadata associated with key from the current BinaryView.
+
+		:param string key: key associated with metadata to remove from the BinaryView
+		:rtype: None
+		:Example:
+
+			>>> bv.store_metadata("integer", 1337)
+			>>> bv.remove_metadata("integer")
+		"""
+		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
 	def __setattr__(self, name, value):
 		try:

@@ -24,14 +24,17 @@ The previous tools are used in the generation of our documentation, but are not 
     - [discount] ([discount license] - BSD)
     - [libcurl] ([libcurl license] - MIT/X derivative)
     - [libgit2] ([libgit2 license] - GPLv2 with linking exception)
+    - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
+    - [jemalloc] ([jemalloc license] - BSD)
     - [openssl] ([openssl license] - openssl license)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
 
 * Other
-    - [yasm] ([yasm license] - 2-clause BSD)
+    - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
+    - [capstone] ([capstone license] - 3-clause BSD) used in the PPC architecture module as an example of how to wrap an external disassembler
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -54,6 +57,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
 [Qt 5.6]: https://www.qt.io/qt-licensing-terms/
+[capstone]: https://github.com/aquynh/capstone
+[capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE
 [breathe-rtd-theme license]: https://github.com/snide/sphinx_rtd_theme/blob/master/LICENSE
 [breathe-rtd-theme]: https://github.com/snide/sphinx_rtd_theme/
@@ -64,12 +69,16 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
-[libcurl license]: https://curl.haxx.se/docs/copyright.html 
 [libcurl]: https://curl.haxx.se/
-[libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
+[libcurl license]: https://curl.haxx.se/docs/copyright.html 
 [libgit2]: https://libgit2.github.com/
-[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
+[libmspack]: https://www.cabextract.org.uk/libmspack/
+[libmspack license]: https://www.cabextract.org.uk/libmspack/#license
 [llvm]: http://llvm.org/releases/3.8.1/
+[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[jemalloc]: http://jemalloc.net/
+[jemalloc license]: https://github.com/jemalloc/jemalloc/blob/dev/COPYING
 [lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
 [mkdocs license]: https://github.com/mkdocs/mkdocs/blob/master/LICENSE

@@ -18,11 +18,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+max_confidence = 255
+
 import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType
+from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
 import callingconvention
 import function
 
@@ -197,9 +199,23 @@ class Symbol(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
+class FunctionParameter(object):
+	def __init__(self, param_type, name = "", location = None):
+		self.type = param_type
+		self.name = name
+		self.location = location
+
+	def __repr__(self):
+		if (self.location is not None) and (self.location.name != self.name):
+			return "%s %s%s @ %s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name(), self.location.name)
+		return "%s %s%s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+
+
 class Type(object):
-	def __init__(self, handle):
+	def __init__(self, handle, platform = None, confidence = max_confidence):
 		self.handle = handle
+		self.confidence = confidence
+		self.platform = platform
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
@@ -232,12 +248,14 @@ class Type(object):
 	@property
 	def signed(self):
 		"""Wether type is signed (read-only)"""
-		return core.BNIsTypeSigned(self.handle)
+		result = core.BNIsTypeSigned(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def const(self):
 		"""Whether type is const (read-only)"""
-		return core.BNIsTypeConst(self.handle)
+		result = core.BNIsTypeConst(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def modified(self):
@@ -248,33 +266,33 @@ class Type(object):
 	def target(self):
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, platform = self.platform, confidence = result.confidence)
 
 	@property
 	def element_type(self):
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, platform = self.platform, confidence = result.confidence)
 
 	@property
 	def return_value(self):
 		"""Return value (read-only)"""
 		result = core.BNGetChildType(self.handle)
-		if result is None:
+		if not result.type:
 			return None
-		return Type(result)
+		return Type(result.type, platform = self.platform, confidence = result.confidence)
 
 	@property
 	def calling_convention(self):
 		"""Calling convention (read-only)"""
 		result = core.BNGetTypeCallingConvention(self.handle)
-		if result is None:
+		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, result)
+		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@property
 	def parameters(self):
@@ -283,19 +301,32 @@ class Type(object):
 		params = core.BNGetTypeParameters(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append((Type(core.BNNewTypeReference(params[i].type)), params[i].name))
+			param_type = Type(core.BNNewTypeReference(params[i].type), platform = self.platform, confidence = params[i].typeConfidence)
+			if params[i].defaultLocation:
+				param_location = None
+			else:
+				name = params[i].name
+				if (params[i].location.type == VariableSourceType.RegisterVariableSourceType) and (self.platform is not None):
+					name = self.platform.arch.get_reg_name(params[i].location.storage)
+				elif params[i].location.type == VariableSourceType.StackVariableSourceType:
+					name = "arg_%x" % params[i].location.storage
+				param_location = function.Variable(None, params[i].location.type, params[i].location.index,
+					params[i].location.storage, name, param_type)
+			result.append(FunctionParameter(param_type, params[i].name, param_location))
 		core.BNFreeTypeParameterList(params, count.value)
 		return result
 
 	@property
 	def has_variable_arguments(self):
 		"""Whether type has variable arguments (read-only)"""
-		return core.BNTypeHasVariableArguments(self.handle)
+		result = core.BNTypeHasVariableArguments(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def can_return(self):
 		"""Whether type can return (read-only)"""
-		return core.BNFunctionTypeCanReturn(self.handle)
+		result = core.BNFunctionTypeCanReturn(self.handle)
+		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@property
 	def structure(self):
@@ -326,23 +357,51 @@ class Type(object):
 		"""Type count (read-only)"""
 		return core.BNGetTypeElementCount(self.handle)
 
+	@property
+	def offset(self):
+		"""Offset into structure (read-only)"""
+		return core.BNGetTypeOffset(self.handle)
+
+	@property
+	def stack_adjustment(self):
+		"""Stack adjustment for function (read-only)"""
+		result = core.BNGetTypeStackAdjustment(self.handle)
+		return SizeWithConfidence(result.value, confidence = result.confidence)
+
 	def __str__(self):
-		return core.BNGetTypeString(self.handle)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		return core.BNGetTypeString(self.handle, platform)
 
 	def __repr__(self):
+		if self.confidence < max_confidence:
+			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
-		return core.BNGetTypeStringBeforeName(self.handle)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		return core.BNGetTypeStringBeforeName(self.handle, platform)
 
 	def get_string_after_name(self):
-		return core.BNGetTypeStringAfterName(self.handle)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		return core.BNGetTypeStringAfterName(self.handle, platform)
 
 	@property
 	def tokens(self):
 		"""Type string as a list of tokens (read-only)"""
+		return self.get_tokens()
+
+	def get_tokens(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
-		tokens = core.BNGetTypeTokens(self.handle, count)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		tokens = core.BNGetTypeTokens(self.handle, platform, base_confidence, count)
 		result = []
 		for i in xrange(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
@@ -351,14 +410,18 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
-	def get_tokens_before_name(self):
+	def get_tokens_before_name(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
-		tokens = core.BNGetTypeTokensBeforeName(self.handle, count)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		tokens = core.BNGetTypeTokensBeforeName(self.handle, platform, base_confidence, count)
 		result = []
 		for i in xrange(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
@@ -367,14 +430,18 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
-	def get_tokens_after_name(self):
+	def get_tokens_after_name(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
-		tokens = core.BNGetTypeTokensAfterName(self.handle, count)
+		platform = None
+		if self.platform is not None:
+			platform = self.platform.handle
+		tokens = core.BNGetTypeTokensAfterName(self.handle, platform, base_confidence, count)
 		result = []
 		for i in xrange(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
@@ -383,8 +450,9 @@ class Type(object):
 			size = tokens[i].size
 			operand = tokens[i].operand
 			context = tokens[i].context
+			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address))
+			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -397,14 +465,23 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
-	def int(self, width, sign = True, altname=""):
+	def int(self, width, sign = None, altname=""):
 		"""
 		``int`` class method for creating an int Type.
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
 		"""
-		return Type(core.BNCreateIntegerType(width, sign, altname))
+		if sign is None:
+			sign = BoolWithConfidence(True, confidence = 0)
+		elif not isinstance(sign, BoolWithConfidence):
+			sign = BoolWithConfidence(sign)
+
+		sign_conf = core.BNBoolWithConfidence()
+		sign_conf.value = sign.value
+		sign_conf.confidence = sign.confidence
+
+		return Type(core.BNCreateIntegerType(width, sign_conf, altname))
 
 	@classmethod
 	def float(self, width):
@@ -444,15 +521,43 @@ class Type(object):
 		return Type(core.BNCreateEnumerationType(e.handle, width))
 
 	@classmethod
-	def pointer(self, arch, t, const=False):
-		return Type(core.BNCreatePointerType(arch.handle, t.handle, const))
+	def pointer(self, arch, t, const=None, volatile=None, ref_type=None):
+		if const is None:
+			const = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(const, BoolWithConfidence):
+			const = BoolWithConfidence(const)
+
+		if volatile is None:
+			volatile = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(volatile, BoolWithConfidence):
+			volatile = BoolWithConfidence(volatile)
+
+		if ref_type is None:
+			ref_type = ReferenceType.PointerReferenceType
+
+		type_conf = core.BNTypeWithConfidence()
+		type_conf.type = t.handle
+		type_conf.confidence = t.confidence
+
+		const_conf = core.BNBoolWithConfidence()
+		const_conf.value = const.value
+		const_conf.confidence = const.confidence
+
+		volatile_conf = core.BNBoolWithConfidence()
+		volatile_conf.value = volatile.value
+		volatile_conf.confidence = volatile.confidence
+
+		return Type(core.BNCreatePointerType(arch.handle, type_conf, const_conf, volatile_conf, ref_type))
 
 	@classmethod
 	def array(self, t, count):
-		return Type(core.BNCreateArrayType(t.handle, count))
+		type_conf = core.BNTypeWithConfidence()
+		type_conf.type = t.handle
+		type_conf.confidence = t.confidence
+		return Type(core.BNCreateArrayType(type_conf, count))
 
 	@classmethod
-	def function(self, ret, params, calling_convention=None, variable_arguments=False):
+	def function(self, ret, params, calling_convention=None, variable_arguments=None, stack_adjust=None):
 		"""
 		``function`` class method for creating an function Type.
 
@@ -461,18 +566,62 @@ class Type(object):
 		:param CallingConvention calling_convention: optional argument for function calling convention
 		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
 		"""
-		param_buf = (core.BNNameAndType * len(params))()
+		param_buf = (core.BNFunctionParameter * len(params))()
 		for i in xrange(0, len(params)):
 			if isinstance(params[i], Type):
 				param_buf[i].name = ""
 				param_buf[i].type = params[i].handle
+				param_buf[i].typeConfidence = params[i].confidence
+				param_buf[i].defaultLocation = True
+			elif isinstance(params[i], FunctionParameter):
+				param_buf[i].name = params[i].name
+				param_buf[i].type = params[i].type.handle
+				param_buf[i].typeConfidence = params[i].type.confidence
+				if params[i].location is None:
+					param_buf[i].defaultLocation = True
+				else:
+					param_buf[i].defaultLocation = False
+					param_buf[i].location.type = params[i].location.type
+					param_buf[i].location.index = params[i].location.index
+					param_buf[i].location.storage = params[i].location.storage
 			else:
 				param_buf[i].name = params[i][1]
-				param_buf[i].type = params[i][0]
-		if calling_convention is not None:
-			calling_convention = calling_convention.handle
-		return Type(core.BNCreateFunctionType(ret.handle, calling_convention, param_buf, len(params),
-			  variable_arguments))
+				param_buf[i].type = params[i][0].handle
+				param_buf[i].typeConfidence = params[i][0].confidence
+				param_buf[i].defaultLocation = True
+
+		ret_conf = core.BNTypeWithConfidence()
+		ret_conf.type = ret.handle
+		ret_conf.confidence = ret.confidence
+
+		conv_conf = core.BNCallingConventionWithConfidence()
+		if calling_convention is None:
+			conv_conf.convention = None
+			conv_conf.confidence = 0
+		else:
+			conv_conf.convention = calling_convention.handle
+			conv_conf.confidence = calling_convention.confidence
+
+		if variable_arguments is None:
+			variable_arguments = BoolWithConfidence(False, confidence = 0)
+		elif not isinstance(variable_arguments, BoolWithConfidence):
+			variable_arguments = BoolWithConfidence(variable_arguments)
+
+		vararg_conf = core.BNBoolWithConfidence()
+		vararg_conf.value = variable_arguments.value
+		vararg_conf.confidence = variable_arguments.confidence
+
+		if stack_adjust is None:
+			stack_adjust = SizeWithConfidence(0, confidence = 0)
+		elif not isinstance(stack_adjust, SizeWithConfidence):
+			stack_adjust = SizeWithConfidence(stack_adjust)
+
+		stack_adjust_conf = core.BNSizeWithConfidence()
+		stack_adjust_conf.value = stack_adjust.value
+		stack_adjust_conf.confidence = stack_adjust.confidence
+
+		return Type(core.BNCreateFunctionType(ret_conf, conv_conf, param_buf, len(params),
+			vararg_conf, stack_adjust_conf))
 
 	@classmethod
 	def generate_auto_type_id(self, source, name):
@@ -488,11 +637,81 @@ class Type(object):
 	def get_auto_demanged_type_id_source(self):
 		return core.BNGetAutoDemangledTypeIdSource()
 
+	def with_confidence(self, confidence):
+		return Type(handle = core.BNNewTypeReference(self.handle), platform = self.platform, confidence = confidence)
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
+
+
+class BoolWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
+
+	def __bool__(self):
+		return self.value
+
+	def __nonzero__(self):
+		return self.value
+
+
+class SizeWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
+
+	def __int__(self):
+		return self.value
+
+
+class RegisterSet(object):
+	def __init__(self, reg_list, confidence = max_confidence):
+		self.regs = reg_list
+		self.confidence = confidence
+
+	def __repr__(self):
+		return repr(self.regs)
+
+	def __iter__(self):
+		for reg in self.regs:
+			yield reg
+
+	def __getitem__(self, idx):
+		return self.regs[idx]
+
+	def __len__(self):
+		return len(self.regs)
+
+	def with_confidence(self, confidence):
+		return RegisterSet(list(self.regs), confidence = confidence)
+
+
+class ReferenceTypeWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
 
 
 class NamedTypeReference(object):
@@ -611,7 +830,7 @@ class Structure(object):
 		members = core.BNGetStructureMembers(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type)),
+			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type), confidence = members[i].typeConfidence),
 				members[i].name, members[i].offset))
 		core.BNFreeStructureMemberList(members, count.value)
 		return result
@@ -664,16 +883,25 @@ class Structure(object):
 		return "<struct: size %#x>" % self.width
 
 	def append(self, t, name = ""):
-		core.BNAddStructureMember(self.handle, t.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNAddStructureMember(self.handle, tc, name)
 
 	def insert(self, offset, t, name = ""):
-		core.BNAddStructureMemberAtOffset(self.handle, t.handle, name, offset)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNAddStructureMemberAtOffset(self.handle, tc, name, offset)
 
 	def remove(self, i):
 		core.BNRemoveStructureMember(self.handle, i)
 
 	def replace(self, i, t, name = ""):
-		core.BNReplaceStructureMember(self.handle, i, t.handle, name)
+		tc = core.BNTypeWithConfidence()
+		tc.type = t.handle
+		tc.confidence = t.confidence
+		core.BNReplaceStructureMember(self.handle, i, tc, name)
 
 
 class EnumerationMember(object):
@@ -746,7 +974,7 @@ class TypeParserResult(object):
 		self.functions = functions
 
 	def __repr__(self):
-		return "{types: %s, variables: %s, functions: %s}" % (self.types, self.variables, self.functions)
+		return "<types: %s, variables: %s, functions: %s>" % (self.types, self.variables, self.functions)
 
 
 def preprocess_source(source, filename=None, include_dirs=[]):

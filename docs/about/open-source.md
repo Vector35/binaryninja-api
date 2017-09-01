@@ -33,7 +33,8 @@ The previous tools are used in the generation of our documentation, but are not 
     - [zlib] ([zlib license] - zlib license)
 
 * Other
-    - [yasm] ([yasm license] - 2-clause BSD)
+    - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
+    - [capstone] ([capstone license] - 3-clause BSD) used in the PPC architecture module as an example of how to wrap an external disassembler
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -56,6 +57,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
 [Qt 5.6]: https://www.qt.io/qt-licensing-terms/
+[capstone]: https://github.com/aquynh/capstone
+[capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE
 [breathe-rtd-theme license]: https://github.com/snide/sphinx_rtd_theme/blob/master/LICENSE
 [breathe-rtd-theme]: https://github.com/snide/sphinx_rtd_theme/

@@ -540,6 +540,12 @@ class PythonScriptingInstance(ScriptingInstance):
 						self.locals["current_address"] = self.active_addr
 						self.locals["here"] = self.active_addr
 						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
+						self.locals["f"] = self.active_func
+						self.locals["h"] = self.active_addr
+						self.locals["llil"] = self.active_func.low_level_il
+						self.locals["llilssa"] = self.active_func.low_level_il.ssa_form
+						self.locals["mlil"] = self.active_func.medium_level_il
+						self.locals["mlilssa"] = self.active_func.medium_level_il.ssa_form
 
 						self.interpreter.runsource(code)
 

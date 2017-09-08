@@ -88,10 +88,15 @@ class BinaryDataNotification(object):
 
 
 class StringReference(object):
-	def __init__(self, string_type, start, length):
+	def __init__(self, bv, string_type, start, length):
 		self.type = string_type
 		self.start = start
 		self.length = length
+		self.view = bv
+
+	@property
+	def value(self):
+		return self.view.read(self.start, self.length)
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
@@ -658,6 +663,50 @@ class BinaryView(object):
 			'value'
 		"""
 		_BinaryViewAssociatedDataStore.set_default(name, value)
+
+	@property
+	def basic_blocks(self):
+		"""A generator of all BasicBlock objects in the BinaryView"""
+		for func in self:
+			for block in func.basic_blocks:
+				yield block
+
+	@property
+	def llil_basic_blocks(self):
+		"""A generator of all LowLevelILBasicBlock objects in the BinaryView"""
+		for func in self:
+			for il_block in func.low_level_il.basic_blocks:
+				yield il_block
+
+	@property
+	def mlil_basic_blocks(self):
+		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
+		for func in self:
+			for il_block in func.medium_level_il.basic_blocks:
+				yield il_block
+
+	@property
+	def instructions(self):
+		"""A generator of instruction tokens and their start addresses"""
+		for block in self.basic_blocks:
+			start = block.start
+			for i in block:
+				yield (i[0], start)
+				start += i[1]
+
+	@property
+	def llil_instructions(self):
+		"""A generator of llil instructions"""
+		for block in self.llil_basic_blocks:
+			for i in block:
+				yield i
+
+	@property
+	def mlil_instructions(self):
+		"""A generator of mlil instructions"""
+		for block in self.mlil_basic_blocks:
+			for i in block:
+				yield i
 
 	def __del__(self):
 		for i in self.notifications.values():
@@ -2601,7 +2650,7 @@ class BinaryView(object):
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(StringReference(StringType(strings[i].type), strings[i].start, strings[i].length))
+			result.append(StringReference(self, StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
 

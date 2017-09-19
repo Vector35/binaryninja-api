@@ -105,7 +105,7 @@ class StringReference(object):
 class AnalysisCompletionEvent(object):
 	def __init__(self, view, callback):
 		self.view = view
-		self.callback = callback
+		self.callback = callback.__get__(self)
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
 

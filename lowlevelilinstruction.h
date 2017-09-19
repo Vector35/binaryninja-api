@@ -49,7 +49,6 @@ namespace BinaryNinja
 	struct LowLevelILOneOperandInstruction;
 	struct LowLevelILTwoOperandInstruction;
 	struct LowLevelILTwoOperandWithCarryInstruction;
-	struct LowLevelILDoublePrecisionInstruction;
 	struct LowLevelILLabel;
 	struct MediumLevelILInstruction;
 	class LowLevelILOperand;
@@ -118,8 +117,6 @@ namespace BinaryNinja
 		LeftExprLowLevelOperandUsage,
 		RightExprLowLevelOperandUsage,
 		CarryExprLowLevelOperandUsage,
-		HighExprLowLevelOperandUsage,
-		LowExprLowLevelOperandUsage,
 		ConditionExprLowLevelOperandUsage,
 		HighRegisterLowLevelOperandUsage,
 		HighSSARegisterLowLevelOperandUsage,
@@ -428,10 +425,6 @@ namespace BinaryNinja
 		{
 			return *(LowLevelILTwoOperandWithCarryInstruction*)this;
 		}
-		LowLevelILDoublePrecisionInstruction& AsDoublePrecision()
-		{
-			return *(LowLevelILDoublePrecisionInstruction*)this;
-		}
 
 		template <BNLowLevelILOperation N>
 		const LowLevelILInstructionAccessor<N>& As() const
@@ -455,10 +448,6 @@ namespace BinaryNinja
 		const LowLevelILTwoOperandWithCarryInstruction& AsTwoOperandWithCarry() const
 		{
 			return *(const LowLevelILTwoOperandWithCarryInstruction*)this;
-		}
-		const LowLevelILDoublePrecisionInstruction& AsDoublePrecision() const
-		{
-			return *(const LowLevelILDoublePrecisionInstruction*)this;
 		}
 	};
 
@@ -491,8 +480,6 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> LowLevelILInstruction GetLeftExpr() const { return As<N>().GetLeftExpr(); }
 		template <BNLowLevelILOperation N> LowLevelILInstruction GetRightExpr() const { return As<N>().GetRightExpr(); }
 		template <BNLowLevelILOperation N> LowLevelILInstruction GetCarryExpr() const { return As<N>().GetCarryExpr(); }
-		template <BNLowLevelILOperation N> LowLevelILInstruction GetHighExpr() const { return As<N>().GetHighExpr(); }
-		template <BNLowLevelILOperation N> LowLevelILInstruction GetLowExpr() const { return As<N>().GetLowExpr(); }
 		template <BNLowLevelILOperation N> LowLevelILInstruction GetConditionExpr() const { return As<N>().GetConditionExpr(); }
 		template <BNLowLevelILOperation N> uint32_t GetHighRegister() const { return As<N>().GetHighRegister(); }
 		template <BNLowLevelILOperation N> SSARegister GetHighSSARegister() const { return As<N>().GetHighSSARegister(); }
@@ -544,8 +531,6 @@ namespace BinaryNinja
 		LowLevelILInstruction GetLeftExpr() const;
 		LowLevelILInstruction GetRightExpr() const;
 		LowLevelILInstruction GetCarryExpr() const;
-		LowLevelILInstruction GetHighExpr() const;
-		LowLevelILInstruction GetLowExpr() const;
 		LowLevelILInstruction GetConditionExpr() const;
 		uint32_t GetHighRegister() const;
 		SSARegister GetHighSSARegister() const;
@@ -649,13 +634,6 @@ namespace BinaryNinja
 		LowLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
 		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
 		LowLevelILInstruction GetCarryExpr() const { return GetRawOperandAsExpr(2); }
-	};
-
-	struct LowLevelILDoublePrecisionInstruction: public LowLevelILInstructionBase
-	{
-		LowLevelILInstruction GetHighExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILInstruction GetLowExpr() const { return GetRawOperandAsExpr(1); }
-		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(2); }
 	};
 
 	// Implementations of each instruction to fetch the correct operand value for the valid operands, these
@@ -762,6 +740,19 @@ namespace BinaryNinja
 		SSAFlag GetSourceSSAFlag() const { return GetRawOperandAsSSAFlag(0); }
 		size_t GetBitIndex() const { return GetRawOperandAsIndex(2); }
 		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+	};
+
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_SPLIT>: public LowLevelILInstructionBase
+	{
+		uint32_t GetHighRegister() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetLowRegister() const { return GetRawOperandAsRegister(1); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_SPLIT_SSA>: public LowLevelILInstructionBase
+	{
+		SSARegister GetHighSSARegister() const { return GetRawOperandAsSSARegister(0); }
+		SSARegister GetLowSSARegister() const { return GetRawOperandAsSSARegister(2); }
+		void SetHighSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		void SetLowSSAVersion(size_t version) { UpdateRawOperand(3, version); }
 	};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_JUMP>: public LowLevelILInstructionBase
@@ -880,6 +871,10 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_DIVS>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_MODU>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_MODS>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_DIVU_DP>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_DIVS_DP>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_MODU_DP>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_MODS_DP>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CMP_E>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CMP_NE>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CMP_SLT>: public LowLevelILTwoOperandInstruction {};
@@ -892,16 +887,22 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_CMP_UGT>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_TEST_BIT>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_ADD_OVERFLOW>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FADD>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FSUB>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FMUL>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FDIV>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_E>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_NE>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_LT>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_LE>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_GE>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_GT>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_UO>: public LowLevelILTwoOperandInstruction {};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_ADC>: public LowLevelILTwoOperandWithCarryInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_SBB>: public LowLevelILTwoOperandWithCarryInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_RLC>: public LowLevelILTwoOperandWithCarryInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_RRC>: public LowLevelILTwoOperandWithCarryInstruction {};
-
-	template <> struct LowLevelILInstructionAccessor<LLIL_DIVU_DP>: public LowLevelILDoublePrecisionInstruction {};
-	template <> struct LowLevelILInstructionAccessor<LLIL_DIVS_DP>: public LowLevelILDoublePrecisionInstruction {};
-	template <> struct LowLevelILInstructionAccessor<LLIL_MODU_DP>: public LowLevelILDoublePrecisionInstruction {};
-	template <> struct LowLevelILInstructionAccessor<LLIL_MODS_DP>: public LowLevelILDoublePrecisionInstruction {};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_PUSH>: public LowLevelILOneOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_NEG>: public LowLevelILOneOperandInstruction {};
@@ -911,4 +912,10 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_LOW_PART>: public LowLevelILOneOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_BOOL_TO_INT>: public LowLevelILOneOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_UNIMPL_MEM>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FSQRT>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FNEG>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FABS>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_TO_INT>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_INT_TO_FLOAT>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_CONV>: public LowLevelILOneOperandInstruction {};
 }

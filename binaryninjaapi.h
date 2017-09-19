@@ -2453,6 +2453,9 @@ namespace BinaryNinja
 		ExprId RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
@@ -2497,19 +2500,19 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId DivDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId ModDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
@@ -2567,6 +2570,27 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t dest, const std::vector<size_t>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f,
@@ -2725,12 +2749,16 @@ namespace BinaryNinja
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarField(size_t size, const Variable& src, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSplit(size_t size, const Variable& high, const Variable& low,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSAField(size_t size, const SSAVariable& src, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarAliased(size_t size, const Variable& src, size_t memVersion,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarAliasedField(size_t size, const Variable& src, size_t memVersion, uint64_t offset,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSplitSSA(size_t size, const SSAVariable& high, const SSAVariable& low,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOfField(const Variable& var, uint64_t offset,
@@ -2770,17 +2798,17 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
@@ -2845,6 +2873,23 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t destMemVersion, const std::vector<size_t>& sourceMemVersions,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f,

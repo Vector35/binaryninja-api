@@ -51,8 +51,6 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType>
 		{LeftExprLowLevelOperandUsage, ExprLowLevelOperand},
 		{RightExprLowLevelOperandUsage, ExprLowLevelOperand},
 		{CarryExprLowLevelOperandUsage, ExprLowLevelOperand},
-		{HighExprLowLevelOperandUsage, ExprLowLevelOperand},
-		{LowExprLowLevelOperandUsage, ExprLowLevelOperand},
 		{ConditionExprLowLevelOperandUsage, ExprLowLevelOperand},
 		{HighRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
 		{HighSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
@@ -105,6 +103,8 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_REG, {SourceRegisterLowLevelOperandUsage}},
 		{LLIL_REG_SSA, {SourceSSARegisterLowLevelOperandUsage}},
 		{LLIL_REG_SSA_PARTIAL, {SourceSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage}},
+		{LLIL_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage}},
+		{LLIL_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage}},
 		{LLIL_FLAG, {SourceFlagLowLevelOperandUsage}},
 		{LLIL_FLAG_BIT, {SourceFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
 		{LLIL_FLAG_SSA, {SourceSSAFlagLowLevelOperandUsage}},
@@ -163,10 +163,10 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_SBB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
 		{LLIL_RLC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
 		{LLIL_RRC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-		{LLIL_DIVU_DP, {HighExprLowLevelOperandUsage, LowExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-		{LLIL_DIVS_DP, {HighExprLowLevelOperandUsage, LowExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-		{LLIL_MODU_DP, {HighExprLowLevelOperandUsage, LowExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-		{LLIL_MODS_DP, {HighExprLowLevelOperandUsage, LowExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_DIVU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_DIVS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_MODU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_MODS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_PUSH, {SourceExprLowLevelOperandUsage}},
 		{LLIL_NEG, {SourceExprLowLevelOperandUsage}},
 		{LLIL_NOT, {SourceExprLowLevelOperandUsage}},
@@ -174,7 +174,24 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_ZX, {SourceExprLowLevelOperandUsage}},
 		{LLIL_LOW_PART, {SourceExprLowLevelOperandUsage}},
 		{LLIL_BOOL_TO_INT, {SourceExprLowLevelOperandUsage}},
-		{LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}}
+		{LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FSUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FMUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FDIV, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FSQRT, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FNEG, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FABS, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FLOAT_TO_INT, {SourceExprLowLevelOperandUsage}},
+		{LLIL_INT_TO_FLOAT, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FLOAT_CONV, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FCMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_LT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}}
 	};
 
 
@@ -1179,6 +1196,12 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_LOW_PART:
 	case LLIL_BOOL_TO_INT:
 	case LLIL_UNIMPL_MEM:
+	case LLIL_FSQRT:
+	case LLIL_FNEG:
+	case LLIL_FABS:
+	case LLIL_FLOAT_TO_INT:
+	case LLIL_INT_TO_FLOAT:
+	case LLIL_FLOAT_CONV:
 		AsOneOperand().GetSourceExpr().VisitExprs(func);
 		break;
 	case LLIL_ADD:
@@ -1198,6 +1221,10 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_DIVS:
 	case LLIL_MODU:
 	case LLIL_MODS:
+	case LLIL_DIVU_DP:
+	case LLIL_DIVS_DP:
+	case LLIL_MODU_DP:
+	case LLIL_MODS_DP:
 	case LLIL_CMP_E:
 	case LLIL_CMP_NE:
 	case LLIL_CMP_SLT:
@@ -1210,6 +1237,17 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_CMP_UGT:
 	case LLIL_TEST_BIT:
 	case LLIL_ADD_OVERFLOW:
+	case LLIL_FADD:
+	case LLIL_FSUB:
+	case LLIL_FMUL:
+	case LLIL_FDIV:
+	case LLIL_FCMP_E:
+	case LLIL_FCMP_NE:
+	case LLIL_FCMP_LT:
+	case LLIL_FCMP_LE:
+	case LLIL_FCMP_GE:
+	case LLIL_FCMP_GT:
+	case LLIL_FCMP_UO:
 		AsTwoOperand().GetLeftExpr().VisitExprs(func);
 		AsTwoOperand().GetRightExpr().VisitExprs(func);
 		break;
@@ -1220,14 +1258,6 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		AsTwoOperandWithCarry().GetLeftExpr().VisitExprs(func);
 		AsTwoOperandWithCarry().GetRightExpr().VisitExprs(func);
 		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
-		break;
-	case LLIL_DIVU_DP:
-	case LLIL_DIVS_DP:
-	case LLIL_MODU_DP:
-	case LLIL_MODS_DP:
-		AsDoublePrecision().GetHighExpr().VisitExprs(func);
-		AsDoublePrecision().GetLowExpr().VisitExprs(func);
-		AsDoublePrecision().GetRightExpr().VisitExprs(func);
 		break;
 	default:
 		break;
@@ -1294,6 +1324,12 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_REG_SSA_PARTIAL:
 		return dest->RegisterSSAPartial(size, GetSourceSSARegister<LLIL_REG_SSA_PARTIAL>(),
 			GetPartialRegister<LLIL_REG_SSA_PARTIAL>(), *this);
+	case LLIL_REG_SPLIT:
+		return dest->RegisterSplit(size, GetHighRegister<LLIL_REG_SPLIT>(),
+			GetLowRegister<LLIL_REG_SPLIT>(), *this);
+	case LLIL_REG_SPLIT_SSA:
+		return dest->RegisterSplitSSA(size, GetHighSSARegister<LLIL_REG_SPLIT_SSA>(),
+			GetLowSSARegister<LLIL_REG_SPLIT_SSA>(), *this);
 	case LLIL_FLAG:
 		return dest->Flag(GetSourceFlag<LLIL_FLAG>(), *this);
 	case LLIL_FLAG_SSA:
@@ -1371,6 +1407,12 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_LOW_PART:
 	case LLIL_BOOL_TO_INT:
 	case LLIL_UNIMPL_MEM:
+	case LLIL_FSQRT:
+	case LLIL_FNEG:
+	case LLIL_FABS:
+	case LLIL_FLOAT_TO_INT:
+	case LLIL_INT_TO_FLOAT:
+	case LLIL_FLOAT_CONV:
 		return dest->AddExprWithLocation(operation, *this, size, flags,
 			subExprHandler(AsOneOperand().GetSourceExpr()));
 	case LLIL_ADD:
@@ -1390,6 +1432,10 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_DIVS:
 	case LLIL_MODU:
 	case LLIL_MODS:
+	case LLIL_DIVU_DP:
+	case LLIL_DIVS_DP:
+	case LLIL_MODU_DP:
+	case LLIL_MODS_DP:
 	case LLIL_CMP_E:
 	case LLIL_CMP_NE:
 	case LLIL_CMP_SLT:
@@ -1402,6 +1448,17 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_CMP_UGT:
 	case LLIL_TEST_BIT:
 	case LLIL_ADD_OVERFLOW:
+	case LLIL_FADD:
+	case LLIL_FSUB:
+	case LLIL_FMUL:
+	case LLIL_FDIV:
+	case LLIL_FCMP_E:
+	case LLIL_FCMP_NE:
+	case LLIL_FCMP_LT:
+	case LLIL_FCMP_LE:
+	case LLIL_FCMP_GE:
+	case LLIL_FCMP_GT:
+	case LLIL_FCMP_UO:
 		return dest->AddExprWithLocation(operation, *this, size, flags,
 			subExprHandler(AsTwoOperand().GetLeftExpr()), subExprHandler(AsTwoOperand().GetRightExpr()));
 	case LLIL_ADC:
@@ -1412,14 +1469,6 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 			subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
 			subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
 			subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
-	case LLIL_DIVU_DP:
-	case LLIL_DIVS_DP:
-	case LLIL_MODU_DP:
-	case LLIL_MODS_DP:
-		return dest->AddExprWithLocation(operation, *this, size, flags,
-			subExprHandler(AsDoublePrecision().GetHighExpr()),
-			subExprHandler(AsDoublePrecision().GetLowExpr()),
-			subExprHandler(AsDoublePrecision().GetRightExpr()));
 	default:
 		throw LowLevelILInstructionAccessException();
 	}
@@ -1569,24 +1618,6 @@ LowLevelILInstruction LowLevelILInstruction::GetCarryExpr() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(CarryExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-LowLevelILInstruction LowLevelILInstruction::GetHighExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(HighExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-LowLevelILInstruction LowLevelILInstruction::GetLowExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LowExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
@@ -1899,6 +1930,19 @@ ExprId LowLevelILFunction::RegisterSSAPartial(size_t size, const SSARegister& fu
 }
 
 
+ExprId LowLevelILFunction::RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_REG_SPLIT, loc, size, 0, high, low);
+}
+
+
+ExprId LowLevelILFunction::RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
+	const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_REG_SPLIT_SSA, loc, size, 0, high.reg, high.version, low.reg, low.version);
+}
+
+
 ExprId LowLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CONST, loc, size, 0, val);
@@ -2054,10 +2098,10 @@ ExprId LowLevelILFunction::DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t
 }
 
 
-ExprId LowLevelILFunction::DivDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags,
+ExprId LowLevelILFunction::DivDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, high, low, div);
+	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, a, b);
 }
 
 
@@ -2067,10 +2111,10 @@ ExprId LowLevelILFunction::DivSigned(size_t size, ExprId a, ExprId b, uint32_t f
 }
 
 
-ExprId LowLevelILFunction::DivDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags,
+ExprId LowLevelILFunction::DivDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, high, low, div);
+	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, a, b);
 }
 
 
@@ -2081,10 +2125,10 @@ ExprId LowLevelILFunction::ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t
 }
 
 
-ExprId LowLevelILFunction::ModDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags,
+ExprId LowLevelILFunction::ModDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, high, low, div);
+	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, a, b);
 }
 
 
@@ -2094,10 +2138,10 @@ ExprId LowLevelILFunction::ModSigned(size_t size, ExprId a, ExprId b, uint32_t f
 }
 
 
-ExprId LowLevelILFunction::ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags,
+ExprId LowLevelILFunction::ModDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, high, low, div);
+	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, a, b);
 }
 
 
@@ -2325,4 +2369,106 @@ ExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& s
 ExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<size_t>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_MEM_PHI, loc, 0, 0, dest, sources.size(), AddIndexList(sources));
+}
+
+
+ExprId LowLevelILFunction::FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FADD, loc, size, flags, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FSUB, loc, size, flags, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FMUL, loc, size, flags, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FDIV, loc, size, flags, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatSqrt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FSQRT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatNeg(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FNEG, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatAbs(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FABS, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::IntToFloat(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatConvert(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, a, b);
 }

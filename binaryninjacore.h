@@ -286,6 +286,7 @@ extern "C"
 		LLIL_PUSH, // Not valid in SSA form (expanded)
 		LLIL_POP, // Not valid in SSA form (expanded)
 		LLIL_REG, // Not valid in SSA form (see LLIL_REG_SSA)
+		LLIL_REG_SPLIT, // Not valid in SSA form (see LLIL_REG_SPLIT_SSA)
 		LLIL_CONST,
 		LLIL_CONST_PTR,
 		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
@@ -349,6 +350,25 @@ extern "C"
 		LLIL_UNIMPL,
 		LLIL_UNIMPL_MEM,
 
+		// Floating point
+		LLIL_FADD,
+		LLIL_FSUB,
+		LLIL_FMUL,
+		LLIL_FDIV,
+		LLIL_FSQRT,
+		LLIL_FNEG,
+		LLIL_FABS,
+		LLIL_FLOAT_TO_INT,
+		LLIL_INT_TO_FLOAT,
+		LLIL_FLOAT_CONV,
+		LLIL_FCMP_E,
+		LLIL_FCMP_NE,
+		LLIL_FCMP_LT,
+		LLIL_FCMP_LE,
+		LLIL_FCMP_GE,
+		LLIL_FCMP_GT,
+		LLIL_FCMP_UO,
+
 		// The following instructions are only used in SSA form
 		LLIL_SET_REG_SSA,
 		LLIL_SET_REG_SSA_PARTIAL,
@@ -356,6 +376,7 @@ extern "C"
 		LLIL_REG_SPLIT_DEST_SSA, // Only valid within an LLIL_SET_REG_SPLIT_SSA instruction
 		LLIL_REG_SSA,
 		LLIL_REG_SSA_PARTIAL,
+		LLIL_REG_SPLIT_SSA,
 		LLIL_SET_FLAG_SSA,
 		LLIL_FLAG_SSA,
 		LLIL_FLAG_BIT_SSA,
@@ -745,6 +766,7 @@ extern "C"
 		MLIL_STORE_STRUCT, // Not valid in SSA form (see MLIL_STORE_STRUCT_SSA)
 		MLIL_VAR, // Not valid in SSA form (see MLIL_VAR_SSA)
 		MLIL_VAR_FIELD, // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
+		MLIL_VAR_SPLIT, // Not valid in SSA form (see MLIL_VAR_SSA)
 		MLIL_ADDRESS_OF,
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
@@ -811,6 +833,25 @@ extern "C"
 		MLIL_UNIMPL,
 		MLIL_UNIMPL_MEM,
 
+		// Floating point
+		MLIL_FADD,
+		MLIL_FSUB,
+		MLIL_FMUL,
+		MLIL_FDIV,
+		MLIL_FSQRT,
+		MLIL_FNEG,
+		MLIL_FABS,
+		MLIL_FLOAT_TO_INT,
+		MLIL_INT_TO_FLOAT,
+		MLIL_FLOAT_CONV,
+		MLIL_FCMP_E,
+		MLIL_FCMP_NE,
+		MLIL_FCMP_LT,
+		MLIL_FCMP_LE,
+		MLIL_FCMP_GE,
+		MLIL_FCMP_GT,
+		MLIL_FCMP_UO,
+
 		// The following instructions are only used in SSA form
 		MLIL_SET_VAR_SSA,
 		MLIL_SET_VAR_SSA_FIELD,
@@ -821,6 +862,7 @@ extern "C"
 		MLIL_VAR_SSA_FIELD,
 		MLIL_VAR_ALIASED,
 		MLIL_VAR_ALIASED_FIELD,
+		MLIL_VAR_SPLIT_SSA,
 		MLIL_CALL_SSA,
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,

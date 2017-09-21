@@ -413,6 +413,18 @@ class Segment(object):
 		self.flags = flags
 
 	@property
+	def executable(self):
+		return (self.flags & SegmentFlag.SegmentExecutable) != 0
+
+	@property
+	def writable(self):
+		return (self.flags & SegmentFlag.SegmentWritable) != 0
+
+	@property
+	def readable(self):
+		return (self.flags & SegmentFlag.SegmentReadable) != 0
+
+	@property
 	def end(self):
 		return self.start + self.length
 
@@ -421,9 +433,9 @@ class Segment(object):
 
 	def __repr__(self):
 		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
-			"r" if (self.flags & SegmentFlag.SegmentReadable) != 0 else "-",
-			"w" if (self.flags & SegmentFlag.SegmentWritable) != 0 else "-",
-			"x" if (self.flags & SegmentFlag.SegmentExecutable) != 0 else "-")
+			"r" if self.readable else "-",
+			"w" if self.writable else "-",
+			"x" if self.executable else "-")
 
 
 class Section(object):

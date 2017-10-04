@@ -26,6 +26,7 @@ from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionText
 import function
 import basicblock
 import mediumlevelil
+import struct
 
 
 class LowLevelILLabel(object):
@@ -50,6 +51,26 @@ class ILRegister(object):
 	@property
 	def info(self):
 		return self.arch.regs[self.name]
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.info == other.info
+
+
+class ILRegisterStack(object):
+	def __init__(self, arch, reg_stack):
+		self.arch = arch
+		self.index = reg_stack
+		self.name = self.arch.get_reg_stack_name(self.index)
+
+	@property
+	def info(self):
+		return self.arch.reg_stacks[self.name]
 
 	def __str__(self):
 		return self.name
@@ -87,6 +108,15 @@ class SSARegister(object):
 		return "<ssa %s version %d>" % (repr(self.reg), self.version)
 
 
+class SSARegisterStack(object):
+	def __init__(self, reg_stack, version):
+		self.reg_stack = reg_stack
+		self.version = version
+
+	def __repr__(self):
+		return "<ssa %s version %d>" % (repr(self.reg_stack), self.version)
+
+
 class SSAFlag(object):
 	def __init__(self, flag, version):
 		self.flag = flag
@@ -118,15 +148,20 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_NOP: [],
 		LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_REL: [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_PUSH: [("stack", "reg_stack"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
 		LowLevelILOperation.LLIL_LOAD: [("src", "expr")],
 		LowLevelILOperation.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
 		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
 		LowLevelILOperation.LLIL_POP: [],
 		LowLevelILOperation.LLIL_REG: [("src", "reg")],
-		LowLevelILOperation.LLIL_REG_SPLIT: [("hi", "reg", "lo", "reg")],
+		LowLevelILOperation.LLIL_REG_SPLIT: [("hi", "reg"), ("lo", "reg")],
+		LowLevelILOperation.LLIL_REG_STACK_REL: [("stack", "reg_stack"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_POP: [("stack", "reg_stack")],
 		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
 		LowLevelILOperation.LLIL_CONST_PTR: [("constant", "int")],
+		LowLevelILOperation.LLIL_FLOAT_CONST: [("constant", "float")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
@@ -207,10 +242,15 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg_ssa"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg_ssa")],
+		LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: [("src", "reg_stack_ssa_dest_and_src")],
 		LowLevelILOperation.LLIL_REG_SSA: [("src", "reg_ssa")],
 		LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("src", "reg")],
 		LowLevelILOperation.LLIL_REG_SPLIT_SSA: [("hi", "reg_ssa"), ("lo", "reg_ssa")],
+		LowLevelILOperation.LLIL_REG_STACK_REL_SSA: [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: [("stack", "reg_stack_ssa"), ("src", "reg")],
 		LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag_ssa"), ("src", "expr")],
 		LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag_ssa")],
 		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag_ssa"), ("bit", "int")],
@@ -222,6 +262,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_REG_STACK_PHI: [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
 		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
 		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
@@ -248,14 +289,35 @@ class LowLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+			elif operand_type == "float":
+				if instr.size == 4:
+					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
+				elif instr.size == 8:
+					value = struct.unpack("d", struct.pack("Q", instr.operands[i]))[0]
+				else:
+					value = instr.operands[i]
 			elif operand_type == "expr":
 				value = LowLevelILInstruction(func, instr.operands[i])
 			elif operand_type == "reg":
 				value = ILRegister(func.arch, instr.operands[i])
+			elif operand_type == "reg_stack":
+				value = ILRegisterStack(func.arch, instr.operands[i])
 			elif operand_type == "reg_ssa":
 				reg = ILRegister(func.arch, instr.operands[i])
 				i += 1
 				value = SSARegister(reg, instr.operands[i])
+			elif operand_type == "reg_stack_ssa":
+				reg_stack = ILRegisterStack(func.arch, instr.operands[i])
+				i += 1
+				value = SSARegisterStack(reg_stack, instr.operands[i])
+			elif operand_type == "reg_stack_ssa_dest_and_src":
+				reg_stack = ILRegisterStack(func.arch, instr.operands[i])
+				i += 1
+				value = SSARegisterStack(reg_stack, instr.operands[i])
+				i += 1
+				self.operands.append(value)
+				self.dest = value
+				value = SSARegisterStack(reg_stack, instr.operands[i])
 			elif operand_type == "flag":
 				value = ILFlag(func.arch, instr.operands[i])
 			elif operand_type == "flag_ssa":
@@ -281,6 +343,16 @@ class LowLevelILInstruction(object):
 					reg = operand_list[i * 2]
 					reg_version = operand_list[(i * 2) + 1]
 					value.append(SSARegister(ILRegister(func.arch, reg), reg_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_stack_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for i in xrange(count.value / 2):
+					reg_stack = operand_list[i * 2]
+					reg_version = operand_list[(i * 2) + 1]
+					value.append(SSARegisterStack(ILRegisterStack(func.arch, reg_stack), reg_version))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "flag_ssa_list":
 				count = ctypes.c_ulonglong()
@@ -729,6 +801,38 @@ class LowLevelILFunction(object):
 		lo = self.arch.get_reg_index(lo)
 		return self.expr(LowLevelILOperation.LLIL_SET_REG_SPLIT, hi, lo, value.index, size = size, flags = flags)
 
+	def set_reg_stack_top_relative(self, size, reg_stack, entry, value, flags = 0):
+		"""
+		``set_reg_stack_top_relative`` sets the top-relative entry ``entry`` of size ``size`` in register
+		stack ``reg_stack`` to the expression ``value``
+
+		:param int size: size of the register parameter in bytes
+		:param str reg_stack: the register stack name
+		:param LowLevelILExpr entry: an expression for which stack entry to set
+		:param LowLevelILExpr value: an expression to set the entry to
+		:param str flags: which flags are set by this operation
+		:return: The expression ``reg_stack[entry] = value``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG_STACK_REL, reg_stack, entry.index, value.index,
+			size = size, flags = flags)
+
+	def reg_stack_push(self, size, reg_stack, value, flags = 0):
+		"""
+		``reg_stack_push`` pushes the expression ``value`` of size ``size`` onto the top of the register
+		stack ``reg_stack``
+
+		:param int size: size of the register parameter in bytes
+		:param str reg_stack: the register stack name
+		:param LowLevelILExpr value: an expression to push
+		:param str flags: which flags are set by this operation
+		:return: The expression ``reg_stack.push(value)``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_PUSH, reg_stack, value.index, size = size, flags = flags)
+
 	def set_flag(self, flag, value):
 		"""
 		``set_flag`` sets the flag ``flag`` to the LowLevelILExpr ``value``
@@ -811,6 +915,33 @@ class LowLevelILFunction(object):
 		lo = self.arch.get_reg_index(lo)
 		return self.expr(LowLevelILOperation.LLIL_REG_SPLIT, hi, lo, size=size)
 
+	def reg_stack_top_relative(self, size, reg_stack, entry):
+		"""
+		``reg_stack_top_relative`` returns a register stack entry of size ``size`` at top-relative
+		location ``entry`` in register stack with name ``reg_stack``
+
+		:param int size: the size of the register in bytes
+		:param str reg_stack: the name of the register stack
+		:param LowLevelILExpr entry: an expression for which stack entry to fetch
+		:return: The expression ``reg_stack[entry]``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_REL, reg_stack, entry.index, size=size)
+
+	def reg_stack_pop(self, size, reg_stack):
+		"""
+		``reg_stack_pop`` returns the top entry of size ``size`` in register stack with name ``reg_stack``, and
+		removes the entry from the stack
+
+		:param int size: the size of the register in bytes
+		:param str reg_stack: the name of the register stack
+		:return: The expression ``reg_stack.pop``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_POP, reg_stack, size=size)
+
 	def const(self, size, value):
 		"""
 		``const`` returns an expression for the constant integer ``value`` with size ``size``
@@ -832,6 +963,38 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CONST_PTR, value, size=size)
+
+	def float_const_raw(self, size, value):
+		"""
+		``float_const_raw`` returns an expression for the constant raw binary floating point
+		value ``value`` with size ``size``
+
+		:param int size: the size of the constant in bytes
+		:param int value: integer value for the raw binary representation of the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, value, size=size)
+
+	def float_const_single(self, value):
+		"""
+		``float_const_single`` returns an expression for the single precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("I", struct.pack("f", value))[0], size=4)
+
+	def float_const_double(self, value):
+		"""
+		``float_const_double`` returns an expression for the double precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8)
 
 	def flag(self, reg):
 		"""

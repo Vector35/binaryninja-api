@@ -230,6 +230,20 @@ ExprId LowLevelILFunction::AddSSARegisterList(const vector<SSARegister>& regs)
 }
 
 
+ExprId LowLevelILFunction::AddSSARegisterStackList(const vector<SSARegisterStack>& regStacks)
+{
+	uint64_t* operandList = new uint64_t[regStacks.size() * 2];
+	for (size_t i = 0; i < regStacks.size(); i++)
+	{
+		operandList[i * 2] = regStacks[i].regStack;
+		operandList[(i * 2) + 1] = regStacks[i].version;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regStacks.size() * 2);
+	delete[] operandList;
+	return result;
+}
+
+
 ExprId LowLevelILFunction::AddSSAFlagList(const vector<SSAFlag>& flags)
 {
 	uint64_t* operandList = new uint64_t[flags.size() * 2];

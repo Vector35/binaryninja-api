@@ -51,11 +51,11 @@ class LookupTableEntry(object):
 
 class RegisterValue(object):
 	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
+		self.is_constant = False
 		if value is None:
 			self.type = RegisterValueType.UndeterminedValue
 		else:
 			self.type = RegisterValueType(value.state)
-			self.is_constant = False
 			if value.state == RegisterValueType.EntryValue:
 				self.arch = arch
 				if arch is not None:
@@ -101,6 +101,54 @@ class RegisterValue(object):
 			result.value = self.offset
 		elif self.type == RegisterValueType.ImportedAddressValue:
 			result.value = self.value
+		return result
+
+	@classmethod
+	def undetermined(self):
+		return RegisterValue()
+
+	@classmethod
+	def entry_value(self, arch, reg):
+		result = RegisterValue()
+		result.type = RegisterValueType.EntryValue
+		result.arch = arch
+		result.reg = reg
+		return result
+
+	@classmethod
+	def constant(self, value):
+		result = RegisterValue()
+		result.type = RegisterValueType.ConstantValue
+		result.value = value
+		result.is_constant = True
+		return result
+
+	@classmethod
+	def constant_ptr(self, value):
+		result = RegisterValue()
+		result.type = RegisterValueType.ConstantPointerValue
+		result.value = value
+		result.is_constant = True
+		return result
+
+	@classmethod
+	def stack_frame_offset(self, offset):
+		result = RegisterValue()
+		result.type = RegisterValueType.StackFrameOffset
+		result.offset = offset
+		return result
+
+	@classmethod
+	def imported_address(self, value):
+		result = RegisterValue()
+		result.type = RegisterValueType.ImportedAddressValue
+		result.value = value
+		return result
+
+	@classmethod
+	def return_address(self):
+		result = RegisterValue()
+		result.type = RegisterValueType.ReturnAddressValue
 		return result
 
 
@@ -1737,6 +1785,15 @@ class RegisterInfo(object):
 		else:
 			extend = ""
 		return "<reg: size %d, offset %d in %s%s>" % (self.size, self.offset, self.full_width_reg, extend)
+
+
+class RegisterStackInfo(object):
+	def __init__(self, storage_regs, stack_top_reg):
+		self.storage_regs = storage_regs
+		self.stack_top_reg = stack_top_reg
+
+	def __repr__(self):
+		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)
 
 
 class InstructionBranch(object):

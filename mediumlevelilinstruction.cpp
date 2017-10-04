@@ -149,6 +149,7 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
 		{MLIL_CONST, {ConstantMediumLevelOperandUsage}},
 		{MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
+		{MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}},
 		{MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
 		{MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_SUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
@@ -1598,6 +1599,8 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->Const(size, GetConstant<MLIL_CONST>(), *this);
 	case MLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<MLIL_CONST_PTR>(), *this);
+	case MLIL_FLOAT_CONST:
+		return dest->FloatConstRaw(size, GetConstant<MLIL_FLOAT_CONST>(), *this);
 	case MLIL_IMPORT:
 		return dest->ImportedAddress(size, GetConstant<MLIL_IMPORT>(), *this);
 	case MLIL_BP:
@@ -2128,6 +2131,36 @@ ExprId MediumLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLoc
 ExprId MediumLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CONST_PTR, loc, size, val);
+}
+
+
+ExprId MediumLevelILFunction::FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, size, val);
+}
+
+
+ExprId MediumLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
+{
+	union
+	{
+		float f;
+		uint32_t i;
+	} bits;
+	bits.f = val;
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 4, bits.i);
+}
+
+
+ExprId MediumLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& loc)
+{
+	union
+	{
+		double f;
+		uint64_t i;
+	} bits;
+	bits.f = val;
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 8, bits.i);
 }
 
 

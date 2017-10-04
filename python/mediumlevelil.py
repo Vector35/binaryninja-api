@@ -27,6 +27,7 @@ import function
 import basicblock
 import lowlevelil
 import types
+import struct
 
 
 class SSAVariable(object):
@@ -90,6 +91,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
+		MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")],
 		MediumLevelILOperation.MLIL_IMPORT: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
@@ -211,6 +213,13 @@ class MediumLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+			elif operand_type == "float":
+				if instr.size == 4:
+					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
+				elif instr.size == 8:
+					value = struct.unpack("d", struct.pack("Q", instr.operands[i]))[0]
+				else:
+					value = instr.operands[i]
 			elif operand_type == "expr":
 				value = MediumLevelILInstruction(func, instr.operands[i])
 			elif operand_type == "var":

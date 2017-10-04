@@ -367,6 +367,34 @@ uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
 }
 
 
+char* Architecture::GetRegisterStackNameCallback(void* ctxt, uint32_t regStack)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetRegisterStackName(regStack);
+	return BNAllocString(result.c_str());
+}
+
+
+uint32_t* Architecture::GetAllRegisterStacksCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllRegisterStacks();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+void Architecture::GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	*result = arch->GetRegisterStackInfo(regStack);
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -476,6 +504,9 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
 	callbacks.getLinkRegister = GetLinkRegisterCallback;
 	callbacks.getGlobalRegisters = GetGlobalRegistersCallback;
+	callbacks.getRegisterStackName = GetRegisterStackNameCallback;
+	callbacks.getAllRegisterStacks = GetAllRegisterStacksCallback;
+	callbacks.getRegisterStackInfo = GetRegisterStackInfoCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -694,6 +725,36 @@ vector<uint32_t> Architecture::GetGlobalRegisters()
 bool Architecture::IsGlobalRegister(uint32_t reg)
 {
 	return BNIsArchitectureGlobalRegister(m_object, reg);
+}
+
+
+string Architecture::GetRegisterStackName(uint32_t regStack)
+{
+	char regStr[32];
+	sprintf(regStr, "reg_stack_%" PRIu32, regStack);
+	return regStr;
+}
+
+
+vector<uint32_t> Architecture::GetAllRegisterStacks()
+{
+	return vector<uint32_t>();
+}
+
+
+BNRegisterStackInfo Architecture::GetRegisterStackInfo(uint32_t)
+{
+	BNRegisterStackInfo result;
+	result.firstStorageReg = BN_INVALID_REGISTER;
+	result.count = 0;
+	result.stackTopReg = BN_INVALID_REGISTER;
+	return result;
+}
+
+
+uint32_t Architecture::GetRegisterStackForRegister(uint32_t reg)
+{
+	return BNGetArchitectureRegisterStackForRegister(m_object, reg);
 }
 
 
@@ -1134,6 +1195,35 @@ vector<uint32_t> CoreArchitecture::GetGlobalRegisters()
 
 	BNFreeRegisterList(regs);
 	return result;
+}
+
+
+string CoreArchitecture::GetRegisterStackName(uint32_t regStack)
+{
+	char* name = BNGetArchitectureRegisterStackName(m_object, regStack);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllRegisterStacks()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureRegisterStacks(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+BNRegisterStackInfo CoreArchitecture::GetRegisterStackInfo(uint32_t regStack)
+{
+	return BNGetArchitectureRegisterStackInfo(m_object, regStack);
 }
 
 

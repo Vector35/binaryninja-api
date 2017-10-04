@@ -123,6 +123,7 @@ class Architecture(object):
 	flag_roles = {}
 	flags_required_for_flag_condition = {}
 	flags_written_by_flag_write_type = {}
+	reg_stacks = {}
 	__metaclass__ = _ArchitectureMetaClass
 	next_address = 0
 
@@ -218,6 +219,19 @@ class Architecture(object):
 			for i in xrange(0, count.value):
 				self.global_regs.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
 			core.BNFreeRegisterList(regs)
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetAllArchitectureRegisterStacks(self.handle, count)
+			self.__dict__["reg_stacks"] = {}
+			for i in xrange(0, count.value):
+				name = core.BNGetArchitectureRegisterStackName(self.handle, regs[i])
+				info = core.BNGetArchitectureRegisterStackInfo(self.handle, regs[i])
+				storage = []
+				for j in xrange(0, info.count):
+					storage.append(core.BNGetArchitectureRegisterName(self.handle, info.firstStorageReg + j))
+				top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
+				self.reg_stacks[name] = function.RegisterStackInfo(storage, top)
+			core.BNFreeRegisterList(regs)
 		else:
 			startup._init_plugins()
 
@@ -262,6 +276,9 @@ class Architecture(object):
 				self._get_stack_pointer_register)
 			self._cb.getLinkRegister = self._cb.getLinkRegister.__class__(self._get_link_register)
 			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_registers)
+			self._cb.getRegisterStackName = self._cb.getRegisterStackName.__class__(self._get_register_stack_name)
+			self._cb.getAllRegisterStacks = self._cb.getAllRegisterStacks.__class__(self._get_all_register_stacks)
+			self._cb.getRegisterStackInfo = self._cb.getRegisterStackInfo.__class__(self._get_register_stack_info)
 			self._cb.assemble = self._cb.assemble.__class__(self._assemble)
 			self._cb.isNeverBranchPatchAvailable = self._cb.isNeverBranchPatchAvailable.__class__(
 				self._is_never_branch_patch_available)
@@ -283,6 +300,25 @@ class Architecture(object):
 			self._regs_by_index = {}
 			self.__dict__["regs"] = self.__class__.regs
 			reg_index = 0
+
+			# Registers used for storage in register stacks must be sequential, so allocate these in order first
+			self._all_reg_stacks = {}
+			self._reg_stacks_by_index = {}
+			self.__dict__["reg_stacks"] = self.__class__.reg_stacks
+			reg_stack_index = 0
+			for reg_stack in self.reg_stacks:
+				info = self.reg_stacks[reg_stack]
+				for reg in info.storage_regs:
+					self._all_regs[reg] = reg_index
+					self._regs_by_index[reg_index] = reg
+					self.regs[reg].index = reg_index
+					reg_index += 1
+				if reg_stack not in self._all_reg_stacks:
+					self._all_reg_stacks[reg_stack] = reg_stack_index
+					self._reg_stacks_by_index[reg_stack_index] = reg_stack
+					self.reg_stacks[reg_stack].index = reg_stack_index
+					reg_stack_index += 1
+
 			for reg in self.regs:
 				info = self.regs[reg]
 				if reg not in self._all_regs:
@@ -755,6 +791,47 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			count[0] = 0
 			return None
+
+	def _get_register_stack_name(self, ctxt, reg_stack):
+		try:
+			if reg_stack in self._reg_stacks_by_index:
+				return core.BNAllocString(self._reg_stacks_by_index[reg_stack])
+			return core.BNAllocString("")
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			return core.BNAllocString("")
+
+	def _get_all_register_stacks(self, ctxt, count):
+		try:
+			regs = self._reg_stacks_by_index.keys()
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in xrange(0, len(regs)):
+				reg_buf[i] = regs[i]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_register_stack_info(self, ctxt, reg_stack, result):
+		try:
+			if reg_stack not in self._reg_stacks_by_index:
+				result[0].firstStorageReg = 0
+				result[0].count = 0
+				result[0].stackTopReg = 0
+				return
+			info = self.__class__.regs[self._reg_stacks_by_index[reg_stack]]
+			result[0].firstStorageReg = self._all_regs[info.storage_regs[0]]
+			result[0].count = len(info.storage_regs)
+			result[0].stackTopReg = self._all_regs[info.stack_top_reg]
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			result[0].firstStorageReg = 0
+			result[0].count = 0
+			result[0].stackTopReg = 0
 
 	def _assemble(self, ctxt, code, addr, result, errors):
 		try:
@@ -1264,6 +1341,23 @@ class Architecture(object):
 		"""
 		return core.BNGetArchitectureRegisterName(self.handle, reg)
 
+	def get_reg_stack_name(self, reg_stack):
+		"""
+		``get_reg_stack_name`` gets a register stack name from a register stack number.
+
+		:param int reg_stack: register stack number
+		:return: the corresponding register string
+		:rtype: str
+		"""
+		return core.BNGetArchitectureRegisterStackName(self.handle, reg_stack)
+
+	def get_reg_stack_for_reg(self, reg):
+		reg = self.get_reg_index(reg)
+		result = core.BNGetArchitectureRegisterStackForRegister(self.handle, reg)
+		if result == 0xffffffff:
+			return None
+		return self.get_reg_stack_name(result)
+
 	def get_flag_name(self, flag):
 		"""
 		``get_flag_name`` gets a flag name from a flag number.
@@ -1280,6 +1374,13 @@ class Architecture(object):
 		elif isinstance(reg, lowlevelil.ILRegister):
 			return reg.index
 		return reg
+
+	def get_reg_stack_index(self, reg_stack):
+		if isinstance(reg_stack, str):
+			return self.reg_stacks[reg_stack].index
+		elif isinstance(reg_stack, lowlevelil.ILRegisterStack):
+			return reg_stack.index
+		return reg_stack
 
 	def get_flag_index(self, flag):
 		if isinstance(flag, str):

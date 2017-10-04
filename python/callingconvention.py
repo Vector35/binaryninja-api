@@ -308,6 +308,10 @@ class CallingConvention(object):
 		return self.name
 
 	def perform_get_incoming_reg_value(self, reg, func):
+		reg_stack = self.arch.get_reg_stack_for_reg(reg)
+		if reg_stack is not None:
+			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
+				return function.RegisterValue.constant(0)
 		return function.RegisterValue()
 
 	def perform_get_incoming_flag_value(self, reg, func):

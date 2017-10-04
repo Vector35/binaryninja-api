@@ -281,14 +281,19 @@ extern "C"
 		LLIL_SET_REG, // Not valid in SSA form (see LLIL_SET_REG_SSA)
 		LLIL_SET_REG_SPLIT, // Not valid in SSA form (see LLIL_SET_REG_SPLIT_SSA)
 		LLIL_SET_FLAG, // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
+		LLIL_SET_REG_STACK_REL, // Not valid in SSA form (see LLIL_SET_REG_STACK_REL_SSA)
+		LLIL_REG_STACK_PUSH, // Not valid in SSA form (expanded)
 		LLIL_LOAD, // Not valid in SSA form (see LLIL_LOAD_SSA)
 		LLIL_STORE, // Not valid in SSA form (see LLIL_STORE_SSA)
 		LLIL_PUSH, // Not valid in SSA form (expanded)
 		LLIL_POP, // Not valid in SSA form (expanded)
 		LLIL_REG, // Not valid in SSA form (see LLIL_REG_SSA)
 		LLIL_REG_SPLIT, // Not valid in SSA form (see LLIL_REG_SPLIT_SSA)
+		LLIL_REG_STACK_REL, // Not valid in SSA form (see LLIL_REG_STACK_REL_SSA)
+		LLIL_REG_STACK_POP, // Not valid in SSA form (expanded)
 		LLIL_CONST,
 		LLIL_CONST_PTR,
+		LLIL_FLOAT_CONST,
 		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
 		LLIL_FLAG_BIT, // Not valid in SSA form (see LLIL_FLAG_BIT_SSA)
 		LLIL_ADD,
@@ -373,10 +378,15 @@ extern "C"
 		LLIL_SET_REG_SSA,
 		LLIL_SET_REG_SSA_PARTIAL,
 		LLIL_SET_REG_SPLIT_SSA,
+		LLIL_SET_REG_STACK_REL_SSA,
+		LLIL_SET_REG_STACK_ABS_SSA,
 		LLIL_REG_SPLIT_DEST_SSA, // Only valid within an LLIL_SET_REG_SPLIT_SSA instruction
+		LLIL_REG_STACK_DEST_SSA, // Only valid within LLIL_SET_REG_STACK_REL_SSA or LLIL_SET_REG_STACK_ABS_SSA
 		LLIL_REG_SSA,
 		LLIL_REG_SSA_PARTIAL,
 		LLIL_REG_SPLIT_SSA,
+		LLIL_REG_STACK_REL_SSA,
+		LLIL_REG_STACK_ABS_SSA,
 		LLIL_SET_FLAG_SSA,
 		LLIL_FLAG_SSA,
 		LLIL_FLAG_BIT_SSA,
@@ -388,6 +398,7 @@ extern "C"
 		LLIL_LOAD_SSA,
 		LLIL_STORE_SSA,
 		LLIL_REG_PHI,
+		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
 		LLIL_MEM_PHI
 	};
@@ -666,6 +677,13 @@ extern "C"
 		BNImplicitRegisterExtend extend;
 	};
 
+	struct BNRegisterStackInfo
+	{
+		uint32_t firstStorageReg;
+		uint32_t count;
+		uint32_t stackTopReg;
+	};
+
 	enum BNRegisterValueType
 	{
 		UndeterminedValue,
@@ -771,6 +789,7 @@ extern "C"
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
 		MLIL_CONST_PTR,
+		MLIL_FLOAT_CONST,
 		MLIL_IMPORT,
 		MLIL_ADD,
 		MLIL_ADC,
@@ -1070,6 +1089,10 @@ extern "C"
 		uint32_t (*getStackPointerRegister)(void* ctxt);
 		uint32_t (*getLinkRegister)(void* ctxt);
 		uint32_t* (*getGlobalRegisters)(void* ctxt, size_t* count);
+
+		char* (*getRegisterStackName)(void* ctxt, uint32_t regStack);
+		uint32_t* (*getAllRegisterStacks)(void* ctxt, size_t* count);
+		void (*getRegisterStackInfo)(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
 
 		bool (*assemble)(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
@@ -2021,6 +2044,11 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetArchitectureGlobalRegisters(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI bool BNIsArchitectureGlobalRegister(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterByName(BNArchitecture* arch, const char* name);
+
+	BINARYNINJACOREAPI char* BNGetArchitectureRegisterStackName(BNArchitecture* arch, uint32_t regStack);
+	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureRegisterStacks(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI BNRegisterStackInfo BNGetArchitectureRegisterStackInfo(BNArchitecture* arch, uint32_t regStack);
+	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterStackForRegister(BNArchitecture* arch, uint32_t reg);
 
 	BINARYNINJACOREAPI bool BNAssemble(BNArchitecture* arch, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 

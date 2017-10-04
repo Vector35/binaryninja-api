@@ -1610,6 +1610,10 @@ namespace BinaryNinja
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
 
+		static char* GetRegisterStackNameCallback(void* ctxt, uint32_t regStack);
+		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
+		static void GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
+
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -1675,6 +1679,11 @@ namespace BinaryNinja
 		bool IsGlobalRegister(uint32_t reg);
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
+
+		virtual std::string GetRegisterStackName(uint32_t regStack);
+		virtual std::vector<uint32_t> GetAllRegisterStacks();
+		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack);
+		uint32_t GetRegisterStackForRegister(uint32_t reg);
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
@@ -1799,6 +1808,10 @@ namespace BinaryNinja
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+
+		virtual std::string GetRegisterStackName(uint32_t regStack) override;
+		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
+		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
@@ -2394,6 +2407,7 @@ namespace BinaryNinja
 
 	struct LowLevelILInstruction;
 	struct SSARegister;
+	struct SSARegisterStack;
 	struct SSAFlag;
 
 	class LowLevelILFunction: public CoreRefCountObject<BNLowLevelILFunction,
@@ -2436,6 +2450,14 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low, ExprId val,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry, ExprId val,
+			uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPush(size_t size, uint32_t regStack, ExprId val, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
+			ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
+			uint32_t reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Load(size_t size, ExprId addr, uint32_t flags = 0,
@@ -2456,8 +2478,18 @@ namespace BinaryNinja
 		ExprId RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPop(size_t size, uint32_t regStack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
+			const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex,
@@ -2566,6 +2598,8 @@ namespace BinaryNinja
 		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagPhi(const SSAFlag& dest, const std::vector<SSAFlag>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t dest, const std::vector<size_t>& sources,
@@ -2602,6 +2636,7 @@ namespace BinaryNinja
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t> operands);
 		ExprId AddSSARegisterList(const std::vector<SSARegister>& regs);
+		ExprId AddSSARegisterStackList(const std::vector<SSARegisterStack>& regStacks);
 		ExprId AddSSAFlagList(const std::vector<SSAFlag>& flags);
 
 		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
@@ -2765,6 +2800,9 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,

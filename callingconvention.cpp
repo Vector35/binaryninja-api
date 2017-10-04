@@ -264,8 +264,16 @@ vector<uint32_t> CallingConvention::GetImplicitlyDefinedRegisters()
 }
 
 
-RegisterValue CallingConvention::GetIncomingRegisterValue(uint32_t, Function*)
+RegisterValue CallingConvention::GetIncomingRegisterValue(uint32_t reg, Function*)
 {
+	uint32_t regStack = GetArchitecture()->GetRegisterStackForRegister(reg);
+	if ((regStack != BN_INVALID_REGISTER) && (reg == GetArchitecture()->GetRegisterStackInfo(regStack).stackTopReg))
+	{
+		RegisterValue value;
+		value.state = ConstantValue;
+		value.value = 0;
+		return value;
+	}
 	return RegisterValue();
 }
 

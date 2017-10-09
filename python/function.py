@@ -666,6 +666,41 @@ class Function(object):
 		"""Sets a comment for the current function"""
 		return core.BNSetFunctionComment(self.handle, comment)
 
+	@property
+	def llil_basic_blocks(self):
+		"""A generator of all LowLevelILBasicBlock objects in the current function"""
+		for block in self.low_level_il:
+			yield block
+
+	@property
+	def mlil_basic_blocks(self):
+		"""A generator of all MediumLevelILBasicBlock objects in the current function"""
+		for block in self.medium_level_il:
+			yield block
+
+	@property
+	def instructions(self):
+		"""A generator of instruction tokens and their start addresses for the current function"""
+		for block in self.basic_blocks:
+			start = block.start
+			for i in block:
+				yield (i[0], start)
+				start += i[1]
+
+	@property
+	def llil_instructions(self):
+		"""A generator of llil instructions of the current function"""
+		for block in self.llil_basic_blocks:
+			for i in block:
+				yield i
+
+	@property
+	def mlil_instructions(self):
+		"""A generator of mlil instructions of the current function"""
+		for block in self.mlil_basic_blocks:
+			for i in block:
+				yield i
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)

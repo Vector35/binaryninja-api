@@ -1695,3 +1695,11 @@ class ReferenceSource(object):
 			return "<ref: %s@%#x>" % (self.arch.name, self.address)
 		else:
 			return "<ref: %#x>" % self.address
+
+        @property
+        def low_level_il(self):
+            return self.function.get_low_level_il_at(self.address)
+
+        @property
+        def medium_level_il(self):
+            return self.function.get_low_level_il_at(self.address).medium_level_il

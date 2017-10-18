@@ -173,6 +173,15 @@ string BinaryNinja::GetVersionString()
 }
 
 
+string BinaryNinja::GetLicensedUserEmail()
+{
+	char* str = BNGetLicensedUserEmail();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
 string BinaryNinja::GetProduct()
 {
 	char* str = BNGetProduct();
@@ -185,6 +194,15 @@ string BinaryNinja::GetProduct()
 string BinaryNinja::GetProductType()
 {
 	char* str = BNGetProductType();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string BinaryNinja::GetSerialNumber()
+{
+	char* str = BNGetSerialNumber();
 	string result = str;
 	BNFreeString(str);
 	return result;

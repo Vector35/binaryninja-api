@@ -1727,8 +1727,9 @@ class RegisterInfo(object):
 
 
 class RegisterStackInfo(object):
-	def __init__(self, storage_regs, stack_top_reg):
+	def __init__(self, storage_regs, top_relative_regs, stack_top_reg):
 		self.storage_regs = storage_regs
+		self.top_relative_regs = top_relative_regs
 		self.stack_top_reg = stack_top_reg
 
 	def __repr__(self):

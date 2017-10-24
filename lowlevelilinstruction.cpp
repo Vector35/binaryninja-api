@@ -2179,7 +2179,7 @@ ExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t 
 ExprId LowLevelILFunction::SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack,
 	size_t destVersion, size_t srcVersion, uint32_t reg, ExprId val, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_STACK_REL_SSA, loc, size, 0,
+	return AddExprWithLocation(LLIL_SET_REG_STACK_ABS_SSA, loc, size, 0,
 		AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, regStack, destVersion, srcVersion),
 		reg, val);
 }

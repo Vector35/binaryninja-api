@@ -679,8 +679,8 @@ extern "C"
 
 	struct BNRegisterStackInfo
 	{
-		uint32_t firstStorageReg;
-		uint32_t count;
+		uint32_t firstStorageReg, firstTopRelativeReg;
+		uint32_t storageCount, topRelativeCount;
 		uint32_t stackTopReg;
 	};
 

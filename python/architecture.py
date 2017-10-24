@@ -227,10 +227,13 @@ class Architecture(object):
 				name = core.BNGetArchitectureRegisterStackName(self.handle, regs[i])
 				info = core.BNGetArchitectureRegisterStackInfo(self.handle, regs[i])
 				storage = []
-				for j in xrange(0, info.count):
+				for j in xrange(0, info.storageCount):
 					storage.append(core.BNGetArchitectureRegisterName(self.handle, info.firstStorageReg + j))
+				top_rel = []
+				for j in xrange(0, info.topRelativeCount):
+					top_rel.append(core.BNGetArchitectureRegisterName(self.handle, info.firstTopRelativeReg + j))
 				top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
-				self.reg_stacks[name] = function.RegisterStackInfo(storage, top)
+				self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top)
 			core.BNFreeRegisterList(regs)
 		else:
 			startup._init_plugins()
@@ -309,6 +312,11 @@ class Architecture(object):
 			for reg_stack in self.reg_stacks:
 				info = self.reg_stacks[reg_stack]
 				for reg in info.storage_regs:
+					self._all_regs[reg] = reg_index
+					self._regs_by_index[reg_index] = reg
+					self.regs[reg].index = reg_index
+					reg_index += 1
+				for reg in info.top_relative_regs:
 					self._all_regs[reg] = reg_index
 					self._regs_by_index[reg_index] = reg
 					self.regs[reg].index = reg_index
@@ -820,17 +828,27 @@ class Architecture(object):
 		try:
 			if reg_stack not in self._reg_stacks_by_index:
 				result[0].firstStorageReg = 0
-				result[0].count = 0
+				result[0].firstTopRelativeReg = 0
+				result[0].storageCount = 0
+				result[0].topRelativeCount = 0
 				result[0].stackTopReg = 0
 				return
 			info = self.__class__.regs[self._reg_stacks_by_index[reg_stack]]
 			result[0].firstStorageReg = self._all_regs[info.storage_regs[0]]
-			result[0].count = len(info.storage_regs)
+			result[0].storageCount = len(info.storage_regs)
+			if len(info.top_relative_regs) > 0:
+				result[0].firstTopRelativeReg = self._all_regs[info.top_relative_regs[0]]
+				result[0].topRelativeCount = len(info.top_relative_regs)
+			else:
+				result[0].firstTopRelativeReg = 0
+				result[0].topRelativeCount = 0
 			result[0].stackTopReg = self._all_regs[info.stack_top_reg]
 		except KeyError:
 			log.log_error(traceback.format_exc())
 			result[0].firstStorageReg = 0
-			result[0].count = 0
+			result[0].firstTopRelativeReg = 0
+			result[0].storageCount = 0
+			result[0].topRelativeCount = 0
 			result[0].stackTopReg = 0
 
 	def _assemble(self, ctxt, code, addr, result, errors):

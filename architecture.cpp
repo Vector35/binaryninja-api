@@ -746,7 +746,9 @@ BNRegisterStackInfo Architecture::GetRegisterStackInfo(uint32_t)
 {
 	BNRegisterStackInfo result;
 	result.firstStorageReg = BN_INVALID_REGISTER;
-	result.count = 0;
+	result.topRelativeCount = BN_INVALID_REGISTER;
+	result.storageCount = 0;
+	result.topRelativeCount = 0;
 	result.stackTopReg = BN_INVALID_REGISTER;
 	return result;
 }

@@ -72,6 +72,14 @@ $ ln -s libssl.so libssl.so.1.0.0
 $ ln -s libcrypto.so libcrypto.so.1.0.0
 ```
 
+Alternatively, you might need to (as root):
+
+```
+apt-get install libssl-dev
+ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.2 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0
+```
+
 ### Gentoo
 
 One Gentoo user [reported][issue672] a failed SSL certificate when trying to update. The solution was to copy over `/etc/ssl/certs/ca-certificates.crt` from another Linux distribution.

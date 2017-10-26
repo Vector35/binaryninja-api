@@ -154,7 +154,7 @@ class UpdateChannel(object):
 	def updates_available(self):
 		"""Whether updates are available (read-only)"""
 		errors = ctypes.c_char_p()
-		result = core.BNAreUpdatesAvailable(self.name, errors)
+		result = core.BNAreUpdatesAvailable(self.name, None, None, errors)
 		if errors:
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))

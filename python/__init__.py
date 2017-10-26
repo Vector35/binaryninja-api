@@ -21,6 +21,7 @@
 
 import atexit
 import sys
+from time import gmtime
 
 # Binary Ninja components
 import _binaryninjacore as core
@@ -146,6 +147,12 @@ core_version = core.BNGetVersionString()
 
 core_build_id = core.BNGetBuildId()
 '''Build ID'''
+
+core_serial = core.BNGetSerialNumber()
+'''Serial Number'''
+
+core_expires = gmtime(core.BNGetLicenseExpirationTime())
+'''License Expiration'''
 
 core_product = core.BNGetProduct()
 '''Product string from the license file'''

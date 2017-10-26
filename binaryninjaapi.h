@@ -561,6 +561,10 @@ namespace BinaryNinja
 
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
+	std::string GetUserDirectory();
+
+	std::string GetSettingsFileName();
+	std::string GetRepositoriesDirectory();
 	std::string GetInstallDirectory();
 	std::string GetUserPluginDirectory();
 
@@ -571,8 +575,10 @@ namespace BinaryNinja
 	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);
 
 	std::string GetVersionString();
+	std::string GetLicensedUserEmail();
 	std::string GetProduct();
 	std::string GetProductType();
+	std::string GetSerialNumber();
 	int GetLicenseCount();
 	bool IsUIEnabled();
 	uint32_t GetBuildId();
@@ -2965,7 +2971,7 @@ namespace BinaryNinja
 
 		static std::vector<UpdateChannel> GetList();
 
-		bool AreUpdatesAvailable();
+		bool AreUpdatesAvailable(uint64_t* expireTime, uint64_t* serverTime);
 
 		BNUpdateResult UpdateToVersion(const std::string& version);
 		BNUpdateResult UpdateToVersion(const std::string& version,

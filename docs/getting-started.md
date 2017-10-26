@@ -27,16 +27,17 @@ The base locations of user folders are:
 
 Contents of the user folder includes:
 
-- `settings.json`: Advanced settings (see [settings](#settings))
 - `lastrun`: A text file containing the directory of the last BinaryNinja binary path -- very useful for plugins to resolve the install locations in non-default settings or on linux.
+- `license.dat`: License file
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
+- `settings.json`: Advanced settings (see [settings](#settings))
 
 ![license popup >](/images/license-popup.png "License Popup")
 
 ## License
 
-When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support].
+When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support](https://binary.ninja/support).
 
 Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
 

@@ -140,7 +140,7 @@ class BasicBlock(object):
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
-			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
+			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge))
 		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 

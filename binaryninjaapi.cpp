@@ -65,6 +65,39 @@ void BinaryNinja::SetBundledPluginDirectory(const string& path)
 }
 
 
+string BinaryNinja::GetUserDirectory(void)
+{
+	char* dir = BNGetUserDirectory();
+	if (!dir)
+		return string();
+	string result(dir);
+	BNFreeString(dir);
+	return result;
+}
+
+
+string BinaryNinja::GetSettingsFileName()
+{
+	char* dir = BNGetSettingsFileName();
+	if (!dir)
+		return string();
+	string result(dir);
+	BNFreeString(dir);
+	return result;
+}
+
+
+string BinaryNinja::GetRepositoriesDirectory()
+{
+	char* dir = BNGetRepositoriesDirectory();
+	if (!dir)
+		return string();
+	string result(dir);
+	BNFreeString(dir);
+	return result;
+}
+
+
 string BinaryNinja::GetInstallDirectory()
 {
 	char* path = BNGetInstallDirectory();
@@ -140,6 +173,15 @@ string BinaryNinja::GetVersionString()
 }
 
 
+string BinaryNinja::GetLicensedUserEmail()
+{
+	char* str = BNGetLicensedUserEmail();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
 string BinaryNinja::GetProduct()
 {
 	char* str = BNGetProduct();
@@ -152,6 +194,15 @@ string BinaryNinja::GetProduct()
 string BinaryNinja::GetProductType()
 {
 	char* str = BNGetProductType();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string BinaryNinja::GetSerialNumber()
+{
+	char* str = BNGetSerialNumber();
 	string result = str;
 	BNFreeString(str);
 	return result;

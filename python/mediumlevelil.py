@@ -893,3 +893,6 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def _create_instance(self, view, handle):
 		"""Internal method by super to instantiante child instances"""
 		return MediumLevelILBasicBlock(view, handle, self.il_function)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self.il_function))

@@ -68,6 +68,9 @@ class BasicBlock(object):
 		"""Internal method used to instantiante child instances"""
 		return BasicBlock(view, handle)
 
+	def __hash__(self):
+		return hash((self.start, self.end, self.arch.name))
+
 	@property
 	def function(self):
 		"""Basic block function (read-only)"""

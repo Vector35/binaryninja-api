@@ -520,7 +520,7 @@ def show_html_report(title, contents, plaintext=""):
 	:param str contents: HTML contents to display
 	:param str plaintext: Plain text version to display (used on the command line)
 	:rtype: None
-	:Example"
+	:Example:
 		>>> show_html_report("title", "<h1>Contents</h1>", "Plain text contents")
 		Plain text contents
 	"""

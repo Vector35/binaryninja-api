@@ -103,6 +103,17 @@ class StringReference(object):
 
 
 class AnalysisCompletionEvent(object):
+	"""
+	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
+	callbacks when analysis is complete.
+
+	:Example:
+		>>> def on_complete(self):
+		...     print "Analysis Complete", self.view
+		...
+		>>> evt = AnalysisCompletionEvent(bv, on_complete)
+		>>>
+	"""
 	def __init__(self, view, callback):
 		self.view = view
 		self.callback = callback
@@ -114,7 +125,7 @@ class AnalysisCompletionEvent(object):
 
 	def _notify(self, ctxt):
 		try:
-			self.callback()
+			self.callback(self)
 		except:
 			log.log_error(traceback.format_exc())
 

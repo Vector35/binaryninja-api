@@ -39,12 +39,12 @@ class SSAVariable(object):
 
 	def __eq__(self, other):
 		return (
-			(self.var.identifier, self.var.function, self.version) ==
-			(other.var.identifier, other.var.function, other.version)
+			(self.var, self.version) ==
+			(other.var, other.version)
 		)
 
 	def __hash__(self):
-		return hash((self.var.identifier, self.var.function, self.version))
+		return hash((self.var, self.version))
 
 
 class MediumLevelILLabel(object):

@@ -241,10 +241,10 @@ class Variable(object):
 		return self.name
 
 	def __eq__(self, other):
-		return self.identifier == other.identifier
+		return (self.identifier, self.function) == (other.identifier, other.function)
 
 	def __hash__(self):
-		return hash(self.identifier)
+		return hash((self.identifier, self.function))
 
 
 class ConstantReference(object):

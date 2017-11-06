@@ -61,7 +61,7 @@ lastrun()
 pythonpath()
 {
 	echo Configuring python path
-	${SUDO}python ${BNPATH}/install_api.py $ROOT
+	${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
 }
 
 createdesktopfile()

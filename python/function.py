@@ -241,10 +241,10 @@ class Variable(object):
 		return self.name
 
 	def __eq__(self, other):
-		return self.identifier == other.identifier
+		return (self.identifier, self.function) == (other.identifier, other.function)
 
 	def __hash__(self):
-		return hash(self.identifier)
+		return hash((self.identifier, self.function))
 
 
 class ConstantReference(object):
@@ -666,6 +666,41 @@ class Function(object):
 		"""Sets a comment for the current function"""
 		return core.BNSetFunctionComment(self.handle, comment)
 
+	@property
+	def llil_basic_blocks(self):
+		"""A generator of all LowLevelILBasicBlock objects in the current function"""
+		for block in self.low_level_il:
+			yield block
+
+	@property
+	def mlil_basic_blocks(self):
+		"""A generator of all MediumLevelILBasicBlock objects in the current function"""
+		for block in self.medium_level_il:
+			yield block
+
+	@property
+	def instructions(self):
+		"""A generator of instruction tokens and their start addresses for the current function"""
+		for block in self.basic_blocks:
+			start = block.start
+			for i in block:
+				yield (i[0], start)
+				start += i[1]
+
+	@property
+	def llil_instructions(self):
+		"""A generator of llil instructions of the current function"""
+		for block in self.llil_basic_blocks:
+			for i in block:
+				yield i
+
+	@property
+	def mlil_instructions(self):
+		"""A generator of mlil instructions of the current function"""
+		for block in self.mlil_basic_blocks:
+			for i in block:
+				yield i
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
@@ -727,7 +762,13 @@ class Function(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		return self.low_level_il[core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)]
+
+		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.low_level_il):
+			return None
+
+		return self.low_level_il[idx]
 
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:
@@ -878,7 +919,13 @@ class Function(object):
 	def get_lifted_il_at(self, addr, arch=None):
 		if arch is None:
 			arch = self.arch
-		return self.lifted_il[core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)]
+
+		idx = core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.lifted_il):
+			return None
+
+		return self.lifted_il[idx]
 
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
 		flag = self.arch.get_flag_index(flag)

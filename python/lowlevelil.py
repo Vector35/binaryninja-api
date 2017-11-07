@@ -1733,6 +1733,9 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		"""Internal method by super to instantiante child instances"""
 		return LowLevelILBasicBlock(view, handle, self.il_function)
 
+	def __hash__(self):
+		return hash((self.start, self.end, self.il_function))
+
 def LLIL_TEMP(n):
 	return n | 0x80000000
 

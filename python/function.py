@@ -307,6 +307,8 @@ class Function(object):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
 		self._advanced_analysis_requests = 0
+		self._arch = None
+		self._platform = None
 
 	def __del__(self):
 		if self._advanced_analysis_requests > 0:
@@ -358,18 +360,26 @@ class Function(object):
 	@property
 	def arch(self):
 		"""Function architecture (read-only)"""
-		arch = core.BNGetFunctionArchitecture(self.handle)
-		if arch is None:
-			return None
-		return architecture.Architecture(arch)
+		if self._arch:
+			return self._arch
+		else:
+			arch = core.BNGetFunctionArchitecture(self.handle)
+			if arch is None:
+				return None
+			self._arch = architecture.Architecture(arch)
+			return self._arch
 
 	@property
 	def platform(self):
 		"""Function platform (read-only)"""
-		plat = core.BNGetFunctionPlatform(self.handle)
-		if plat is None:
-			return None
-		return platform.Platform(None, handle = plat)
+		if self._platform:
+			return self._platform
+		else: 
+			plat = core.BNGetFunctionPlatform(self.handle)
+			if plat is None:
+				return None
+			self._platform = plat
+			return platform.Platform(None, handle = plat)
 
 	@property
 	def start(self):

@@ -1088,6 +1088,7 @@ namespace BinaryNinja
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
 		virtual bool PerformIsExecutable() const { return false; }
 		virtual BNEndianness PerformGetDefaultEndianness() const;
+		virtual bool PerformIsRelocatable() const;
 		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file);
@@ -1115,6 +1116,7 @@ namespace BinaryNinja
 		static uint64_t GetEntryPointCallback(void* ctxt);
 		static bool IsExecutableCallback(void* ctxt);
 		static BNEndianness GetDefaultEndiannessCallback(void* ctxt);
+		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
@@ -1181,6 +1183,7 @@ namespace BinaryNinja
 		void SetDefaultPlatform(Platform* platform);
 
 		BNEndianness GetDefaultEndianness() const;
+		bool IsRelocatable() const;
 		size_t GetAddressSize() const;
 
 		bool IsExecutable() const;

@@ -935,6 +935,7 @@ extern "C"
 		uint64_t (*getEntryPoint)(void* ctxt);
 		bool (*isExecutable)(void* ctxt);
 		BNEndianness (*getDefaultEndianness)(void* ctxt);
+		bool (*isRelocatable)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
 	};
@@ -1777,6 +1778,7 @@ extern "C"
 	BINARYNINJACOREAPI BNPlatform* BNGetDefaultPlatform(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetDefaultPlatform(BNBinaryView* view, BNPlatform* platform);
 	BINARYNINJACOREAPI BNEndianness BNGetDefaultEndianness(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNIsRelocatable(BNBinaryView* view);
 	BINARYNINJACOREAPI size_t BNGetViewAddressSize(BNBinaryView* view);
 
 	BINARYNINJACOREAPI bool BNIsViewModified(BNBinaryView* view);

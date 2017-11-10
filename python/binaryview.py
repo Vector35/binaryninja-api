@@ -583,6 +583,7 @@ class BinaryView(object):
 			self._cb.getEntryPoint = self._cb.getEntryPoint.__class__(self._get_entry_point)
 			self._cb.isExecutable = self._cb.isExecutable.__class__(self._is_executable)
 			self._cb.getDefaultEndianness = self._cb.getDefaultEndianness.__class__(self._get_default_endianness)
+			self._cb.isRelocatable = self._cb.isRelocatable.__class__(self._is_relocatable)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.save = self._cb.save.__class__(self._save)
 			self.file = file_metadata
@@ -837,6 +838,11 @@ class BinaryView(object):
 	def endianness(self):
 		"""Endianness of the binary (read-only)"""
 		return Endianness(core.BNGetDefaultEndianness(self.handle))
+
+	@property
+	def relocatable(self):
+		"""Boolean - is the binary relocatable (read-only)"""
+		return core.BNIsRelocatable(self.handle)
 
 	@property
 	def address_size(self):
@@ -1202,6 +1208,13 @@ class BinaryView(object):
 			log.log_error(traceback.format_exc())
 			return Endianness.LittleEndian
 
+	def _is_relocatable(self, ctxt):
+		try:
+			return self.perform_is_relocatable()
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
 	def _get_address_size(self, ctxt):
 		try:
 			return self.perform_get_address_size()
@@ -1493,6 +1506,19 @@ class BinaryView(object):
 		:rtype: Endianness
 		"""
 		return Endianness.LittleEndian
+
+	def perform_is_relocatable(self):
+		"""
+		``perform_is_relocatable`` implements a check which returns true if the BinaryView is relocatable. Defaults to
+		True.
+
+		.. note:: This method **may** be implemented for custom BinaryViews that are relocatable.
+		.. warning:: This method **must not** be called directly.
+
+		:return: True if the BinaryView is relocatable, False otherwise
+		:rtype: boolean
+		"""
+		return True
 
 	def create_database(self, filename, progress_func=None):
 		"""

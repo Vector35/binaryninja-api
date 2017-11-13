@@ -327,6 +327,11 @@ public:
 		return LittleEndian;
 	}
 
+	virtual size_t GetInstructionAlignment() const override
+	{
+		return 1;
+	}
+
 	virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override
 	{
 		return m_arch->GetInstructionInfo(data, addr, maxLen, result);

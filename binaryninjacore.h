@@ -1003,6 +1003,7 @@ extern "C"
 		BNEndianness (*getEndianness)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		size_t (*getDefaultIntegerSize)(void* ctxt);
+		size_t (*getInstructionAlignment)(void* ctxt);
 		size_t (*getMaxInstructionLength)(void* ctxt);
 		size_t (*getOpcodeDisplayLength)(void* ctxt);
 		BNArchitecture* (*getAssociatedArchitectureByAddress)(void* ctxt, uint64_t* addr);
@@ -1946,6 +1947,7 @@ extern "C"
 	BINARYNINJACOREAPI BNEndianness BNGetArchitectureEndianness(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureAddressSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureInstructionAlignment(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);

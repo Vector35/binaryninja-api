@@ -1585,6 +1585,7 @@ namespace BinaryNinja
 		static BNEndianness GetEndiannessCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
+		static size_t GetInstructionAlignmentCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
@@ -1640,6 +1641,7 @@ namespace BinaryNinja
 		virtual size_t GetAddressSize() const = 0;
 		virtual size_t GetDefaultIntegerSize() const;
 
+		virtual size_t GetInstructionAlignment() const;
 		virtual size_t GetMaxInstructionLength() const;
 		virtual size_t GetOpcodeDisplayLength() const;
 
@@ -1780,6 +1782,7 @@ namespace BinaryNinja
 		virtual BNEndianness GetEndianness() const override;
 		virtual size_t GetAddressSize() const override;
 		virtual size_t GetDefaultIntegerSize() const override;
+		virtual size_t GetInstructionAlignment() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;

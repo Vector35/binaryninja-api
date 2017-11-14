@@ -378,8 +378,8 @@ class Function(object):
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
-			self._platform = plat
-			return platform.Platform(None, handle = plat)
+			self._platform = platform.Platform(None, handle = plat)
+			return self._platform
 
 	@property
 	def start(self):

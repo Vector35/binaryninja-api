@@ -424,7 +424,7 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return 4
 
-	def __get_instruction_alignment(self, ctxt):
+	def _get_instruction_alignment(self, ctxt):
 		try:
 			return self.__class__.instr_alignment
 		except:

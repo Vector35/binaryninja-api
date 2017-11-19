@@ -83,11 +83,11 @@ Comment=${APPCOMMENT}
 EOF
 	if [ "${ROOT}" == "root" ]
 	then
-		echo ${DESKTOP} | $SUDO tee ${DESKTOPFILE} >/dev/null
+		echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
 		$SUDO chmod +x ${DESKTOPFILE}
 		$SUDO update-desktop-database ${SHARE}/applications
 	else
-		echo ${DESKTOP} > ${HOME}/Desktop/${APP}.desktop
+		echo "${DESKTOP}" > ${HOME}/Desktop/${APP}.desktop
 	fi
 }
 

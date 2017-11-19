@@ -81,14 +81,9 @@ Type=Application
 Categories=Utility;
 Comment=${APPCOMMENT}
 EOF
-	if [ "${ROOT}" == "root" ]
-	then
-		echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
-		$SUDO chmod +x ${DESKTOPFILE}
-		$SUDO update-desktop-database ${SHARE}/applications
-	else
-		echo "${DESKTOP}" > ${HOME}/Desktop/${APP}.desktop
-	fi
+	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
+	$SUDO chmod +x ${DESKTOPFILE}
+	$SUDO update-desktop-database ${SHARE}/applications
 }
 
 createmime()
@@ -108,16 +103,12 @@ createmime()
 		<glob pattern=\"*.${EXT}\"/>
 		<sub-class-of type=\"application/x-sqlite3\" />
 	</mime-type>
-</mime-info>"| $SUDO tee ${MIMEFILE} >/dev/null
+</mime-info>"| $SUDO tee ${MIMEFILEbinary} >/dev/null
 
 	#echo Copying icon
 	#$SUDO cp $PNG $IMAGEFILE
-	if [ "${ROOT}" == "root" ]
-	then
-		$SUDO cp ${PNG} ${IMAGEFILE}
-		$SUDO update-mime-database ${SHARE}/mime
-	fi
-
+	$SUDO cp ${PNG} ${IMAGEFILE}
+	$SUDO update-mime-database ${SHARE}/mime
 }
 
 addtodesktop()
@@ -127,11 +118,8 @@ addtodesktop()
 
 uninstall()
 {
-	rm -i -r $DESKTOPFILE $MIMEFILE $IMAGEFILE
-	if [ "$ROOT" == "root" ]
-	then
-		$SUDO update-mime-database ${SHARE}/mime
-	fi
+	rm -i -r $DESKTOPFILE $MIMEFILE $IMAGEFILE ${HOME}/Desktop/${APP}.desktop
+	$SUDO update-mime-database ${SHARE}/mime
 	exit 0
 }
 

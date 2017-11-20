@@ -61,7 +61,12 @@ lastrun()
 pythonpath()
 {
 	echo Configuring python path
-	${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
+	if [[ $(python -V) == "Python 3."* ]]
+	then
+	    ${SUDO}python2 ${BNPATH}/scripts/install_api.py $ROOT
+	else
+	    ${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
+	fi
 }
 
 createdesktopfile()

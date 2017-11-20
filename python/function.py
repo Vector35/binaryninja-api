@@ -123,6 +123,8 @@ class PossibleValueSet(object):
 			self.reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
+		elif value.state == RegisterValueType.ConstantPointerValue:
+			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
 		elif value.state == RegisterValueType.SignedRangeValue:
@@ -164,6 +166,8 @@ class PossibleValueSet(object):
 			return "<entry %s>" % self.reg
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.ConstantPointerValue:
+			return "<const ptr %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
 		if self.type == RegisterValueType.SignedRangeValue:

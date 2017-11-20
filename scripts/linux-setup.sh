@@ -103,7 +103,7 @@ createmime()
 		<glob pattern=\"*.${EXT}\"/>
 		<sub-class-of type=\"application/x-sqlite3\" />
 	</mime-type>
-</mime-info>"| $SUDO tee ${MIMEFILEbinary} >/dev/null
+</mime-info>"| $SUDO tee ${MIMEFILE} >/dev/null
 
 	#echo Copying icon
 	#$SUDO cp $PNG $IMAGEFILE

@@ -14,7 +14,7 @@ setvars()
 	APP="binaryninja"
 	FILECOMMENT="Binary Ninja Analysis Database"
 	APPCOMMENT="Binary Ninja: A Reverse Engineering Platform"
-	BNPATH="$(dirname $(readlink -f "$0"))/../"
+	BNPATH="$(dirname $(readlink -f "$0"))/.."
 	EXEC="${BNPATH}/binaryninja"
 	PNG="${BNPATH}/docs/images/logo.png"
 	EXT="bndb"

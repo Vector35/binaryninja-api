@@ -3581,4 +3581,7 @@ namespace BinaryNinja
 		bool IsArray() const;
 		bool IsKeyValueStore() const;
 	};
+
+	std::string GetLinuxCADirectory();
+	std::string GetLinuxCABundlePath();
 }

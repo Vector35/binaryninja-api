@@ -344,3 +344,21 @@ string BinaryNinja::GetUniqueIdentifierString()
 	BNFreeString(str);
 	return result;
 }
+
+
+string BinaryNinja::GetLinuxCADirectory()
+{
+	char* str = BNGetLinuxCADirectory();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string BinaryNinja::GetLinuxCABundlePath()
+{
+	char* str = BNGetLinuxCABundlePath();
+	string result = str;
+	BNFreeString(str);
+	return result;
+}

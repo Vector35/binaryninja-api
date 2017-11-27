@@ -112,9 +112,11 @@ namespace BinaryNinja
 		SSARegisterStackLowLevelOperand,
 		SSAFlagLowLevelOperand,
 		IndexListLowLevelOperand,
+		ExprListLowLevelOperand,
 		SSARegisterListLowLevelOperand,
 		SSARegisterStackListLowLevelOperand,
-		SSAFlagListLowLevelOperand
+		SSAFlagListLowLevelOperand,
+		RegisterStackAdjustmentsLowLevelOperand
 	};
 
 	enum LowLevelILOperandUsage
@@ -158,12 +160,13 @@ namespace BinaryNinja
 		FlagConditionLowLevelOperandUsage,
 		OutputSSARegistersLowLevelOperandUsage,
 		OutputMemoryVersionLowLevelOperandUsage,
-		ParameterSSARegistersLowLevelOperandUsage,
+		ParameterExprsLowLevelOperandUsage,
 		SourceSSARegistersLowLevelOperandUsage,
 		SourceSSARegisterStacksLowLevelOperandUsage,
 		SourceSSAFlagsLowLevelOperandUsage,
 		SourceMemoryVersionsLowLevelOperandUsage,
-		TargetListLowLevelOperandUsage
+		TargetListLowLevelOperandUsage,
+		RegisterStackAdjustmentsLowLevelOperandUsage
 	};
 }
 
@@ -328,6 +331,36 @@ namespace BinaryNinja
 		operator std::vector<size_t>() const;
 	};
 
+	class LowLevelILInstructionList
+	{
+		struct ListIterator
+		{
+			LowLevelILIntegerList::const_iterator pos;
+			size_t instructionIndex;
+			bool operator==(const ListIterator& a) const { return pos == a.pos; }
+			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
+			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			ListIterator& operator++() { ++pos; return *this; }
+			const LowLevelILInstruction operator*();
+		};
+
+		LowLevelILIntegerList m_list;
+		size_t m_instructionIndex;
+
+	public:
+		typedef ListIterator const_iterator;
+
+		LowLevelILInstructionList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr,
+			size_t count, size_t instrIndex);
+
+		const_iterator begin() const;
+		const_iterator end() const;
+		size_t size() const;
+		const LowLevelILInstruction operator[](size_t i) const;
+
+		operator std::vector<LowLevelILInstruction>() const;
+	};
+
 	class LowLevelILSSARegisterList
 	{
 		struct ListIterator
@@ -436,9 +469,11 @@ namespace BinaryNinja
 		SSARegisterStack GetRawOperandAsPartialSSARegisterStackSource(size_t operand) const;
 		SSAFlag GetRawOperandAsSSAFlag(size_t operand) const;
 		LowLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
+		LowLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
 		LowLevelILSSARegisterList GetRawOperandAsSSARegisterList(size_t operand) const;
 		LowLevelILSSARegisterStackList GetRawOperandAsSSARegisterStackList(size_t operand) const;
 		LowLevelILSSAFlagList GetRawOperandAsSSAFlagList(size_t operand) const;
+		std::map<uint32_t, int32_t> GetRawOperandAsRegisterStackAdjustments(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsSSARegisterList(size_t operandIndex, const std::vector<SSARegister>& regs);
@@ -574,12 +609,13 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> size_t GetDestMemoryVersion() const { return As<N>().GetDestMemoryVersion(); }
 		template <BNLowLevelILOperation N> BNLowLevelILFlagCondition GetFlagCondition() const { return As<N>().GetFlagCondition(); }
 		template <BNLowLevelILOperation N> LowLevelILSSARegisterList GetOutputSSARegisters() const { return As<N>().GetOutputSSARegisters(); }
-		template <BNLowLevelILOperation N> LowLevelILSSARegisterList GetParameterSSARegisters() const { return As<N>().GetParameterSSARegisters(); }
+		template <BNLowLevelILOperation N> LowLevelILInstructionList GetParameterExprs() const { return As<N>().GetParameterExprs(); }
 		template <BNLowLevelILOperation N> LowLevelILSSARegisterList GetSourceSSARegisters() const { return As<N>().GetSourceSSARegisters(); }
 		template <BNLowLevelILOperation N> LowLevelILSSARegisterStackList GetSourceSSARegisterStacks() const { return As<N>().GetSourceSSARegisterStacks(); }
 		template <BNLowLevelILOperation N> LowLevelILSSAFlagList GetSourceSSAFlags() const { return As<N>().GetSourceSSAFlags(); }
 		template <BNLowLevelILOperation N> LowLevelILIndexList GetSourceMemoryVersions() const { return As<N>().GetSourceMemoryVersions(); }
 		template <BNLowLevelILOperation N> LowLevelILIndexList GetTargetList() const { return As<N>().GetTargetList(); }
+		template <BNLowLevelILOperation N> std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const { return As<N>().GetRegisterStackAdjustments(); }
 
 		template <BNLowLevelILOperation N> void SetDestSSAVersion(size_t version) { As<N>().SetDestSSAVersion(version); }
 		template <BNLowLevelILOperation N> void SetSourceSSAVersion(size_t version) { As<N>().SetSourceSSAVersion(version); }
@@ -590,7 +626,6 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> void SetDestMemoryVersion(size_t version) { As<N>().SetDestMemoryVersion(version); }
 		template <BNLowLevelILOperation N> void SetSourceMemoryVersion(size_t version) { As<N>().SetSourceMemoryVersion(version); }
 		template <BNLowLevelILOperation N> void SetOutputSSARegisters(const std::vector<SSARegister>& regs) { As<N>().SetOutputSSARegisters(regs); }
-		template <BNLowLevelILOperation N> void SetParameterSSARegisters(const std::vector<SSARegister>& regs) { As<N>().SetParameterSSARegisters(regs); }
 
 		bool GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const;
 
@@ -632,12 +667,13 @@ namespace BinaryNinja
 		size_t GetDestMemoryVersion() const;
 		BNLowLevelILFlagCondition GetFlagCondition() const;
 		LowLevelILSSARegisterList GetOutputSSARegisters() const;
-		LowLevelILSSARegisterList GetParameterSSARegisters() const;
+		LowLevelILInstructionList GetParameterExprs() const;
 		LowLevelILSSARegisterList GetSourceSSARegisters() const;
 		LowLevelILSSARegisterStackList GetSourceSSARegisterStacks() const;
 		LowLevelILSSAFlagList GetSourceSSAFlags() const;
 		LowLevelILIndexList GetSourceMemoryVersions() const;
 		LowLevelILIndexList GetTargetList() const;
+		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const;
 	};
 
 	class LowLevelILOperand
@@ -665,9 +701,11 @@ namespace BinaryNinja
 		SSARegisterStack GetSSARegisterStack() const;
 		SSAFlag GetSSAFlag() const;
 		LowLevelILIndexList GetIndexList() const;
+		LowLevelILInstructionList GetExprList() const;
 		LowLevelILSSARegisterList GetSSARegisterList() const;
 		LowLevelILSSARegisterStackList GetSSARegisterStackList() const;
 		LowLevelILSSAFlagList GetSSAFlagList() const;
+		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const;
 	};
 
 	class LowLevelILOperandList
@@ -915,6 +953,7 @@ namespace BinaryNinja
 	{
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
 		size_t GetStackAdjustment() const { return (size_t)GetRawOperandAsInteger(1); }
+		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const { return GetRawOperandAsRegisterStackAdjustments(2); }
 	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_RET>: public LowLevelILInstructionBase
 	{
@@ -949,12 +988,11 @@ namespace BinaryNinja
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
 		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
-		LowLevelILSSARegisterList GetParameterSSARegisters() const { return GetRawOperandAsExpr(3).GetRawOperandAsSSARegisterList(0); }
+		LowLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(2, version); }
 		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
 		void SetOutputSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs); }
-		void SetParameterSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(3).UpdateRawOperandAsSSARegisterList(0, regs); }
 	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_SYSCALL_SSA>: public LowLevelILInstructionBase
 	{
@@ -962,12 +1000,11 @@ namespace BinaryNinja
 		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
 		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(1).GetRawOperandAsSSARegister(0); }
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(1).GetRawOperandAsIndex(2); }
-		LowLevelILSSARegisterList GetParameterSSARegisters() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegisterList(0); }
+		LowLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExpr(2).GetRawOperandAsExprList(0); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(2, version); }
 		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(1, version); }
 		void SetOutputSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs); }
-		void SetParameterSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSARegisterList(0, regs); }
 	};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_REG_PHI>: public LowLevelILInstructionBase

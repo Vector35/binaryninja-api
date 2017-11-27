@@ -2218,6 +2218,7 @@ namespace BinaryNinja
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<size_t> GetStackAdjustment() const;
+		std::map<uint32_t, Confidence<int32_t>> GetRegisterStackAdjustments() const;
 		Confidence<std::set<uint32_t>> GetClobberedRegisters() const;
 
 		void SetAutoType(Type* type);
@@ -2227,6 +2228,7 @@ namespace BinaryNinja
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
 		void SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetAutoRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void SetUserType(Type* type);
@@ -2236,6 +2238,7 @@ namespace BinaryNinja
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
 		void SetStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void ApplyImportedTypes(Symbol* sym);
@@ -2568,11 +2571,12 @@ namespace BinaryNinja
 		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallStackAdjust(ExprId dest, size_t adjust, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<SSARegister>& params,
+		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<SSARegister>& params,
+		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
@@ -3196,6 +3200,11 @@ namespace BinaryNinja
 		static void GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 		static void GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 
+		static void GetIncomingVariableForParameterVariableCallback(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
+		static void GetParameterVariableForIncomingVariableCallback(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
+
 	public:
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;
@@ -3216,6 +3225,9 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters();
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func);
 		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func);
+
+		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func);
+		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func);
 	};
 
 	class CoreCallingConvention: public CallingConvention
@@ -3239,6 +3251,9 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters() override;
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override;
 		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func) override;
+
+		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func) override;
+		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func) override;
 	};
 
 	/*!

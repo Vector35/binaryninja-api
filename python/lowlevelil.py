@@ -197,7 +197,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
-		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int")],
+		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
 		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
@@ -258,7 +258,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "expr_list")],
 		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
@@ -334,6 +334,14 @@ class LowLevelILInstruction(object):
 				for i in xrange(count.value):
 					value.append(operand_list[i])
 				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "expr_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for i in xrange(count.value):
+					value.append(LowLevelILInstruction(func, operand_list[i]))
+				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_ssa_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
@@ -363,6 +371,18 @@ class LowLevelILInstruction(object):
 					flag = operand_list[i * 2]
 					flag_version = operand_list[(i * 2) + 1]
 					value.append(SSAFlag(ILFlag(func.arch, flag), flag_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_stack_adjust":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = {}
+				for i in xrange(count.value / 2):
+					reg_stack = operand_list[i * 2]
+					adjust = operand_list[(i * 2) + 1]
+					if adjust & 0x80000000:
+						adjust |= ~0x80000000
+					value[func.arch.get_reg_stack_name(reg_stack)] = adjust
 				core.BNLowLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
 			self.__dict__[name] = value

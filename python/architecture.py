@@ -233,7 +233,7 @@ class Architecture(object):
 				for j in xrange(0, info.topRelativeCount):
 					top_rel.append(core.BNGetArchitectureRegisterName(self.handle, info.firstTopRelativeReg + j))
 				top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
-				self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top)
+				self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top, regs[i])
 			core.BNFreeRegisterList(regs)
 		else:
 			startup._init_plugins()

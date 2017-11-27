@@ -1341,6 +1341,11 @@ extern "C"
 		uint32_t* (*getImplicitlyDefinedRegisters)(void* ctxt, size_t* count);
 		void (*getIncomingRegisterValue)(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 		void (*getIncomingFlagValue)(void* ctxt, uint32_t flag, BNFunction* func, BNRegisterValue* result);
+
+		void (*getIncomingVariableForParameterVariable)(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
+		void (*getParameterVariableForIncomingVariable)(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
 	};
 
 	struct BNVariableNameAndType
@@ -1656,6 +1661,13 @@ extern "C"
 		RawDataType,
 		KeyValueDataType,
 		ArrayDataType
+	};
+
+	struct BNRegisterStackAdjustment
+	{
+		uint32_t regStack;
+		int32_t adjustment;
+		uint8_t confidence;
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2173,6 +2185,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeParameterVariables(BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionHasVariableArguments(BNFunction* func);
 	BINARYNINJACOREAPI BNSizeWithConfidence BNGetFunctionStackAdjustment(BNFunction* func);
+	BINARYNINJACOREAPI BNRegisterStackAdjustment* BNGetFunctionRegisterStackAdjustments(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeRegisterStackAdjustments(BNRegisterStackAdjustment* adjustments);
 	BINARYNINJACOREAPI BNRegisterSetWithConfidence BNGetFunctionClobberedRegisters(BNFunction* func);
 	BINARYNINJACOREAPI void BNFreeClobberedRegisters(BNRegisterSetWithConfidence* regs);
 
@@ -2182,6 +2196,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetAutoFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetAutoFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
 	BINARYNINJACOREAPI void BNSetAutoFunctionStackAdjustment(BNFunction* func, BNSizeWithConfidence* stackAdjust);
+	BINARYNINJACOREAPI void BNSetAutoFunctionRegisterStackAdjustments(BNFunction* func,
+		BNRegisterStackAdjustment* adjustments, size_t count);
 	BINARYNINJACOREAPI void BNSetAutoFunctionClobberedRegisters(BNFunction* func, BNRegisterSetWithConfidence* regs);
 
 	BINARYNINJACOREAPI void BNSetUserFunctionReturnType(BNFunction* func, BNTypeWithConfidence* type);
@@ -2190,6 +2206,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetUserFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetUserFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
 	BINARYNINJACOREAPI void BNSetUserFunctionStackAdjustment(BNFunction* func, BNSizeWithConfidence* stackAdjust);
+	BINARYNINJACOREAPI void BNSetUserFunctionRegisterStackAdjustments(BNFunction* func,
+		BNRegisterStackAdjustment* adjustments, size_t count);
 	BINARYNINJACOREAPI void BNSetUserFunctionClobberedRegisters(BNFunction* func, BNRegisterSetWithConfidence* regs);
 
 	BINARYNINJACOREAPI void BNApplyImportedTypes(BNFunction* func, BNSymbol* sym);
@@ -2241,7 +2259,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeStringReferenceList(BNStringReference* strings);
 
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetStackLayout(BNFunction* func, size_t* count);
-	BINARYNINJACOREAPI void BNFreeVariableList(BNVariableNameAndType* vars, size_t count);
+	BINARYNINJACOREAPI void BNFreeVariableNameAndTypeList(BNVariableNameAndType* vars, size_t count);
 	BINARYNINJACOREAPI void BNCreateAutoStackVariable(BNFunction* func, int64_t offset,
 		BNTypeWithConfidence* type, const char* name);
 	BINARYNINJACOREAPI void BNCreateUserStackVariable(BNFunction* func, int64_t offset,
@@ -2916,6 +2934,15 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetImplicitlyDefinedRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingRegisterValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingFlagValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
+
+	BINARYNINJACOREAPI BNVariable BNGetIncomingVariableForParameterVariable(BNCallingConvention* cc,
+		const BNVariable* var, BNFunction* func);
+	BINARYNINJACOREAPI BNVariable BNGetParameterVariableForIncomingVariable(BNCallingConvention* cc,
+		const BNVariable* var, BNFunction* func);
+	BINARYNINJACOREAPI BNVariable BNGetDefaultIncomingVariableForParameterVariable(BNCallingConvention* cc,
+		const BNVariable* var);
+	BINARYNINJACOREAPI BNVariable BNGetDefaultParameterVariableForIncomingVariable(BNCallingConvention* cc,
+		const BNVariable* var);
 
 	BINARYNINJACOREAPI BNCallingConvention* BNGetArchitectureDefaultCallingConvention(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetArchitectureCdeclCallingConvention(BNArchitecture* arch);

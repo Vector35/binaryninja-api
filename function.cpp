@@ -530,6 +530,18 @@ Confidence<size_t> Function::GetStackAdjustment() const
 }
 
 
+map<uint32_t, Confidence<int32_t>> Function::GetRegisterStackAdjustments() const
+{
+	size_t count;
+	BNRegisterStackAdjustment* regStackAdjust = BNGetFunctionRegisterStackAdjustments(m_object, &count);
+	map<uint32_t, Confidence<int32_t>> result;
+	for (size_t i = 0; i < count; i++)
+		result[regStackAdjust[i].regStack] = Confidence<int32_t>(regStackAdjust[i].adjustment, regStackAdjust[i].confidence);
+	BNFreeRegisterStackAdjustments(regStackAdjust);
+	return result;
+}
+
+
 Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
 {
 	BNRegisterSetWithConfidence regs = BNGetFunctionClobberedRegisters(m_object);
@@ -608,6 +620,22 @@ void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
 	sc.value = stackAdjust.GetValue();
 	sc.confidence = stackAdjust.GetConfidence();
 	BNSetAutoFunctionStackAdjustment(m_object, &sc);
+}
+
+
+void Function::SetAutoRegisterStackAdjustments(const map<uint32_t, Confidence<int32_t>>& regStackAdjust)
+{
+	BNRegisterStackAdjustment* adjust = new BNRegisterStackAdjustment[regStackAdjust.size()];
+	size_t i = 0;
+	for (auto& j : regStackAdjust)
+	{
+		adjust[i].regStack = j.first;
+		adjust[i].adjustment = j.second.GetValue();
+		adjust[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetAutoFunctionRegisterStackAdjustments(m_object, adjust, regStackAdjust.size());
+	delete[] adjust;
 }
 
 
@@ -694,6 +722,22 @@ void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
 }
 
 
+void Function::SetRegisterStackAdjustments(const map<uint32_t, Confidence<int32_t>>& regStackAdjust)
+{
+	BNRegisterStackAdjustment* adjust = new BNRegisterStackAdjustment[regStackAdjust.size()];
+	size_t i = 0;
+	for (auto& j : regStackAdjust)
+	{
+		adjust[i].regStack = j.first;
+		adjust[i].adjustment = j.second.GetValue();
+		adjust[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetUserFunctionRegisterStackAdjustments(m_object, adjust, regStackAdjust.size());
+	delete[] adjust;
+}
+
+
 void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
 {
 	BNRegisterSetWithConfidence regs;
@@ -743,7 +787,7 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 		result[vars[i].var.storage].push_back(var);
 	}
 
-	BNFreeVariableList(vars, count);
+	BNFreeVariableNameAndTypeList(vars, count);
 	return result;
 }
 
@@ -811,7 +855,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 		result[vars[i].var] = var;
 	}
 
-	BNFreeVariableList(vars, count);
+	BNFreeVariableNameAndTypeList(vars, count);
 	return result;
 }
 

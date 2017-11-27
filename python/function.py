@@ -263,14 +263,15 @@ class Variable(object):
 		var.storage = storage
 		self.identifier = core.BNToVariableIdentifier(var)
 
-		if name is None:
-			name = core.BNGetVariableName(func.handle, var)
-		if var_type is None:
-			var_type_conf = core.BNGetVariableType(func.handle, var)
-			if var_type_conf.type:
-				var_type = types.Type(var_type_conf.type, platform = func.platform, confidence = var_type_conf.confidence)
-			else:
-				var_type = None
+		if func is not None:
+			if name is None:
+				name = core.BNGetVariableName(func.handle, var)
+			if var_type is None:
+				var_type_conf = core.BNGetVariableType(func.handle, var)
+				if var_type_conf.type:
+					var_type = types.Type(var_type_conf.type, platform = func.platform, confidence = var_type_conf.confidence)
+				else:
+					var_type = None
 
 		self.name = name
 		self.type = var_type
@@ -519,7 +520,7 @@ class Function(object):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
 				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
-		core.BNFreeVariableList(v, count.value)
+		core.BNFreeVariableNameAndTypeList(v, count.value)
 		return result
 
 	@property
@@ -532,7 +533,7 @@ class Function(object):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
 				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
-		core.BNFreeVariableList(v, count.value)
+		core.BNFreeVariableNameAndTypeList(v, count.value)
 		return result
 
 	@property
@@ -673,6 +674,35 @@ class Function(object):
 		else:
 			sc.confidence = types.max_confidence
 		core.BNSetUserFunctionStackAdjustment(self.handle, sc)
+
+	@property
+	def reg_stack_adjustments(self):
+		"""Number of entries removed from each register stack after return"""
+		count = ctypes.c_ulonglong()
+		adjust = core.BNGetFunctionRegisterStackAdjustments(self.handle, count)
+		result = {}
+		for i in xrange(0, count.value):
+			name = self.arch.get_reg_stack_name(adjust[i].regStack)
+			value = types.RegisterStackAdjustmentWithConfidence(adjust[i].adjustment,
+				confidence = adjust[i].confidence)
+			result[name] = value
+		core.BNFreeRegisterStackAdjustments(adjust)
+		return result
+
+	@reg_stack_adjustments.setter
+	def reg_stack_adjustments(self, value):
+		adjust = (core.BNRegisterStackAdjustment * len(value))()
+		i = 0
+		for reg_stack in value.keys():
+			adjust[i].regStack = self.arch.get_reg_stack_index(reg_stack)
+			if isinstance(value[reg_stack], types.RegisterStackAdjustmentWithConfidence):
+				adjust[i].adjustment = value[reg_stack].value
+				adjust[i].confidence = value[reg_stack].confidence
+			else:
+				adjust[i].adjustment = value[reg_stack]
+				adjust[i].confidence = types.max_confidence
+			i += 1
+		core.BNSetUserFunctionRegisterStackAdjustments(self.handle, adjust, len(value))
 
 	@property
 	def clobbered_regs(self):
@@ -1098,6 +1128,20 @@ class Function(object):
 		else:
 			sc.confidence = types.max_confidence
 		core.BNSetAutoFunctionStackAdjustment(self.handle, sc)
+
+	def set_auto_reg_stack_adjustments(self, value):
+		adjust = (core.BNRegisterStackAdjustment * len(value))()
+		i = 0
+		for reg_stack in value.keys():
+			adjust[i].regStack = self.arch.get_reg_stack_index(reg_stack)
+			if isinstance(value[reg_stack], types.RegisterStackAdjustmentWithConfidence):
+				adjust[i].adjustment = value[reg_stack].value
+				adjust[i].confidence = value[reg_stack].confidence
+			else:
+				adjust[i].adjustment = value[reg_stack]
+				adjust[i].confidence = types.max_confidence
+			i += 1
+		core.BNSetAutoFunctionRegisterStackAdjustments(self.handle, adjust, len(value))
 
 	def set_auto_clobbered_regs(self, value):
 		regs = core.BNRegisterSetWithConfidence()
@@ -1727,10 +1771,11 @@ class RegisterInfo(object):
 
 
 class RegisterStackInfo(object):
-	def __init__(self, storage_regs, top_relative_regs, stack_top_reg):
+	def __init__(self, storage_regs, top_relative_regs, stack_top_reg, index=None):
 		self.storage_regs = storage_regs
 		self.top_relative_regs = top_relative_regs
 		self.stack_top_reg = stack_top_reg
+		self.index = index
 
 	def __repr__(self):
 		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)

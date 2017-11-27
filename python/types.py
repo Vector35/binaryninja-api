@@ -680,6 +680,21 @@ class SizeWithConfidence(object):
 		return self.value
 
 
+class RegisterStackAdjustmentWithConfidence(object):
+	def __init__(self, value, confidence = max_confidence):
+		self.value = value
+		self.confidence = confidence
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return repr(self.value)
+
+	def __int__(self):
+		return self.value
+
+
 class RegisterSet(object):
 	def __init__(self, reg_list, confidence = max_confidence):
 		self.regs = reg_list

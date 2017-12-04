@@ -1755,6 +1755,7 @@ class InstructionBranch(object):
 class InstructionInfo(object):
 	def __init__(self):
 		self.length = 0
+		self.arch_transition_by_target_addr = False
 		self.branch_delay = False
 		self.branches = []
 

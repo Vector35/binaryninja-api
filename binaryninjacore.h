@@ -973,6 +973,7 @@ extern "C"
 	{
 		size_t length;
 		size_t branchCount;
+		bool archTransitionByTargetAddr;
 		bool branchDelay;
 		BNBranchType branchType[BN_MAX_INSTRUCTION_BRANCHES];
 		uint64_t branchTarget[BN_MAX_INSTRUCTION_BRANCHES];

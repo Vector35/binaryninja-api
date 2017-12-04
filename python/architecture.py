@@ -462,6 +462,7 @@ class Architecture(object):
 			if info is None:
 				return False
 			result[0].length = info.length
+			result[0].archTransitionByTargetAddr = info.arch_transition_by_target_addr
 			result[0].branchDelay = info.branch_delay
 			result[0].branchCount = len(info.branches)
 			for i in xrange(0, len(info.branches)):
@@ -1163,6 +1164,7 @@ class Architecture(object):
 			return None
 		result = function.InstructionInfo()
 		result.length = info.length
+		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
 		result.branch_delay = info.branchDelay
 		for i in xrange(0, info.branchCount):
 			target = info.branchTarget[i]

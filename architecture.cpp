@@ -30,6 +30,7 @@ using namespace std;
 InstructionInfo::InstructionInfo()
 {
 	length = 0;
+	archTransitionByTargetAddr = false;
 	branchCount = 0;
 	branchDelay = false;
 }

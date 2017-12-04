@@ -2951,6 +2951,7 @@ namespace BinaryNinja
 	class FunctionRecognizer
 	{
 		static bool RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
+		static bool RecognizeMediumLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
 
 	public:
 		FunctionRecognizer();
@@ -2959,6 +2960,7 @@ namespace BinaryNinja
 		static void RegisterArchitectureFunctionRecognizer(Architecture* arch, FunctionRecognizer* recog);
 
 		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
+		virtual bool RecognizeMediumLevelIL(BinaryView* data, Function* func, MediumLevelILFunction* il);
 	};
 
 	class UpdateException: public std::exception

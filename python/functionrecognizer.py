@@ -36,6 +36,7 @@ class FunctionRecognizer(object):
 		self._cb = core.BNFunctionRecognizer()
 		self._cb.context = 0
 		self._cb.recognizeLowLevelIL = self._cb.recognizeLowLevelIL.__class__(self._recognize_low_level_il)
+		self._cb.recognizeMediumLevelIL = self._cb.recognizeMediumLevelIL.__class__(self._recognize_medium_level_il)
 
 	@classmethod
 	def register_global(cls):
@@ -61,4 +62,18 @@ class FunctionRecognizer(object):
 			return False
 
 	def recognize_low_level_il(self, data, func, il):
+		return False
+
+	def _recognize_medium_level_il(self, ctxt, data, func, il):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
+			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
+			func = function.Function(view, handle = core.BNNewFunctionReference(func))
+			il = mediumlevelil.MediumLevelILFunction(func.arch, handle = core.BNNewMediumLevelILFunctionReference(il))
+			return self.recognize_medium_level_il(view, func, il)
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def recognize_medium_level_il(self, data, func, il):
 		return False

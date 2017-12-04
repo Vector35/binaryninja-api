@@ -1191,6 +1191,7 @@ extern "C"
 	{
 		void* context;
 		bool (*recognizeLowLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
+		bool (*recognizeMediumLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
 	};
 
 	struct BNTypeParserResult

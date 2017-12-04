@@ -38,11 +38,22 @@ bool FunctionRecognizer::RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* d
 }
 
 
+bool FunctionRecognizer::RecognizeMediumLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il)
+{
+	FunctionRecognizer* recog = (FunctionRecognizer*)ctxt;
+	Ref<BinaryView> dataObj = new BinaryView(BNNewViewReference(data));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	Ref<MediumLevelILFunction> ilObj = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(il));
+	return recog->RecognizeMediumLevelIL(dataObj, funcObj, ilObj);
+}
+
+
 void FunctionRecognizer::RegisterGlobalRecognizer(FunctionRecognizer* recog)
 {
 	BNFunctionRecognizer reg;
 	reg.context = recog;
 	reg.recognizeLowLevelIL = RecognizeLowLevelILCallback;
+	reg.recognizeMediumLevelIL = RecognizeMediumLevelILCallback;
 	BNRegisterGlobalFunctionRecognizer(&reg);
 }
 
@@ -52,11 +63,18 @@ void FunctionRecognizer::RegisterArchitectureFunctionRecognizer(Architecture* ar
 	BNFunctionRecognizer reg;
 	reg.context = recog;
 	reg.recognizeLowLevelIL = RecognizeLowLevelILCallback;
+	reg.recognizeMediumLevelIL = RecognizeMediumLevelILCallback;
 	BNRegisterArchitectureFunctionRecognizer(arch->GetObject(), &reg);
 }
 
 
 bool FunctionRecognizer::RecognizeLowLevelIL(BinaryView*, Function*, LowLevelILFunction*)
+{
+	return false;
+}
+
+
+bool FunctionRecognizer::RecognizeMediumLevelIL(BinaryView*, Function*, MediumLevelILFunction*)
 {
 	return false;
 }

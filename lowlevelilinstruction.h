@@ -158,10 +158,10 @@ namespace std
 #else
 		typedef BinaryNinja::SSARegister argument_type;
 #endif
-		typedef uint64_t result_type;
+		typedef uint32_t result_type;
 		result_type operator()(argument_type const& value) const
 		{
-			return ((result_type)value.reg) ^ ((result_type)value.version << 32);
+			return ((result_type)value.reg) ^ ((result_type)value.version << 16);
 		}
 	};
 
@@ -176,10 +176,10 @@ namespace std
 #else
 		typedef BinaryNinja::SSAFlag argument_type;
 #endif
-		typedef uint64_t result_type;
+		typedef uint32_t result_type;
 		result_type operator()(argument_type const& value) const
 		{
-			return ((result_type)value.flag) ^ ((result_type)value.version << 32);
+			return ((result_type)value.flag) ^ ((result_type)value.version << 16);
 		}
 	};
 

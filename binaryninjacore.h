@@ -1531,6 +1531,7 @@ extern "C"
 		uint64_t start, length;
 		uint64_t dataOffset, dataLength;
 		uint32_t flags;
+		bool autoDefined;
 	};
 
 	enum BNSectionSemantics
@@ -1551,6 +1552,7 @@ extern "C"
 		uint64_t infoData;
 		uint64_t align, entrySize;
 		BNSectionSemantics semantics;
+		bool autoDefined;
 	};
 
 	struct BNAddressRange

@@ -1724,13 +1724,13 @@ vector<Segment> BinaryView::GetSegments()
 		segment.dataOffset = segments[i].dataOffset;
 		segment.dataLength = segments[i].dataLength;
 		segment.flags = segments[i].flags;
+		segment.autoDefined = segments[i].autoDefined;
 		result.push_back(segment);
 	}
 
 	BNFreeSegmentList(segments);
 	return result;
 }
-
 
 bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 {

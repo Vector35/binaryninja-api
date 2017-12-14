@@ -547,7 +547,7 @@ class PythonScriptingInstance(ScriptingInstance):
 							self.locals["current_llil"] = self.active_func.low_level_il
 							self.locals["current_mlil"] = self.active_func.medium_level_il
 
-						self.interpreter.runsource(code)
+						self.interpreter.runcode(code)
 
 						if self.locals["here"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):

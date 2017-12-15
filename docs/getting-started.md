@@ -255,6 +255,8 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 
 |Plugin | Setting                  | Type         | Default                                        | Description                                                                                   |
 |------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| core  | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
+| core  | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |
 | ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
 | ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
 | ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |

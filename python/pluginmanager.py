@@ -382,7 +382,6 @@ class RepositoryManager(object):
 			>>> mgr = RepositoryManager()
 			>>> mgr.add_repository(url="https://github.com/vector35/community-plugins.git",
 			                       repopath="myrepo",
-			                       repomanifest="plugins",
 			                       localreference="master", remotereference="origin")
 			True
 			>>>

@@ -42,14 +42,14 @@ class _ThreadActionContext(object):
 	def __init__(self, func):
 		self.func = func
 		self.interpreter = None
-		if "value" in dir(PythonScriptingInstance._interpreter):
+		if hasattr(PythonScriptingInstance._interpreter, "value"):
 			self.interpreter = PythonScriptingInstance._interpreter.value
 		self.__class__._actions.append(self)
 		self.callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(lambda ctxt: self.execute())
 
 	def execute(self):
 		old_interpreter = None
-		if "value" in dir(PythonScriptingInstance._interpreter):
+		if hasattr(PythonScriptingInstance._interpreter, "value"):
 			old_interpreter = PythonScriptingInstance._interpreter.value
 		PythonScriptingInstance._interpreter.value = self.interpreter
 		try:
@@ -380,7 +380,7 @@ class _PythonScriptingInstanceOutput(object):
 
 	def write(self, data):
 		interpreter = None
-		if "value" in dir(PythonScriptingInstance._interpreter):
+		if hasattr(PythonScriptingInstance._interpreter, "value"):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
@@ -419,7 +419,7 @@ class _PythonScriptingInstanceInput(object):
 
 	def read(self, size):
 		interpreter = None
-		if "value" in dir(PythonScriptingInstance._interpreter):
+		if hasattr(PythonScriptingInstance._interpreter, "value"):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
@@ -434,7 +434,7 @@ class _PythonScriptingInstanceInput(object):
 
 	def readline(self):
 		interpreter = None
-		if "value" in dir(PythonScriptingInstance._interpreter):
+		if hasattr(PythonScriptingInstance._interpreter, "value"):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
@@ -548,7 +548,7 @@ class PythonScriptingInstance(ScriptingInstance):
 							self.locals["current_mlil"] = self.active_func.medium_level_il
 
 						for line in code.split("\n"):
-							self.interpreter.push(line)
+							self.interpreter.push(line + "\n")
 
 						if self.locals["here"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):

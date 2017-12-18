@@ -548,7 +548,7 @@ class PythonScriptingInstance(ScriptingInstance):
 							self.locals["current_mlil"] = self.active_func.medium_level_il
 
 						for line in code.split("\n"):
-							self.interpreter.push(line + "\n")
+							self.interpreter.push(line)
 
 						if self.locals["here"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):

@@ -14,7 +14,7 @@ setvars()
 	APP="binaryninja"
 	FILECOMMENT="Binary Ninja Analysis Database"
 	APPCOMMENT="Binary Ninja: A Reverse Engineering Platform"
-	BNPATH=$(dirname $(readlink -f "$0"))
+	BNPATH="$(dirname $(readlink -f "$0"))/.."
 	EXEC="${BNPATH}/binaryninja"
 	PNG="${BNPATH}/docs/images/logo.png"
 	EXT="bndb"
@@ -61,7 +61,12 @@ lastrun()
 pythonpath()
 {
 	echo Configuring python path
-	${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
+	if [[ $(python -V) == "Python 3."* ]]
+	then
+	    ${SUDO}python2 ${BNPATH}/scripts/install_api.py $ROOT
+	else
+	    ${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
+	fi
 }
 
 createdesktopfile()
@@ -81,14 +86,9 @@ Type=Application
 Categories=Utility;
 Comment=${APPCOMMENT}
 EOF
-	if [ "${ROOT}" == "root" ]
-	then
-		echo ${DESKTOP} | $SUDO tee ${DESKTOPFILE} >/dev/null
-		$SUDO chmod +x ${DESKTOPFILE}
-		$SUDO update-desktop-database ${SHARE}/applications
-	else
-		echo ${DESKTOP} > ${HOME}/Desktop/${APP}.desktop
-	fi
+	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
+	$SUDO chmod +x ${DESKTOPFILE}
+	$SUDO update-desktop-database ${SHARE}/applications
 }
 
 createmime()
@@ -112,12 +112,8 @@ createmime()
 
 	#echo Copying icon
 	#$SUDO cp $PNG $IMAGEFILE
-	if [ "${ROOT}" == "root" ]
-	then
-		$SUDO cp ${PNG} ${IMAGEFILE}
-		$SUDO update-mime-database ${SHARE}/mime
-	fi
-
+	$SUDO cp ${PNG} ${IMAGEFILE}
+	$SUDO update-mime-database ${SHARE}/mime
 }
 
 addtodesktop()
@@ -127,11 +123,8 @@ addtodesktop()
 
 uninstall()
 {
-	rm -i -r $DESKTOPFILE $MIMEFILE $IMAGEFILE
-	if [ "$ROOT" == "root" ]
-	then
-		$SUDO update-mime-database ${SHARE}/mime
-	fi
+	rm -i -r $DESKTOPFILE $MIMEFILE $IMAGEFILE ${HOME}/Desktop/${APP}.desktop
+	$SUDO update-mime-database ${SHARE}/mime
 	exit 0
 }
 

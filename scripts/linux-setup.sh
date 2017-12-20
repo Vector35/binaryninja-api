@@ -54,6 +54,10 @@ lastrun()
 	then
 		echo lastrun already exists, remove to create a new one
 	else
+		if [ ! -d ${HOME}/.binaryninja ]
+		then
+			mkdir ${HOME}/.binaryninja
+		fi
 		echo ${BNPATH} > ${HOME}/.binaryninja/lastrun
 	fi
 }

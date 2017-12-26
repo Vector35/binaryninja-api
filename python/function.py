@@ -607,6 +607,30 @@ class Function(object):
 		core.BNSetUserFunctionReturnType(self.handle, type_conf)
 
 	@property
+	def return_regs(self):
+		"""Registers that are used for the return value"""
+		result = core.BNGetFunctionReturnRegisters(self.handle)
+		reg_set = []
+		for i in xrange(0, result.count):
+			reg_set.append(self.arch.get_reg_name(result.regs[i]))
+		regs = types.RegisterSet(reg_set, confidence = result.confidence)
+		core.BNFreeRegisterSet(result)
+		return regs
+
+	@return_regs.setter
+	def return_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetUserFunctionReturnRegisters(self.handle, regs)
+
+	@property
 	def calling_convention(self):
 		"""Calling convention used by the function"""
 		result = core.BNGetFunctionCallingConvention(self.handle)
@@ -726,7 +750,7 @@ class Function(object):
 		for i in xrange(0, result.count):
 			reg_set.append(self.arch.get_reg_name(result.regs[i]))
 		regs = types.RegisterSet(reg_set, confidence = result.confidence)
-		core.BNFreeClobberedRegisters(result)
+		core.BNFreeRegisterSet(result)
 		return regs
 
 	@clobbered_regs.setter
@@ -1132,6 +1156,18 @@ class Function(object):
 			type_conf.type = value.handle
 			type_conf.confidence = value.confidence
 		core.BNSetAutoFunctionReturnType(self.handle, type_conf)
+
+	def set_auto_return_regs(self, value):
+		regs = core.BNRegisterSetWithConfidence()
+		regs.regs = (ctypes.c_uint * len(value))()
+		regs.count = len(value)
+		for i in xrange(0, len(value)):
+			regs.regs[i] = self.arch.get_reg_index(value[i])
+		if hasattr(value, 'confidence'):
+			regs.confidence = value.confidence
+		else:
+			regs.confidence = types.max_confidence
+		core.BNSetAutoFunctionReturnRegisters(self.handle, regs)
 
 	def set_auto_calling_convention(self, value):
 		conv_conf = core.BNCallingConventionWithConfidence()

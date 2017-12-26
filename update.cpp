@@ -67,10 +67,10 @@ vector<UpdateChannel> UpdateChannel::GetList()
 }
 
 
-bool UpdateChannel::AreUpdatesAvailable()
+bool UpdateChannel::AreUpdatesAvailable(uint64_t* expireTime, uint64_t* serverTime)
 {
 	char* errors;
-	bool result = BNAreUpdatesAvailable(name.c_str(), &errors);
+	bool result = BNAreUpdatesAvailable(name.c_str(), expireTime, serverTime, &errors);
 
 	if (errors)
 	{

@@ -36,9 +36,9 @@ Binary Ninja now offers a [PluginManager API] which can simplify the process of 
 ['__class__', '__delattr__', '__dict__', '__doc__', '__format__', '__getattribute__', '__hash__', '__init__', '__module__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'add_repository', 'check_for_updates', 'default_repository', 'disable_plugin', 'enable_plugin', 'handle', 'install_plugin', 'plugins', 'repositories', 'uninstall_plugin', 'update_plugin']
 >>> mgr.plugins
 {'default': [<binaryninja-bookmarks not-installed/disabled>, <binaryninja-msp430 not-installed/disabled>, <binaryninja-radare2 not-installed/disabled>, <binaryninja-spu not-installed/disabled>, <binja-avr not-installed/disabled>, <binja_smali not-installed/disabled>, <binjatron not-installed/disabled>, <binoculars not-installed/disabled>, <easypatch not-installed/disabled>, <liil installed/enabled>, <list_comments not-installed/disabled>, <x64dbgbinja not-installed/disabled>]}
->>> mgr.install_plugin(easypatch)
+>>> mgr.install_plugin("easypatch")
 True
->>> mgr.enable(easypatch)
+>>> mgr.enable_plugin("easypatch")
 True
 ```
 

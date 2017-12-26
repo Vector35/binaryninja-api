@@ -210,6 +210,8 @@ By default the interactive python prompt has a number of convenient helper funct
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.BinaryView.html)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.Function.html)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)
+- `current_llil`: the current [LowLevelILBasicBlock](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html)
+- `current_mlil`: the current [MediumLevelILBasicBlock](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILBasicBlock.html)
 - `current_selection`: a tuple of the start and end addresses of the current selection
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
@@ -253,6 +255,8 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 
 |Plugin | Setting                  | Type         | Default                                        | Description                                                                                   |
 |------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| core  | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
+| core  | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |
 | ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
 | ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
 | ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |

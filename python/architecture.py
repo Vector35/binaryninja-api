@@ -111,6 +111,7 @@ class Architecture(object):
 	endianness = Endianness.LittleEndian
 	address_size = 8
 	default_int_size = 4
+	instr_alignment = 1
 	max_instr_length = 16
 	opcode_display_length = 8
 	regs = {}
@@ -133,6 +134,7 @@ class Architecture(object):
 			self.__dict__["endianness"] = Endianness(core.BNGetArchitectureEndianness(self.handle))
 			self.__dict__["address_size"] = core.BNGetArchitectureAddressSize(self.handle)
 			self.__dict__["default_int_size"] = core.BNGetArchitectureDefaultIntegerSize(self.handle)
+			self.__dict__["instr_alignment"] = core.BNGetArchitectureInstructionAlignment(self.handle)
 			self.__dict__["max_instr_length"] = core.BNGetArchitectureMaxInstructionLength(self.handle)
 			self.__dict__["opcode_display_length"] = core.BNGetArchitectureOpcodeDisplayLength(self.handle)
 			self.__dict__["stack_pointer"] = core.BNGetArchitectureRegisterName(self.handle,
@@ -245,6 +247,7 @@ class Architecture(object):
 			self._cb.getEndianness = self._cb.getEndianness.__class__(self._get_endianness)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.getDefaultIntegerSize = self._cb.getDefaultIntegerSize.__class__(self._get_default_integer_size)
+			self._cb.getInstructionAlignment = self._cb.getInstructionAlignment.__class__(self._get_instruction_alignment)
 			self._cb.getMaxInstructionLength = self._cb.getMaxInstructionLength.__class__(self._get_max_instruction_length)
 			self._cb.getOpcodeDisplayLength = self._cb.getOpcodeDisplayLength.__class__(self._get_opcode_display_length)
 			self._cb.getAssociatedArchitectureByAddress = \
@@ -429,7 +432,8 @@ class Architecture(object):
 
 	def __setattr__(self, name, value):
 		if ((name == "name") or (name == "endianness") or (name == "address_size") or
-			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length")):
+			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length") or
+			(name == "get_instruction_alignment")):
 			raise AttributeError("attribute '%s' is read only" % name)
 		else:
 			try:
@@ -464,6 +468,13 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return 4
 
+	def _get_instruction_alignment(self, ctxt):
+		try:
+			return self.__class__.instr_alignment
+		except:
+			log.log_error(traceback.format_exc())
+			return 1
+
 	def _get_max_instruction_length(self, ctxt):
 		try:
 			return self.__class__.max_instr_length
@@ -495,6 +506,7 @@ class Architecture(object):
 			if info is None:
 				return False
 			result[0].length = info.length
+			result[0].archTransitionByTargetAddr = info.arch_transition_by_target_addr
 			result[0].branchDelay = info.branch_delay
 			result[0].branchCount = len(info.branches)
 			for i in xrange(0, len(info.branches)):
@@ -1247,6 +1259,7 @@ class Architecture(object):
 			return None
 		result = function.InstructionInfo()
 		result.length = info.length
+		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
 		result.branch_delay = info.branchDelay
 		for i in xrange(0, info.branchCount):
 			target = info.branchTarget[i]

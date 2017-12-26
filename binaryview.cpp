@@ -288,6 +288,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	view.getEntryPoint = GetEntryPointCallback;
 	view.isExecutable = IsExecutableCallback;
 	view.getDefaultEndianness = GetDefaultEndiannessCallback;
+	view.isRelocatable = IsRelocatableCallback;
 	view.getAddressSize = GetAddressSizeCallback;
 	view.save = SaveCallback;
 
@@ -431,6 +432,13 @@ BNEndianness BinaryView::GetDefaultEndiannessCallback(void* ctxt)
 }
 
 
+bool BinaryView::IsRelocatableCallback(void* ctxt)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	return view->PerformIsRelocatable();
+}
+
+
 size_t BinaryView::GetAddressSizeCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
@@ -493,6 +501,11 @@ BNEndianness BinaryView::PerformGetDefaultEndianness() const
 	return LittleEndian;
 }
 
+
+bool BinaryView::PerformIsRelocatable() const
+{
+	return false;
+}
 
 size_t BinaryView::PerformGetAddressSize() const
 {
@@ -833,6 +846,12 @@ void BinaryView::SetDefaultPlatform(Platform* platform)
 BNEndianness BinaryView::GetDefaultEndianness() const
 {
 	return BNGetDefaultEndianness(m_object);
+}
+
+
+bool BinaryView::IsRelocatable() const
+{
+	return BNIsRelocatable(m_object);
 }
 
 
@@ -1705,13 +1724,13 @@ vector<Segment> BinaryView::GetSegments()
 		segment.dataOffset = segments[i].dataOffset;
 		segment.dataLength = segments[i].dataLength;
 		segment.flags = segments[i].flags;
+		segment.autoDefined = segments[i].autoDefined;
 		result.push_back(segment);
 	}
 
 	BNFreeSegmentList(segments);
 	return result;
 }
-
 
 bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 {

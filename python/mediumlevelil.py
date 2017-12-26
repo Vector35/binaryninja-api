@@ -40,12 +40,12 @@ class SSAVariable(object):
 
 	def __eq__(self, other):
 		return (
-			(self.var.identifier, self.version) ==
-			(other.var.identifier, other.version)
+			(self.var, self.version) ==
+			(other.var, other.version)
 		)
 
 	def __hash__(self):
-		return hash((self.var.identifier, self.version))
+		return hash((self.var, self.version))
 
 
 class MediumLevelILLabel(object):
@@ -921,3 +921,6 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def _create_instance(self, view, handle):
 		"""Internal method by super to instantiante child instances"""
 		return MediumLevelILBasicBlock(view, handle, self.il_function)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self.il_function))

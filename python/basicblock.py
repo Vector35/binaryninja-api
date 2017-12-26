@@ -35,6 +35,14 @@ class BasicBlockEdge(object):
 		self.target = target
 		self.back_edge = back_edge
 
+	def __eq__(self, value):
+		if not isinstance(value, BasicBlockEdge):
+			return False
+		return (self.type, self.source, self.target, self.back_edge) == (value.type, value.source, value.target, value.back_edge)
+
+	def __hash__(self):
+		return hash((self.type, self.source, self.target, self.back_edge))
+
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
 			return "<%s>" % BranchType(self.type).name
@@ -67,6 +75,9 @@ class BasicBlock(object):
 	def _create_instance(self, view, handle):
 		"""Internal method used to instantiante child instances"""
 		return BasicBlock(view, handle)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self.arch.name))
 
 	@property
 	def function(self):

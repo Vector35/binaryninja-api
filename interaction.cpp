@@ -119,8 +119,6 @@ void InteractionHandler::ShowHTMLReport(Ref<BinaryView> view, const string& titl
 
 bool InteractionHandler::GetIntegerInput(int64_t& result, const string& prompt, const string& title)
 {
-	string input;
-
 	while (true)
 	{
 		string input;

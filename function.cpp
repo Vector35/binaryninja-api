@@ -490,6 +490,18 @@ Confidence<Ref<Type>> Function::GetReturnType() const
 }
 
 
+Confidence<vector<uint32_t>> Function::GetReturnRegisters() const
+{
+	BNRegisterSetWithConfidence regs = BNGetFunctionReturnRegisters(m_object);
+	vector<uint32_t> regList;
+	for (size_t i = 0; i < regs.count; i++)
+		regList.push_back(regs.regs[i]);
+	Confidence<vector<uint32_t>> result(regList, regs.confidence);
+	BNFreeRegisterSet(&regs);
+	return result;
+}
+
+
 Confidence<Ref<CallingConvention>> Function::GetCallingConvention() const
 {
 	BNCallingConventionWithConfidence cc = BNGetFunctionCallingConvention(m_object);
@@ -549,7 +561,7 @@ Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
 	for (size_t i = 0; i < regs.count; i++)
 		regSet.insert(regs.regs[i]);
 	Confidence<set<uint32_t>> result(regSet, regs.confidence);
-	BNFreeClobberedRegisters(&regs);
+	BNFreeRegisterSet(&regs);
 	return result;
 }
 
@@ -566,6 +578,19 @@ void Function::SetAutoReturnType(const Confidence<Ref<Type>>& type)
 	tc.type = type ? type->GetObject() : nullptr;
 	tc.confidence = type.GetConfidence();
 	BNSetAutoFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetAutoReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[returnRegs.GetValue().size()];
+	regs.count = returnRegs.GetValue().size();
+	for (size_t i = 0; i < regs.count; i++)
+		regs.regs[i] = returnRegs.GetValue()[i];
+	regs.confidence = returnRegs.GetConfidence();
+	BNSetAutoFunctionReturnRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 
@@ -665,6 +690,19 @@ void Function::SetReturnType(const Confidence<Ref<Type>>& type)
 	tc.type = type ? type->GetObject() : nullptr;
 	tc.confidence = type.GetConfidence();
 	BNSetUserFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[returnRegs.GetValue().size()];
+	regs.count = returnRegs.GetValue().size();
+	for (size_t i = 0; i < regs.count; i++)
+		regs.regs[i] = returnRegs.GetValue()[i];
+	regs.confidence = returnRegs.GetConfidence();
+	BNSetUserFunctionReturnRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 

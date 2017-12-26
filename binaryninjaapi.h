@@ -2204,6 +2204,7 @@ namespace BinaryNinja
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
+		Confidence<std::vector<uint32_t>> GetReturnRegisters() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
@@ -2213,6 +2214,7 @@ namespace BinaryNinja
 
 		void SetAutoType(Type* type);
 		void SetAutoReturnType(const Confidence<Ref<Type>>& type);
+		void SetAutoReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs);
 		void SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
@@ -2223,6 +2225,7 @@ namespace BinaryNinja
 
 		void SetUserType(Type* type);
 		void SetReturnType(const Confidence<Ref<Type>>& type);
+		void SetReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs);
 		void SetCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);

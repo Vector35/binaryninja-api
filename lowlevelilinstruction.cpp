@@ -1489,7 +1489,7 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 			i.VisitExprs(func);
 		break;
 	case LLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<LLIL_CALL_SSA>())
+		for (auto& i : GetParameterExprs<LLIL_SYSCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_RET:

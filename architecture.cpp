@@ -30,6 +30,7 @@ using namespace std;
 InstructionInfo::InstructionInfo()
 {
 	length = 0;
+	archTransitionByTargetAddr = false;
 	branchCount = 0;
 	branchDelay = false;
 }
@@ -108,6 +109,13 @@ size_t Architecture::GetDefaultIntegerSizeCallback(void* ctxt)
 {
 	Architecture* arch = (Architecture*)ctxt;
 	return arch->GetDefaultIntegerSize();
+}
+
+
+size_t Architecture::GetInstructionAlignmentCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetInstructionAlignment();
 }
 
 
@@ -443,6 +451,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getEndianness = GetEndiannessCallback;
 	callbacks.getAddressSize = GetAddressSizeCallback;
 	callbacks.getDefaultIntegerSize = GetDefaultIntegerSizeCallback;
+	callbacks.getInstructionAlignment = GetInstructionAlignmentCallback;
 	callbacks.getMaxInstructionLength = GetMaxInstructionLengthCallback;
 	callbacks.getOpcodeDisplayLength = GetOpcodeDisplayLengthCallback;
 	callbacks.getAssociatedArchitectureByAddress = GetAssociatedArchitectureByAddressCallback;
@@ -520,6 +529,12 @@ size_t Architecture::GetDefaultIntegerSize() const
 	if (GetAddressSize() < 4)
 		return GetAddressSize();
 	return 4;
+}
+
+
+size_t Architecture::GetInstructionAlignment() const
+{
+	return 1;
 }
 
 
@@ -902,6 +917,12 @@ size_t CoreArchitecture::GetAddressSize() const
 size_t CoreArchitecture::GetDefaultIntegerSize() const
 {
 	return BNGetArchitectureDefaultIntegerSize(m_object);
+}
+
+
+size_t CoreArchitecture::GetInstructionAlignment() const
+{
+	return BNGetArchitectureInstructionAlignment(m_object);
 }
 
 

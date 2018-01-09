@@ -1027,6 +1027,7 @@ namespace BinaryNinja
 		uint64_t start, length;
 		uint64_t dataOffset, dataLength;
 		uint32_t flags;
+		bool autoDefined;
 	};
 
 	struct Section
@@ -1037,6 +1038,7 @@ namespace BinaryNinja
 		uint64_t infoData;
 		uint64_t align, entrySize;
 		BNSectionSemantics semantics;
+		bool autoDefined;
 	};
 
 	struct QualifiedNameAndType;
@@ -1088,6 +1090,7 @@ namespace BinaryNinja
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
 		virtual bool PerformIsExecutable() const { return false; }
 		virtual BNEndianness PerformGetDefaultEndianness() const;
+		virtual bool PerformIsRelocatable() const;
 		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file);
@@ -1115,6 +1118,7 @@ namespace BinaryNinja
 		static uint64_t GetEntryPointCallback(void* ctxt);
 		static bool IsExecutableCallback(void* ctxt);
 		static BNEndianness GetDefaultEndiannessCallback(void* ctxt);
+		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 
@@ -1181,6 +1185,7 @@ namespace BinaryNinja
 		void SetDefaultPlatform(Platform* platform);
 
 		BNEndianness GetDefaultEndianness() const;
+		bool IsRelocatable() const;
 		size_t GetAddressSize() const;
 
 		bool IsExecutable() const;
@@ -1582,6 +1587,7 @@ namespace BinaryNinja
 		static BNEndianness GetEndiannessCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
+		static size_t GetInstructionAlignmentCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
@@ -1637,6 +1643,7 @@ namespace BinaryNinja
 		virtual size_t GetAddressSize() const = 0;
 		virtual size_t GetDefaultIntegerSize() const;
 
+		virtual size_t GetInstructionAlignment() const;
 		virtual size_t GetMaxInstructionLength() const;
 		virtual size_t GetOpcodeDisplayLength() const;
 
@@ -1777,6 +1784,7 @@ namespace BinaryNinja
 		virtual BNEndianness GetEndianness() const override;
 		virtual size_t GetAddressSize() const override;
 		virtual size_t GetDefaultIntegerSize() const override;
+		virtual size_t GetInstructionAlignment() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
@@ -2945,6 +2953,7 @@ namespace BinaryNinja
 	class FunctionRecognizer
 	{
 		static bool RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
+		static bool RecognizeMediumLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
 
 	public:
 		FunctionRecognizer();
@@ -2953,6 +2962,7 @@ namespace BinaryNinja
 		static void RegisterArchitectureFunctionRecognizer(Architecture* arch, FunctionRecognizer* recog);
 
 		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
+		virtual bool RecognizeMediumLevelIL(BinaryView* data, Function* func, MediumLevelILFunction* il);
 	};
 
 	class UpdateException: public std::exception
@@ -3575,4 +3585,7 @@ namespace BinaryNinja
 		bool IsArray() const;
 		bool IsKeyValueStore() const;
 	};
+
+	std::string GetLinuxCADirectory();
+	std::string GetLinuxCABundlePath();
 }

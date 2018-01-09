@@ -135,10 +135,11 @@ namespace std
 #else
 		typedef BinaryNinja::SSAVariable argument_type;
 #endif
-		typedef uint64_t result_type;
+		typedef uint32_t result_type;
 		result_type operator()(argument_type const& value) const
 		{
-			return ((result_type)value.var.ToIdentifier()) ^ ((result_type)value.version << 40);
+			uint64_t hashTmp = ((uint64_t)value.var.ToIdentifier()) ^ ((uint64_t)value.version << 40);
+			return (uint32_t)((hashTmp >> 32) ^ (uint32_t)hashTmp);
 		}
 	};
 

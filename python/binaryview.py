@@ -416,12 +416,13 @@ class BinaryViewType(object):
 
 
 class Segment(object):
-	def __init__(self, start, length, data_offset, data_length, flags):
+	def __init__(self, start, length, data_offset, data_length, flags, auto_defined):
 		self.start = start
 		self.length = length
 		self.data_offset = data_offset
 		self.data_length = data_length
 		self.flags = flags
+		self.auto_defined = auto_defined
 
 	@property
 	def executable(self):
@@ -450,7 +451,7 @@ class Segment(object):
 
 
 class Section(object):
-	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics):
+	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics, auto_defined):
 		self.name = name
 		self.type = section_type
 		self.start = start
@@ -461,6 +462,7 @@ class Section(object):
 		self.align = align
 		self.entry_size = entry_size
 		self.semantics = SectionSemantics(semantics)
+		self.auto_defined = auto_defined
 
 	@property
 	def end(self):
@@ -583,6 +585,7 @@ class BinaryView(object):
 			self._cb.getEntryPoint = self._cb.getEntryPoint.__class__(self._get_entry_point)
 			self._cb.isExecutable = self._cb.isExecutable.__class__(self._is_executable)
 			self._cb.getDefaultEndianness = self._cb.getDefaultEndianness.__class__(self._get_default_endianness)
+			self._cb.isRelocatable = self._cb.isRelocatable.__class__(self._is_relocatable)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.save = self._cb.save.__class__(self._save)
 			self.file = file_metadata
@@ -839,6 +842,11 @@ class BinaryView(object):
 		return Endianness(core.BNGetDefaultEndianness(self.handle))
 
 	@property
+	def relocatable(self):
+		"""Boolean - is the binary relocatable (read-only)"""
+		return core.BNIsRelocatable(self.handle)
+
+	@property
 	def address_size(self):
 		"""Address size of the binary (read-only)"""
 		return core.BNGetViewAddressSize(self.handle)
@@ -959,7 +967,7 @@ class BinaryView(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Segment(segment_list[i].start, segment_list[i].length,
-				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags))
+				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags, segment_list[i].autoDefined))
 		core.BNFreeSegmentList(segment_list)
 		return result
 
@@ -973,7 +981,7 @@ class BinaryView(object):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics)
+				section_list[i].semantics, section_list[i].autoDefined)
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -1201,6 +1209,13 @@ class BinaryView(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return Endianness.LittleEndian
+
+	def _is_relocatable(self, ctxt):
+		try:
+			return self.perform_is_relocatable()
+		except:
+			log.log_error(traceback.format_exc())
+			return False
 
 	def _get_address_size(self, ctxt):
 		try:
@@ -1493,6 +1508,19 @@ class BinaryView(object):
 		:rtype: Endianness
 		"""
 		return Endianness.LittleEndian
+
+	def perform_is_relocatable(self):
+		"""
+		``perform_is_relocatable`` implements a check which returns true if the BinaryView is relocatable. Defaults to
+		True.
+
+		.. note:: This method **may** be implemented for custom BinaryViews that are relocatable.
+		.. warning:: This method **must not** be called directly.
+
+		:return: True if the BinaryView is relocatable, False otherwise
+		:rtype: boolean
+		"""
+		return True
 
 	def create_database(self, filename, progress_func=None):
 		"""
@@ -3327,7 +3355,7 @@ class BinaryView(object):
 		if not core.BNGetSegmentAt(self.handle, addr, segment):
 			return None
 		result = Segment(segment.start, segment.length, segment.dataOffset, segment.dataLength,
-			segment.flags)
+			segment.flags, segment.autoDefined)
 		return result
 
 	def get_address_for_data_offset(self, offset):
@@ -3360,7 +3388,7 @@ class BinaryView(object):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics))
+				section_list[i].semantics, section_list[i].autoDefined))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3369,7 +3397,8 @@ class BinaryView(object):
 		if not core.BNGetSectionByName(self.handle, name, section):
 			return None
 		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
-			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics)
+			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics,
+			section_list.autoDefined)
 		core.BNFreeSection(section)
 		return result
 

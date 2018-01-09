@@ -36,6 +36,16 @@ Next, if running a python plugin, make sure the python requirements are met by y
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
+## OS X
+
+While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
+
+```
+DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/MacOS" /Applications/Binary\ Ninja.app/Contents/MacOS/binaryninja
+```
+
+Or second, modify the binary itself using the [install_name_tool](https://blogs.oracle.com/dipol/dynamic-libraries,-rpath,-and-mac-os).
+
 ## Linux
 
 Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][faq].
@@ -67,9 +77,9 @@ QT_PLUGIN_PATH=./qt ./binaryninja
 For Debian variants that (Kali, eg) don't match packages with Ubuntu LTS or the latest stable, the following might fix problems with libssl and libcrypto:
 
 ```
-$ cd binaryninja/plugins
-$ ln -s libssl.so libssl.so.1.0.0
-$ ln -s libcrypto.so libcrypto.so.1.0.0
+$ cd binaryninja
+$ ln -s plugins/libssl.so libssl.so.1.0.0
+$ ln -s plugins/libcrypto.so libcrypto.so.1.0.0
 ```
 
 Alternatively, you might need to (as root):

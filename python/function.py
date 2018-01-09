@@ -123,6 +123,8 @@ class PossibleValueSet(object):
 			self.reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self.value = value.value
+		elif value.state == RegisterValueType.ConstantPointerValue:
+			self.value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self.offset = value.value
 		elif value.state == RegisterValueType.SignedRangeValue:
@@ -164,6 +166,8 @@ class PossibleValueSet(object):
 			return "<entry %s>" % self.reg
 		if self.type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
+		if self.type == RegisterValueType.ConstantPointerValue:
+			return "<const ptr %#x>" % self.value
 		if self.type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
 		if self.type == RegisterValueType.SignedRangeValue:
@@ -307,6 +311,8 @@ class Function(object):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNFunction)
 		self._advanced_analysis_requests = 0
+		self._arch = None
+		self._platform = None
 
 	def __del__(self):
 		if self._advanced_analysis_requests > 0:
@@ -358,18 +364,26 @@ class Function(object):
 	@property
 	def arch(self):
 		"""Function architecture (read-only)"""
-		arch = core.BNGetFunctionArchitecture(self.handle)
-		if arch is None:
-			return None
-		return architecture.Architecture(arch)
+		if self._arch:
+			return self._arch
+		else:
+			arch = core.BNGetFunctionArchitecture(self.handle)
+			if arch is None:
+				return None
+			self._arch = architecture.Architecture(arch)
+			return self._arch
 
 	@property
 	def platform(self):
 		"""Function platform (read-only)"""
-		plat = core.BNGetFunctionPlatform(self.handle)
-		if plat is None:
-			return None
-		return platform.Platform(None, handle = plat)
+		if self._platform:
+			return self._platform
+		else: 
+			plat = core.BNGetFunctionPlatform(self.handle)
+			if plat is None:
+				return None
+			self._platform = platform.Platform(None, handle = plat)
+			return self._platform
 
 	@property
 	def start(self):
@@ -1741,6 +1755,7 @@ class InstructionBranch(object):
 class InstructionInfo(object):
 	def __init__(self):
 		self.length = 0
+		self.arch_transition_by_target_addr = False
 		self.branch_delay = False
 		self.branches = []
 

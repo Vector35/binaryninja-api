@@ -476,16 +476,8 @@ vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseCon
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 	}
 
 	BNFreeTokenList(tokens, count);
@@ -502,16 +494,8 @@ vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 	}
 
 	BNFreeTokenList(tokens, count);
@@ -528,16 +512,8 @@ vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_
 	vector<InstructionTextToken> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 	}
 
 	BNFreeTokenList(tokens, count);

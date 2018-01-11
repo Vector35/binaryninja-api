@@ -340,16 +340,8 @@ bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<
 	tokens.clear();
 	for (size_t i = 0; i < count; i++)
 	{
-		InstructionTextToken token;
-		token.type = list[i].type;
-		token.text = list[i].text;
-		token.value = list[i].value;
-		token.size = list[i].size;
-		token.operand = list[i].operand;
-		token.context = list[i].context;
-		token.confidence = list[i].confidence;
-		token.address = list[i].address;
-		tokens.push_back(token);
+		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
+			list[i].operand, list[i].confidence);
 	}
 
 	BNFreeInstructionText(list, count);
@@ -369,16 +361,8 @@ bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arc
 	tokens.clear();
 	for (size_t i = 0; i < count; i++)
 	{
-		InstructionTextToken token;
-		token.type = list[i].type;
-		token.text = list[i].text;
-		token.value = list[i].value;
-		token.size = list[i].size;
-		token.operand = list[i].operand;
-		token.context = list[i].context;
-		token.confidence = list[i].confidence;
-		token.address = list[i].address;
-		tokens.push_back(token);
+		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
+			list[i].operand, list[i].confidence);
 	}
 
 	BNFreeInstructionText(list, count);

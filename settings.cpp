@@ -52,7 +52,7 @@ std::vector<std::string> Setting::GetStringList(const std::string& pluginName,
 
 	vector<string> result;
 	for (size_t i = 0; i < size; i++)
-		result.push_back(string(outBuffer[i]));
+		result.emplace_back(outBuffer[i]);
 
 	for (size_t i = 0; i < defaultValue.size(); i++)
 		BNFreeString(buffer[i]);

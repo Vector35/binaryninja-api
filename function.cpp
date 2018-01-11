@@ -504,11 +504,7 @@ Confidence<vector<Variable>> Function::GetParameterVariables() const
 	vector<Variable> varList;
 	for (size_t i = 0; i < vars.count; i++)
 	{
-		Variable var;
-		var.type = vars.vars[i].type;
-		var.index = vars.vars[i].index;
-		var.storage = vars.vars[i].storage;
-		varList.push_back(var);
+		varList.emplace_back(vars.vars[i].type, vars.vars[i].index, vars.vars[i].storage);
 	}
 	Confidence<vector<Variable>> result(varList, vars.confidence);
 	BNFreeParameterVariables(&vars);
@@ -569,13 +565,14 @@ void Function::SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>
 void Function::SetAutoParameterVariables(const Confidence<vector<Variable>>& vars)
 {
 	BNParameterVariablesWithConfidence varConf;
-	varConf.vars = new BNVariable[vars.GetValue().size()];
-	varConf.count = vars.GetValue().size();
-	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	varConf.vars = new BNVariable[vars->size()];
+	varConf.count = vars->size();
+	size_t i = 0;
+	for (auto it = vars->begin(); it != vars->end(); ++it, ++i)
 	{
-		varConf.vars[i].type = vars.GetValue()[i].type;
-		varConf.vars[i].index = vars.GetValue()[i].index;
-		varConf.vars[i].storage = vars.GetValue()[i].storage;
+		varConf.vars[i].type = it->type;
+		varConf.vars[i].index = it->index;
+		varConf.vars[i].storage = it->storage;
 	}
 	varConf.confidence = vars.GetConfidence();
 
@@ -614,11 +611,12 @@ void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
 void Function::SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
 {
 	BNRegisterSetWithConfidence regs;
-	regs.regs = new uint32_t[clobbered.GetValue().size()];
-	regs.count = clobbered.GetValue().size();
+	regs.regs = new uint32_t[clobbered->size()];
+	regs.count = clobbered->size();
+
 	size_t i = 0;
-	for (auto reg : clobbered.GetValue())
-		regs.regs[i++] = reg;
+	for (auto it = clobbered->begin(); it != clobbered->end(); ++it, ++i)
+		regs.regs[i] = *it;
 	regs.confidence = clobbered.GetConfidence();
 	BNSetAutoFunctionClobberedRegisters(m_object, &regs);
 	delete[] regs.regs;
@@ -652,13 +650,14 @@ void Function::SetCallingConvention(const Confidence<Ref<CallingConvention>>& co
 void Function::SetParameterVariables(const Confidence<vector<Variable>>& vars)
 {
 	BNParameterVariablesWithConfidence varConf;
-	varConf.vars = new BNVariable[vars.GetValue().size()];
-	varConf.count = vars.GetValue().size();
-	for (size_t i = 0; i < vars.GetValue().size(); i++)
+	varConf.vars = new BNVariable[vars->size()];
+	varConf.count = vars->size();
+	size_t i = 0;
+	for (auto it = vars->begin(); it != vars->end(); ++it, ++i)
 	{
-		varConf.vars[i].type = vars.GetValue()[i].type;
-		varConf.vars[i].index = vars.GetValue()[i].index;
-		varConf.vars[i].storage = vars.GetValue()[i].storage;
+		varConf.vars[i].type = it->type;
+		varConf.vars[i].index = it->index;
+		varConf.vars[i].storage = it->storage;
 	}
 	varConf.confidence = vars.GetConfidence();
 
@@ -697,11 +696,11 @@ void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
 void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
 {
 	BNRegisterSetWithConfidence regs;
-	regs.regs = new uint32_t[clobbered.GetValue().size()];
-	regs.count = clobbered.GetValue().size();
+	regs.regs = new uint32_t[clobbered->size()];
+	regs.count = clobbered->size();
 	size_t i = 0;
-	for (auto reg : clobbered.GetValue())
-		regs.regs[i++] = reg;
+	for (auto it = clobbered->begin(); it != clobbered->end(); ++it, ++i)
+		regs.regs[i] = *it;
 	regs.confidence = clobbered.GetConfidence();
 	BNSetUserFunctionClobberedRegisters(m_object, &regs);
 	delete[] regs.regs;

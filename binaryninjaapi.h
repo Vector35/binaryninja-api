@@ -1017,6 +1017,9 @@ namespace BinaryNinja
 
 	struct DataVariable
 	{
+		DataVariable() { }
+		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) { }
+
 		uint64_t address;
 		Confidence<Ref<Type>> type;
 		bool autoDiscovered;
@@ -1845,6 +1848,7 @@ namespace BinaryNinja
 	{
 		Variable();
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
+		Variable(BNVariableSourceType type, uint64_t storage);
 		Variable(const BNVariable& var);
 
 		Variable& operator=(const Variable& var);

@@ -82,10 +82,7 @@ void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView*
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableAdded(view, varObj);
 }
 
@@ -94,10 +91,7 @@ void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryVie
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableRemoved(view, varObj);
 }
 
@@ -106,10 +100,7 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableUpdated(view, varObj);
 }
 
@@ -965,11 +956,8 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 	map<uint64_t, DataVariable> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		DataVariable var;
-		var.address = vars[i].address;
-		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
-		var.autoDiscovered = vars[i].autoDiscovered;
-		result[var.address] = var;
+		result.emplace(piecewise_construct, forward_as_tuple(vars[i].address),
+			forward_as_tuple(vars[i].address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence), vars[i].autoDiscovered));
 	}
 
 	BNFreeDataVariables(vars, count);

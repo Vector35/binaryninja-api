@@ -1022,8 +1022,8 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 	for (size_t i = 0; i < count; i++)
 	{
-		result.push_back(InstructionTextToken(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
-			tokens[i].value, tokens[i].size, tokens[i].operand, tokens[i].confidence));
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
+			tokens[i].value, tokens[i].size, tokens[i].operand, tokens[i].confidence);
 	}
 
 	BNFreeInstructionText(tokens, count);

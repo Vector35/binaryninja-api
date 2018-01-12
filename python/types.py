@@ -515,10 +515,10 @@ class Type(object):
 		return Type(core.BNCreateNamedTypeReferenceFromType(view.handle, name))
 
 	@classmethod
-	def enumeration_type(self, arch, e, width=None):
+	def enumeration_type(self, arch, e, width=None, sign=False):
 		if width is None:
 			width = arch.default_int_size
-		return Type(core.BNCreateEnumerationType(e.handle, width))
+		return Type(core.BNCreateEnumerationType(arch.handle, e.handle, width, sign))
 
 	@classmethod
 	def pointer(self, arch, t, const=None, volatile=None, ref_type=None):

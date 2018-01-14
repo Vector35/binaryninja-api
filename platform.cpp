@@ -72,6 +72,7 @@ vector<Ref<Platform>> Platform::GetList()
 	BNPlatform** list = BNGetPlatformList(&count);
 
 	vector<Ref<Platform>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Platform(BNNewPlatformReference(list[i])));
 
@@ -86,6 +87,7 @@ vector<Ref<Platform>> Platform::GetList(Architecture* arch)
 	BNPlatform** list = BNGetPlatformListByArchitecture(arch->GetObject(), &count);
 
 	vector<Ref<Platform>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Platform(BNNewPlatformReference(list[i])));
 
@@ -100,6 +102,7 @@ vector<Ref<Platform>> Platform::GetList(const string& os)
 	BNPlatform** list = BNGetPlatformListByOS(os.c_str(), &count);
 
 	vector<Ref<Platform>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Platform(BNNewPlatformReference(list[i])));
 
@@ -114,6 +117,7 @@ vector<Ref<Platform>> Platform::GetList(const string& os, Architecture* arch)
 	BNPlatform** list = BNGetPlatformListByOSAndArchitecture(os.c_str(), arch->GetObject(), &count);
 
 	vector<Ref<Platform>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Platform(BNNewPlatformReference(list[i])));
 
@@ -128,6 +132,7 @@ vector<std::string> Platform::GetOSList()
 	char** list = BNGetPlatformOSList(&count);
 
 	vector<string> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(list[i]);
 
@@ -178,6 +183,7 @@ vector<Ref<CallingConvention>> Platform::GetCallingConventions() const
 	BNCallingConvention** list = BNGetPlatformCallingConventions(m_object, &count);
 
 	vector<Ref<CallingConvention>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreCallingConvention(BNNewCallingConventionReference(list[i])));
 

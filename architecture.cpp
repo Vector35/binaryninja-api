@@ -507,6 +507,7 @@ vector<Ref<Architecture>> Architecture::GetList()
 	archs = BNGetArchitectureList(&count);
 
 	vector<Ref<Architecture>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreArchitecture(archs[i]));
 
@@ -703,6 +704,7 @@ vector<uint32_t> Architecture::GetModifiedRegistersOnWrite(uint32_t reg)
 	uint32_t* regs = BNGetModifiedArchitectureRegistersOnWrite(m_object, reg, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -814,6 +816,7 @@ vector<Ref<CallingConvention>> Architecture::GetCallingConventions()
 	BNCallingConvention** list = BNGetArchitectureCallingConventions(m_object, &count);
 
 	vector<Ref<CallingConvention>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreCallingConvention(BNNewCallingConventionReference(list[i])));
 
@@ -957,6 +960,7 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 	if (!BNGetInstructionText(m_object, data, addr, &len, &tokens, &count))
 		return false;
 
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
@@ -1007,6 +1011,7 @@ vector<uint32_t> CoreArchitecture::GetFullWidthRegisters()
 	uint32_t* regs = BNGetFullWidthArchitectureRegisters(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1021,6 +1026,7 @@ vector<uint32_t> CoreArchitecture::GetAllRegisters()
 	uint32_t* regs = BNGetAllArchitectureRegisters(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1035,6 +1041,7 @@ vector<uint32_t> CoreArchitecture::GetAllFlags()
 	uint32_t* regs = BNGetAllArchitectureFlags(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1049,6 +1056,7 @@ vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
 	uint32_t* regs = BNGetAllArchitectureFlagWriteTypes(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1069,6 +1077,7 @@ vector<uint32_t> CoreArchitecture::GetFlagsRequiredForFlagCondition(BNLowLevelIL
 	uint32_t* flags = BNGetArchitectureFlagsRequiredForFlagCondition(m_object, cond, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(flags[i]);
 
@@ -1083,6 +1092,7 @@ vector<uint32_t> CoreArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t write
 	uint32_t* flags = BNGetArchitectureFlagsWrittenByFlagWriteType(m_object, writeType, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(flags[i]);
 
@@ -1129,6 +1139,7 @@ vector<uint32_t> CoreArchitecture::GetGlobalRegisters()
 	uint32_t* regs = BNGetArchitectureGlobalRegisters(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 

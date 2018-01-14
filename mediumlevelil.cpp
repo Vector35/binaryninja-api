@@ -157,6 +157,7 @@ vector<uint64_t> MediumLevelILFunction::GetOperandList(ExprId expr, size_t listO
 	size_t count;
 	uint64_t* operands = BNMediumLevelILGetOperandList(m_object, expr, listOperand, &count);
 	vector<uint64_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
 	BNMediumLevelILFreeOperandList(operands);
@@ -338,11 +339,10 @@ bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
 			list[i].operand, list[i].confidence);
-	}
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -359,11 +359,10 @@ bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arc
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
 			list[i].operand, list[i].confidence);
-	}
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -396,6 +395,7 @@ vector<Ref<BasicBlock>> MediumLevelILFunction::GetBasicBlocks() const
 	BNBasicBlock** blocks = BNGetMediumLevelILBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
@@ -680,6 +680,7 @@ unordered_map<size_t, BNILBranchDependence> MediumLevelILFunction::GetAllBranchD
 	BNILBranchInstructionAndDependence* deps = BNGetAllMediumLevelILBranchDependence(m_object, instr, &count);
 
 	unordered_map<size_t, BNILBranchDependence> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result[deps[i].branch] = deps[i].dependence;
 

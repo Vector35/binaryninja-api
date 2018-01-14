@@ -178,15 +178,16 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 	};
 
 
-static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>>
-	GetOperandIndexForOperandUsages()
+static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>> GetOperandIndexForOperandUsages()
 {
 	unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>> result;
+	result.reserve(LowLevelILInstructionBase::operationOperandUsage.size());
 	for (auto& operation : LowLevelILInstructionBase::operationOperandUsage)
 	{
 		result[operation.first] = unordered_map<LowLevelILOperandUsage, size_t>();
 
 		size_t operand = 0;
+		result[operation.first].reserve(operation.second.size());
 		for (auto usage : operation.second)
 		{
 			result[operation.first][usage] = operand;
@@ -377,7 +378,7 @@ uint64_t LowLevelILIntegerList::ListIterator::operator*()
 
 
 LowLevelILIntegerList::LowLevelILIntegerList(LowLevelILFunction* func,
-	const BNLowLevelILInstruction& instr, size_t count)
+const BNLowLevelILInstruction& instr, size_t count)
 {
 	m_start.function = func;
 #ifdef BINARYNINJACORE_LIBRARY

@@ -51,6 +51,7 @@ std::vector<std::string> Setting::GetStringList(const std::string& pluginName,
 	char** outBuffer = (char**)BNSettingGetStringList(pluginName.c_str(), name.c_str(), (const char**)buffer, &size);
 
 	vector<string> result;
+	result.reserve(size);
 	for (size_t i = 0; i < size; i++)
 		result.emplace_back(outBuffer[i]);
 

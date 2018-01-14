@@ -968,6 +968,7 @@ namespace BinaryNinja
 		uint64_t address;
 
 		InstructionTextToken();
+		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,

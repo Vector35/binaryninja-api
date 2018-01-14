@@ -174,6 +174,7 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 	BNBasicBlock** blocks = BNGetFunctionBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
@@ -379,6 +380,7 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	BNStackVariableReference* refs = BNGetStackVariablesReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<StackVariableReference> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		StackVariableReference ref;
@@ -514,10 +516,9 @@ Confidence<vector<Variable>> Function::GetParameterVariables() const
 {
 	BNParameterVariablesWithConfidence vars = BNGetFunctionParameterVariables(m_object);
 	vector<Variable> varList;
+	varList.reserve(vars.count);
 	for (size_t i = 0; i < vars.count; i++)
-	{
 		varList.emplace_back(vars.vars[i].type, vars.vars[i].index, vars.vars[i].storage);
-	}
 	Confidence<vector<Variable>> result(varList, vars.confidence);
 	BNFreeParameterVariables(&vars);
 	return result;
@@ -979,6 +980,7 @@ vector<IndirectBranchInfo> Function::GetIndirectBranches()
 	BNIndirectBranchInfo* branches = BNGetIndirectBranches(m_object, &count);
 
 	vector<IndirectBranchInfo> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		IndirectBranchInfo b;
@@ -1001,6 +1003,7 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 	BNIndirectBranchInfo* branches = BNGetIndirectBranchesAt(m_object, arch->GetObject(), addr, &count);
 
 	vector<IndirectBranchInfo> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		IndirectBranchInfo b;
@@ -1023,9 +1026,11 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 	BNInstructionTextLine* lines = BNGetFunctionBlockAnnotations(m_object, arch->GetObject(), addr, &count);
 
 	vector<vector<InstructionTextToken>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		vector<InstructionTextToken> line;
+		line.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;
@@ -1237,10 +1242,12 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		settings ? settings->GetObject() : nullptr, &count);
 
 	vector<DisassemblyTextLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;

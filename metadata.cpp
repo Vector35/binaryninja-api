@@ -144,6 +144,7 @@ vector<Ref<Metadata>> Metadata::GetArray()
 	size_t size = 0;
 	BNMetadata** data = BNMetadataGetArray(m_object, &size);
 	vector<Ref<Metadata>> result;
+	result.reserve(size);
 	for (size_t i = 0; i < size; i++)
 		result.push_back(new Metadata(data[i]));
 	return result;

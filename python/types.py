@@ -634,7 +634,7 @@ class Type(object):
 		return core.BNGenerateAutoDemangledTypeId(name)
 
 	@classmethod
-	def get_auto_demanged_type_id_source(self):
+	def get_auto_demangled_type_id_source(self):
 		return core.BNGetAutoDemangledTypeIdSource()
 
 	def with_confidence(self, confidence):

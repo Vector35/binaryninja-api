@@ -2095,6 +2095,8 @@ class BinaryView(object):
 		"""
 		if plat is None:
 			plat = self.platform
+		if plat is None:
+			return None
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
@@ -3398,7 +3400,7 @@ class BinaryView(object):
 			return None
 		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
 			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics,
-			section_list.autoDefined)
+			section.autoDefined)
 		core.BNFreeSection(section)
 		return result
 

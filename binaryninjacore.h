@@ -335,6 +335,7 @@ extern "C"
 		LLIL_IF,
 		LLIL_GOTO,
 		LLIL_FLAG_COND, // Valid only in Lifted IL
+		LLIL_FLAG_GROUP, // Valid only in Lifted IL
 		LLIL_CMP_E,
 		LLIL_CMP_NE,
 		LLIL_CMP_SLT,
@@ -372,6 +373,7 @@ extern "C"
 		LLIL_FCMP_LE,
 		LLIL_FCMP_GE,
 		LLIL_FCMP_GT,
+		LLIL_FCMP_O,
 		LLIL_FCMP_UO,
 
 		// The following instructions are only used in SSA form
@@ -418,7 +420,15 @@ extern "C"
 		LLFC_NEG,
 		LLFC_POS,
 		LLFC_O,
-		LLFC_NO
+		LLFC_NO,
+		LLFC_FE,
+		LLFC_FNE,
+		LLFC_FLT,
+		LLFC_FLE,
+		LLFC_FGE,
+		LLFC_FGT,
+		LLFC_FO,
+		LLFC_FUO
 	};
 
 	enum BNFlagRole
@@ -869,6 +879,7 @@ extern "C"
 		MLIL_FCMP_LE,
 		MLIL_FCMP_GE,
 		MLIL_FCMP_GT,
+		MLIL_FCMP_O,
 		MLIL_FCMP_UO,
 
 		// The following instructions are only used in SSA form
@@ -1058,6 +1069,12 @@ extern "C"
 		size_t count;
 	};
 
+	struct BNFlagConditionForSemanticClass
+	{
+		uint32_t semanticClass;
+		BNLowLevelILFlagCondition condition;
+	};
+
 	struct BNCustomArchitecture
 	{
 		void* context;
@@ -1077,16 +1094,27 @@ extern "C"
 		char* (*getRegisterName)(void* ctxt, uint32_t reg);
 		char* (*getFlagName)(void* ctxt, uint32_t flag);
 		char* (*getFlagWriteTypeName)(void* ctxt, uint32_t flags);
+		char* (*getSemanticFlagClassName)(void* ctxt, uint32_t semClass);
+		char* (*getSemanticFlagGroupName)(void* ctxt, uint32_t semGroup);
 		uint32_t* (*getFullWidthRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getAllRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getAllFlags)(void* ctxt, size_t* count);
 		uint32_t* (*getAllFlagWriteTypes)(void* ctxt, size_t* count);
+		uint32_t* (*getAllSemanticFlagClasses)(void* ctxt, size_t* count);
+		uint32_t* (*getAllSemanticFlagGroups)(void* ctxt, size_t* count);
 		BNFlagRole (*getFlagRole)(void* ctxt, uint32_t flag);
-		uint32_t* (*getFlagsRequiredForFlagCondition)(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
+		uint32_t* (*getFlagsRequiredForFlagCondition)(void* ctxt, BNLowLevelILFlagCondition cond,
+			uint32_t semClass, size_t* count);
+		uint32_t* (*getFlagsRequiredForSemanticFlagGroup)(void* ctxt, uint32_t semGroup, size_t* count);
+		BNFlagConditionForSemanticClass* (*getFlagConditionsForSemanticFlagGroup)(void* ctxt, uint32_t semGroup, size_t* count);
+		void (*freeFlagConditionsForSemanticFlagGroup)(void* ctxt, BNFlagConditionForSemanticClass* conditions);
 		uint32_t* (*getFlagsWrittenByFlagWriteType)(void* ctxt, uint32_t writeType, size_t* count);
+		uint32_t (*getSemanticClassForFlagWriteType)(void* ctxt, uint32_t writeType);
 		size_t (*getFlagWriteLowLevelIL)(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
-		size_t (*getFlagConditionLowLevelIL)(void* ctxt, BNLowLevelILFlagCondition cond, BNLowLevelILFunction* il);
+		size_t (*getFlagConditionLowLevelIL)(void* ctxt, BNLowLevelILFlagCondition cond,
+			uint32_t semClass, BNLowLevelILFunction* il);
+		size_t (*getSemanticFlagGroupLowLevelIL)(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs);
 		void (*getRegisterInfo)(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		uint32_t (*getStackPointerRegister)(void* ctxt);
@@ -2042,24 +2070,36 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterName(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI char* BNGetArchitectureFlagName(BNArchitecture* arch, uint32_t flag);
 	BINARYNINJACOREAPI char* BNGetArchitectureFlagWriteTypeName(BNArchitecture* arch, uint32_t flags);
+	BINARYNINJACOREAPI char* BNGetArchitectureSemanticFlagClassName(BNArchitecture* arch, uint32_t semClass);
+	BINARYNINJACOREAPI char* BNGetArchitectureSemanticFlagGroupName(BNArchitecture* arch, uint32_t semGroup);
 	BINARYNINJACOREAPI uint32_t* BNGetFullWidthArchitectureRegisters(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureRegisters(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureFlags(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureFlagWriteTypes(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureSemanticFlagClasses(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureSemanticFlagGroups(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI BNFlagRole BNGetArchitectureFlagRole(BNArchitecture* arch, uint32_t flag);
 	BINARYNINJACOREAPI uint32_t* BNGetArchitectureFlagsRequiredForFlagCondition(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
-		size_t* count);
+		uint32_t semClass, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetArchitectureFlagsRequiredForSemanticFlagGroup(BNArchitecture* arch,
+		uint32_t semGroup, size_t* count);
+	BINARYNINJACOREAPI BNFlagConditionForSemanticClass* BNGetArchitectureFlagConditionsForSemanticFlagGroup(BNArchitecture* arch,
+		uint32_t semGroup, size_t* count);
+	BINARYNINJACOREAPI void BNFreeFlagConditionsForSemanticFlagGroup(BNFlagConditionForSemanticClass* conditions);
 	BINARYNINJACOREAPI uint32_t* BNGetArchitectureFlagsWrittenByFlagWriteType(BNArchitecture* arch, uint32_t writeType,
 		size_t* count);
+	BINARYNINJACOREAPI uint32_t BNGetArchitectureSemanticClassForFlagWriteType(BNArchitecture* arch, uint32_t writeType);
 	BINARYNINJACOREAPI size_t BNGetArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
 		size_t size, uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
 		BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetDefaultArchitectureFlagWriteLowLevelIL(BNArchitecture* arch, BNLowLevelILOperation op,
 		size_t size, BNFlagRole role, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetArchitectureFlagConditionLowLevelIL(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
-		BNLowLevelILFunction* il);
+		uint32_t semClass, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI size_t BNGetDefaultArchitectureFlagConditionLowLevelIL(BNArchitecture* arch, BNLowLevelILFlagCondition cond,
 		BNLowLevelILFunction* il);
+	BINARYNINJACOREAPI size_t BNGetArchitectureSemanticFlagGroupLowLevelIL(BNArchitecture* arch,
+		uint32_t semGroup, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI uint32_t* BNGetModifiedArchitectureRegistersOnWrite(BNArchitecture* arch, uint32_t reg, size_t* count);
 	BINARYNINJACOREAPI void BNFreeRegisterList(uint32_t* regs);
 	BINARYNINJACOREAPI BNRegisterInfo BNGetArchitectureRegisterInfo(BNArchitecture* arch, uint32_t reg);

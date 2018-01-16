@@ -33,7 +33,6 @@ import callingconvention
 import platform
 import log
 import databuffer
-import types
 
 
 class _ArchitectureMetaClass(type):
@@ -120,9 +119,14 @@ class Architecture(object):
 	global_regs = []
 	flags = []
 	flag_write_types = []
+	semantic_flag_classes = []
+	semantic_flag_groups = []
 	flag_roles = {}
 	flags_required_for_flag_condition = {}
+	flags_required_for_semantic_flag_group = {}
+	flag_conditions_for_semantic_flag_group = {}
 	flags_written_by_flag_write_type = {}
+	semantic_class_for_flag_write_type = {}
 	reg_stacks = {}
 	__metaclass__ = _ArchitectureMetaClass
 	next_address = 0
@@ -166,16 +170,40 @@ class Architecture(object):
 			core.BNFreeRegisterList(flags)
 
 			count = ctypes.c_ulonglong()
-			types = core.BNGetAllArchitectureFlagWriteTypes(self.handle, count)
+			write_types = core.BNGetAllArchitectureFlagWriteTypes(self.handle, count)
 			self._flag_write_types = {}
 			self._flag_write_types_by_index = {}
 			self.__dict__["flag_write_types"] = []
 			for i in xrange(0, count.value):
-				name = core.BNGetArchitectureFlagWriteTypeName(self.handle, types[i])
-				self._flag_write_types[name] = types[i]
-				self._flag_write_types_by_index[types[i]] = name
+				name = core.BNGetArchitectureFlagWriteTypeName(self.handle, write_types[i])
+				self._flag_write_types[name] = write_types[i]
+				self._flag_write_types_by_index[write_types[i]] = name
 				self.flag_write_types.append(name)
-			core.BNFreeRegisterList(types)
+			core.BNFreeRegisterList(write_types)
+
+			count = ctypes.c_ulonglong()
+			sem_classes = core.BNGetAllArchitectureSemanticFlagClasses(self.handle, count)
+			self._semantic_flag_classes = {}
+			self._semantic_flag_classes_by_index = {}
+			self.__dict__["semantic_flag_classes"] = []
+			for i in xrange(0, count.value):
+				name = core.BNGetArchitectureSemanticFlagClassName(self.handle, sem_classes[i])
+				self._semantic_flag_classes[name] = sem_classes[i]
+				self._semantic_flag_classes_by_index[sem_classes[i]] = name
+				self.semantic_flag_classes.append(name)
+			core.BNFreeRegisterList(sem_classes)
+
+			count = ctypes.c_ulonglong()
+			sem_groups = core.BNGetAllArchitectureSemanticFlagGroups(self.handle, count)
+			self._semantic_flag_groups = {}
+			self._semantic_flag_groups_by_index = {}
+			self.__dict__["semantic_flag_groups"] = []
+			for i in xrange(0, count.value):
+				name = core.BNGetArchitectureSemanticFlagGroupName(self.handle, sem_groups[i])
+				self._semantic_flag_groups[name] = sem_groups[i]
+				self._semantic_flag_groups_by_index[sem_groups[i]] = name
+				self.semantic_flag_groups.append(name)
+			core.BNFreeRegisterList(sem_groups)
 
 			self._flag_roles = {}
 			self.__dict__["flag_roles"] = {}
@@ -184,19 +212,48 @@ class Architecture(object):
 				self.__dict__["flag_roles"][flag] = role
 				self._flag_roles[self._flags[flag]] = role
 
-			self._flags_required_for_flag_condition = {}
 			self.__dict__["flags_required_for_flag_condition"] = {}
 			for cond in LowLevelILFlagCondition:
 				count = ctypes.c_ulonglong()
-				flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, count)
+				flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, 0, count)
+				flag_names = []
+				for i in xrange(0, count.value):
+					flag_names.append(self._flags_by_index[flags[i]])
+				core.BNFreeRegisterList(flags)
+				self.__dict__["flags_required_for_flag_condition"][cond] = flag_names
+
+			self._flags_required_by_semantic_flag_group = {}
+			self.__dict__["flags_required_for_semantic_flag_group"] = {}
+			for group in self.semantic_flag_groups:
+				count = ctypes.c_ulonglong()
+				flags = core.BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.handle,
+					self._semantic_flag_groups[group], count)
 				flag_indexes = []
 				flag_names = []
 				for i in xrange(0, count.value):
 					flag_indexes.append(flags[i])
 					flag_names.append(self._flags_by_index[flags[i]])
 				core.BNFreeRegisterList(flags)
-				self._flags_required_for_flag_condition[cond] = flag_indexes
-				self.__dict__["flags_required_for_flag_condition"][cond] = flag_names
+				self._flags_required_by_semantic_flag_group[self._semantic_flag_groups[group]] = flag_indexes
+				self.__dict__["flags_required_for_semantic_flag_group"][cond] = flag_names
+
+			self._flag_conditions_for_semantic_flag_group = {}
+			self.__dict__["flag_conditions_for_semantic_flag_group"] = {}
+			for group in self.semantic_flag_groups:
+				count = ctypes.c_ulonglong()
+				conditions = core.BNGetArchitectureFlagConditionsForSemanticFlagGroup(self.handle,
+					self._semantic_flag_groups[group], count)
+				class_index_cond = {}
+				class_cond = {}
+				for i in xrange(0, count.value):
+					class_index_cond[conditions[i].semanticClass] = conditions[i].condition
+					if conditions[i].semanticClass == 0:
+						class_cond[None] = conditions[i].condition
+					elif conditions[i].semanticClass in self._semantic_flag_classes_by_index:
+						class_cond[self._semantic_flag_classes_by_index[conditions[i].semanticClass]] = conditions[i].condition
+				core.BNFreeFlagConditionsForSemanticFlagGroup(conditions)
+				self._flag_conditions_for_semantic_flag_group[self._semantic_flag_groups[group]] = class_index_cond
+				self.__dict__["flag_conditions_for_semantic_flag_group"][group] = class_cond
 
 			self._flags_written_by_flag_write_type = {}
 			self.__dict__["flags_written_by_flag_write_type"] = {}
@@ -212,6 +269,18 @@ class Architecture(object):
 				core.BNFreeRegisterList(flags)
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flag_indexes
 				self.__dict__["flags_written_by_flag_write_type"][write_type] = flag_names
+
+			self._semantic_class_for_flag_write_type = {}
+			self.__dict__["semantic_class_for_flag_write_type"] = {}
+			for write_type in self.flag_write_types:
+				sem_class = core.BNGetArchitectureSemanticClassForFlagWriteType(self.handle,
+					self._flag_write_types[write_type])
+				if sem_class == 0:
+					sem_class_name = None
+				else:
+					sem_class_name = self._semantic_flag_classes_by_index[sem_class]
+				self._semantic_class_for_flag_write_type[self._flag_write_types[write_type]] = sem_class
+				self.__dict__["semantic_class_for_flag_write_type"][write_type] = sem_class_name
 
 			count = ctypes.c_ulonglong()
 			regs = core.BNGetArchitectureGlobalRegisters(self.handle, count)
@@ -260,19 +329,33 @@ class Architecture(object):
 			self._cb.getRegisterName = self._cb.getRegisterName.__class__(self._get_register_name)
 			self._cb.getFlagName = self._cb.getFlagName.__class__(self._get_flag_name)
 			self._cb.getFlagWriteTypeName = self._cb.getFlagWriteTypeName.__class__(self._get_flag_write_type_name)
+			self._cb.getFlagSemanticClassName = self._cb.getFlagSemanticClassName.__class__(self._get_semantic_flag_class_name)
+			self._cb.getFlagSemanticGroupName = self._cb.getFlagSemanticGroupName.__class__(self._get_semantic_flag_group_name)
 			self._cb.getFullWidthRegisters = self._cb.getFullWidthRegisters.__class__(self._get_full_width_registers)
 			self._cb.getAllRegisters = self._cb.getAllRegisters.__class__(self._get_all_registers)
 			self._cb.getAllFlags = self._cb.getAllRegisters.__class__(self._get_all_flags)
 			self._cb.getAllFlagWriteTypes = self._cb.getAllRegisters.__class__(self._get_all_flag_write_types)
+			self._cb.getAllFlagSemanticClasses = self._cb.getAllFlagSemanticClasses.__class__(self._get_all_semantic_flag_classes)
+			self._cb.getAllFlagSemanticGroups = self._cb.getAllFlagSemanticGroups.__class__(self._get_all_semantic_flag_groups)
 			self._cb.getFlagRole = self._cb.getFlagRole.__class__(self._get_flag_role)
 			self._cb.getFlagsRequiredForFlagCondition = self._cb.getFlagsRequiredForFlagCondition.__class__(
 				self._get_flags_required_for_flag_condition)
+			self._cb.getFlagsRequiredForSemanticFlagGroup = self._cb.getFlagsRequiredForSemanticFlagGroup.__class__(
+				self._get_flags_required_for_semantic_flag_group)
+			self._cb.getFlagConditionsForSemanticFlagGroup = self._cb.getFlagConditionsForSemanticFlagGroup.__class__(
+				self._get_flag_conditions_for_semantic_flag_group)
+			self._cb.freeFlagConditionsForSemanticFlagGroup = self._cb.freeFlagConditionsForSemanticFlagGroup.__class__(
+				self._free_flag_conditions_for_semantic_flag_group)
 			self._cb.getFlagsWrittenByFlagWriteType = self._cb.getFlagsWrittenByFlagWriteType.__class__(
 				self._get_flags_written_by_flag_write_type)
+			self._cb.getSemanticClassForFlagWriteType = self._cb.getSemanticClassForFlagWriteType.__class__(
+				self._get_semantic_class_for_flag_write_type)
 			self._cb.getFlagWriteLowLevelIL = self._cb.getFlagWriteLowLevelIL.__class__(
 				self._get_flag_write_low_level_il)
 			self._cb.getFlagConditionLowLevelIL = self._cb.getFlagConditionLowLevelIL.__class__(
 				self._get_flag_condition_low_level_il)
+			self._cb.getSemanticFlagGroupLowLevelIL = self._cb.getSemanticFlagGroupLowLevelIL.__class__(
+				self._get_semantic_flag_group_low_level_il)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.getRegisterInfo = self._cb.getRegisterInfo.__class__(self._get_register_info)
 			self._cb.getStackPointerRegister = self._cb.getStackPointerRegister.__class__(
@@ -362,6 +445,26 @@ class Architecture(object):
 					self._flag_write_types_by_index[write_type_index] = write_type
 					write_type_index += 1
 
+			self._semantic_flag_classes = {}
+			self._semantic_flag_classes_by_index = {}
+			self.__dict__["semantic_flag_classes"] = self.__class__.semantic_flag_classes
+			semantic_class_index = 1
+			for sem_class in self.__class__.semantic_flag_classes:
+				if sem_class not in self._semantic_flag_classes:
+					self._semantic_flag_classes[sem_class] = semantic_class_index
+					self._semantic_flag_classes_by_index[semantic_class_index] = sem_class
+					semantic_class_index += 1
+
+			self._semantic_flag_groups = {}
+			self._semantic_flag_groups_by_index = {}
+			self.__dict__["semantic_flag_groups"] = self.__class__.semantic_flag_groups
+			semantic_group_index = 0
+			for sem_group in self.__class__.semantic_flag_groups:
+				if sem_group not in self._semantic_flag_groups:
+					self._semantic_flag_groups[sem_group] = semantic_group_index
+					self._semantic_flag_groups_by_index[semantic_group_index] = sem_group
+					semantic_group_index += 1
+
 			self._flag_roles = {}
 			self.__dict__["flag_roles"] = self.__class__.flag_roles
 			for flag in self.__class__.flag_roles:
@@ -370,13 +473,26 @@ class Architecture(object):
 					role = FlagRole[role]
 				self._flag_roles[self._flags[flag]] = role
 
-			self._flags_required_for_flag_condition = {}
 			self.__dict__["flags_required_for_flag_condition"] = self.__class__.flags_required_for_flag_condition
-			for cond in self.__class__.flags_required_for_flag_condition:
+
+			self._flags_required_by_semantic_flag_group = {}
+			self.__dict__["flags_required_for_semantic_flag_group"] = self.__class__.flags_required_for_semantic_flag_group
+			for group in self.__class__.flags_required_for_semantic_flag_group:
 				flags = []
-				for flag in self.__class__.flags_required_for_flag_condition[cond]:
+				for flag in self.__class__.flags_required_for_semantic_flag_group[group]:
 					flags.append(self._flags[flag])
-				self._flags_required_for_flag_condition[cond] = flags
+				self._flags_required_by_semantic_flag_group[self._semantic_flag_groups[group]] = flags
+
+			self._flag_conditions_for_semantic_flag_group = {}
+			self.__dict__["flag_conditions_for_semantic_flag_group"] = self.__class__.flag_conditions_for_semantic_flag_group
+			for group in self.__class__.flag_conditions_for_semantic_flag_group:
+				class_cond = {}
+				for sem_class in self.__class__.flag_conditions_for_semantic_flag_group[group]:
+					if sem_class is None:
+						class_cond[0] = self.__class__.flag_conditions_for_semantic_flag_group[group][sem_class]
+					else:
+						class_cond[self._semantic_flag_classes[sem_class]] = self.__class__.flag_conditions_for_semantic_flag_group[group][sem_class]
+				self._flag_conditions_for_semantic_flag_group[self._semantic_flag_groups[group]] = class_cond
 
 			self._flags_written_by_flag_write_type = {}
 			self.__dict__["flags_written_by_flag_write_type"] = self.__class__.flags_written_by_flag_write_type
@@ -386,10 +502,21 @@ class Architecture(object):
 					flags.append(self._flags[flag])
 				self._flags_written_by_flag_write_type[self._flag_write_types[write_type]] = flags
 
+			self._semantic_class_for_flag_write_type = {}
+			self.__dict__["semantic_class_for_flag_write_type"] = self.__class__.semantic_class_for_flag_write_type
+			for write_type in self.__class__.semantic_class_for_flag_write_type:
+				sem_class = self.__class__.semantic_class_for_flag_write_type[write_type]
+				if sem_class in self._semantic_flag_classes:
+					sem_class_index = self._semantic_flag_classes[sem_class]
+				else:
+					sem_class_index = 0
+				self._semantic_class_for_flag_write_type[self._flag_write_types[write_type]] = sem_class_index
+
 			self.__dict__["global_regs"] = self.__class__.global_regs
 
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
+			self._pending_condition_lists = {}
 
 	def __eq__(self, value):
 		if not isinstance(value, Architecture):
@@ -605,6 +732,24 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
+	def _get_semantic_flag_class_name(self, ctxt, sem_class):
+		try:
+			if sem_class in self._semantic_flag_class_by_index:
+				return core.BNAllocString(self._semantic_flag_class_by_index[sem_class])
+			return core.BNAllocString("")
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			return core.BNAllocString("")
+
+	def _get_semantic_flag_group_name(self, ctxt, sem_group):
+		try:
+			if sem_group in self._semantic_flag_group_by_index:
+				return core.BNAllocString(self._semantic_flag_group_by_index[sem_group])
+			return core.BNAllocString("")
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			return core.BNAllocString("")
+
 	def _get_full_width_registers(self, ctxt, count):
 		try:
 			regs = self._full_width_regs.values()
@@ -652,13 +797,43 @@ class Architecture(object):
 
 	def _get_all_flag_write_types(self, ctxt, count):
 		try:
-			types = self._flag_write_types_by_index.keys()
-			count[0] = len(types)
-			type_buf = (ctypes.c_uint * len(types))()
-			for i in xrange(0, len(types)):
-				type_buf[i] = types[i]
+			write_types = self._flag_write_types_by_index.keys()
+			count[0] = len(write_types)
+			type_buf = (ctypes.c_uint * len(write_types))()
+			for i in xrange(0, len(write_types)):
+				type_buf[i] = write_types[i]
 			result = ctypes.cast(type_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, type_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_all_semantic_flag_classes(self, ctxt, count):
+		try:
+			sem_classes = self._semantic_flag_classes_by_index.keys()
+			count[0] = len(sem_classes)
+			class_buf = (ctypes.c_uint * len(sem_classes))()
+			for i in xrange(0, len(sem_classes)):
+				class_buf[i] = sem_classes[i]
+			result = ctypes.cast(class_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, class_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_all_semantic_flag_groups(self, ctxt, count):
+		try:
+			sem_groups = self._semantic_flag_groups_by_index.keys()
+			count[0] = len(sem_groups)
+			group_buf = (ctypes.c_uint * len(sem_groups))()
+			for i in xrange(0, len(sem_groups)):
+				group_buf[i] = sem_groups[i]
+			result = ctypes.cast(group_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, group_buf)
 			return result.value
 		except KeyError:
 			log.log_error(traceback.format_exc())
@@ -674,12 +849,16 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return None
 
-	def _get_flags_required_for_flag_condition(self, ctxt, cond, count):
+	def _get_flags_required_for_flag_condition(self, ctxt, cond, sem_class, count):
 		try:
-			if cond in self._flags_required_for_flag_condition:
-				flags = self._flags_required_for_flag_condition[cond]
+			if sem_class in self._semantic_flag_classes_by_index:
+				sem_class = self._semantic_flag_classes_by_index[sem_class]
 			else:
-				flags = []
+				sem_class = 0
+			flag_names = self.perform_get_flags_required_for_flag_condition(cond, sem_class)
+			flags = []
+			for name in flag_names:
+				flags.append(self._flags[name])
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
 			for i in xrange(0, len(flags)):
@@ -691,6 +870,59 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			count[0] = 0
 			return None
+
+	def perform_get_flags_required_for_flag_condition(self, cond, sem_class):
+		if cond in self.flags_required_for_flag_condition:
+			return self.flags_required_for_flag_condition[cond]
+		return []
+
+	def _get_flags_required_for_semantic_flag_group(self, ctxt, sem_group, count):
+		try:
+			if sem_group in self._flags_required_by_semantic_flag_group:
+				flags = self._flags_required_by_semantic_flag_group[sem_group]
+			else:
+				flags = []
+			count[0] = len(flags)
+			flag_buf = (ctypes.c_uint * len(flags))()
+			for i in xrange(0, len(flags)):
+				flag_buf[i] = flags[i]
+			result = ctypes.cast(flag_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, flag_buf)
+			return result.value
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_flag_conditions_for_semantic_flag_group(self, ctxt, sem_group, count):
+		try:
+			if sem_group in self._flag_conditions_by_semantic_flag_group:
+				class_cond = self._flag_conditions_by_semantic_flag_group[sem_group]
+			else:
+				class_cond = {}
+			count[0] = len(class_cond)
+			cond_buf = (core.BNFlagConditionForSemanticClass * len(class_cond))()
+			i = 0
+			for class_index in class_cond.keys():
+				cond_buf[i].semanticClass = class_index
+				cond_buf[i].condition = class_cond[class_index]
+				i += 1
+			result = ctypes.cast(cond_buf, ctypes.c_void_p)
+			self._pending_conditions[result.value] = (result, cond_buf)
+			return result.value
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _free_flag_conditions_for_semantic_flag_group(self, ctxt, conditions):
+		try:
+			buf = ctypes.cast(conditions, ctypes.c_void_p)
+			if buf.value not in self._pending_conditions:
+				raise ValueError("freeing condition list that wasn't allocated")
+			del self._pending_conditions[buf.value]
+		except (ValueError, KeyError):
+			log.log_error(traceback.format_exc())
 
 	def _get_flags_written_by_flag_write_type(self, ctxt, write_type, count):
 		try:
@@ -709,6 +941,16 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			count[0] = 0
 			return None
+
+	def _get_semantic_class_for_flag_write_type(self, ctxt, write_type):
+		try:
+			if write_type in self._semantic_class_for_flag_write_type:
+				return self._semantic_class_for_flag_write_type[write_type]
+			else:
+				return 0
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			return 0
 
 	def _get_flag_write_low_level_il(self, ctxt, op, size, write_type, flag, operands, operand_count, il):
 		try:
@@ -730,9 +972,25 @@ class Architecture(object):
 			log.log_error(traceback.format_exc())
 			return False
 
-	def _get_flag_condition_low_level_il(self, ctxt, cond, il):
+	def _get_flag_condition_low_level_il(self, ctxt, cond, sem_class, il):
 		try:
-			return self.perform_get_flag_condition_low_level_il(cond,
+			if sem_class in self._semantic_flag_classes_by_index:
+				sem_class_name = self._semantic_flag_classes_by_index[sem_class]
+			else:
+				sem_class_name = None
+			return self.perform_get_flag_condition_low_level_il(cond, sem_class_name,
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
+		except OSError:
+			log.log_error(traceback.format_exc())
+			return 0
+
+	def _get_semantic_flag_group_low_level_il(self, ctxt, sem_group, il):
+		try:
+			if sem_group in self._semantic_flag_groups_by_index:
+				sem_group_name = self._semantic_flag_groups_by_index[sem_group]
+			else:
+				sem_group_name = None
+			return self.perform_get_semantic_flag_group_low_level_il(sem_group_name,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
 		except OSError:
 			log.log_error(traceback.format_exc())
@@ -1054,16 +1312,29 @@ class Architecture(object):
 		return self.get_default_flag_write_low_level_il(op, size, self._flag_roles[flag], operands, il)
 
 	@abc.abstractmethod
-	def perform_get_flag_condition_low_level_il(self, cond, il):
+	def perform_get_flag_condition_low_level_il(self, cond, sem_class, il):
 		"""
 		.. note:: Architecture subclasses should implement this method.
 		.. warning:: This method should never be called directly.
 
-		:param LowLevelILFlagCondition cond:
-		:param LowLevelILFunction il:
+		:param LowLevelILFlagCondition cond: Flag condition to be computed
+		:param str sem_class: Semantic class to be used (None for default semantics)
+		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
 		:rtype: LowLevelILExpr
 		"""
 		return self.get_default_flag_condition_low_level_il(cond, il)
+
+	@abc.abstractmethod
+	def perform_get_semantic_flag_group_low_level_il(self, sem_group, il):
+		"""
+		.. note:: Architecture subclasses should implement this method.
+		.. warning:: This method should never be called directly.
+
+		:param str sem_group: Semantic group to be computed
+		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
+		:rtype: LowLevelILExpr
+		"""
+		return il.unimplemented()
 
 	@abc.abstractmethod
 	def perform_assemble(self, code, addr):
@@ -1407,6 +1678,22 @@ class Architecture(object):
 			return flag.index
 		return flag
 
+	def get_semantic_flag_class_index(self, sem_class):
+		if sem_class is None:
+			return 0
+		elif isinstance(sem_class, str):
+			return self._semantic_flag_classes[sem_class]
+		elif isinstance(sem_class, lowlevelil.ILSemanticFlagClass):
+			return sem_class.index
+		return sem_class
+
+	def get_semantic_flag_group_index(self, sem_group):
+		if isinstance(sem_group, str):
+			return self._semantic_flag_groups[sem_group]
+		elif isinstance(sem_group, lowlevelil.ILSemanticFlagGroup):
+			return sem_group.index
+		return sem_group
+
 	def get_flag_write_type_name(self, write_type):
 		"""
 		``get_flag_write_type_name`` gets the flag write type name for the given flag.
@@ -1436,6 +1723,26 @@ class Architecture(object):
 		:rtype: str
 		"""
 		return self._flag_write_types[write_type]
+
+	def get_semantic_flag_class_by_name(self, sem_class):
+		"""
+		``get_semantic_flag_class_by_name`` gets the semantic flag class index by name.
+
+		:param int sem_class: semantic flag class
+		:return: semantic flag class index
+		:rtype: str
+		"""
+		return self._semantic_flag_classes[sem_class]
+
+	def get_semantic_flag_group_by_name(self, sem_group):
+		"""
+		``get_semantic_flag_group_by_name`` gets the semantic flag group index by name.
+
+		:param int sem_group: semantic flag group
+		:return: semantic flag group index
+		:rtype: str
+		"""
+		return self._semantic_flag_groups[sem_group]
 
 	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""
@@ -1501,6 +1808,25 @@ class Architecture(object):
 		:rtype: LowLevelILExpr
 		"""
 		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
+
+	def get_semantic_flag_group_low_level_il(self, sem_group, il):
+		"""
+		:param str sem_group:
+		:param LowLevelILFunction il:
+		:rtype: LowLevelILExpr
+		"""
+		group_index = self.get_semantic_flag_group_index(sem_group)
+		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureSemanticFlagGroupLowLevelIL(self.handle, group_index, il.handle))
+
+	def get_flags_required_for_flag_condition(self, cond, sem_class = None):
+		sem_class = self.get_semantic_flag_class_index(sem_class)
+		count = ctypes.c_ulonglong()
+		flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, sem_class, count)
+		flag_names = []
+		for i in xrange(0, count.value):
+			flag_names.append(self._flags_by_index[flags[i]])
+		core.BNFreeRegisterList(flags)
+		return flag_names
 
 	def get_modified_regs_on_write(self, reg):
 		"""

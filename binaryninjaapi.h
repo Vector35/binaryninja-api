@@ -1605,17 +1605,28 @@ namespace BinaryNinja
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
+		static char* GetSemanticFlagClassNameCallback(void* ctxt, uint32_t semClass);
+		static char* GetSemanticFlagGroupNameCallback(void* ctxt, uint32_t semGroup);
 		static uint32_t* GetFullWidthRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagsCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagWriteTypesCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count);
 		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag);
-		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
+		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+			uint32_t semClass, size_t* count);
+		static uint32_t* GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count);
+		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(void* ctxt,
+			uint32_t semGroup, size_t* count);
+		static void FreeFlagConditionsForSemanticFlagGroupCallback(void* ctxt, BNFlagConditionForSemanticClass* conditions);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
+		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
 		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
-			BNLowLevelILFunction* il);
+			uint32_t semClass, BNLowLevelILFunction* il);
+		static size_t GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
@@ -1672,19 +1683,28 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
+		virtual std::string GetSemanticFlagClassName(uint32_t semClass);
+		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup);
 		virtual std::vector<uint32_t> GetFullWidthRegisters();
 		virtual std::vector<uint32_t> GetAllRegisters();
 		virtual std::vector<uint32_t> GetAllFlags();
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
+		virtual std::vector<uint32_t> GetAllSemanticFlagClasses();
+		virtual std::vector<uint32_t> GetAllSemanticFlagGroups();
 		virtual BNFlagRole GetFlagRole(uint32_t flag);
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond);
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+			uint32_t semClass = 0);
+		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup);
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup);
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
+		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType);
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
 			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
 		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
@@ -1808,16 +1828,26 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
+		virtual std::string GetSemanticFlagClassName(uint32_t semClass) override;
+		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFullWidthRegisters() override;
 		virtual std::vector<uint32_t> GetAllRegisters() override;
 		virtual std::vector<uint32_t> GetAllFlags() override;
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
 		virtual BNFlagRole GetFlagRole(uint32_t flag) override;
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+			uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
+		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+			uint32_t semClass, LowLevelILFunction& il) override;
+		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
@@ -2589,7 +2619,9 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagCondition(BNLowLevelILFlagCondition cond, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagGroup(uint32_t semGroup, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareEqual(size_t size, ExprId a, ExprId b,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareNotEqual(size_t size, ExprId a, ExprId b,
@@ -2646,6 +2678,7 @@ namespace BinaryNinja
 		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
@@ -2949,6 +2982,7 @@ namespace BinaryNinja
 		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());

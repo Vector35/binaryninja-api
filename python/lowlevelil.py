@@ -99,6 +99,38 @@ class ILFlag(object):
 		return self.name
 
 
+class ILSemanticFlagClass(object):
+	def __init__(self, arch, sem_class):
+		self.arch = arch
+		self.index = sem_class
+		self.name = self.arch.get_semantic_flag_class_name(self.index)
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
+class ILSemanticFlagGroup(object):
+	def __init__(self, arch, sem_group):
+		self.arch = arch
+		self.index = sem_group
+		self.name = self.arch.get_semantic_flag_group_name(self.index)
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
 class SSARegister(object):
 	def __init__(self, reg, version):
 		self.reg = reg
@@ -202,7 +234,8 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
 		LowLevelILOperation.LLIL_GOTO: [("dest", "int")],
-		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond")],
+		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond", "semantic_class", "sem_class")],
+		LowLevelILOperation.LLIL_FLAG_GROUP: [("semantic_group", "sem_group")],
 		LowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
@@ -238,6 +271,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg_ssa"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
@@ -324,6 +358,10 @@ class LowLevelILInstruction(object):
 				flag = ILFlag(func.arch, instr.operands[i])
 				i += 1
 				value = SSAFlag(flag, instr.operands[i])
+			elif operand_type == "sem_class":
+				value = ILSemanticFlagClass(func.arch, instr.operands[i])
+			elif operand_type == "sem_group":
+				value = ILSemanticFlagGroup(func.arch, instr.operands[i])
 			elif operand_type == "cond":
 				value = LowLevelILFlagCondition(instr.operands[i])
 			elif operand_type == "int_list":
@@ -1507,11 +1545,12 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NORET)
 
-	def flag_condition(self, cond):
+	def flag_condition(self, cond, sem_class = None):
 		"""
 		``flag_condition`` returns a flag_condition expression for the given LowLevelILFlagCondition
 
 		:param LowLevelILFlagCondition cond: Flag condition expression to retrieve
+		:param str sem_class: Optional semantic flag class
 		:return: A flag_condition expression
 		:rtype: LowLevelILExpr
 		"""
@@ -1519,7 +1558,19 @@ class LowLevelILFunction(object):
 			cond = LowLevelILFlagCondition[cond]
 		elif isinstance(cond, LowLevelILFlagCondition):
 			cond = cond.value
-		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond)
+		class_index = self.arch.get_semantic_flag_class_index(sem_class)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, class_index)
+
+	def flag_group(self, sem_group):
+		"""
+		``flag_group`` returns a flag_group expression for the given semantic flag group
+
+		:param str sem_group: Semantic flag group to access
+		:return: A flag_group expression
+		:rtype: LowLevelILExpr
+		"""
+		group = self.arch.get_semantic_flag_group_index(sem_group)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_GROUP, group)
 
 	def compare_equal(self, size, a, b):
 		"""
@@ -2173,6 +2224,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
+
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

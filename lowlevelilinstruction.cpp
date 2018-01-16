@@ -49,6 +49,8 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType>
 		{DestSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
 		{DestSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
 		{DestSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
+		{SemanticFlagClassLowLevelOperandUsage, SemanticFlagClassLowLevelOperand},
+		{SemanticFlagGroupLowLevelOperandUsage, SemanticFlagGroupLowLevelOperand},
 		{PartialRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
 		{PartialSSARegisterStackSourceLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
 		{StackSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
@@ -140,7 +142,8 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage,
 			FalseTargetLowLevelOperandUsage}},
 		{LLIL_GOTO, {TargetLowLevelOperandUsage}},
-		{LLIL_FLAG_COND, {FlagConditionLowLevelOperandUsage}},
+		{LLIL_FLAG_COND, {FlagConditionLowLevelOperandUsage, SemanticFlagClassLowLevelOperandUsage}},
+		{LLIL_FLAG_GROUP, {SemanticFlagGroupLowLevelOperandUsage}},
 		{LLIL_TRAP, {VectorLowLevelOperandUsage}},
 		{LLIL_CALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
 			DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage,
@@ -884,6 +887,22 @@ BNLowLevelILFlagCondition LowLevelILOperand::GetFlagCondition() const
 	if (m_type != FlagConditionLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
 	return m_instr.GetRawOperandAsFlagCondition(m_operandIndex);
+}
+
+
+uint32_t LowLevelILOperand::GetSemanticFlagClass() const
+{
+	if (m_type != SemanticFlagClassLowLevelOperand)
+		throw LowLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+}
+
+
+uint32_t LowLevelILOperand::GetSemanticFlagGroup() const
+{
+	if (m_type != SemanticFlagGroupLowLevelOperand)
+		throw LowLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsRegister(m_operandIndex);
 }
 
 
@@ -1711,7 +1730,9 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 			return dest->Undefined(*this);
 		return dest->If(subExprHandler(GetConditionExpr<LLIL_IF>()), *labelA, *labelB, *this);
 	case LLIL_FLAG_COND:
-		return dest->FlagCondition(GetFlagCondition<LLIL_FLAG_COND>(), *this);
+		return dest->FlagCondition(GetFlagCondition<LLIL_FLAG_COND>(), GetSemanticFlagClass<LLIL_FLAG_COND>(), *this);
+	case LLIL_FLAG_GROUP:
+		return dest->FlagGroup(GetSemanticFlagGroup<LLIL_FLAG_GROUP>(), *this);
 	case LLIL_TRAP:
 		return dest->Trap(GetVector<LLIL_TRAP>(), *this);
 	case LLIL_CALL_SSA:
@@ -1961,6 +1982,24 @@ SSAFlag LowLevelILInstruction::GetDestSSAFlag() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(DestSSAFlagLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAFlag(operandIndex);
+	throw LowLevelILInstructionAccessException();
+}
+
+
+uint32_t LowLevelILInstruction::GetSemanticFlagClass() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(SemanticFlagClassLowLevelOperandUsage, operandIndex))
+		return GetRawOperandAsRegister(operandIndex);
+	throw LowLevelILInstructionAccessException();
+}
+
+
+uint32_t LowLevelILInstruction::GetSemanticFlagGroup() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(SemanticFlagGroupLowLevelOperandUsage, operandIndex))
+		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -2749,9 +2788,15 @@ ExprId LowLevelILFunction::NoReturn(const ILSourceLocation& loc)
 }
 
 
-ExprId LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, (ExprId)cond);
+	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, (ExprId)cond, semClass);
+}
+
+
+ExprId LowLevelILFunction::FlagGroup(uint32_t semGroup, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_GROUP, loc, 0, 0, semGroup);
 }
 
 
@@ -2986,6 +3031,12 @@ ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprI
 ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, a, b);
 }
 
 

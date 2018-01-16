@@ -169,6 +169,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],

@@ -108,6 +108,8 @@ namespace BinaryNinja
 		RegisterStackLowLevelOperand,
 		FlagLowLevelOperand,
 		FlagConditionLowLevelOperand,
+		SemanticFlagClassLowLevelOperand,
+		SemanticFlagGroupLowLevelOperand,
 		SSARegisterLowLevelOperand,
 		SSARegisterStackLowLevelOperand,
 		SSAFlagLowLevelOperand,
@@ -135,6 +137,8 @@ namespace BinaryNinja
 		DestSSARegisterLowLevelOperandUsage,
 		DestSSARegisterStackLowLevelOperandUsage,
 		DestSSAFlagLowLevelOperandUsage,
+		SemanticFlagClassLowLevelOperandUsage,
+		SemanticFlagGroupLowLevelOperandUsage,
 		PartialRegisterLowLevelOperandUsage,
 		PartialSSARegisterStackSourceLowLevelOperandUsage,
 		StackSSARegisterLowLevelOperandUsage,
@@ -587,6 +591,8 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> SSARegister GetDestSSARegister() const { return As<N>().GetDestSSARegister(); }
 		template <BNLowLevelILOperation N> SSARegisterStack GetDestSSARegisterStack() const { return As<N>().GetDestSSARegisterStack(); }
 		template <BNLowLevelILOperation N> SSAFlag GetDestSSAFlag() const { return As<N>().GetDestSSAFlag(); }
+		template <BNLowLevelILOperation N> uint32_t GetSemanticFlagClass() const { return As<N>().GetSemanticFlagClass(); }
+		template <BNLowLevelILOperation N> uint32_t GetSemanticFlagGroup() const { return As<N>().GetSemanticFlagGroup(); }
 		template <BNLowLevelILOperation N> uint32_t GetPartialRegister() const { return As<N>().GetPartialRegister(); }
 		template <BNLowLevelILOperation N> SSARegister GetStackSSARegister() const { return As<N>().GetStackSSARegister(); }
 		template <BNLowLevelILOperation N> SSARegister GetTopSSARegister() const { return As<N>().GetTopSSARegister(); }
@@ -645,6 +651,8 @@ namespace BinaryNinja
 		SSARegister GetDestSSARegister() const;
 		SSARegisterStack GetDestSSARegisterStack() const;
 		SSAFlag GetDestSSAFlag() const;
+		uint32_t GetSemanticFlagClass() const;
+		uint32_t GetSemanticFlagGroup() const;
 		uint32_t GetPartialRegister() const;
 		SSARegister GetStackSSARegister() const;
 		SSARegister GetTopSSARegister() const;
@@ -696,6 +704,8 @@ namespace BinaryNinja
 		uint32_t GetRegister() const;
 		uint32_t GetRegisterStack() const;
 		uint32_t GetFlag() const;
+		uint32_t GetSemanticFlagClass() const;
+		uint32_t GetSemanticFlagGroup() const;
 		BNLowLevelILFlagCondition GetFlagCondition() const;
 		SSARegister GetSSARegister() const;
 		SSARegisterStack GetSSARegisterStack() const;
@@ -974,6 +984,11 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLAG_COND>: public LowLevelILInstructionBase
 	{
 		BNLowLevelILFlagCondition GetFlagCondition() const { return GetRawOperandAsFlagCondition(0); }
+		uint32_t GetSemanticFlagClass() const { return GetRawOperandAsRegister(1); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FLAG_GROUP>: public LowLevelILInstructionBase
+	{
+		uint32_t GetSemanticFlagGroup() const { return GetRawOperandAsRegister(0); }
 	};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_TRAP>: public LowLevelILInstructionBase
@@ -1083,6 +1098,7 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_LE>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_GE>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_GT>: public LowLevelILTwoOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_O>: public LowLevelILTwoOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FCMP_UO>: public LowLevelILTwoOperandInstruction {};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_ADC>: public LowLevelILTwoOperandWithCarryInstruction {};

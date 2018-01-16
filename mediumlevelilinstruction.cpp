@@ -1331,6 +1331,7 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 	case MLIL_FCMP_LE:
 	case MLIL_FCMP_GE:
 	case MLIL_FCMP_GT:
+	case MLIL_FCMP_O:
 	case MLIL_FCMP_UO:
 		AsTwoOperand().GetLeftExpr().VisitExprs(func);
 		AsTwoOperand().GetRightExpr().VisitExprs(func);
@@ -1561,6 +1562,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_FCMP_LE:
 	case MLIL_FCMP_GE:
 	case MLIL_FCMP_GT:
+	case MLIL_FCMP_O:
 	case MLIL_FCMP_UO:
 		return dest->AddExprWithLocation(operation, *this, size,
 			subExprHandler(AsTwoOperand().GetLeftExpr()), subExprHandler(AsTwoOperand().GetRightExpr()));
@@ -2703,6 +2705,12 @@ ExprId MediumLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, Ex
 ExprId MediumLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_FCMP_GT, loc, size, a, b);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_O, loc, size, a, b);
 }
 
 

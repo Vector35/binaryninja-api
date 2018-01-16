@@ -224,6 +224,22 @@ char* Architecture::GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags)
 }
 
 
+char* Architecture::GetSemanticFlagClassNameCallback(void* ctxt, uint32_t semClass)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetSemanticFlagClassName(semClass);
+	return BNAllocString(result.c_str());
+}
+
+
+char* Architecture::GetSemanticFlagGroupNameCallback(void* ctxt, uint32_t semGroup)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetSemanticFlagGroupName(semGroup);
+	return BNAllocString(result.c_str());
+}
+
+
 uint32_t* Architecture::GetFullWidthRegistersCallback(void* ctxt, size_t* count)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -276,6 +292,32 @@ uint32_t* Architecture::GetAllFlagWriteTypesCallback(void* ctxt, size_t* count)
 }
 
 
+uint32_t* Architecture::GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllSemanticFlagClasses();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* Architecture::GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllSemanticFlagGroups();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
 BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -283,16 +325,55 @@ BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag)
 }
 
 
-uint32_t* Architecture::GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count)
+uint32_t* Architecture::GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+	uint32_t semClass, size_t* count)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	vector<uint32_t> flags = arch->GetFlagsRequiredForFlagCondition(cond);
+	vector<uint32_t> flags = arch->GetFlagsRequiredForFlagCondition(cond, semClass);
 	*count = flags.size();
 
 	uint32_t* result = new uint32_t[flags.size()];
 	for (size_t i = 0; i < flags.size(); i++)
 		result[i] = flags[i];
 	return result;
+}
+
+
+uint32_t* Architecture::GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> flags = arch->GetFlagsRequiredForSemanticFlagGroup(semGroup);
+	*count = flags.size();
+
+	uint32_t* result = new uint32_t[flags.size()];
+	for (size_t i = 0; i < flags.size(); i++)
+		result[i] = flags[i];
+	return result;
+}
+
+
+BNFlagConditionForSemanticClass* Architecture::GetFlagConditionsForSemanticFlagGroupCallback(void* ctxt,
+	uint32_t semGroup, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	map<uint32_t, BNLowLevelILFlagCondition> conditions = arch->GetFlagConditionsForSemanticFlagGroup(semGroup);
+	*count = conditions.size();
+
+	BNFlagConditionForSemanticClass* result = new BNFlagConditionForSemanticClass[conditions.size()];
+	size_t i = 0;
+	for (auto& j : conditions)
+	{
+		result[i].semanticClass = j.first;
+		result[i].condition = j.second;
+		i++;
+	}
+	return result;
+}
+
+
+void Architecture::FreeFlagConditionsForSemanticFlagGroupCallback(void*, BNFlagConditionForSemanticClass* conditions)
+{
+	delete[] conditions;
 }
 
 
@@ -309,6 +390,13 @@ uint32_t* Architecture::GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint3
 }
 
 
+uint32_t Architecture::GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->GetSemanticClassForFlagWriteType(writeType);
+}
+
+
 size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
 {
@@ -318,12 +406,20 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
 }
 
 
-size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass,
 	BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
 	LowLevelILFunction func(il);
-	return arch->GetFlagConditionLowLevelIL(cond, func);
+	return arch->GetFlagConditionLowLevelIL(cond, semClass, func);
+}
+
+
+size_t Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	LowLevelILFunction func(il);
+	return arch->GetSemanticFlagGroupLowLevelIL(semGroup, func);
 }
 
 
@@ -490,15 +586,24 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterName = GetRegisterNameCallback;
 	callbacks.getFlagName = GetFlagNameCallback;
 	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
+	callbacks.getSemanticFlagClassName = GetSemanticFlagClassNameCallback;
+	callbacks.getSemanticFlagGroupName = GetSemanticFlagGroupNameCallback;
 	callbacks.getFullWidthRegisters = GetFullWidthRegistersCallback;
 	callbacks.getAllRegisters = GetAllRegistersCallback;
 	callbacks.getAllFlags = GetAllFlagsCallback;
 	callbacks.getAllFlagWriteTypes = GetAllFlagWriteTypesCallback;
+	callbacks.getAllSemanticFlagClasses = GetAllSemanticFlagClassesCallback;
+	callbacks.getAllSemanticFlagGroups = GetAllSemanticFlagGroupsCallback;
 	callbacks.getFlagRole = GetFlagRoleCallback;
 	callbacks.getFlagsRequiredForFlagCondition = GetFlagsRequiredForFlagConditionCallback;
+	callbacks.getFlagsRequiredForSemanticFlagGroup = GetFlagsRequiredForSemanticFlagGroupCallback;
+	callbacks.getFlagConditionsForSemanticFlagGroup = GetFlagConditionsForSemanticFlagGroupCallback;
+	callbacks.freeFlagConditionsForSemanticFlagGroup = FreeFlagConditionsForSemanticFlagGroupCallback;
 	callbacks.getFlagsWrittenByFlagWriteType = GetFlagsWrittenByFlagWriteTypeCallback;
+	callbacks.getSemanticClassForFlagWriteType = GetSemanticClassForFlagWriteTypeCallback;
 	callbacks.getFlagWriteLowLevelIL = GetFlagWriteLowLevelILCallback;
 	callbacks.getFlagConditionLowLevelIL = GetFlagConditionLowLevelILCallback;
+	callbacks.getSemanticFlagGroupLowLevelIL = GetSemanticFlagGroupLowLevelILCallback;
 	callbacks.freeRegisterList = FreeRegisterListCallback;
 	callbacks.getRegisterInfo = GetRegisterInfoCallback;
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
@@ -621,6 +726,24 @@ string Architecture::GetFlagWriteTypeName(uint32_t flags)
 }
 
 
+string Architecture::GetSemanticFlagClassName(uint32_t semClass)
+{
+	if (semClass == 0)
+		return "";
+	char flagStr[32];
+	sprintf(flagStr, "semantic%" PRIu32, semClass);
+	return flagStr;
+}
+
+
+string Architecture::GetSemanticFlagGroupName(uint32_t semGroup)
+{
+	char flagStr[32];
+	sprintf(flagStr, "group%" PRIu32, semGroup);
+	return flagStr;
+}
+
+
 vector<uint32_t> Architecture::GetFullWidthRegisters()
 {
 	return vector<uint32_t>();
@@ -645,21 +768,51 @@ vector<uint32_t> Architecture::GetAllFlagWriteTypes()
 }
 
 
+vector<uint32_t> Architecture::GetAllSemanticFlagClasses()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetAllSemanticFlagGroups()
+{
+	return vector<uint32_t>();
+}
+
+
 BNFlagRole Architecture::GetFlagRole(uint32_t)
 {
 	return SpecialFlagRole;
 }
 
 
-vector<uint32_t> Architecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition)
+vector<uint32_t> Architecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition, uint32_t)
 {
 	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> Architecture::GetFlagsRequiredForSemanticFlagGroup(uint32_t)
+{
+	return vector<uint32_t>();
+}
+
+
+map<uint32_t, BNLowLevelILFlagCondition> Architecture::GetFlagConditionsForSemanticFlagGroup(uint32_t)
+{
+	return map<uint32_t, BNLowLevelILFlagCondition>();
 }
 
 
 vector<uint32_t> Architecture::GetFlagsWrittenByFlagWriteType(uint32_t)
 {
 	return vector<uint32_t>();
+}
+
+
+uint32_t Architecture::GetSemanticClassForFlagWriteType(uint32_t)
+{
+	return 0;
 }
 
 
@@ -681,7 +834,7 @@ size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, siz
 }
 
 
-ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t, LowLevelILFunction& il)
 {
 	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
 }
@@ -690,6 +843,12 @@ ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, 
 ExprId Architecture::GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
 {
 	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+}
+
+
+ExprId Architecture::GetSemanticFlagGroupLowLevelIL(uint32_t, LowLevelILFunction& il)
+{
+	return il.Unimplemented();
 }
 
 
@@ -1064,6 +1223,24 @@ string CoreArchitecture::GetFlagWriteTypeName(uint32_t flags)
 }
 
 
+string CoreArchitecture::GetSemanticFlagClassName(uint32_t semClass)
+{
+	char* name = BNGetArchitectureSemanticFlagClassName(m_object, semClass);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+string CoreArchitecture::GetSemanticFlagGroupName(uint32_t semGroup)
+{
+	char* name = BNGetArchitectureSemanticFlagGroupName(m_object, semGroup);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
 vector<uint32_t> CoreArchitecture::GetFullWidthRegisters()
 {
 	size_t count;
@@ -1120,22 +1297,79 @@ vector<uint32_t> CoreArchitecture::GetAllFlagWriteTypes()
 }
 
 
+vector<uint32_t> CoreArchitecture::GetAllSemanticFlagClasses()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureSemanticFlagClasses(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllSemanticFlagGroups()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureSemanticFlagGroups(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
 BNFlagRole CoreArchitecture::GetFlagRole(uint32_t flag)
 {
 	return BNGetArchitectureFlagRole(m_object, flag);
 }
 
 
-vector<uint32_t> CoreArchitecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond)
+vector<uint32_t> CoreArchitecture::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass)
 {
 	size_t count;
-	uint32_t* flags = BNGetArchitectureFlagsRequiredForFlagCondition(m_object, cond, &count);
+	uint32_t* flags = BNGetArchitectureFlagsRequiredForFlagCondition(m_object, cond, semClass, &count);
 
 	vector<uint32_t> result;
 	for (size_t i = 0; i < count; i++)
 		result.push_back(flags[i]);
 
 	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup)
+{
+	size_t count;
+	uint32_t* flags = BNGetArchitectureFlagsRequiredForSemanticFlagGroup(m_object, semGroup, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(flags[i]);
+
+	BNFreeRegisterList(flags);
+	return result;
+}
+
+
+map<uint32_t, BNLowLevelILFlagCondition> CoreArchitecture::GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup)
+{
+	size_t count;
+	BNFlagConditionForSemanticClass* conditions = BNGetArchitectureFlagConditionsForSemanticFlagGroup(m_object,
+		semGroup, &count);
+
+	map<uint32_t, BNLowLevelILFlagCondition> result;
+	for (size_t i = 0; i < count; i++)
+		result[conditions[i].semanticClass] = conditions[i].condition;
+
+	BNFreeFlagConditionsForSemanticFlagGroup(conditions);
 	return result;
 }
 
@@ -1154,6 +1388,12 @@ vector<uint32_t> CoreArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t write
 }
 
 
+uint32_t CoreArchitecture::GetSemanticClassForFlagWriteType(uint32_t writeType)
+{
+	return BNGetArchitectureSemanticClassForFlagWriteType(m_object, writeType);
+}
+
+
 size_t CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
 {
@@ -1162,9 +1402,16 @@ size_t CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t
 }
 
 
-ExprId CoreArchitecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+ExprId CoreArchitecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+	uint32_t semClass, LowLevelILFunction& il)
 {
-	return (ExprId)BNGetArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+	return (ExprId)BNGetArchitectureFlagConditionLowLevelIL(m_object, cond, semClass, il.GetObject());
+}
+
+
+ExprId CoreArchitecture::GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il)
+{
+	return (ExprId)BNGetArchitectureSemanticFlagGroupLowLevelIL(m_object, semGroup, il.GetObject());
 }
 
 

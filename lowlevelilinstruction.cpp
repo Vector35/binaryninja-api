@@ -1681,7 +1681,7 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 		return dest->RegisterStackTopRelative(size, GetSourceRegisterStack<LLIL_REG_STACK_REL>(),
 			subExprHandler(GetSourceExpr<LLIL_REG_STACK_REL>()), *this);
 	case LLIL_REG_STACK_POP:
-		return dest->RegisterStackPop(size, GetSourceRegisterStack<LLIL_REG_STACK_POP>(), *this);
+		return dest->RegisterStackPop(size, GetSourceRegisterStack<LLIL_REG_STACK_POP>(), flags, *this);
 	case LLIL_REG_STACK_REL_SSA:
 		return dest->RegisterStackTopRelativeSSA(size, GetSourceSSARegisterStack<LLIL_REG_STACK_REL_SSA>(),
 			subExprHandler(GetSourceExpr<LLIL_REG_STACK_REL_SSA>()),
@@ -1828,6 +1828,7 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_FCMP_LE:
 	case LLIL_FCMP_GE:
 	case LLIL_FCMP_GT:
+	case LLIL_FCMP_O:
 	case LLIL_FCMP_UO:
 		return dest->AddExprWithLocation(operation, *this, size, flags,
 			subExprHandler(AsTwoOperand().GetLeftExpr()), subExprHandler(AsTwoOperand().GetRightExpr()));
@@ -2436,9 +2437,9 @@ ExprId LowLevelILFunction::RegisterStackTopRelative(size_t size, uint32_t regSta
 }
 
 
-ExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t regStack, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, 0, regStack);
+	return AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, flags, regStack);
 }
 
 

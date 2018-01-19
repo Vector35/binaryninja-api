@@ -1613,7 +1613,7 @@ namespace BinaryNinja
 		static uint32_t* GetAllFlagWriteTypesCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count);
-		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag);
+		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t semClass);
 		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond,
 			uint32_t semClass, size_t* count);
 		static uint32_t* GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count);
@@ -1691,7 +1691,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses();
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups();
-		virtual BNFlagRole GetFlagRole(uint32_t flag);
+		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0);
 		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
 			uint32_t semClass = 0);
 		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup);
@@ -1703,7 +1703,7 @@ namespace BinaryNinja
 		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
 			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
-		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
 		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
@@ -1836,7 +1836,7 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
-		virtual BNFlagRole GetFlagRole(uint32_t flag) override;
+		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
 		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
 			uint32_t semClass = 0) override;
 		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
@@ -2531,7 +2531,8 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackPop(size_t size, uint32_t regStack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
 			const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,

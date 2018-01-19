@@ -208,7 +208,7 @@ class Architecture(object):
 			self._flag_roles = {}
 			self.__dict__["flag_roles"] = {}
 			for flag in self.__dict__["flags"]:
-				role = FlagRole(core.BNGetArchitectureFlagRole(self.handle, self._flags[flag]))
+				role = FlagRole(core.BNGetArchitectureFlagRole(self.handle, self._flags[flag], 0))
 				self.__dict__["flag_roles"][flag] = role
 				self._flag_roles[self._flags[flag]] = role
 
@@ -840,21 +840,28 @@ class Architecture(object):
 			count[0] = 0
 			return None
 
-	def _get_flag_role(self, ctxt, flag):
+	def _get_flag_role(self, ctxt, flag, sem_class):
 		try:
-			if flag in self._flag_roles:
-				return self._flag_roles[flag]
-			return FlagRole.SpecialFlagRole
+			if sem_class in self._semantic_flag_classes_by_index:
+				sem_class = self._semantic_flag_classes_by_index[sem_class]
+			else:
+				sem_class = None
+			return self.perform_get_flag_role(flag, sem_class)
 		except KeyError:
 			log.log_error(traceback.format_exc())
-			return None
+			return FlagRole.SpecialFlagRole
+
+	def perform_get_flag_role(self, flag, sem_class):
+		if flag in self._flag_roles:
+			return self._flag_roles[flag]
+		return FlagRole.SpecialFlagRole
 
 	def _get_flags_required_for_flag_condition(self, ctxt, cond, sem_class, count):
 		try:
 			if sem_class in self._semantic_flag_classes_by_index:
 				sem_class = self._semantic_flag_classes_by_index[sem_class]
 			else:
-				sem_class = 0
+				sem_class = None
 			flag_names = self.perform_get_flags_required_for_flag_condition(cond, sem_class)
 			flags = []
 			for name in flag_names:
@@ -1322,7 +1329,7 @@ class Architecture(object):
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
 		:rtype: LowLevelILExpr
 		"""
-		return self.get_default_flag_condition_low_level_il(cond, il)
+		return self.get_default_flag_condition_low_level_il(cond, sem_class, il)
 
 	@abc.abstractmethod
 	def perform_get_semantic_flag_group_low_level_il(self, sem_group, il):
@@ -1744,6 +1751,19 @@ class Architecture(object):
 		"""
 		return self._semantic_flag_groups[sem_group]
 
+	def get_flag_role(self, flag, sem_class = None):
+		"""
+		``get_flag_role`` gets the role of a given flag.
+
+		:param int flag: flag
+		:param int sem_class: optional semantic flag class
+		:return: flag role
+		:rtype: FlagRole
+		"""
+		flag = self.get_flag_index(flag)
+		sem_class = self.get_semantic_flag_class_index(sem_class)
+		return FlagRole(core.BNGetArchitectureFlagRole(self.handle, flag, sem_class))
+
 	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""
 		:param LowLevelILOperation op:
@@ -1801,13 +1821,15 @@ class Architecture(object):
 		"""
 		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
 
-	def get_default_flag_condition_low_level_il(self, cond, il):
+	def get_default_flag_condition_low_level_il(self, cond, sem_class, il):
 		"""
 		:param LowLevelILFlagCondition cond:
 		:param LowLevelILFunction il:
+		:param str sem_class:
 		:rtype: LowLevelILExpr
 		"""
-		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond, il.handle))
+		class_index = self.get_semantic_flag_class_index(sem_class)
+		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond, class_index, il.handle))
 
 	def get_semantic_flag_group_low_level_il(self, sem_group, il):
 		"""

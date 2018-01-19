@@ -318,10 +318,10 @@ uint32_t* Architecture::GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* cou
 }
 
 
-BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag)
+BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t semClass)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	return arch->GetFlagRole(flag);
+	return arch->GetFlagRole(flag, semClass);
 }
 
 
@@ -780,7 +780,7 @@ vector<uint32_t> Architecture::GetAllSemanticFlagGroups()
 }
 
 
-BNFlagRole Architecture::GetFlagRole(uint32_t)
+BNFlagRole Architecture::GetFlagRole(uint32_t, uint32_t)
 {
 	return SpecialFlagRole;
 }
@@ -819,8 +819,7 @@ uint32_t Architecture::GetSemanticClassForFlagWriteType(uint32_t)
 size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
-	(void)flagWriteType;
-	BNFlagRole role = GetFlagRole(flag);
+	BNFlagRole role = GetFlagRole(flag, GetSemanticClassForFlagWriteType(flagWriteType));
 	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
 		operandCount, il.GetObject());
 }
@@ -834,15 +833,17 @@ size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, siz
 }
 
 
-ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t, LowLevelILFunction& il)
+ExprId Architecture::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+	uint32_t semClass, LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, semClass, il.GetObject());
 }
 
 
-ExprId Architecture::GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il)
+ExprId Architecture::GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+	uint32_t semClass, LowLevelILFunction& il)
 {
-	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, il.GetObject());
+	return BNGetDefaultArchitectureFlagConditionLowLevelIL(m_object, cond, semClass, il.GetObject());
 }
 
 
@@ -1325,9 +1326,9 @@ vector<uint32_t> CoreArchitecture::GetAllSemanticFlagGroups()
 }
 
 
-BNFlagRole CoreArchitecture::GetFlagRole(uint32_t flag)
+BNFlagRole CoreArchitecture::GetFlagRole(uint32_t flag, uint32_t semClass)
 {
-	return BNGetArchitectureFlagRole(m_object, flag);
+	return BNGetArchitectureFlagRole(m_object, flag, semClass);
 }
 
 

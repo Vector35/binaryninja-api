@@ -486,6 +486,7 @@ namespace BinaryNinja
 	};
 
 	class Architecture;
+	class BackgroundTask;
 	class Platform;
 	class Type;
 	class DataBuffer;
@@ -1266,6 +1267,7 @@ namespace BinaryNinja
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		BNAnalysisProgress GetAnalysisProgress();
+		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);

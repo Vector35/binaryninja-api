@@ -1351,6 +1351,16 @@ BNAnalysisProgress BinaryView::GetAnalysisProgress()
 }
 
 
+Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
+{
+	BNBackgroundTask* task = BNGetBackgroundAnalysisTask(m_object);
+	if (!task)
+		return nullptr;
+
+	return new BackgroundTask(BNNewBackgroundTaskReference(task));
+}
+
+
 uint64_t BinaryView::GetNextFunctionStartAfterAddress(uint64_t addr)
 {
 	return BNGetNextFunctionStartAfterAddress(m_object, addr);

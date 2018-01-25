@@ -471,6 +471,7 @@ class Type(object):
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
+		:param string altname: alternate name for type
 		"""
 		if sign is None:
 			sign = BoolWithConfidence(True, confidence = 0)
@@ -484,8 +485,14 @@ class Type(object):
 		return Type(core.BNCreateIntegerType(width, sign_conf, altname))
 
 	@classmethod
-	def float(self, width):
-		return Type(core.BNCreateFloatType(width))
+	def float(self, width, altname=""):
+		"""
+		``float`` class method for creating an floating point Types.
+
+		:param int width: width of the floating point number in bytes
+		:param string altname: alternate name for type
+		"""
+		return Type(core.BNCreateFloatType(width, altname))
 
 	@classmethod
 	def structure_type(self, structure_type):

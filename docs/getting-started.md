@@ -210,15 +210,15 @@ By default the interactive python prompt has a number of convenient helper funct
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.BinaryView.html)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.Function.html)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)
-- `current_llil`: the current [LowLevelILBasicBlock](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html)
-- `current_mlil`: the current [MediumLevelILBasicBlock](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILBasicBlock.html)
+- `current_llil`: the current [LowLevelILFunction](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html)
+- `current_mlil`: the current [MediumLevelILFunction](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILFunction.html)
 - `current_selection`: a tuple of the start and end addresses of the current selection
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 
 Note
 !!! Tip "Note"
-    The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who with to implement their own bindings.
+    The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who wish to implement their own bindings.
 
 ## Using Plugins
 

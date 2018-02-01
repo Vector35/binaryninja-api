@@ -33,6 +33,7 @@ import callingconvention
 import platform
 import log
 import databuffer
+import types
 
 
 class _ArchitectureMetaClass(type):
@@ -128,6 +129,7 @@ class Architecture(object):
 	flags_written_by_flag_write_type = {}
 	semantic_class_for_flag_write_type = {}
 	reg_stacks = {}
+	intrinsics = {}
 	__metaclass__ = _ArchitectureMetaClass
 	next_address = 0
 
@@ -304,6 +306,27 @@ class Architecture(object):
 				top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
 				self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top, regs[i])
 			core.BNFreeRegisterList(regs)
+
+			count = ctypes.c_ulonglong()
+			intrinsics = core.BNGetAllArchitectureIntrinsics(self.handle, count)
+			self.__dict__["intrinsics"] = {}
+			for i in xrange(0, count.value):
+				name = core.BNGetArchitectureIntrinsicName(self.handle, intrinsics[i])
+				input_count = ctypes.c_ulonglong()
+				inputs = core.BNGetArchitectureIntrinsicInputs(self.handle, intrinsics[i], input_count)
+				input_list = []
+				for j in xrange(0, input_count.value):
+					input_name = inputs[j].name
+					type_obj = types.Type(core.BNNewTypeReference(inputs[j].type), confidence = inputs[j].typeConfidence)
+					input_list.append(function.IntrinsicInput(type_obj, input_name))
+				core.BNFreeNameAndTypeList(inputs, input_count.value)
+				output_count = ctypes.c_ulonglong()
+				outputs = core.BNGetArchitectureIntrinsicOutputs(self.handle, intrinsics[i], output_count)
+				output_list = []
+				for j in xrange(0, output_count.value):
+					output_list.append(types.Type(core.BNNewTypeReference(outputs[j].type), confidence = outputs[j].confidence))
+				core.BNFreeOutputTypeList(outputs, output_count.value)
+				self.intrinsics[name] = function.IntrinsicInfo(input_list, output_list)
 		else:
 			startup._init_plugins()
 
@@ -365,6 +388,12 @@ class Architecture(object):
 			self._cb.getRegisterStackName = self._cb.getRegisterStackName.__class__(self._get_register_stack_name)
 			self._cb.getAllRegisterStacks = self._cb.getAllRegisterStacks.__class__(self._get_all_register_stacks)
 			self._cb.getRegisterStackInfo = self._cb.getRegisterStackInfo.__class__(self._get_register_stack_info)
+			self._cb.getIntrinsicName = self._cb.getIntrinsicName.__class__(self._get_intrinsic_name)
+			self._cb.getAllIntrinsics = self._cb.getAllIntrinsics.__class__(self._get_all_intrinsics)
+			self._cb.getIntrinsicInputs = self._cb.getIntrinsicInputs.__class__(self._get_intrinsic_inputs)
+			self._cb.freeNameAndTypeList = self._cb.freeNameAndTypeList.__class__(self._free_name_and_type_list)
+			self._cb.getIntrinsicOutputs = self._cb.getIntrinsicOutputs.__class__(self._get_intrinsic_outputs)
+			self._cb.freeTypeList = self._cb.freeTypeList.__class__(self._free_type_list)
 			self._cb.assemble = self._cb.assemble.__class__(self._assemble)
 			self._cb.isNeverBranchPatchAvailable = self._cb.isNeverBranchPatchAvailable.__class__(
 				self._is_never_branch_patch_available)
@@ -514,9 +543,28 @@ class Architecture(object):
 
 			self.__dict__["global_regs"] = self.__class__.global_regs
 
+			self._intrinsics = {}
+			self._intrinsics_by_index = {}
+			self.__dict__["intrinsics"] = self.__class__.intrinsics
+			intrinsic_index = 0
+			for intrinsic in self.__class__.intrinsics.keys():
+				if intrinsic not in self._intrinsics:
+					info = self.__class__.intrinsics[intrinsic]
+					for i in xrange(0, len(info.inputs)):
+						if isinstance(info.inputs[i], types.Type):
+							info.inputs[i] = function.IntrinsicInput(info.inputs[i])
+						elif isinstance(info.inputs[i], tuple):
+							info.inputs[i] = function.IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
+					info.index = intrinsic_index
+					self._intrinsics[intrinsic] = intrinsic_index
+					self._intrinsics_by_index[intrinsic_index] = (intrinsic, info)
+					intrinsic_index += 1
+
 			self._pending_reg_lists = {}
 			self._pending_token_lists = {}
 			self._pending_condition_lists = {}
+			self._pending_name_and_type_lists = {}
+			self._pending_type_lists = {}
 
 	def __eq__(self, value):
 		if not isinstance(value, Architecture):
@@ -1116,6 +1164,95 @@ class Architecture(object):
 			result[0].topRelativeCount = 0
 			result[0].stackTopReg = 0
 
+	def _get_intrinsic_name(self, ctxt, intrinsic):
+		try:
+			if intrinsic in self._intrinsics_by_index:
+				return core.BNAllocString(self._intrinsics_by_index[intrinsic][0])
+			return core.BNAllocString("")
+		except (KeyError, OSError):
+			log.log_error(traceback.format_exc())
+			return core.BNAllocString("")
+
+	def _get_all_intrinsics(self, ctxt, count):
+		try:
+			regs = self._intrinsics_by_index.keys()
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in xrange(0, len(regs)):
+				reg_buf[i] = regs[i]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_intrinsic_inputs(self, ctxt, intrinsic, count):
+		try:
+			if intrinsic in self._intrinsics_by_index:
+				inputs = self._intrinsics_by_index[intrinsic][1].inputs
+				count[0] = len(inputs)
+				input_buf = (core.BNNameAndType * len(inputs))()
+				for i in xrange(0, len(inputs)):
+					input_buf[i].name = inputs[i].name
+					input_buf[i].type = core.BNNewTypeReference(inputs[i].type.handle)
+					input_buf[i].typeConfidence = inputs[i].type.confidence
+				result = ctypes.cast(input_buf, ctypes.c_void_p)
+				self._pending_name_and_type_lists[result.value] = (result, input_buf, len(inputs))
+				return result.value
+			count[0] = 0
+			return None
+		except:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _free_name_and_type_list(self, ctxt, buf_raw):
+		try:
+			buf = ctypes.cast(buf_raw, ctypes.c_void_p)
+			if buf.value not in self._pending_name_and_type_lists:
+				raise ValueError("freeing name and type list that wasn't allocated")
+			name_and_types = self._pending_name_and_type_lists[buf.value][1]
+			count = self._pending_name_and_type_lists[buf.value][2]
+			for i in xrange(0, count):
+				core.BNFreeType(name_and_types[i].type)
+			del self._pending_name_and_type_lists[buf.value]
+		except (ValueError, KeyError):
+			log.log_error(traceback.format_exc())
+
+	def _get_intrinsic_outputs(self, ctxt, intrinsic, count):
+		try:
+			if intrinsic in self._intrinsics_by_index:
+				outputs = self._intrinsics_by_index[intrinsic][1].outputs
+				count[0] = len(outputs)
+				output_buf = (core.BNTypeWithConfidence * len(outputs))()
+				for i in xrange(0, len(outputs)):
+					output_buf[i].type = core.BNNewTypeReference(outputs[i].handle)
+					output_buf[i].confidence = outputs[i].confidence
+				result = ctypes.cast(output_buf, ctypes.c_void_p)
+				self._pending_type_lists[result.value] = (result, output_buf, len(outputs))
+				return result.value
+			count[0] = 0
+			return None
+		except:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _free_type_list(self, ctxt, buf_raw):
+		try:
+			buf = ctypes.cast(buf_raw, ctypes.c_void_p)
+			if buf.value not in self._pending_type_lists:
+				raise ValueError("freeing type list that wasn't allocated")
+			types = self._pending_type_lists[buf.value][1]
+			count = self._pending_type_lists[buf.value][2]
+			for i in xrange(0, count):
+				core.BNFreeType(types[i].type)
+			del self._pending_type_lists[buf.value]
+		except (ValueError, KeyError):
+			log.log_error(traceback.format_exc())
+
 	def _assemble(self, ctxt, code, addr, result, errors):
 		try:
 			data, error_str = self.perform_assemble(code, addr)
@@ -1700,6 +1837,23 @@ class Architecture(object):
 		elif isinstance(sem_group, lowlevelil.ILSemanticFlagGroup):
 			return sem_group.index
 		return sem_group
+
+	def get_intrinsic_name(self, intrinsic):
+		"""
+		``get_intrinsic_name`` gets an intrinsic name from an intrinsic number.
+
+		:param int intrinsic: intrinsic number
+		:return: the corresponding intrinsic string
+		:rtype: str
+		"""
+		return core.BNGetArchitectureIntrinsicName(self.handle, intrinsic)
+
+	def get_intrinsic_index(self, intrinsic):
+		if isinstance(intrinsic, str):
+			return self._intrinsics[intrinsic]
+		elif isinstance(intrinsic, lowlevelil.ILIntrinsic):
+			return intrinsic.index
+		return intrinsic
 
 	def get_flag_write_type_name(self, write_type):
 		"""

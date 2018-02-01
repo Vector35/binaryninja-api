@@ -150,6 +150,8 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [("output", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_BP: [],
 		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
+		MediumLevelILOperation.MLIL_INTRINSIC: [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_INTRINSIC_SSA: [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_UNDEF: [],
 		MediumLevelILOperation.MLIL_UNIMPL: [],
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
@@ -223,6 +225,8 @@ class MediumLevelILInstruction(object):
 					value = instr.operands[i]
 			elif operand_type == "expr":
 				value = MediumLevelILInstruction(func, instr.operands[i])
+			elif operand_type == "intrinsic":
+				value = lowlevelil.ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "var":
 				value = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 			elif operand_type == "var_ssa":

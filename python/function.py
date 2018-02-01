@@ -427,7 +427,7 @@ class Function(object):
 		"""Function platform (read-only)"""
 		if self._platform:
 			return self._platform
-		else: 
+		else:
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
@@ -1876,6 +1876,27 @@ class RegisterStackInfo(object):
 
 	def __repr__(self):
 		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)
+
+
+class IntrinsicInput(object):
+	def __init__(self, type_obj, name=""):
+		self.name = name
+		self.type = type_obj
+
+	def __repr__(self):
+		if len(self.name) == 0:
+			return "<input: %s>" % str(self.type)
+		return "<input: %s %s>" % (str(self.type), self.name)
+
+
+class IntrinsicInfo(object):
+	def __init__(self, inputs, outputs, index=None):
+		self.inputs = inputs
+		self.outputs = outputs
+		self.index = index
+
+	def __repr__(self):
+		return "<intrinsic: %s -> %s>" % (repr(self.inputs), repr(self.outputs))
 
 
 class InstructionBranch(object):

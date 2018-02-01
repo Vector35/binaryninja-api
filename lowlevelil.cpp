@@ -216,6 +216,17 @@ ExprId LowLevelILFunction::AddIndexList(const vector<size_t> operands)
 }
 
 
+ExprId LowLevelILFunction::AddRegisterOrFlagList(const vector<RegisterOrFlag>& regs)
+{
+	uint64_t* operandList = new uint64_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		operandList[i] = regs[i].ToIdentifier();
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regs.size());
+	delete[] operandList;
+	return result;
+}
+
+
 ExprId LowLevelILFunction::AddSSARegisterList(const vector<SSARegister>& regs)
 {
 	uint64_t* operandList = new uint64_t[regs.size() * 2];
@@ -253,6 +264,20 @@ ExprId LowLevelILFunction::AddSSAFlagList(const vector<SSAFlag>& flags)
 		operandList[(i * 2) + 1] = flags[i].version;
 	}
 	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, flags.size() * 2);
+	delete[] operandList;
+	return result;
+}
+
+
+ExprId LowLevelILFunction::AddSSARegisterOrFlagList(const vector<SSARegisterOrFlag>& regs)
+{
+	uint64_t* operandList = new uint64_t[regs.size() * 2];
+	for (size_t i = 0; i < regs.size(); i++)
+	{
+		operandList[i * 2] = regs[i].regOrFlag.ToIdentifier();
+		operandList[(i * 2) + 1] = regs[i].version;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regs.size() * 2);
 	delete[] operandList;
 	return result;
 }

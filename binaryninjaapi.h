@@ -2678,7 +2678,8 @@ namespace BinaryNinja
 		ExprId BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Intrinsic(const std::vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+			const std::vector<ExprId>& params, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
 			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());

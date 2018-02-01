@@ -70,6 +70,7 @@ namespace BinaryNinja
 	{
 		IntegerMediumLevelOperand,
 		IndexMediumLevelOperand,
+		IntrinsicMediumLevelOperand,
 		ExprMediumLevelOperand,
 		VariableMediumLevelOperand,
 		SSAVariableMediumLevelOperand,
@@ -100,6 +101,7 @@ namespace BinaryNinja
 		OffsetMediumLevelOperandUsage,
 		ConstantMediumLevelOperandUsage,
 		VectorMediumLevelOperandUsage,
+		IntrinsicMediumLevelOperandUsage,
 		TargetMediumLevelOperandUsage,
 		TrueTargetMediumLevelOperandUsage,
 		FalseTargetMediumLevelOperandUsage,
@@ -110,6 +112,7 @@ namespace BinaryNinja
 		OutputVariablesMediumLevelOperandUsage,
 		OutputVariablesSubExprMediumLevelOperandUsage,
 		OutputSSAVariablesMediumLevelOperandUsage,
+		OutputSSAVariablesSubExprMediumLevelOperandUsage,
 		OutputSSAMemoryVersionMediumLevelOperandUsage,
 		ParameterExprsMediumLevelOperandUsage,
 		SourceExprsMediumLevelOperandUsage,
@@ -485,6 +488,7 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> uint64_t GetOffset() const { return As<N>().GetOffset(); }
 		template <BNMediumLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
 		template <BNMediumLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
+		template <BNMediumLevelILOperation N> uint32_t GetIntrinsic() const { return As<N>().GetIntrinsic(); }
 		template <BNMediumLevelILOperation N> size_t GetTarget() const { return As<N>().GetTarget(); }
 		template <BNMediumLevelILOperation N> size_t GetTrueTarget() const { return As<N>().GetTrueTarget(); }
 		template <BNMediumLevelILOperation N> size_t GetFalseTarget() const { return As<N>().GetFalseTarget(); }
@@ -535,6 +539,7 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		int64_t GetConstant() const;
 		int64_t GetVector() const;
+		uint32_t GetIntrinsic() const;
 		size_t GetTarget() const;
 		size_t GetTrueTarget() const;
 		size_t GetFalseTarget() const;
@@ -567,6 +572,7 @@ namespace BinaryNinja
 
 		uint64_t GetInteger() const;
 		size_t GetIndex() const;
+		uint32_t GetIntrinsic() const;
 		MediumLevelILInstruction GetExpr() const;
 		Variable GetVariable() const;
 		SSAVariable GetSSAVariable() const;
@@ -900,6 +906,20 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_GOTO>: public MediumLevelILInstructionBase
 	{
 		size_t GetTarget() const { return GetRawOperandAsIndex(0); }
+	};
+
+	template <> struct MediumLevelILInstructionAccessor<MLIL_INTRINSIC>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILVariableList GetOutputVariables() const { return GetRawOperandAsVariableList(0); }
+		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(2); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_INTRINSIC_SSA>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsSSAVariableList(0); }
+		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(2); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
+		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TRAP>: public MediumLevelILInstructionBase

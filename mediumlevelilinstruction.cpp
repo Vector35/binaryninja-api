@@ -54,6 +54,7 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType>
 		{OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
 		{ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
 		{VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
+		{IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
 		{TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 		{TrueTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 		{FalseTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
@@ -64,6 +65,7 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType>
 		{OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
 		{OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
 		{OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+		{OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
 		{OutputSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
 		{ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
 		{SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
@@ -127,23 +129,27 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_SYSCALL, {OutputVariablesMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
 		{MLIL_SYSCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage,
 			ParameterVariablesMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-		{MLIL_CALL_SSA, {OutputSSAVariablesMediumLevelOperandUsage,
+		{MLIL_CALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
 			OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
 			ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-		{MLIL_CALL_UNTYPED_SSA, {OutputSSAVariablesMediumLevelOperandUsage,
+		{MLIL_CALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
 			OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
 			ParameterSSAVariablesMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage,
 			StackExprMediumLevelOperandUsage}},
-		{MLIL_SYSCALL_SSA, {OutputSSAVariablesMediumLevelOperandUsage,
+		{MLIL_SYSCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
 			OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage,
 			SourceMemoryVersionMediumLevelOperandUsage}},
-		{MLIL_SYSCALL_UNTYPED_SSA, {OutputSSAVariablesMediumLevelOperandUsage,
+		{MLIL_SYSCALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
 			OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterSSAVariablesMediumLevelOperandUsage,
 			ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 		{MLIL_RET, {SourceExprsMediumLevelOperandUsage}},
 		{MLIL_IF, {ConditionExprMediumLevelOperandUsage, TrueTargetMediumLevelOperandUsage,
 			FalseTargetMediumLevelOperandUsage}},
 		{MLIL_GOTO, {TargetMediumLevelOperandUsage}},
+		{MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
+			ParameterExprsMediumLevelOperandUsage}},
+		{MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
+			ParameterExprsMediumLevelOperandUsage}},
 		{MLIL_TRAP, {VectorMediumLevelOperandUsage}},
 		{MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
 		{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
@@ -243,7 +249,7 @@ static unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperan
 				// Represented as subexpression, so only takes one slot even though it is a list
 				operand++;
 				break;
-			case OutputSSAVariablesMediumLevelOperandUsage:
+			case OutputSSAVariablesSubExprMediumLevelOperandUsage:
 				// OutputSSAMemoryVersionMediumLevelOperandUsage follows at same operand
 				break;
 			case ParameterSSAVariablesMediumLevelOperandUsage:
@@ -681,6 +687,14 @@ size_t MediumLevelILOperand::GetIndex() const
 }
 
 
+uint32_t MediumLevelILOperand::GetIntrinsic() const
+{
+	if (m_type != IntrinsicMediumLevelOperand)
+		throw MediumLevelILInstructionAccessException();
+	return (uint32_t)m_instr.GetRawOperandAsInteger(m_operandIndex);
+}
+
+
 MediumLevelILInstruction MediumLevelILOperand::GetExpr() const
 {
 	if (m_type != ExprMediumLevelOperand)
@@ -730,7 +744,7 @@ MediumLevelILSSAVariableList MediumLevelILOperand::GetSSAVariableList() const
 {
 	if (m_type != SSAVariableListMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if ((m_usage == OutputSSAVariablesMediumLevelOperandUsage) ||
+	if ((m_usage == OutputSSAVariablesSubExprMediumLevelOperandUsage) ||
 		(m_usage == ParameterSSAVariablesMediumLevelOperandUsage))
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSAVariableList(1);
 	return m_instr.GetRawOperandAsSSAVariableList(m_operandIndex);
@@ -1344,6 +1358,14 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		AsTwoOperandWithCarry().GetRightExpr().VisitExprs(func);
 		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
 		break;
+	case MLIL_INTRINSIC:
+		for (auto& i : GetParameterExprs<MLIL_INTRINSIC>())
+			i.VisitExprs(func);
+		break;
+	case MLIL_INTRINSIC_SSA:
+		for (auto& i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+			i.VisitExprs(func);
+		break;
 	default:
 		break;
 	}
@@ -1609,6 +1631,16 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->Breakpoint(*this);
 	case MLIL_TRAP:
 		return dest->Trap(GetVector<MLIL_TRAP>(), *this);
+	case MLIL_INTRINSIC:
+		for (auto& i : GetParameterExprs<MLIL_INTRINSIC>())
+			params.push_back(subExprHandler(i));
+		return dest->Intrinsic(GetOutputVariables<MLIL_INTRINSIC>(),
+			GetIntrinsic<MLIL_INTRINSIC>(), params, *this);
+	case MLIL_INTRINSIC_SSA:
+		for (auto& i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->IntrinsicSSA(GetOutputSSAVariables<MLIL_INTRINSIC_SSA>(),
+			GetIntrinsic<MLIL_INTRINSIC_SSA>(), params, *this);
 	case MLIL_UNDEF:
 		return dest->Undefined(*this);
 	case MLIL_UNIMPL:
@@ -1796,6 +1828,15 @@ int64_t MediumLevelILInstruction::GetVector() const
 }
 
 
+uint32_t MediumLevelILInstruction::GetIntrinsic() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(IntrinsicMediumLevelOperandUsage, operandIndex))
+		return (uint32_t)GetRawOperandAsInteger(operandIndex);
+	throw MediumLevelILInstructionAccessException();
+}
+
+
 size_t MediumLevelILInstruction::GetTarget() const
 {
 	size_t operandIndex;
@@ -1878,6 +1919,8 @@ MediumLevelILSSAVariableList MediumLevelILInstruction::GetOutputSSAVariables() c
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OutputSSAVariablesMediumLevelOperandUsage, operandIndex))
+		return GetRawOperandAsSSAVariableList(operandIndex);
+	if (GetOperandIndexForUsage(OutputSSAVariablesSubExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSAVariableList(1);
 	throw MediumLevelILInstructionAccessException();
 }
@@ -2574,6 +2617,22 @@ ExprId MediumLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 ExprId MediumLevelILFunction::Trap(int64_t vector, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_TRAP, loc, 0, vector);
+}
+
+
+ExprId MediumLevelILFunction::Intrinsic(const vector<Variable>& outputs, uint32_t intrinsic,
+	const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_INTRINSIC, loc, 0, outputs.size(), AddVariableList(outputs),
+		intrinsic, params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::IntrinsicSSA(const vector<SSAVariable>& outputs, uint32_t intrinsic,
+	const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, 0, outputs.size() * 2, AddSSAVariableList(outputs),
+		intrinsic, params.size(), AddOperandList(params));
 }
 
 

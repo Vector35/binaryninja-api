@@ -352,6 +352,7 @@ extern "C"
 		LLIL_SYSCALL,
 		LLIL_BP,
 		LLIL_TRAP,
+		LLIL_INTRINSIC,
 		LLIL_UNDEF,
 		LLIL_UNIMPL,
 		LLIL_UNIMPL_MEM,
@@ -394,11 +395,12 @@ extern "C"
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
-		LLIL_CALL_PARAM_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_CALL_PARAM, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA instructions
 		LLIL_CALL_STACK_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_LOAD_SSA,
 		LLIL_STORE_SSA,
+		LLIL_INTRINSIC_SSA,
 		LLIL_REG_PHI,
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
@@ -858,6 +860,7 @@ extern "C"
 		MLIL_ADD_OVERFLOW,
 		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
 		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
+		MLIL_INTRINSIC, // Not valid in SSA form (see MLIL_INTRINSIC_SSA)
 		MLIL_BP,
 		MLIL_TRAP,
 		MLIL_UNDEF,
@@ -905,6 +908,7 @@ extern "C"
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
 		MLIL_STORE_STRUCT_SSA,
+		MLIL_INTRINSIC_SSA,
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI
 	};
@@ -1077,6 +1081,19 @@ extern "C"
 		BNLowLevelILFlagCondition condition;
 	};
 
+	struct BNNameAndType
+	{
+		char* name;
+		BNType* type;
+		uint8_t typeConfidence;
+	};
+
+	struct BNTypeWithConfidence
+	{
+		BNType* type;
+		uint8_t confidence;
+	};
+
 	struct BNCustomArchitecture
 	{
 		void* context;
@@ -1126,6 +1143,13 @@ extern "C"
 		char* (*getRegisterStackName)(void* ctxt, uint32_t regStack);
 		uint32_t* (*getAllRegisterStacks)(void* ctxt, size_t* count);
 		void (*getRegisterStackInfo)(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
+
+		char* (*getIntrinsicName)(void* ctxt, uint32_t intrinsic);
+		uint32_t* (*getAllIntrinsics)(void* ctxt, size_t* count);
+		BNNameAndType* (*getIntrinsicInputs)(void* ctxt, uint32_t intrinsic, size_t* count);
+		void (*freeNameAndTypeList)(void* ctxt, BNNameAndType* nt, size_t count);
+		BNTypeWithConfidence* (*getIntrinsicOutputs)(void* ctxt, uint32_t intrinsic, size_t* count);
+		void (*freeTypeList)(void* ctxt, BNTypeWithConfidence* types, size_t count);
 
 		bool (*assemble)(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 
@@ -1201,12 +1225,6 @@ extern "C"
 		void (*undo)(void* ctxt, BNBinaryView* data);
 		void (*redo)(void* ctxt, BNBinaryView* data);
 		char* (*serialize)(void* ctxt);
-	};
-
-	struct BNTypeWithConfidence
-	{
-		BNType* type;
-		uint8_t confidence;
 	};
 
 	struct BNCallingConventionWithConfidence
@@ -2115,6 +2133,14 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureRegisterStacks(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI BNRegisterStackInfo BNGetArchitectureRegisterStackInfo(BNArchitecture* arch, uint32_t regStack);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterStackForRegister(BNArchitecture* arch, uint32_t reg);
+
+	BINARYNINJACOREAPI char* BNGetArchitectureIntrinsicName(BNArchitecture* arch, uint32_t intrinsic);
+	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureIntrinsics(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI BNNameAndType* BNGetArchitectureIntrinsicInputs(BNArchitecture* arch, uint32_t intrinsic, size_t* count);
+	BINARYNINJACOREAPI void BNFreeNameAndTypeList(BNNameAndType* nt, size_t count);
+	BINARYNINJACOREAPI BNTypeWithConfidence* BNGetArchitectureIntrinsicOutputs(BNArchitecture* arch, uint32_t intrinsic,
+		size_t* count);
+	BINARYNINJACOREAPI void BNFreeOutputTypeList(BNTypeWithConfidence* types, size_t count);
 
 	BINARYNINJACOREAPI bool BNAssemble(BNArchitecture* arch, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 

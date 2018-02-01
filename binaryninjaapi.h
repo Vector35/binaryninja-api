@@ -1572,6 +1572,16 @@ namespace BinaryNinja
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
 	};
 
+	struct NameAndType
+	{
+		std::string name;
+		Confidence<Ref<Type>> type;
+
+		NameAndType() {}
+		NameAndType(const Confidence<Ref<Type>>& t): type(t) {}
+		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
+	};
+
 	class LowLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
@@ -1638,6 +1648,13 @@ namespace BinaryNinja
 		static char* GetRegisterStackNameCallback(void* ctxt, uint32_t regStack);
 		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
 		static void GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
+
+		static char* GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic);
+		static uint32_t* GetAllIntrinsicsCallback(void* ctxt, size_t* count);
+		static BNNameAndType* GetIntrinsicInputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
+		static void FreeNameAndTypeListCallback(void* ctxt, BNNameAndType* nt, size_t count);
+		static BNTypeWithConfidence* GetIntrinsicOutputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
+		static void FreeTypeListCallback(void* ctxt, BNTypeWithConfidence* types, size_t count);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -1719,6 +1736,11 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetAllRegisterStacks();
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack);
 		uint32_t GetRegisterStackForRegister(uint32_t reg);
+
+		virtual std::string GetIntrinsicName(uint32_t intrinsic);
+		virtual std::vector<uint32_t> GetAllIntrinsics();
+		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
+		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic);
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
@@ -1858,6 +1880,11 @@ namespace BinaryNinja
 		virtual std::string GetRegisterStackName(uint32_t regStack) override;
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
+
+		virtual std::string GetIntrinsicName(uint32_t intrinsic) override;
+		virtual std::vector<uint32_t> GetAllIntrinsics() override;
+		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
+		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override;
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
@@ -2459,9 +2486,11 @@ namespace BinaryNinja
 	};
 
 	struct LowLevelILInstruction;
+	struct RegisterOrFlag;
 	struct SSARegister;
 	struct SSARegisterStack;
 	struct SSAFlag;
+	struct SSARegisterOrFlag;
 
 	class LowLevelILFunction: public CoreRefCountObject<BNLowLevelILFunction,
 		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
@@ -2648,6 +2677,10 @@ namespace BinaryNinja
 		ExprId TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(const std::vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(uint32_t num, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
@@ -2693,9 +2726,11 @@ namespace BinaryNinja
 		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t> operands);
+		ExprId AddRegisterOrFlagList(const std::vector<RegisterOrFlag>& regs);
 		ExprId AddSSARegisterList(const std::vector<SSARegister>& regs);
 		ExprId AddSSARegisterStackList(const std::vector<SSARegisterStack>& regStacks);
 		ExprId AddSSAFlagList(const std::vector<SSAFlag>& flags);
+		ExprId AddSSARegisterOrFlagList(const std::vector<SSARegisterOrFlag>& regs);
 
 		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
 		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
@@ -2961,6 +2996,10 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(const std::vector<Variable>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target,

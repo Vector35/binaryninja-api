@@ -131,6 +131,25 @@ class ILSemanticFlagGroup(object):
 		return self.index == other.index
 
 
+class ILIntrinsic(object):
+	def __init__(self, arch, intrinsic):
+		self.arch = arch
+		self.index = intrinsic
+		self.name = self.arch.get_intrinsic_name(self.index)
+		if self.name in self.arch.intrinsics:
+			self.inputs = self.arch.intrinsics[self.name].inputs
+			self.outputs = self.arch.intrinsics[self.name].outputs
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
 class SSARegister(object):
 	def __init__(self, reg, version):
 		self.reg = reg
@@ -156,6 +175,15 @@ class SSAFlag(object):
 
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self.flag), self.version)
+
+
+class SSARegisterOrFlag(object):
+	def __init__(self, reg_or_flag, version):
+		self.reg_or_flag = reg_or_flag
+		self.version = version
+
+	def __repr__(self):
+		return "<ssa %s version %d>" % (repr(self.reg_or_flag), self.version)
 
 
 class LowLevelILOperationAndSize(object):
@@ -250,6 +278,8 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
 		LowLevelILOperation.LLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL: [],
+		LowLevelILOperation.LLIL_INTRINSIC: [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+		LowLevelILOperation.LLIL_INTRINSIC_SSA: [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
 		LowLevelILOperation.LLIL_BP: [],
 		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
 		LowLevelILOperation.LLIL_UNDEF: [],
@@ -292,7 +322,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "expr_list")],
+		LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
 		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
@@ -336,6 +366,8 @@ class LowLevelILInstruction(object):
 				value = ILRegister(func.arch, instr.operands[i])
 			elif operand_type == "reg_stack":
 				value = ILRegisterStack(func.arch, instr.operands[i])
+			elif operand_type == "intrinsic":
+				value = ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "reg_ssa":
 				reg = ILRegister(func.arch, instr.operands[i])
 				i += 1
@@ -369,25 +401,36 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value):
-					value.append(operand_list[i])
+				for j in xrange(count.value):
+					value.append(operand_list[j])
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "expr_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value):
-					value.append(LowLevelILInstruction(func, operand_list[i]))
+				for j in xrange(count.value):
+					value.append(LowLevelILInstruction(func, operand_list[j]))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_or_flag_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value):
+					if (operand_list[j] & (1 << 32)) != 0:
+						value.append(ILFlag(func.arch, operand_list[j] & 0xffffffff))
+					else:
+						value.append(ILRegister(func.arch, operand_list[j] & 0xffffffff))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_ssa_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value / 2):
-					reg = operand_list[i * 2]
-					reg_version = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					reg = operand_list[j * 2]
+					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegister(ILRegister(func.arch, reg), reg_version))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_stack_ssa_list":
@@ -395,9 +438,9 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value / 2):
-					reg_stack = operand_list[i * 2]
-					reg_version = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					reg_stack = operand_list[j * 2]
+					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegisterStack(ILRegisterStack(func.arch, reg_stack), reg_version))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "flag_ssa_list":
@@ -405,19 +448,32 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value / 2):
-					flag = operand_list[i * 2]
-					flag_version = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					flag = operand_list[j * 2]
+					flag_version = operand_list[(j * 2) + 1]
 					value.append(SSAFlag(ILFlag(func.arch, flag), flag_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_or_flag_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value / 2):
+					if (operand_list[j * 2] & (1 << 32)) != 0:
+						reg_or_flag = ILFlag(func.arch, operand_list[j * 2] & 0xffffffff)
+					else:
+						reg_or_flag = ILRegister(func.arch, operand_list[j * 2] & 0xffffffff)
+					reg_version = operand_list[(j * 2) + 1]
+					value.append(SSARegisterOrFlag(reg_or_flag, reg_version))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_stack_adjust":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = {}
-				for i in xrange(count.value / 2):
-					reg_stack = operand_list[i * 2]
-					adjust = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					reg_stack = operand_list[j * 2]
+					adjust = operand_list[(j * 2) + 1]
 					if adjust & 0x80000000:
 						adjust |= ~0x80000000
 					value[func.arch.get_reg_stack_name(reg_stack)] = adjust
@@ -1713,6 +1769,25 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
+
+	def intrinsic(self, outputs, intrinsic, params):
+		"""
+		``intrinsic`` return an intrinsic expression.
+
+		:return: an intrinsic expression.
+		:rtype: LowLevelILExpr
+		"""
+		output_list = []
+		for output in outputs:
+			if isinstance(output, ILFlag):
+				output_list.append((1 << 32) | output.index)
+			else:
+				output_list.append(output.index)
+		param_list = []
+		for param in params:
+			param_list.append(param.index)
+		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
+			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list))
 
 	def breakpoint(self):
 		"""

@@ -491,6 +491,79 @@ void Architecture::GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, B
 }
 
 
+char* Architecture::GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	string result = arch->GetIntrinsicName(intrinsic);
+	return BNAllocString(result.c_str());
+}
+
+
+uint32_t* Architecture::GetAllIntrinsicsCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetAllIntrinsics();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+BNNameAndType* Architecture::GetIntrinsicInputsCallback(void* ctxt, uint32_t intrinsic, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<NameAndType> inputs = arch->GetIntrinsicInputs(intrinsic);
+	*count = inputs.size();
+
+	BNNameAndType* result = new BNNameAndType[inputs.size()];
+	for (size_t i = 0; i < inputs.size(); i++)
+	{
+		result[i].name = BNAllocString(inputs[i].name.c_str());
+		result[i].type = BNNewTypeReference(inputs[i].type.GetValue()->GetObject());
+		result[i].typeConfidence = inputs[i].type.GetConfidence();
+	}
+	return result;
+}
+
+
+void Architecture::FreeNameAndTypeListCallback(void*, BNNameAndType* nt, size_t count)
+{
+	for (size_t i = 0; i < count; i++)
+	{
+		BNFreeString(nt[i].name);
+		BNFreeType(nt[i].type);
+	}
+	delete[] nt;
+}
+
+
+BNTypeWithConfidence* Architecture::GetIntrinsicOutputsCallback(void* ctxt, uint32_t intrinsic, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<Confidence<Ref<Type>>> outputs = arch->GetIntrinsicOutputs(intrinsic);
+	*count = outputs.size();
+
+	BNTypeWithConfidence* result = new BNTypeWithConfidence[outputs.size()];
+	for (size_t i = 0; i < outputs.size(); i++)
+	{
+		result[i].type = BNNewTypeReference(outputs[i].GetValue()->GetObject());
+		result[i].confidence = outputs[i].GetConfidence();
+	}
+	return result;
+}
+
+
+void Architecture::FreeTypeListCallback(void*, BNTypeWithConfidence* types, size_t count)
+{
+	for (size_t i = 0; i < count; i++)
+		BNFreeType(types[i].type);
+	delete[] types;
+}
+
+
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -612,6 +685,12 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterStackName = GetRegisterStackNameCallback;
 	callbacks.getAllRegisterStacks = GetAllRegisterStacksCallback;
 	callbacks.getRegisterStackInfo = GetRegisterStackInfoCallback;
+	callbacks.getIntrinsicName = GetIntrinsicNameCallback;
+	callbacks.getAllIntrinsics = GetAllIntrinsicsCallback;
+	callbacks.getIntrinsicInputs = GetIntrinsicInputsCallback;
+	callbacks.freeNameAndTypeList = FreeNameAndTypeListCallback;
+	callbacks.getIntrinsicOutputs = GetIntrinsicOutputsCallback;
+	callbacks.freeTypeList = FreeTypeListCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -918,6 +997,32 @@ BNRegisterStackInfo Architecture::GetRegisterStackInfo(uint32_t)
 uint32_t Architecture::GetRegisterStackForRegister(uint32_t reg)
 {
 	return BNGetArchitectureRegisterStackForRegister(m_object, reg);
+}
+
+
+string Architecture::GetIntrinsicName(uint32_t intrinsic)
+{
+	char intrinsicStr[32];
+	sprintf(intrinsicStr, "intrinsic_%" PRIu32, intrinsic);
+	return intrinsicStr;
+}
+
+
+vector<uint32_t> Architecture::GetAllIntrinsics()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<NameAndType> Architecture::GetIntrinsicInputs(uint32_t)
+{
+	return vector<NameAndType>();
+}
+
+
+vector<Confidence<Ref<Type>>> Architecture::GetIntrinsicOutputs(uint32_t)
+{
+	return vector<Confidence<Ref<Type>>>();
 }
 
 
@@ -1485,6 +1590,60 @@ vector<uint32_t> CoreArchitecture::GetAllRegisterStacks()
 BNRegisterStackInfo CoreArchitecture::GetRegisterStackInfo(uint32_t regStack)
 {
 	return BNGetArchitectureRegisterStackInfo(m_object, regStack);
+}
+
+
+string CoreArchitecture::GetIntrinsicName(uint32_t intrinsic)
+{
+	char* name = BNGetArchitectureIntrinsicName(m_object, intrinsic);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+vector<uint32_t> CoreArchitecture::GetAllIntrinsics()
+{
+	size_t count;
+	uint32_t* regs = BNGetAllArchitectureIntrinsics(m_object, &count);
+
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<NameAndType> CoreArchitecture::GetIntrinsicInputs(uint32_t intrinsic)
+{
+	size_t count;
+	BNNameAndType* inputs = BNGetArchitectureIntrinsicInputs(m_object, intrinsic, &count);
+
+	vector<NameAndType> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(NameAndType(inputs[i].name, Confidence<Ref<Type>>(
+			new Type(BNNewTypeReference(inputs[i].type)), inputs[i].typeConfidence)));
+	}
+
+	BNFreeNameAndTypeList(inputs, count);
+	return result;
+}
+
+
+vector<Confidence<Ref<Type>>> CoreArchitecture::GetIntrinsicOutputs(uint32_t intrinsic)
+{
+	size_t count;
+	BNTypeWithConfidence* outputs = BNGetArchitectureIntrinsicOutputs(m_object, intrinsic, &count);
+
+	vector<Confidence<Ref<Type>>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(Confidence<Ref<Type>>(new Type(BNNewTypeReference(outputs[i].type)), outputs[i].confidence));
+
+	BNFreeOutputTypeList(outputs, count);
+	return result;
 }
 
 

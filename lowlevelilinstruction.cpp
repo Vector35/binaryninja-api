@@ -2139,7 +2139,7 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 		for (auto& i : GetParameterExprs<LLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));
 		return dest->Intrinsic(GetOutputRegisterOrFlagList<LLIL_INTRINSIC>(), GetIntrinsic<LLIL_INTRINSIC>(),
-			params, *this);
+			params, flags, *this);
 	case LLIL_INTRINSIC_SSA:
 		for (auto& i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			params.push_back(subExprHandler(i));
@@ -3212,9 +3212,9 @@ ExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
 
 
 ExprId LowLevelILFunction::Intrinsic(const vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-	const vector<ExprId>& params, const ILSourceLocation& loc)
+	const vector<ExprId>& params, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_INTRINSIC, loc, 0, 0,
+	return AddExprWithLocation(LLIL_INTRINSIC, loc, 0, flags,
 		outputs.size(), AddRegisterOrFlagList(outputs), intrinsic,
 		AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
 }

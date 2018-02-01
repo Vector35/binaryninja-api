@@ -1770,7 +1770,7 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
-	def intrinsic(self, outputs, intrinsic, params):
+	def intrinsic(self, outputs, intrinsic, params, flags=None):
 		"""
 		``intrinsic`` return an intrinsic expression.
 
@@ -1787,7 +1787,7 @@ class LowLevelILFunction(object):
 		for param in params:
 			param_list.append(param.index)
 		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
-			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list))
+			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list), flags = flags)
 
 	def breakpoint(self):
 		"""

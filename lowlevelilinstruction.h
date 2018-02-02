@@ -1249,4 +1249,8 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_TO_INT>: public LowLevelILOneOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_INT_TO_FLOAT>: public LowLevelILOneOperandInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_CONV>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_ROUND_TO_INT>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FLOOR>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_CEIL>: public LowLevelILOneOperandInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_FTRUNC>: public LowLevelILOneOperandInstruction {};
 }

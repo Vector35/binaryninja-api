@@ -215,6 +215,10 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_FLOAT_TO_INT, {SourceExprMediumLevelOperandUsage}},
 		{MLIL_INT_TO_FLOAT, {SourceExprMediumLevelOperandUsage}},
 		{MLIL_FLOAT_CONV, {SourceExprMediumLevelOperandUsage}},
+		{MLIL_ROUND_TO_INT, {SourceExprMediumLevelOperandUsage}},
+		{MLIL_FLOOR, {SourceExprMediumLevelOperandUsage}},
+		{MLIL_CEIL, {SourceExprMediumLevelOperandUsage}},
+		{MLIL_FTRUNC, {SourceExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_LT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
@@ -1300,6 +1304,10 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 	case MLIL_FLOAT_TO_INT:
 	case MLIL_INT_TO_FLOAT:
 	case MLIL_FLOAT_CONV:
+	case MLIL_ROUND_TO_INT:
+	case MLIL_FLOOR:
+	case MLIL_CEIL:
+	case MLIL_FTRUNC:
 		AsOneOperand().GetSourceExpr().VisitExprs(func);
 		break;
 	case MLIL_ADD:
@@ -1539,6 +1547,10 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_FLOAT_TO_INT:
 	case MLIL_INT_TO_FLOAT:
 	case MLIL_FLOAT_CONV:
+	case MLIL_ROUND_TO_INT:
+	case MLIL_FLOOR:
+	case MLIL_CEIL:
+	case MLIL_FTRUNC:
 		return dest->AddExprWithLocation(operation, *this, size,
 			subExprHandler(AsOneOperand().GetSourceExpr()));
 	case MLIL_ADD:
@@ -2728,6 +2740,30 @@ ExprId MediumLevelILFunction::IntToFloat(size_t size, ExprId a, const ILSourceLo
 ExprId MediumLevelILFunction::FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_FLOAT_CONV, loc, size, a);
+}
+
+
+ExprId MediumLevelILFunction::RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_ROUND_TO_INT, loc, size, a);
+}
+
+
+ExprId MediumLevelILFunction::Floor(size_t size, ExprId a, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FLOOR, loc, size, a);
+}
+
+
+ExprId MediumLevelILFunction::Ceil(size_t size, ExprId a, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CEIL, loc, size, a);
+}
+
+
+ExprId MediumLevelILFunction::FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FTRUNC, loc, size, a);
 }
 
 

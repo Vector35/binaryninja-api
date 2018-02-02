@@ -220,6 +220,10 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_FLOAT_TO_INT, {SourceExprLowLevelOperandUsage}},
 		{LLIL_INT_TO_FLOAT, {SourceExprLowLevelOperandUsage}},
 		{LLIL_FLOAT_CONV, {SourceExprLowLevelOperandUsage}},
+		{LLIL_ROUND_TO_INT, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FLOOR, {SourceExprLowLevelOperandUsage}},
+		{LLIL_CEIL, {SourceExprLowLevelOperandUsage}},
+		{LLIL_FTRUNC, {SourceExprLowLevelOperandUsage}},
 		{LLIL_FCMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_FCMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_FCMP_LT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
@@ -1816,6 +1820,10 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_FLOAT_TO_INT:
 	case LLIL_INT_TO_FLOAT:
 	case LLIL_FLOAT_CONV:
+	case LLIL_ROUND_TO_INT:
+	case LLIL_FLOOR:
+	case LLIL_CEIL:
+	case LLIL_FTRUNC:
 		AsOneOperand().GetSourceExpr().VisitExprs(func);
 		break;
 	case LLIL_ADD:
@@ -2078,6 +2086,10 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_FLOAT_TO_INT:
 	case LLIL_INT_TO_FLOAT:
 	case LLIL_FLOAT_CONV:
+	case LLIL_ROUND_TO_INT:
+	case LLIL_FLOOR:
+	case LLIL_CEIL:
+	case LLIL_FTRUNC:
 		return dest->AddExprWithLocation(operation, *this, size, flags,
 			subExprHandler(AsOneOperand().GetSourceExpr()));
 	case LLIL_ADD:
@@ -3346,6 +3358,30 @@ ExprId LowLevelILFunction::IntToFloat(size_t size, ExprId a, uint32_t flags, con
 ExprId LowLevelILFunction::FloatConvert(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::RoundToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::Floor(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOOR, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::Ceil(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CEIL, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::FloatTrunc(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, a);
 }
 
 

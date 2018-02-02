@@ -295,6 +295,10 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_FLOAT_TO_INT: [("src", "expr")],
 		LowLevelILOperation.LLIL_INT_TO_FLOAT: [("src", "expr")],
 		LowLevelILOperation.LLIL_FLOAT_CONV: [("src", "expr")],
+		LowLevelILOperation.LLIL_ROUND_TO_INT: [("src", "expr")],
+		LowLevelILOperation.LLIL_FLOOR: [("src", "expr")],
+		LowLevelILOperation.LLIL_CEIL: [("src", "expr")],
+		LowLevelILOperation.LLIL_FTRUNC: [("src", "expr")],
 		LowLevelILOperation.LLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
@@ -1966,6 +1970,54 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONV, value.index, size=size, flags=flags)
+
+	def round_to_int(self, size, value, flags=None):
+		"""
+		``round_to_int`` rounds a floating point value to the nearest integer
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_ROUND_TO_INT, value.index, size=size, flags=flags)
+
+	def floor(self, size, value, flags=None):
+		"""
+		``floor`` rounds a floating point value to an integer towards negative infinity
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOOR, value.index, size=size, flags=flags)
+
+	def ceil(self, size, value, flags=None):
+		"""
+		``ceil`` rounds a floating point value to an integer towards positive infinity
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_CEIL, value.index, size=size, flags=flags)
+
+	def float_trunc(self, size, value, flags=None):
+		"""
+		``float_trunc`` rounds a floating point value to an integer towards zero
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FTRUNC, value.index, size=size, flags=flags)
 
 	def float_compare_equal(self, size, a, b):
 		"""

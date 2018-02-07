@@ -1453,6 +1453,94 @@ class Function(object):
 		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
 		return RegisterValue(self.arch, result.value, confidence = result.confidence)
 
+	def set_auto_call_stack_adjustment(self, addr, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		if not isinstance(adjust, types.SizeWithConfidence):
+			adjust = types.SizeWithConfidence(adjust)
+		core.BNSetAutoCallStackAdjustment(self.handle, arch.handle, addr, adjust.value, adjust.confidence)
+
+	def set_auto_call_reg_stack_adjustment(self, addr, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		adjust_buf = (core.BNRegisterStackAdjustment * len(adjust))()
+		i = 0
+		for reg_stack in adjust.keys():
+			adjust_buf[i].regStack = arch.get_reg_stack_index(reg_stack)
+			value = adjust[reg_stack]
+			if not isinstance(value, types.RegisterStackAdjustmentWithConfidence):
+				value = types.RegisterStackAdjustmentWithConfidence(value)
+			adjust_buf[i].adjustment = value.value
+			adjust_buf[i].confidence = value.confidence
+			i += 1
+		core.BNSetAutoCallRegisterStackAdjustment(self.handle, arch.handle, addr, adjust_buf, len(adjust))
+
+	def set_auto_call_reg_stack_adjustment_for_reg_stack(self, addr, reg_stack, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		reg_stack = arch.get_reg_stack_index(reg_stack)
+		if not isinstance(adjust, types.RegisterStackAdjustmentWithConfidence):
+			adjust = types.RegisterStackAdjustmentWithConfidence(adjust)
+		core.BNSetAutoCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
+			adjust.value, adjust.confidence)
+
+	def set_call_stack_adjustment(self, addr, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		if not isinstance(adjust, types.SizeWithConfidence):
+			adjust = types.SizeWithConfidence(adjust)
+		core.BNSetUserCallStackAdjustment(self.handle, arch.handle, addr, adjust.value, adjust.confidence)
+
+	def set_call_reg_stack_adjustment(self, addr, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		adjust_buf = (core.BNRegisterStackAdjustment * len(adjust))()
+		i = 0
+		for reg_stack in adjust.keys():
+			adjust_buf[i].regStack = arch.get_reg_stack_index(reg_stack)
+			value = adjust[reg_stack]
+			if not isinstance(value, types.RegisterStackAdjustmentWithConfidence):
+				value = types.RegisterStackAdjustmentWithConfidence(value)
+			adjust_buf[i].adjustment = value.value
+			adjust_buf[i].confidence = value.confidence
+			i += 1
+		core.BNSetUserCallRegisterStackAdjustment(self.handle, arch.handle, addr, adjust_buf, len(adjust))
+
+	def set_call_reg_stack_adjustment_for_reg_stack(self, addr, reg_stack, adjust, arch=None):
+		if arch is None:
+			arch = self.arch
+		reg_stack = arch.get_reg_stack_index(reg_stack)
+		if not isinstance(adjust, types.RegisterStackAdjustmentWithConfidence):
+			adjust = types.RegisterStackAdjustmentWithConfidence(adjust)
+		core.BNSetUserCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
+			adjust.value, adjust.confidence)
+
+	def get_call_stack_adjustment(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNGetCallStackAdjustment(self.handle, arch.handle, addr)
+		return types.SizeWithConfidence(result.value, confidence = result.confidence)
+
+	def get_call_reg_stack_adjustment(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		adjust = core.BNGetCallRegisterStackAdjustment(self.handle, arch.handle, addr, count)
+		result = {}
+		for i in xrange(0, count.value):
+			result[arch.get_reg_stack_name(adjust[i].regStack)] = types.RegisterStackAdjustmentWithConfidence(
+				adjust[i].adjustment, confidence = adjust[i].confidence)
+		core.BNFreeRegisterStackAdjustments(adjust)
+		return result
+
+	def get_call_reg_stack_adjustment_for_reg_stack(self, addr, reg_stack, arch=None):
+		if arch is None:
+			arch = self.arch
+		reg_stack = arch.get_reg_stack_index(reg_stack)
+		adjust = core.BNGetCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack)
+		result = types.RegisterStackAdjustmentWithConfidence(adjust.adjustment, confidence = adjust.confidence)
+		return result
+
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):

@@ -1020,6 +1020,96 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+{
+	BNSetAutoCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+	const map<uint32_t, Confidence<int32_t>>& adjust)
+{
+	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
+	size_t i = 0;
+	for (auto& j : adjust)
+	{
+		values[i].regStack = j.first;
+		values[i].adjustment = j.second.GetValue();
+		values[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetAutoCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, values, adjust.size());
+	delete[] values;
+}
+
+
+void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+	const Confidence<int32_t>& adjust)
+{
+	BNSetAutoCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
+		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+{
+	BNSetUserCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+	const map<uint32_t, Confidence<int32_t>>& adjust)
+{
+	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
+	size_t i = 0;
+	for (auto& j : adjust)
+	{
+		values[i].regStack = j.first;
+		values[i].adjustment = j.second.GetValue();
+		values[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetUserCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, values, adjust.size());
+	delete[] values;
+}
+
+
+void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+	const Confidence<int32_t>& adjust)
+{
+	BNSetUserCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
+		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+Confidence<size_t> Function::GetCallStackAdjustment(Architecture* arch, uint64_t addr)
+{
+	BNSizeWithConfidence result = BNGetCallStackAdjustment(m_object, arch->GetObject(), addr);
+	return Confidence<size_t>(result.value, result.confidence);
+}
+
+
+map<uint32_t, Confidence<int32_t>> Function::GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNRegisterStackAdjustment* adjust = BNGetCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, &count);
+
+	map<uint32_t, Confidence<int32_t>> result;
+	for (size_t i = 0; i < count; i++)
+		result[adjust[i].regStack] = Confidence<int32_t>(adjust[i].adjustment, adjust[i].confidence);
+	BNFreeRegisterStackAdjustments(adjust);
+	return result;
+}
+
+
+Confidence<int32_t> Function::GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack)
+{
+	BNRegisterStackAdjustment result = BNGetCallRegisterStackAdjustmentForRegisterStack(m_object,
+		arch->GetObject(), addr, regStack);
+	return Confidence<int32_t>(result.adjustment, result.confidence);
+}
+
+
 vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture* arch, uint64_t addr)
 {
 	size_t count;

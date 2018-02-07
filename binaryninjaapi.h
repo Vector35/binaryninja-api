@@ -2336,6 +2336,21 @@ namespace BinaryNinja
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
+		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+			const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+			const Confidence<int32_t>& adjust);
+		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+			const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+			const Confidence<int32_t>& adjust);
+
+		Confidence<size_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
+		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
+		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
+
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 
 		BNIntegerDisplayType GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,

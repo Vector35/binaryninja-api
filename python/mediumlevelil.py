@@ -152,6 +152,8 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
 		MediumLevelILOperation.MLIL_INTRINSIC: [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_INTRINSIC_SSA: [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [("dest", "var")],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [("prev", "var_ssa_dest_and_src")],
 		MediumLevelILOperation.MLIL_UNDEF: [],
 		MediumLevelILOperation.MLIL_UNIMPL: [],
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],

@@ -150,6 +150,8 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 			ParameterExprsMediumLevelOperandUsage}},
 		{MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
 			ParameterExprsMediumLevelOperandUsage}},
+		{MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
+		{MLIL_FREE_VAR_SLOT_SSA, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
 		{MLIL_TRAP, {VectorMediumLevelOperandUsage}},
 		{MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
 		{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
@@ -1653,6 +1655,12 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetOutputSSAVariables<MLIL_INTRINSIC_SSA>(),
 			GetIntrinsic<MLIL_INTRINSIC_SSA>(), params, *this);
+	case MLIL_FREE_VAR_SLOT:
+		return dest->FreeVarSlot(GetDestVariable<MLIL_FREE_VAR_SLOT>(), *this);
+	case MLIL_FREE_VAR_SLOT_SSA:
+		return dest->FreeVarSlotSSA(GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().var,
+			GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version,
+			GetSourceSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version, *this);
 	case MLIL_UNDEF:
 		return dest->Undefined(*this);
 	case MLIL_UNIMPL:
@@ -2645,6 +2653,19 @@ ExprId MediumLevelILFunction::IntrinsicSSA(const vector<SSAVariable>& outputs, u
 {
 	return AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, 0, outputs.size() * 2, AddSSAVariableList(outputs),
 		intrinsic, params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::FreeVarSlot(const Variable& var, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FREE_VAR_SLOT, loc, 0, var.ToIdentifier());
+}
+
+
+ExprId MediumLevelILFunction::FreeVarSlotSSA(const Variable& var, size_t newVersion, size_t prevVersion,
+	const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FREE_VAR_SLOT_SSA, loc, 0, var.ToIdentifier(), newVersion, prevVersion);
 }
 
 

@@ -1013,6 +1013,15 @@ namespace BinaryNinja
 	{
 		uint32_t GetSourceRegisterStack() const { return GetRawOperandAsRegister(0); }
 	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REG>: public LowLevelILInstructionBase
+	{
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(0); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REL>: public LowLevelILInstructionBase
+	{
+		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_REG_STACK_REL_SSA>: public LowLevelILInstructionBase
 	{
 		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(0); }
@@ -1026,6 +1035,24 @@ namespace BinaryNinja
 		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(0); }
 		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(2); }
 		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REL_SSA>: public LowLevelILInstructionBase
+	{
+		SSARegisterStack GetDestSSARegisterStack() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0); }
+		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
+		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_ABS_SSA>: public LowLevelILInstructionBase
+	{
+		SSARegisterStack GetDestSSARegisterStack() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0); }
+		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0); }
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(1); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
 	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLAG>: public LowLevelILInstructionBase
 	{

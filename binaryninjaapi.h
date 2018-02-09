@@ -2579,10 +2579,17 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
 			const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
+			ExprId entry, const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeAbsoluteSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
+			uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
@@ -3020,6 +3027,9 @@ namespace BinaryNinja
 			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
 			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FreeVarSlot(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FreeVarSlotSSA(const Variable& var, size_t newVersion, size_t prevVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target,

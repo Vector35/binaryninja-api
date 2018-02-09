@@ -922,6 +922,18 @@ namespace BinaryNinja
 		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
 	};
 
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT>: public MediumLevelILInstructionBase
+	{
+		Variable GetDestVariable() const { return GetRawOperandAsVariable(0); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT_SSA>: public MediumLevelILInstructionBase
+	{
+		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		SSAVariable GetSourceSSAVariable() const { return GetRawOperandAsPartialSSAVariableSource(0); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(2, version); }
+	};
+
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TRAP>: public MediumLevelILInstructionBase
 	{
 		int64_t GetVector() const { return GetRawOperandAsInteger(0); }

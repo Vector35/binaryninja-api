@@ -157,6 +157,7 @@ vector<Ref<Transform>> Transform::GetTransformTypes()
 	BNTransform** list = BNGetTransformTypeList(&count);
 
 	vector<Ref<Transform>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreTransform(list[i]));
 
@@ -229,6 +230,7 @@ vector<TransformParameter> CoreTransform::GetParameters() const
 	BNTransformParameterInfo* list = BNGetTransformParameterList(m_object, &count);
 
 	vector<TransformParameter> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		TransformParameter param;

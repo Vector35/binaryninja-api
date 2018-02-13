@@ -471,6 +471,7 @@ class Type(object):
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
+		:param string altname: alternate name for type
 		"""
 		if sign is None:
 			sign = BoolWithConfidence(True, confidence = 0)
@@ -484,8 +485,14 @@ class Type(object):
 		return Type(core.BNCreateIntegerType(width, sign_conf, altname))
 
 	@classmethod
-	def float(self, width):
-		return Type(core.BNCreateFloatType(width))
+	def float(self, width, altname=""):
+		"""
+		``float`` class method for creating an floating point Types.
+
+		:param int width: width of the floating point number in bytes
+		:param string altname: alternate name for type
+		"""
+		return Type(core.BNCreateFloatType(width, altname))
 
 	@classmethod
 	def structure_type(self, structure_type):
@@ -515,10 +522,10 @@ class Type(object):
 		return Type(core.BNCreateNamedTypeReferenceFromType(view.handle, name))
 
 	@classmethod
-	def enumeration_type(self, arch, e, width=None):
+	def enumeration_type(self, arch, e, width=None, sign=False):
 		if width is None:
 			width = arch.default_int_size
-		return Type(core.BNCreateEnumerationType(e.handle, width))
+		return Type(core.BNCreateEnumerationType(arch.handle, e.handle, width, sign))
 
 	@classmethod
 	def pointer(self, arch, t, const=None, volatile=None, ref_type=None):
@@ -634,7 +641,7 @@ class Type(object):
 		return core.BNGenerateAutoDemangledTypeId(name)
 
 	@classmethod
-	def get_auto_demanged_type_id_source(self):
+	def get_auto_demangled_type_id_source(self):
 		return core.BNGetAutoDemangledTypeIdSource()
 
 	def with_confidence(self, confidence):

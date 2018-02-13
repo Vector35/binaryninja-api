@@ -211,8 +211,9 @@ vector<PluginCommand> PluginCommand::GetList()
 	vector<PluginCommand> result;
 	size_t count;
 	BNPluginCommand* commands = BNGetAllPluginCommands(&count);
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(PluginCommand(commands[i]));
+		result.emplace_back(commands[i]);
 	BNFreePluginCommandList(commands);
 	return result;
 }

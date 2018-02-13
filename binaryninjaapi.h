@@ -486,6 +486,7 @@ namespace BinaryNinja
 	};
 
 	class Architecture;
+	class BackgroundTask;
 	class Platform;
 	class Type;
 	class DataBuffer;
@@ -968,6 +969,7 @@ namespace BinaryNinja
 		uint64_t address;
 
 		InstructionTextToken();
+		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
@@ -1017,6 +1019,9 @@ namespace BinaryNinja
 
 	struct DataVariable
 	{
+		DataVariable() { }
+		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) { }
+
 		uint64_t address;
 		Confidence<Ref<Type>> type;
 		bool autoDiscovered;
@@ -1262,6 +1267,7 @@ namespace BinaryNinja
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		BNAnalysisProgress GetAnalysisProgress();
+		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
@@ -1902,6 +1908,7 @@ namespace BinaryNinja
 	{
 		Variable();
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
+		Variable(BNVariableSourceType type, uint64_t storage);
 		Variable(const BNVariable& var);
 
 		Variable& operator=(const Variable& var);

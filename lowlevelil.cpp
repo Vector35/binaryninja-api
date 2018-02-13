@@ -176,6 +176,7 @@ vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOper
 	size_t count;
 	uint64_t* operands = BNLowLevelILGetOperandList(m_object, expr, listOperand, &count);
 	vector<uint64_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
 	BNLowLevelILFreeOperandList(operands);
@@ -429,19 +430,10 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken token;
-		token.type = list[i].type;
-		token.text = list[i].text;
-		token.value = list[i].value;
-		token.size = list[i].size;
-		token.operand = list[i].operand;
-		token.context = list[i].context;
-		token.confidence = list[i].confidence;
-		token.address = list[i].address;
-		tokens.push_back(token);
-	}
+		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
+			list[i].operand, list[i].confidence);
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -458,19 +450,10 @@ bool LowLevelILFunction::GetInstructionText(Function* func, Architecture* arch, 
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken token;
-		token.type = list[i].type;
-		token.text = list[i].text;
-		token.value = list[i].value;
-		token.size = list[i].size;
-		token.operand = list[i].operand;
-		token.context = list[i].context;
-		token.confidence = list[i].confidence;
-		token.address = list[i].address;
-		tokens.push_back(token);
-	}
+		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
+			list[i].operand, list[i].confidence);
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -495,6 +478,7 @@ vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
 	BNBasicBlock** blocks = BNGetLowLevelILBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 

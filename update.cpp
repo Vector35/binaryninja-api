@@ -53,6 +53,7 @@ vector<UpdateChannel> UpdateChannel::GetList()
 	}
 
 	vector<UpdateChannel> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		UpdateChannel channel;
@@ -149,6 +150,7 @@ vector<UpdateVersion> UpdateVersion::GetChannelVersions(const string& channel)
 	}
 
 	vector<UpdateVersion> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		UpdateVersion version;

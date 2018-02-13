@@ -355,6 +355,7 @@ vector<FunctionParameter> Type::GetParameters() const
 	BNFunctionParameter* types = BNGetTypeParameters(m_object, &count);
 
 	vector<FunctionParameter> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		FunctionParameter param;
@@ -474,19 +475,10 @@ vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseCon
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
-	}
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -500,19 +492,10 @@ vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
-	}
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -526,19 +509,10 @@ vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		InstructionTextToken token;
-		token.type = tokens[i].type;
-		token.text = tokens[i].text;
-		token.value = tokens[i].value;
-		token.size = tokens[i].size;
-		token.operand = tokens[i].operand;
-		token.context = tokens[i].context;
-		token.confidence = tokens[i].confidence;
-		token.address = tokens[i].address;
-		result.push_back(token);
-	}
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence);
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -906,6 +880,7 @@ vector<StructureMember> Structure::GetMembers() const
 	BNStructureMember* members = BNGetStructureMembers(m_object, &count);
 
 	vector<StructureMember> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		StructureMember member;
@@ -1025,6 +1000,7 @@ vector<EnumerationMember> Enumeration::GetMembers() const
 	BNEnumerationMember* members = BNGetEnumerationMembers(m_object, &count);
 
 	vector<EnumerationMember> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		EnumerationMember member;

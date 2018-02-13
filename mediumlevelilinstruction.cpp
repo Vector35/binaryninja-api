@@ -231,14 +231,14 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 	};
 
 
-static unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>>
-	GetOperandIndexForOperandUsages()
+static unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>> GetOperandIndexForOperandUsages()
 {
 	unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>> result;
+	result.reserve(MediumLevelILInstructionBase::operationOperandUsage.size());
 	for (auto& operation : MediumLevelILInstructionBase::operationOperandUsage)
 	{
 		result[operation.first] = unordered_map<MediumLevelILOperandUsage, size_t>();
-
+		result[operation.first].reserve(operation.second.size());
 		size_t operand = 0;
 		for (auto usage : operation.second)
 		{

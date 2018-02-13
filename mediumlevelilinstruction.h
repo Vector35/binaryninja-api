@@ -1004,6 +1004,7 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_LE>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_GE>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_GT>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_O>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_UO>: public MediumLevelILTwoOperandInstruction {};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_ADC>: public MediumLevelILTwoOperandWithCarryInstruction {};

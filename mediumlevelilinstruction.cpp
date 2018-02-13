@@ -227,6 +227,7 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_FCMP_LE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_GE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_GT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+		{MLIL_FCMP_O, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}}
 	};
 

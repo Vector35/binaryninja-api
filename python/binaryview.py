@@ -416,12 +416,13 @@ class BinaryViewType(object):
 
 
 class Segment(object):
-	def __init__(self, start, length, data_offset, data_length, flags):
+	def __init__(self, start, length, data_offset, data_length, flags, auto_defined):
 		self.start = start
 		self.length = length
 		self.data_offset = data_offset
 		self.data_length = data_length
 		self.flags = flags
+		self.auto_defined = auto_defined
 
 	@property
 	def executable(self):
@@ -450,7 +451,7 @@ class Segment(object):
 
 
 class Section(object):
-	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics):
+	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics, auto_defined):
 		self.name = name
 		self.type = section_type
 		self.start = start
@@ -461,6 +462,7 @@ class Section(object):
 		self.align = align
 		self.entry_size = entry_size
 		self.semantics = SectionSemantics(semantics)
+		self.auto_defined = auto_defined
 
 	@property
 	def end(self):
@@ -965,7 +967,7 @@ class BinaryView(object):
 		result = []
 		for i in xrange(0, count.value):
 			result.append(Segment(segment_list[i].start, segment_list[i].length,
-				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags))
+				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags, segment_list[i].autoDefined))
 		core.BNFreeSegmentList(segment_list)
 		return result
 
@@ -979,7 +981,7 @@ class BinaryView(object):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics)
+				section_list[i].semantics, section_list[i].autoDefined)
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -2093,6 +2095,8 @@ class BinaryView(object):
 		"""
 		if plat is None:
 			plat = self.platform
+		if plat is None:
+			return None
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
@@ -3353,7 +3357,7 @@ class BinaryView(object):
 		if not core.BNGetSegmentAt(self.handle, addr, segment):
 			return None
 		result = Segment(segment.start, segment.length, segment.dataOffset, segment.dataLength,
-			segment.flags)
+			segment.flags, segment.autoDefined)
 		return result
 
 	def get_address_for_data_offset(self, offset):
@@ -3386,7 +3390,7 @@ class BinaryView(object):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics))
+				section_list[i].semantics, section_list[i].autoDefined))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3395,7 +3399,8 @@ class BinaryView(object):
 		if not core.BNGetSectionByName(self.handle, name, section):
 			return None
 		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
-			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics)
+			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics,
+			section.autoDefined)
 		core.BNFreeSection(section)
 		return result
 

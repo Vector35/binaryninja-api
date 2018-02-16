@@ -70,6 +70,7 @@ namespace BinaryNinja
 	{
 		IntegerMediumLevelOperand,
 		IndexMediumLevelOperand,
+		IntrinsicMediumLevelOperand,
 		ExprMediumLevelOperand,
 		VariableMediumLevelOperand,
 		SSAVariableMediumLevelOperand,
@@ -91,8 +92,6 @@ namespace BinaryNinja
 		LeftExprMediumLevelOperandUsage,
 		RightExprMediumLevelOperandUsage,
 		CarryExprMediumLevelOperandUsage,
-		HighExprMediumLevelOperandUsage,
-		LowExprMediumLevelOperandUsage,
 		StackExprMediumLevelOperandUsage,
 		ConditionExprMediumLevelOperandUsage,
 		HighVariableMediumLevelOperandUsage,
@@ -102,6 +101,7 @@ namespace BinaryNinja
 		OffsetMediumLevelOperandUsage,
 		ConstantMediumLevelOperandUsage,
 		VectorMediumLevelOperandUsage,
+		IntrinsicMediumLevelOperandUsage,
 		TargetMediumLevelOperandUsage,
 		TrueTargetMediumLevelOperandUsage,
 		FalseTargetMediumLevelOperandUsage,
@@ -112,6 +112,7 @@ namespace BinaryNinja
 		OutputVariablesMediumLevelOperandUsage,
 		OutputVariablesSubExprMediumLevelOperandUsage,
 		OutputSSAVariablesMediumLevelOperandUsage,
+		OutputSSAVariablesSubExprMediumLevelOperandUsage,
 		OutputSSAMemoryVersionMediumLevelOperandUsage,
 		ParameterExprsMediumLevelOperandUsage,
 		SourceExprsMediumLevelOperandUsage,
@@ -135,10 +136,11 @@ namespace std
 #else
 		typedef BinaryNinja::SSAVariable argument_type;
 #endif
-		typedef uint64_t result_type;
+		typedef uint32_t result_type;
 		result_type operator()(argument_type const& value) const
 		{
-			return ((result_type)value.var.ToIdentifier()) ^ ((result_type)value.version << 40);
+			uint64_t hashTmp = ((uint64_t)value.var.ToIdentifier()) ^ ((uint64_t)value.version << 40);
+			return (uint32_t)((hashTmp >> 32) ^ (uint32_t)hashTmp);
 		}
 	};
 
@@ -428,10 +430,6 @@ namespace BinaryNinja
 		{
 			return *(MediumLevelILTwoOperandWithCarryInstruction*)this;
 		}
-		MediumLevelILDoublePrecisionInstruction& AsDoublePrecision()
-		{
-			return *(MediumLevelILDoublePrecisionInstruction*)this;
-		}
 
 		template <BNMediumLevelILOperation N>
 		const MediumLevelILInstructionAccessor<N>& As() const
@@ -455,10 +453,6 @@ namespace BinaryNinja
 		const MediumLevelILTwoOperandWithCarryInstruction& AsTwoOperandWithCarry() const
 		{
 			return *(const MediumLevelILTwoOperandWithCarryInstruction*)this;
-		}
-		const MediumLevelILDoublePrecisionInstruction& AsDoublePrecision() const
-		{
-			return *(const MediumLevelILDoublePrecisionInstruction*)this;
 		}
 	};
 
@@ -485,8 +479,6 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetLeftExpr() const { return As<N>().GetLeftExpr(); }
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetRightExpr() const { return As<N>().GetRightExpr(); }
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetCarryExpr() const { return As<N>().GetCarryExpr(); }
-		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetHighExpr() const { return As<N>().GetHighExpr(); }
-		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetLowExpr() const { return As<N>().GetLowExpr(); }
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetStackExpr() const { return As<N>().GetStackExpr(); }
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetConditionExpr() const { return As<N>().GetConditionExpr(); }
 		template <BNMediumLevelILOperation N> Variable GetHighVariable() const { return As<N>().GetHighVariable(); }
@@ -496,6 +488,7 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> uint64_t GetOffset() const { return As<N>().GetOffset(); }
 		template <BNMediumLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
 		template <BNMediumLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
+		template <BNMediumLevelILOperation N> uint32_t GetIntrinsic() const { return As<N>().GetIntrinsic(); }
 		template <BNMediumLevelILOperation N> size_t GetTarget() const { return As<N>().GetTarget(); }
 		template <BNMediumLevelILOperation N> size_t GetTrueTarget() const { return As<N>().GetTrueTarget(); }
 		template <BNMediumLevelILOperation N> size_t GetFalseTarget() const { return As<N>().GetFalseTarget(); }
@@ -537,8 +530,6 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetLeftExpr() const;
 		MediumLevelILInstruction GetRightExpr() const;
 		MediumLevelILInstruction GetCarryExpr() const;
-		MediumLevelILInstruction GetHighExpr() const;
-		MediumLevelILInstruction GetLowExpr() const;
 		MediumLevelILInstruction GetStackExpr() const;
 		MediumLevelILInstruction GetConditionExpr() const;
 		Variable GetHighVariable() const;
@@ -548,6 +539,7 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		int64_t GetConstant() const;
 		int64_t GetVector() const;
+		uint32_t GetIntrinsic() const;
 		size_t GetTarget() const;
 		size_t GetTrueTarget() const;
 		size_t GetFalseTarget() const;
@@ -580,6 +572,7 @@ namespace BinaryNinja
 
 		uint64_t GetInteger() const;
 		size_t GetIndex() const;
+		uint32_t GetIntrinsic() const;
 		MediumLevelILInstruction GetExpr() const;
 		Variable GetVariable() const;
 		SSAVariable GetSSAVariable() const;
@@ -642,13 +635,6 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
 		MediumLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
 		MediumLevelILInstruction GetCarryExpr() const { return GetRawOperandAsExpr(2); }
-	};
-
-	struct MediumLevelILDoublePrecisionInstruction: public MediumLevelILInstructionBase
-	{
-		MediumLevelILInstruction GetHighExpr() const { return GetRawOperandAsExpr(0); }
-		MediumLevelILInstruction GetLowExpr() const { return GetRawOperandAsExpr(1); }
-		MediumLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(2); }
 	};
 
 	// Implementations of each instruction to fetch the correct operand value for the valid operands, these
@@ -773,6 +759,11 @@ namespace BinaryNinja
 		Variable GetSourceVariable() const { return GetRawOperandAsVariable(0); }
 		uint64_t GetOffset() const { return GetRawOperandAsInteger(1); }
 	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_VAR_SPLIT>: public MediumLevelILInstructionBase
+	{
+		Variable GetHighVariable() const { return GetRawOperandAsVariable(0); }
+		Variable GetLowVariable() const { return GetRawOperandAsVariable(1); }
+	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_VAR_SSA>: public MediumLevelILInstructionBase
 	{
@@ -795,6 +786,13 @@ namespace BinaryNinja
 		SSAVariable GetSourceSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
 		uint64_t GetOffset() const { return GetRawOperandAsInteger(2); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(1, version); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_VAR_SPLIT_SSA>: public MediumLevelILInstructionBase
+	{
+		SSAVariable GetHighSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		SSAVariable GetLowSSAVariable() const { return GetRawOperandAsSSAVariable(2); }
+		void SetHighSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		void SetLowSSAVersion(size_t version) { UpdateRawOperand(3, version); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_ADDRESS_OF>: public MediumLevelILInstructionBase
@@ -910,6 +908,32 @@ namespace BinaryNinja
 		size_t GetTarget() const { return GetRawOperandAsIndex(0); }
 	};
 
+	template <> struct MediumLevelILInstructionAccessor<MLIL_INTRINSIC>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILVariableList GetOutputVariables() const { return GetRawOperandAsVariableList(0); }
+		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(2); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_INTRINSIC_SSA>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsSSAVariableList(0); }
+		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(2); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
+		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
+	};
+
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT>: public MediumLevelILInstructionBase
+	{
+		Variable GetDestVariable() const { return GetRawOperandAsVariable(0); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT_SSA>: public MediumLevelILInstructionBase
+	{
+		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
+		SSAVariable GetSourceSSAVariable() const { return GetRawOperandAsPartialSSAVariableSource(0); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(2, version); }
+	};
+
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TRAP>: public MediumLevelILInstructionBase
 	{
 		int64_t GetVector() const { return GetRawOperandAsInteger(0); }
@@ -934,6 +958,7 @@ namespace BinaryNinja
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CONST>: public MediumLevelILConstantInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CONST_PTR>: public MediumLevelILConstantInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FLOAT_CONST>: public MediumLevelILConstantInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_IMPORT>: public MediumLevelILConstantInstruction {};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_ADD>: public MediumLevelILTwoOperandInstruction {};
@@ -953,6 +978,10 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_DIVS>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_MODU>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_MODS>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_DIVU_DP>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_DIVS_DP>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_MODU_DP>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_MODS_DP>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CMP_E>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CMP_NE>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CMP_SLT>: public MediumLevelILTwoOperandInstruction {};
@@ -965,16 +994,23 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CMP_UGT>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TEST_BIT>: public MediumLevelILTwoOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_ADD_OVERFLOW>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FADD>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FSUB>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FMUL>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FDIV>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_E>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_NE>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_LT>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_LE>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_GE>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_GT>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_O>: public MediumLevelILTwoOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FCMP_UO>: public MediumLevelILTwoOperandInstruction {};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_ADC>: public MediumLevelILTwoOperandWithCarryInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_SBB>: public MediumLevelILTwoOperandWithCarryInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RLC>: public MediumLevelILTwoOperandWithCarryInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RRC>: public MediumLevelILTwoOperandWithCarryInstruction {};
-
-	template <> struct MediumLevelILInstructionAccessor<MLIL_DIVU_DP>: public MediumLevelILDoublePrecisionInstruction {};
-	template <> struct MediumLevelILInstructionAccessor<MLIL_DIVS_DP>: public MediumLevelILDoublePrecisionInstruction {};
-	template <> struct MediumLevelILInstructionAccessor<MLIL_MODU_DP>: public MediumLevelILDoublePrecisionInstruction {};
-	template <> struct MediumLevelILInstructionAccessor<MLIL_MODS_DP>: public MediumLevelILDoublePrecisionInstruction {};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_NEG>: public MediumLevelILOneOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_NOT>: public MediumLevelILOneOperandInstruction {};
@@ -983,4 +1019,14 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_LOW_PART>: public MediumLevelILOneOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_BOOL_TO_INT>: public MediumLevelILOneOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_UNIMPL_MEM>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FSQRT>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FNEG>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FABS>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FLOAT_TO_INT>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_INT_TO_FLOAT>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FLOAT_CONV>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_ROUND_TO_INT>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FLOOR>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_CEIL>: public MediumLevelILOneOperandInstruction {};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_FTRUNC>: public MediumLevelILOneOperandInstruction {};
 }

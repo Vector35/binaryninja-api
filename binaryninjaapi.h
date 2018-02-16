@@ -486,6 +486,7 @@ namespace BinaryNinja
 	};
 
 	class Architecture;
+	class BackgroundTask;
 	class Platform;
 	class Type;
 	class DataBuffer;
@@ -968,6 +969,7 @@ namespace BinaryNinja
 		uint64_t address;
 
 		InstructionTextToken();
+		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
@@ -1017,6 +1019,9 @@ namespace BinaryNinja
 
 	struct DataVariable
 	{
+		DataVariable() { }
+		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) { }
+
 		uint64_t address;
 		Confidence<Ref<Type>> type;
 		bool autoDiscovered;
@@ -1027,6 +1032,7 @@ namespace BinaryNinja
 		uint64_t start, length;
 		uint64_t dataOffset, dataLength;
 		uint32_t flags;
+		bool autoDefined;
 	};
 
 	struct Section
@@ -1037,6 +1043,7 @@ namespace BinaryNinja
 		uint64_t infoData;
 		uint64_t align, entrySize;
 		BNSectionSemantics semantics;
+		bool autoDefined;
 	};
 
 	struct QualifiedNameAndType;
@@ -1260,6 +1267,7 @@ namespace BinaryNinja
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		BNAnalysisProgress GetAnalysisProgress();
+		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
@@ -1564,6 +1572,16 @@ namespace BinaryNinja
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
 	};
 
+	struct NameAndType
+	{
+		std::string name;
+		Confidence<Ref<Type>> type;
+
+		NameAndType() {}
+		NameAndType(const Confidence<Ref<Type>>& t): type(t) {}
+		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
+	};
+
 	class LowLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
@@ -1599,22 +1617,44 @@ namespace BinaryNinja
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
+		static char* GetSemanticFlagClassNameCallback(void* ctxt, uint32_t semClass);
+		static char* GetSemanticFlagGroupNameCallback(void* ctxt, uint32_t semGroup);
 		static uint32_t* GetFullWidthRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagsCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllFlagWriteTypesCallback(void* ctxt, size_t* count);
-		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag);
-		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond, size_t* count);
+		static uint32_t* GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count);
+		static uint32_t* GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count);
+		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t semClass);
+		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+			uint32_t semClass, size_t* count);
+		static uint32_t* GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count);
+		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(void* ctxt,
+			uint32_t semGroup, size_t* count);
+		static void FreeFlagConditionsForSemanticFlagGroupCallback(void* ctxt, BNFlagConditionForSemanticClass* conditions);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
+		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
 		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
 		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
-			BNLowLevelILFunction* il);
+			uint32_t semClass, BNLowLevelILFunction* il);
+		static size_t GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
+
+		static char* GetRegisterStackNameCallback(void* ctxt, uint32_t regStack);
+		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
+		static void GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
+
+		static char* GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic);
+		static uint32_t* GetAllIntrinsicsCallback(void* ctxt, size_t* count);
+		static BNNameAndType* GetIntrinsicInputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
+		static void FreeNameAndTypeListCallback(void* ctxt, BNNameAndType* nt, size_t count);
+		static BNTypeWithConfidence* GetIntrinsicOutputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
+		static void FreeTypeListCallback(void* ctxt, BNTypeWithConfidence* types, size_t count);
 
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -1662,19 +1702,28 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
+		virtual std::string GetSemanticFlagClassName(uint32_t semClass);
+		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup);
 		virtual std::vector<uint32_t> GetFullWidthRegisters();
 		virtual std::vector<uint32_t> GetAllRegisters();
 		virtual std::vector<uint32_t> GetAllFlags();
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
-		virtual BNFlagRole GetFlagRole(uint32_t flag);
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond);
+		virtual std::vector<uint32_t> GetAllSemanticFlagClasses();
+		virtual std::vector<uint32_t> GetAllSemanticFlagGroups();
+		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0);
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+			uint32_t semClass = 0);
+		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup);
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup);
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
+		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType);
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
 			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
-		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il);
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
+		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
+		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
 		virtual uint32_t GetLinkRegister();
@@ -1682,6 +1731,16 @@ namespace BinaryNinja
 		bool IsGlobalRegister(uint32_t reg);
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
+
+		virtual std::string GetRegisterStackName(uint32_t regStack);
+		virtual std::vector<uint32_t> GetAllRegisterStacks();
+		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack);
+		uint32_t GetRegisterStackForRegister(uint32_t reg);
+
+		virtual std::string GetIntrinsicName(uint32_t intrinsic);
+		virtual std::vector<uint32_t> GetAllIntrinsics();
+		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
+		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic);
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
@@ -1793,20 +1852,39 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
+		virtual std::string GetSemanticFlagClassName(uint32_t semClass) override;
+		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFullWidthRegisters() override;
 		virtual std::vector<uint32_t> GetAllRegisters() override;
 		virtual std::vector<uint32_t> GetAllFlags() override;
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
-		virtual BNFlagRole GetFlagRole(uint32_t flag) override;
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond) override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
+		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+			uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
+		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+			uint32_t semClass, LowLevelILFunction& il) override;
+		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+
+		virtual std::string GetRegisterStackName(uint32_t regStack) override;
+		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
+		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
+
+		virtual std::string GetIntrinsicName(uint32_t intrinsic) override;
+		virtual std::vector<uint32_t> GetAllIntrinsics() override;
+		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
+		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override;
 
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
@@ -1830,6 +1908,7 @@ namespace BinaryNinja
 	{
 		Variable();
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
+		Variable(BNVariableSourceType type, uint64_t storage);
 		Variable(const BNVariable& var);
 
 		Variable& operator=(const Variable& var);
@@ -2199,28 +2278,34 @@ namespace BinaryNinja
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
+		Confidence<std::vector<uint32_t>> GetReturnRegisters() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<size_t> GetStackAdjustment() const;
+		std::map<uint32_t, Confidence<int32_t>> GetRegisterStackAdjustments() const;
 		Confidence<std::set<uint32_t>> GetClobberedRegisters() const;
 
 		void SetAutoType(Type* type);
 		void SetAutoReturnType(const Confidence<Ref<Type>>& type);
+		void SetAutoReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs);
 		void SetAutoCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
 		void SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetAutoRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void SetUserType(Type* type);
 		void SetReturnType(const Confidence<Ref<Type>>& type);
+		void SetReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs);
 		void SetCallingConvention(const Confidence<Ref<CallingConvention>>& convention);
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
 		void SetStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void ApplyImportedTypes(Symbol* sym);
@@ -2250,6 +2335,21 @@ namespace BinaryNinja
 
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
+
+		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+			const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+			const Confidence<int32_t>& adjust);
+		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+			const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+			const Confidence<int32_t>& adjust);
+
+		Confidence<size_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
+		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
+		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
 
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 
@@ -2401,8 +2501,11 @@ namespace BinaryNinja
 	};
 
 	struct LowLevelILInstruction;
+	struct RegisterOrFlag;
 	struct SSARegister;
+	struct SSARegisterStack;
 	struct SSAFlag;
+	struct SSARegisterOrFlag;
 
 	class LowLevelILFunction: public CoreRefCountObject<BNLowLevelILFunction,
 		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
@@ -2444,6 +2547,14 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low, ExprId val,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry, ExprId val,
+			uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPush(size_t size, uint32_t regStack, ExprId val, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
+			ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
+			uint32_t reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Load(size_t size, ExprId addr, uint32_t flags = 0,
@@ -2461,8 +2572,29 @@ namespace BinaryNinja
 		ExprId RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
+			const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
+			ExprId entry, const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeAbsoluteSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
+			uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex,
@@ -2505,19 +2637,19 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId DivDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId div, uint32_t flags = 0,
+		ExprId ModDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
@@ -2531,16 +2663,19 @@ namespace BinaryNinja
 		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallStackAdjust(ExprId dest, size_t adjust, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<SSARegister>& params,
+		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<SSARegister>& params,
+		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagCondition(BNLowLevelILFlagCondition cond, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagGroup(uint32_t semGroup, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareEqual(size_t size, ExprId a, ExprId b,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareNotEqual(size_t size, ExprId a, ExprId b,
@@ -2564,6 +2699,11 @@ namespace BinaryNinja
 		ExprId TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(const std::vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(uint32_t num, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
@@ -2571,10 +2711,38 @@ namespace BinaryNinja
 		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagPhi(const SSAFlag& dest, const std::vector<SSAFlag>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t dest, const std::vector<size_t>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RoundToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Floor(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Ceil(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatTrunc(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f,
@@ -2585,8 +2753,11 @@ namespace BinaryNinja
 		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t> operands);
+		ExprId AddRegisterOrFlagList(const std::vector<RegisterOrFlag>& regs);
 		ExprId AddSSARegisterList(const std::vector<SSARegister>& regs);
+		ExprId AddSSARegisterStackList(const std::vector<SSARegisterStack>& regStacks);
 		ExprId AddSSAFlagList(const std::vector<SSAFlag>& flags);
+		ExprId AddSSARegisterOrFlagList(const std::vector<SSARegisterOrFlag>& regs);
 
 		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
 		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
@@ -2733,6 +2904,8 @@ namespace BinaryNinja
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarField(size_t size, const Variable& src, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSplit(size_t size, const Variable& high, const Variable& low,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSAField(size_t size, const SSAVariable& src, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
@@ -2740,11 +2913,16 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarAliasedField(size_t size, const Variable& src, size_t memVersion, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSplitSSA(size_t size, const SSAVariable& high, const SSAVariable& low,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOfField(const Variable& var, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
@@ -2778,17 +2956,17 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId high, ExprId low, ExprId right,
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
@@ -2845,6 +3023,13 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(const std::vector<Variable>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FreeVarSlot(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FreeVarSlotSSA(const Variable& var, size_t newVersion, size_t prevVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
@@ -2853,6 +3038,28 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t destMemVersion, const std::vector<size_t>& sourceMemVersions,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Floor(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Ceil(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f,
@@ -3111,6 +3318,11 @@ namespace BinaryNinja
 		static void GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 		static void GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 
+		static void GetIncomingVariableForParameterVariableCallback(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
+		static void GetParameterVariableForIncomingVariableCallback(void* ctxt, const BNVariable* var,
+			BNFunction* func, BNVariable* result);
+
 	public:
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;
@@ -3131,6 +3343,9 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters();
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func);
 		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func);
+
+		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func);
+		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func);
 	};
 
 	class CoreCallingConvention: public CallingConvention
@@ -3154,6 +3369,9 @@ namespace BinaryNinja
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters() override;
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override;
 		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func) override;
+
+		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func) override;
+		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func) override;
 	};
 
 	/*!

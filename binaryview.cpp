@@ -82,10 +82,7 @@ void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView*
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableAdded(view, varObj);
 }
 
@@ -94,10 +91,7 @@ void BinaryDataNotification::DataVariableRemovedCallback(void* ctxt, BNBinaryVie
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableRemoved(view, varObj);
 }
 
@@ -106,10 +100,7 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
-	DataVariable varObj;
-	varObj.address = var->address;
-	varObj.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence);
-	varObj.autoDiscovered = var->autoDiscovered;
+	DataVariable varObj(var->address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
 	notify->OnDataVariableUpdated(view, varObj);
 }
 
@@ -679,6 +670,7 @@ vector<BNModificationStatus> BinaryView::GetModification(uint64_t offset, size_t
 	len = BNGetModificationArray(m_object, offset, mod, len);
 
 	vector<BNModificationStatus> result;
+	result.reserve(len);
 	for (size_t i = 0; i < len; i++)
 		result.push_back(mod[i]);
 
@@ -965,11 +957,8 @@ map<uint64_t, DataVariable> BinaryView::GetDataVariables()
 	map<uint64_t, DataVariable> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		DataVariable var;
-		var.address = vars[i].address;
-		var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence);
-		var.autoDiscovered = vars[i].autoDiscovered;
-		result[var.address] = var;
+		result.emplace(piecewise_construct, forward_as_tuple(vars[i].address),
+			forward_as_tuple(vars[i].address, Confidence<Ref<Type>>(new Type(BNNewTypeReference(vars[i].type)), vars[i].typeConfidence), vars[i].autoDiscovered));
 	}
 
 	BNFreeDataVariables(vars, count);
@@ -1000,6 +989,7 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 	BNFunction** list = BNGetAnalysisFunctionList(m_object, &count);
 
 	vector<Ref<Function>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Function(BNNewFunctionReference(list[i])));
 
@@ -1038,6 +1028,7 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionsForAddress(uint64_t addr)
 	BNFunction** list = BNGetAnalysisFunctionsForAddress(m_object, addr, &count);
 
 	vector<Ref<Function>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Function(BNNewFunctionReference(list[i])));
 
@@ -1070,6 +1061,7 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksForAddress(uint64_t addr)
 	BNBasicBlock** blocks = BNGetBasicBlocksForAddress(m_object, addr, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
@@ -1084,6 +1076,7 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksStartingAtAddress(uint64_t add
 	BNBasicBlock** blocks = BNGetBasicBlocksStartingAtAddress(m_object, addr, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
@@ -1098,6 +1091,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 	BNReferenceSource* refs = BNGetCodeReferences(m_object, addr, &count);
 
 	vector<ReferenceSource> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		ReferenceSource src;
@@ -1118,6 +1112,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t le
 	BNReferenceSource* refs = BNGetCodeReferencesInRange(m_object, addr, len, &count);
 
 	vector<ReferenceSource> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		ReferenceSource src;
@@ -1156,6 +1151,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
 	BNSymbol** syms = BNGetSymbolsByName(m_object, name.c_str(), &count);
 
 	vector<Ref<Symbol>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
 
@@ -1170,6 +1166,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols()
 	BNSymbol** syms = BNGetSymbols(m_object, &count);
 
 	vector<Ref<Symbol>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
 
@@ -1184,6 +1181,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
 	BNSymbol** syms = BNGetSymbolsInRange(m_object, start, len, &count);
 
 	vector<Ref<Symbol>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
 
@@ -1198,6 +1196,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
 	BNSymbol** syms = BNGetSymbolsOfType(m_object, type, &count);
 
 	vector<Ref<Symbol>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
 
@@ -1212,6 +1211,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_object, type, start, len, &count);
 
 	vector<Ref<Symbol>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
 
@@ -1351,6 +1351,16 @@ BNAnalysisProgress BinaryView::GetAnalysisProgress()
 }
 
 
+Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
+{
+	BNBackgroundTask* task = BNGetBackgroundAnalysisTask(m_object);
+	if (!task)
+		return nullptr;
+
+	return new BackgroundTask(BNNewBackgroundTaskReference(task));
+}
+
+
 uint64_t BinaryView::GetNextFunctionStartAfterAddress(uint64_t addr)
 {
 	return BNGetNextFunctionStartAfterAddress(m_object, addr);
@@ -1424,6 +1434,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		settings ? settings->GetObject() : nullptr, &count);
 
 	vector<LinearDisassemblyLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		LinearDisassemblyLine line;
@@ -1432,6 +1443,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
 			InstructionTextToken token;
@@ -1470,6 +1482,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		settings ? settings->GetObject() : nullptr, &count);
 
 	vector<LinearDisassemblyLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		LinearDisassemblyLine line;
@@ -1478,6 +1491,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
 			InstructionTextToken token;
@@ -1716,6 +1730,7 @@ vector<Segment> BinaryView::GetSegments()
 	BNSegment* segments = BNGetSegments(m_object, &count);
 
 	vector<Segment> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		Segment segment;
@@ -1724,13 +1739,13 @@ vector<Segment> BinaryView::GetSegments()
 		segment.dataOffset = segments[i].dataOffset;
 		segment.dataLength = segments[i].dataLength;
 		segment.flags = segments[i].flags;
+		segment.autoDefined = segments[i].autoDefined;
 		result.push_back(segment);
 	}
 
 	BNFreeSegmentList(segments);
 	return result;
 }
-
 
 bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 {
@@ -1789,6 +1804,7 @@ vector<Section> BinaryView::GetSections()
 	BNSection* sections = BNGetSections(m_object, &count);
 
 	vector<Section> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		Section section;
@@ -1816,6 +1832,7 @@ vector<Section> BinaryView::GetSectionsAt(uint64_t addr)
 	BNSection* sections = BNGetSectionsAt(m_object, addr, &count);
 
 	vector<Section> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		Section section;
@@ -1867,6 +1884,7 @@ vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
 
 	char** outgoingNames = BNGetUniqueSectionNames(m_object, incomingNames, names.size());
 	vector<string> result;
+	result.reserve(names.size());
 	for (size_t i = 0; i < names.size(); i++)
 		result.push_back(outgoingNames[i]);
 

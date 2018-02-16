@@ -110,6 +110,7 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 	BNFunctionGraphBlock** blocks = BNGetFunctionGraphBlocks(m_graph, &count);
 
 	vector<Ref<FunctionGraphBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		auto block = m_cachedBlocks.find(blocks[i]);
@@ -148,6 +149,7 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocksInRegion(int left, int t
 	BNFunctionGraphBlock** blocks = BNGetFunctionGraphBlocksInRegion(m_graph, left, top, right, bottom, &count);
 
 	vector<Ref<FunctionGraphBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		auto block = m_cachedBlocks.find(blocks[i]);

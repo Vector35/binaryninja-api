@@ -306,6 +306,7 @@ static void Repeat(size_t addrSize,
 	}
 }
 
+
 // This is a wrapper for the x86 architecture. Its useful for extending and improving
 // the existing core x86 architecture.
 class x86ArchitectureExtension: public Architecture
@@ -350,8 +351,11 @@ public:
 			il.AddInstruction(il.Undefined());
 			return false;
 		}
-		if (instr.operation == CPUID)
+
+		size_t addrSize = 4;
+		switch (instr.operation)
 		{
+		case CPUID:
 			// The default implementation of CPUID doesn't set registers to constant values
 			// Here we'll emulate a Intel(R) Core(TM) i5-6267U CPU @ 2.90GHz with _eax set to 1
 			il.AddInstruction(il.Register(4, REG_EAX)); // Reference the register so we know it is read
@@ -361,8 +365,96 @@ public:
 			il.AddInstruction(il.SetRegister(4, REG_EDX, il.Const(4, 0xbfebfbff)));
 			len = instr.length;
 			return true;
+
+		case JMP:
+			if (instr.operands[0].operand == IMM)
+				il.AddInstruction(DirectJump(this, il, instr.operands[0].immediate, addrSize));
+			else
+				il.AddInstruction(il.Jump(ReadILOperand(il, instr, 0, addrSize, true)));
+			return false;
+
+		case JO:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_O), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JNO:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_NO), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JB:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_ULT), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JAE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_UGE), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_E), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JNE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_NE), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JBE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_ULE), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JA:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_UGT), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JS:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_NEG), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JNS:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_POS), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JPE:
+			ConditionalJump(this, il, il.Not(0, il.Flag(IL_FLAG_P)), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JPO:
+			ConditionalJump(this, il, il.Flag(IL_FLAG_P), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JL:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_SLT), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JGE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_SGE), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JLE:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_SLE), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JG:
+			ConditionalJump(this, il, il.FlagCondition(LLFC_SGT), addrSize, instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JCXZ:
+			ConditionalJump(this, il, il.CompareEqual(2, il.Register(2, REG_CX), il.Const(2, 0)), addrSize,
+							instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JECXZ:
+			ConditionalJump(this, il, il.CompareEqual(4, il.Register(4, REG_ECX), il.Const(4, 0)), addrSize,
+							instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		case JRCXZ:
+			ConditionalJump(this, il, il.CompareEqual(8, il.Register(8, REG_RCX), il.Const(8, 0)), addrSize,
+							instr.operands[0].immediate, addr + instr.length);
+			return false;
+
+		default:
+			return m_arch->GetInstructionLowLevelIL(data, addr, len, il);
 		}
-		return m_arch->GetInstructionLowLevelIL(data, addr, len, il);
 	}
 
 	virtual size_t GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
@@ -490,6 +582,12 @@ public:
 
 extern "C"
 {
+	BINARYNINJAPLUGIN void CorePluginDependencies()
+	{
+		// Make sure we load after the original x86 plugin loads
+		SetCurrentPluginLoadOrder(LatePluginLoadOrder);
+	}
+
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
 		Architecture* x86ext = new x86ArchitectureExtension();

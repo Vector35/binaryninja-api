@@ -168,6 +168,17 @@ class PluginCommand(object):
 
 	@classmethod
 	def register(cls, name, description, action, is_valid = None):
+		"""
+		``register`` Register a plugin
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` as an argument
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
 		startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._default_action(view, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._default_is_valid(view, is_valid))
@@ -176,6 +187,17 @@ class PluginCommand(object):
 
 	@classmethod
 	def register_for_address(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_address`` Register a plugin to be called with an address argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and address as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_address`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
 		startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong)(lambda ctxt, view, addr: cls._address_action(view, addr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong)(lambda ctxt, view, addr: cls._address_is_valid(view, addr, is_valid))
@@ -184,6 +206,17 @@ class PluginCommand(object):
 
 	@classmethod
 	def register_for_range(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_range`` Register a plugin to be called with a range argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and ``AddressRange`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_range`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
 		startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, view, addr, length: cls._range_action(view, addr, length, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, view, addr, length: cls._range_is_valid(view, addr, length, is_valid))
@@ -192,6 +225,17 @@ class PluginCommand(object):
 
 	@classmethod
 	def register_for_function(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_function`` Register a plugin to be called with a function argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and a ``Function`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
 		startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNFunction))(lambda ctxt, view, func: cls._function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNFunction))(lambda ctxt, view, func: cls._function_is_valid(view, func, is_valid))
@@ -200,11 +244,12 @@ class PluginCommand(object):
 
 	@classmethod
 	def get_valid_list(cls, context):
+		"""Dict of registered plugins"""
 		commands = cls.list
-		result = []
+		result = {}
 		for cmd in commands:
 			if cmd.is_valid(context):
-				result.append(cmd)
+				result[cmd.name] = cmd
 		return result
 
 	def is_valid(self, context):

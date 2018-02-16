@@ -27,6 +27,7 @@ import function
 import basicblock
 import lowlevelil
 import types
+import struct
 
 
 class SSAVariable(object):
@@ -85,10 +86,12 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_VAR: [("src", "var")],
 		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_VAR_SPLIT: [("high", "var"), ("low", "var")],
 		MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")],
 		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
 		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
+		MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")],
 		MediumLevelILOperation.MLIL_IMPORT: [("constant", "int")],
 		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
@@ -108,13 +111,13 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_DIVU: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_DIVS: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MODU: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_MODS: [("left", "expr"), ("right", "expr")],
-		MediumLevelILOperation.MLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_NEG: [("src", "expr")],
 		MediumLevelILOperation.MLIL_NOT: [("src", "expr")],
 		MediumLevelILOperation.MLIL_SX: [("src", "expr")],
@@ -147,9 +150,35 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [("output", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_BP: [],
 		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
+		MediumLevelILOperation.MLIL_INTRINSIC: [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_INTRINSIC_SSA: [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [("dest", "var")],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [("prev", "var_ssa_dest_and_src")],
 		MediumLevelILOperation.MLIL_UNDEF: [],
 		MediumLevelILOperation.MLIL_UNIMPL: [],
 		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FADD: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FSUB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FMUL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FDIV: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FSQRT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FNEG: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FABS: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOAT_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_INT_TO_FLOAT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOAT_CONV: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ROUND_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOOR: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CEIL: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FTRUNC: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
@@ -159,6 +188,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [("src", "var_ssa"), ("offset", "int")],
 		MediumLevelILOperation.MLIL_VAR_ALIASED: [("src", "var_ssa")],
 		MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: [("src", "var_ssa"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa")],
 		MediumLevelILOperation.MLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_SYSCALL_SSA: [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
@@ -192,8 +222,17 @@ class MediumLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+			elif operand_type == "float":
+				if instr.size == 4:
+					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
+				elif instr.size == 8:
+					value = struct.unpack("d", struct.pack("Q", instr.operands[i]))[0]
+				else:
+					value = instr.operands[i]
 			elif operand_type == "expr":
 				value = MediumLevelILInstruction(func, instr.operands[i])
+			elif operand_type == "intrinsic":
+				value = lowlevelil.ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "var":
 				value = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 			elif operand_type == "var_ssa":

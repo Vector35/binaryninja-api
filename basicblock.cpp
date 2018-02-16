@@ -120,6 +120,7 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	BNBasicBlockEdge* array = BNGetBasicBlockOutgoingEdges(m_object, &count);
 
 	vector<BasicBlockEdge> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
@@ -140,6 +141,7 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 	BNBasicBlockEdge* array = BNGetBasicBlockIncomingEdges(m_object, &count);
 
 	vector<BasicBlockEdge> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
@@ -269,10 +271,12 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
 
 	vector<DisassemblyTextLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;

@@ -1831,12 +1831,42 @@ class Architecture(object):
 			return sem_class.index
 		return sem_class
 
+	def get_semantic_flag_class_name(self, class_index):
+		"""
+		``get_semantic_flag_class_name`` gets the name of a semantic flag class from the index.
+
+		:param int _index: class_index
+		:return: the name of the semantic flag class
+		:rtype: str
+		"""
+		if not isinstance(class_index, int):
+			raise ValueError("argument 'class_index' must be an intege")
+		try:
+			return self._semantic_flag_classes_by_index[class_index]
+		except KeyError:
+			raise AttributeError("argument class_index is not a valid class index")
+
 	def get_semantic_flag_group_index(self, sem_group):
 		if isinstance(sem_group, str):
 			return self._semantic_flag_groups[sem_group]
 		elif isinstance(sem_group, lowlevelil.ILSemanticFlagGroup):
 			return sem_group.index
 		return sem_group
+
+	def get_semantic_flag_group_name(self, group_index):
+		"""
+		``get_semantic_flag_group_name`` gets the name of a semantic flag group from the index.
+
+		:param int group_index: group_index
+		:return: the name of the semantic flag group
+		:rtype: str
+		"""
+		if not isinstance(group_index, int):
+			raise ValueError("argument 'group_index' must be an intege")
+		try:
+			return self._semantic_flag_groups_by_index[group_index]
+		except KeyError:
+			raise AttributeError("argument group_index is not a valid group index")
 
 	def get_intrinsic_name(self, intrinsic):
 		"""

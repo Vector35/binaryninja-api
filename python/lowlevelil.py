@@ -968,7 +968,7 @@ class LowLevelILFunction(object):
 
 	def load(self, size, addr):
 		"""
-		``laod`` Reads ``size`` bytes from the expression ``addr``
+		``load`` Reads ``size`` bytes from the expression ``addr``
 
 		:param int size: number of bytes to read
 		:param LowLevelILExpr addr: the expression to read memory from

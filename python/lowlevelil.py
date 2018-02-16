@@ -119,7 +119,7 @@ class ILSemanticFlagGroup(object):
 	def __init__(self, arch, sem_group):
 		self.arch = arch
 		self.index = sem_group
-		self.name = self.arch.get_semantic_flag_group_name(self.index)
+		self.name = self.arch.get_semantic_flag_group_index(self.index)
 
 	def __str__(self):
 		return self.name

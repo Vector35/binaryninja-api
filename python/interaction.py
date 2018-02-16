@@ -121,7 +121,7 @@ class IntegerField(object):
 class AddressField(object):
 	"""
 	``AddressField`` prompts the user for an address. By passing the optional view and current_address parameters
-	offsets can be used instead of just an address. Th reslut is stored as in int in self.result.
+	offsets can be used instead of just an address. The result is stored as in int in self.result.
 
 	Note: This API currenlty functions differently on the command line, as the view and current_address are
 	      disregarded. Additionally where as in the ui the result defaults to hexidecimal on the command line 0x must be 

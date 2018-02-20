@@ -1423,7 +1423,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVU, a.index, b.index, size=size, flags=flags)
 
 	def div_double_prec_unsigned(self, size, a, b, flags=None):
 		"""
@@ -1438,7 +1438,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``divs.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVU_DP, a.index, b.index, size=size, flags=flags)
 
 	def mod_signed(self, size, a, b, flags=None):
 		"""

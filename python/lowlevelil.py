@@ -1377,7 +1377,7 @@ class LowLevelILFunction(object):
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
+		:return: The expression ``mulu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a.index, b.index, size=size, flags=flags)
@@ -1420,7 +1420,7 @@ class LowLevelILFunction(object):
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``divs.<size>{<flags>}(a, b)``
+		:return: The expression ``divu.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVU, a.index, b.index, size=size, flags=flags)
@@ -1435,7 +1435,7 @@ class LowLevelILFunction(object):
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``divs.dp.<size>{<flags>}(a, b)``
+		:return: The expression ``divu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVU_DP, a.index, b.index, size=size, flags=flags)
@@ -1540,7 +1540,7 @@ class LowLevelILFunction(object):
 
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr value: the expression to zero extend
-		:return: The expression ``sx.<size>(value)``
+		:return: The expression ``zx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ZX, value.index, size=size, flags=flags)

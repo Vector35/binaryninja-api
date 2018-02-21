@@ -1496,7 +1496,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``modu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_MODS_DP, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODU_DP, a.index, b.index, size=size, flags=flags)
 
 	def neg_expr(self, size, value, flags=None):
 		"""

@@ -1481,7 +1481,7 @@ class LowLevelILFunction(object):
 		:return: The expression ``modu.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODU, a.index, b.index, size=size, flags=flags)
 
 	def mod_double_prec_unsigned(self, size, a, b, flags=None):
 		"""

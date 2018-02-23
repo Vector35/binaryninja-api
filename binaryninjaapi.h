@@ -1668,6 +1668,8 @@ namespace BinaryNinja
 		static bool InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		static bool SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
+		virtual void Register(BNCustomArchitecture* callbacks);
+
 	public:
 		Architecture(const std::string& name);
 
@@ -1832,6 +1834,8 @@ namespace BinaryNinja
 		Ref<CallingConvention> GetStdcallCallingConvention();
 		Ref<CallingConvention> GetFastcallCallingConvention();
 		Ref<Platform> GetStandalonePlatform();
+
+		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
 
 	class CoreArchitecture: public Architecture
@@ -1898,6 +1902,91 @@ namespace BinaryNinja
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
+	};
+
+	class ArchitectureExtension: public Architecture
+	{
+	protected:
+		Ref<Architecture> m_base;
+
+		virtual void Register(BNCustomArchitecture* callbacks) override;
+
+	public:
+		ArchitectureExtension(const std::string& name, Architecture* base);
+
+		Ref<Architecture> GetBaseArchitecture() const { return m_base; }
+
+		virtual BNEndianness GetEndianness() const override;
+		virtual size_t GetAddressSize() const override;
+		virtual size_t GetDefaultIntegerSize() const override;
+		virtual size_t GetInstructionAlignment() const override;
+		virtual size_t GetMaxInstructionLength() const override;
+		virtual size_t GetOpcodeDisplayLength() const override;
+		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
+		                                std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+		virtual std::string GetRegisterName(uint32_t reg) override;
+		virtual std::string GetFlagName(uint32_t flag) override;
+		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
+		virtual std::string GetSemanticFlagClassName(uint32_t semClass) override;
+		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup) override;
+		virtual std::vector<uint32_t> GetFullWidthRegisters() override;
+		virtual std::vector<uint32_t> GetAllRegisters() override;
+		virtual std::vector<uint32_t> GetAllFlags() override;
+		virtual std::vector<uint32_t> GetAllFlagWriteTypes() override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
+		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
+		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+			uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
+		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
+		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+			uint32_t semClass, LowLevelILFunction& il) override;
+		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override;
+		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
+		virtual uint32_t GetStackPointerRegister() override;
+		virtual uint32_t GetLinkRegister() override;
+		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+
+		virtual std::string GetRegisterStackName(uint32_t regStack) override;
+		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
+		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
+
+		virtual std::string GetIntrinsicName(uint32_t intrinsic) override;
+		virtual std::vector<uint32_t> GetAllIntrinsics() override;
+		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
+		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override;
+
+		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
+
+		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
+
+		virtual bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override;
+		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
+	};
+
+	class ArchitectureHook: public CoreArchitecture
+	{
+	protected:
+		Ref<Architecture> m_base;
+
+		virtual void Register(BNCustomArchitecture* callbacks) override;
+
+	public:
+		ArchitectureHook(Architecture* base);
 	};
 
 	class Structure;

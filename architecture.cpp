@@ -640,6 +640,13 @@ bool Architecture::SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_
 }
 
 
+void Architecture::Register(BNCustomArchitecture* callbacks)
+{
+	AddRefForRegistration();
+	BNRegisterArchitecture(m_nameForRegister.c_str(), callbacks);
+}
+
+
 void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
@@ -701,8 +708,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
-	arch->AddRefForRegistration();
-	BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
+	arch->Register(&callbacks);
 }
 
 
@@ -1228,6 +1234,12 @@ Ref<Platform> Architecture::GetStandalonePlatform()
 }
 
 
+void Architecture::AddArchitectureRedirection(Architecture* from, Architecture* to)
+{
+	BNAddArchitectureRedirection(m_object, from->GetObject(), to->GetObject());
+}
+
+
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
 }
@@ -1711,4 +1723,366 @@ bool CoreArchitecture::InvertBranch(uint8_t* data, uint64_t addr, size_t len)
 bool CoreArchitecture::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value)
 {
 	return BNArchitectureSkipAndReturnValue(m_object, data, addr, len, value);
+}
+
+
+ArchitectureExtension::ArchitectureExtension(const string& name, Architecture* base): Architecture(name), m_base(base)
+{
+}
+
+
+void ArchitectureExtension::Register(BNCustomArchitecture* callbacks)
+{
+	AddRefForRegistration();
+	BNRegisterArchitectureExtension(m_nameForRegister.c_str(), m_base->GetObject(), callbacks);
+}
+
+
+BNEndianness ArchitectureExtension::GetEndianness() const
+{
+	return m_base->GetEndianness();
+}
+
+
+size_t ArchitectureExtension::GetAddressSize() const
+{
+	return m_base->GetAddressSize();
+}
+
+
+size_t ArchitectureExtension::GetDefaultIntegerSize() const
+{
+	return m_base->GetDefaultIntegerSize();
+}
+
+
+size_t ArchitectureExtension::GetInstructionAlignment() const
+{
+	return m_base->GetInstructionAlignment();
+}
+
+
+size_t ArchitectureExtension::GetMaxInstructionLength() const
+{
+	return m_base->GetMaxInstructionLength();
+}
+
+
+size_t ArchitectureExtension::GetOpcodeDisplayLength() const
+{
+	return m_base->GetOpcodeDisplayLength();
+}
+
+
+Ref<Architecture> ArchitectureExtension::GetAssociatedArchitectureByAddress(uint64_t& addr)
+{
+	Ref<Architecture> result = m_base->GetAssociatedArchitectureByAddress(addr);
+	if (result == m_base)
+		return this;
+	return result;
+}
+
+
+bool ArchitectureExtension::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
+{
+	return m_base->GetInstructionInfo(data, addr, maxLen, result);
+}
+
+
+bool ArchitectureExtension::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
+	vector<InstructionTextToken>& result)
+{
+	return m_base->GetInstructionText(data, addr, len, result);
+}
+
+
+bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
+{
+	return m_base->GetInstructionLowLevelIL(data, addr, len, il);
+}
+
+
+string ArchitectureExtension::GetRegisterName(uint32_t reg)
+{
+	return m_base->GetRegisterName(reg);
+}
+
+
+string ArchitectureExtension::GetFlagName(uint32_t flag)
+{
+	return m_base->GetFlagName(flag);
+}
+
+
+string ArchitectureExtension::GetFlagWriteTypeName(uint32_t flags)
+{
+	return m_base->GetFlagWriteTypeName(flags);
+}
+
+
+string ArchitectureExtension::GetSemanticFlagClassName(uint32_t semClass)
+{
+	return m_base->GetSemanticFlagClassName(semClass);
+}
+
+
+string ArchitectureExtension::GetSemanticFlagGroupName(uint32_t semGroup)
+{
+	return m_base->GetSemanticFlagGroupName(semGroup);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetFullWidthRegisters()
+{
+	return m_base->GetFullWidthRegisters();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllRegisters()
+{
+	return m_base->GetAllRegisters();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllFlags()
+{
+	return m_base->GetAllFlags();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllFlagWriteTypes()
+{
+	return m_base->GetAllFlagWriteTypes();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllSemanticFlagClasses()
+{
+	return m_base->GetAllSemanticFlagClasses();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllSemanticFlagGroups()
+{
+	return m_base->GetAllSemanticFlagGroups();
+}
+
+
+BNFlagRole ArchitectureExtension::GetFlagRole(uint32_t flag, uint32_t semClass)
+{
+	return m_base->GetFlagRole(flag, semClass);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
+	uint32_t semClass)
+{
+	return m_base->GetFlagsRequiredForFlagCondition(cond, semClass);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup)
+{
+	return m_base->GetFlagsRequiredForSemanticFlagGroup(semGroup);
+}
+
+
+map<uint32_t, BNLowLevelILFlagCondition> ArchitectureExtension::GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup)
+{
+	return m_base->GetFlagConditionsForSemanticFlagGroup(semGroup);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetFlagsWrittenByFlagWriteType(uint32_t writeType)
+{
+	return m_base->GetFlagsWrittenByFlagWriteType(writeType);
+}
+
+
+uint32_t ArchitectureExtension::GetSemanticClassForFlagWriteType(uint32_t writeType)
+{
+	return m_base->GetSemanticClassForFlagWriteType(writeType);
+}
+
+
+ExprId ArchitectureExtension::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
+{
+	return m_base->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, il);
+}
+
+
+ExprId ArchitectureExtension::GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
+	uint32_t semClass, LowLevelILFunction& il)
+{
+	return m_base->GetFlagConditionLowLevelIL(cond, semClass, il);
+}
+
+
+ExprId ArchitectureExtension::GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il)
+{
+	return m_base->GetSemanticFlagGroupLowLevelIL(semGroup, il);
+}
+
+
+BNRegisterInfo ArchitectureExtension::GetRegisterInfo(uint32_t reg)
+{
+	return m_base->GetRegisterInfo(reg);
+}
+
+
+uint32_t ArchitectureExtension::GetStackPointerRegister()
+{
+	return m_base->GetStackPointerRegister();
+}
+
+
+uint32_t ArchitectureExtension::GetLinkRegister()
+{
+	return m_base->GetLinkRegister();
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetGlobalRegisters()
+{
+	return m_base->GetGlobalRegisters();
+}
+
+
+string ArchitectureExtension::GetRegisterStackName(uint32_t regStack)
+{
+	return m_base->GetRegisterStackName(regStack);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllRegisterStacks()
+{
+	return m_base->GetAllRegisterStacks();
+}
+
+
+BNRegisterStackInfo ArchitectureExtension::GetRegisterStackInfo(uint32_t regStack)
+{
+	return m_base->GetRegisterStackInfo(regStack);
+}
+
+
+string ArchitectureExtension::GetIntrinsicName(uint32_t intrinsic)
+{
+	return m_base->GetIntrinsicName(intrinsic);
+}
+
+
+vector<uint32_t> ArchitectureExtension::GetAllIntrinsics()
+{
+	return m_base->GetAllIntrinsics();
+}
+
+
+vector<NameAndType> ArchitectureExtension::GetIntrinsicInputs(uint32_t intrinsic)
+{
+	return m_base->GetIntrinsicInputs(intrinsic);
+}
+
+
+vector<Confidence<Ref<Type>>> ArchitectureExtension::GetIntrinsicOutputs(uint32_t intrinsic)
+{
+	return m_base->GetIntrinsicOutputs(intrinsic);
+}
+
+
+bool ArchitectureExtension::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
+{
+	return m_base->Assemble(code, addr, result, errors);
+}
+
+
+bool ArchitectureExtension::IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->IsNeverBranchPatchAvailable(data, addr, len);
+}
+
+
+bool ArchitectureExtension::IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->IsAlwaysBranchPatchAvailable(data, addr, len);
+}
+
+
+bool ArchitectureExtension::IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->IsInvertBranchPatchAvailable(data, addr, len);
+}
+
+
+bool ArchitectureExtension::IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->IsSkipAndReturnValuePatchAvailable(data, addr, len);
+}
+
+
+bool ArchitectureExtension::IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->IsSkipAndReturnValuePatchAvailable(data, addr, len);
+}
+
+
+bool ArchitectureExtension::ConvertToNop(uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->ConvertToNop(data, addr, len);
+}
+
+
+bool ArchitectureExtension::AlwaysBranch(uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->AlwaysBranch(data, addr, len);
+}
+
+
+bool ArchitectureExtension::InvertBranch(uint8_t* data, uint64_t addr, size_t len)
+{
+	return m_base->InvertBranch(data, addr, len);
+}
+
+
+bool ArchitectureExtension::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value)
+{
+	return m_base->SkipAndReturnValue(data, addr, len, value);
+}
+
+
+ArchitectureHook::ArchitectureHook(Architecture* base): CoreArchitecture(nullptr), m_base(base)
+{
+	// Architecture hooks allow existing architecture implementations to be extended without creating
+	// a new Architecture object for the changes. By deriving from the ArchitectureHook class and passing
+	// the original Architecture object of the architecture to be extended, any reimplemented functions
+	// will be called first before the original architecture's implementation. You MUST call the base
+	// class method to call the original implementation's version of the function, as calling the
+	// same function on the original Architecture object will call your implementation again.
+
+	// Example of a hook to modify the lifting process:
+
+	// class ArchitectureHookExample: public ArchitectureHook
+	// {
+	// public:
+	//     ArchitectureHookExample(Architecture* existingArch) : ArchitectureHook(existingArch)
+	//     {
+	//     }
+	//
+	//     virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len,
+	//         LowLevelILFunction& il) override
+	//     {
+	//         // Perform extra lifting here
+	//         // ...
+	//         // For unhandled cases, call the original architecture's implementation
+	//         return ArchitectureHook::GetInstructionLowLevelIL(data, addr, len, il);
+	//     }
+	// };
+}
+
+
+void ArchitectureHook::Register(BNCustomArchitecture* callbacks)
+{
+	AddRefForRegistration();
+	m_object = BNRegisterArchitectureHook(m_base->GetObject(), callbacks);
 }

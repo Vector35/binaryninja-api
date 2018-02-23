@@ -2085,6 +2085,10 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture** BNGetArchitectureList(size_t* count);
 	BINARYNINJACOREAPI void BNFreeArchitectureList(BNArchitecture** archs);
 	BINARYNINJACOREAPI BNArchitecture* BNRegisterArchitecture(const char* name, BNCustomArchitecture* arch);
+	BINARYNINJACOREAPI BNArchitecture* BNRegisterArchitectureExtension(const char* name,
+		BNArchitecture* base, BNCustomArchitecture* arch);
+	BINARYNINJACOREAPI void BNAddArchitectureRedirection(BNArchitecture* arch, BNArchitecture* from, BNArchitecture* to);
+	BINARYNINJACOREAPI BNArchitecture* BNRegisterArchitectureHook(BNArchitecture* base, BNCustomArchitecture* arch);
 
 	BINARYNINJACOREAPI char* BNGetArchitectureName(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNEndianness BNGetArchitectureEndianness(BNArchitecture* arch);

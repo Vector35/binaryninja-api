@@ -102,6 +102,7 @@ void BinaryNinja::Log(BNLogLevel level, const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(level, fmt, args);
+	va_end(args);
 }
 
 
@@ -110,6 +111,7 @@ void BinaryNinja::LogDebug(const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(DebugLog, fmt, args);
+	va_end(args);
 }
 
 
@@ -118,6 +120,7 @@ void BinaryNinja::LogInfo(const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(InfoLog, fmt, args);
+	va_end(args);
 }
 
 
@@ -126,6 +129,7 @@ void BinaryNinja::LogWarn(const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(WarningLog, fmt, args);
+	va_end(args);
 }
 
 
@@ -134,6 +138,7 @@ void BinaryNinja::LogError(const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(ErrorLog, fmt, args);
+	va_end(args);
 }
 
 
@@ -142,6 +147,7 @@ void BinaryNinja::LogAlert(const char* fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	PerformLog(AlertLog, fmt, args);
+	va_end(args);
 }
 
 

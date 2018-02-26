@@ -1839,8 +1839,8 @@ class Architecture(object):
 		:return: the name of the semantic flag class
 		:rtype: str
 		"""
-		if not isinstance(class_index, int):
-			raise ValueError("argument 'class_index' must be an intege")
+		if not isinstance(class_index, (int, long)):
+			raise ValueError("argument 'class_index' must be an integer")
 		try:
 			return self._semantic_flag_classes_by_index[class_index]
 		except KeyError:
@@ -1861,8 +1861,8 @@ class Architecture(object):
 		:return: the name of the semantic flag group
 		:rtype: str
 		"""
-		if not isinstance(group_index, int):
-			raise ValueError("argument 'group_index' must be an intege")
+		if not isinstance(group_index, (int, long)):
+			raise ValueError("argument 'group_index' must be an integer")
 		try:
 			return self._semantic_flag_groups_by_index[group_index]
 		except KeyError:

@@ -105,7 +105,7 @@ class Platform(object):
 		else:
 			self.handle = handle
 			self.__dict__["name"] = core.BNGetPlatformName(self.handle)
-			self.arch = architecture.Architecture(core.BNGetPlatformArchitecture(self.handle))
+			self.arch = architecture.CoreArchitecture(core.BNGetPlatformArchitecture(self.handle))
 
 	def __del__(self):
 		core.BNFreePlatform(self.handle)

@@ -423,7 +423,7 @@ class M6502(Architecture):
 
 		return instr, operand, length, value
 
-	def perform_get_instruction_info(self, data, addr):
+	def get_instruction_info(self, data, addr):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
@@ -445,7 +445,7 @@ class M6502(Architecture):
 			result.add_branch(BranchType.FalseBranch, addr + 2)
 		return result
 
-	def perform_get_instruction_text(self, data, addr):
+	def get_instruction_text(self, data, addr):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
@@ -455,7 +455,7 @@ class M6502(Architecture):
 		tokens += OperandTokens[operand](value)
 		return tokens, length
 
-	def perform_get_instruction_low_level_il(self, data, addr, il):
+	def get_instruction_low_level_il(self, data, addr, il):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
@@ -470,48 +470,48 @@ class M6502(Architecture):
 
 		return length
 
-	def perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
+	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		if flag == 'c':
 			if (op == LowLevelILOperation.LLIL_SUB) or (op == LowLevelILOperation.LLIL_SBB):
 				# Subtraction carry flag is inverted from the commom implementation
 				return il.not_expr(0, self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il))
 			# Other operations use a normal carry flag
 			return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
-		return Architecture.perform_get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
+		return Architecture.get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
 
-	def perform_is_never_branch_patch_available(self, data, addr):
+	def is_never_branch_patch_available(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
 			return True
 		return False
 
-	def perform_is_invert_branch_patch_available(self, data, addr):
+	def is_invert_branch_patch_available(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
 			return True
 		return False
 
-	def perform_is_always_branch_patch_available(self, data, addr):
+	def is_always_branch_patch_available(self, data, addr):
 		return False
 
-	def perform_is_skip_and_return_zero_patch_available(self, data, addr):
+	def is_skip_and_return_zero_patch_available(self, data, addr):
 		return (data[0] == "\x20") and (len(data) == 3)
 
-	def perform_is_skip_and_return_value_patch_available(self, data, addr):
+	def is_skip_and_return_value_patch_available(self, data, addr):
 		return (data[0] == "\x20") and (len(data) == 3)
 
-	def perform_convert_to_nop(self, data, addr):
+	def convert_to_nop(self, data, addr):
 		return "\xea" * len(data)
 
-	def perform_never_branch(self, data, addr):
+	def never_branch(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
 			return "\xea" * len(data)
 		return None
 
-	def perform_invert_branch(self, data, addr):
+	def invert_branch(self, data, addr):
 		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
 			return chr(ord(data[0]) ^ 0x20) + data[1:]
 		return None
 
-	def perform_skip_and_return_value(self, data, addr, value):
+	def skip_and_return_value(self, data, addr, value):
 		if (data[0] != "\x20") or (len(data) != 3):
 			return None
 		return "\xa9" + chr(value & 0xff) + "\xea"

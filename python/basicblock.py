@@ -100,7 +100,7 @@ class BasicBlock(object):
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = architecture.Architecture(arch)
+		self._arch = architecture.CoreArchitecture(arch)
 		return self._arch
 
 	@property

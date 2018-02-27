@@ -400,7 +400,7 @@ class BinaryViewType(object):
 		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
-		return architecture.Architecture(arch)
+		return architecture.CoreArchitecture(arch)
 
 	def register_platform(self, ident, arch, plat):
 		core.BNRegisterPlatformForViewType(self.handle, ident, arch.handle, plat.handle)
@@ -812,7 +812,7 @@ class BinaryView(object):
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.Architecture(handle=arch)
+		return architecture.CoreArchitecture(handle=arch)
 
 	@arch.setter
 	def arch(self, value):
@@ -2191,7 +2191,7 @@ class BinaryView(object):
 			else:
 				func = None
 			if refs[i].arch:
-				arch = architecture.Architecture(refs[i].arch)
+				arch = architecture.CoreArchitecture(refs[i].arch)
 			else:
 				arch = None
 			addr = refs[i].addr

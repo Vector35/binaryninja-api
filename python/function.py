@@ -419,7 +419,7 @@ class Function(object):
 			arch = core.BNGetFunctionArchitecture(self.handle)
 			if arch is None:
 				return None
-			self._arch = architecture.Architecture(arch)
+			self._arch = architecture.CoreArchitecture(arch)
 			return self._arch
 
 	@property
@@ -557,7 +557,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranches(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.Architecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1115,7 +1115,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.Architecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1633,7 +1633,7 @@ class FunctionGraphBlock(object):
 		arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.Architecture(arch)
+		return architecture.CoreArchitecture(arch)
 
 	@property
 	def start(self):

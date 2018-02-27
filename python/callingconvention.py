@@ -75,7 +75,7 @@ class CallingConvention(object):
 			self.__class__._registered_calling_conventions.append(self)
 		else:
 			self.handle = handle
-			self.arch = architecture.Architecture(core.BNGetCallingConventionArchitecture(self.handle))
+			self.arch = architecture.CoreArchitecture(core.BNGetCallingConventionArchitecture(self.handle))
 			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)

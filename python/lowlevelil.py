@@ -264,7 +264,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
 		LowLevelILOperation.LLIL_GOTO: [("dest", "int")],
-		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond", "semantic_class", "sem_class")],
+		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond"), ("semantic_class", "sem_class")],
 		LowLevelILOperation.LLIL_FLAG_GROUP: [("semantic_group", "sem_group")],
 		LowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
@@ -399,7 +399,10 @@ class LowLevelILInstruction(object):
 				i += 1
 				value = SSAFlag(flag, instr.operands[i])
 			elif operand_type == "sem_class":
-				value = ILSemanticFlagClass(func.arch, instr.operands[i])
+				if instr.operands[i] == 0:
+					value = None
+				else:
+					value = ILSemanticFlagClass(func.arch, instr.operands[i])
 			elif operand_type == "sem_group":
 				value = ILSemanticFlagGroup(func.arch, instr.operands[i])
 			elif operand_type == "cond":

@@ -22,15 +22,16 @@ import traceback
 import ctypes
 import abc
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import TransformType
-import startup
-import log
-import databuffer
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import TransformType
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class _TransformMetaClass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		startup._init_plugins()
@@ -90,14 +91,15 @@ class TransformParameter(object):
 		self.fixed_length = fixed_length
 
 
-class Transform(object):
+class Transform(with_metaclass(_TransformMetaClass, object)):
+	from binaryninja import log
+	from binaryninja import databuffer
 	transform_type = None
 	name = None
 	long_name = None
 	group = None
 	parameters = []
 	_registered_cb = None
-	__metaclass__ = _TransformMetaClass
 
 	def __init__(self, handle):
 		if handle is None:

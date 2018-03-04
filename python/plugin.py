@@ -22,16 +22,12 @@ import traceback
 import ctypes
 import threading
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import PluginCommandType
-import startup
-import filemetadata
-import binaryview
-import function
-import log
-import lowlevelil
-import mediumlevelil
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import PluginCommandType
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class PluginCommandContext(object):
@@ -44,6 +40,7 @@ class PluginCommandContext(object):
 
 
 class _PluginCommandMetaClass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		startup._init_plugins()
@@ -72,9 +69,13 @@ class _PluginCommandMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class PluginCommand(object):
+class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
+	from binaryninja import startup
+	from binaryninja import filemetadata
+	from binaryninja import binaryview
+	from binaryninja import function
+	from binaryninja import log
 	_registered_commands = []
-	__metaclass__ = _PluginCommandMetaClass
 
 	def __init__(self, cmd):
 		self.command = core.BNPluginCommand()
@@ -536,6 +537,7 @@ class MainThreadAction(object):
 
 
 class MainThreadActionHandler(object):
+	from binaryninja import log
 	_main_thread = None
 
 	def __init__(self):
@@ -580,8 +582,7 @@ class _BackgroundTaskMetaclass(type):
 			core.BNFreeBackgroundTaskList(tasks, count.value)
 
 
-class BackgroundTask(object):
-	__metaclass__ = _BackgroundTaskMetaclass
+class BackgroundTask(with_metaclass(_BackgroundTaskMetaclass, object)):
 
 	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
 		if handle is None:

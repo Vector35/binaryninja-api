@@ -18,18 +18,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import traceback
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-import startup
-import associateddatastore
-import log
-import binaryview
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
 
 
 class NavigationHandler(object):
+	from binaryninja import log
 	def _register(self, handle):
 		self._cb = core.BNNavigationHandler()
 		self._cb.context = 0
@@ -66,12 +65,14 @@ class _FileMetadataAssociatedDataStore(associateddatastore._AssociatedDataStore)
 
 
 class FileMetadata(object):
-	_associated_data = {}
-
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
 	"""
+	from binaryninja import startup
+	from binaryninja import binaryview
+	_associated_data = {}
+
 	def __init__(self, filename = None, handle = None):
 		"""
 		Instantiates a new FileMetadata class.

@@ -24,23 +24,14 @@ import ctypes
 import abc
 import threading
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
-import function
-import startup
-import architecture
-import platform
-import associateddatastore
-import fileaccessor
-import filemetadata
-import log
-import databuffer
-import basicblock
-import types
-import lineardisassembly
-import metadata
+from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class BinaryDataNotification(object):
@@ -113,12 +104,13 @@ class AnalysisCompletionEvent(object):
 
 	:Example:
 		>>> def on_complete(self):
-		...     print "Analysis Complete", self.view
+		...     print("Analysis Complete", self.view)
 		...
 		>>> evt = AnalysisCompletionEvent(bv, on_complete)
 		>>>
 	"""
 	def __init__(self, view, callback):
+		from binaryninja import log
 		self.view = view
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
@@ -197,6 +189,9 @@ class DataVariable(object):
 
 class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
+		from binaryninja import function
+		from binaryninja import types
+		from binaryninja import log
 		self.view = view
 		self.notify = notify
 		self._cb = core.BNBinaryDataNotification()
@@ -319,6 +314,7 @@ class BinaryDataNotificationCallbacks(object):
 
 
 class _BinaryViewTypeMetaclass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		"""List all BinaryView types (read-only)"""
@@ -349,10 +345,12 @@ class _BinaryViewTypeMetaclass(type):
 		return BinaryViewType(view_type)
 
 
-class BinaryViewType(object):
-	__metaclass__ = _BinaryViewTypeMetaclass
+class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 	def __init__(self, handle):
+		from binaryninja import architecture
+		from binaryninja import filemetadata
+		from binaryninja import platform
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
 
 	def __eq__(self, value):
@@ -581,6 +579,18 @@ class BinaryView(object):
 	database (e.g. ``remove_user_function()`` rather than ``remove_function()``). Thus use ``_user_`` methods if saving \
 	to the database is desired.
 	"""
+	import binaryninja.function
+	import binaryninja.architecture
+	import binaryninja.platform
+	import binaryninja.fileaccessor
+	import binaryninja.filemetadata
+	import binaryninja.databuffer
+	import binaryninja.basicblock
+	import binaryninja.types
+	import binaryninja.log
+	import binaryninja.startup
+	import binaryninja.lineardisassembly
+	import binaryninja.metadata
 	name = None
 	long_name = None
 	_registered = False
@@ -590,6 +600,18 @@ class BinaryView(object):
 	_associated_data = {}
 
 	def __init__(self, file_metadata=None, parent_view=None, handle=None):
+		function = binaryninja.function
+		architecture = binaryninja.architecture
+		platform = binaryninja.platform
+		fileaccessor = binaryninja.fileaccessor
+		filemetadata = binaryninja.filemetadata
+		databuffer = binaryninja.databuffer
+		basicblock = binaryninja.basicblock
+		types = binaryninja.types
+		log = binaryninja.log
+		startup = binaryninja.startup
+		lineardisassembly = binaryninja.lineardisassembly
+		metadata = binaryninja.metadata
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
@@ -680,7 +702,7 @@ class BinaryView(object):
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
-		startup._init_plugins()
+		binaryninja.startup._init_plugins()
 		if isinstance(src, fileaccessor.FileAccessor):
 			if file_metadata is None:
 				file_metadata = filemetadata.FileMetadata()
@@ -2790,7 +2812,7 @@ class BinaryView(object):
 		:Example:
 
 			>>> def completionEvent():
-			...   print "done"
+			...   print("done")
 			...
 			>>> bv.add_analysis_completion_event(completionEvent)
 			<binaryninja.AnalysisCompletionEvent object at 0x10a2c9f10>
@@ -3098,7 +3120,7 @@ class BinaryView(object):
 			>>> settings = DisassemblySettings()
 			>>> lines = bv.get_linear_disassembly(settings)
 			>>> for line in lines:
-			...  print line
+			...  print(line)
 			...  break
 			...
 			cf fa ed fe 07 00 00 01  ........

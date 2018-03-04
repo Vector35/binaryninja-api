@@ -22,14 +22,14 @@ import traceback
 import json
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import ActionType
-import startup
-import log
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import ActionType
 
 
 class UndoAction(object):
+	from binaryninja import startup
+	from binaryninja import log
 	name = None
 	action_type = None
 	_registered = False

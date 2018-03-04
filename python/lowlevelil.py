@@ -19,14 +19,12 @@
 # IN THE SOFTWARE.
 
 import ctypes
-
-# Binary Ninja components
-import _binaryninjacore as core
-from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
-import function
-import basicblock
-import mediumlevelil
 import struct
+
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
+from binaryninja import basicblock #required for LowLevelILBasicBlock
 
 
 class LowLevelILLabel(object):
@@ -342,6 +340,8 @@ class LowLevelILInstruction(object):
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):
+		from binaryninja import function
+		from binaryninja import mediumlevelil
 		instr = core.BNGetLowLevelILByIndex(func.handle, expr_index)
 		self.function = func
 		self.expr_index = expr_index
@@ -441,7 +441,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					reg = operand_list[j * 2]
 					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegister(ILRegister(func.arch, reg), reg_version))
@@ -451,7 +451,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					reg_stack = operand_list[j * 2]
 					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegisterStack(ILRegisterStack(func.arch, reg_stack), reg_version))
@@ -461,7 +461,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					flag = operand_list[j * 2]
 					flag_version = operand_list[(j * 2) + 1]
 					value.append(SSAFlag(ILFlag(func.arch, flag), flag_version))
@@ -471,7 +471,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					if (operand_list[j * 2] & (1 << 32)) != 0:
 						reg_or_flag = ILFlag(func.arch, operand_list[j * 2] & 0xffffffff)
 					else:
@@ -484,7 +484,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = {}
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					reg_stack = operand_list[j * 2]
 					adjust = operand_list[(j * 2) + 1]
 					if adjust & 0x80000000:
@@ -720,6 +720,7 @@ class LowLevelILFunction(object):
 		LLFC_NO                 !overflow  No overflow
 		======================= ========== ===============================
 	"""
+	from binaryninja import mediumlevelil
 	def __init__(self, arch, handle = None, source_func = None):
 		self.arch = arch
 		self.source_function = source_func

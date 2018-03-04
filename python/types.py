@@ -18,15 +18,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 max_confidence = 255
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
-import callingconvention
-import function
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
 
 
 class QualifiedName(object):
@@ -213,6 +212,8 @@ class FunctionParameter(object):
 
 class Type(object):
 	def __init__(self, handle, platform = None, confidence = max_confidence):
+		from binaryninja import callingconvention
+		from binaryninja import function
 		self.handle = handle
 		self.confidence = confidence
 		self.platform = platform
@@ -344,7 +345,7 @@ class Type(object):
 			return None
 		return Enumeration(result)
 
- 	@property
+	@property
 	def named_type_reference(self):
 		"""Reference to a named type (read-only)"""
 		result = core.BNGetTypeNamedTypeReference(self.handle)
@@ -376,7 +377,7 @@ class Type(object):
 
 	def __repr__(self):
 		if self.confidence < max_confidence:
-			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / max_confidence)
+			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) // max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):

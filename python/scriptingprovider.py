@@ -26,14 +26,12 @@ import threading
 import abc
 import sys
 
-# Binary Ninja Components
-import _binaryninjacore as core
-from enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-import binaryview
-import function
-import basicblock
-import startup
-import log
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class _ThreadActionContext(object):
@@ -60,6 +58,7 @@ class _ThreadActionContext(object):
 
 
 class ScriptingOutputListener(object):
+	from binaryninja import log
 	def _register(self, handle):
 		self._cb = core.BNScriptingOutputListener()
 		self._cb.context = 0
@@ -100,6 +99,10 @@ class ScriptingOutputListener(object):
 
 
 class ScriptingInstance(object):
+	from binaryninja import binaryview
+	from binaryninja import basicblock
+	from binaryninja import log
+	from binaryninja import function
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNScriptingInstanceCallbacks()
@@ -256,6 +259,7 @@ class ScriptingInstance(object):
 
 
 class _ScriptingProviderMetaclass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		"""List all ScriptingProvider types (read-only)"""
@@ -292,8 +296,8 @@ class _ScriptingProviderMetaclass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class ScriptingProvider(object):
-	__metaclass__ = _ScriptingProviderMetaclass
+class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
+	from binaryninja import log
 
 	name = None
 	instance_class = None
@@ -335,6 +339,7 @@ class ScriptingProvider(object):
 
 
 class _PythonScriptingInstanceOutput(object):
+	from binaryninja import log
 	def __init__(self, orig, is_error):
 		self.orig = orig
 		self.is_error = is_error

@@ -18,25 +18,22 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import traceback
 import ctypes
 import abc
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import (Endianness, ImplicitRegisterExtend, BranchType,
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import (Endianness, ImplicitRegisterExtend, BranchType,
 	InstructionTextTokenType, LowLevelILFlagCondition, FlagRole)
-import startup
-import function
-import lowlevelil
-import callingconvention
-import platform
-import log
-import databuffer
-import types
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class _ArchitectureMetaClass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		startup._init_plugins()
@@ -80,12 +77,12 @@ class _ArchitectureMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class Architecture(object):
+class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	"""
 	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implement assembly,
 	disassembly, IL lifting, and patching.
 
-	``class Architecture`` has a ``__metaclass__`` with the additional methods ``register``, and supports
+	``class Architecture`` has a metaclass with the additional methods ``register``, and supports
 	iteration::
 
 		>>> #List the architectures
@@ -130,10 +127,17 @@ class Architecture(object):
 	semantic_class_for_flag_write_type = {}
 	reg_stacks = {}
 	intrinsics = {}
-	__metaclass__ = _ArchitectureMetaClass
 	next_address = 0
 
 	def __init__(self):
+		from binaryninja import function
+		from binaryninja import startup
+		from binaryninja import lowlevelil
+		from binaryninja import types
+		from binaryninja import databuffer
+		from binaryninja import log
+		from binaryninja import platform
+		from binaryninja import callingconvention
 		startup._init_plugins()
 
 		if self.__class__.opcode_display_length > self.__class__.max_instr_length:
@@ -2045,6 +2049,10 @@ class Architecture(object):
 _architecture_cache = {}
 class CoreArchitecture(Architecture):
 	def __init__(self, handle):
+		from binaryninja import function
+		from binaryninja import types
+		from binaryninja import databuffer
+		from binaryninja import lowlevelil
 		super(CoreArchitecture, self).__init__()
 
 		self.handle = core.handle_of_type(handle, core.BNArchitecture)

@@ -21,11 +21,9 @@
 import ctypes
 import traceback
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
-import binaryview
-import log
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
 
 
 class LabelField(object):
@@ -241,6 +239,8 @@ class DirectoryNameField(object):
 
 
 class InteractionHandler(object):
+	from binaryninja import log
+	from binaryninja import binaryview
 	_interaction_handler = None
 
 	def __init__(self):
@@ -724,7 +724,7 @@ def get_form_input(fields, title):
 		3) Maybe
 		Options 1
 		>>> True
-		>>> print tex_f.result, int_f.result, choice_f.result
+		>>> print(tex_f.result, int_f.result, choice_f.result)
 		Peter 1337 0
 	"""
 	value = (core.BNFormInputField * len(fields))()

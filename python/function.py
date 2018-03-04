@@ -18,27 +18,18 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import threading
 import traceback
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
 	FunctionAnalysisSkipOverride)
-import architecture
-import platform
-import highlight
-import associateddatastore
-import types
-import basicblock
-import lowlevelil
-import mediumlevelil
-import binaryview
-import log
-import callingconvention
+from binaryninja import associateddatastore #required in the main scope due to being an argument for _FunctionAssociatedDataStore
 
 
 class LookupTableEntry(object):
@@ -51,6 +42,7 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
+	from binaryninja import types
 	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
 		self.is_constant = False
 		if value is None:
@@ -329,6 +321,7 @@ class IndirectBranchInfo(object):
 
 
 class ParameterVariables(object):
+	from binaryninja import types
 	def __init__(self, var_list, confidence = types.max_confidence):
 		self.vars = var_list
 		self.confidence = confidence
@@ -355,6 +348,14 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class Function(object):
+	from binaryninja import callingconvention
+	from binaryninja import mediumlevelil
+	from binaryninja import lowlevelil
+	from binaryninja import basicblock
+	from binaryninja import types
+	from binaryninja import highlight
+	from binaryninja import platform
+	from binaryninja import architecture
 	_associated_data = {}
 
 	def __init__(self, view, handle):
@@ -1631,7 +1632,8 @@ class FunctionGraphEdge(object):
 
 
 class FunctionGraphBlock(object):
-	def __init__(self, handle, graph):
+	def __init__(self, handle):
+		from binaryninja import binaryview
 		self.handle = handle
 		self.graph = graph
 
@@ -1839,6 +1841,8 @@ class DisassemblySettings(object):
 
 
 class FunctionGraph(object):
+	from binaryninja import log
+	from binaryninja import types
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = handle
@@ -2140,6 +2144,7 @@ class InstructionTextToken(object):
 		========================== ============================================
 
 	"""
+	from binaryninja import types
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
 		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
 		self.type = InstructionTextTokenType(token_type)

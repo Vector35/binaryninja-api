@@ -21,14 +21,17 @@
 import traceback
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import UpdateResult
-import startup
-import log
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import UpdateResult
+
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class _UpdateChannelMetaClass(type):
+	from binaryninja import startup
 	@property
 	def list(self):
 		startup._init_plugins()
@@ -95,6 +98,7 @@ class _UpdateChannelMetaClass(type):
 
 
 class UpdateProgressCallback(object):
+	from binaryninja import log
 	def __init__(self, func):
 		self.cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(self.callback)
 		self.func = func
@@ -108,8 +112,7 @@ class UpdateProgressCallback(object):
 			log.log_error(traceback.format_exc())
 
 
-class UpdateChannel(object):
-	__metaclass__ = _UpdateChannelMetaClass
+class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 
 	def __init__(self, name, desc, ver):
 		self.name = name

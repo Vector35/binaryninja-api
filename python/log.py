@@ -19,9 +19,8 @@
 # IN THE SOFTWARE.
 
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import LogLevel
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
 
 
 _output_to_log = False

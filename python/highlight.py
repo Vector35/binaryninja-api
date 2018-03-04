@@ -19,9 +19,9 @@
 # IN THE SOFTWARE.
 
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import HighlightColorStyle, HighlightStandardColor
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import HighlightColorStyle, HighlightStandardColor
 
 
 class HighlightColor(object):

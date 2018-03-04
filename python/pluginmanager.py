@@ -20,10 +20,8 @@
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from .enums import PluginType, PluginUpdateStatus
-import startup
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
 
 
 class RepoPlugin(object):
@@ -31,6 +29,7 @@ class RepoPlugin(object):
 	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
+	from binaryninja.enums import PluginType, PluginUpdateStatus
 	def __init__(self, handle):
 		raise Exception("RepoPlugin temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
@@ -200,6 +199,7 @@ class RepositoryManager(object):
 	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
 	the plugins that are installed/unstalled enabled/disabled
 	"""
+	from binaryninja import startup
 	def __init__(self, handle=None):
 		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()

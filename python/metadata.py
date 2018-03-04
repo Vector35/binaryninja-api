@@ -19,11 +19,12 @@
 # IN THE SOFTWARE.
 
 
+from __future__ import absolute_import
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import MetadataType
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import MetadataType
 
 
 class Metadata(object):

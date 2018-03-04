@@ -19,41 +19,41 @@
 # IN THE SOFTWARE.
 
 
+from __future__ import absolute_import
 import atexit
 import sys
 from time import gmtime
 
 # Binary Ninja components
-import _binaryninjacore as core
-from .enums import *
-from .databuffer import *
-from .filemetadata import *
-from .fileaccessor import *
-from .binaryview import *
-from .transform import *
-from .architecture import *
-from .basicblock import *
-from .function import *
-from .log import *
-from .lowlevelil import *
-from .mediumlevelil import *
-from .types import *
-from .functionrecognizer import *
-from .update import *
-from .plugin import *
-from .callingconvention import *
-from .platform import *
-from .demangle import *
-from .mainthread import *
-from .interaction import *
-from .lineardisassembly import *
-from .undoaction import *
-from .highlight import *
-from .scriptingprovider import *
-from .downloadprovider import *
-from .pluginmanager import *
-from .setting import *
-from .metadata import *
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import *
+from binaryninja.databuffer import *
+from binaryninja.filemetadata import *
+from binaryninja.fileaccessor import *
+from binaryninja.binaryview import *
+from binaryninja.transform import *
+from binaryninja.architecture import *
+from binaryninja.basicblock import *
+from binaryninja.function import *
+from binaryninja.log import *
+from binaryninja.lowlevelil import *
+from binaryninja.mediumlevelil import *
+from binaryninja.types import *
+from binaryninja.functionrecognizer import *
+from binaryninja.update import *
+from binaryninja.plugin import *
+from binaryninja.callingconvention import *
+from binaryninja.platform import *
+from binaryninja.demangle import *
+from binaryninja.mainthread import *
+from binaryninja.interaction import *
+from binaryninja.lineardisassembly import *
+from binaryninja.undoaction import *
+from binaryninja.highlight import *
+from binaryninja.scriptingprovider import *
+from binaryninja.pluginmanager import *
+from binaryninja.setting import *
+from binaryninja.metadata import *
 
 
 def shutdown():

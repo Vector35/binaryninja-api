@@ -19,15 +19,12 @@
 # IN THE SOFTWARE.
 
 import ctypes
-
-# Binary Ninja components
-import _binaryninjacore as core
-from .enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
-import function
-import basicblock
-import lowlevelil
-import types
 import struct
+
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
+from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
 
 
 class SSAVariable(object):
@@ -208,6 +205,9 @@ class MediumLevelILInstruction(object):
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):
+		from binaryninja import function
+		from binaryninja import types
+		from binaryninja import lowlevelil
 		instr = core.BNGetMediumLevelILByIndex(func.handle, expr_index)
 		self.function = func
 		self.expr_index = expr_index
@@ -272,7 +272,7 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value / 2):
+				for j in xrange(count.value // 2):
 					var_id = operand_list[j * 2]
 					var_version = operand_list[(j * 2) + 1]
 					value.append(SSAVariable(function.Variable.from_identifier(self.function.source_function,

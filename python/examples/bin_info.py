@@ -67,6 +67,6 @@ def display_bininfo(bv):
 
 
 if __name__ == "__main__":
-	print get_bininfo(None)
+	print(get_bininfo(None))
 else:
 	PluginCommand.register("Binary Info", "Display basic info about the binary", display_bininfo)

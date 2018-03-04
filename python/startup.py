@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import _binaryninjacore as core
+from binaryninja import _binaryninjacore as core
 
 
 _plugin_init = False

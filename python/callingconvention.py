@@ -21,17 +21,11 @@
 import traceback
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-import architecture
-import log
-import types
-import function
-import binaryview
-from enums import VariableSourceType
-
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
 
 class CallingConvention(object):
+	from binaryninja import types
 	name = None
 	caller_saved_regs = []
 	int_arg_regs = []
@@ -48,6 +42,11 @@ class CallingConvention(object):
 	_registered_calling_conventions = []
 
 	def __init__(self, arch=None, name=None, handle=None, confidence=types.max_confidence):
+		from binaryninja import architecture
+		from binaryninja import log
+		from binaryninja import function
+		from binaryninja import binaryview
+		from binaryninja.enums import VariableSourceType
 		if handle is None:
 			if arch is None or name is None:
 				raise ValueError("Must specify either handle or architecture and name")

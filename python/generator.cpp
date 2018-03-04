@@ -374,10 +374,10 @@ int main(int argc, char* argv[])
 	fprintf(out, "def handle_of_type(value, handle_type):\n");
 	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
 	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
-	fprintf(out, "\traise ValueError, 'expected pointer to %%s' %% str(handle_type)\n");
+	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
-	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");
+	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\").encode('utf-8'))\n");
 
 	fclose(out);
 	fclose(enums);

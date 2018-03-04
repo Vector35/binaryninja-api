@@ -20,15 +20,16 @@
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-import startup
-import architecture
-import callingconvention
-import types
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+
+#2-3 compatibility
+from six import with_metaclass
 
 
 class _PlatformMetaClass(type):
+	from binaryninja import startup
+	from binaryninja import types
 	@property
 	def list(self):
 		startup._init_plugins()
@@ -90,12 +91,14 @@ class _PlatformMetaClass(type):
 		return result
 
 
-class Platform(object):
+class Platform(with_metaclass(_PlatformMetaClass, object)):
 	"""
 	``class Platform`` contains all information releated to the execution environment of the binary, mainly the
 	calling conventions used.
 	"""
-	__metaclass__ = _PlatformMetaClass
+	from binaryninja import architecture
+	from binaryninja import callingconvention
+	from binaryninja import types
 	name = None
 
 	def __init__(self, arch, handle = None):

@@ -20,12 +20,9 @@
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-from enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
-import architecture
-import highlight
-import function
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
 
 
 class BasicBlockEdge(object):
@@ -54,6 +51,9 @@ class BasicBlockEdge(object):
 
 class BasicBlock(object):
 	def __init__(self, view, handle):
+		from binaryninja import architecture
+		from binaryninja import function
+		from binaryninja import highlight
 		self.view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
 		self._arch = None

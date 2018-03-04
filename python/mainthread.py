@@ -18,9 +18,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-# Binary Ninja components
-import _binaryninjacore as core
-import scriptingprovider
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
+from binaryninja import scriptingprovider
 
 
 def execute_on_main_thread(func):

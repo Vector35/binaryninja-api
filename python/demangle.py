@@ -20,9 +20,8 @@
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-import types
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
 
 
 def get_qualified_name(names):
@@ -56,6 +55,7 @@ def demangle_ms(arch, mangled_name):
 		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
 		>>>
 	"""
+	from binaryninja import types
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
@@ -69,6 +69,7 @@ def demangle_ms(arch, mangled_name):
 
 
 def demangle_gnu3(arch, mangled_name):
+	from binaryninja import types
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()

@@ -20,8 +20,8 @@
 
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
+# Binary Ninja components -- additional imports belong in the appropriate class
+from binaryninja import _binaryninjacore as core
 
 
 class DataBuffer(object):

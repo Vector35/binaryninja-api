@@ -22,7 +22,7 @@ import inspect
 
 from binaryninja import BinaryDataNotification
 from binaryninja import PluginCommand
-from binaryninja import log
+
 
 def reg_notif(view):
 	demo_notification = DemoNotification(view)

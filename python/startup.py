@@ -18,18 +18,18 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from binaryninja import _binaryninjacore as core
+#from binaryninja import _binaryninjacore as core
 
 
-_plugin_init = False
+#_plugin_init = False
 
 
-def _init_plugins():
-	global _plugin_init
-	if not _plugin_init:
-		_plugin_init = True
-		core.BNInitCorePlugins()
-		core.BNInitUserPlugins()
-		core.BNInitRepoPlugins()
-	if not core.BNIsLicenseValidated():
-		raise RuntimeError("License is not valid. Please supply a valid license.")
+# def _init_plugins():
+# 	global _plugin_init
+# 	if not _plugin_init:
+# 		_plugin_init = True
+# 		core.BNInitCorePlugins()
+# 		core.BNInitUserPlugins()
+# 		core.BNInitRepoPlugins()
+# 	if not core.BNIsLicenseValidated():
+# 		raise RuntimeError("License is not valid. Please supply a valid license.")

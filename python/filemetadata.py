@@ -23,12 +23,12 @@ import traceback
 import ctypes
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
-
+from binaryninja import log
 
 class NavigationHandler(object):
-	from binaryninja import log
 	def _register(self, handle):
 		self._cb = core.BNNavigationHandler()
 		self._cb.context = 0
@@ -69,8 +69,7 @@ class FileMetadata(object):
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
 	"""
-	from binaryninja import startup
-	from binaryninja import binaryview
+
 	_associated_data = {}
 
 	def __init__(self, filename = None, handle = None):
@@ -83,7 +82,7 @@ class FileMetadata(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNFileMetadata)
 		else:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			self.handle = core.BNCreateFileMetadata()
 			if filename is not None:
 				core.BNSetFilename(self.handle, str(filename))
@@ -168,7 +167,7 @@ class FileMetadata(object):
 		view = core.BNGetFileViewOfType(self.handle, "Raw")
 		if view is None:
 			return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	@property
 	def saved(self):
@@ -323,7 +322,7 @@ class FileMetadata(object):
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	def save_auto_snapshot(self, progress_func = None):
 		if progress_func is None:
@@ -342,7 +341,7 @@ class FileMetadata(object):
 			view = core.BNCreateBinaryViewOfType(view_type, self.raw.handle)
 			if view is None:
 				return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	def __setattr__(self, name, value):
 		try:

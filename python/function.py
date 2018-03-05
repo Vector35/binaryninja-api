@@ -24,12 +24,15 @@ import traceback
 import ctypes
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 from binaryninja import associateddatastore #required in the main scope due to being an argument for _FunctionAssociatedDataStore
-
+from binaryninja import types
+from binaryninja import highlight
+from binaryninja import log
 
 class LookupTableEntry(object):
 	def __init__(self, from_values, to_value):
@@ -41,8 +44,7 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
-	from binaryninja import types
-	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
+	def __init__(self, arch = None, value = None, confidence = binaryninja.types.max_confidence):
 		self.is_constant = False
 		if value is None:
 			self.type = RegisterValueType.UndeterminedValue
@@ -320,7 +322,6 @@ class IndirectBranchInfo(object):
 
 
 class ParameterVariables(object):
-	from binaryninja import types
 	def __init__(self, var_list, confidence = types.max_confidence):
 		self.vars = var_list
 		self.confidence = confidence
@@ -347,14 +348,6 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class Function(object):
-	from binaryninja import callingconvention
-	from binaryninja import mediumlevelil
-	from binaryninja import lowlevelil
-	from binaryninja import basicblock
-	from binaryninja import types
-	from binaryninja import highlight
-	from binaryninja import platform
-	from binaryninja import architecture
 	_associated_data = {}
 
 	def __init__(self, view, handle):
@@ -420,7 +413,7 @@ class Function(object):
 			arch = core.BNGetFunctionArchitecture(self.handle)
 			if arch is None:
 				return None
-			self._arch = architecture.CoreArchitecture(arch)
+			self._arch = binaryninja.architecture.CoreArchitecture(arch)
 			return self._arch
 
 	@property
@@ -432,7 +425,7 @@ class Function(object):
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
-			self._platform = platform.Platform(None, handle = plat)
+			self._platform = binaryninja.platform.Platform(None, handle = plat)
 			return self._platform
 
 	@property
@@ -486,7 +479,7 @@ class Function(object):
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -504,17 +497,17 @@ class Function(object):
 	@property
 	def low_level_il(self):
 		"""returns LowLevelILFunction used to represent Function low level IL (read-only)"""
-		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
 	def lifted_il(self):
 		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
-		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
 	def medium_level_il(self):
 		"""Function medium level IL (read-only)"""
-		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
 
 	@property
 	def function_type(self):
@@ -558,7 +551,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranches(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -637,7 +630,7 @@ class Function(object):
 		result = core.BNGetFunctionCallingConvention(self.handle)
 		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+		return binaryninja.callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@calling_convention.setter
 	def calling_convention(self, value):
@@ -823,7 +816,7 @@ class Function(object):
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		try:
 			for i in xrange(0, count.value):
-				yield basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+				yield binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -905,7 +898,7 @@ class Function(object):
 		:param int addr: virtual address of the instruction to query
 		:param str reg: string value of native register to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 		:Example:
 
 			>>> func.get_reg_value_at(0x400dbe, 'rdi')
@@ -925,7 +918,7 @@ class Function(object):
 		:param int addr: virtual address of the instruction to query
 		:param str reg: string value of native register to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 		:Example:
 
 			>>> func.get_reg_value_after(0x400dbe, 'rdi')
@@ -947,7 +940,7 @@ class Function(object):
 		:param int offset: stack offset base of stack
 		:param int size: size of memory to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 
 		.. note:: Stack base is zero on entry into the function unless the architecture places the return address on the
 		stack as in (x86/x86_64) where the stack base will start at address_size
@@ -1116,7 +1109,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1305,7 +1298,7 @@ class Function(object):
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
 		if not block:
 			return None
-		return basicblock.BasicBlock(self._view, handle = block)
+		return binaryninja.basicblock.BasicBlock(self._view, handle = block)
 
 	def get_instr_highlight(self, addr, arch=None):
 		"""
@@ -1600,7 +1593,6 @@ class FunctionGraphEdge(object):
 
 class FunctionGraphBlock(object):
 	def __init__(self, handle):
-		from binaryninja import binaryview
 		self.handle = handle
 
 	def __del__(self):
@@ -1625,7 +1617,7 @@ class FunctionGraphBlock(object):
 			core.BNFreeBasicBlock(block)
 			block = None
 		else:
-			block = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), block)
+			block = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), block)
 			core.BNFreeFunction(func)
 		return block
 
@@ -1635,7 +1627,7 @@ class FunctionGraphBlock(object):
 		arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.CoreArchitecture(arch)
+		return binaryninja.architecture.CoreArchitecture(arch)
 
 	@property
 	def start(self):
@@ -1705,7 +1697,7 @@ class FunctionGraphBlock(object):
 					core.BNFreeBasicBlock(target)
 					target = None
 				else:
-					target = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+					target = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 						core.BNNewBasicBlockReference(target))
 					core.BNFreeFunction(func)
 			points = []
@@ -1788,8 +1780,6 @@ class DisassemblySettings(object):
 
 
 class FunctionGraph(object):
-	from binaryninja import log
-	from binaryninja import types
 	def __init__(self, view, handle):
 		self.view = view
 		self.handle = handle
@@ -2060,7 +2050,6 @@ class InstructionTextToken(object):
 		========================== ============================================
 
 	"""
-	from binaryninja import types
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
 		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
 		self.type = InstructionTextTokenType(token_type)

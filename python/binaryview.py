@@ -22,15 +22,22 @@ import struct
 import traceback
 import ctypes
 import abc
-import threading
 
 # Binary Ninja components -- additional imports belong in the appropriate class
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
+import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
+from binaryninja import log
+from binaryninja import types
+from binaryninja import fileaccessor
+from binaryninja import databuffer
+from binaryninja import basicblock
+from binaryninja import lineardisassembly
+from binaryninja import metadata
 
-#2-3 compatibility
+# 2-3 compatibility
 from six import with_metaclass
 
 
@@ -106,7 +113,6 @@ class AnalysisCompletionEvent(object):
 		>>>
 	"""
 	def __init__(self, view, callback):
-		from binaryninja import log
 		self.view = view
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
@@ -162,9 +168,6 @@ class DataVariable(object):
 
 class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
-		from binaryninja import function
-		from binaryninja import types
-		from binaryninja import log
 		self.view = view
 		self.notify = notify
 		self._cb = core.BNBinaryDataNotification()
@@ -209,19 +212,19 @@ class BinaryDataNotificationCallbacks(object):
 
 	def _function_added(self, ctxt, view, func):
 		try:
-			self.notify.function_added(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_added(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_removed(self, ctxt, view, func):
 		try:
-			self.notify.function_removed(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_removed(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_updated(self, ctxt, view, func):
 		try:
-			self.notify.function_updated(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_updated(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -280,11 +283,11 @@ class BinaryDataNotificationCallbacks(object):
 
 
 class _BinaryViewTypeMetaclass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
 		"""List all BinaryView types (read-only)"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		result = []
@@ -294,7 +297,7 @@ class _BinaryViewTypeMetaclass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		try:
@@ -304,7 +307,7 @@ class _BinaryViewTypeMetaclass(type):
 			core.BNFreeBinaryViewTypeList(types)
 
 	def __getitem__(self, value):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		view_type = core.BNGetBinaryViewTypeByName(str(value))
 		if view_type is None:
 			raise KeyError("'%s' is not a valid view type" % str(value))
@@ -314,9 +317,6 @@ class _BinaryViewTypeMetaclass(type):
 class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 	def __init__(self, handle):
-		from binaryninja import architecture
-		from binaryninja import filemetadata
-		from binaryninja import platform
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
 
 	def __eq__(self, value):
@@ -370,7 +370,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
 			f.close()
-			view = filemetadata.FileMetadata().open_existing_database(filename)
+			view = binaryninja.filemetadata.FileMetadata().open_existing_database(filename)
 		else:
 			view = BinaryView.open(filename)
 
@@ -398,7 +398,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
-		return architecture.CoreArchitecture(arch)
+		return binaryninja.architecture.CoreArchitecture(arch)
 
 	def register_platform(self, ident, arch, plat):
 		core.BNRegisterPlatformForViewType(self.handle, ident, arch.handle, plat.handle)
@@ -410,7 +410,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		plat = core.BNGetPlatformForViewType(self.handle, ident, arch.handle)
 		if plat is None:
 			return None
-		return platform.Platform(None, plat)
+		return binaryninja.platform.Platform(None, plat)
 
 
 class Segment(object):
@@ -540,18 +540,6 @@ class BinaryView(object):
 	database (e.g. ``remove_user_function()`` rather than ``remove_function()``). Thus use ``_user_`` methods if saving \
 	to the database is desired.
 	"""
-	import binaryninja.function
-	import binaryninja.architecture
-	import binaryninja.platform
-	import binaryninja.fileaccessor
-	import binaryninja.filemetadata
-	import binaryninja.databuffer
-	import binaryninja.basicblock
-	import binaryninja.types
-	import binaryninja.log
-	import binaryninja.startup
-	import binaryninja.lineardisassembly
-	import binaryninja.metadata
 	name = None
 	long_name = None
 	_registered = False
@@ -561,32 +549,20 @@ class BinaryView(object):
 	_associated_data = {}
 
 	def __init__(self, file_metadata=None, parent_view=None, handle=None):
-		function = binaryninja.function
-		architecture = binaryninja.architecture
-		platform = binaryninja.platform
-		fileaccessor = binaryninja.fileaccessor
-		filemetadata = binaryninja.filemetadata
-		databuffer = binaryninja.databuffer
-		basicblock = binaryninja.basicblock
-		types = binaryninja.types
-		log = binaryninja.log
-		startup = binaryninja.startup
-		lineardisassembly = binaryninja.lineardisassembly
-		metadata = binaryninja.metadata
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
-				self.file = filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
+				self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
 			else:
 				self.file = file_metadata
 		elif self.__class__ is BinaryView:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata()
+				file_metadata = binaryninja.filemetadata.FileMetadata()
 			self.handle = core.BNCreateBinaryDataView(file_metadata.handle)
-			self.file = filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
+			self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
 		else:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			if not self.__class__._registered:
 				raise TypeError("view type not registered")
 			self._cb = core.BNCustomBinaryView()
@@ -629,7 +605,7 @@ class BinaryView(object):
 
 	@classmethod
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("view 'name' not defined")
 		if cls.long_name is None:
@@ -644,7 +620,7 @@ class BinaryView(object):
 	@classmethod
 	def _create(cls, ctxt, data):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
 			view = cls(BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data)))
 			if view is None:
 				return None
@@ -663,14 +639,14 @@ class BinaryView(object):
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
-		binaryninja.startup._init_plugins()
+		binaryninja._init_plugins()
 		if isinstance(src, fileaccessor.FileAccessor):
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata()
+				file_metadata = binaryninja.filemetadata.FileMetadata()
 			view = core.BNCreateBinaryDataViewFromFile(file_metadata.handle, src._cb)
 		else:
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata(str(src))
+				file_metadata = binaryninja.filemetadata.FileMetadata(str(src))
 			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src))
 		if view is None:
 			return None
@@ -679,9 +655,9 @@ class BinaryView(object):
 
 	@classmethod
 	def new(cls, data=None, file_metadata=None):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if file_metadata is None:
-			file_metadata = filemetadata.FileMetadata()
+			file_metadata = binaryninja.filemetadata.FileMetadata()
 		if data is None:
 			view = core.BNCreateBinaryDataView(file_metadata.handle)
 		else:
@@ -766,7 +742,7 @@ class BinaryView(object):
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		try:
 			for i in xrange(0, count.value):
-				yield function.Function(self, core.BNNewFunctionReference(funcs[i]))
+				yield binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i]))
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
@@ -834,7 +810,7 @@ class BinaryView(object):
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.CoreArchitecture(handle=arch)
+		return binaryninja.architecture.CoreArchitecture(handle=arch)
 
 	@arch.setter
 	def arch(self, value):
@@ -849,7 +825,7 @@ class BinaryView(object):
 		plat = core.BNGetDefaultPlatform(self.handle)
 		if plat is None:
 			return None
-		return platform.Platform(self.arch, handle=plat)
+		return binaryninja.platform.Platform(self.arch, handle=plat)
 
 	@platform.setter
 	def platform(self, value):
@@ -885,7 +861,7 @@ class BinaryView(object):
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(function.Function(self, core.BNNewFunctionReference(funcs[i])))
+			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
 
@@ -900,7 +876,7 @@ class BinaryView(object):
 		func = core.BNGetAnalysisEntryPoint(self.handle)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	@property
 	def symbols(self):
@@ -1033,7 +1009,7 @@ class BinaryView(object):
 	def global_pointer_value(self):
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
-		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+		return binaryninja.function.RegisterValue(self.arch, result.value, confidence = result.confidence)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -2122,7 +2098,7 @@ class BinaryView(object):
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	def get_functions_at(self, addr):
 		"""
@@ -2139,7 +2115,7 @@ class BinaryView(object):
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(function.Function(self, core.BNNewFunctionReference(funcs[i])))
+			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
 
@@ -2147,7 +2123,7 @@ class BinaryView(object):
 		func = core.BNGetRecentAnalysisFunctionForAddress(self.handle, addr)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	def get_basic_blocks_at(self, addr):
 		"""
@@ -2209,15 +2185,15 @@ class BinaryView(object):
 		result = []
 		for i in xrange(0, count.value):
 			if refs[i].func:
-				func = function.Function(self, core.BNNewFunctionReference(refs[i].func))
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(refs[i].func))
 			else:
 				func = None
 			if refs[i].arch:
-				arch = architecture.CoreArchitecture(refs[i].arch)
+				arch = binaryninja.architecture.CoreArchitecture(refs[i].arch)
 			else:
 				arch = None
 			addr = refs[i].addr
-			result.append(architecture.ReferenceSource(func, arch, addr))
+			result.append(binaryninja.architecture.ReferenceSource(func, arch, addr))
 		core.BNFreeCodeReferences(refs, count.value)
 		return result
 
@@ -2934,7 +2910,7 @@ class BinaryView(object):
 		func = None
 		block = None
 		if pos.function:
-			func = function.Function(self, pos.function)
+			func = binaryninja.function.Function(self, pos.function)
 		if pos.block:
 			block = basicblock.BasicBlock(self, pos.block)
 		return lineardisassembly.LinearDisassemblyPosition(func, block, pos.address)
@@ -2960,7 +2936,7 @@ class BinaryView(object):
 			func = None
 			block = None
 			if lines[i].function:
-				func = function.Function(self, core.BNNewFunctionReference(lines[i].function))
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
 			addr = lines[i].contents.addr
@@ -2974,14 +2950,14 @@ class BinaryView(object):
 				context = lines[i].contents.tokens[j].context
 				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			contents = function.DisassemblyTextLine(addr, tokens)
+				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			contents = binaryninja.function.DisassemblyTextLine(addr, tokens)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
 		func = None
 		block = None
 		if pos_obj.function:
-			func = function.Function(self, pos_obj.function)
+			func = binaryninja.function.Function(self, pos_obj.function)
 		if pos_obj.block:
 			block = basicblock.BasicBlock(self, pos_obj.block)
 		pos.function = func

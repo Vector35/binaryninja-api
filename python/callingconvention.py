@@ -22,7 +22,10 @@ import traceback
 import ctypes
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
 from binaryninja import _binaryninjacore as core
+from binaryninja import log
+from binaryninja.enums import VariableSourceType
 
 class CallingConvention(object):
 	from binaryninja import types
@@ -42,11 +45,6 @@ class CallingConvention(object):
 	_registered_calling_conventions = []
 
 	def __init__(self, arch=None, name=None, handle=None, confidence=types.max_confidence):
-		from binaryninja import architecture
-		from binaryninja import log
-		from binaryninja import function
-		from binaryninja import binaryview
-		from binaryninja.enums import VariableSourceType
 		if handle is None:
 			if arch is None or name is None:
 				raise ValueError("Must specify either handle or architecture and name")
@@ -74,7 +72,7 @@ class CallingConvention(object):
 			self.__class__._registered_calling_conventions.append(self)
 		else:
 			self.handle = handle
-			self.arch = architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(self.handle))
+			self.arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(self.handle))
 			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
@@ -281,25 +279,25 @@ class CallingConvention(object):
 
 	def _get_incoming_reg_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+			func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 				core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = function.RegisterValue()._to_api_object()
+			api_obj = binaryninja.function.RegisterValue()._to_api_object()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
 	def _get_incoming_flag_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+			func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 				core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = function.RegisterValue()._to_api_object()
+			api_obj = binaryninja.function.RegisterValue()._to_api_object()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
@@ -308,9 +306,9 @@ class CallingConvention(object):
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+				func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 					core.BNNewFunctionReference(func))
-			in_var_obj = function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			in_var_obj = binaryninja.function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
 			out_var = self.perform_get_incoming_var_for_parameter_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
 			result[0].index = out_var.index
@@ -326,9 +324,9 @@ class CallingConvention(object):
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+				func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
 					core.BNNewFunctionReference(func))
-			in_var_obj = function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			in_var_obj = binaryninja.function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
 			out_var = self.perform_get_parameter_var_for_incoming_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
 			result[0].index = out_var.index
@@ -349,11 +347,11 @@ class CallingConvention(object):
 		reg_stack = self.arch.get_reg_stack_for_reg(reg)
 		if reg_stack is not None:
 			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
-				return function.RegisterValue.constant(0)
-		return function.RegisterValue()
+				return binaryninja.function.RegisterValue.constant(0)
+		return binaryninja.function.RegisterValue()
 
 	def perform_get_incoming_flag_value(self, reg, func):
-		return function.RegisterValue()
+		return binaryninja.function.RegisterValue()
 
 	def perform_get_incoming_var_for_parameter_var(self, in_var, func):
 		in_buf = core.BNVariable()
@@ -364,7 +362,7 @@ class CallingConvention(object):
 		name = None
 		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
 			name = func.arch.get_reg_name(out_var.storage)
-		return function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+		return binaryninja.function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
 
 	def perform_get_parameter_var_for_incoming_var(self, in_var, func):
 		in_buf = core.BNVariable()
@@ -372,7 +370,7 @@ class CallingConvention(object):
 		in_buf.index = in_var.index
 		in_buf.storage = in_var.storage
 		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_buf)
-		return function.Variable(func, out_var.type, out_var.index, out_var.storage)
+		return binaryninja.function.Variable(func, out_var.type, out_var.index, out_var.storage)
 
 	def with_confidence(self, confidence):
 		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
@@ -383,14 +381,14 @@ class CallingConvention(object):
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return function.RegisterValue(self.arch, core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle))
+		return binaryninja.function.RegisterValue(self.arch, core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle))
 
 	def get_incoming_flag_value(self, flag, func):
 		reg_num = self.arch.get_flag_index(flag)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return function.RegisterValue(self.arch, core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle))
+		return binaryninja.function.RegisterValue(self.arch, core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle))
 
 	def get_incoming_var_for_parameter_var(self, in_var, func):
 		in_buf = core.BNVariable()
@@ -405,7 +403,7 @@ class CallingConvention(object):
 		name = None
 		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
 			name = func.arch.get_reg_name(out_var.storage)
-		return function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+		return binaryninja.function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
 
 	def get_parameter_var_for_incoming_var(self, in_var, func):
 		in_buf = core.BNVariable()
@@ -417,4 +415,4 @@ class CallingConvention(object):
 		else:
 			func_obj = func.handle
 		out_var = core.BNGetParameterVariableForIncomingVariable(self.handle, in_buf, func_obj)
-		return function.Variable(func, out_var.type, out_var.index, out_var.storage)
+		return binaryninja.function.Variable(func, out_var.type, out_var.index, out_var.storage)

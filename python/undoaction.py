@@ -28,8 +28,8 @@ from binaryninja.enums import ActionType
 
 
 class UndoAction(object):
-	from binaryninja import startup
-	from binaryninja import log
+
+
 	name = None
 	action_type = None
 	_registered = False
@@ -52,7 +52,7 @@ class UndoAction(object):
 
 	@classmethod
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("undo action 'name' not defined")
 		if cls.action_type is None:

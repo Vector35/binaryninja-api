@@ -22,10 +22,41 @@
 from __future__ import absolute_import
 import atexit
 import sys
+import ctypes
 from time import gmtime
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
+import binaryninja._binaryninjacore as core
+# __all__ = [
+# 	"enums",
+# 	"databuffer",
+# 	"filemetadata",
+# 	"fileaccessor",
+# 	"binaryview",
+# 	"transform",
+# 	"architecture",
+# 	"basicblock",
+# 	"function",
+# 	"log",
+# 	"lowlevelil",
+# 	"mediumlevelil",
+# 	"types",
+# 	"functionrecognizer",
+# 	"update",
+# 	"plugin",
+# 	"callingconvention",
+# 	"platform",
+# 	"demangle",
+# 	"mainthread",
+# 	"interaction",
+# 	"lineardisassembly",
+# 	"undoaction",
+# 	"highlight",
+# 	"scriptingprovider",
+# 	"pluginmanager",
+# 	"setting",
+# 	"metadata",
+# ]
 from binaryninja.enums import *
 from binaryninja.databuffer import *
 from binaryninja.filemetadata import *
@@ -116,7 +147,7 @@ class PluginManagerLoadPluginCallback(object):
 
 
 load_plugin = PluginManagerLoadPluginCallback()
-core.BNRegisterForPluginLoading(_plugin_api_name, load_plugin.cb, 0)
+core.BNRegisterForPluginLoading(_plugin_api_name.encode("utf8"), load_plugin.cb, 0)
 
 
 class _DestructionCallbackHandler(object):
@@ -136,6 +167,20 @@ class _DestructionCallbackHandler(object):
 
 	def destruct_function(self, ctxt, func):
 		Function._unregister(func)
+
+
+_plugin_init = False
+
+
+def _init_plugins():
+	global _plugin_init
+	if not _plugin_init:
+		_plugin_init = True
+		core.BNInitCorePlugins()
+		core.BNInitUserPlugins()
+		core.BNInitRepoPlugins()
+	if not core.BNIsLicenseValidated():
+		raise RuntimeError("License is not valid. Please supply a valid license.")
 
 
 _destruct_callbacks = _DestructionCallbackHandler()

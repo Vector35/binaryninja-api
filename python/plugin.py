@@ -23,6 +23,8 @@ import ctypes
 import threading
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
+from binaryninja import log
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import PluginCommandType
 
@@ -40,10 +42,10 @@ class PluginCommandContext(object):
 
 
 class _PluginCommandMetaClass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		commands = core.BNGetAllPluginCommands(count)
 		result = []
@@ -53,7 +55,7 @@ class _PluginCommandMetaClass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		commands = core.BNGetAllPluginCommands(count)
 		try:
@@ -70,11 +72,11 @@ class _PluginCommandMetaClass(type):
 
 
 class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
-	from binaryninja import startup
+
 	from binaryninja import filemetadata
 	from binaryninja import binaryview
 	from binaryninja import function
-	from binaryninja import log
+
 	_registered_commands = []
 
 	def __init__(self, cmd):
@@ -92,8 +94,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	@classmethod
 	def _default_action(cls, view, action):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -101,8 +103,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	@classmethod
 	def _address_action(cls, view, addr, action):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr)
 		except:
 			log.log_error(traceback.format_exc())
@@ -110,8 +112,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	@classmethod
 	def _range_action(cls, view, addr, length, action):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr, length)
 		except:
 			log.log_error(traceback.format_exc())
@@ -119,9 +121,9 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	@classmethod
 	def _function_action(cls, view, func, action):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			func_obj = binaryninja.function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -175,8 +177,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -187,8 +189,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr)
 		except:
 			log.log_error(traceback.format_exc())
@@ -199,8 +201,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr, length)
 		except:
 			log.log_error(traceback.format_exc())
@@ -211,9 +213,9 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			func_obj = binaryninja.function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -288,7 +290,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._default_action(view, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._default_is_valid(view, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -307,7 +309,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_address`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong)(lambda ctxt, view, addr: cls._address_action(view, addr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong)(lambda ctxt, view, addr: cls._address_is_valid(view, addr, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -326,7 +328,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_range`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, view, addr, length: cls._range_action(view, addr, length, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, view, addr, length: cls._range_is_valid(view, addr, length, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -345,7 +347,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNFunction))(lambda ctxt, view, func: cls._function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNFunction))(lambda ctxt, view, func: cls._function_is_valid(view, func, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -537,7 +539,7 @@ class MainThreadAction(object):
 
 
 class MainThreadActionHandler(object):
-	from binaryninja import log
+
 	_main_thread = None
 
 	def __init__(self):
@@ -572,7 +574,7 @@ class _BackgroundTaskMetaclass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		try:

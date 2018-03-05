@@ -23,6 +23,9 @@ import ctypes
 import abc
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
+from binaryninja import log
+from binaryninja import databuffer
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import TransformType
 
@@ -31,10 +34,10 @@ from six import with_metaclass
 
 
 class _TransformMetaClass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		result = []
@@ -44,7 +47,7 @@ class _TransformMetaClass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		try:
@@ -60,14 +63,14 @@ class _TransformMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		xform = core.BNGetTransformByName(name)
 		if xform is None:
 			raise KeyError("'%s' is not a valid transform" % str(name))
 		return Transform(xform)
 
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("transform 'name' is not defined")
 		if cls.long_name is None:
@@ -92,7 +95,7 @@ class TransformParameter(object):
 
 
 class Transform(with_metaclass(_TransformMetaClass, object)):
-	from binaryninja import log
+
 	from binaryninja import databuffer
 	transform_type = None
 	name = None

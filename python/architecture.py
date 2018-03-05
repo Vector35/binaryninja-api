@@ -27,16 +27,24 @@ import abc
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (Endianness, ImplicitRegisterExtend, BranchType,
 	InstructionTextTokenType, LowLevelILFlagCondition, FlagRole)
+import binaryninja
+from binaryninja import log
 
-#2-3 compatibility
+from binaryninja import lowlevelil
+from binaryninja import types
+from binaryninja import databuffer
+from binaryninja import platform
+from binaryninja import callingconvention
+
+# 2-3 compatibility
 from six import with_metaclass
 
 
 class _ArchitectureMetaClass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		archs = core.BNGetArchitectureList(count)
 		result = []
@@ -46,7 +54,7 @@ class _ArchitectureMetaClass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		archs = core.BNGetArchitectureList(count)
 		try:
@@ -56,14 +64,14 @@ class _ArchitectureMetaClass(type):
 			core.BNFreeArchitectureList(archs)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		arch = core.BNGetArchitectureByName(name)
 		if arch is None:
 			raise KeyError("'%s' is not a valid architecture" % str(name))
 		return CoreArchitecture._from_cache(arch)
 
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("architecture 'name' is not defined")
 		arch = cls()
@@ -130,15 +138,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	next_address = 0
 
 	def __init__(self):
-		from binaryninja import function
-		from binaryninja import startup
-		from binaryninja import lowlevelil
-		from binaryninja import types
-		from binaryninja import databuffer
-		from binaryninja import log
-		from binaryninja import platform
-		from binaryninja import callingconvention
-		startup._init_plugins()
+		binaryninja._init_plugins()
 
 		if self.__class__.opcode_display_length > self.__class__.max_instr_length:
 			self.__class__.opcode_display_length = self.__class__.max_instr_length
@@ -371,9 +371,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 				info = self.__class__.intrinsics[intrinsic]
 				for i in xrange(0, len(info.inputs)):
 					if isinstance(info.inputs[i], types.Type):
-						info.inputs[i] = function.IntrinsicInput(info.inputs[i])
+						info.inputs[i] = binaryninja.function.IntrinsicInput(info.inputs[i])
 					elif isinstance(info.inputs[i], tuple):
-						info.inputs[i] = function.IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
+						info.inputs[i] = binaryninja.function.IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
 				info.index = intrinsic_index
 				self._intrinsics[intrinsic] = intrinsic_index
 				self._intrinsics_by_index[intrinsic_index] = (intrinsic, info)
@@ -2049,10 +2049,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 _architecture_cache = {}
 class CoreArchitecture(Architecture):
 	def __init__(self, handle):
-		from binaryninja import function
-		from binaryninja import types
-		from binaryninja import databuffer
-		from binaryninja import lowlevelil
 		super(CoreArchitecture, self).__init__()
 
 		self.handle = core.handle_of_type(handle, core.BNArchitecture)
@@ -2082,7 +2078,7 @@ class CoreArchitecture(Architecture):
 			name = core.BNGetArchitectureRegisterName(self.handle, regs[i])
 			info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 			full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
-			self.regs[name] = function.RegisterInfo(full_width_reg, info.size, info.offset,
+			self.regs[name] = binaryninja.function.RegisterInfo(full_width_reg, info.size, info.offset,
 				ImplicitRegisterExtend(info.extend), regs[i])
 			self._all_regs[name] = regs[i]
 			self._regs_by_index[regs[i]] = name
@@ -2240,7 +2236,7 @@ class CoreArchitecture(Architecture):
 			for j in xrange(0, info.topRelativeCount):
 				top_rel.append(core.BNGetArchitectureRegisterName(self.handle, info.firstTopRelativeReg + j))
 			top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
-			self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top, regs[i])
+			self.reg_stacks[name] = binaryninja.function.RegisterStackInfo(storage, top_rel, top, regs[i])
 			self._all_reg_stacks[name] = regs[i]
 			self._reg_stacks_by_index[regs[i]] = name
 		core.BNFreeRegisterList(regs)
@@ -2258,7 +2254,7 @@ class CoreArchitecture(Architecture):
 			for j in xrange(0, input_count.value):
 				input_name = inputs[j].name
 				type_obj = types.Type(core.BNNewTypeReference(inputs[j].type), confidence = inputs[j].typeConfidence)
-				input_list.append(function.IntrinsicInput(type_obj, input_name))
+				input_list.append(binaryninja.function.IntrinsicInput(type_obj, input_name))
 			core.BNFreeNameAndTypeList(inputs, input_count.value)
 			output_count = ctypes.c_ulonglong()
 			outputs = core.BNGetArchitectureIntrinsicOutputs(self.handle, intrinsics[i], output_count)
@@ -2266,7 +2262,7 @@ class CoreArchitecture(Architecture):
 			for j in xrange(0, output_count.value):
 				output_list.append(types.Type(core.BNNewTypeReference(outputs[j].type), confidence = outputs[j].confidence))
 			core.BNFreeOutputTypeList(outputs, output_count.value)
-			self.intrinsics[name] = function.IntrinsicInfo(input_list, output_list)
+			self.intrinsics[name] = binaryninja.function.IntrinsicInfo(input_list, output_list)
 			self._intrinsics[name] = intrinsics[i]
 			self._intrinsics_by_index[intrinsics[i]] = (name, self.intrinsics[name])
 		core.BNFreeRegisterList(intrinsics)
@@ -2303,7 +2299,7 @@ class CoreArchitecture(Architecture):
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), info):
 			return None
-		result = function.InstructionInfo()
+		result = binaryninja.function.InstructionInfo()
 		result.length = info.length
 		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
 		result.branch_delay = info.branchDelay
@@ -2345,7 +2341,7 @@ class CoreArchitecture(Architecture):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 

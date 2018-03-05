@@ -31,10 +31,10 @@ from six import with_metaclass
 
 
 class _UpdateChannelMetaClass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -57,7 +57,7 @@ class _UpdateChannelMetaClass(type):
 		return core.BNSetActiveUpdateChannel(value)
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -78,7 +78,7 @@ class _UpdateChannelMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -98,7 +98,7 @@ class _UpdateChannelMetaClass(type):
 
 
 class UpdateProgressCallback(object):
-	from binaryninja import log
+
 	def __init__(self, func):
 		self.cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(self.callback)
 		self.func = func

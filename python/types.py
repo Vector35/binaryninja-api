@@ -24,6 +24,7 @@ max_confidence = 255
 import ctypes
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
 
@@ -212,8 +213,6 @@ class FunctionParameter(object):
 
 class Type(object):
 	def __init__(self, handle, platform = None, confidence = max_confidence):
-		from binaryninja import callingconvention
-		from binaryninja import function
 		self.handle = handle
 		self.confidence = confidence
 		self.platform = platform
@@ -293,7 +292,7 @@ class Type(object):
 		result = core.BNGetTypeCallingConvention(self.handle)
 		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+		return binaryninja.callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@property
 	def parameters(self):
@@ -311,7 +310,7 @@ class Type(object):
 					name = self.platform.arch.get_reg_name(params[i].location.storage)
 				elif params[i].location.type == VariableSourceType.StackVariableSourceType:
 					name = "arg_%x" % params[i].location.storage
-				param_location = function.Variable(None, params[i].location.type, params[i].location.index,
+				param_location = binaryninja.function.Variable(None, params[i].location.type, params[i].location.index,
 					params[i].location.storage, name, param_type)
 			result.append(FunctionParameter(param_type, params[i].name, param_location))
 		core.BNFreeTypeParameterList(params, count.value)
@@ -413,7 +412,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -433,7 +432,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -453,7 +452,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 

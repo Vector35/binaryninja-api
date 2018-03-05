@@ -238,14 +238,14 @@ class MediumLevelILInstruction(object):
 			elif operand_type == "intrinsic":
 				value = lowlevelil.ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "var":
-				value = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				value = binaryninja.function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 			elif operand_type == "var_ssa":
-				var = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				var = binaryninja.function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 				version = instr.operands[i + 1]
 				i += 1
 				value = SSAVariable(var, version)
 			elif operand_type == "var_ssa_dest_and_src":
-				var = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				var = binaryninja.function.Variable.from_identifier(self.function.source_function, instr.operands[i])
 				dest_version = instr.operands[i + 1]
 				src_version = instr.operands[i + 2]
 				i += 2
@@ -346,14 +346,14 @@ class MediumLevelILInstruction(object):
 	def value(self):
 		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetMediumLevelILExprValue(self.function.handle, self.expr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
 		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
@@ -451,7 +451,7 @@ class MediumLevelILInstruction(object):
 			return []
 		result = []
 		for operand in self.operands:
-			if (isinstance(operand, function.Variable)) or (isinstance(operand, SSAVariable)):
+			if (isinstance(operand, binaryninja.function.Variable)) or (isinstance(operand, SSAVariable)):
 				result.append(operand)
 			elif isinstance(operand, MediumLevelILInstruction):
 				result += operand.vars_read
@@ -474,7 +474,7 @@ class MediumLevelILInstruction(object):
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, ssa_var.version, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
@@ -488,88 +488,88 @@ class MediumLevelILInstruction(object):
 	def get_var_for_reg(self, reg):
 		reg = self.function.arch.get_reg_index(reg)
 		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		return binaryninja.function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_flag(self, flag):
 		flag = self.function.arch.get_flag_index(flag)
 		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		return binaryninja.function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_stack_location(self, offset):
 		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self.function.handle, offset, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		return binaryninja.function.Variable(self.function.source_function, result.type, result.index, result.storage)
 
 	def get_reg_value(self, reg):
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_reg_value_after(self, reg):
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_possible_reg_values(self, reg):
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_reg_values_after(self, reg):
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_flag_value(self, flag):
 		flag = self.function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_flag_value_after(self, flag):
 		flag = self.function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_possible_flag_values(self, flag):
 		flag = self.function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_flag_values_after(self, flag):
 		flag = self.function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_stack_contents(self, offset, size):
 		value = core.BNGetMediumLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_stack_contents_after(self, offset, size):
 		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		result = binaryninja.function.RegisterValue(self.function.arch, value)
 		return result
 
 	def get_possible_stack_contents(self, offset, size):
 		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_stack_contents_after(self, offset, size):
 		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		result = binaryninja.function.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
@@ -596,7 +596,7 @@ class MediumLevelILExpr(object):
 
 class MediumLevelILFunction(object):
 	"""
-	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a function. MediumLevelILExpr
+	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a binaryninja.function. MediumLevelILExpr
 	objects can be added to the MediumLevelILFunction by calling ``append`` and passing the result of the various class
 	methods which return MediumLevelILExpr objects.
 	"""
@@ -902,7 +902,7 @@ class MediumLevelILFunction(object):
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, ssa_var.version)
-		result = function.RegisterValue(self.arch, value)
+		result = binaryninja.function.RegisterValue(self.arch, value)
 		return result
 
 	def get_low_level_il_instruction_index(self, instr):

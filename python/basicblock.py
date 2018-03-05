@@ -21,6 +21,8 @@
 import ctypes
 
 # Binary Ninja components -- additional imports belong in the appropriate class
+import binaryninja
+from binaryninja import highlight
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
 
@@ -51,9 +53,6 @@ class BasicBlockEdge(object):
 
 class BasicBlock(object):
 	def __init__(self, view, handle):
-		from binaryninja import architecture
-		from binaryninja import function
-		from binaryninja import highlight
 		self.view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
 		self._arch = None
@@ -87,7 +86,7 @@ class BasicBlock(object):
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		self._func = function.Function(self.view, func)
+		self._func =binaryninja.function.Function(self.view, func)
 		return self._func
 
 	@property
@@ -100,7 +99,7 @@ class BasicBlock(object):
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = architecture.CoreArchitecture._from_cache(arch)
+		self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
 	@property
@@ -225,7 +224,7 @@ class BasicBlock(object):
 	@property
 	def disassembly_text(self):
 		"""
-		``disassembly_text`` property which returns a list of function.DisassemblyTextLine objects for the current basic block.
+		``disassembly_text`` property which returns a list of binaryninja.function.DisassemblyTextLine objects for the current basic block.
 		:Example:
 
 			>>> current_basic_block.disassembly_text
@@ -322,7 +321,7 @@ class BasicBlock(object):
 
 	def get_disassembly_text(self, settings=None):
 		"""
-		``get_disassembly_text`` returns a list of function.DisassemblyTextLine objects for the current basic block.
+		``get_disassembly_text`` returns a list of binaryninja.function.DisassemblyTextLine objects for the current basic block.
 
 		:param DisassemblySettings settings: (optional) DisassemblySettings object
 		:Example:
@@ -353,8 +352,8 @@ class BasicBlock(object):
 				context = lines[i].tokens[j].context
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(function.DisassemblyTextLine(addr, tokens, il_instr))
+				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.DisassemblyTextLine(addr, tokens, il_instr))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 

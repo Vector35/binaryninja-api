@@ -239,7 +239,7 @@ class DirectoryNameField(object):
 
 
 class InteractionHandler(object):
-	from binaryninja import log
+
 	from binaryninja import binaryview
 	_interaction_handler = None
 

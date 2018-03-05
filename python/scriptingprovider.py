@@ -29,6 +29,7 @@ import sys
 # Binary Ninja components -- additional imports belong in the appropriate class
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
+import binaryninja.log
 
 #2-3 compatibility
 from six import with_metaclass
@@ -58,7 +59,6 @@ class _ThreadActionContext(object):
 
 
 class ScriptingOutputListener(object):
-	from binaryninja import log
 	def _register(self, handle):
 		self._cb = core.BNScriptingOutputListener()
 		self._cb.context = 0
@@ -74,19 +74,19 @@ class ScriptingOutputListener(object):
 		try:
 			self.notify_output(text)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _error(self, ctxt, text):
 		try:
 			self.notify_error(text)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _input_ready_state_changed(self, ctxt, state):
 		try:
 			self.notify_input_ready_state_changed(state)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def notify_output(self, text):
 		pass
@@ -99,10 +99,6 @@ class ScriptingOutputListener(object):
 
 
 class ScriptingInstance(object):
-	from binaryninja import binaryview
-	from binaryninja import basicblock
-	from binaryninja import log
-	from binaryninja import function
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNScriptingInstanceCallbacks()
@@ -126,34 +122,34 @@ class ScriptingInstance(object):
 		try:
 			self.perform_destroy_instance()
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _execute_script_input(self, ctxt, text):
 		try:
 			return self.perform_execute_script_input(text)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryninja.binaryview.BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
+				func = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
 		except:
-			log.log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _set_current_basic_block(self, ctxt, block):
 		try:
@@ -162,25 +158,25 @@ class ScriptingInstance(object):
 				if func is None:
 					block = None
 				else:
-					block = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
+					block = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
 					core.BNFreeFunction(func)
 			else:
 				block = None
 			self.perform_set_current_basic_block(block)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _set_current_address(self, ctxt, addr):
 		try:
 			self.perform_set_current_address(addr)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def _set_current_selection(self, ctxt, begin, end):
 		try:
 			self.perform_set_current_selection(begin, end)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
@@ -259,11 +255,11 @@ class ScriptingInstance(object):
 
 
 class _ScriptingProviderMetaclass(type):
-	from binaryninja import startup
+
 	@property
 	def list(self):
 		"""List all ScriptingProvider types (read-only)"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		result = []
@@ -273,7 +269,7 @@ class _ScriptingProviderMetaclass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		try:
@@ -283,7 +279,7 @@ class _ScriptingProviderMetaclass(type):
 			core.BNFreeScriptingProviderList(types)
 
 	def __getitem__(self, value):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		provider = core.BNGetScriptingProviderByName(str(value))
 		if provider is None:
 			raise KeyError("'%s' is not a valid scripting provider" % str(value))
@@ -297,7 +293,6 @@ class _ScriptingProviderMetaclass(type):
 
 
 class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
-	from binaryninja import log
 
 	name = None
 	instance_class = None
@@ -318,7 +313,7 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 		self._cb = core.BNScriptingProviderCallbacks()
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
-		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self._cb)
+		self.handle = core.BNRegisterScriptingProvider(self.__class__.name.encode('utf8'), self._cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -328,7 +323,7 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 				return None
 			return ctypes.cast(core.BNNewScriptingInstanceReference(result.handle), ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self):
@@ -339,7 +334,6 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 
 
 class _PythonScriptingInstanceOutput(object):
-	from binaryninja import log
 	def __init__(self, orig, is_error):
 		self.orig = orig
 		self.is_error = is_error
@@ -395,7 +389,7 @@ class _PythonScriptingInstanceOutput(object):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if log.is_output_redirected_to_log():
+			if binaryninja.log.is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')
@@ -405,9 +399,9 @@ class _PythonScriptingInstanceOutput(object):
 					self.buffer = self.buffer[i + 1:]
 
 					if self.is_error:
-						log.log_error(line)
+						binaryninja.log.log_error(line)
 					else:
-						log.log_info(line)
+						binaryninja.log.log_info(line)
 			else:
 				self.orig.write(data)
 		else:

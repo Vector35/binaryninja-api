@@ -199,7 +199,7 @@ class RepositoryManager(object):
 	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
 	the plugins that are installed/unstalled enabled/disabled
 	"""
-	from binaryninja import startup
+
 	def __init__(self, handle=None):
 		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()
@@ -236,7 +236,7 @@ class RepositoryManager(object):
 	@property
 	def default_repository(self):
 		"""Gets the default Repository"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		return Repository(handle=core.BNRepositoryManagerGetDefaultRepository(self.handle))
 
 	def enable_plugin(self, plugin, install=True, repo=None):

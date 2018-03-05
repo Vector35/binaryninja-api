@@ -29,7 +29,7 @@ class FunctionRecognizer(object):
 	from binaryninja import filemetadata
 	from binaryninja import binaryview
 	from binaryninja import lowlevelil
-	from binaryninja import log
+
 	_instance = None
 
 	def __init__(self):
@@ -54,7 +54,7 @@ class FunctionRecognizer(object):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
 			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = function.Function(view, handle = core.BNNewFunctionReference(func))
+			func = binaryninja.function.Function(view, handle = core.BNNewFunctionReference(func))
 			il = lowlevelil.LowLevelILFunction(func.arch, handle = core.BNNewLowLevelILFunctionReference(il))
 			return self.recognize_low_level_il(view, func, il)
 		except:
@@ -68,7 +68,7 @@ class FunctionRecognizer(object):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
 			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = function.Function(view, handle = core.BNNewFunctionReference(func))
+			func = binaryninja.function.Function(view, handle = core.BNNewFunctionReference(func))
 			il = mediumlevelil.MediumLevelILFunction(func.arch, handle = core.BNNewMediumLevelILFunctionReference(il))
 			return self.recognize_medium_level_il(view, func, il)
 		except:

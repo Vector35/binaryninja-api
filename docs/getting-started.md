@@ -85,6 +85,10 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `h` : Switch to hex view
  - `p` : Create a function
  - `[ESC]` : Navigate backward
+ - `[CMD] [` (OS X) : Navigate backward
+ - `[CMD] ]` (OS X) : Navigate forward
+ - `[CTRL] [` (Windows/Linux) : Navigate backward
+ - `[CTRL] ]` (Windows/Linux) : Navigate forward
  - `[SPACE]` : Toggle between linear view and graph view
  - `g` : Go To Address dialog
  - `n` : Name a symbol

@@ -540,7 +540,7 @@ class PythonScriptingInstance(ScriptingInstance):
 						self.locals["current_address"] = self.active_addr
 						self.locals["here"] = self.active_addr
 						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
-						if self.active_func == None:
+						if self.active_func is None:
 							self.locals["current_llil"] = None
 							self.locals["current_mlil"] = None
 						else:
@@ -556,6 +556,8 @@ class PythonScriptingInstance(ScriptingInstance):
 						elif self.locals["current_address"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
 								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+						if self.active_view is not None:
+							self.active_view.update_analysis()
 					except:
 						traceback.print_exc()
 					finally:

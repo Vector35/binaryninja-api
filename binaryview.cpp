@@ -78,6 +78,15 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::FunctionUpdateRequestedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	notify->OnAnalysisFunctionUpdateRequested(view, funcObj);
+}
+
+
 void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -148,6 +157,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
 	m_callbacks.functionUpdated = FunctionUpdatedCallback;
+	m_callbacks.functionUpdateRequested = FunctionUpdateRequestedCallback;
 	m_callbacks.dataVariableAdded = DataVariableAddedCallback;
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
@@ -1948,6 +1958,19 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
 }
+
+
+uint64_t BinaryView::GetMaxFunctionSizeForAnalysis()
+{
+	return BNGetMaxFunctionSizeForAnalysis(m_object);
+}
+
+
+void BinaryView::SetMaxFunctionSizeForAnalysis(uint64_t size)
+{
+	BNSetMaxFunctionSizeForAnalysis(m_object, size);
+}
+
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {

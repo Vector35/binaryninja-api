@@ -131,6 +131,12 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 }
 
 
+bool FunctionGraph::HasBlocks() const
+{
+	return BNFunctionGraphHasBlocks(m_graph);
+}
+
+
 int FunctionGraph::GetWidth() const
 {
 	return BNGetFunctionGraphWidth(m_graph);

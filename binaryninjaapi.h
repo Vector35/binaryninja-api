@@ -866,6 +866,7 @@ namespace BinaryNinja
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void FunctionUpdateRequestedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void DataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
@@ -886,6 +887,7 @@ namespace BinaryNinja
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnAnalysisFunctionUpdateRequested(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
@@ -1344,6 +1346,9 @@ namespace BinaryNinja
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
+
+		uint64_t GetMaxFunctionSizeForAnalysis();
+		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 	};
 
 	class BinaryData: public BinaryView
@@ -2475,6 +2480,11 @@ namespace BinaryNinja
 
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
+
+		bool IsFunctionTooLarge();
+		bool IsAnalysisSkipped();
+		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
+		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -2550,6 +2560,7 @@ namespace BinaryNinja
 		void Abort();
 
 		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
+		bool HasBlocks() const;
 
 		int GetWidth() const;
 		int GetHeight() const;

@@ -989,6 +989,7 @@ extern "C"
 		void (*functionAdded)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionRemoved)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionUpdated)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		void (*functionUpdateRequested)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*dataVariableAdded)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataVariableRemoved)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
@@ -1739,6 +1740,13 @@ extern "C"
 		uint8_t confidence;
 	};
 
+	enum BNFunctionAnalysisSkipOverride
+	{
+		DefaultFunctionAnalysisSkip,
+		NeverSkipFunctionAnalysis,
+		AlwaysSkipFunctionAnalysis
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2421,6 +2429,14 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
 		uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
 
+	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
+	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);
+	BINARYNINJACOREAPI BNFunctionAnalysisSkipOverride BNGetFunctionAnalysisSkipOverride(BNFunction* func);
+	BINARYNINJACOREAPI void BNSetFunctionAnalysisSkipOverride(BNFunction* func, BNFunctionAnalysisSkipOverride skip);
+
+	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
+
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
 		void (*callback)(void* ctxt));
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNNewAnalysisCompletionEventReference(BNAnalysisCompletionEvent* event);
@@ -2536,6 +2552,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFunctionGraphBlock** BNGetFunctionGraphBlocksInRegion(
 		BNFunctionGraph* graph, int left, int top, int right, int bottom, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockList(BNFunctionGraphBlock** blocks, size_t count);
+	BINARYNINJACOREAPI bool BNFunctionGraphHasBlocks(BNFunctionGraph* graph);
 
 	BINARYNINJACOREAPI int BNGetFunctionGraphWidth(BNFunctionGraph* graph);
 	BINARYNINJACOREAPI int BNGetFunctionGraphHeight(BNFunctionGraph* graph);

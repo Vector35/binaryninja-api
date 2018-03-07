@@ -1359,6 +1359,30 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 }
 
 
+bool Function::IsFunctionTooLarge()
+{
+	return BNIsFunctionTooLarge(m_object);
+}
+
+
+bool Function::IsAnalysisSkipped()
+{
+	return BNIsFunctionAnalysisSkipped(m_object);
+}
+
+
+BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
+{
+	return BNGetFunctionAnalysisSkipOverride(m_object);
+}
+
+
+void Function::SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip)
+{
+	BNSetFunctionAnalysisSkipOverride(m_object, skip);
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
 {
 	if (m_func)

@@ -26,7 +26,8 @@ import ctypes
 import _binaryninjacore as core
 from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
+	FunctionAnalysisSkipOverride)
 import architecture
 import platform
 import highlight
@@ -816,6 +817,32 @@ class Function(object):
 		for block in self.mlil_basic_blocks:
 			for i in block:
 				yield i
+
+	@property
+	def too_large(self):
+		"""Whether the function is too large to automatically perform analysis (read-only)"""
+		return core.BNIsFunctionTooLarge(self.handle)
+
+	@property
+	def analysis_skipped(self):
+		"""Whether automatic analysis was skipped for this function"""
+		return core.BNIsFunctionAnalysisSkipped(self.handle)
+
+	@analysis_skipped.setter
+	def analysis_skipped(self, skip):
+		if skip:
+			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.AlwaysSkipFunctionAnalysis)
+		else:
+			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.NeverSkipFunctionAnalysis)
+
+	@property
+	def analysis_skip_override(self):
+		"""Override for skipping of automatic analysis"""
+		return FunctionAnalysisSkipOverride(core.BNGetFunctionAnalysisSkipOverride(self.handle))
+
+	@analysis_skip_override.setter
+	def analysis_skip_override(self, override):
+		core.BNSetFunctionAnalysisSkipOverride(self.handle, override)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -1834,6 +1861,11 @@ class FunctionGraph(object):
 			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
 		core.BNFreeFunctionGraphBlockList(blocks, count.value)
 		return result
+
+	@property
+	def has_blocks(self):
+		"""Whether the function graph has at least one block (read-only)"""
+		return core.BNFunctionGraphHasBlocks(self.handle)
 
 	@property
 	def width(self):

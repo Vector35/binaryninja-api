@@ -108,7 +108,8 @@ class StringReference(object):
 class AnalysisCompletionEvent(object):
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
-	callbacks when analysis is complete.
+	callbacks when analysis is complete. The callback runs once. A completion event must be added
+	for each new analysis in order to be notified of each analysis completion.
 
 	:Example:
 		>>> def on_complete(self):

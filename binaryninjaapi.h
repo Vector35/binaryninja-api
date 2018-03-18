@@ -680,8 +680,10 @@ namespace BinaryNinja
 		void erase(std::vector<std::string>::iterator i);
 		void clear();
 		void push_back(const std::string& name);
+		// Returns count of names
 		size_t size() const;
-
+		// Returns size of output string
+		size_t StringSize() const;
 		std::string GetString() const;
 
 		BNQualifiedName GetAPIObject() const;

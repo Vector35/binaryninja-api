@@ -188,6 +188,15 @@ size_t QualifiedName::size() const
 }
 
 
+size_t QualifiedName::StringSize() const
+{
+	size_t size = 0;
+	for (auto& name : m_name)
+		size += name.size() + 2;
+	return size - 2;
+}
+
+
 string QualifiedName::GetString() const
 {
 	bool first = true;

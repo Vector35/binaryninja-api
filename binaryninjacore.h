@@ -3325,6 +3325,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPathExists(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathDirectory(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
+	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);
 
 	// Settings APIs
 	BINARYNINJACOREAPI bool BNSettingGetBool(const char* settingGroup, const char* name, bool defaultValue);

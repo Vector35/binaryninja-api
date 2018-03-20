@@ -44,7 +44,7 @@ class _ArchitectureMetaClass(type):
 		archs = core.BNGetArchitectureList(count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(CoreArchitecture(archs[i]))
+			result.append(CoreArchitecture._from_cache(archs[i]))
 		core.BNFreeArchitectureList(archs)
 		return result
 
@@ -54,7 +54,7 @@ class _ArchitectureMetaClass(type):
 		archs = core.BNGetArchitectureList(count)
 		try:
 			for i in xrange(0, count.value):
-				yield CoreArchitecture(archs[i])
+				yield CoreArchitecture._from_cache(archs[i])
 		finally:
 			core.BNFreeArchitectureList(archs)
 
@@ -63,7 +63,7 @@ class _ArchitectureMetaClass(type):
 		arch = core.BNGetArchitectureByName(name)
 		if arch is None:
 			raise KeyError("'%s' is not a valid architecture" % str(name))
-		return CoreArchitecture(arch)
+		return CoreArchitecture._from_cache(arch)
 
 	def register(cls):
 		startup._init_plugins()
@@ -2037,6 +2037,7 @@ class Architecture(object):
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
 
+_architecture_cache = {}
 class CoreArchitecture(Architecture):
 	def __init__(self, handle):
 		super(CoreArchitecture, self).__init__()
@@ -2256,12 +2257,19 @@ class CoreArchitecture(Architecture):
 			self._intrinsics[name] = intrinsics[i]
 			self._intrinsics_by_index[intrinsics[i]] = (name, self.intrinsics[name])
 		core.BNFreeRegisterList(intrinsics)
+		global _architecture_cache
+		_architecture_cache[ctypes.addressof(handle.contents)] = self
+
+	@classmethod
+	def _from_cache(cls, handle):
+		global _architecture_cache
+		return _architecture_cache.get(ctypes.addressof(handle.contents)) or cls(handle)
 
 	def get_associated_arch_by_address(self, addr):
 		new_addr = ctypes.c_ulonglong()
 		new_addr.value = addr
 		result = core.BNGetAssociatedArchitectureByAddress(self.handle, new_addr)
-		return CoreArchitecture(handle = result), new_addr.value
+		return CoreArchitecture._from_cache(handle = result), new_addr.value
 
 	def get_instruction_info(self, data, addr):
 		"""
@@ -2289,7 +2297,7 @@ class CoreArchitecture(Architecture):
 		for i in xrange(0, info.branchCount):
 			target = info.branchTarget[i]
 			if info.branchArch[i]:
-				arch = CoreArchitecture(info.branchArch[i])
+				arch = CoreArchitecture._from_cache(info.branchArch[i])
 			else:
 				arch = None
 			result.add_branch(BranchType(info.branchType[i]), target, arch)

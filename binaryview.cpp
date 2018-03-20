@@ -584,6 +584,9 @@ bool BinaryView::IsBackedByDatabase() const
 
 bool BinaryView::CreateDatabase(const string& path)
 {
+	auto parent = GetParentView();
+	if (parent)
+		return parent->CreateDatabase(path);
 	return m_file->CreateDatabase(path, this);
 }
 
@@ -591,6 +594,9 @@ bool BinaryView::CreateDatabase(const string& path)
 bool BinaryView::CreateDatabase(const string& path,
 	const function<void(size_t progress, size_t total)>& progressCallback)
 {
+	auto parent = GetParentView();
+	if (parent)
+		return parent->CreateDatabase(path);
 	return m_file->CreateDatabase(path, this, progressCallback);
 }
 

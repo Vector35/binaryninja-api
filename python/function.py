@@ -558,7 +558,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranches(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1142,7 +1142,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 

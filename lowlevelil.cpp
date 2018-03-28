@@ -314,7 +314,11 @@ ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOpe
 	if (operandCount == 0)
 		return AddExpr(op, size, 0);
 	if (operandCount == 1)
+	{
+		if (op == LLIL_SET_REG)
+			return GetExprForRegisterOrConstant(operands[0], size);
 		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size));
+	}
 	if (operandCount == 2)
 	{
 		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),

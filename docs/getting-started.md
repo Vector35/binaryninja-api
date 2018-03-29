@@ -96,7 +96,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focuses the cross-reference pane
  - `;` : Adds a comment
- - `i` : Switches between disassembly and low-level il in graph view
+ - `i` : Cycles between disassembly, low-level il, and medium-level il in graph view
  - `y` : Change type
  - `a` : Change the data type to an ASCII string
  - [1248] : Change type directly to a data variable of the indicated widths

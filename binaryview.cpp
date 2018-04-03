@@ -1459,6 +1459,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
@@ -1507,6 +1508,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{

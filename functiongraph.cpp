@@ -110,6 +110,7 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 	BNFunctionGraphBlock** blocks = BNGetFunctionGraphBlocks(m_graph, &count);
 
 	vector<Ref<FunctionGraphBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		auto block = m_cachedBlocks.find(blocks[i]);
@@ -127,6 +128,12 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 
 	BNFreeFunctionGraphBlockList(blocks, count);
 	return result;
+}
+
+
+bool FunctionGraph::HasBlocks() const
+{
+	return BNFunctionGraphHasBlocks(m_graph);
 }
 
 
@@ -148,6 +155,7 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocksInRegion(int left, int t
 	BNFunctionGraphBlock** blocks = BNGetFunctionGraphBlocksInRegion(m_graph, left, top, right, bottom, &count);
 
 	vector<Ref<FunctionGraphBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		auto block = m_cachedBlocks.find(blocks[i]);
@@ -177,4 +185,40 @@ bool FunctionGraph::IsOptionSet(BNDisassemblyOption option) const
 void FunctionGraph::SetOption(BNDisassemblyOption option, bool state)
 {
 	BNSetFunctionGraphOption(m_graph, option, state);
+}
+
+
+bool FunctionGraph::IsILGraph() const
+{
+	return BNIsILFunctionGraph(m_graph);
+}
+
+
+bool FunctionGraph::IsLowLevelILGraph() const
+{
+	return BNIsLowLevelILFunctionGraph(m_graph);
+}
+
+
+bool FunctionGraph::IsMediumLevelILGraph() const
+{
+	return BNIsMediumLevelILFunctionGraph(m_graph);
+}
+
+
+Ref<LowLevelILFunction> FunctionGraph::GetLowLevelILFunction() const
+{
+	BNLowLevelILFunction* func = BNGetFunctionGraphLowLevelILFunction(m_graph);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+Ref<MediumLevelILFunction> FunctionGraph::GetMediumLevelILFunction() const
+{
+	BNMediumLevelILFunction* func = BNGetFunctionGraphMediumLevelILFunction(m_graph);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
 }

@@ -1,4 +1,4 @@
-[![slack](https://binaryninja-slack-hwwdinrdce.now.sh/badge.svg)](https://binaryninja-slack-hwwdinrdce.now.sh/)
+[![slack](https://slack.binary.ninja/badge.svg)](https://slack.binary.ninja/)
 
 # Binary Ninja API
 

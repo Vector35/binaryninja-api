@@ -65,6 +65,9 @@ class BinaryDataNotification(object):
 	def function_updated(self, view, func):
 		pass
 
+	def function_update_requested(self, view, func):
+		pass
+
 	def data_var_added(self, view, var):
 		pass
 
@@ -105,7 +108,8 @@ class StringReference(object):
 class AnalysisCompletionEvent(object):
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
-	callbacks when analysis is complete.
+	callbacks when analysis is complete. The callback runs once. A completion event must be added
+	for each new analysis in order to be notified of each analysis completion.
 
 	:Example:
 		>>> def on_complete(self):
@@ -180,6 +184,7 @@ class BinaryDataNotificationCallbacks(object):
 		self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
 		self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
 		self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
+		self._cb.functionUpdateRequested = self._cb.functionUpdateRequested.__class__(self._function_update_requested)
 		self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
 		self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
 		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
@@ -227,6 +232,12 @@ class BinaryDataNotificationCallbacks(object):
 	def _function_updated(self, ctxt, view, func):
 		try:
 			self.notify.function_updated(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _function_update_requested(self, ctxt, view, func):
+		try:
+			self.notify.function_update_requested(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -400,7 +411,7 @@ class BinaryViewType(object):
 		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
-		return architecture.Architecture(arch)
+		return architecture.CoreArchitecture._from_cache(arch)
 
 	def register_platform(self, ident, arch, plat):
 		core.BNRegisterPlatformForViewType(self.handle, ident, arch.handle, plat.handle)
@@ -857,7 +868,7 @@ class BinaryView(object):
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.Architecture(handle=arch)
+		return architecture.CoreArchitecture._from_cache(handle=arch)
 
 	@arch.setter
 	def arch(self, value):
@@ -1053,6 +1064,15 @@ class BinaryView(object):
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
 		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+
+	@property
+	def max_function_size_for_analysis(self):
+		"""Maximum size of function (sum of basic block sizes in bytes) for auto analysis"""
+		return core.BNGetMaxFunctionSizeForAnalysis(self.handle)
+
+	@max_function_size_for_analysis.setter
+	def max_function_size_for_analysis(self, size):
+		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -2146,6 +2166,8 @@ class BinaryView(object):
 		"""
 		if plat is None:
 			plat = self.platform
+		if plat is None:
+			return None
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
@@ -2240,7 +2262,7 @@ class BinaryView(object):
 			else:
 				func = None
 			if refs[i].arch:
-				arch = architecture.Architecture(refs[i].arch)
+				arch = architecture.CoreArchitecture._from_cache(refs[i].arch)
 			else:
 				arch = None
 			addr = refs[i].addr

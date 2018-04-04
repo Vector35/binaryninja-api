@@ -89,10 +89,13 @@ const vector<DisassemblyTextLine>& FunctionGraphBlock::GetLines()
 	BNDisassemblyTextLine* lines = BNGetFunctionGraphBlockLines(m_object, &count);
 
 	vector<DisassemblyTextLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
+		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;
@@ -125,6 +128,7 @@ const vector<FunctionGraphEdge>& FunctionGraphBlock::GetOutgoingEdges()
 	BNFunctionGraphEdge* edges = BNGetFunctionGraphBlockOutgoingEdges(m_object, &count);
 
 	vector<FunctionGraphEdge> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		FunctionGraphEdge edge;

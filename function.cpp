@@ -174,6 +174,7 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 	BNBasicBlock** blocks = BNGetFunctionBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 
@@ -379,6 +380,7 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	BNStackVariableReference* refs = BNGetStackVariablesReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<StackVariableReference> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		StackVariableReference ref;
@@ -490,6 +492,18 @@ Confidence<Ref<Type>> Function::GetReturnType() const
 }
 
 
+Confidence<vector<uint32_t>> Function::GetReturnRegisters() const
+{
+	BNRegisterSetWithConfidence regs = BNGetFunctionReturnRegisters(m_object);
+	vector<uint32_t> regList;
+	for (size_t i = 0; i < regs.count; i++)
+		regList.push_back(regs.regs[i]);
+	Confidence<vector<uint32_t>> result(regList, regs.confidence);
+	BNFreeRegisterSet(&regs);
+	return result;
+}
+
+
 Confidence<Ref<CallingConvention>> Function::GetCallingConvention() const
 {
 	BNCallingConventionWithConfidence cc = BNGetFunctionCallingConvention(m_object);
@@ -502,10 +516,9 @@ Confidence<vector<Variable>> Function::GetParameterVariables() const
 {
 	BNParameterVariablesWithConfidence vars = BNGetFunctionParameterVariables(m_object);
 	vector<Variable> varList;
+	varList.reserve(vars.count);
 	for (size_t i = 0; i < vars.count; i++)
-	{
 		varList.emplace_back(vars.vars[i].type, vars.vars[i].index, vars.vars[i].storage);
-	}
 	Confidence<vector<Variable>> result(varList, vars.confidence);
 	BNFreeParameterVariables(&vars);
 	return result;
@@ -526,6 +539,18 @@ Confidence<size_t> Function::GetStackAdjustment() const
 }
 
 
+map<uint32_t, Confidence<int32_t>> Function::GetRegisterStackAdjustments() const
+{
+	size_t count;
+	BNRegisterStackAdjustment* regStackAdjust = BNGetFunctionRegisterStackAdjustments(m_object, &count);
+	map<uint32_t, Confidence<int32_t>> result;
+	for (size_t i = 0; i < count; i++)
+		result[regStackAdjust[i].regStack] = Confidence<int32_t>(regStackAdjust[i].adjustment, regStackAdjust[i].confidence);
+	BNFreeRegisterStackAdjustments(regStackAdjust);
+	return result;
+}
+
+
 Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
 {
 	BNRegisterSetWithConfidence regs = BNGetFunctionClobberedRegisters(m_object);
@@ -533,7 +558,7 @@ Confidence<set<uint32_t>> Function::GetClobberedRegisters() const
 	for (size_t i = 0; i < regs.count; i++)
 		regSet.insert(regs.regs[i]);
 	Confidence<set<uint32_t>> result(regSet, regs.confidence);
-	BNFreeClobberedRegisters(&regs);
+	BNFreeRegisterSet(&regs);
 	return result;
 }
 
@@ -550,6 +575,19 @@ void Function::SetAutoReturnType(const Confidence<Ref<Type>>& type)
 	tc.type = type ? type->GetObject() : nullptr;
 	tc.confidence = type.GetConfidence();
 	BNSetAutoFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetAutoReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[returnRegs.GetValue().size()];
+	regs.count = returnRegs.GetValue().size();
+	for (size_t i = 0; i < regs.count; i++)
+		regs.regs[i] = returnRegs.GetValue()[i];
+	regs.confidence = returnRegs.GetConfidence();
+	BNSetAutoFunctionReturnRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 
@@ -608,6 +646,22 @@ void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
 }
 
 
+void Function::SetAutoRegisterStackAdjustments(const map<uint32_t, Confidence<int32_t>>& regStackAdjust)
+{
+	BNRegisterStackAdjustment* adjust = new BNRegisterStackAdjustment[regStackAdjust.size()];
+	size_t i = 0;
+	for (auto& j : regStackAdjust)
+	{
+		adjust[i].regStack = j.first;
+		adjust[i].adjustment = j.second.GetValue();
+		adjust[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetAutoFunctionRegisterStackAdjustments(m_object, adjust, regStackAdjust.size());
+	delete[] adjust;
+}
+
+
 void Function::SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
 {
 	BNRegisterSetWithConfidence regs;
@@ -635,6 +689,19 @@ void Function::SetReturnType(const Confidence<Ref<Type>>& type)
 	tc.type = type ? type->GetObject() : nullptr;
 	tc.confidence = type.GetConfidence();
 	BNSetUserFunctionReturnType(m_object, &tc);
+}
+
+
+void Function::SetReturnRegisters(const Confidence<std::vector<uint32_t>>& returnRegs)
+{
+	BNRegisterSetWithConfidence regs;
+	regs.regs = new uint32_t[returnRegs.GetValue().size()];
+	regs.count = returnRegs.GetValue().size();
+	for (size_t i = 0; i < regs.count; i++)
+		regs.regs[i] = returnRegs.GetValue()[i];
+	regs.confidence = returnRegs.GetConfidence();
+	BNSetUserFunctionReturnRegisters(m_object, &regs);
+	delete[] regs.regs;
 }
 
 
@@ -693,6 +760,22 @@ void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
 }
 
 
+void Function::SetRegisterStackAdjustments(const map<uint32_t, Confidence<int32_t>>& regStackAdjust)
+{
+	BNRegisterStackAdjustment* adjust = new BNRegisterStackAdjustment[regStackAdjust.size()];
+	size_t i = 0;
+	for (auto& j : regStackAdjust)
+	{
+		adjust[i].regStack = j.first;
+		adjust[i].adjustment = j.second.GetValue();
+		adjust[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetUserFunctionRegisterStackAdjustments(m_object, adjust, regStackAdjust.size());
+	delete[] adjust;
+}
+
+
 void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered)
 {
 	BNRegisterSetWithConfidence regs;
@@ -742,7 +825,7 @@ map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 		result[vars[i].var.storage].push_back(var);
 	}
 
-	BNFreeVariableList(vars, count);
+	BNFreeVariableNameAndTypeList(vars, count);
 	return result;
 }
 
@@ -810,7 +893,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 		result[vars[i].var] = var;
 	}
 
-	BNFreeVariableList(vars, count);
+	BNFreeVariableNameAndTypeList(vars, count);
 	return result;
 }
 
@@ -897,6 +980,7 @@ vector<IndirectBranchInfo> Function::GetIndirectBranches()
 	BNIndirectBranchInfo* branches = BNGetIndirectBranches(m_object, &count);
 
 	vector<IndirectBranchInfo> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		IndirectBranchInfo b;
@@ -919,6 +1003,7 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 	BNIndirectBranchInfo* branches = BNGetIndirectBranchesAt(m_object, arch->GetObject(), addr, &count);
 
 	vector<IndirectBranchInfo> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		IndirectBranchInfo b;
@@ -935,15 +1020,107 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+{
+	BNSetAutoCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+	const map<uint32_t, Confidence<int32_t>>& adjust)
+{
+	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
+	size_t i = 0;
+	for (auto& j : adjust)
+	{
+		values[i].regStack = j.first;
+		values[i].adjustment = j.second.GetValue();
+		values[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetAutoCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, values, adjust.size());
+	delete[] values;
+}
+
+
+void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+	const Confidence<int32_t>& adjust)
+{
+	BNSetAutoCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
+		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+{
+	BNSetUserCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
+	const map<uint32_t, Confidence<int32_t>>& adjust)
+{
+	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
+	size_t i = 0;
+	for (auto& j : adjust)
+	{
+		values[i].regStack = j.first;
+		values[i].adjustment = j.second.GetValue();
+		values[i].confidence = j.second.GetConfidence();
+		i++;
+	}
+	BNSetUserCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, values, adjust.size());
+	delete[] values;
+}
+
+
+void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
+	const Confidence<int32_t>& adjust)
+{
+	BNSetUserCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
+		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+Confidence<size_t> Function::GetCallStackAdjustment(Architecture* arch, uint64_t addr)
+{
+	BNSizeWithConfidence result = BNGetCallStackAdjustment(m_object, arch->GetObject(), addr);
+	return Confidence<size_t>(result.value, result.confidence);
+}
+
+
+map<uint32_t, Confidence<int32_t>> Function::GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNRegisterStackAdjustment* adjust = BNGetCallRegisterStackAdjustment(m_object, arch->GetObject(), addr, &count);
+
+	map<uint32_t, Confidence<int32_t>> result;
+	for (size_t i = 0; i < count; i++)
+		result[adjust[i].regStack] = Confidence<int32_t>(adjust[i].adjustment, adjust[i].confidence);
+	BNFreeRegisterStackAdjustments(adjust);
+	return result;
+}
+
+
+Confidence<int32_t> Function::GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack)
+{
+	BNRegisterStackAdjustment result = BNGetCallRegisterStackAdjustmentForRegisterStack(m_object,
+		arch->GetObject(), addr, regStack);
+	return Confidence<int32_t>(result.adjustment, result.confidence);
+}
+
+
 vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture* arch, uint64_t addr)
 {
 	size_t count;
 	BNInstructionTextLine* lines = BNGetFunctionBlockAnnotations(m_object, arch->GetObject(), addr, &count);
 
 	vector<vector<InstructionTextToken>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		vector<InstructionTextToken> line;
+		line.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;
@@ -1155,10 +1332,13 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		settings ? settings->GetObject() : nullptr, &count);
 
 	vector<DisassemblyTextLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
+		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;
@@ -1177,6 +1357,30 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
+}
+
+
+bool Function::IsFunctionTooLarge()
+{
+	return BNIsFunctionTooLarge(m_object);
+}
+
+
+bool Function::IsAnalysisSkipped()
+{
+	return BNIsFunctionAnalysisSkipped(m_object);
+}
+
+
+BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
+{
+	return BNGetFunctionAnalysisSkipOverride(m_object);
+}
+
+
+void Function::SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip)
+{
+	BNSetFunctionAnalysisSkipOverride(m_object, skip);
 }
 
 

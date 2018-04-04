@@ -85,6 +85,10 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `h` : Switch to hex view
  - `p` : Create a function
  - `[ESC]` : Navigate backward
+ - `[CMD] [` (OS X) : Navigate backward
+ - `[CMD] ]` (OS X) : Navigate forward
+ - `[CTRL] [` (Windows/Linux) : Navigate backward
+ - `[CTRL] ]` (Windows/Linux) : Navigate forward
  - `[SPACE]` : Toggle between linear view and graph view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
@@ -92,7 +96,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focuses the cross-reference pane
  - `;` : Adds a comment
- - `i` : Switches between disassembly and low-level il in graph view
+ - `i` : Cycles between disassembly, low-level il, and medium-level il in graph view
  - `y` : Change type
  - `a` : Change the data type to an ASCII string
  - [1248] : Change type directly to a data variable of the indicated widths
@@ -210,15 +214,15 @@ By default the interactive python prompt has a number of convenient helper funct
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.BinaryView.html)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.Function.html)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)
-- `current_llil`: the current [LowLevelILBasicBlock](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html)
-- `current_mlil`: the current [MediumLevelILBasicBlock](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILBasicBlock.html)
+- `current_llil`: the current [LowLevelILFunction](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html)
+- `current_mlil`: the current [MediumLevelILFunction](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILFunction.html)
 - `current_selection`: a tuple of the start and end addresses of the current selection
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 
 Note
 !!! Tip "Note"
-    The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who with to implement their own bindings.
+    The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who wish to implement their own bindings.
 
 ## Using Plugins
 
@@ -260,6 +264,7 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 | ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
 | ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
 | ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
+| ui    | recent-file-limit        | integer      | 10                                             | Specify limit for number of recent files                                                       |
 | pdb   | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
 | pdb   | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
 | pdb   | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
@@ -273,6 +278,7 @@ Below is an example `settings.json` setting various options:
 		"activeContent" : false,
 		"colorblind" : false,
 		"debug" : true
+		"recent-file-limit" : 10
 	}
     "pdb" :
     {

@@ -26,6 +26,7 @@ from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionText
 import function
 import basicblock
 import mediumlevelil
+import struct
 
 
 class LowLevelILLabel(object):
@@ -61,6 +62,26 @@ class ILRegister(object):
 		return self.info == other.info
 
 
+class ILRegisterStack(object):
+	def __init__(self, arch, reg_stack):
+		self.arch = arch
+		self.index = reg_stack
+		self.name = self.arch.get_reg_stack_name(self.index)
+
+	@property
+	def info(self):
+		return self.arch.reg_stacks[self.name]
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.info == other.info
+
+
 class ILFlag(object):
 	def __init__(self, arch, flag):
 		self.arch = arch
@@ -78,6 +99,57 @@ class ILFlag(object):
 		return self.name
 
 
+class ILSemanticFlagClass(object):
+	def __init__(self, arch, sem_class):
+		self.arch = arch
+		self.index = sem_class
+		self.name = self.arch.get_semantic_flag_class_name(self.index)
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
+class ILSemanticFlagGroup(object):
+	def __init__(self, arch, sem_group):
+		self.arch = arch
+		self.index = sem_group
+		self.name = self.arch.get_semantic_flag_group_name(self.index)
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
+class ILIntrinsic(object):
+	def __init__(self, arch, intrinsic):
+		self.arch = arch
+		self.index = intrinsic
+		self.name = self.arch.get_intrinsic_name(self.index)
+		if self.name in self.arch.intrinsics:
+			self.inputs = self.arch.intrinsics[self.name].inputs
+			self.outputs = self.arch.intrinsics[self.name].outputs
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.name
+
+	def __eq__(self, other):
+		return self.index == other.index
+
+
 class SSARegister(object):
 	def __init__(self, reg, version):
 		self.reg = reg
@@ -87,6 +159,15 @@ class SSARegister(object):
 		return "<ssa %s version %d>" % (repr(self.reg), self.version)
 
 
+class SSARegisterStack(object):
+	def __init__(self, reg_stack, version):
+		self.reg_stack = reg_stack
+		self.version = version
+
+	def __repr__(self):
+		return "<ssa %s version %d>" % (repr(self.reg_stack), self.version)
+
+
 class SSAFlag(object):
 	def __init__(self, flag, version):
 		self.flag = flag
@@ -94,6 +175,15 @@ class SSAFlag(object):
 
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self.flag), self.version)
+
+
+class SSARegisterOrFlag(object):
+	def __init__(self, reg_or_flag, version):
+		self.reg_or_flag = reg_or_flag
+		self.version = version
+
+	def __repr__(self):
+		return "<ssa %s version %d>" % (repr(self.reg_or_flag), self.version)
 
 
 class LowLevelILOperationAndSize(object):
@@ -118,14 +208,22 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_NOP: [],
 		LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_REL: [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_PUSH: [("stack", "reg_stack"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
 		LowLevelILOperation.LLIL_LOAD: [("src", "expr")],
 		LowLevelILOperation.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
 		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
 		LowLevelILOperation.LLIL_POP: [],
 		LowLevelILOperation.LLIL_REG: [("src", "reg")],
+		LowLevelILOperation.LLIL_REG_SPLIT: [("hi", "reg"), ("lo", "reg")],
+		LowLevelILOperation.LLIL_REG_STACK_REL: [("stack", "reg_stack"), ("src", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_POP: [("stack", "reg_stack")],
+		LowLevelILOperation.LLIL_REG_STACK_FREE_REG: [("dest", "reg")],
+		LowLevelILOperation.LLIL_REG_STACK_FREE_REL: [("stack", "reg_stack"), ("dest", "expr")],
 		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
 		LowLevelILOperation.LLIL_CONST_PTR: [("constant", "int")],
+		LowLevelILOperation.LLIL_FLOAT_CONST: [("constant", "float")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
 		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
@@ -146,13 +244,13 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_DIVU: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_DIVS: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_MODU: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODU_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_MODS: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODS_DP: [("hi", "expr"), ("lo", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_NEG: [("src", "expr")],
 		LowLevelILOperation.LLIL_NOT: [("src", "expr")],
 		LowLevelILOperation.LLIL_SX: [("src", "expr")],
@@ -161,12 +259,13 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
-		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int")],
+		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
 		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
 		LowLevelILOperation.LLIL_GOTO: [("dest", "int")],
-		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond")],
+		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond"), ("semantic_class", "sem_class")],
+		LowLevelILOperation.LLIL_FLAG_GROUP: [("semantic_group", "sem_group")],
 		LowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
@@ -181,17 +280,49 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
 		LowLevelILOperation.LLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL: [],
+		LowLevelILOperation.LLIL_INTRINSIC: [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+		LowLevelILOperation.LLIL_INTRINSIC_SSA: [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
 		LowLevelILOperation.LLIL_BP: [],
 		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
 		LowLevelILOperation.LLIL_UNDEF: [],
 		LowLevelILOperation.LLIL_UNIMPL: [],
 		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
+		LowLevelILOperation.LLIL_FADD: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FSUB: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FMUL: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FDIV: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FSQRT: [("src", "expr")],
+		LowLevelILOperation.LLIL_FNEG: [("src", "expr")],
+		LowLevelILOperation.LLIL_FABS: [("src", "expr")],
+		LowLevelILOperation.LLIL_FLOAT_TO_INT: [("src", "expr")],
+		LowLevelILOperation.LLIL_INT_TO_FLOAT: [("src", "expr")],
+		LowLevelILOperation.LLIL_FLOAT_CONV: [("src", "expr")],
+		LowLevelILOperation.LLIL_ROUND_TO_INT: [("src", "expr")],
+		LowLevelILOperation.LLIL_FLOOR: [("src", "expr")],
+		LowLevelILOperation.LLIL_CEIL: [("src", "expr")],
+		LowLevelILOperation.LLIL_FTRUNC: [("src", "expr")],
+		LowLevelILOperation.LLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
+		LowLevelILOperation.LLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg_ssa"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg_ssa")],
+		LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: [("src", "reg_stack_ssa_dest_and_src")],
 		LowLevelILOperation.LLIL_REG_SSA: [("src", "reg_ssa")],
 		LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("src", "reg")],
+		LowLevelILOperation.LLIL_REG_SPLIT_SSA: [("hi", "reg_ssa"), ("lo", "reg_ssa")],
+		LowLevelILOperation.LLIL_REG_STACK_REL_SSA: [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: [("stack", "reg_stack_ssa"), ("src", "reg")],
+		LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
+		LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: [("stack", "expr"), ("dest", "reg")],
 		LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag_ssa"), ("src", "expr")],
 		LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag_ssa")],
 		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag_ssa"), ("bit", "int")],
@@ -199,10 +330,11 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_CALL_PARAM_SSA: [("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
 		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
+		LowLevelILOperation.LLIL_REG_STACK_PHI: [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
 		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
 		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
@@ -229,20 +361,50 @@ class LowLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+			elif operand_type == "float":
+				if instr.size == 4:
+					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
+				elif instr.size == 8:
+					value = struct.unpack("d", struct.pack("Q", instr.operands[i]))[0]
+				else:
+					value = instr.operands[i]
 			elif operand_type == "expr":
 				value = LowLevelILInstruction(func, instr.operands[i])
 			elif operand_type == "reg":
 				value = ILRegister(func.arch, instr.operands[i])
+			elif operand_type == "reg_stack":
+				value = ILRegisterStack(func.arch, instr.operands[i])
+			elif operand_type == "intrinsic":
+				value = ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "reg_ssa":
 				reg = ILRegister(func.arch, instr.operands[i])
 				i += 1
 				value = SSARegister(reg, instr.operands[i])
+			elif operand_type == "reg_stack_ssa":
+				reg_stack = ILRegisterStack(func.arch, instr.operands[i])
+				i += 1
+				value = SSARegisterStack(reg_stack, instr.operands[i])
+			elif operand_type == "reg_stack_ssa_dest_and_src":
+				reg_stack = ILRegisterStack(func.arch, instr.operands[i])
+				i += 1
+				value = SSARegisterStack(reg_stack, instr.operands[i])
+				i += 1
+				self.operands.append(value)
+				self.dest = value
+				value = SSARegisterStack(reg_stack, instr.operands[i])
 			elif operand_type == "flag":
 				value = ILFlag(func.arch, instr.operands[i])
 			elif operand_type == "flag_ssa":
 				flag = ILFlag(func.arch, instr.operands[i])
 				i += 1
 				value = SSAFlag(flag, instr.operands[i])
+			elif operand_type == "sem_class":
+				if instr.operands[i] == 0:
+					value = None
+				else:
+					value = ILSemanticFlagClass(func.arch, instr.operands[i])
+			elif operand_type == "sem_group":
+				value = ILSemanticFlagGroup(func.arch, instr.operands[i])
 			elif operand_type == "cond":
 				value = LowLevelILFlagCondition(instr.operands[i])
 			elif operand_type == "int_list":
@@ -250,28 +412,82 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value):
-					value.append(operand_list[i])
+				for j in xrange(count.value):
+					value.append(operand_list[j])
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "expr_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value):
+					value.append(LowLevelILInstruction(func, operand_list[j]))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_or_flag_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value):
+					if (operand_list[j] & (1 << 32)) != 0:
+						value.append(ILFlag(func.arch, operand_list[j] & 0xffffffff))
+					else:
+						value.append(ILRegister(func.arch, operand_list[j] & 0xffffffff))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_ssa_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value / 2):
-					reg = operand_list[i * 2]
-					reg_version = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					reg = operand_list[j * 2]
+					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegister(ILRegister(func.arch, reg), reg_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_stack_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value / 2):
+					reg_stack = operand_list[j * 2]
+					reg_version = operand_list[(j * 2) + 1]
+					value.append(SSARegisterStack(ILRegisterStack(func.arch, reg_stack), reg_version))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "flag_ssa_list":
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for i in xrange(count.value / 2):
-					flag = operand_list[i * 2]
-					flag_version = operand_list[(i * 2) + 1]
+				for j in xrange(count.value / 2):
+					flag = operand_list[j * 2]
+					flag_version = operand_list[(j * 2) + 1]
 					value.append(SSAFlag(ILFlag(func.arch, flag), flag_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_or_flag_ssa_list":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = []
+				for j in xrange(count.value / 2):
+					if (operand_list[j * 2] & (1 << 32)) != 0:
+						reg_or_flag = ILFlag(func.arch, operand_list[j * 2] & 0xffffffff)
+					else:
+						reg_or_flag = ILRegister(func.arch, operand_list[j * 2] & 0xffffffff)
+					reg_version = operand_list[(j * 2) + 1]
+					value.append(SSARegisterOrFlag(reg_or_flag, reg_version))
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "reg_stack_adjust":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = {}
+				for j in xrange(count.value / 2):
+					reg_stack = operand_list[j * 2]
+					adjust = operand_list[(j * 2) + 1]
+					if adjust & 0x80000000:
+						adjust |= ~0x80000000
+					value[func.arch.get_reg_stack_name(reg_stack)] = adjust
 				core.BNLowLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
 			self.__dict__[name] = value
@@ -710,6 +926,38 @@ class LowLevelILFunction(object):
 		lo = self.arch.get_reg_index(lo)
 		return self.expr(LowLevelILOperation.LLIL_SET_REG_SPLIT, hi, lo, value.index, size = size, flags = flags)
 
+	def set_reg_stack_top_relative(self, size, reg_stack, entry, value, flags = 0):
+		"""
+		``set_reg_stack_top_relative`` sets the top-relative entry ``entry`` of size ``size`` in register
+		stack ``reg_stack`` to the expression ``value``
+
+		:param int size: size of the register parameter in bytes
+		:param str reg_stack: the register stack name
+		:param LowLevelILExpr entry: an expression for which stack entry to set
+		:param LowLevelILExpr value: an expression to set the entry to
+		:param str flags: which flags are set by this operation
+		:return: The expression ``reg_stack[entry] = value``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG_STACK_REL, reg_stack, entry.index, value.index,
+			size = size, flags = flags)
+
+	def reg_stack_push(self, size, reg_stack, value, flags = 0):
+		"""
+		``reg_stack_push`` pushes the expression ``value`` of size ``size`` onto the top of the register
+		stack ``reg_stack``
+
+		:param int size: size of the register parameter in bytes
+		:param str reg_stack: the register stack name
+		:param LowLevelILExpr value: an expression to push
+		:param str flags: which flags are set by this operation
+		:return: The expression ``reg_stack.push(value)``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_PUSH, reg_stack, value.index, size = size, flags = flags)
+
 	def set_flag(self, flag, value):
 		"""
 		``set_flag`` sets the flag ``flag`` to the LowLevelILExpr ``value``
@@ -723,7 +971,7 @@ class LowLevelILFunction(object):
 
 	def load(self, size, addr):
 		"""
-		``laod`` Reads ``size`` bytes from the expression ``addr``
+		``load`` Reads ``size`` bytes from the expression ``addr``
 
 		:param int size: number of bytes to read
 		:param LowLevelILExpr addr: the expression to read memory from
@@ -768,7 +1016,7 @@ class LowLevelILFunction(object):
 
 	def reg(self, size, reg):
 		"""
-		``reg`` returns a register of size ``size`` with name ``name``
+		``reg`` returns a register of size ``size`` with name ``reg``
 
 		:param int size: the size of the register in bytes
 		:param str reg: the name of the register
@@ -777,6 +1025,47 @@ class LowLevelILFunction(object):
 		"""
 		reg = self.arch.get_reg_index(reg)
 		return self.expr(LowLevelILOperation.LLIL_REG, reg, size=size)
+
+	def reg_split(self, size, hi, lo):
+		"""
+		``reg_split`` combines registers of size ``size`` with names ``hi`` and ``lo``
+
+		:param int size: the size of the register in bytes
+		:param str hi: register holding high part of value
+		:param str lo: register holding low part of value
+		:return: The expression ``hi:lo``
+		:rtype: LowLevelILExpr
+		"""
+		hi = self.arch.get_reg_index(hi)
+		lo = self.arch.get_reg_index(lo)
+		return self.expr(LowLevelILOperation.LLIL_REG_SPLIT, hi, lo, size=size)
+
+	def reg_stack_top_relative(self, size, reg_stack, entry):
+		"""
+		``reg_stack_top_relative`` returns a register stack entry of size ``size`` at top-relative
+		location ``entry`` in register stack with name ``reg_stack``
+
+		:param int size: the size of the register in bytes
+		:param str reg_stack: the name of the register stack
+		:param LowLevelILExpr entry: an expression for which stack entry to fetch
+		:return: The expression ``reg_stack[entry]``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_REL, reg_stack, entry.index, size=size)
+
+	def reg_stack_pop(self, size, reg_stack):
+		"""
+		``reg_stack_pop`` returns the top entry of size ``size`` in register stack with name ``reg_stack``, and
+		removes the entry from the stack
+
+		:param int size: the size of the register in bytes
+		:param str reg_stack: the name of the register stack
+		:return: The expression ``reg_stack.pop``
+		:rtype: LowLevelILExpr
+		"""
+		reg_stack = self.arch.get_reg_stack_index(reg_stack)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_POP, reg_stack, size=size)
 
 	def const(self, size, value):
 		"""
@@ -799,6 +1088,38 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CONST_PTR, value, size=size)
+
+	def float_const_raw(self, size, value):
+		"""
+		``float_const_raw`` returns an expression for the constant raw binary floating point
+		value ``value`` with size ``size``
+
+		:param int size: the size of the constant in bytes
+		:param int value: integer value for the raw binary representation of the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, value, size=size)
+
+	def float_const_single(self, value):
+		"""
+		``float_const_single`` returns an expression for the single precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("I", struct.pack("f", value))[0], size=4)
+
+	def float_const_double(self, value):
+		"""
+		``float_const_double`` returns an expression for the double precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8)
 
 	def flag(self, reg):
 		"""
@@ -1059,7 +1380,7 @@ class LowLevelILFunction(object):
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
+		:return: The expression ``mulu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a.index, b.index, size=size, flags=flags)
@@ -1078,21 +1399,20 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
 
-	def div_double_prec_signed(self, size, hi, lo, b, flags=None):
+	def div_double_prec_signed(self, size, a, b, flags=None):
 		"""
-		``div_double_prec_signed`` signed double precision divide using expression ``hi`` and expression ``lo`` as a
+		``div_double_prec_signed`` signed double precision divide using expression ``a`` as a
 		single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
 		expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
-		:param LowLevelILExpr hi: high LHS expression
-		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
+		:return: The expression ``divs.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, a.index, b.index, size=size, flags=flags)
 
 	def div_unsigned(self, size, a, b, flags=None):
 		"""
@@ -1103,26 +1423,25 @@ class LowLevelILFunction(object):
 		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``divs.<size>{<flags>}(a, b)``
+		:return: The expression ``divu.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_DIVS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVU, a.index, b.index, size=size, flags=flags)
 
-	def div_double_prec_unsigned(self, size, hi, lo, b, flags=None):
+	def div_double_prec_unsigned(self, size, a, b, flags=None):
 		"""
-		``div_double_prec_unsigned`` unsigned double precision divide using expression ``hi`` and expression ``lo`` as
+		``div_double_prec_unsigned`` unsigned double precision divide using expression ``a`` as
 		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
 		expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
-		:param LowLevelILExpr hi: high LHS expression
-		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``divs.dp.<size>{<flags>}(hi:lo, b)``
+		:return: The expression ``divu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_DIVU_DP, a.index, b.index, size=size, flags=flags)
 
 	def mod_signed(self, size, a, b, flags=None):
 		"""
@@ -1138,21 +1457,20 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
 
-	def mod_double_prec_signed(self, size, hi, lo, b, flags=None):
+	def mod_double_prec_signed(self, size, a, b, flags=None):
 		"""
-		``mod_double_prec_signed`` signed double precision modulus using expression ``hi`` and expression ``lo`` as a single
+		``mod_double_prec_signed`` signed double precision modulus using expression ``a`` as a single
 		double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an expression
 		of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
-		:param LowLevelILExpr hi: high LHS expression
-		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``mods.dp.<size>{<flags>}(hi:lo, b)``
+		:return: The expression ``mods.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODS_DP, a.index, b.index, size=size, flags=flags)
 
 	def mod_unsigned(self, size, a, b, flags=None):
 		"""
@@ -1166,23 +1484,22 @@ class LowLevelILFunction(object):
 		:return: The expression ``modu.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_MODS, a.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODU, a.index, b.index, size=size, flags=flags)
 
-	def mod_double_prec_unsigned(self, size, hi, lo, b, flags=None):
+	def mod_double_prec_unsigned(self, size, a, b, flags=None):
 		"""
-		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``hi`` and expression ``lo`` as
+		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``a`` as
 		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
 		expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
-		:param LowLevelILExpr hi: high LHS expression
-		:param LowLevelILExpr lo: low LHS expression
+		:param LowLevelILExpr a: LHS expression
 		:param LowLevelILExpr b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``modu.dp.<size>{<flags>}(hi:lo, b)``
+		:return: The expression ``modu.dp.<size>{<flags>}(a, b)``
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_MODS_DP, hi.index, lo.index, b.index, size=size, flags=flags)
+		return self.expr(LowLevelILOperation.LLIL_MODU_DP, a.index, b.index, size=size, flags=flags)
 
 	def neg_expr(self, size, value, flags=None):
 		"""
@@ -1226,7 +1543,7 @@ class LowLevelILFunction(object):
 
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr value: the expression to zero extend
-		:return: The expression ``sx.<size>(value)``
+		:return: The expression ``zx.<size>(value)``
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ZX, value.index, size=size, flags=flags)
@@ -1295,11 +1612,12 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NORET)
 
-	def flag_condition(self, cond):
+	def flag_condition(self, cond, sem_class = None):
 		"""
 		``flag_condition`` returns a flag_condition expression for the given LowLevelILFlagCondition
 
 		:param LowLevelILFlagCondition cond: Flag condition expression to retrieve
+		:param str sem_class: Optional semantic flag class
 		:return: A flag_condition expression
 		:rtype: LowLevelILExpr
 		"""
@@ -1307,7 +1625,19 @@ class LowLevelILFunction(object):
 			cond = LowLevelILFlagCondition[cond]
 		elif isinstance(cond, LowLevelILFlagCondition):
 			cond = cond.value
-		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond)
+		class_index = self.arch.get_semantic_flag_class_index(sem_class)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, class_index)
+
+	def flag_group(self, sem_group):
+		"""
+		``flag_group`` returns a flag_group expression for the given semantic flag group
+
+		:param str sem_group: Semantic flag group to access
+		:return: A flag_group expression
+		:rtype: LowLevelILExpr
+		"""
+		group = self.arch.get_semantic_flag_group_index(sem_group)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_GROUP, group)
 
 	def compare_equal(self, size, a, b):
 		"""
@@ -1451,6 +1781,25 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
+	def intrinsic(self, outputs, intrinsic, params, flags=None):
+		"""
+		``intrinsic`` return an intrinsic expression.
+
+		:return: an intrinsic expression.
+		:rtype: LowLevelILExpr
+		"""
+		output_list = []
+		for output in outputs:
+			if isinstance(output, ILFlag):
+				output_list.append((1 << 32) | output.index)
+			else:
+				output_list.append(output.index)
+		param_list = []
+		for param in params:
+			param_list.append(param.index)
+		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
+			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list), flags = flags)
+
 	def breakpoint(self):
 		"""
 		``breakpoint`` returns a processor breakpoint expression.
@@ -1500,6 +1849,280 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr.index, size = size)
+
+	def float_add(self, size, a, b, flags=None):
+		"""
+		``float_add`` adds floating point expression ``a`` to expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``fadd.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FADD, a.index, b.index, size=size, flags=flags)
+
+	def float_sub(self, size, a, b, flags=None):
+		"""
+		``float_sub`` subtracts floating point expression ``b`` from expression ``a`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``fsub.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FSUB, a.index, b.index, size=size, flags=flags)
+
+	def float_mult(self, size, a, b, flags=None):
+		"""
+		``float_mult`` multiplies floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``fmul.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FMUL, a.index, b.index, size=size, flags=flags)
+
+	def float_div(self, size, a, b, flags=None):
+		"""
+		``float_div`` divides floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``fdiv.<size>{<flags>}(a, b)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FDIV, a.index, b.index, size=size, flags=flags)
+
+	def float_sqrt(self, size, value, flags=None):
+		"""
+		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``sqrt.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FSQRT, value.index, size=size, flags=flags)
+
+	def float_neg(self, size, value, flags=None):
+		"""
+		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``fneg.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FNEG, value.index, size=size, flags=flags)
+
+	def float_abs(self, size, value, flags=None):
+		"""
+		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``fabs.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FABS, value.index, size=size, flags=flags)
+
+	def float_to_int(self, size, value, flags=None):
+		"""
+		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``int.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_TO_INT, value.index, size=size, flags=flags)
+
+	def int_to_float(self, size, value, flags=None):
+		"""
+		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``float.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_INT_TO_FLOAT, value.index, size=size, flags=flags)
+
+	def float_convert(self, size, value, flags=None):
+		"""
+		``int_to_float`` converts floating point value of expression ``value`` to size ``size`` potentially setting flags
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``fconvert.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONV, value.index, size=size, flags=flags)
+
+	def round_to_int(self, size, value, flags=None):
+		"""
+		``round_to_int`` rounds a floating point value to the nearest integer
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_ROUND_TO_INT, value.index, size=size, flags=flags)
+
+	def floor(self, size, value, flags=None):
+		"""
+		``floor`` rounds a floating point value to an integer towards negative infinity
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FLOOR, value.index, size=size, flags=flags)
+
+	def ceil(self, size, value, flags=None):
+		"""
+		``ceil`` rounds a floating point value to an integer towards positive infinity
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_CEIL, value.index, size=size, flags=flags)
+
+	def float_trunc(self, size, value, flags=None):
+		"""
+		``float_trunc`` rounds a floating point value to an integer towards zero
+
+		:param int size: the size of the result in bytes
+		:param LowLevelILExpr value: the expression to negate
+		:param str flags: optional, flags to set
+		:return: The expression ``roundint.<size>{<flags>}(value)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FTRUNC, value.index, size=size, flags=flags)
+
+	def float_compare_equal(self, size, a, b):
+		"""
+		``float_compare_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f== b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_E, a.index, b.index)
+
+	def float_compare_not_equal(self, size, a, b):
+		"""
+		``float_compare_not_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is not equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f!= b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_NE, a.index, b.index)
+
+	def float_compare_less_than(self, size, a, b):
+		"""
+		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is less than to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f< b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_LT, a.index, b.index)
+
+	def float_compare_less_equal(self, size, a, b):
+		"""
+		``float_compare_less_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is less than or equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f<= b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_LE, a.index, b.index)
+
+	def float_compare_greater_equal(self, size, a, b):
+		"""
+		``float_compare_greater_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is greater than or equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f>= b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_GE, a.index, b.index)
+
+	def float_compare_greater_than(self, size, a, b):
+		"""
+		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is greater than or equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``a f> b``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_GT, a.index, b.index)
+
+	def float_compare_unordered(self, size, a, b):
+		"""
+		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is unordered relative to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param LowLevelILExpr a: LHS expression
+		:param LowLevelILExpr b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``is_unordered(a, b)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_UO, a.index, b.index)
 
 	def goto(self, label):
 		"""
@@ -1735,6 +2358,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
+
 
 def LLIL_TEMP(n):
 	return n | 0x80000000

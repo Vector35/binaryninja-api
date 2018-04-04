@@ -120,6 +120,7 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	BNBasicBlockEdge* array = BNGetBasicBlockOutgoingEdges(m_object, &count);
 
 	vector<BasicBlockEdge> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
@@ -140,6 +141,7 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 	BNBasicBlockEdge* array = BNGetBasicBlockIncomingEdges(m_object, &count);
 
 	vector<BasicBlockEdge> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
@@ -269,10 +271,13 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
 
 	vector<DisassemblyTextLine> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
+		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
 			InstructionTextToken token;
@@ -412,4 +417,40 @@ bool BasicBlock::IsBackEdge(BasicBlock* source, BasicBlock* target)
 			return i.backEdge;
 	}
 	return false;
+}
+
+
+bool BasicBlock::IsILBlock() const
+{
+	return BNIsILBasicBlock(m_object);
+}
+
+
+bool BasicBlock::IsLowLevelILBlock() const
+{
+	return BNIsLowLevelILBasicBlock(m_object);
+}
+
+
+bool BasicBlock::IsMediumLevelILBlock() const
+{
+	return BNIsMediumLevelILBasicBlock(m_object);
+}
+
+
+Ref<LowLevelILFunction> BasicBlock::GetLowLevelILFunction() const
+{
+	BNLowLevelILFunction* func = BNGetBasicBlockLowLevelILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+Ref<MediumLevelILFunction> BasicBlock::GetMediumLevelILFunction() const
+{
+	BNMediumLevelILFunction* func = BNGetBasicBlockMediumLevelILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
 }

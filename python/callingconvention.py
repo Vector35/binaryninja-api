@@ -28,6 +28,7 @@ import log
 import types
 import function
 import binaryview
+from enums import VariableSourceType
 
 
 class CallingConvention(object):
@@ -68,11 +69,13 @@ class CallingConvention(object):
 			self._cb.getImplicitlyDefinedRegisters = self._cb.getImplicitlyDefinedRegisters.__class__(self._get_implicitly_defined_regs)
 			self._cb.getIncomingRegisterValue = self._cb.getIncomingRegisterValue.__class__(self._get_incoming_reg_value)
 			self._cb.getIncomingFlagValue = self._cb.getIncomingFlagValue.__class__(self._get_incoming_flag_value)
+			self._cb.getIncomingVariableForParameterVariable = self._cb.getIncomingVariableForParameterVariable.__class__(self._get_incoming_var_for_parameter_var)
+			self._cb.getParameterVariableForIncomingVariable = self._cb.getParameterVariableForIncomingVariable.__class__(self._get_parameter_var_for_incoming_var)
 			self.handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
 			self.handle = handle
-			self.arch = architecture.Architecture(core.BNGetCallingConventionArchitecture(self.handle))
+			self.arch = architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(self.handle))
 			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
@@ -301,6 +304,42 @@ class CallingConvention(object):
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
+	def _get_incoming_var_for_parameter_var(self, ctxt, in_var, func, result):
+		try:
+			if func is None:
+				func_obj = None
+			else:
+				func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+					core.BNNewFunctionReference(func))
+			in_var_obj = function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			out_var = self.perform_get_incoming_var_for_parameter_var(in_var_obj, func_obj)
+			result[0].type = out_var.source_type
+			result[0].index = out_var.index
+			result[0].storage = out_var.storage
+		except:
+			log.log_error(traceback.format_exc())
+			result[0].type = in_var[0].type
+			result[0].index = in_var[0].index
+			result[0].storage = in_var[0].storage
+
+	def _get_parameter_var_for_incoming_var(self, ctxt, in_var, func, result):
+		try:
+			if func is None:
+				func_obj = None
+			else:
+				func_obj = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
+					core.BNNewFunctionReference(func))
+			in_var_obj = function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			out_var = self.perform_get_parameter_var_for_incoming_var(in_var_obj, func_obj)
+			result[0].type = out_var.source_type
+			result[0].index = out_var.index
+			result[0].storage = out_var.storage
+		except:
+			log.log_error(traceback.format_exc())
+			result[0].type = in_var[0].type
+			result[0].index = in_var[0].index
+			result[0].storage = in_var[0].storage
+
 	def __repr__(self):
 		return "<calling convention: %s %s>" % (self.arch.name, self.name)
 
@@ -308,10 +347,33 @@ class CallingConvention(object):
 		return self.name
 
 	def perform_get_incoming_reg_value(self, reg, func):
+		reg_stack = self.arch.get_reg_stack_for_reg(reg)
+		if reg_stack is not None:
+			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
+				return function.RegisterValue.constant(0)
 		return function.RegisterValue()
 
 	def perform_get_incoming_flag_value(self, reg, func):
 		return function.RegisterValue()
+
+	def perform_get_incoming_var_for_parameter_var(self, in_var, func):
+		in_buf = core.BNVariable()
+		in_buf.type = in_var.source_type
+		in_buf.index = in_var.index
+		in_buf.storage = in_var.storage
+		out_var = core.BNGetDefaultIncomingVariableForParameterVariable(self.handle, in_buf)
+		name = None
+		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
+			name = func.arch.get_reg_name(out_var.storage)
+		return function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+
+	def perform_get_parameter_var_for_incoming_var(self, in_var, func):
+		in_buf = core.BNVariable()
+		in_buf.type = in_var.source_type
+		in_buf.index = in_var.index
+		in_buf.storage = in_var.storage
+		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_buf)
+		return function.Variable(func, out_var.type, out_var.index, out_var.storage)
 
 	def with_confidence(self, confidence):
 		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
@@ -330,3 +392,30 @@ class CallingConvention(object):
 		if func is not None:
 			func_handle = func.handle
 		return function.RegisterValue(self.arch, core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle))
+
+	def get_incoming_var_for_parameter_var(self, in_var, func):
+		in_buf = core.BNVariable()
+		in_buf.type = in_var.source_type
+		in_buf.index = in_var.index
+		in_buf.storage = in_var.storage
+		if func is None:
+			func_obj = None
+		else:
+			func_obj = func.handle
+		out_var = core.BNGetIncomingVariableForParameterVariable(self.handle, in_buf, func_obj)
+		name = None
+		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
+			name = func.arch.get_reg_name(out_var.storage)
+		return function.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+
+	def get_parameter_var_for_incoming_var(self, in_var, func):
+		in_buf = core.BNVariable()
+		in_buf.type = in_var.source_type
+		in_buf.index = in_var.index
+		in_buf.storage = in_var.storage
+		if func is None:
+			func_obj = None
+		else:
+			func_obj = func.handle
+		out_var = core.BNGetParameterVariableForIncomingVariable(self.handle, in_buf, func_obj)
+		return function.Variable(func, out_var.type, out_var.index, out_var.storage)

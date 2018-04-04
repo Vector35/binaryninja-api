@@ -188,6 +188,15 @@ size_t QualifiedName::size() const
 }
 
 
+size_t QualifiedName::StringSize() const
+{
+	size_t size = 0;
+	for (auto& name : m_name)
+		size += name.size() + 2;
+	return size - 2;
+}
+
+
 string QualifiedName::GetString() const
 {
 	bool first = true;
@@ -355,6 +364,7 @@ vector<FunctionParameter> Type::GetParameters() const
 	BNFunctionParameter* types = BNGetTypeParameters(m_object, &count);
 
 	vector<FunctionParameter> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		FunctionParameter param;
@@ -474,11 +484,10 @@ vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseCon
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
 			tokens[i].operand, tokens[i].confidence);
-	}
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -492,11 +501,10 @@ vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
 			tokens[i].operand, tokens[i].confidence);
-	}
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -510,11 +518,10 @@ vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
 	vector<InstructionTextToken> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
 			tokens[i].operand, tokens[i].confidence);
-	}
 
 	BNFreeTokenList(tokens, count);
 	return result;
@@ -575,19 +582,19 @@ Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
 Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	Type* result = new Type(BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj,
-		type ? type->GetObject() : nullptr));
+	BNType* coreObj = BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj,
+		type ? type->GetObject() : nullptr);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return result;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
 Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	Type* result = new Type(BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj));
+	BNType* coreObj = BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return result;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
@@ -882,6 +889,7 @@ vector<StructureMember> Structure::GetMembers() const
 	BNStructureMember* members = BNGetStructureMembers(m_object, &count);
 
 	vector<StructureMember> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		StructureMember member;
@@ -1001,6 +1009,7 @@ vector<EnumerationMember> Enumeration::GetMembers() const
 	BNEnumerationMember* members = BNGetEnumerationMembers(m_object, &count);
 
 	vector<EnumerationMember> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		EnumerationMember member;

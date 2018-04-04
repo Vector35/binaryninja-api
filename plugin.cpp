@@ -19,6 +19,8 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "lowlevelilinstruction.h"
+#include "mediumlevelilinstruction.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -27,6 +29,7 @@ using namespace std;
 PluginCommandContext::PluginCommandContext()
 {
 	address = length = 0;
+	instrIndex = BN_INVALID_EXPR;
 }
 
 
@@ -97,6 +100,48 @@ void PluginCommand::FunctionPluginCommandActionCallback(void* ctxt, BNBinaryView
 }
 
 
+void PluginCommand::LowLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+	BNLowLevelILFunction* func)
+{
+	RegisteredLowLevelILFunctionCommand* cmd = (RegisteredLowLevelILFunctionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<LowLevelILFunction> funcObject = new LowLevelILFunction(BNNewLowLevelILFunctionReference(func));
+	cmd->action(viewObject, funcObject);
+}
+
+
+void PluginCommand::LowLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+	BNLowLevelILFunction* func, size_t instr)
+{
+	RegisteredLowLevelILInstructionCommand* cmd = (RegisteredLowLevelILInstructionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<LowLevelILFunction> funcObject = new LowLevelILFunction(BNNewLowLevelILFunctionReference(func));
+	LowLevelILInstruction instrObject = funcObject->GetInstruction(instr);
+	cmd->action(viewObject, instrObject);
+}
+
+
+void PluginCommand::MediumLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+	BNMediumLevelILFunction* func)
+{
+	RegisteredMediumLevelILFunctionCommand* cmd = (RegisteredMediumLevelILFunctionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<MediumLevelILFunction> funcObject = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(func));
+	cmd->action(viewObject, funcObject);
+}
+
+
+void PluginCommand::MediumLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+	BNMediumLevelILFunction* func, size_t instr)
+{
+	RegisteredMediumLevelILInstructionCommand* cmd = (RegisteredMediumLevelILInstructionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<MediumLevelILFunction> funcObject = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(func));
+	MediumLevelILInstruction instrObject = funcObject->GetInstruction(instr);
+	cmd->action(viewObject, instrObject);
+}
+
+
 bool PluginCommand::DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view)
 {
 	RegisteredDefaultCommand* cmd = (RegisteredDefaultCommand*)ctxt;
@@ -127,6 +172,48 @@ bool PluginCommand::FunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryVie
 	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
 	Ref<Function> funcObject = new Function(BNNewFunctionReference(func));
 	return cmd->isValid(viewObject, funcObject);
+}
+
+
+bool PluginCommand::LowLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+	BNLowLevelILFunction* func)
+{
+	RegisteredLowLevelILFunctionCommand* cmd = (RegisteredLowLevelILFunctionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<LowLevelILFunction> funcObject = new LowLevelILFunction(BNNewLowLevelILFunctionReference(func));
+	return cmd->isValid(viewObject, funcObject);
+}
+
+
+bool PluginCommand::LowLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+	BNLowLevelILFunction* func, size_t instr)
+{
+	RegisteredLowLevelILInstructionCommand* cmd = (RegisteredLowLevelILInstructionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<LowLevelILFunction> funcObject = new LowLevelILFunction(BNNewLowLevelILFunctionReference(func));
+	LowLevelILInstruction instrObject = funcObject->GetInstruction(instr);
+	return cmd->isValid(viewObject, instrObject);
+}
+
+
+bool PluginCommand::MediumLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+	BNMediumLevelILFunction* func)
+{
+	RegisteredMediumLevelILFunctionCommand* cmd = (RegisteredMediumLevelILFunctionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<MediumLevelILFunction> funcObject = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(func));
+	return cmd->isValid(viewObject, funcObject);
+}
+
+
+bool PluginCommand::MediumLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+	BNMediumLevelILFunction* func, size_t instr)
+{
+	RegisteredMediumLevelILInstructionCommand* cmd = (RegisteredMediumLevelILInstructionCommand*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<MediumLevelILFunction> funcObject = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(func));
+	MediumLevelILInstruction instrObject = funcObject->GetInstruction(instr);
+	return cmd->isValid(viewObject, instrObject);
 }
 
 
@@ -206,11 +293,95 @@ void PluginCommand::RegisterForFunction(const string& name, const string& descri
 }
 
 
+void PluginCommand::RegisterForLowLevelILFunction(const string& name, const string& description,
+	const function<void(BinaryView* view, LowLevelILFunction* func)>& action)
+{
+	RegisterForLowLevelILFunction(name, description, action, [](BinaryView*, LowLevelILFunction*) { return true; });
+}
+
+
+void PluginCommand::RegisterForLowLevelILFunction(const string& name, const string& description,
+	const function<void(BinaryView* view, LowLevelILFunction* func)>& action,
+	const function<bool(BinaryView* view, LowLevelILFunction* func)>& isValid)
+{
+	RegisteredLowLevelILFunctionCommand* cmd = new RegisteredLowLevelILFunctionCommand;
+	cmd->action = action;
+	cmd->isValid = isValid;
+	BNRegisterPluginCommandForLowLevelILFunction(name.c_str(), description.c_str(),
+		LowLevelILFunctionPluginCommandActionCallback,
+		LowLevelILFunctionPluginCommandIsValidCallback, cmd);
+}
+
+
+void PluginCommand::RegisterForLowLevelILInstruction(const string& name, const string& description,
+	const function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action)
+{
+	RegisterForLowLevelILInstruction(name, description, action,
+		[](BinaryView*, const LowLevelILInstruction&) { return true; });
+}
+
+
+void PluginCommand::RegisterForLowLevelILInstruction(const string& name, const string& description,
+	const function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action,
+	const function<bool(BinaryView* view, const LowLevelILInstruction& instr)>& isValid)
+{
+	RegisteredLowLevelILInstructionCommand* cmd = new RegisteredLowLevelILInstructionCommand;
+	cmd->action = action;
+	cmd->isValid = isValid;
+	BNRegisterPluginCommandForLowLevelILInstruction(name.c_str(), description.c_str(),
+		LowLevelILInstructionPluginCommandActionCallback,
+		LowLevelILInstructionPluginCommandIsValidCallback, cmd);
+}
+
+
+void PluginCommand::RegisterForMediumLevelILFunction(const string& name, const string& description,
+	const function<void(BinaryView* view, MediumLevelILFunction* func)>& action)
+{
+	RegisterForMediumLevelILFunction(name, description, action,
+		[](BinaryView*, MediumLevelILFunction*) { return true; });
+}
+
+
+void PluginCommand::RegisterForMediumLevelILFunction(const string& name, const string& description,
+	const function<void(BinaryView* view, MediumLevelILFunction* func)>& action,
+	const function<bool(BinaryView* view, MediumLevelILFunction* func)>& isValid)
+{
+	RegisteredMediumLevelILFunctionCommand* cmd = new RegisteredMediumLevelILFunctionCommand;
+	cmd->action = action;
+	cmd->isValid = isValid;
+	BNRegisterPluginCommandForMediumLevelILFunction(name.c_str(), description.c_str(),
+		MediumLevelILFunctionPluginCommandActionCallback,
+		MediumLevelILFunctionPluginCommandIsValidCallback, cmd);
+}
+
+
+void PluginCommand::RegisterForMediumLevelILInstruction(const string& name, const string& description,
+	const function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action)
+{
+	RegisterForMediumLevelILInstruction(name, description, action,
+		[](BinaryView*, const MediumLevelILInstruction&) { return true; });
+}
+
+
+void PluginCommand::RegisterForMediumLevelILInstruction(const string& name, const string& description,
+	const function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action,
+	const function<bool(BinaryView* view, const MediumLevelILInstruction& instr)>& isValid)
+{
+	RegisteredMediumLevelILInstructionCommand* cmd = new RegisteredMediumLevelILInstructionCommand;
+	cmd->action = action;
+	cmd->isValid = isValid;
+	BNRegisterPluginCommandForMediumLevelILInstruction(name.c_str(), description.c_str(),
+		MediumLevelILInstructionPluginCommandActionCallback,
+		MediumLevelILInstructionPluginCommandIsValidCallback, cmd);
+}
+
+
 vector<PluginCommand> PluginCommand::GetList()
 {
 	vector<PluginCommand> result;
 	size_t count;
 	BNPluginCommand* commands = BNGetAllPluginCommands(&count);
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.emplace_back(commands[i]);
 	BNFreePluginCommandList(commands);
@@ -258,6 +429,38 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 		if (!m_command.functionIsValid)
 			return true;
 		return m_command.functionIsValid(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
+	case LowLevelILFunctionPluginCommand:
+		if (!ctxt.lowLevelILFunction)
+			return false;
+		if (!m_command.lowLevelILFunctionIsValid)
+			return true;
+		return m_command.lowLevelILFunctionIsValid(m_command.context, ctxt.view->GetObject(),
+			ctxt.lowLevelILFunction->GetObject());
+	case LowLevelILInstructionPluginCommand:
+		if (!ctxt.lowLevelILFunction)
+			return false;
+		if (ctxt.instrIndex == BN_INVALID_EXPR)
+			return false;
+		if (!m_command.lowLevelILInstructionIsValid)
+			return true;
+		return m_command.lowLevelILInstructionIsValid(m_command.context, ctxt.view->GetObject(),
+			ctxt.lowLevelILFunction->GetObject(), ctxt.instrIndex);
+	case MediumLevelILFunctionPluginCommand:
+		if (!ctxt.mediumLevelILFunction)
+			return false;
+		if (!m_command.mediumLevelILFunctionIsValid)
+			return true;
+		return m_command.mediumLevelILFunctionIsValid(m_command.context, ctxt.view->GetObject(),
+			ctxt.mediumLevelILFunction->GetObject());
+	case MediumLevelILInstructionPluginCommand:
+		if (!ctxt.mediumLevelILFunction)
+			return false;
+		if (ctxt.instrIndex == BN_INVALID_EXPR)
+			return false;
+		if (!m_command.mediumLevelILInstructionIsValid)
+			return true;
+		return m_command.mediumLevelILInstructionIsValid(m_command.context, ctxt.view->GetObject(),
+			ctxt.mediumLevelILFunction->GetObject(), ctxt.instrIndex);
 	default:
 		return false;
 	}
@@ -282,6 +485,22 @@ void PluginCommand::Execute(const PluginCommandContext& ctxt) const
 		break;
 	case FunctionPluginCommand:
 		m_command.functionCommand(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
+		break;
+	case LowLevelILFunctionPluginCommand:
+		m_command.lowLevelILFunctionCommand(m_command.context, ctxt.view->GetObject(),
+			ctxt.lowLevelILFunction->GetObject());
+		break;
+	case LowLevelILInstructionPluginCommand:
+		m_command.lowLevelILInstructionCommand(m_command.context, ctxt.view->GetObject(),
+			ctxt.lowLevelILFunction->GetObject(), ctxt.instrIndex);
+		break;
+	case MediumLevelILFunctionPluginCommand:
+		m_command.mediumLevelILFunctionCommand(m_command.context, ctxt.view->GetObject(),
+			ctxt.mediumLevelILFunction->GetObject());
+		break;
+	case MediumLevelILInstructionPluginCommand:
+		m_command.mediumLevelILInstructionCommand(m_command.context, ctxt.view->GetObject(),
+			ctxt.mediumLevelILFunction->GetObject(), ctxt.instrIndex);
 		break;
 	default:
 		break;

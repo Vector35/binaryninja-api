@@ -67,6 +67,7 @@ vector<Ref<BackgroundTask>> BackgroundTask::GetRunningTasks()
 	BNBackgroundTask** tasks = BNGetRunningBackgroundTasks(&count);
 
 	vector<Ref<BackgroundTask>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BackgroundTask(BNNewBackgroundTaskReference(tasks[i])));
 

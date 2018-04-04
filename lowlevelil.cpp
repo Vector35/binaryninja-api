@@ -176,6 +176,7 @@ vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOper
 	size_t count;
 	uint64_t* operands = BNLowLevelILGetOperandList(m_object, expr, listOperand, &count);
 	vector<uint64_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
 	BNLowLevelILFreeOperandList(operands);
@@ -216,6 +217,17 @@ ExprId LowLevelILFunction::AddIndexList(const vector<size_t> operands)
 }
 
 
+ExprId LowLevelILFunction::AddRegisterOrFlagList(const vector<RegisterOrFlag>& regs)
+{
+	uint64_t* operandList = new uint64_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		operandList[i] = regs[i].ToIdentifier();
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regs.size());
+	delete[] operandList;
+	return result;
+}
+
+
 ExprId LowLevelILFunction::AddSSARegisterList(const vector<SSARegister>& regs)
 {
 	uint64_t* operandList = new uint64_t[regs.size() * 2];
@@ -230,6 +242,20 @@ ExprId LowLevelILFunction::AddSSARegisterList(const vector<SSARegister>& regs)
 }
 
 
+ExprId LowLevelILFunction::AddSSARegisterStackList(const vector<SSARegisterStack>& regStacks)
+{
+	uint64_t* operandList = new uint64_t[regStacks.size() * 2];
+	for (size_t i = 0; i < regStacks.size(); i++)
+	{
+		operandList[i * 2] = regStacks[i].regStack;
+		operandList[(i * 2) + 1] = regStacks[i].version;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regStacks.size() * 2);
+	delete[] operandList;
+	return result;
+}
+
+
 ExprId LowLevelILFunction::AddSSAFlagList(const vector<SSAFlag>& flags)
 {
 	uint64_t* operandList = new uint64_t[flags.size() * 2];
@@ -239,6 +265,20 @@ ExprId LowLevelILFunction::AddSSAFlagList(const vector<SSAFlag>& flags)
 		operandList[(i * 2) + 1] = flags[i].version;
 	}
 	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, flags.size() * 2);
+	delete[] operandList;
+	return result;
+}
+
+
+ExprId LowLevelILFunction::AddSSARegisterOrFlagList(const vector<SSARegisterOrFlag>& regs)
+{
+	uint64_t* operandList = new uint64_t[regs.size() * 2];
+	for (size_t i = 0; i < regs.size(); i++)
+	{
+		operandList[i * 2] = regs[i].regOrFlag.ToIdentifier();
+		operandList[(i * 2) + 1] = regs[i].version;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddOperandList(m_object, operandList, regs.size() * 2);
 	delete[] operandList;
 	return result;
 }
@@ -274,7 +314,11 @@ ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOpe
 	if (operandCount == 0)
 		return AddExpr(op, size, 0);
 	if (operandCount == 1)
+	{
+		if (op == LLIL_SET_REG)
+			return GetExprForRegisterOrConstant(operands[0], size);
 		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size));
+	}
 	if (operandCount == 2)
 	{
 		return AddExpr(op, size, 0, GetExprForRegisterOrConstant(operands[0], size),
@@ -390,11 +434,10 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
 			list[i].operand, list[i].confidence);
-	}
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -411,11 +454,10 @@ bool LowLevelILFunction::GetInstructionText(Function* func, Architecture* arch, 
 		return false;
 
 	tokens.clear();
+	tokens.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
 		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
 			list[i].operand, list[i].confidence);
-	}
 
 	BNFreeInstructionText(list, count);
 	return true;
@@ -440,6 +482,7 @@ vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
 	BNBasicBlock** blocks = BNGetLowLevelILBasicBlockList(m_object, &count);
 
 	vector<Ref<BasicBlock>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new BasicBlock(BNNewBasicBlockReference(blocks[i])));
 

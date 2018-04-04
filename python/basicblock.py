@@ -100,7 +100,7 @@ class BasicBlock(object):
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = architecture.Architecture(arch)
+		self._arch = architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
 	@property
@@ -256,6 +256,21 @@ class BasicBlock(object):
 	def highlight(self, value):
 		self.set_user_highlight(value)
 
+	@property
+	def is_il(self):
+		"""Whether the basic block contains IL"""
+		return core.BNIsILBasicBlock(self.handle)
+
+	@property
+	def is_low_level_il(self):
+		"""Whether the basic block contains Low Level IL"""
+		return core.BNIsLowLevelILBasicBlock(self.handle)
+
+	@property
+	def is_medium_level_il(self):
+		"""Whether the basic block contains Medium Level IL"""
+		return core.BNIsMediumLevelILBasicBlock(self.handle)
+
 	@classmethod
 	def get_iterated_dominance_frontier(self, blocks):
 		if len(blocks) == 0:
@@ -322,6 +337,10 @@ class BasicBlock(object):
 		result = []
 		for i in xrange(0, count.value):
 			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
+				il_instr = self.il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
 			tokens = []
 			for j in xrange(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -333,7 +352,7 @@ class BasicBlock(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(function.DisassemblyTextLine(addr, tokens))
+			result.append(function.DisassemblyTextLine(addr, tokens, il_instr))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 

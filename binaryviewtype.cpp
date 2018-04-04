@@ -83,6 +83,7 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypes()
 	types = BNGetBinaryViewTypes(&count);
 
 	vector<Ref<BinaryViewType>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreBinaryViewType(types[i]));
 
@@ -98,6 +99,7 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 	types = BNGetBinaryViewTypesForData(data->GetObject(), &count);
 
 	vector<Ref<BinaryViewType>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new CoreBinaryViewType(types[i]));
 

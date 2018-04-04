@@ -1971,7 +1971,7 @@ vector<Ref<Segment>> BinaryView::GetSegments()
 	size_t count;
 	BNSegment** segments = BNGetSegments(m_object, &count);
 
-	vector<Segment> result;
+	vector<Ref<Segment>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Segment(BNNewSegmentReference(segments[i])));

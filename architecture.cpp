@@ -140,13 +140,26 @@ BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* c
 }
 
 
-bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-                                              size_t maxLen, BNInstructionInfo* result)
+bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen,
+	BNInstructionInfo* result)
 {
 	Architecture* arch = (Architecture*)ctxt;
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
+	*result = info;
+	return ok;
+}
+
+
+bool Architecture::GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, uint64_t relocType,
+	BNRelocationInfo* result)
+{
+	Architecture* arch = (Architecture*)ctxt;
+
+	BNRelocationInfo info = *result;
+	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
+	bool ok = arch->GetRelocationInfo(bv, relocType, info);
 	*result = info;
 	return ok;
 }
@@ -443,6 +456,33 @@ bool Architecture::SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_
 }
 
 
+// bool Architecture::ApplyPERelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len)
+// {
+// 	Architecture* arch = (Architecture*)ctxt;
+// 	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
+// 	Ref<Relocation> reloc = new Relocation(BNNewRelocationReference(rel));
+// 	return arch->ApplyPERelocation(bv, reloc, data, len);
+// }
+
+
+bool Architecture::ApplyELFRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* data, size_t len)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
+	BNRelocationInfo reloc = *rel;
+	return arch->ApplyELFRelocation(bv, reloc, data, len);
+}
+
+
+// bool Architecture::ApplyMachoRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len)
+// {
+// 	Architecture* arch = (Architecture*)ctxt;
+// 	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
+// 	Ref<Relocation> reloc = new Relocation(BNNewRelocationReference(rel));
+// 	return arch->ApplyMachoRelocation(bv, reloc, data, len);
+// }
+
+
 void Architecture::Register(Architecture* arch)
 {
 	BNCustomArchitecture callbacks;
@@ -486,6 +526,11 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
+	// callbacks.applyPERelocation = ApplyPERelocationCallback;
+	callbacks.applyELFRelocation = ApplyELFRelocationCallback;
+	// callbacks.applyMachoRelocation = ApplyMachoRelocationCallback;
+	callbacks.getRelocationInfo = GetRelocationInfoCallback;
+
 	arch->AddRefForRegistration();
 	BNRegisterArchitecture(arch->m_nameForRegister.c_str(), &callbacks);
 }
@@ -897,6 +942,37 @@ Ref<Platform> Architecture::GetStandalonePlatform()
 }
 
 
+// bool Architecture::ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
+// {
+// 	(void)view;
+// 	(void)rel;
+// 	(void)dest;
+// 	(void)len;
+// 	return true;
+// }
+
+
+bool Architecture::ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len)
+{
+	(void)view;
+	(void)rel;
+	(void)dest;
+	(void)len;
+	
+	return true;
+}
+
+
+// bool Architecture::ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
+// {
+// 	(void)view;
+// 	(void)rel;
+// 	(void)dest;
+// 	(void)len;
+// 	return true;
+// }
+
+
 CoreArchitecture::CoreArchitecture(BNArchitecture* arch): Architecture(arch)
 {
 }
@@ -1201,4 +1277,28 @@ bool CoreArchitecture::InvertBranch(uint8_t* data, uint64_t addr, size_t len)
 bool CoreArchitecture::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value)
 {
 	return BNArchitectureSkipAndReturnValue(m_object, data, addr, len, value);
+}
+
+
+// bool CoreArchitecture::ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
+// {
+// 	return BNArchitectureApplyPERelocation(m_object, view->GetObject(), rel->GetObject(), dest, len);
+// }
+
+
+bool CoreArchitecture::ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len)
+{
+	return BNArchitectureApplyELFRelocation(m_object, view->GetObject(), &rel, dest, len);
+}
+
+
+// bool CoreArchitecture::ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
+// {
+// 	return BNArchitectureApplyMachoRelocation(m_object, view->GetObject(), rel->GetObject(), dest, len);
+// }
+
+
+bool CoreArchitecture::GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& reloc)
+{
+	return BNGetRelocationInfo(m_object, view->GetObject(), relocType, &reloc);
 }

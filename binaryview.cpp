@@ -257,6 +257,165 @@ void AnalysisCompletionEvent::Cancel()
 }
 
 
+Segment::Segment(BNSegment* seg)
+{
+	m_object = seg;
+}
+
+
+uint64_t Segment::GetStart() const
+{
+	return BNSegmentGetStart(m_object);
+}
+
+
+uint64_t Segment::GetLength() const
+{
+	return BNSegmentGetLength(m_object);
+}
+
+
+uint64_t Segment::GetEnd() const
+{
+	return BNSegmentGetEnd(m_object);
+}
+
+
+uint64_t Segment::GetDataEnd() const
+{
+	return BNSegmentGetDataEnd(m_object);
+}
+
+
+uint64_t Segment::GetDataOffset() const
+{
+	return BNSegmentGetDataOffset(m_object);
+}
+
+
+uint64_t Segment::GetDataLength() const
+{
+	return BNSegmentGetDataLength(m_object);
+}
+
+
+uint32_t Segment::GetFlags() const
+{
+	return BNSegmentGetFlags(m_object);
+}
+
+
+bool Segment::IsAutoDefined() const
+{
+	return BNSegmentIsAutoDefined(m_object);
+}
+
+
+void Segment::SetLength(uint64_t length)
+{
+	BNSegmentSetLength(m_object, length);
+}
+
+
+void Segment::SetDataOffset(uint64_t dataOffset)
+{
+	BNSegmentSetDataOffset(m_object, dataOffset);
+}
+
+
+void Segment::SetDataLength(uint64_t dataLength)
+{
+	BNSegmentSetDataLength(m_object, dataLength);
+}
+
+
+void Segment::SetFlags(uint64_t flags)
+{
+	BNSegmentSetFlags(m_object, flags);
+}
+
+
+size_t Segment::Read(BinaryView* view, uint8_t* dest, uint64_t offset, size_t len)
+{
+	return BNSegmentRead(m_object, view->GetObject(), dest, offset, len);
+}
+
+
+Section::Section(BNSection* sec)
+{
+	m_object = sec;
+}
+
+
+std::string Section::GetName() const
+{
+	return BNSectionGetName(m_object);
+}
+
+
+std::string Section::GetType() const
+{
+	return BNSectionGetType(m_object);
+}
+
+
+uint64_t Section::GetStart() const
+{
+	return BNSectionGetStart(m_object);
+}
+
+
+uint64_t Section::GetLength() const
+{
+	return BNSectionGetLength(m_object);
+}
+
+
+uint64_t Section::GetInfoData() const
+{
+	return BNSectionGetInfoData(m_object);
+}
+
+
+uint64_t Section::GetAlignment() const
+{
+	return BNSectionGetAlign(m_object);
+}
+
+
+uint64_t Section::GetEntrySize() const
+{
+	return BNSectionGetEntrySize(m_object);
+}
+
+
+std::string Section::GetLinkedSection() const
+{
+	return BNSectionGetLinkedSection(m_object);
+}
+
+
+std::string Section::GetInfoSection() const
+{
+	return BNSectionGetInfoSection(m_object);
+}
+
+
+BNSectionSemantics Section::GetSemantics() const
+{
+	return BNSectionGetSemantics(m_object);
+}
+
+
+bool Section::AutoDefined() const
+{
+	return BNSectionIsAutoDefined(m_object);
+}
+
+
+
+
+
 BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView)
 {
 	BNCustomBinaryView view;
@@ -282,7 +441,8 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	view.isRelocatable = IsRelocatableCallback;
 	view.getAddressSize = GetAddressSizeCallback;
 	view.save = SaveCallback;
-
+	view.defineRelocation = DefineRelocationCallback;
+	view.defineSectionRelocation = DefineSectionRelocationCallback;
 	m_file = file;
 	AddRefForRegistration();
 	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(),
@@ -445,6 +605,30 @@ bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 }
 
 
+void BinaryView::DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
+	uint64_t symOffset, BNSegment* seg, uint64_t segOffset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	Architecture* curArch = new CoreArchitecture(arch);
+	BNRelocationInfo curInfo = *info;
+	Ref<Symbol> curSym = new Symbol(sym);
+	Ref<Segment> curSeg = new Segment(seg);
+	return view->PerformDefineRelocation(curArch, curInfo, curSym, symOffset, curSeg, segOffset);
+}
+
+
+void BinaryView::DefineSectionRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
+	uint64_t secOffset, BNSegment* seg, uint64_t segOffset)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	Architecture* curArch = new CoreArchitecture(arch);
+	BNRelocationInfo curInfo = *info;
+	Ref<Section> curSec = new Section(sec);
+	Ref<Segment> curSeg = new Segment(seg);
+	return view->PerformDefineRelocation(curArch, curInfo, curSec, secOffset, curSeg, segOffset);
+}
+
+
 bool BinaryView::PerformIsValidOffset(uint64_t offset)
 {
 	uint8_t val;
@@ -515,6 +699,26 @@ bool BinaryView::PerformSave(FileAccessor* file)
 	if (parent)
 		return parent->Save(file);
 	return false;
+}
+
+
+void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym,
+	uint64_t symOffset, const Ref<Segment> seg, uint64_t segOffset)
+{
+	Ref<BinaryView> parent = GetParentView();
+	if (parent)
+		parent->DefineRelocation(arch, info, sym, symOffset, seg, segOffset);
+	return;
+}
+
+
+void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec,
+	uint64_t secOffset, const Ref<Segment> seg, uint64_t segOffset)
+{
+	Ref<BinaryView> parent = GetParentView();
+	if (parent)
+		parent->DefineRelocation(arch, info, sec, secOffset, seg, segOffset);
+	return;
 }
 
 
@@ -690,6 +894,20 @@ bool BinaryView::Save(const string& path)
 }
 
 
+void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym,
+	uint64_t symOffset, const Ref<Segment> seg, uint64_t segOffset)
+{
+	BNDefineRelocation(m_object, arch->GetObject(), &info, sym->GetObject(), symOffset, seg->GetObject(), segOffset);
+}
+
+
+void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec,
+	uint64_t secOffset, const Ref<Segment> seg, uint64_t segOffset)
+{
+	BNDefineSectionRelocation(m_object, arch->GetObject(), &info, sec->GetObject(), secOffset, seg->GetObject(), segOffset);
+}
+
+
 void BinaryView::RegisterNotification(BinaryDataNotification* notify)
 {
 	BNRegisterDataNotification(m_object, notify->GetCallbacks());
@@ -765,6 +983,12 @@ bool BinaryView::IsOffsetBackedByFile(uint64_t offset) const
 bool BinaryView::IsOffsetCodeSemantics(uint64_t offset) const
 {
 	return BNIsOffsetCodeSemantics(m_object, offset);
+}
+
+
+bool BinaryView::IsOffsetExternSemantics(uint64_t offset) const
+{
+	return BNIsOffsetExternSemantics(m_object, offset);
 }
 
 
@@ -1698,40 +1922,27 @@ void BinaryView::RemoveUserSegment(uint64_t start, uint64_t length)
 }
 
 
-vector<Segment> BinaryView::GetSegments()
+vector<Ref<Segment>> BinaryView::GetSegments()
 {
 	size_t count;
-	BNSegment* segments = BNGetSegments(m_object, &count);
+	BNSegment** segments = BNGetSegments(m_object, &count);
 
-	vector<Segment> result;
+	vector<Ref<Segment>> result;
 	for (size_t i = 0; i < count; i++)
-	{
-		Segment segment;
-		segment.start = segments[i].start;
-		segment.length = segments[i].length;
-		segment.dataOffset = segments[i].dataOffset;
-		segment.dataLength = segments[i].dataLength;
-		segment.flags = segments[i].flags;
-		segment.autoDefined = segments[i].autoDefined;
-		result.push_back(segment);
-	}
+		result.push_back(new Segment(BNNewSegmentReference(segments[i])));
 
-	BNFreeSegmentList(segments);
+	BNFreeSegmentList(segments, count);
 	return result;
 }
 
-bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
-{
-	BNSegment segment;
-	if (!BNGetSegmentAt(m_object, addr, &segment))
-		return false;
 
-	result.start = segment.start;
-	result.length = segment.length;
-	result.dataOffset = segment.dataOffset;
-	result.dataLength = segment.dataLength;
-	result.flags = segment.flags;
-	return true;
+Ref<Segment> BinaryView::GetSegmentAt(uint64_t addr)
+{
+	BNSegment* segment = BNGetSegmentAt(m_object, addr);
+	if (!segment)
+		return nullptr;
+
+	return new Segment(BNNewSegmentReference(segment));
 }
 
 
@@ -1771,26 +1982,29 @@ void BinaryView::RemoveUserSection(const string& name)
 }
 
 
-vector<Section> BinaryView::GetSections()
+vector<Ref<Section>> BinaryView::GetSections()
 {
 	size_t count;
-	BNSection* sections = BNGetSections(m_object, &count);
+	BNSection** sections = BNGetSections(m_object, &count);
 
-	vector<Section> result;
+	vector<Ref<Section>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Section(BNNewSectionReference(sections[i])));
+
+	BNFreeSectionList(sections, count);
+	return result;
+}
+
+
+vector<Ref<Section>> BinaryView::GetSectionsAt(uint64_t addr)
+{
+	size_t count;
+	BNSection** sections = BNGetSectionsAt(m_object, addr, &count);
+
+	vector<Ref<Section>> result;
 	for (size_t i = 0; i < count; i++)
 	{
-		Section section;
-		section.name = sections[i].name;
-		section.type = sections[i].type;
-		section.start = sections[i].start;
-		section.length = sections[i].length;
-		section.linkedSection = sections[i].linkedSection;
-		section.infoSection = sections[i].infoSection;
-		section.infoData = sections[i].infoData;
-		section.align = sections[i].align;
-		section.entrySize = sections[i].entrySize;
-		section.semantics = sections[i].semantics;
-		result.push_back(section);
+		result.push_back(new Section(BNNewSectionReference(sections[i])));
 	}
 
 	BNFreeSectionList(sections, count);
@@ -1798,52 +2012,9 @@ vector<Section> BinaryView::GetSections()
 }
 
 
-vector<Section> BinaryView::GetSectionsAt(uint64_t addr)
+Ref<Section> BinaryView::GetSectionByName(const string& name)
 {
-	size_t count;
-	BNSection* sections = BNGetSectionsAt(m_object, addr, &count);
-
-	vector<Section> result;
-	for (size_t i = 0; i < count; i++)
-	{
-		Section section;
-		section.name = sections[i].name;
-		section.type = sections[i].type;
-		section.start = sections[i].start;
-		section.length = sections[i].length;
-		section.linkedSection = sections[i].linkedSection;
-		section.infoSection = sections[i].infoSection;
-		section.infoData = sections[i].infoData;
-		section.align = sections[i].align;
-		section.entrySize = sections[i].entrySize;
-		section.semantics = sections[i].semantics;
-		result.push_back(section);
-	}
-
-	BNFreeSectionList(sections, count);
-	return result;
-}
-
-
-bool BinaryView::GetSectionByName(const string& name, Section& result)
-{
-	BNSection section;
-	if (!BNGetSectionByName(m_object, name.c_str(), &section))
-		return false;
-
-	result.name = section.name;
-	result.type = section.type;
-	result.start = section.start;
-	result.length = section.length;
-	result.linkedSection = section.linkedSection;
-	result.infoSection = section.infoSection;
-	result.infoData = section.infoData;
-	result.align = section.align;
-	result.entrySize = section.entrySize;
-	result.semantics = section.semantics;
-
-	BNFreeSection(&section);
-	return true;
+	return new Section(BNGetSectionByName(m_object, name.c_str()));
 }
 
 
@@ -1918,6 +2089,7 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
 }
+
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {

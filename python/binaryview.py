@@ -416,32 +416,47 @@ class BinaryViewType(object):
 
 
 class Segment(object):
-	def __init__(self, start, length, data_offset, data_length, flags, auto_defined):
-		self.start = start
-		self.length = length
-		self.data_offset = data_offset
-		self.data_length = data_length
-		self.flags = flags
-		self.auto_defined = auto_defined
+	def __init__(self, handle):
+		self.handle = handle
 
 	@property
-	def executable(self):
-		return (self.flags & SegmentFlag.SegmentExecutable) != 0
-
-	@property
-	def writable(self):
-		return (self.flags & SegmentFlag.SegmentWritable) != 0
-
-	@property
-	def readable(self):
-		return (self.flags & SegmentFlag.SegmentReadable) != 0
+	def start(self):
+		return core.BNSegmentGetStart(self.handle)
 
 	@property
 	def end(self):
-		return self.start + self.length
+		return core.BNSegmentGetEnd(self.handle)
+
+	@property
+	def executable(self):
+		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentExecutable) != 0
+
+	@property
+	def writable(self):
+		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentWritable) != 0
+
+	@property
+	def readable(self):
+		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentReadable) != 0
+
+	@property
+	def end(self):
+		return core.BNSegmentGetEnd(self.handle)
+
+	@property
+	def data_length(self):
+		return core.BNSegmentGetDataLength(self.handle)
+
+	@property
+	def data_offset(self):
+		return core.BNSegmentGetDataOffset(self.handle)
+
+	@property
+	def data_end(self):
+		return core.BNSegmentGetDataEnd(self.handle)
 
 	def __len__(self):
-		return self.length
+		return core.BNSegmentGetLength(self.handle)
 
 	def __repr__(self):
 		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
@@ -451,25 +466,55 @@ class Segment(object):
 
 
 class Section(object):
-	def __init__(self, name, section_type, start, length, linked_section, info_section, info_data, align, entry_size, semantics, auto_defined):
-		self.name = name
-		self.type = section_type
-		self.start = start
-		self.length = length
-		self.linked_section = linked_section
-		self.info_section = info_section
-		self.info_data = info_data
-		self.align = align
-		self.entry_size = entry_size
-		self.semantics = SectionSemantics(semantics)
-		self.auto_defined = auto_defined
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNSection)
+
+	@property
+	def name(self):
+		return core.BNSectionGetName(self.handle)
+
+	@property
+	def type(self):
+		return core.BNSectionGetType(self.handle)
+
+	@property
+	def start(self):
+		return core.BNSectionGetStart(self.handle)
+
+	@property
+	def linked_section(self):
+		return core.BNSectionLinkedSection(self.handle)
+
+	@property
+	def info_section(self):
+		return core.BNSectionInfoSection(self.handle)
+
+	@property
+	def info_data(self):
+		return core.BNSectionInfoData(self.handle)
+
+	@property
+	def align(self):
+		return core.BNSectionAlign(self.handle)
+
+	@property
+	def entry_size(self):
+		return core.BNSectionEntrySize(self.handle)
+
+	@property
+	def semantics(self):
+		return SectionSemantics(core.BNSectionSemantics(self.handle))
+
+	@property
+	def auto_defined(self):
+		return core.BNSectionAutoDefined(self.handle)
 
 	@property
 	def end(self):
-		return self.start + self.length
+		return self.start + len(self)
 
 	def __len__(self):
-		return self.length
+		return core.BNSectionGetLength(self.handle)
 
 	def __repr__(self):
 		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
@@ -966,9 +1011,8 @@ class BinaryView(object):
 		segment_list = core.BNGetSegments(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(Segment(segment_list[i].start, segment_list[i].length,
-				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags, segment_list[i].autoDefined))
-		core.BNFreeSegmentList(segment_list)
+			result.append(Segment(core.BNNewSegmentReference(segment_list[i])))
+		core.BNFreeSegmentList(segment_list, count.value)
 		return result
 
 	@property
@@ -978,10 +1022,7 @@ class BinaryView(object):
 		section_list = core.BNGetSections(self.handle, count)
 		result = {}
 		for i in xrange(0, count.value):
-			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
-				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics, section_list[i].autoDefined)
+			result[core.BNSectionGetName(section_list[i])] = Section(section_list[i])
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -1795,6 +1836,16 @@ class BinaryView(object):
 		:rtype: bool
 		"""
 		return core.BNIsOffsetCodeSemantics(self.handle, addr)
+
+	def is_offset_extern_semantics(self, addr):
+		"""
+		``is_offset_extern_semantics`` checks if an virtual address ``addr`` is semantically valid for external references.
+
+		:param int addr: a virtual address to be checked
+		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetExternSemantics(self.handle, addr)
 
 	def is_offset_writable_semantics(self, addr):
 		"""
@@ -3351,12 +3402,10 @@ class BinaryView(object):
 		core.BNRemoveUserSegment(self.handle, start, length)
 
 	def get_segment_at(self, addr):
-		segment = core.BNSegment()
-		if not core.BNGetSegmentAt(self.handle, addr, segment):
+		seg = core.BNGetSegmentAt(self.handle, addr)
+		if not seg:
 			return None
-		result = Segment(segment.start, segment.length, segment.dataOffset, segment.dataLength,
-			segment.flags, segment.autoDefined)
-		return result
+		return Segment(seg)
 
 	def get_address_for_data_offset(self, offset):
 		address = ctypes.c_ulonglong()
@@ -3385,10 +3434,7 @@ class BinaryView(object):
 		section_list = core.BNGetSectionsAt(self.handle, addr, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
-				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
-				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
-				section_list[i].semantics, section_list[i].autoDefined))
+			result.append(Section(section_list[i]))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3396,9 +3442,7 @@ class BinaryView(object):
 		section = core.BNSection()
 		if not core.BNGetSectionByName(self.handle, name, section):
 			return None
-		result = Section(section.name, section.type, section.start, section.length, section.linkedSection,
-			section.infoSection, section.infoData, section.align, section.entrySize, section.semantics,
-			section_list.autoDefined)
+		result = Section(section)
 		core.BNFreeSection(section)
 		return result
 

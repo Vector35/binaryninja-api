@@ -850,7 +850,6 @@ namespace BinaryNinja
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
 	};
 
-	class BinaryView;
 	class Function;
 	struct DataVariable;
 
@@ -930,13 +929,13 @@ namespace BinaryNinja
 
 	class Function;
 	class BasicBlock;
-
 	class Symbol: public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
 	{
 	public:
-		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName,
-		       const std::string& rawName, uint64_t addr);
+		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName, uint64_t addr);
 		Symbol(BNSymbolType type, const std::string& name, uint64_t addr);
+		//Symbol(const std::string& shortName, const std::string& fullName, const std::string& rawName, SymbolBinding binding, size_t size);
+		//Symbol(const std::string& name, SymbolBinding binding, size_t size);
 		Symbol(BNSymbol* sym);
 
 		BNSymbolType GetType() const;
@@ -1025,28 +1024,50 @@ namespace BinaryNinja
 		bool autoDiscovered;
 	};
 
-	struct Segment
+	class Segment: public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
 	{
-		uint64_t start, length;
-		uint64_t dataOffset, dataLength;
-		uint32_t flags;
-		bool autoDefined;
+	public:
+		Segment(BNSegment* seg);
+		uint64_t GetStart() const;
+		uint64_t GetLength() const;
+		uint64_t GetEnd() const;
+		uint64_t GetDataEnd() const;
+		uint64_t GetDataOffset() const;
+		uint64_t GetDataLength() const;
+		uint32_t GetFlags() const;
+		bool IsAutoDefined() const;
+
+		void SetStart(uint64_t newSegmentBase);
+		void SetLength(uint64_t length);
+		void SetDataOffset(uint64_t dataOffset);
+		void SetDataLength(uint64_t dataLength);
+		void SetFlags(uint64_t flags);
+
+		size_t Read(BinaryView* view, uint8_t* dest, uint64_t offset, size_t len);
 	};
 
-	struct Section
+	class Section: public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
 	{
-		std::string name, type;
-		uint64_t start, length;
-		std::string linkedSection, infoSection;
-		uint64_t infoData;
-		uint64_t align, entrySize;
-		BNSectionSemantics semantics;
-		bool autoDefined;
+	public:
+		Section(BNSection* sec);
+		Section(const std::string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
+			const std::string& type, uint64_t align, uint64_t entrySize, const std::string& linkedSection,
+			const std::string& infoSection, uint64_t infoData, bool autoDefined);
+		std::string GetName() const;
+		std::string GetType() const;
+		uint64_t GetStart() const;
+		uint64_t GetLength() const;
+		uint64_t GetInfoData() const;
+		uint64_t GetAlignment() const;
+		uint64_t GetEntrySize() const;
+		std::string GetLinkedSection() const;
+		std::string GetInfoSection() const;
+		BNSectionSemantics GetSemantics() const;
+		bool AutoDefined() const;
 	};
 
 	struct QualifiedNameAndType;
 	class Metadata;
-
 	class QueryMetadataException: public std::exception
 	{
 		const std::string m_error;
@@ -1097,7 +1118,10 @@ namespace BinaryNinja
 		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file);
-
+		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym, uint64_t symOffset,
+			const Ref<Segment> seg, uint64_t segOffset);
+		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec, uint64_t secOffset,
+			const Ref<Segment> seg, uint64_t segOffset);
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
@@ -1124,7 +1148,10 @@ namespace BinaryNinja
 		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
-
+		static void DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
+			uint64_t symOffset, BNSegment* seg, uint64_t segOffset);
+		static void DefineSectionRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
+			uint64_t secOffset, BNSegment* seg, uint64_t segOffset);
 	public:
 		BinaryView(BNBinaryView* view);
 
@@ -1175,6 +1202,7 @@ namespace BinaryNinja
 		bool IsOffsetBackedByFile(uint64_t offset) const;
 		bool IsOffsetCodeSemantics(uint64_t offset) const;
 		bool IsOffsetWritableSemantics(uint64_t offset) const;
+		bool IsOffsetExternSemantics(uint64_t offset) const;
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
 		uint64_t GetStart() const;
@@ -1196,6 +1224,10 @@ namespace BinaryNinja
 		bool Save(FileAccessor* file);
 		bool Save(const std::string& path);
 
+		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym, uint64_t symOffset,
+			const Ref<Segment> seg, uint64_t segOffset);
+		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec, uint64_t secOffset,
+			const Ref<Segment> seg, uint64_t segOffset);
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 
@@ -1313,8 +1345,8 @@ namespace BinaryNinja
 		void RemoveAutoSegment(uint64_t start, uint64_t length);
 		void AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
 		void RemoveUserSegment(uint64_t start, uint64_t length);
-		std::vector<Segment> GetSegments();
-		bool GetSegmentAt(uint64_t addr, Segment& result);
+		std::vector<Ref<Segment>> GetSegments();
+		Ref<Segment> GetSegmentAt(uint64_t addr);
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length,
@@ -1327,9 +1359,9 @@ namespace BinaryNinja
 			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
 			const std::string& infoSection = "", uint64_t infoData = 0);
 		void RemoveUserSection(const std::string& name);
-		std::vector<Section> GetSections();
-		std::vector<Section> GetSectionsAt(uint64_t addr);
-		bool GetSectionByName(const std::string& name, Section& result);
+		std::vector<Ref<Section>> GetSections();
+		std::vector<Ref<Section>> GetSectionsAt(uint64_t addr);
+		Ref<Section> GetSectionByName(const std::string& name);
 
 		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
 
@@ -1633,6 +1665,11 @@ namespace BinaryNinja
 		static bool InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		static bool SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
+		// static bool ApplyPERelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
+		static bool ApplyELFRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* data, size_t len);
+		// static bool ApplyMachoRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
+		static bool GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, uint64_t relocType, BNRelocationInfo* result);
+
 	public:
 		Architecture(const std::string& name);
 
@@ -1778,6 +1815,15 @@ namespace BinaryNinja
 		Ref<CallingConvention> GetStdcallCallingConvention();
 		Ref<CallingConvention> GetFastcallCallingConvention();
 		Ref<Platform> GetStandalonePlatform();
+
+		//virtual bool ApplyPERelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
+		virtual bool ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
+		// virtual bool ApplyMachoRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
+		virtual bool GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& result)
+		{
+			(void)view; (void)relocType; (void)result;
+			return false;
+		}
 	};
 
 	class CoreArchitecture: public Architecture
@@ -1825,6 +1871,11 @@ namespace BinaryNinja
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override;
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
+
+		//virtual bool ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len) override;
+		virtual bool ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len) override;
+		//virtual bool ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len) override;
+		virtual bool GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& result) override;
 	};
 
 	class Structure;

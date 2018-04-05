@@ -851,6 +851,20 @@ class MediumLevelILFunction(object):
 		core.BNFreeILInstructionList(instrs)
 		return result
 
+	def is_ssa_var_live(self, ssa_var):
+		"""
+		``is_ssa_var_live`` determines if ``ssa_var`` is live at any point in the function
+
+		:param SSAVariable ssa_var: the SSA variable to query
+		:return: whether the variable is live at any point in the function
+		:rtype: bool
+		"""
+		var_data = core.BNVariable()
+		var_data.type = ssa_var.var.source_type
+		var_data.index = ssa_var.var.index
+		var_data.storage = ssa_var.var.storage
+		return core.BNIsMediumLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
+
 	def get_var_definitions(self, var):
 		count = ctypes.c_ulonglong()
 		var_data = core.BNVariable()

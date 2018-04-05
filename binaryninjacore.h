@@ -2830,6 +2830,8 @@ extern "C"
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
 		size_t version, size_t* count);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLive(BNMediumLevelILFunction* func,
+		const BNVariable* var, size_t version);
 
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t* count);

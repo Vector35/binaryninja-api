@@ -1119,7 +1119,8 @@ extern "C"
 	struct BNRelocationInfo
 	{
 		BNRelocationType bnType; // BinaryNinja Relocation Type
-		BNRelativeRelocationType relative;       // Relative to base/symbol or Absolute
+		bool pcRelative;       // PC Relative or Absolute (subtract address from relocation)
+		bool baseRelative;   // Relative to start of module (Add module base to relocation)
 		bool hasSign;        // Addend should be subtracted
 		size_t size;         // Size of the data to be written
 		size_t truncateSize; // After addition/subtraction truncate to

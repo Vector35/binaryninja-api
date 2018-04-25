@@ -148,6 +148,7 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_CALL, {DestExprLowLevelOperandUsage}},
 		{LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage,
 			RegisterStackAdjustmentsLowLevelOperandUsage}},
+		{LLIL_TAILCALL, {DestExprLowLevelOperandUsage}},
 		{LLIL_RET, {DestExprLowLevelOperandUsage}},
 		{LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage,
 			FalseTargetLowLevelOperandUsage}},
@@ -161,6 +162,9 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_SYSCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
 			StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage,
 			ParameterExprsLowLevelOperandUsage}},
+		{LLIL_TAILCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
+			DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage,
+			StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
 		{LLIL_REG_PHI, {DestSSARegisterLowLevelOperandUsage, SourceSSARegistersLowLevelOperandUsage}},
 		{LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}},
 		{LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
@@ -1808,6 +1812,9 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_CALL_STACK_ADJUST:
 		GetDestExpr<LLIL_CALL_STACK_ADJUST>().VisitExprs(func);
 		break;
+	case LLIL_TAILCALL:
+		GetDestExpr<LLIL_TAILCALL>().VisitExprs(func);
+		break;
 	case LLIL_CALL_SSA:
 		GetDestExpr<LLIL_CALL_SSA>().VisitExprs(func);
 		for (auto& i : GetParameterExprs<LLIL_CALL_SSA>())
@@ -1815,6 +1822,11 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		break;
 	case LLIL_SYSCALL_SSA:
 		for (auto& i : GetParameterExprs<LLIL_SYSCALL_SSA>())
+			i.VisitExprs(func);
+		break;
+	case LLIL_TAILCALL_SSA:
+		GetDestExpr<LLIL_TAILCALL_SSA>().VisitExprs(func);
+		for (auto& i : GetParameterExprs<LLIL_TAILCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_RET:
@@ -2037,6 +2049,8 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_CALL_STACK_ADJUST:
 		return dest->CallStackAdjust(subExprHandler(GetDestExpr<LLIL_CALL_STACK_ADJUST>()),
 			GetStackAdjustment<LLIL_CALL_STACK_ADJUST>(), GetRegisterStackAdjustments<LLIL_CALL_STACK_ADJUST>(), *this);
+	case LLIL_TAILCALL:
+		return dest->TailCall(subExprHandler(GetDestExpr<LLIL_TAILCALL>()), *this);
 	case LLIL_RET:
 		return dest->Return(subExprHandler(GetDestExpr<LLIL_RET>()), *this);
 	case LLIL_JUMP_TO:
@@ -2080,6 +2094,12 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 		return dest->SystemCallSSA(GetOutputSSARegisters<LLIL_SYSCALL_SSA>(),
 			params, GetStackSSARegister<LLIL_SYSCALL_SSA>(), GetDestMemoryVersion<LLIL_SYSCALL_SSA>(),
 			GetSourceMemoryVersion<LLIL_SYSCALL_SSA>(), *this);
+	case LLIL_TAILCALL_SSA:
+		for (auto& i : GetParameterExprs<LLIL_TAILCALL_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->TailCallSSA(GetOutputSSARegisters<LLIL_TAILCALL_SSA>(), subExprHandler(GetDestExpr<LLIL_TAILCALL_SSA>()),
+			params, GetStackSSARegister<LLIL_TAILCALL_SSA>(), GetDestMemoryVersion<LLIL_TAILCALL_SSA>(),
+			GetSourceMemoryVersion<LLIL_TAILCALL_SSA>(), *this);
 	case LLIL_REG_PHI:
 		return dest->RegisterPhi(GetDestSSARegister<LLIL_REG_PHI>(), GetSourceSSARegisters<LLIL_REG_PHI>(), *this);
 	case LLIL_REG_STACK_PHI:
@@ -3157,6 +3177,12 @@ ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, size_t adjust,
 }
 
 
+ExprId LowLevelILFunction::TailCall(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TAILCALL, loc, 0, 0, dest);
+}
+
+
 ExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
 	const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
 {
@@ -3175,6 +3201,18 @@ ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, cons
 	return AddExprWithLocation(LLIL_SYSCALL_SSA, loc, 0, 0,
 		AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer,
 			output.size() * 2, AddSSARegisterList(output)),
+		AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
+		AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0,
+			params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
+	const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TAILCALL_SSA, loc, 0, 0,
+		AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer,
+			output.size() * 2, AddSSARegisterList(output)), dest,
 		AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
 		AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0,
 			params.size(), AddOperandList(params)));

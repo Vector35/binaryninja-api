@@ -2781,10 +2781,14 @@ namespace BinaryNinja
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
+			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
@@ -3100,6 +3104,10 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<Variable>& params,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
@@ -3108,6 +3116,11 @@ namespace BinaryNinja
 		ExprId SyscallSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output,
+			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
 			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());

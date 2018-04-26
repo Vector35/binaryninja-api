@@ -669,11 +669,9 @@ def get_save_filename_input(prompt, ext="", default_name=""):
 
 def get_directory_name_input(prompt, default_name=""):
 	"""
-	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing and
-	default_name.
+	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name.
 
-	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline
-	      a simple text prompt is used. The ui uses the native window popup for file selection.
+	Note: This API function differently on the command line vs. the UI. In the UI a popup is used. On the commandline a simple text prompt is used. The ui uses the native window popup for file selection.
 
 	:param str prompt: Prompt to display.
 	:param str default_name: Optional, default directory name.

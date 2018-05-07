@@ -347,6 +347,7 @@ extern "C"
 		LLIL_JUMP_TO,
 		LLIL_CALL,
 		LLIL_CALL_STACK_ADJUST,
+		LLIL_TAILCALL,
 		LLIL_RET,
 		LLIL_NORET,
 		LLIL_IF,
@@ -418,6 +419,7 @@ extern "C"
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
+		LLIL_TAILCALL_SSA,
 		LLIL_CALL_PARAM, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA instructions
 		LLIL_CALL_STACK_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
@@ -862,8 +864,8 @@ extern "C"
 		MLIL_JUMP_TO,
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
-		MLIL_CALL_PARAM, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
+		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_CALL_PARAM, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_RET, // Not valid in SSA form (see MLIL_RET_SSA)
 		MLIL_NORET,
 		MLIL_IF,
@@ -883,6 +885,8 @@ extern "C"
 		MLIL_ADD_OVERFLOW,
 		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
 		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
+		MLIL_TAILCALL, // Not valid in SSA form (see MLIL_TAILCALL_SSA)
+		MLIL_TAILCALL_UNTYPED, // Not valid in SSA form (see MLIL_TAILCALL_UNTYPED_SSA)
 		MLIL_INTRINSIC, // Not valid in SSA form (see MLIL_INTRINSIC_SSA)
 		MLIL_FREE_VAR_SLOT, // Not valid in SSA from (see MLIL_FREE_VAR_SLOT_SSA)
 		MLIL_BP,
@@ -930,8 +934,10 @@ extern "C"
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
 		MLIL_SYSCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA family instructions
-		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA family instructions
+		MLIL_TAILCALL_SSA,
+		MLIL_TAILCALL_UNTYPED_SSA,
+		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
@@ -2878,6 +2884,8 @@ extern "C"
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
 		size_t version, size_t* count);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLive(BNMediumLevelILFunction* func,
+		const BNVariable* var, size_t version);
 
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t* count);

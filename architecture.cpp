@@ -20,6 +20,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
+#include <cstdint>
 #include <inttypes.h>
 #include "binaryninjaapi.h"
 
@@ -147,19 +148,6 @@ bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, u
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
-	*result = info;
-	return ok;
-}
-
-
-bool Architecture::GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, uint64_t relocType,
-	BNRelocationInfo* result)
-{
-	Architecture* arch = (Architecture*)ctxt;
-
-	BNRelocationInfo info = *result;
-	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
-	bool ok = arch->GetRelocationInfo(bv, relocType, info);
 	*result = info;
 	return ok;
 }
@@ -653,33 +641,6 @@ bool Architecture::SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_
 }
 
 
-// bool Architecture::ApplyPERelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len)
-// {
-// 	Architecture* arch = (Architecture*)ctxt;
-// 	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
-// 	Ref<Relocation> reloc = new Relocation(BNNewRelocationReference(rel));
-// 	return arch->ApplyPERelocation(bv, reloc, data, len);
-// }
-
-
-bool Architecture::ApplyELFRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* data, size_t len)
-{
-	Architecture* arch = (Architecture*)ctxt;
-	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
-	BNRelocationInfo reloc = *rel;
-	return arch->ApplyELFRelocation(bv, reloc, data, len);
-}
-
-
-// bool Architecture::ApplyMachoRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len)
-// {
-// 	Architecture* arch = (Architecture*)ctxt;
-// 	Ref<BinaryView> bv = new BinaryView(BNNewViewReference(view));
-// 	Ref<Relocation> reloc = new Relocation(BNNewRelocationReference(rel));
-// 	return arch->ApplyMachoRelocation(bv, reloc, data, len);
-// }
-
-
 void Architecture::Register(BNCustomArchitecture* callbacks)
 {
 	AddRefForRegistration();
@@ -748,10 +709,6 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
-	// callbacks.applyPERelocation = ApplyPERelocationCallback;
-	callbacks.applyELFRelocation = ApplyELFRelocationCallback;
-	// callbacks.applyMachoRelocation = ApplyMachoRelocationCallback;
-	callbacks.getRelocationInfo = GetRelocationInfoCallback;
 	arch->Register(&callbacks);
 }
 
@@ -1164,6 +1121,17 @@ void Architecture::RegisterFunctionRecognizer(FunctionRecognizer* recog)
 }
 
 
+void Architecture::RegisterRelocationHandler(const string& viewName, RelocationHandler* handler)
+{
+	BNArchitectureRegisterRelocationHandler(m_object, viewName.c_str(), handler->GetObject());
+}
+
+
+Ref<RelocationHandler> Architecture::GetRelocationHandler(const std::string& viewName)
+{
+	return new CoreRelocationHandler(BNArchitectureGetRelocationHandler(m_object, viewName.c_str()));
+}
+
 bool Architecture::IsBinaryViewTypeConstantDefined(const string& type, const string& name)
 {
 	return BNIsBinaryViewTypeArchitectureConstantDefined(m_object, type.c_str(), name.c_str());
@@ -1276,37 +1244,6 @@ Ref<Platform> Architecture::GetStandalonePlatform()
 {
 	return new Platform(BNGetArchitectureStandalonePlatform(m_object));
 }
-
-
-// bool Architecture::ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
-// {
-// 	(void)view;
-// 	(void)rel;
-// 	(void)dest;
-// 	(void)len;
-// 	return true;
-// }
-
-
-bool Architecture::ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len)
-{
-	(void)view;
-	(void)rel;
-	(void)dest;
-	(void)len;
-	
-	return true;
-}
-
-
-// bool Architecture::ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
-// {
-// 	(void)view;
-// 	(void)rel;
-// 	(void)dest;
-// 	(void)len;
-// 	return true;
-// }
 
 
 void Architecture::AddArchitectureRedirection(Architecture* from, Architecture* to)
@@ -1800,29 +1737,6 @@ bool CoreArchitecture::SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t l
 	return BNArchitectureSkipAndReturnValue(m_object, data, addr, len, value);
 }
 
-
-// bool CoreArchitecture::ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
-// {
-// 	return BNArchitectureApplyPERelocation(m_object, view->GetObject(), rel->GetObject(), dest, len);
-// }
-
-
-bool CoreArchitecture::ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len)
-{
-	return BNArchitectureApplyELFRelocation(m_object, view->GetObject(), &rel, dest, len);
-}
-
-
-// bool CoreArchitecture::ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len)
-// {
-// 	return BNArchitectureApplyMachoRelocation(m_object, view->GetObject(), rel->GetObject(), dest, len);
-// }
-
-
-bool CoreArchitecture::GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& reloc)
-{
-	return BNGetRelocationInfo(m_object, view->GetObject(), relocType, &reloc);
-}
 
 ArchitectureExtension::ArchitectureExtension(const string& name, Architecture* base): Architecture(name), m_base(base)
 {

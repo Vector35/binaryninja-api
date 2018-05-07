@@ -423,9 +423,6 @@ bool Section::AutoDefined() const
 }
 
 
-
-
-
 BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView)
 {
 	BNCustomBinaryView view;
@@ -619,10 +616,10 @@ void BinaryView::DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRe
 	uint64_t symOffset, BNSegment* seg, uint64_t segOffset)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	Architecture* curArch = new CoreArchitecture(arch);
 	BNRelocationInfo curInfo = *info;
-	Ref<Symbol> curSym = new Symbol(sym);
-	Ref<Segment> curSeg = new Segment(seg);
+	Ref<Symbol> curSym = new Symbol(BNNewSymbolReference(sym));
+	Ref<Segment> curSeg = new Segment(BNNewSegmentReference(seg));
+	Architecture* curArch = new CoreArchitecture(arch);
 	return view->PerformDefineRelocation(curArch, curInfo, curSym, symOffset, curSeg, segOffset);
 }
 
@@ -631,10 +628,10 @@ void BinaryView::DefineSectionRelocationCallback(void* ctxt, BNArchitecture* arc
 	uint64_t secOffset, BNSegment* seg, uint64_t segOffset)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	Architecture* curArch = new CoreArchitecture(arch);
 	BNRelocationInfo curInfo = *info;
-	Ref<Section> curSec = new Section(sec);
-	Ref<Segment> curSeg = new Segment(seg);
+	Ref<Section> curSec = new Section(BNNewSectionReference(sec));
+	Ref<Segment> curSeg = new Segment(BNNewSegmentReference(seg));
+	Architecture* curArch = new CoreArchitecture(arch);
 	return view->PerformDefineRelocation(curArch, curInfo, curSec, secOffset, curSeg, segOffset);
 }
 
@@ -715,20 +712,14 @@ bool BinaryView::PerformSave(FileAccessor* file)
 void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym,
 	uint64_t symOffset, const Ref<Segment> seg, uint64_t segOffset)
 {
-	Ref<BinaryView> parent = GetParentView();
-	if (parent)
-		parent->DefineRelocation(arch, info, sym, symOffset, seg, segOffset);
-	return;
+	DefineRelocation(arch, info, sym, symOffset, seg, segOffset);
 }
 
 
 void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec,
 	uint64_t secOffset, const Ref<Segment> seg, uint64_t segOffset)
 {
-	Ref<BinaryView> parent = GetParentView();
-	if (parent)
-		parent->DefineRelocation(arch, info, sec, secOffset, seg, segOffset);
-	return;
+	DefineRelocation(arch, info, sec, secOffset, seg, segOffset);
 }
 
 
@@ -2148,6 +2139,60 @@ uint64_t BinaryView::GetMaxFunctionSizeForAnalysis()
 void BinaryView::SetMaxFunctionSizeForAnalysis(uint64_t size)
 {
 	BNSetMaxFunctionSizeForAnalysis(m_object, size);
+}
+
+
+Relocation::Relocation(BNRelocation* reloc)
+{
+	m_object = reloc;
+}
+
+
+BNRelocationInfo Relocation::GetInfo() const
+{
+	return BNRelocationGetInfo(m_object);
+}
+
+
+Architecture* Relocation::GetArchitecture() const
+{
+	return new CoreArchitecture(BNRelocationGetArchitecture(m_object));
+}
+
+
+Ref<Symbol> Relocation::GetSymbol()
+{
+	return new Symbol(BNNewSymbolReference(BNRelocationGetSymbol(m_object)));
+}
+
+
+uint64_t Relocation::GetSymbolOffset() const
+{
+	return BNRelocationGetSymbolOffset(m_object);
+}
+
+
+uint64_t Relocation::GetTargetAddress() const
+{
+	return BNRelocationGetTargetAddress(m_object);
+}
+
+
+Ref<Segment> Relocation::GetSegment()
+{
+	return new Segment(BNNewSegmentReference(BNRelocationGetSegment(m_object)));
+}
+
+
+uint64_t Relocation::GetSegmentOffset() const
+{
+	return BNRelocationGetSegmentOffset(m_object);
+}
+
+
+uint64_t Relocation::GetDestAddress() const
+{
+	return BNRelocationGetDestAddress(m_object);
 }
 
 

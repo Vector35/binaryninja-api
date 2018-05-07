@@ -146,6 +146,7 @@ extern "C"
 	struct BNSegment;
 	struct BNSection;
 	struct BNRelocationInfo;
+	struct BNRelocationHandler;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
@@ -1021,15 +1022,6 @@ extern "C"
 		size_t (*write)(void* ctxt, uint64_t offset, const void* src, size_t len);
 	};
 
-	enum BNRelocationType
-	{
-		ELFGlobalRelocationType,
-		ELFCopyRelocationType,
-		ELFJumpSlotRelocationType,
-		StandardRelocationType,
-		CustomRelocationType
-	};
-
 	struct BNCustomBinaryView
 	{
 		void* context;
@@ -1058,15 +1050,6 @@ extern "C"
 			uint64_t symOffset, BNSegment* seg, uint64_t segOffset);
 		void (*defineSectionRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
 			uint64_t secOffset, BNSegment* seg, uint64_t segOffset);
-	};
-
-	struct BNCustomRelocation
-	{
-		void* context;
-		BNArchitecture* arch;
-		bool (*init)(void* ctxt);
-		void (*freeRelocation)(void* ctxt);
-		bool (*applyRelocation)(void* ctxt, BNBinaryView* view, uint8_t* dest, size_t len);
 	};
 
 	struct BNCustomBinaryViewType
@@ -1109,24 +1092,30 @@ extern "C"
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES]; // If null, same architecture as instruction
 	};
 
-	enum BNRelativeRelocationType
+	enum BNRelocationType
 	{
-		NotRelativeRelocationType,
-		SegmentRelativeRelocationType,
-		BaseRelativeRelocationType
+		ELFGlobalRelocationType,
+		ELFCopyRelocationType,
+		ELFJumpSlotRelocationType,
+		StandardRelocationType,
+		IgnoredRelocation
 	};
 
 	struct BNRelocationInfo
 	{
-		BNRelocationType bnType; // BinaryNinja Relocation Type
+		BNRelocationType type; // BinaryNinja Relocation Type
 		bool pcRelative;       // PC Relative or Absolute (subtract address from relocation)
 		bool baseRelative;   // Relative to start of module (Add module base to relocation)
-		bool hasSign;        // Addend should be subtracted
 		size_t size;         // Size of the data to be written
 		size_t truncateSize; // After addition/subtraction truncate to
-		uint64_t type;       // Base type from relocation entry
+		uint64_t nativeType; // Base type from relocation entry
 		size_t addend;       // Addend value from relocation entry
+		bool hasSign;        // Addend should be subtracted
 		bool implicitAddend; // Addend should be read from the BinaryView
+		bool external;       // Relocation entry points to external symbol
+		size_t symbolIndex;  // Index into symbol table
+		size_t sectionIndex; // Index into the section table
+		uint64_t address;    // Absolute address or segment offset
 	};
 
 	struct BNInstructionTextToken
@@ -1234,11 +1223,6 @@ extern "C"
 		bool (*alwaysBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*invertBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*skipAndReturnValue)(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
-
-		//bool (*applyPERelocation)(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
-		bool (*applyELFRelocation)(void* ctxt, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* data, size_t len);
-		//bool (*applyMachoRelocation)(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
-		bool (*getRelocationInfo)(void* ctxt, BNBinaryView* view, uint64_t relocType, BNRelocationInfo* result);
 	};
 
 	struct BNBasicBlockEdge
@@ -1383,6 +1367,17 @@ extern "C"
 		void* context;
 		bool (*recognizeLowLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
 		bool (*recognizeMediumLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
+	};
+
+	struct BNCustomRelocationHandler
+	{
+		void* context;
+		void (*freeObject)(void* ctxt);
+
+		bool (*getRelocationInfo)(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* result,
+			size_t resultCount);
+		bool (*applyRelocation)(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest,
+			size_t len);
 	};
 
 	struct BNTypeParserResult
@@ -2058,12 +2053,6 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(const char* name, BNFileMetadata* file,
 		BNBinaryView* parent, BNCustomBinaryView* view);
 
-	// Creation of new types of relocations
-	// BINARYNINJACOREAPI BNRelocation* BNCreateRelocation(BNArchitecture* arch, size_t size, BNSymbol* sym, uint64_t addend,
-	// 	uint64_t segmentOffset, BNCustomRelocation* reloc);
-	// BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);
-	// BINARYNINJACOREAPI void BNFreeRelocation(BNRelocation* reloc);
-	// Binary view type management
 	BINARYNINJACOREAPI BNBinaryViewType* BNGetBinaryViewTypeByName(const char* name);
 	BINARYNINJACOREAPI BNBinaryViewType** BNGetBinaryViewTypes(size_t* count);
 	BINARYNINJACOREAPI BNBinaryViewType** BNGetBinaryViewTypesForData(BNBinaryView* data, size_t* count);
@@ -2170,8 +2159,6 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
 		size_t maxLen, BNInstructionInfo* result);
-	BINARYNINJACOREAPI bool BNGetRelocationInfo(BNArchitecture* arch, BNBinaryView* view, uint64_t relocType,
-		BNRelocationInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
 	                                             size_t* len, BNInstructionTextToken** result, size_t* count);
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
@@ -2250,11 +2237,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNArchitectureInvertBranch(BNArchitecture* arch, uint8_t* data, uint64_t addr, size_t len);
 	BINARYNINJACOREAPI bool BNArchitectureSkipAndReturnValue(BNArchitecture* arch, uint8_t* data, uint64_t addr,
 	                                                         size_t len, uint64_t value);
-	//BINARYNINJACOREAPI bool BNArchitectureApplyPERelocation(BNArchitecture* arch, BNBinaryView* view, BNRelocation* rel, uint8_t* dest, size_t len);
-	BINARYNINJACOREAPI bool BNArchitectureApplyELFRelocation(BNArchitecture* arch, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* dest, size_t len);
-	//BINARYNINJACOREAPI bool BNArchitectureApplyMachoRelocation(BNArchitecture* arch, BNBinaryView* view, BNRelocation* rel, uint8_t* dest, size_t len);
 	BINARYNINJACOREAPI void BNRegisterArchitectureFunctionRecognizer(BNArchitecture* arch, BNFunctionRecognizer* rec);
-
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeArchitectureConstantDefined(BNArchitecture* arch, const char* type,
 	                                                                      const char* name);
 	BINARYNINJACOREAPI uint64_t BNGetBinaryViewTypeArchitectureConstant(BNArchitecture* arch, const char* type,
@@ -2262,6 +2245,18 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetBinaryViewTypeArchitectureConstant(BNArchitecture* arch, const char* type,
 	                                                                const char* name, uint64_t value);
 
+	BINARYNINJACOREAPI void BNArchitectureRegisterRelocationHandler(BNArchitecture* arch, const char* viewName,
+		BNRelocationHandler* handler);
+	BINARYNINJACOREAPI BNRelocationHandler* BNCreateRelocationHandler(BNCustomRelocationHandler* handler);
+	BINARYNINJACOREAPI BNRelocationHandler* BNArchitectureGetRelocationHandler(BNArchitecture* arch, const char* viewName);
+	BINARYNINJACOREAPI BNRelocationHandler* BNNewRelocationHandlerReference(BNRelocationHandler* handler);
+	BINARYNINJACOREAPI void BNFreeRelocationHandler(BNRelocationHandler* handler);
+	BINARYNINJACOREAPI bool BNRelocationHandlerGetRelocationInfo(BNRelocationHandler* handler, BNBinaryView* data,
+		BNArchitecture* arch, BNRelocationInfo* info, size_t infoCount);
+	BINARYNINJACOREAPI bool BNRelocationHandlerApplyRelocation(BNRelocationHandler* handler, BNBinaryView* view,
+		BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len);
+	BINARYNINJACOREAPI bool BNRelocationHandlerDefaultApplyRelocation(BNRelocationHandler* handler, BNBinaryView* view,
+		BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len);
 	// Analysis
 	BINARYNINJACOREAPI void BNAddAnalysisOption(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNAddFunctionForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
@@ -3508,7 +3503,19 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetLinuxCADirectory();
 	BINARYNINJACOREAPI char* BNGetLinuxCABundlePath();
 
-	// Segment Operations
+	// Relocation object methods
+	BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);
+	BINARYNINJACOREAPI void BNFreeRelocation(BNRelocation* reloc);
+	BINARYNINJACOREAPI BNRelocationInfo BNRelocationGetInfo(BNRelocation* reloc);
+	BINARYNINJACOREAPI BNArchitecture* BNRelocationGetArchitecture(BNRelocation* reloc);
+	BINARYNINJACOREAPI BNSymbol* BNRelocationGetSymbol(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetSymbolOffset(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetTargetAddress(BNRelocation* reloc);
+	BINARYNINJACOREAPI BNSegment* BNRelocationGetSegment(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetSegmentOffset(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetDestAddress(BNRelocation* reloc);
+
+	// Segment object methods
 	BINARYNINJACOREAPI BNSegment* BNCreateSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags,
 		bool autoDefined);
 	BINARYNINJACOREAPI BNSegment* BNNewSegmentReference(BNSegment* seg);
@@ -3525,9 +3532,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNSegmentSetDataOffset(BNSegment* segment, uint64_t dataOffset);
 	BINARYNINJACOREAPI void BNSegmentSetDataLength(BNSegment* segment, uint64_t dataLength);
 	BINARYNINJACOREAPI void BNSegmentSetFlags(BNSegment* segment, uint32_t flags);
-	// BINARYNINJACOREAPI bool BNSegmentAddRelocation(BNSegment* segment, BNRelocation* rel);
 	BINARYNINJACOREAPI size_t BNSegmentRead(BNSegment* segment, BNBinaryView* view, uint8_t* dest, uint64_t offset, size_t len);
 
+	// Section object methods
 	BINARYNINJACOREAPI BNSection* BNNewSectionReference(BNSection* section);
 	BINARYNINJACOREAPI void BNFreeSection(BNSection* section);
 	BINARYNINJACOREAPI char* BNSectionGetName(BNSection* section);

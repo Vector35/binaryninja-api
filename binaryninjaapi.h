@@ -19,7 +19,6 @@
 // IN THE SOFTWARE.
 
 #pragma once
-
 #ifdef WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -34,6 +33,7 @@
 #include <set>
 #include <mutex>
 #include <memory>
+#include <cstdint>
 #include "binaryninjacore.h"
 #include "json/json.h"
 
@@ -1384,6 +1384,22 @@ namespace BinaryNinja
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 	};
 
+
+	class Relocation: public CoreRefCountObject<BNRelocation, BNNewRelocationReference, BNFreeRelocation>
+	{
+	public:
+		Relocation(BNRelocation* reloc);
+		BNRelocationInfo GetInfo() const;
+		Architecture* GetArchitecture() const;
+		Ref<Symbol> GetSymbol();
+		uint64_t GetSymbolOffset() const;
+		uint64_t GetTargetAddress() const;
+		Ref<Segment> GetSegment();
+		uint64_t GetSegmentOffset() const;
+		uint64_t GetDestAddress() const;
+	};
+
+
 	class BinaryData: public BinaryView
 	{
 	public:
@@ -1624,6 +1640,7 @@ namespace BinaryNinja
 	class MediumLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
+	class RelocationHandler;
 
 	typedef size_t ExprId;
 
@@ -1706,11 +1723,6 @@ namespace BinaryNinja
 		static bool AlwaysBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		static bool InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		static bool SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
-
-		// static bool ApplyPERelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
-		static bool ApplyELFRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocationInfo* rel, uint8_t* data, size_t len);
-		// static bool ApplyMachoRelocationCallback(void* ctxt, BNBinaryView* view, BNRelocation* rel, uint8_t* data, size_t len);
-		static bool GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, uint64_t relocType, BNRelocationInfo* result);
 
 		virtual void Register(BNCustomArchitecture* callbacks);
 
@@ -1859,6 +1871,8 @@ namespace BinaryNinja
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
 		void RegisterFunctionRecognizer(FunctionRecognizer* recog);
+		void RegisterRelocationHandler(const std::string& viewName, RelocationHandler* handler);
+		Ref<RelocationHandler> GetRelocationHandler(const std::string& viewName);
 
 		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name,
@@ -1878,15 +1892,6 @@ namespace BinaryNinja
 		Ref<CallingConvention> GetStdcallCallingConvention();
 		Ref<CallingConvention> GetFastcallCallingConvention();
 		Ref<Platform> GetStandalonePlatform();
-
-		//virtual bool ApplyPERelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
-		virtual bool ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
-		// virtual bool ApplyMachoRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len);
-		virtual bool GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& result)
-		{
-			(void)view; (void)relocType; (void)result;
-			return false;
-		}
 
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
@@ -1909,10 +1914,6 @@ namespace BinaryNinja
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
-		//virtual bool ApplyPERelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len) override;
-		virtual bool ApplyELFRelocation(BinaryView* view, BNRelocationInfo& rel, uint8_t* dest, size_t len) override;
-		//virtual bool ApplyMachoRelocation(BinaryView* view, Relocation* rel, uint8_t* dest, size_t len) override;
-		virtual bool GetRelocationInfo(BinaryView* view, uint64_t relocType, BNRelocationInfo& result) override;
 
 		virtual std::string GetSemanticFlagClassName(uint32_t semClass) override;
 		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup) override;
@@ -3333,6 +3334,36 @@ namespace BinaryNinja
 
 		virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il);
 		virtual bool RecognizeMediumLevelIL(BinaryView* data, Function* func, MediumLevelILFunction* il);
+	};
+
+	class RelocationHandler: public CoreRefCountObject<BNRelocationHandler,
+		BNNewRelocationHandlerReference, BNFreeRelocationHandler>
+	{
+		static bool GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, BNArchitecture* arch,
+			BNRelocationInfo* result, size_t resultCount);
+		static bool ApplyRelocationCallback(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc,
+			uint8_t* dest, size_t len);
+
+	protected:
+		RelocationHandler();
+		RelocationHandler(BNRelocationHandler* handler);
+		static void FreeCallback(void* ctxt);
+
+	public:
+
+		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result);
+		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
+			size_t len);
+	};
+
+	class CoreRelocationHandler: public RelocationHandler
+	{
+	public:
+		CoreRelocationHandler(BNRelocationHandler* handler);
+
+		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result) override;
+		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
+			size_t len) override;
 	};
 
 	class UpdateException: public std::exception

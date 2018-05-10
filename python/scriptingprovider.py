@@ -650,6 +650,7 @@ original_stdin = sys.stdin
 original_stdout = sys.stdout
 original_stderr = sys.stderr
 
-sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
-sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
-sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)
+def redirect_stdio():
+	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
+	sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
+	sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

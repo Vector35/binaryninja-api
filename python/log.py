@@ -21,6 +21,7 @@
 
 # Binary Ninja components
 import _binaryninjacore as core
+from enums import LogLevel
 
 
 _output_to_log = False
@@ -135,7 +136,7 @@ def log_alert(text):
 	core.BNLogAlert("%s", str(text))
 
 
-def log_to_stdout(min_level):
+def log_to_stdout(min_level=LogLevel.InfoLog):
 	"""
 	``log_to_stdout`` redirects minimum log level to standard out.
 

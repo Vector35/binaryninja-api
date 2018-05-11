@@ -1123,10 +1123,7 @@ namespace BinaryNinja
 		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file);
-		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym, uint64_t symOffset,
-			const Ref<Segment> seg, uint64_t segOffset);
-		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec, uint64_t secOffset,
-			const Ref<Segment> seg, uint64_t segOffset);
+		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
@@ -1153,10 +1150,7 @@ namespace BinaryNinja
 		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
-		static void DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
-			uint64_t symOffset, BNSegment* seg, uint64_t segOffset);
-		static void DefineSectionRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
-			uint64_t secOffset, BNSegment* seg, uint64_t segOffset);
+		static void DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
 	public:
 		BinaryView(BNBinaryView* view);
 
@@ -1229,10 +1223,7 @@ namespace BinaryNinja
 		bool Save(FileAccessor* file);
 		bool Save(const std::string& path);
 
-		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym, uint64_t symOffset,
-			const Ref<Segment> seg, uint64_t segOffset);
-		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec, uint64_t secOffset,
-			const Ref<Segment> seg, uint64_t segOffset);
+		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 
@@ -1391,12 +1382,8 @@ namespace BinaryNinja
 		Relocation(BNRelocation* reloc);
 		BNRelocationInfo GetInfo() const;
 		Architecture* GetArchitecture() const;
-		Ref<Symbol> GetSymbol();
-		uint64_t GetSymbolOffset() const;
-		uint64_t GetTargetAddress() const;
-		Ref<Segment> GetSegment();
-		uint64_t GetSegmentOffset() const;
-		uint64_t GetDestAddress() const;
+		uint64_t GetTarget() const;
+		uint64_t GetReloc() const;
 	};
 
 

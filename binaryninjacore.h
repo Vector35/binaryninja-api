@@ -1052,10 +1052,7 @@ extern "C"
 		bool (*isRelocatable)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
-		void (*defineRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
-			uint64_t symOffset, BNSegment* seg, uint64_t segOffset);
-		void (*defineSectionRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
-			uint64_t secOffset, BNSegment* seg, uint64_t segOffset);
+		void (*defineRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
 	};
 
 	struct BNCustomBinaryViewType
@@ -1995,9 +1992,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSaveToFile(BNBinaryView* view, BNFileAccessor* file);
 	BINARYNINJACOREAPI bool BNSaveToFilename(BNBinaryView* view, const char* filename);
 	BINARYNINJACOREAPI void BNDefineRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
-		BNSymbol* sym, uint64_t symOffset, BNSegment* seg, uint64_t segOffset);
-	BINARYNINJACOREAPI void BNDefineSectionRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
-		BNSection* sec, uint64_t secOffset, BNSegment* seg, uint64_t segOffset);
+		uint64_t target, uint64_t reloc);
 	BINARYNINJACOREAPI void BNRegisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 	BINARYNINJACOREAPI void BNUnregisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 
@@ -3516,12 +3511,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeRelocation(BNRelocation* reloc);
 	BINARYNINJACOREAPI BNRelocationInfo BNRelocationGetInfo(BNRelocation* reloc);
 	BINARYNINJACOREAPI BNArchitecture* BNRelocationGetArchitecture(BNRelocation* reloc);
-	BINARYNINJACOREAPI BNSymbol* BNRelocationGetSymbol(BNRelocation* reloc);
-	BINARYNINJACOREAPI uint64_t BNRelocationGetSymbolOffset(BNRelocation* reloc);
-	BINARYNINJACOREAPI uint64_t BNRelocationGetTargetAddress(BNRelocation* reloc);
-	BINARYNINJACOREAPI BNSegment* BNRelocationGetSegment(BNRelocation* reloc);
-	BINARYNINJACOREAPI uint64_t BNRelocationGetSegmentOffset(BNRelocation* reloc);
-	BINARYNINJACOREAPI uint64_t BNRelocationGetDestAddress(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetTarget(BNRelocation* reloc);
+	BINARYNINJACOREAPI uint64_t BNRelocationGetReloc(BNRelocation* reloc);
 
 	// Segment object methods
 	BINARYNINJACOREAPI BNSegment* BNCreateSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags,

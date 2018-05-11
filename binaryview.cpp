@@ -449,7 +449,6 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	view.getAddressSize = GetAddressSizeCallback;
 	view.save = SaveCallback;
 	view.defineRelocation = DefineRelocationCallback;
-	view.defineSectionRelocation = DefineSectionRelocationCallback;
 	m_file = file;
 	AddRefForRegistration();
 	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(),
@@ -612,27 +611,13 @@ bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 }
 
 
-void BinaryView::DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
-	uint64_t symOffset, BNSegment* seg, uint64_t segOffset)
+void BinaryView::DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target,
+	uint64_t reloc)
 {
 	BinaryView* view = (BinaryView*)ctxt;
 	BNRelocationInfo curInfo = *info;
-	Ref<Symbol> curSym = new Symbol(BNNewSymbolReference(sym));
-	Ref<Segment> curSeg = new Segment(BNNewSegmentReference(seg));
 	Architecture* curArch = new CoreArchitecture(arch);
-	return view->PerformDefineRelocation(curArch, curInfo, curSym, symOffset, curSeg, segOffset);
-}
-
-
-void BinaryView::DefineSectionRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSection* sec,
-	uint64_t secOffset, BNSegment* seg, uint64_t segOffset)
-{
-	BinaryView* view = (BinaryView*)ctxt;
-	BNRelocationInfo curInfo = *info;
-	Ref<Section> curSec = new Section(BNNewSectionReference(sec));
-	Ref<Segment> curSeg = new Segment(BNNewSegmentReference(seg));
-	Architecture* curArch = new CoreArchitecture(arch);
-	return view->PerformDefineRelocation(curArch, curInfo, curSec, secOffset, curSeg, segOffset);
+	return view->PerformDefineRelocation(curArch, curInfo, target, reloc);
 }
 
 
@@ -709,17 +694,9 @@ bool BinaryView::PerformSave(FileAccessor* file)
 }
 
 
-void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym,
-	uint64_t symOffset, const Ref<Segment> seg, uint64_t segOffset)
+void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc)
 {
-	DefineRelocation(arch, info, sym, symOffset, seg, segOffset);
-}
-
-
-void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec,
-	uint64_t secOffset, const Ref<Segment> seg, uint64_t segOffset)
-{
-	DefineRelocation(arch, info, sec, secOffset, seg, segOffset);
+	DefineRelocation(arch, info, target, reloc);
 }
 
 
@@ -902,17 +879,9 @@ bool BinaryView::Save(const string& path)
 }
 
 
-void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Symbol> sym,
-	uint64_t symOffset, const Ref<Segment> seg, uint64_t segOffset)
+void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc)
 {
-	BNDefineRelocation(m_object, arch->GetObject(), &info, sym->GetObject(), symOffset, seg->GetObject(), segOffset);
-}
-
-
-void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, const Ref<Section> sec,
-	uint64_t secOffset, const Ref<Segment> seg, uint64_t segOffset)
-{
-	BNDefineSectionRelocation(m_object, arch->GetObject(), &info, sec->GetObject(), secOffset, seg->GetObject(), segOffset);
+	BNDefineRelocation(m_object, arch->GetObject(), &info, target, reloc);
 }
 
 
@@ -2160,39 +2129,15 @@ Architecture* Relocation::GetArchitecture() const
 }
 
 
-Ref<Symbol> Relocation::GetSymbol()
+uint64_t Relocation::GetTarget() const
 {
-	return new Symbol(BNNewSymbolReference(BNRelocationGetSymbol(m_object)));
+	return BNRelocationGetTarget(m_object);
 }
 
 
-uint64_t Relocation::GetSymbolOffset() const
+uint64_t Relocation::GetReloc() const
 {
-	return BNRelocationGetSymbolOffset(m_object);
-}
-
-
-uint64_t Relocation::GetTargetAddress() const
-{
-	return BNRelocationGetTargetAddress(m_object);
-}
-
-
-Ref<Segment> Relocation::GetSegment()
-{
-	return new Segment(BNNewSegmentReference(BNRelocationGetSegment(m_object)));
-}
-
-
-uint64_t Relocation::GetSegmentOffset() const
-{
-	return BNRelocationGetSegmentOffset(m_object);
-}
-
-
-uint64_t Relocation::GetDestAddress() const
-{
-	return BNRelocationGetDestAddress(m_object);
+	return BNRelocationGetReloc(m_object);
 }
 
 

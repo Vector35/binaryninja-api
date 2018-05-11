@@ -560,8 +560,8 @@ class _BackgroundTaskMetaclass(type):
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i])))
-		core.BNFreeBackgroundTaskList(tasks)
+			result.append(BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i])))
+		core.BNFreeBackgroundTaskList(tasks, count.value)
 		return result
 
 	def __iter__(self):
@@ -570,9 +570,9 @@ class _BackgroundTaskMetaclass(type):
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		try:
 			for i in xrange(0, count.value):
-				yield BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i]))
+				yield BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i]))
 		finally:
-			core.BNFreeBackgroundTaskList(tasks)
+			core.BNFreeBackgroundTaskList(tasks, count.value)
 
 
 class BackgroundTask(object):

@@ -449,6 +449,7 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	view.getAddressSize = GetAddressSizeCallback;
 	view.save = SaveCallback;
 	view.defineRelocation = DefineRelocationCallback;
+	view.defineSymbolRelocation = DefineSymbolRelocationCallback;
 	m_file = file;
 	AddRefForRegistration();
 	m_object = BNCreateCustomBinaryView(typeName.c_str(), m_file->GetObject(),
@@ -621,6 +622,17 @@ void BinaryView::DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRe
 }
 
 
+void BinaryView::DefineSymbolRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* sym,
+	uint64_t reloc)
+{
+	BinaryView* view = (BinaryView*)ctxt;
+	BNRelocationInfo curInfo = *info;
+	Architecture* curArch = new CoreArchitecture(arch);
+	Ref<Symbol> curSymbol = new Symbol(sym);
+	return view->PerformDefineRelocation(curArch, curInfo, curSymbol, reloc);
+}
+
+
 bool BinaryView::PerformIsValidOffset(uint64_t offset)
 {
 	uint8_t val;
@@ -695,6 +707,12 @@ bool BinaryView::PerformSave(FileAccessor* file)
 
 
 void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc)
+{
+	DefineRelocation(arch, info, target, reloc);
+}
+
+
+void BinaryView::PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc)
 {
 	DefineRelocation(arch, info, target, reloc);
 }
@@ -882,6 +900,12 @@ bool BinaryView::Save(const string& path)
 void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc)
 {
 	BNDefineRelocation(m_object, arch->GetObject(), &info, target, reloc);
+}
+
+
+void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc)
+{
+	BNDefineSymbolRelocation(m_object, arch->GetObject(), &info, target->GetObject(), reloc);
 }
 
 

@@ -1124,6 +1124,7 @@ namespace BinaryNinja
 
 		virtual bool PerformSave(FileAccessor* file);
 		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
+		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> sym, uint64_t reloc);
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
@@ -1151,6 +1152,7 @@ namespace BinaryNinja
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
 		static void DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
+		static void DefineSymbolRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* target, uint64_t reloc);
 	public:
 		BinaryView(BNBinaryView* view);
 
@@ -1224,6 +1226,7 @@ namespace BinaryNinja
 		bool Save(const std::string& path);
 
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
+		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc);
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 

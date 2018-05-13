@@ -1053,6 +1053,7 @@ extern "C"
 		size_t (*getAddressSize)(void* ctxt);
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
 		void (*defineRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
+		void (*defineSymbolRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* target, uint64_t reloc);
 	};
 
 	struct BNCustomBinaryViewType
@@ -1993,6 +1994,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSaveToFilename(BNBinaryView* view, const char* filename);
 	BINARYNINJACOREAPI void BNDefineRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
 		uint64_t target, uint64_t reloc);
+	BINARYNINJACOREAPI void BNDefineSymbolRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
+		BNSymbol* target, uint64_t reloc);
 	BINARYNINJACOREAPI void BNRegisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 	BINARYNINJACOREAPI void BNUnregisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 

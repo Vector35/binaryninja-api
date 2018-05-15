@@ -2045,7 +2045,10 @@ vector<Ref<Section>> BinaryView::GetSectionsAt(uint64_t addr)
 
 Ref<Section> BinaryView::GetSectionByName(const string& name)
 {
-	return new Section(BNGetSectionByName(m_object, name.c_str()));
+	BNSection* section = BNGetSectionByName(m_object, name.c_str());
+	if (section)
+		return new Section(section);
+	return nullptr;
 }
 
 

@@ -25,6 +25,8 @@ from binaryninja.binaryview import BinaryViewType
 import binaryninja.interaction as interaction
 from binaryninja.plugin import PluginCommand
 
+# 2-3 compatibility
+from six.moves import range
 
 def get_bininfo(bv):
 	if bv is None:
@@ -48,13 +50,13 @@ def get_bininfo(bv):
 
 	contents += "| Start | Name   |\n"
 	contents += "|------:|:-------|\n"
-	for i in xrange(min(10, len(bv.functions))):
+	for i in range(min(10, len(bv.functions))):
 		contents += "| 0x%x | %s |\n" % (bv.functions[i].start, bv.functions[i].symbol.full_name)
 
 	contents += "### First 10 Strings ###\n"
 	contents += "| Start | Length | String |\n"
 	contents += "|------:|-------:|:-------|\n"
-	for i in xrange(min(10, len(bv.strings))):
+	for i in range(min(10, len(bv.strings))):
 		start = bv.strings[i].start
 		length = bv.strings[i].length
 		string = bv.read(start, length)

@@ -26,6 +26,9 @@ import ctypes
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import MetadataType
 
+# 2-3 compatibility
+from six.moves import range
+
 
 class Metadata(object):
 	def __init__(self, value=None, signed=None, raw=None, handle=None):
@@ -138,12 +141,12 @@ class Metadata(object):
 
 	def __iter__(self):
 		if self.is_array:
-			for i in xrange(core.BNMetadataSize(self.handle)):
+			for i in range(core.BNMetadataSize(self.handle)):
 				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
 		elif self.is_dict:
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
-				for i in xrange(result.contents.size):
+				for i in range(result.contents.size):
 					yield result.contents.keys[i]
 			finally:
 				core.BNFreeMetadataValueStore(result)
@@ -175,7 +178,7 @@ class Metadata(object):
 			length.value = 0
 			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
 			out_list = []
-			for i in xrange(length.value):
+			for i in range(length.value):
 				out_list.append(native_list[i])
 			core.BNFreeMetadataRaw(native_list)
 			return ''.join(chr(a) for a in out_list)

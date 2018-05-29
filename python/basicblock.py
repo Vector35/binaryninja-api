@@ -26,6 +26,8 @@ from binaryninja import highlight
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
 
+# 2-3 compatibility
+from six.moves import range
 
 class BasicBlockEdge(object):
 	def __init__(self, branch_type, source, target, back_edge):
@@ -128,7 +130,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong(0)
 		edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
@@ -144,7 +146,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong(0)
 		edges = core.BNGetBasicBlockIncomingEdges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
@@ -170,7 +172,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -181,7 +183,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -200,7 +202,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -211,7 +213,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -260,12 +262,12 @@ class BasicBlock(object):
 		if len(blocks) == 0:
 			return []
 		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
-		for i in xrange(len(blocks)):
+		for i in range(len(blocks)):
 			block_set[i] = blocks[i].handle
 		count = ctypes.c_ulonglong()
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BasicBlock(blocks[0].view, core.BNNewBasicBlockReference(out_blocks[i])))
 		core.BNFreeBasicBlockList(out_blocks, count.value)
 		return result
@@ -319,10 +321,10 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetBasicBlockDisassemblyText(self.handle, settings_obj, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = lines[i].addr
 			tokens = []
-			for j in xrange(0, lines[i].count):
+			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value

@@ -28,6 +28,7 @@ from binaryninja.enums import UpdateResult
 
 #2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class _UpdateChannelMetaClass(type):
@@ -43,7 +44,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion))
 		core.BNFreeUpdateChannelList(channels, count.value)
 		return result
@@ -66,7 +67,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion)
 		finally:
 			core.BNFreeUpdateChannelList(channels, count.value)
@@ -87,7 +88,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = None
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if channels[i].name == str(name):
 				result = UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion)
 				break
@@ -130,7 +131,7 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time))
 		core.BNFreeUpdateChannelVersionList(versions, count.value)
 		return result
@@ -146,7 +147,7 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = None
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if versions[i].version == self.latest_version_num:
 				result = UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time)
 				break

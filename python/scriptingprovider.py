@@ -33,6 +33,7 @@ import binaryninja.log
 
 #2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class _ThreadActionContext(object):
@@ -263,7 +264,7 @@ class _ScriptingProviderMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(ScriptingProvider(types[i]))
 		core.BNFreeScriptingProviderList(types)
 		return result
@@ -273,7 +274,7 @@ class _ScriptingProviderMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield ScriptingProvider(types[i])
 		finally:
 			core.BNFreeScriptingProviderList(types)
@@ -313,7 +314,7 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 		self._cb = core.BNScriptingProviderCallbacks()
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
-		self.handle = core.BNRegisterScriptingProvider(self.__class__.name.encode('utf8'), self._cb)
+		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self._cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):

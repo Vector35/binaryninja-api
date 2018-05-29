@@ -30,6 +30,7 @@ from binaryninja.enums import PluginCommandType
 
 #2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class PluginCommandContext(object):
@@ -49,7 +50,7 @@ class _PluginCommandMetaClass(type):
 		count = ctypes.c_ulonglong()
 		commands = core.BNGetAllPluginCommands(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(PluginCommand(commands[i]))
 		core.BNFreePluginCommandList(commands)
 		return result
@@ -59,7 +60,7 @@ class _PluginCommandMetaClass(type):
 		count = ctypes.c_ulonglong()
 		commands = core.BNGetAllPluginCommands(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield PluginCommand(commands[i])
 		finally:
 			core.BNFreePluginCommandList(commands)
@@ -568,7 +569,7 @@ class _BackgroundTaskMetaclass(type):
 		count = ctypes.c_ulonglong()
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i])))
 		core.BNFreeBackgroundTaskList(tasks, count.value)
 		return result
@@ -578,7 +579,7 @@ class _BackgroundTaskMetaclass(type):
 		count = ctypes.c_ulonglong()
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i]))
 		finally:
 			core.BNFreeBackgroundTaskList(tasks, count.value)

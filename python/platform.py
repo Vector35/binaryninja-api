@@ -26,6 +26,7 @@ from binaryninja import _binaryninjacore as core
 
 #2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class _PlatformMetaClass(type):
@@ -37,7 +38,7 @@ class _PlatformMetaClass(type):
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
@@ -48,7 +49,7 @@ class _PlatformMetaClass(type):
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformOSList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(str(platforms[i]))
 		core.BNFreePlatformOSList(platforms, count.value)
 		return result
@@ -58,7 +59,7 @@ class _PlatformMetaClass(type):
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield Platform(None, core.BNNewPlatformReference(platforms[i]))
 		finally:
 			core.BNFreePlatformList(platforms, count.value)
@@ -86,7 +87,7 @@ class _PlatformMetaClass(type):
 		else:
 			platforms = core.BNGetPlatformListByArchitecture(os, arch.handle)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
@@ -227,7 +228,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		count = ctypes.c_ulonglong()
 		cc = core.BNGetPlatformCallingConventions(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(binaryninja.callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i])))
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
@@ -238,7 +239,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformTypes(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
 			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
@@ -250,7 +251,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformVariables(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
 			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
@@ -262,7 +263,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformFunctions(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
 			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
@@ -274,7 +275,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		count = ctypes.c_ulonglong(0)
 		call_list = core.BNGetPlatformSystemCalls(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = binaryninja.types.QualifiedName._from_core_struct(call_list[i].name)
 			t = binaryninja.types.Type(core.BNNewTypeReference(call_list[i].type), platform = self)
 			result[call_list[i].number] = (name, t)
@@ -389,7 +390,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		if filename is None:
 			filename = "input"
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in xrange(0, len(include_dirs)):
+		for i in range(0, len(include_dirs)):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
@@ -402,13 +403,13 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		type_dict = {}
 		variables = {}
 		functions = {}
-		for i in xrange(0, parse.typeCount):
+		for i in range(0, parse.typeCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.types[i].name)
 			type_dict[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
-		for i in xrange(0, parse.variableCount):
+		for i in range(0, parse.variableCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.variables[i].name)
 			variables[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
-		for i in xrange(0, parse.functionCount):
+		for i in range(0, parse.functionCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.functions[i].name)
 			functions[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
@@ -435,7 +436,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			>>>
 		"""
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in xrange(0, len(include_dirs)):
+		for i in range(0, len(include_dirs)):
 			dir_buf[i] = str(include_dirs[i])
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
@@ -448,13 +449,13 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		type_dict = {}
 		variables = {}
 		functions = {}
-		for i in xrange(0, parse.typeCount):
+		for i in range(0, parse.typeCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.types[i].name)
 			type_dict[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
-		for i in xrange(0, parse.variableCount):
+		for i in range(0, parse.variableCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.variables[i].name)
 			variables[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
-		for i in xrange(0, parse.functionCount):
+		for i in range(0, parse.functionCount):
 			name = binaryninja.types.QualifiedName._from_core_struct(parse.functions[i].name)
 			functions[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)

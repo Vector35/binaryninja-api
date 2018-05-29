@@ -27,6 +27,9 @@ from binaryninja import _binaryninjacore as core
 from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
 from binaryninja import basicblock #required for LowLevelILBasicBlock
 
+# 2-3 compatibility
+from six.moves import range
+
 
 class LowLevelILLabel(object):
 	def __init__(self, handle = None):
@@ -413,7 +416,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					value.append(operand_list[j])
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "expr_list":
@@ -421,7 +424,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					value.append(LowLevelILInstruction(func, operand_list[j]))
 				core.BNLowLevelILFreeOperandList(operand_list)
 			elif operand_type == "reg_or_flag_list":
@@ -429,7 +432,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					if (operand_list[j] & (1 << 32)) != 0:
 						value.append(ILFlag(func.arch, operand_list[j] & 0xffffffff))
 					else:
@@ -440,7 +443,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					reg = operand_list[j * 2]
 					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegister(ILRegister(func.arch, reg), reg_version))
@@ -450,7 +453,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					reg_stack = operand_list[j * 2]
 					reg_version = operand_list[(j * 2) + 1]
 					value.append(SSARegisterStack(ILRegisterStack(func.arch, reg_stack), reg_version))
@@ -460,7 +463,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					flag = operand_list[j * 2]
 					flag_version = operand_list[(j * 2) + 1]
 					value.append(SSAFlag(ILFlag(func.arch, flag), flag_version))
@@ -470,7 +473,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					if (operand_list[j * 2] & (1 << 32)) != 0:
 						reg_or_flag = ILFlag(func.arch, operand_list[j * 2] & 0xffffffff)
 					else:
@@ -483,7 +486,7 @@ class LowLevelILInstruction(object):
 				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = {}
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					reg_stack = operand_list[j * 2]
 					adjust = operand_list[(j * 2) + 1]
 					if adjust & 0x80000000:
@@ -520,7 +523,7 @@ class LowLevelILInstruction(object):
 				self.expr_index, tokens, count):
 				return None
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -777,7 +780,7 @@ class LowLevelILFunction(object):
 		view = None
 		if self.source_function is not None:
 			view = self.source_function.view
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -844,7 +847,7 @@ class LowLevelILFunction(object):
 		if self.source_function is not None:
 			view = self.source_function.view
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
@@ -862,7 +865,7 @@ class LowLevelILFunction(object):
 
 	def set_indirect_branches(self, branches):
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
-		for i in xrange(len(branches)):
+		for i in range(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
@@ -2178,7 +2181,7 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		label_list = (ctypes.POINTER(core.BNLowLevelILLabel) * len(labels))()
-		for i in xrange(len(labels)):
+		for i in range(len(labels)):
 			label_list[i] = labels[i].handle
 		return LowLevelILExpr(core.BNLowLevelILAddLabelList(self.handle, label_list, len(labels)))
 
@@ -2191,7 +2194,7 @@ class LowLevelILFunction(object):
 		:rtype: LowLevelILExpr
 		"""
 		operand_list = (ctypes.c_ulonglong * len(operands))()
-		for i in xrange(len(operands)):
+		for i in range(len(operands)):
 			operand_list[i] = operands[i]
 		return LowLevelILExpr(core.BNLowLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
@@ -2274,7 +2277,7 @@ class LowLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, reg_ssa.version, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -2284,7 +2287,7 @@ class LowLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, flag_ssa.version, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -2293,7 +2296,7 @@ class LowLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSAMemoryUses(self.handle, index, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -2353,7 +2356,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		self.il_function = owner
 
 	def __iter__(self):
-		for idx in xrange(self.start, self.end):
+		for idx in range(self.start, self.end):
 			yield self.il_function[idx]
 
 	def __getitem__(self, idx):

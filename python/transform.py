@@ -31,6 +31,7 @@ from binaryninja.enums import TransformType
 
 #2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class _TransformMetaClass(type):
@@ -41,7 +42,7 @@ class _TransformMetaClass(type):
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Transform(xforms[i]))
 		core.BNFreeTransformTypeList(xforms)
 		return result
@@ -51,7 +52,7 @@ class _TransformMetaClass(type):
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield Transform(xforms[i])
 		finally:
 			core.BNFreeTransformTypeList(xforms)
@@ -129,7 +130,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			count = ctypes.c_ulonglong()
 			params = core.BNGetTransformParameterList(self.handle, count)
 			self.parameters = []
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				self.parameters.append(TransformParameter(params[i].name, params[i].longName, params[i].fixedLength))
 			core.BNFreeTransformParameterList(params, count.value)
 
@@ -150,7 +151,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		try:
 			count[0] = len(self.parameters)
 			param_buf = (core.BNTransformParameterInfo * len(self.parameters))()
-			for i in xrange(0, len(self.parameters)):
+			for i in range(0, len(self.parameters)):
 				param_buf[i].name = self.parameters[i].name
 				param_buf[i].longName = self.parameters[i].long_name
 				param_buf[i].fixedLength = self.parameters[i].fixed_length
@@ -175,7 +176,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		try:
 			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
-			for i in xrange(0, count):
+			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = str(data)
 			result = self.perform_decode(str(input_obj), param_map)
@@ -192,7 +193,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		try:
 			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
-			for i in xrange(0, count):
+			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = str(data)
 			result = self.perform_encode(str(input_obj), param_map)
@@ -225,7 +226,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		output_buf = databuffer.DataBuffer()
 		keys = params.keys()
 		param_buf = (core.BNTransformParameter * len(keys))()
-		for i in xrange(0, len(keys)):
+		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
 			param_buf[i].value = data.handle
@@ -238,7 +239,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		output_buf = databuffer.DataBuffer()
 		keys = params.keys()
 		param_buf = (core.BNTransformParameter * len(keys))()
-		for i in xrange(0, len(keys)):
+		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
 			param_buf[i].value = data.handle

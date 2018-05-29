@@ -117,12 +117,14 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			break;
 		}
 		else if ((type->GetChildType()->GetClass() == IntegerTypeClass) &&
-		         (type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
+				 (type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
 		{
 			if (isReturnType)
 				fprintf(out, "ctypes.POINTER(ctypes.c_byte)");
-			else
+			else {
+				//fprintf(out, "compatstring");
 				fprintf(out, "ctypes.c_char_p");
+			}
 			break;
 		}
 		else if (type->GetChildType()->GetClass() == FunctionTypeClass)
@@ -188,6 +190,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
 	fprintf(out, "_base_path = None\n");
+	fprintf(out, "ctypes.set_conversion_mode('utf-8', 'strict')\n");
 	fprintf(out, "if platform.system() == \"Darwin\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
@@ -199,6 +202,40 @@ int main(int argc, char* argv[])
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
+	// fprintf(out, "class compatstring(ctypes.c_char_p):\n");
+	// fprintf(out, "\tdef __init__(self, value=None):\n");
+	// fprintf(out, "\t\tsuper(compatstring, self).__init__()\n");
+	// fprintf(out, "\t\tif value is not None:\n");
+	// fprintf(out, "\t\t\tself.value = value\n");
+	// fprintf(out, "\t@classmethod\n");
+	// fprintf(out, "\tdef from_param(cls, value):\n");
+	// fprintf(out, "\t\tif not isinstance(value, bytes):\n");
+	// fprintf(out, "\t\t\treturn super(compatstring, cls).from_param(value.encode('utf8'))\n");
+	// fprintf(out, "\t\treturn super(compatstring, cls).from_param(value)\n\n");
+	// fprintf(out, "\t@property\n");
+	// fprintf(out, "\tdef value(self, value):\n");
+	// fprintf(out, "\t\tif not isinstance(value, bytes):\n");
+	// fprintf(out, "\t\t\treturn super(compatstring, cls).from_param(value.encode('utf8'))\n");
+	// fprintf(out, "\t\treturn super(compatstring, cls).from_param(value)\n\n");
+	fprintf(out, "class compatstring(ctypes.c_char_p):\n");
+	fprintf(out, "	@classmethod\n");
+	fprintf(out, "	def from_param(cls, obj):\n");
+	fprintf(out, "		if (obj is not None) and (not isinstance(obj, cls)):\n");
+	fprintf(out, "			if not isinstance(obj, basestring):\n");
+	fprintf(out, "				raise TypeError('parameter must be a string type instance')\n");
+	fprintf(out, "			if not isinstance(obj, unicode):\n");
+	fprintf(out, "				obj = unicode(obj)\n");
+	fprintf(out, "			obj = obj.encode('utf-8')\n");
+	fprintf(out, "		return ctypes.c_char_p.from_param(obj)\n");
+	fprintf(out, "\n");
+	fprintf(out, "	def decode(self):\n");
+	fprintf(out, "		if self.value is None:\n");
+	fprintf(out, "			return None\n");
+	fprintf(out, "		return self.value.decode('utf-8')\n");
+	fprintf(out, "	@property\n");
+	fprintf(out, "	def value(self, c_void_p=ctypes.c_void_p):\n");
+	fprintf(out, "		addr = c_void_p.from_buffer(self).value\n");
+	fprintf(out, "		return \n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -227,7 +264,7 @@ int main(int argc, char* argv[])
 			}
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
-		         (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
+				 (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
 		{
 			fprintf(out, "%s = ", name.c_str());
 			OutputType(out, i.second);
@@ -377,7 +414,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
-	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\").encode('utf-8'))\n");
+	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");
 
 	fclose(out);
 	fclose(enums);

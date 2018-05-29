@@ -23,6 +23,9 @@ import ctypes
 # Binary Ninja components -- additional imports belong in the appropriate class
 from binaryninja import _binaryninjacore as core
 
+# 2-3 compatibility
+from six.moves import range
+
 
 def get_qualified_name(names):
 	"""
@@ -61,7 +64,7 @@ def demangle_ms(arch, mangled_name):
 	outSize = ctypes.c_ulonglong()
 	names = []
 	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
-		for i in xrange(outSize.value):
+		for i in range(outSize.value):
 			names.append(outName[i])
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		return (types.Type(handle), names)
@@ -75,7 +78,7 @@ def demangle_gnu3(arch, mangled_name):
 	outSize = ctypes.c_ulonglong()
 	names = []
 	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
-		for i in xrange(outSize.value):
+		for i in range(outSize.value):
 			names.append(outName[i])
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		if not handle:

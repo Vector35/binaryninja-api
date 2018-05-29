@@ -26,6 +26,9 @@ from binaryninja import _binaryninjacore as core
 from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
 from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
 
+# 2-3 compatibility
+from six.moves import range
+
 
 class SSAVariable(object):
 	def __init__(self, var, version):
@@ -256,7 +259,7 @@ class MediumLevelILInstruction(object):
 				count = ctypes.c_ulonglong()
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					value.append(operand_list[j])
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_list":
@@ -264,7 +267,7 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					value.append(function.Variable.from_identifier(self.function.source_function, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_ssa_list":
@@ -272,7 +275,7 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value // 2):
+				for j in range(count.value // 2):
 					var_id = operand_list[j * 2]
 					var_version = operand_list[(j * 2) + 1]
 					value.append(SSAVariable(function.Variable.from_identifier(self.function.source_function,
@@ -283,7 +286,7 @@ class MediumLevelILInstruction(object):
 				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
 				i += 1
 				value = []
-				for j in xrange(count.value):
+				for j in range(count.value):
 					value.append(MediumLevelILInstruction(func, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			self.operands.append(value)
@@ -317,7 +320,7 @@ class MediumLevelILInstruction(object):
 				self.expr_index, tokens, count):
 				return None
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -363,7 +366,7 @@ class MediumLevelILInstruction(object):
 		count = ctypes.c_ulonglong()
 		deps = core.BNGetAllMediumLevelILBranchDependence(self.function.handle, self.instr_index, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[deps[i].branch] = ILBranchDependence(deps[i].dependence)
 		core.BNFreeILBranchDependenceList(deps)
 		return result
@@ -647,7 +650,7 @@ class MediumLevelILFunction(object):
 		view = None
 		if self.source_function is not None:
 			view = self.source_function.view
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -704,7 +707,7 @@ class MediumLevelILFunction(object):
 		if self.source_function is not None:
 			view = self.source_function.view
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
@@ -775,7 +778,7 @@ class MediumLevelILFunction(object):
 		:rtype: MediumLevelILExpr
 		"""
 		label_list = (ctypes.POINTER(core.BNMediumLevelILLabel) * len(labels))()
-		for i in xrange(len(labels)):
+		for i in range(len(labels)):
 			label_list[i] = labels[i].handle
 		return MediumLevelILExpr(core.BNMediumLevelILAddLabelList(self.handle, label_list, len(labels)))
 
@@ -788,7 +791,7 @@ class MediumLevelILFunction(object):
 		:rtype: MediumLevelILExpr
 		"""
 		operand_list = (ctypes.c_ulonglong * len(operands))()
-		for i in xrange(len(operands)):
+		for i in range(len(operands)):
 			operand_list[i] = operands[i]
 		return MediumLevelILExpr(core.BNMediumLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
@@ -842,7 +845,7 @@ class MediumLevelILFunction(object):
 		var_data.storage = ssa_var.var.storage
 		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -851,7 +854,7 @@ class MediumLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetMediumLevelILSSAMemoryUses(self.handle, version, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -878,7 +881,7 @@ class MediumLevelILFunction(object):
 		var_data.storage = var.storage
 		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -891,7 +894,7 @@ class MediumLevelILFunction(object):
 		var_data.storage = var.storage
 		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -936,7 +939,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		self.il_function = owner
 
 	def __iter__(self):
-		for idx in xrange(self.start, self.end):
+		for idx in range(self.start, self.end):
 			yield self.il_function[idx]
 
 	def __getitem__(self, idx):

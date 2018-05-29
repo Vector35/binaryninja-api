@@ -27,6 +27,10 @@ from binaryninja import _binaryninjacore as core
 from binaryninja import log
 from binaryninja.enums import VariableSourceType
 
+# 2-3 compatibility
+from six.moves import range
+
+
 class CallingConvention(object):
 	from binaryninja import types
 	name = None
@@ -82,7 +86,7 @@ class CallingConvention(object):
 			regs = core.BNGetCallerSavedRegisters(self.handle, count)
 			result = []
 			arch = self.arch
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["caller_saved_regs"] = result
@@ -91,7 +95,7 @@ class CallingConvention(object):
 			regs = core.BNGetIntegerArgumentRegisters(self.handle, count)
 			result = []
 			arch = self.arch
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["int_arg_regs"] = result
@@ -100,7 +104,7 @@ class CallingConvention(object):
 			regs = core.BNGetFloatArgumentRegisters(self.handle, count)
 			result = []
 			arch = self.arch
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["float_arg_regs"] = result
@@ -133,7 +137,7 @@ class CallingConvention(object):
 			regs = core.BNGetImplicitlyDefinedRegisters(self.handle, count)
 			result = []
 			arch = self.arch
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["implicitly_defined_regs"] = result
@@ -158,7 +162,7 @@ class CallingConvention(object):
 			regs = self.__class__.caller_saved_regs
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = self.arch.regs[regs[i]].index
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -173,7 +177,7 @@ class CallingConvention(object):
 			regs = self.__class__.int_arg_regs
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = self.arch.regs[regs[i]].index
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -188,7 +192,7 @@ class CallingConvention(object):
 			regs = self.__class__.float_arg_regs
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = self.arch.regs[regs[i]].index
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -267,7 +271,7 @@ class CallingConvention(object):
 			regs = self.__class__.implicitly_defined_regs
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = self.arch.regs[regs[i]].index
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)

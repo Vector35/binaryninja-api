@@ -23,6 +23,8 @@ import ctypes
 # Binary Ninja components -- additional imports belong in the appropriate class
 from binaryninja import _binaryninjacore as core
 
+# 2-3 compatibility
+from six.moves import range
 
 class RepoPlugin(object):
 	"""
@@ -110,7 +112,7 @@ class RepoPlugin(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		plugintypes = core.BNPluginGetPluginTypes(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			result.append(PluginType(plugintypes[i]))
 		core.BNFreePluginTypes(plugintypes)
 		return result
@@ -182,7 +184,7 @@ class Repository(object):
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			pluginlist.append(RepoPlugin(handle=result[i]))
 		core.BNFreeRepositoryPluginList(result, count.value)
 		del result
@@ -220,7 +222,7 @@ class RepositoryManager(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			result.append(Repository(handle=repos[i]))
 		core.BNFreeRepositoryManagerRepositoriesList(repos)
 		return result

@@ -39,6 +39,7 @@ from binaryninja import metadata
 
 # 2-3 compatibility
 from six import with_metaclass
+from six.moves import range
 
 
 class BinaryDataNotification(object):
@@ -325,7 +326,7 @@ class _BinaryViewTypeMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BinaryViewType(types[i]))
 		core.BNFreeBinaryViewTypeList(types)
 		return result
@@ -335,7 +336,7 @@ class _BinaryViewTypeMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield BinaryViewType(types[i])
 		finally:
 			core.BNFreeBinaryViewTypeList(types)
@@ -371,12 +372,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@property
 	def name(self):
 		"""BinaryView name (read-only)"""
-		return core.BNGetBinaryViewTypeName(self.handle)
+		return core.BNGetBinaryViewTypeName(self.handle).decode('utf8')
 
 	@property
 	def long_name(self):
 		"""BinaryView long name (read-only)"""
-		return core.BNGetBinaryViewTypeLongName(self.handle)
+		return core.BNGetBinaryViewTypeLongName(self.handle).decode('utf8')
 
 	def __repr__(self):
 		return "<view type: '%s'>" % self.name
@@ -780,7 +781,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i]))
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
@@ -899,7 +900,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
@@ -923,7 +924,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbols(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			sym = types.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
 			result[sym.raw_name] = sym
 		core.BNFreeSymbolList(syms, count.value)
@@ -940,7 +941,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		types = core.BNGetBinaryViewTypesForData(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BinaryViewType(types[i]))
 		core.BNFreeBinaryViewTypeList(types)
 		return result
@@ -990,7 +991,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		var_list = core.BNGetDataVariables(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = var_list[i].address
 			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), platform = self.platform, confidence = var_list[i].typeConfidence)
 			auto_discovered = var_list[i].autoDiscovered
@@ -1004,7 +1005,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
 			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
 		core.BNFreeTypeList(type_list, count.value)
@@ -1016,7 +1017,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		segment_list = core.BNGetSegments(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Segment(segment_list[i].start, segment_list[i].length,
 				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags, segment_list[i].autoDefined))
 		core.BNFreeSegmentList(segment_list)
@@ -1028,7 +1029,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSections(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
@@ -1042,7 +1043,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(AddressRange(range_list[i].start, range_list[i].end))
 		core.BNFreeAddressRanges(range_list)
 		return result
@@ -2184,7 +2185,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
@@ -2206,7 +2207,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -2222,7 +2223,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksStartingAtAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -2253,7 +2254,7 @@ class BinaryView(object):
 		else:
 			refs = core.BNGetCodeReferencesInRange(self.handle, addr, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if refs[i].func:
 				func = binaryninja.function.Function(self, core.BNNewFunctionReference(refs[i].func))
 			else:
@@ -2319,7 +2320,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2344,7 +2345,7 @@ class BinaryView(object):
 		else:
 			syms = core.BNGetSymbolsInRange(self.handle, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2373,7 +2374,7 @@ class BinaryView(object):
 		else:
 			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2772,7 +2773,7 @@ class BinaryView(object):
 				length = self.end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(StringReference(self, StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
@@ -3004,7 +3005,7 @@ class BinaryView(object):
 		lines = api(self.handle, pos_obj, settings, count)
 
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			func = None
 			block = None
 			if lines[i].function:
@@ -3013,7 +3014,7 @@ class BinaryView(object):
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
 			addr = lines[i].contents.addr
 			tokens = []
-			for j in xrange(0, lines[i].contents.count):
+			for j in range(0, lines[i].contents.count):
 				token_type = InstructionTextTokenType(lines[i].contents.tokens[j].type)
 				text = lines[i].contents.tokens[j].text
 				value = lines[i].contents.tokens[j].value
@@ -3456,7 +3457,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSectionsAt(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
@@ -3476,11 +3477,11 @@ class BinaryView(object):
 
 	def get_unique_section_names(self, name_list):
 		incoming_names = (ctypes.c_char_p * len(name_list))()
-		for i in xrange(0, len(name_list)):
+		for i in range(0, len(name_list)):
 			incoming_names[i] = name_list[i]
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		result = []
-		for i in xrange(0, len(name_list)):
+		for i in range(0, len(name_list)):
 			result.append(str(outgoing_names[i]))
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result

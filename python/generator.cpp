@@ -122,8 +122,8 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			if (isReturnType)
 				fprintf(out, "ctypes.POINTER(ctypes.c_byte)");
 			else {
-				//fprintf(out, "compatstring");
-				fprintf(out, "ctypes.c_char_p");
+				fprintf(out, "compatstring");
+				// fprintf(out, "ctypes.c_char_p");
 			}
 			break;
 		}

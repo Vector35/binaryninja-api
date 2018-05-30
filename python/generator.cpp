@@ -190,7 +190,10 @@ int main(int argc, char* argv[])
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
 	fprintf(out, "_base_path = None\n");
-	fprintf(out, "ctypes.set_conversion_mode('utf-8', 'strict')\n");
+	
+	// There's deffinately a reason this was here and I'm going to regret this later
+	// fprintf(out, "ctypes.set_conversion_mode('utf-8', 'strict')\n");
+	
 	fprintf(out, "if platform.system() == \"Darwin\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
@@ -412,6 +415,17 @@ int main(int argc, char* argv[])
 	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
 	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
 	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
+
+	// The following method is addapted from python/enum/__init__.py, lines 25-36
+	fprintf(out, "try:\n");
+	fprintf(out, "\tbasestring\n");
+	fprintf(out, "\tunicode\n");
+	fprintf(out, "except NameError:\n");
+	fprintf(out, "\t# In Python 2 basestring is the ancestor of both str and unicode\n");
+	fprintf(out, "\t# in Python 3 it's just str, but was missing in 3.1\n");
+	fprintf(out, "\t# In Python 3 unicode no longer exists (it's just str)\n");
+	fprintf(out, "\tbasestring = str\n");
+	fprintf(out, "\tunicode = str\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
 	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");

@@ -722,7 +722,6 @@ class LowLevelILFunction(object):
 		LLFC_NO                 !overflow  No overflow
 		======================= ========== ===============================
 	"""
-	from binaryninja import mediumlevelil
 	def __init__(self, arch, handle = None, source_func = None):
 		self.arch = arch
 		self.source_function = source_func

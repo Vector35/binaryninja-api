@@ -372,12 +372,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@property
 	def name(self):
 		"""BinaryView name (read-only)"""
-		return core.BNGetBinaryViewTypeName(self.handle).decode('utf8')
+		return core.BNGetBinaryViewTypeName(self.handle)
 
 	@property
 	def long_name(self):
 		"""BinaryView long name (read-only)"""
-		return core.BNGetBinaryViewTypeLongName(self.handle).decode('utf8')
+		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
 		return "<view type: '%s'>" % self.name
@@ -422,6 +422,9 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 					bv = view.get_view_of_type(available.name)
 				else:
 					bv = cls[available.name].open(filename)
+
+				if bv is None:
+					raise Exception("Unknown Architecture/Architecture Not Found (check plugins folder)")
 
 				if update_analysis:
 					bv.update_analysis_and_wait()
@@ -1740,7 +1743,7 @@ class BinaryView(object):
 			\'\\xcf\\xfa\\xed\\xfe\'
 		"""
 		buf = databuffer.DataBuffer(handle=core.BNReadViewBuffer(self.handle, addr, length))
-		return str(buf)
+		return bytes(buf)
 
 	def write(self, addr, data):
 		"""

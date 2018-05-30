@@ -43,7 +43,7 @@ class Metadata(object):
 			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, str):
 			if raw:
-				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
+				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value.encode('charmap'))
 				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 			else:
 				self.handle = core.BNCreateMetadataStringData(value)
@@ -147,7 +147,10 @@ class Metadata(object):
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
 				for i in range(result.contents.size):
-					yield result.contents.keys[i]
+					if type(result.contents.keys[i]) is bytes:
+						yield str(result.contents.keys[i].decode('charmap'))
+					else:
+						yield result.contents.keys[i]
 			finally:
 				core.BNFreeMetadataValueStore(result)
 		else:
@@ -172,7 +175,7 @@ class Metadata(object):
 
 	def __str__(self):
 		if self.is_string:
-			return core.BNMetadataGetString(self.handle)
+			return str(core.BNMetadataGetString(self.handle))
 		if self.is_raw:
 			length = ctypes.c_ulonglong()
 			length.value = 0

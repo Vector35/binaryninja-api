@@ -39,7 +39,7 @@ class QualifiedName(object):
 		elif isinstance(name, QualifiedName):
 			self.name = name.name
 		else:
-			self.name = name
+			self.name = [i.decode('utf-8') for i in name]
 
 	def __str__(self):
 		return "::".join(self.name)

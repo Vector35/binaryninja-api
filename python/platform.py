@@ -107,7 +107,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		else:
 			self.handle = handle
 			self.__dict__["name"] = core.BNGetPlatformName(self.handle)
-			self.arch = binaryninja.architecture.CoreArchitecture(core.BNGetPlatformArchitecture(self.handle))
+			self.arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(self.handle))
 
 	def __del__(self):
 		core.BNFreePlatform(self.handle)

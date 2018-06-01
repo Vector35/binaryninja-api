@@ -680,8 +680,10 @@ namespace BinaryNinja
 		void erase(std::vector<std::string>::iterator i);
 		void clear();
 		void push_back(const std::string& name);
+		// Returns count of names
 		size_t size() const;
-
+		// Returns size of output string
+		size_t StringSize() const;
 		std::string GetString() const;
 
 		BNQualifiedName GetAPIObject() const;
@@ -866,6 +868,7 @@ namespace BinaryNinja
 		static void FunctionAddedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void FunctionUpdatedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
+		static void FunctionUpdateRequestedCallback(void* ctxt, BNBinaryView* data, BNFunction* func);
 		static void DataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
@@ -886,6 +889,7 @@ namespace BinaryNinja
 		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
+		virtual void OnAnalysisFunctionUpdateRequested(BinaryView* view, Function* func) { (void)view; (void)func; }
 		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
@@ -982,6 +986,7 @@ namespace BinaryNinja
 	struct DisassemblyTextLine
 	{
 		uint64_t addr;
+		size_t instrIndex;
 		std::vector<InstructionTextToken> tokens;
 	};
 
@@ -1344,6 +1349,9 @@ namespace BinaryNinja
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
+
+		uint64_t GetMaxFunctionSizeForAnalysis();
+		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 	};
 
 	class BinaryData: public BinaryView
@@ -1583,6 +1591,7 @@ namespace BinaryNinja
 	};
 
 	class LowLevelILFunction;
+	class MediumLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
 
@@ -2247,6 +2256,12 @@ namespace BinaryNinja
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 
 		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
+
+		bool IsILBlock() const;
+		bool IsLowLevelILBlock() const;
+		bool IsMediumLevelILBlock() const;
+		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
+		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
 	};
 
 	struct VariableNameAndType
@@ -2475,6 +2490,11 @@ namespace BinaryNinja
 
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
+
+		bool IsFunctionTooLarge();
+		bool IsAnalysisSkipped();
+		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
+		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -2550,6 +2570,7 @@ namespace BinaryNinja
 		void Abort();
 
 		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
+		bool HasBlocks() const;
 
 		int GetWidth() const;
 		int GetHeight() const;
@@ -2557,6 +2578,12 @@ namespace BinaryNinja
 
 		bool IsOptionSet(BNDisassemblyOption option) const;
 		void SetOption(BNDisassemblyOption option, bool state = true);
+
+		bool IsILGraph() const;
+		bool IsLowLevelILGraph() const;
+		bool IsMediumLevelILGraph() const;
+		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
+		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel
@@ -2754,10 +2781,14 @@ namespace BinaryNinja
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
+			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
@@ -3073,6 +3104,10 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<Variable>& params,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
@@ -3081,6 +3116,11 @@ namespace BinaryNinja
 		ExprId SyscallSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output,
+			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
 			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
@@ -3203,6 +3243,7 @@ namespace BinaryNinja
 		size_t GetSSAMemoryDefinition(size_t version) const;
 		std::set<size_t> GetSSAVarUses(const SSAVariable& var) const;
 		std::set<size_t> GetSSAMemoryUses(size_t version) const;
+		bool IsSSAVarLive(const SSAVariable& var) const;
 
 		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
 		std::set<size_t> GetVariableUses(const Variable& var) const;
@@ -3299,7 +3340,10 @@ namespace BinaryNinja
 	{
 		Ref<BinaryView> view;
 		uint64_t address, length;
+		size_t instrIndex;
 		Ref<Function> function;
+		Ref<LowLevelILFunction> lowLevelILFunction;
+		Ref<MediumLevelILFunction> mediumLevelILFunction;
 
 		PluginCommandContext();
 	};
@@ -3332,15 +3376,55 @@ namespace BinaryNinja
 			std::function<bool(BinaryView*, Function*)> isValid;
 		};
 
+		struct RegisteredLowLevelILFunctionCommand
+		{
+			std::function<void(BinaryView*, LowLevelILFunction*)> action;
+			std::function<bool(BinaryView*, LowLevelILFunction*)> isValid;
+		};
+
+		struct RegisteredLowLevelILInstructionCommand
+		{
+			std::function<void(BinaryView*, const LowLevelILInstruction&)> action;
+			std::function<bool(BinaryView*, const LowLevelILInstruction&)> isValid;
+		};
+
+		struct RegisteredMediumLevelILFunctionCommand
+		{
+			std::function<void(BinaryView*, MediumLevelILFunction*)> action;
+			std::function<bool(BinaryView*, MediumLevelILFunction*)> isValid;
+		};
+
+		struct RegisteredMediumLevelILInstructionCommand
+		{
+			std::function<void(BinaryView*, const MediumLevelILInstruction&)> action;
+			std::function<bool(BinaryView*, const MediumLevelILInstruction&)> isValid;
+		};
+
 		static void DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view);
 		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		static void FunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
+		static void LowLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNLowLevelILFunction* func);
+		static void LowLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNLowLevelILFunction* func, size_t instr);
+		static void MediumLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNMediumLevelILFunction* func);
+		static void MediumLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNMediumLevelILFunction* func, size_t instr);
 
 		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
 		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static bool RangePluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		static bool FunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
+		static bool LowLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNLowLevelILFunction* func);
+		static bool LowLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNLowLevelILFunction* func, size_t instr);
+		static bool MediumLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNMediumLevelILFunction* func);
+		static bool MediumLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNMediumLevelILFunction* func, size_t instr);
 
 	public:
 		PluginCommand(const BNPluginCommand& cmd);
@@ -3350,25 +3434,45 @@ namespace BinaryNinja
 		PluginCommand& operator=(const PluginCommand& cmd);
 
 		static void Register(const std::string& name, const std::string& description,
-		                     const std::function<void(BinaryView* view)>& action);
+			const std::function<void(BinaryView* view)>& action);
 		static void Register(const std::string& name, const std::string& description,
-		                     const std::function<void(BinaryView* view)>& action,
-		                     const std::function<bool(BinaryView* view)>& isValid);
+			const std::function<void(BinaryView* view)>& action,
+			const std::function<bool(BinaryView* view)>& isValid);
 		static void RegisterForAddress(const std::string& name, const std::string& description,
-		                               const std::function<void(BinaryView* view, uint64_t addr)>& action);
+			const std::function<void(BinaryView* view, uint64_t addr)>& action);
 		static void RegisterForAddress(const std::string& name, const std::string& description,
-		                               const std::function<void(BinaryView* view, uint64_t addr)>& action,
-		                               const std::function<bool(BinaryView* view, uint64_t addr)>& isValid);
+			const std::function<void(BinaryView* view, uint64_t addr)>& action,
+			const std::function<bool(BinaryView* view, uint64_t addr)>& isValid);
 		static void RegisterForRange(const std::string& name, const std::string& description,
-		                             const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action);
+			const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action);
 		static void RegisterForRange(const std::string& name, const std::string& description,
-		                             const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action,
-		                             const std::function<bool(BinaryView* view, uint64_t addr, uint64_t len)>& isValid);
+			const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action,
+			const std::function<bool(BinaryView* view, uint64_t addr, uint64_t len)>& isValid);
 		static void RegisterForFunction(const std::string& name, const std::string& description,
-		                                const std::function<void(BinaryView* view, Function* func)>& action);
+			const std::function<void(BinaryView* view, Function* func)>& action);
 		static void RegisterForFunction(const std::string& name, const std::string& description,
-		                                const std::function<void(BinaryView* view, Function* func)>& action,
-		                                const std::function<bool(BinaryView* view, Function* func)>& isValid);
+			const std::function<void(BinaryView* view, Function* func)>& action,
+			const std::function<bool(BinaryView* view, Function* func)>& isValid);
+		static void RegisterForLowLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action);
+		static void RegisterForLowLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action,
+			const std::function<bool(BinaryView* view, LowLevelILFunction* func)>& isValid);
+		static void RegisterForLowLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action);
+		static void RegisterForLowLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action,
+			const std::function<bool(BinaryView* view, const LowLevelILInstruction& instr)>& isValid);
+		static void RegisterForMediumLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action);
+		static void RegisterForMediumLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action,
+			const std::function<bool(BinaryView* view, MediumLevelILFunction* func)>& isValid);
+		static void RegisterForMediumLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action);
+		static void RegisterForMediumLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action,
+			const std::function<bool(BinaryView* view, const MediumLevelILInstruction& instr)>& isValid);
 
 		static std::vector<PluginCommand> GetList();
 		static std::vector<PluginCommand> GetValidList(const PluginCommandContext& ctxt);

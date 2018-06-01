@@ -131,6 +131,12 @@ vector<Ref<FunctionGraphBlock>> FunctionGraph::GetBlocks()
 }
 
 
+bool FunctionGraph::HasBlocks() const
+{
+	return BNFunctionGraphHasBlocks(m_graph);
+}
+
+
 int FunctionGraph::GetWidth() const
 {
 	return BNGetFunctionGraphWidth(m_graph);
@@ -179,4 +185,40 @@ bool FunctionGraph::IsOptionSet(BNDisassemblyOption option) const
 void FunctionGraph::SetOption(BNDisassemblyOption option, bool state)
 {
 	BNSetFunctionGraphOption(m_graph, option, state);
+}
+
+
+bool FunctionGraph::IsILGraph() const
+{
+	return BNIsILFunctionGraph(m_graph);
+}
+
+
+bool FunctionGraph::IsLowLevelILGraph() const
+{
+	return BNIsLowLevelILFunctionGraph(m_graph);
+}
+
+
+bool FunctionGraph::IsMediumLevelILGraph() const
+{
+	return BNIsMediumLevelILFunctionGraph(m_graph);
+}
+
+
+Ref<LowLevelILFunction> FunctionGraph::GetLowLevelILFunction() const
+{
+	BNLowLevelILFunction* func = BNGetFunctionGraphLowLevelILFunction(m_graph);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
+Ref<MediumLevelILFunction> FunctionGraph::GetMediumLevelILFunction() const
+{
+	BNMediumLevelILFunction* func = BNGetFunctionGraphMediumLevelILFunction(m_graph);
+	if (!func)
+		return nullptr;
+	return new MediumLevelILFunction(func);
 }

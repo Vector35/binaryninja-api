@@ -556,6 +556,8 @@ class PythonScriptingInstance(ScriptingInstance):
 						elif self.locals["current_address"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
 								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+						if self.active_view is not None:
+							self.active_view.update_analysis()
 					except:
 						traceback.print_exc()
 					finally:
@@ -648,6 +650,7 @@ original_stdin = sys.stdin
 original_stdout = sys.stdout
 original_stderr = sys.stderr
 
-sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
-sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
-sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)
+def redirect_stdio():
+	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
+	sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
+	sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

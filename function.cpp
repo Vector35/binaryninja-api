@@ -1337,6 +1337,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
 		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
@@ -1356,6 +1357,30 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
+}
+
+
+bool Function::IsFunctionTooLarge()
+{
+	return BNIsFunctionTooLarge(m_object);
+}
+
+
+bool Function::IsAnalysisSkipped()
+{
+	return BNIsFunctionAnalysisSkipped(m_object);
+}
+
+
+BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
+{
+	return BNGetFunctionAnalysisSkipOverride(m_object);
+}
+
+
+void Function::SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip)
+{
+	BNSetFunctionAnalysisSkipOverride(m_object, skip);
 }
 
 

@@ -78,6 +78,15 @@ void BinaryDataNotification::FunctionUpdatedCallback(void* ctxt, BNBinaryView* o
 }
 
 
+void BinaryDataNotification::FunctionUpdateRequestedCallback(void* ctxt, BNBinaryView* object, BNFunction* func)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
+	notify->OnAnalysisFunctionUpdateRequested(view, funcObj);
+}
+
+
 void BinaryDataNotification::DataVariableAddedCallback(void* ctxt, BNBinaryView* object, BNDataVariable* var)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -148,6 +157,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.functionAdded = FunctionAddedCallback;
 	m_callbacks.functionRemoved = FunctionRemovedCallback;
 	m_callbacks.functionUpdated = FunctionUpdatedCallback;
+	m_callbacks.functionUpdateRequested = FunctionUpdateRequestedCallback;
 	m_callbacks.dataVariableAdded = DataVariableAddedCallback;
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
@@ -574,6 +584,9 @@ bool BinaryView::IsBackedByDatabase() const
 
 bool BinaryView::CreateDatabase(const string& path)
 {
+	auto parent = GetParentView();
+	if (parent)
+		return parent->CreateDatabase(path);
 	return m_file->CreateDatabase(path, this);
 }
 
@@ -581,6 +594,9 @@ bool BinaryView::CreateDatabase(const string& path)
 bool BinaryView::CreateDatabase(const string& path,
 	const function<void(size_t progress, size_t total)>& progressCallback)
 {
+	auto parent = GetParentView();
+	if (parent)
+		return parent->CreateDatabase(path);
 	return m_file->CreateDatabase(path, this, progressCallback);
 }
 
@@ -1443,6 +1459,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
@@ -1491,6 +1508,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
+		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
@@ -1948,6 +1966,19 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
 }
+
+
+uint64_t BinaryView::GetMaxFunctionSizeForAnalysis()
+{
+	return BNGetMaxFunctionSizeForAnalysis(m_object);
+}
+
+
+void BinaryView::SetMaxFunctionSizeForAnalysis(uint64_t size)
+{
+	BNSetMaxFunctionSizeForAnalysis(m_object, size);
+}
+
 
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {

@@ -332,6 +332,7 @@ extern "C"
 		LLIL_JUMP_TO,
 		LLIL_CALL,
 		LLIL_CALL_STACK_ADJUST,
+		LLIL_TAILCALL,
 		LLIL_RET,
 		LLIL_NORET,
 		LLIL_IF,
@@ -403,6 +404,7 @@ extern "C"
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
+		LLIL_TAILCALL_SSA,
 		LLIL_CALL_PARAM, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA instructions
 		LLIL_CALL_STACK_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
@@ -847,8 +849,8 @@ extern "C"
 		MLIL_JUMP_TO,
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
-		MLIL_CALL_PARAM, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
+		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_CALL_PARAM, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_RET, // Not valid in SSA form (see MLIL_RET_SSA)
 		MLIL_NORET,
 		MLIL_IF,
@@ -868,6 +870,8 @@ extern "C"
 		MLIL_ADD_OVERFLOW,
 		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
 		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
+		MLIL_TAILCALL, // Not valid in SSA form (see MLIL_TAILCALL_SSA)
+		MLIL_TAILCALL_UNTYPED, // Not valid in SSA form (see MLIL_TAILCALL_UNTYPED_SSA)
 		MLIL_INTRINSIC, // Not valid in SSA form (see MLIL_INTRINSIC_SSA)
 		MLIL_FREE_VAR_SLOT, // Not valid in SSA from (see MLIL_FREE_VAR_SLOT_SSA)
 		MLIL_BP,
@@ -915,8 +919,10 @@ extern "C"
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
 		MLIL_SYSCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA family instructions
-		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA family instructions
+		MLIL_TAILCALL_SSA,
+		MLIL_TAILCALL_UNTYPED_SSA,
+		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
@@ -989,6 +995,7 @@ extern "C"
 		void (*functionAdded)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionRemoved)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*functionUpdated)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		void (*functionUpdateRequested)(void* ctxt, BNBinaryView* view, BNFunction* func);
 		void (*dataVariableAdded)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataVariableRemoved)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
@@ -1204,6 +1211,7 @@ extern "C"
 	struct BNDisassemblyTextLine
 	{
 		uint64_t addr;
+		size_t instrIndex;
 		BNInstructionTextToken* tokens;
 		size_t count;
 	};
@@ -1364,7 +1372,11 @@ extern "C"
 		DefaultPluginCommand,
 		AddressPluginCommand,
 		RangePluginCommand,
-		FunctionPluginCommand
+		FunctionPluginCommand,
+		LowLevelILFunctionPluginCommand,
+		LowLevelILInstructionPluginCommand,
+		MediumLevelILFunctionPluginCommand,
+		MediumLevelILInstructionPluginCommand
 	};
 
 	struct BNPluginCommand
@@ -1378,11 +1390,19 @@ extern "C"
 		void (*addressCommand)(void* ctxt, BNBinaryView* view, uint64_t addr);
 		void (*rangeCommand)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		void (*functionCommand)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		void (*lowLevelILFunctionCommand)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func);
+		void (*lowLevelILInstructionCommand)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
+		void (*mediumLevelILFunctionCommand)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
+		void (*mediumLevelILInstructionCommand)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
 
 		bool (*defaultIsValid)(void* ctxt, BNBinaryView* view);
 		bool (*addressIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr);
 		bool (*rangeIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		bool (*functionIsValid)(void* ctxt, BNBinaryView* view, BNFunction* func);
+		bool (*lowLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func);
+		bool (*lowLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
+		bool (*mediumLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
+		bool (*mediumLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
 	};
 
 	struct BNCustomCallingConvention
@@ -1737,6 +1757,13 @@ extern "C"
 		uint32_t regStack;
 		int32_t adjustment;
 		uint8_t confidence;
+	};
+
+	enum BNFunctionAnalysisSkipOverride
+	{
+		DefaultFunctionAnalysisSkip,
+		NeverSkipFunctionAnalysis,
+		AlwaysSkipFunctionAnalysis
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2339,6 +2366,11 @@ extern "C"
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockDominanceFrontier(BNBasicBlock* block, size_t* count);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockIteratedDominanceFrontier(BNBasicBlock** blocks,
 		size_t incomingCount, size_t* outputCount);
+	BINARYNINJACOREAPI bool BNIsILBasicBlock(BNBasicBlock* block);
+	BINARYNINJACOREAPI bool BNIsLowLevelILBasicBlock(BNBasicBlock* block);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILBasicBlock(BNBasicBlock* block);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetBasicBlockLowLevelILFunction(BNBasicBlock* block);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetBasicBlockMediumLevelILFunction(BNBasicBlock* block);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);
@@ -2420,6 +2452,14 @@ extern "C"
 		uint64_t instrAddr, uint64_t value, size_t operand);
 	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
 		uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
+
+	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
+	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);
+	BINARYNINJACOREAPI BNFunctionAnalysisSkipOverride BNGetFunctionAnalysisSkipOverride(BNFunction* func);
+	BINARYNINJACOREAPI void BNSetFunctionAnalysisSkipOverride(BNFunction* func, BNFunctionAnalysisSkipOverride skip);
+
+	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
 
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
 		void (*callback)(void* ctxt));
@@ -2531,11 +2571,17 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetFunctionGraphCompleteCallback(BNFunctionGraph* graph, void* ctxt, void (*func)(void* ctxt));
 	BINARYNINJACOREAPI void BNAbortFunctionGraph(BNFunctionGraph* graph);
 	BINARYNINJACOREAPI BNFunctionGraphType BNGetFunctionGraphType(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI bool BNIsILFunctionGraph(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI bool BNIsLowLevelILFunctionGraph(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILFunctionGraph(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionGraphLowLevelILFunction(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionGraphMediumLevelILFunction(BNFunctionGraph* graph);
 
 	BINARYNINJACOREAPI BNFunctionGraphBlock** BNGetFunctionGraphBlocks(BNFunctionGraph* graph, size_t* count);
 	BINARYNINJACOREAPI BNFunctionGraphBlock** BNGetFunctionGraphBlocksInRegion(
 		BNFunctionGraph* graph, int left, int top, int right, int bottom, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockList(BNFunctionGraphBlock** blocks, size_t count);
+	BINARYNINJACOREAPI bool BNFunctionGraphHasBlocks(BNFunctionGraph* graph);
 
 	BINARYNINJACOREAPI int BNGetFunctionGraphWidth(BNFunctionGraph* graph);
 	BINARYNINJACOREAPI int BNGetFunctionGraphHeight(BNFunctionGraph* graph);
@@ -2790,6 +2836,8 @@ extern "C"
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILSSAMemoryUses(BNMediumLevelILFunction* func,
 		size_t version, size_t* count);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLive(BNMediumLevelILFunction* func,
+		const BNVariable* var, size_t version);
 
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t* count);
@@ -3000,29 +3048,45 @@ extern "C"
 
 	// Plugin commands
 	BINARYNINJACOREAPI void BNRegisterPluginCommand(const char* name, const char* description,
-	                                                void (*action)(void* ctxt, BNBinaryView* view),
-	                                                bool (*isValid)(void* ctxt, BNBinaryView* view), void* context);
+		void (*action)(void* ctxt, BNBinaryView* view), bool (*isValid)(void* ctxt, BNBinaryView* view), void* context);
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForAddress(const char* name, const char* description,
-	                                                          void (*action)(void* ctxt, BNBinaryView* view, uint64_t addr),
-	                                                          bool (*isValid)(void* ctxt, BNBinaryView* view, uint64_t addr),
-	                                                          void* context);
+		void (*action)(void* ctxt, BNBinaryView* view, uint64_t addr),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, uint64_t addr), void* context);
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForRange(const char* name, const char* description,
-	                                                        void (*action)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len),
-	                                                        bool (*isValid)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len),
-	                                                        void* context);
+		void (*action)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len), void* context);
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForFunction(const char* name, const char* description,
-	                                                           void (*action)(void* ctxt, BNBinaryView* view, BNFunction* func),
-	                                                           bool (*isValid)(void* ctxt, BNBinaryView* view, BNFunction* func),
-	                                                           void* context);
+		void (*action)(void* ctxt, BNBinaryView* view, BNFunction* func),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNFunction* func), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForLowLevelILFunction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForLowLevelILInstruction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForMediumLevelILFunction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForMediumLevelILInstruction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr), void* context);
 
 	BINARYNINJACOREAPI BNPluginCommand* BNGetAllPluginCommands(size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommands(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForAddress(BNBinaryView* view, uint64_t addr,
-	                                                                       size_t* count);
+		size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForRange(BNBinaryView* view, uint64_t addr,
-	                                                                     uint64_t len, size_t* count);
+		uint64_t len, size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForFunction(BNBinaryView* view, BNFunction* func,
-	                                                                        size_t* count);
+		size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForLowLevelILFunction(BNBinaryView* view,
+		BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForLowLevelILInstruction(BNBinaryView* view,
+		BNLowLevelILFunction* func, size_t instr, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForMediumLevelILFunction(BNBinaryView* view,
+		BNMediumLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForMediumLevelILInstruction(BNBinaryView* view,
+		BNMediumLevelILFunction* func, size_t instr, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginCommandList(BNPluginCommand* commands);
 
 	// Calling conventions
@@ -3308,6 +3372,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPathExists(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathDirectory(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
+	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);
 
 	// Settings APIs
 	BINARYNINJACOREAPI bool BNSettingGetBool(const char* settingGroup, const char* name, bool defaultValue);

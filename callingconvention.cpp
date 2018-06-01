@@ -195,8 +195,10 @@ void CallingConvention::GetIncomingVariableForParameterVariableCallback(void* ct
 	BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	*result = cc->GetIncomingVariableForParameterVariable(*var,
-		func ? new Function(BNNewFunctionReference(func)) : nullptr);
+	Ref<Function> funcObj;
+	if (func)
+		funcObj = new Function(BNNewFunctionReference(func));
+	*result = cc->GetIncomingVariableForParameterVariable(*var, funcObj);
 }
 
 
@@ -204,8 +206,10 @@ void CallingConvention::GetParameterVariableForIncomingVariableCallback(void* ct
 	BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	*result = cc->GetParameterVariableForIncomingVariable(*var,
-		func ? new Function(BNNewFunctionReference(func)) : nullptr);
+	Ref<Function> funcObj;
+	if (func)
+		funcObj = new Function(BNNewFunctionReference(func));
+	*result = cc->GetParameterVariableForIncomingVariable(*var, funcObj);
 }
 
 

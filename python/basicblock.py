@@ -101,7 +101,7 @@ class BasicBlock(object):
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = binaryninja.architecture.CoreArchitecture(arch)
+		self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
 	@property
@@ -257,6 +257,21 @@ class BasicBlock(object):
 	def highlight(self, value):
 		self.set_user_highlight(value)
 
+	@property
+	def is_il(self):
+		"""Whether the basic block contains IL"""
+		return core.BNIsILBasicBlock(self.handle)
+
+	@property
+	def is_low_level_il(self):
+		"""Whether the basic block contains Low Level IL"""
+		return core.BNIsLowLevelILBasicBlock(self.handle)
+
+	@property
+	def is_medium_level_il(self):
+		"""Whether the basic block contains Medium Level IL"""
+		return core.BNIsMediumLevelILBasicBlock(self.handle)
+
 	@classmethod
 	def get_iterated_dominance_frontier(self, blocks):
 		if len(blocks) == 0:
@@ -294,7 +309,7 @@ class BasicBlock(object):
 
 		idx = start
 		while idx < end:
-			data = self.view.read(idx, 16)
+			data = self.view.read(idx, self.arch.max_instr_length)
 			inst_info = self.arch.get_instruction_info(data, idx)
 			inst_text = self.arch.get_instruction_text(data, idx)
 
@@ -323,6 +338,10 @@ class BasicBlock(object):
 		result = []
 		for i in range(0, count.value):
 			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
+				il_instr = self.il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
 			tokens = []
 			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -334,7 +353,7 @@ class BasicBlock(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(binaryninja.function.DisassemblyTextLine(addr, tokens))
+			result.append(binaryninja.function.DisassemblyTextLine(addr, tokens, il_instr))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 

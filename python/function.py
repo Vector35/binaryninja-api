@@ -26,13 +26,14 @@ import ctypes
 # Binary Ninja components -- additional imports belong in the appropriate class
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
-	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
-	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType)
 from binaryninja import associateddatastore #required in the main scope due to being an argument for _FunctionAssociatedDataStore
 from binaryninja import types
 from binaryninja import highlight
 from binaryninja import log
+from binaryninja.enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
+	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
+	FunctionAnalysisSkipOverride)
 
 # 2-3 compatibility
 from six.moves import range
@@ -417,7 +418,7 @@ class Function(object):
 			arch = core.BNGetFunctionArchitecture(self.handle)
 			if arch is None:
 				return None
-			self._arch = binaryninja.architecture.CoreArchitecture(arch)
+			self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 			return self._arch
 
 	@property
@@ -555,7 +556,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranches(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -814,6 +815,32 @@ class Function(object):
 		for block in self.mlil_basic_blocks:
 			for i in block:
 				yield i
+
+	@property
+	def too_large(self):
+		"""Whether the function is too large to automatically perform analysis (read-only)"""
+		return core.BNIsFunctionTooLarge(self.handle)
+
+	@property
+	def analysis_skipped(self):
+		"""Whether automatic analysis was skipped for this function"""
+		return core.BNIsFunctionAnalysisSkipped(self.handle)
+
+	@analysis_skipped.setter
+	def analysis_skipped(self, skip):
+		if skip:
+			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.AlwaysSkipFunctionAnalysis)
+		else:
+			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.NeverSkipFunctionAnalysis)
+
+	@property
+	def analysis_skip_override(self):
+		"""Override for skipping of automatic analysis"""
+		return FunctionAnalysisSkipOverride(core.BNGetFunctionAnalysisSkipOverride(self.handle))
+
+	@analysis_skip_override.setter
+	def analysis_skip_override(self, override):
+		core.BNSetFunctionAnalysisSkipOverride(self.handle, override)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -1113,7 +1140,7 @@ class Function(object):
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.Architecture(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1569,9 +1596,10 @@ class AdvancedFunctionAnalysisDataRequestor(object):
 
 
 class DisassemblyTextLine(object):
-	def __init__(self, addr, tokens):
+	def __init__(self, addr, tokens, il_instr = None):
 		self.address = addr
 		self.tokens = tokens
+		self.il_instruction = il_instr
 
 	def __str__(self):
 		result = ""
@@ -1596,8 +1624,9 @@ class FunctionGraphEdge(object):
 
 
 class FunctionGraphBlock(object):
-	def __init__(self, handle):
+	def __init__(self, handle, graph):
 		self.handle = handle
+		self.graph = graph
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
@@ -1616,13 +1645,22 @@ class FunctionGraphBlock(object):
 	def basic_block(self):
 		"""Basic block associated with this part of the function graph (read-only)"""
 		block = core.BNGetFunctionGraphBasicBlock(self.handle)
-		func = core.BNGetBasicBlockFunction(block)
-		if func is None:
+		func_handle = core.BNGetBasicBlockFunction(block)
+		if func_handle is None:
 			core.BNFreeBasicBlock(block)
-			block = None
+			return None
+
+		view = binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
+		func = Function(view, func_handle)
+
+		if core.BNIsLowLevelILBasicBlock(block):
+			block = binaryninja.lowlevelil.LowLevelILBasicBlock(view, block,
+				binaryninja.lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func))
+		elif core.BNIsMediumLevelILBasicBlock(block):
+			block = binaryninja.mediumlevelil.MediumLevelILBasicBlock(view, block,
+				binaryninja.mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func))
 		else:
-			block = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), block)
-			core.BNFreeFunction(func)
+			block = binaryninja.basicblock.BasicBlock(view, block)
 		return block
 
 	@property
@@ -1631,7 +1669,7 @@ class FunctionGraphBlock(object):
 		arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		return binaryninja.architecture.CoreArchitecture(arch)
+		return binaryninja.architecture.CoreArchitecture._from_cache(arch)
 
 	@property
 	def start(self):
@@ -1668,9 +1706,14 @@ class FunctionGraphBlock(object):
 		"""Function graph block list of lines (read-only)"""
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		block = self.basic_block
 		result = []
 		for i in range(0, count.value):
 			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
+				il_instr = block.il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
 			tokens = []
 			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -1682,7 +1725,7 @@ class FunctionGraphBlock(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(DisassemblyTextLine(addr, tokens))
+			result.append(DisassemblyTextLine(addr, tokens, il_instr))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
@@ -1727,9 +1770,14 @@ class FunctionGraphBlock(object):
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		block = self.basic_block
 		try:
 			for i in range(0, count.value):
 				addr = lines[i].addr
+				if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
+					il_instr = block.il_function[lines[i].instrIndex]
+				else:
+					il_instr = None
 				tokens = []
 				for j in range(0, lines[i].count):
 					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -1741,7 +1789,7 @@ class FunctionGraphBlock(object):
 					confidence = lines[i].tokens[j].confidence
 					address = lines[i].tokens[j].address
 					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-				yield DisassemblyTextLine(addr, tokens)
+				yield DisassemblyTextLine(addr, tokens, il_instr)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
@@ -1829,9 +1877,14 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
+			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
 		core.BNFreeFunctionGraphBlockList(blocks, count.value)
 		return result
+
+	@property
+	def has_blocks(self):
+		"""Whether the function graph has at least one block (read-only)"""
+		return core.BNFunctionGraphHasBlocks(self.handle)
 
 	@property
 	def width(self):
@@ -1863,6 +1916,32 @@ class FunctionGraph(object):
 	def settings(self):
 		return DisassemblySettings(core.BNGetFunctionGraphSettings(self.handle))
 
+	@property
+	def is_il(self):
+		return core.BNIsILFunctionGraph(self.handle)
+
+	@property
+	def is_low_level_il(self):
+		return core.BNIsLowLevelILFunctionGraph(self.handle)
+
+	@property
+	def is_medium_level_il(self):
+		return core.BNIsMediumLevelILFunctionGraph(self.handle)
+
+	@property
+	def il_function(self):
+		if self.is_low_level_il:
+			il_func = core.BNGetFunctionGraphLowLevelILFunction(self.handle)
+			if not il_func:
+				return None
+			return binaryninja.lowlevelil.LowLevelILFunction(self.function.arch, il_func, self.function)
+		if self.is_medium_level_il:
+			il_func = core.BNGetFunctionGraphMediumLevelILFunction(self.handle)
+			if not il_func:
+				return None
+			return binaryninja.mediumlevelil.MediumLevelILFunction(self.function.arch, il_func, self.function)
+		return None
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -1877,7 +1956,7 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
 		try:
 			for i in range(0, count.value):
-				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]))
+				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeFunctionGraphBlockList(blocks, count.value)
 
@@ -1920,7 +1999,7 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocksInRegion(self.handle, left, top, right, bottom, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
+			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
 		core.BNFreeFunctionGraphBlockList(blocks, count.value)
 		return result
 

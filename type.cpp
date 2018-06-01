@@ -188,6 +188,15 @@ size_t QualifiedName::size() const
 }
 
 
+size_t QualifiedName::StringSize() const
+{
+	size_t size = 0;
+	for (auto& name : m_name)
+		size += name.size() + 2;
+	return size - 2;
+}
+
+
 string QualifiedName::GetString() const
 {
 	bool first = true;
@@ -573,19 +582,19 @@ Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
 Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	Type* result = new Type(BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj,
-		type ? type->GetObject() : nullptr));
+	BNType* coreObj = BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj,
+		type ? type->GetObject() : nullptr);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return result;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
 Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	Type* result = new Type(BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj));
+	BNType* coreObj = BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return result;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 

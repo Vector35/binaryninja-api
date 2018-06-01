@@ -839,6 +839,19 @@ namespace BinaryNinja
 		MediumLevelILVariableList GetParameterVariables() const { return GetRawOperandAsExpr(1).GetRawOperandAsVariableList(0); }
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(2); }
 	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILVariableList GetOutputVariables() const { return GetRawOperandAsVariableList(0); }
+		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(2); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_UNTYPED>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILVariableList GetOutputVariables() const { return GetRawOperandAsExpr(0).GetRawOperandAsVariableList(0); }
+		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILVariableList GetParameterVariables() const { return GetRawOperandAsExpr(2).GetRawOperandAsVariableList(0); }
+		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
+	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CALL_SSA>: public MediumLevelILInstructionBase
 	{
@@ -889,6 +902,32 @@ namespace BinaryNinja
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(0, version); }
 		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
 		void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(1).UpdateRawOperandAsSSAVariableList(1, vars); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_SSA>: public MediumLevelILInstructionBase
+	{
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
+		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1); }
+		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(2); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(4); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
+		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(4, version); }
+		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(2, params); }
+		void SetParameterExprs(const std::vector<ExprId>& params) { UpdateRawOperandAsExprList(2, params); }
+	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_UNTYPED_SSA>: public MediumLevelILInstructionBase
+	{
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
+		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1); }
+		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILSSAVariableList GetParameterSSAVariables() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSAVariableList(1); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(0); }
+		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
+		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(0, version); }
+		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RET>: public MediumLevelILInstructionBase

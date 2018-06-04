@@ -21,7 +21,7 @@
 
 # Binary Ninja components -- additional imports belong in the appropriate class
 from binaryninja import _binaryninjacore as core
-from enums import LogLevel
+from binaryninja.enums import LogLevel
 
 
 _output_to_log = False

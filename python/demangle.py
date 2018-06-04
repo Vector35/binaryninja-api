@@ -65,7 +65,7 @@ def demangle_ms(arch, mangled_name):
 	names = []
 	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
 		for i in range(outSize.value):
-			names.append(outName[i])
+			names.append(str(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		return (types.Type(handle), names)
 	return (None, mangled_name)
@@ -79,7 +79,7 @@ def demangle_gnu3(arch, mangled_name):
 	names = []
 	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
 		for i in range(outSize.value):
-			names.append(outName[i])
+			names.append(str(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		if not handle:
 			return (None, names)

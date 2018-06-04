@@ -121,10 +121,8 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 		{
 			if (isReturnType)
 				fprintf(out, "ctypes.POINTER(ctypes.c_byte)");
-			else {
-				fprintf(out, "compatstring");
-				// fprintf(out, "ctypes.c_char_p");
-			}
+			else
+				fprintf(out, "ctypes.c_char_p");
 			break;
 		}
 		else if (type->GetChildType()->GetClass() == FunctionTypeClass)
@@ -175,7 +173,7 @@ int main(int argc, char* argv[])
 	}
 
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
-	fprintf(stderr, "Errors: %s", errors.c_str());
+	fprintf(stderr, "Errors: %s\n", errors.c_str());
 	if (!ok)
 		return 1;
 
@@ -205,40 +203,6 @@ int main(int argc, char* argv[])
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
-	// fprintf(out, "class compatstring(ctypes.c_char_p):\n");
-	// fprintf(out, "\tdef __init__(self, value=None):\n");
-	// fprintf(out, "\t\tsuper(compatstring, self).__init__()\n");
-	// fprintf(out, "\t\tif value is not None:\n");
-	// fprintf(out, "\t\t\tself.value = value\n");
-	// fprintf(out, "\t@classmethod\n");
-	// fprintf(out, "\tdef from_param(cls, value):\n");
-	// fprintf(out, "\t\tif not isinstance(value, bytes):\n");
-	// fprintf(out, "\t\t\treturn super(compatstring, cls).from_param(value.encode('utf8'))\n");
-	// fprintf(out, "\t\treturn super(compatstring, cls).from_param(value)\n\n");
-	// fprintf(out, "\t@property\n");
-	// fprintf(out, "\tdef value(self, value):\n");
-	// fprintf(out, "\t\tif not isinstance(value, bytes):\n");
-	// fprintf(out, "\t\t\treturn super(compatstring, cls).from_param(value.encode('utf8'))\n");
-	// fprintf(out, "\t\treturn super(compatstring, cls).from_param(value)\n\n");
-	fprintf(out, "class compatstring(ctypes.c_char_p):\n");
-	fprintf(out, "	@classmethod\n");
-	fprintf(out, "	def from_param(cls, obj):\n");
-	fprintf(out, "		if (obj is not None) and (not isinstance(obj, cls)):\n");
-	fprintf(out, "			if not isinstance(obj, basestring):\n");
-	fprintf(out, "				raise TypeError('parameter must be a string type instance')\n");
-	fprintf(out, "			if not isinstance(obj, unicode):\n");
-	fprintf(out, "				obj = unicode(obj)\n");
-	fprintf(out, "			obj = obj.encode('utf-8')\n");
-	fprintf(out, "		return ctypes.c_char_p.from_param(obj)\n");
-	fprintf(out, "\n");
-	fprintf(out, "	def decode(self):\n");
-	fprintf(out, "		if self.value is None:\n");
-	fprintf(out, "			return None\n");
-	fprintf(out, "		return self.value.decode('utf-8')\n");
-	fprintf(out, "	@property\n");
-	fprintf(out, "	def value(self, c_void_p=ctypes.c_void_p):\n");
-	fprintf(out, "		addr = c_void_p.from_buffer(self).value\n");
-	fprintf(out, "		return \n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -350,6 +314,20 @@ int main(int argc, char* argv[])
 			(i.second->GetChildType()->GetChildType()->IsSigned());
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
+
+		// From python -> C python3 requires str -> str.encode('utf-8')
+		bool stringArgument = false;
+		for (auto& arg : i.second->GetParameters())
+		{
+			if ((arg.type->GetClass() == PointerTypeClass) &&
+				(arg.type->GetChildType()->GetWidth() == 1) &&
+				(arg.type->GetChildType()->IsSigned()))
+				{
+					stringArgument = true;
+					break;
+				}
+		}
+
 		bool callbackConvention = false;
 		if (name == "BNAllocString")
 		{
@@ -361,7 +339,7 @@ int main(int argc, char* argv[])
 		}
 
 		string funcName = name;
-		if (stringResult || pointerResult)
+		if (stringResult || pointerResult || stringArgument)
 			funcName = string("_") + funcName;
 
 		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
@@ -394,7 +372,11 @@ int main(int argc, char* argv[])
 		{
 			// Emit wrapper to get Python string and free native memory
 			fprintf(out, "def %s(*args):\n", name.c_str());
-			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			if (stringArgument)
+				// This can be done statically... Fix this here later
+				fprintf(out, "\tresult = %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+			else
+				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tstring = ctypes.cast(result, ctypes.c_char_p).value\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
@@ -403,11 +385,23 @@ int main(int argc, char* argv[])
 		{
 			// Emit wrapper to return None on null pointer
 			fprintf(out, "def %s(*args):\n", name.c_str());
-			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			if (stringArgument)
+				// This can be done statically... Fix this here later
+				fprintf(out, "\tresult = %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+			else
+				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tif not result:\n");
 			fprintf(out, "\t\treturn None\n");
 			fprintf(out, "\treturn result\n");
 		}
+		else if (stringArgument)
+		{
+			fprintf(out, "def %s(*args):\n", name.c_str());
+			// This can be done statically... Fix this here later
+			fprintf(out, "\treturn %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+		}
+
+		fprintf(out, "\n");
 	}
 
 	fprintf(out, "\n# Helper functions\n");
@@ -417,7 +411,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
 
 	// The following method is addapted from python/enum/__init__.py, lines 25-36
-	fprintf(out, "try:\n");
+	fprintf(out, "\ntry:\n");
 	fprintf(out, "\tbasestring\n");
 	fprintf(out, "\tunicode\n");
 	fprintf(out, "except NameError:\n");

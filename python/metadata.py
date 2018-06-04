@@ -83,6 +83,7 @@ class Metadata(object):
 			raise TypeError()
 		result = {}
 		for key in self:
+			key = str(key.decode('utf-8'))
 			result[key] = self[key]
 		return result
 
@@ -172,7 +173,7 @@ class Metadata(object):
 
 	def __str__(self):
 		if self.is_string:
-			return core.BNMetadataGetString(self.handle)
+			return str(core.BNMetadataGetString(self.handle))
 		if self.is_raw:
 			length = ctypes.c_ulonglong()
 			length.value = 0

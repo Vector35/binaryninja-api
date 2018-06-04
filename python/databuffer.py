@@ -26,6 +26,13 @@ from binaryninja import _binaryninjacore as core
 
 class DataBuffer(object):
 	def __init__(self, contents="", handle=None):
+
+		# python3 no longer has longs
+		try:
+			long
+		except NameError:
+			long = int
+
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
 		elif isinstance(contents, int) or isinstance(contents, long):
@@ -107,7 +114,7 @@ class DataBuffer(object):
 	def __str__(self):
 		buf = ctypes.create_string_buffer(len(self))
 		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
-		return buf.raw
+		return str(buf.raw)
 
 	def __repr__(self):
 		return repr(str(self))

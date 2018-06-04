@@ -395,6 +395,9 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 				else:
 					bv = cls[available.name].open(filename)
 
+				if bv is None:
+					raise Exception("Unknown Architecture/Architecture Not Found (check plugins folder)")
+
 				if update_analysis:
 					bv.update_analysis_and_wait()
 				return bv

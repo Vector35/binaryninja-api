@@ -118,10 +118,8 @@ class PluginManagerLoadPluginCallback(object):
 	def __init__(self):
 		self.cb = ctypes.CFUNCTYPE(
 			ctypes.c_bool,
-			core.compatstring,
-			core.compatstring,
-			# ctypes.c_char_p,
-			# ctypes.c_char_p,
+			ctypes.c_char_p,
+			ctypes.c_char_p,
 			ctypes.c_void_p)(self._load_plugin)
 
 	def _load_plugin(self, repo_path, plugin_path, ctx):

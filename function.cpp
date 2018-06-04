@@ -119,6 +119,12 @@ Function::~Function()
 }
 
 
+Ref<BinaryView> Function::GetView() const
+{
+	return new BinaryView(BNGetFunctionData(m_object));
+}
+
+
 Ref<Platform> Function::GetPlatform() const
 {
 	return new Platform(BNGetFunctionPlatform(m_object));
@@ -802,10 +808,10 @@ void Function::ApplyAutoDiscoveredType(Type* type)
 }
 
 
-Ref<FunctionGraph> Function::CreateFunctionGraph()
+Ref<FlowGraph> Function::CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings)
 {
-	BNFunctionGraph* graph = BNCreateFunctionGraph(m_object);
-	return new FunctionGraph(graph);
+	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type, settings ? settings->GetObject() : nullptr);
+	return new FlowGraph(graph);
 }
 
 
@@ -1338,6 +1344,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
+		line.highlight = lines[i].highlight;
 		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
@@ -1381,6 +1388,15 @@ BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
 void Function::SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip)
 {
 	BNSetFunctionAnalysisSkipOverride(m_object, skip);
+}
+
+
+Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
+{
+	BNFlowGraph* graph = BNGetUnresolvedStackAdjustmentGraph(m_object);
+	if (!graph)
+		return nullptr;
+	return new FlowGraph(graph);
 }
 
 

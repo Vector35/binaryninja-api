@@ -53,6 +53,7 @@ from .scriptingprovider import *
 from .pluginmanager import *
 from .setting import *
 from .metadata import *
+from .flowgraph import *
 
 
 def shutdown():

@@ -117,6 +117,16 @@ void InteractionHandler::ShowHTMLReport(Ref<BinaryView> view, const string& titl
 }
 
 
+void InteractionHandler::ShowGraphReport(Ref<BinaryView>, const std::string&, Ref<FlowGraph>)
+{
+}
+
+
+void InteractionHandler::ShowReportCollection(const string&, Ref<ReportCollection>)
+{
+}
+
+
 bool InteractionHandler::GetIntegerInput(int64_t& result, const string& prompt, const string& title)
 {
 	while (true)
@@ -191,6 +201,21 @@ static void ShowHTMLReportCallback(void* ctxt, BNBinaryView* view, const char* t
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
 	handler->ShowHTMLReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
+}
+
+
+static void ShowGraphReportCallback(void* ctxt, BNBinaryView* view, const char* title, BNFlowGraph* graph)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	handler->ShowGraphReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title,
+		new FlowGraph(BNNewFlowGraphReference(graph)));
+}
+
+
+static void ShowReportCollectionCallback(void* ctxt, const char* title, BNReportCollection* reports)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	handler->ShowReportCollection(title, new ReportCollection(reports));
 }
 
 
@@ -360,6 +385,8 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.showPlainTextReport = ShowPlainTextReportCallback;
 	cb.showMarkdownReport = ShowMarkdownReportCallback;
 	cb.showHTMLReport = ShowHTMLReportCallback;
+	cb.showGraphReport = ShowGraphReportCallback;
+	cb.showReportCollection = ShowReportCollectionCallback;
 	cb.getTextLineInput = GetTextLineInputCallback;
 	cb.getIntegerInput = GetIntegerInputCallback;
 	cb.getAddressInput = GetAddressInputCallback;
@@ -397,6 +424,22 @@ void BinaryNinja::ShowMarkdownReport(const string& title, const string& contents
 void BinaryNinja::ShowHTMLReport(const string& title, const string& contents, const string& plainText)
 {
 	BNShowHTMLReport(nullptr, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+void BinaryNinja::ShowGraphReport(const string& title, FlowGraph* graph)
+{
+	Ref<Function> func = graph->GetFunction();
+	if (func)
+		BNShowGraphReport(func->GetView()->GetObject(), title.c_str(), graph->GetGraphObject());
+	else
+		BNShowGraphReport(nullptr, title.c_str(), graph->GetGraphObject());
+}
+
+
+void BinaryNinja::ShowReportCollection(const string& title, ReportCollection* reports)
+{
+	BNShowReportCollection(title.c_str(), reports->GetObject());
 }
 
 
@@ -552,4 +595,101 @@ BNMessageBoxButtonResult BinaryNinja::ShowMessageBox(const string& title, const 
 	BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon)
 {
 	return BNShowMessageBox(title.c_str(), text.c_str(), buttons, icon);
+}
+
+
+ReportCollection::ReportCollection()
+{
+	m_object = BNCreateReportCollection();
+}
+
+
+ReportCollection::ReportCollection(BNReportCollection* reports)
+{
+	m_object = reports;
+}
+
+
+size_t ReportCollection::GetCount() const
+{
+	return BNGetReportCollectionCount(m_object);
+}
+
+
+BNReportType ReportCollection::GetType(size_t i) const
+{
+	return BNGetReportType(m_object, i);
+}
+
+
+Ref<BinaryView> ReportCollection::GetView(size_t i) const
+{
+	BNBinaryView* view = BNGetReportView(m_object, i);
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
+}
+
+
+string ReportCollection::GetTitle(size_t i) const
+{
+	char* str = BNGetReportTitle(m_object, i);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string ReportCollection::GetContents(size_t i) const
+{
+	char* str = BNGetReportContents(m_object, i);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string ReportCollection::GetPlainText(size_t i) const
+{
+	char* str = BNGetReportPlainText(m_object, i);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+Ref<FlowGraph> ReportCollection::GetFlowGraph(size_t i) const
+{
+	BNFlowGraph* graph = BNGetReportFlowGraph(m_object, i);
+	if (!graph)
+		return nullptr;
+	return new FlowGraph(graph);
+}
+
+
+void ReportCollection::AddPlainTextReport(Ref<BinaryView> view, const string& title, const string& contents)
+{
+	BNAddPlainTextReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str());
+}
+
+
+void ReportCollection::AddMarkdownReport(Ref<BinaryView> view, const string& title, const string& contents,
+	const string& plainText)
+{
+	BNAddMarkdownReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str(),
+		plainText.c_str());
+}
+
+
+void ReportCollection::AddHTMLReport(Ref<BinaryView> view, const string& title, const string& contents,
+	const string& plainText)
+{
+	BNAddHTMLReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str(),
+		plainText.c_str());
+}
+
+
+void ReportCollection::AddGraphReport(Ref<BinaryView> view, const string& title, Ref<FlowGraph> graph)
+{
+	BNAddGraphReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), graph->GetGraphObject());
 }

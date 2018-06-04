@@ -23,9 +23,10 @@ import traceback
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
+from enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult, ReportType
 import binaryview
 import log
+import flowgraph
 
 
 class LabelField(object):
@@ -249,6 +250,8 @@ class InteractionHandler(object):
 		self._cb.showPlainTextReport = self._cb.showPlainTextReport.__class__(self._show_plain_text_report)
 		self._cb.showMarkdownReport = self._cb.showMarkdownReport.__class__(self._show_markdown_report)
 		self._cb.showHTMLReport = self._cb.showHTMLReport.__class__(self._show_html_report)
+		self._cb.showGraphReport = self._cb.showGraphReport.__class__(self._show_graph_report)
+		self._cb.showReportCollection = self._cb.showReportCollection.__class__(self._show_report_collection)
 		self._cb.getTextLineInput = self._cb.getTextLineInput.__class__(self._get_text_line_input)
 		self._cb.getIntegerInput = self._cb.getIntegerInput.__class__(self._get_int_input)
 		self._cb.getAddressInput = self._cb.getAddressInput.__class__(self._get_address_input)
@@ -290,6 +293,22 @@ class InteractionHandler(object):
 			else:
 				view = None
 			self.show_html_report(view, title, contents, plaintext)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _show_graph_report(self, ctxt, view, title, graph):
+		try:
+			if view:
+				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+			else:
+				view = None
+			self.show_graph_report(view, title, flowgraph.FlowGraph(core.BNNewFlowGraphReference(graph)))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _show_report_collection(self, ctxt, title, reports):
+		try:
+			self.show_report_collection(title, ReportCollection(core.BNNewReportCollectionReference(reports)))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -426,6 +445,12 @@ class InteractionHandler(object):
 		if len(plaintext) != 0:
 			self.show_plain_text_report(view, title, plaintext)
 
+	def show_graph_report(self, view, title, graph):
+		pass
+
+	def show_report_collection(self, title, reports):
+		pass
+
 	def get_text_line_input(self, prompt, title):
 		return None
 
@@ -459,6 +484,123 @@ class InteractionHandler(object):
 
 	def show_message_box(self, title, text, buttons, icon):
 		return MessageBoxButtonResult.CancelButton
+
+
+class PlainTextReport(object):
+	def __init__(self, title, contents, view = None):
+		self.view = view
+		self.title = title
+		self.contents = contents
+
+	def __repr__(self):
+		return "<plain text report: %s>" % self.title
+
+	def __str__(self):
+		return self.contents
+
+
+class MarkdownReport(object):
+	def __init__(self, title, contents, plaintext = "", view = None):
+		self.view = view
+		self.title = title
+		self.contents = contents
+		self.plaintext = plaintext
+
+	def __repr__(self):
+		return "<markdown report: %s>" % self.title
+
+	def __str__(self):
+		return self.contents
+
+
+class HTMLReport(object):
+	def __init__(self, title, contents, plaintext = "", view = None):
+		self.view = view
+		self.title = title
+		self.contents = contents
+		self.plaintext = plaintext
+
+	def __repr__(self):
+		return "<html report: %s>" % self.title
+
+	def __str__(self):
+		return self.contents
+
+
+class FlowGraphReport(object):
+	def __init__(self, title, graph, view = None):
+		self.view = view
+		self.title = title
+		self.graph = graph
+
+	def __repr__(self):
+		return "<graph report: %s>" % self.title
+
+
+class ReportCollection(object):
+	def __init__(self, handle = None):
+		if handle is None:
+			self.handle = core.BNCreateReportCollection()
+		else:
+			self.handle = handle
+
+	def __len__(self):
+		return core.BNGetReportCollectionCount(self.handle)
+
+	def _report_from_index(self, i):
+		report_type = core.BNGetReportType(self.handle, i)
+		title = core.BNGetReportTitle(self.handle, i)
+		view = core.BNGetReportView(self.handle, i)
+		if view:
+			view = binaryview.BinaryView(handle = view)
+		else:
+			view = None
+		if report_type == ReportType.PlainTextReportType:
+			contents = core.BNGetReportContents(self.handle, i)
+			return PlainTextReport(title, contents, view)
+		elif report_type == ReportType.MarkdownReportType:
+			contents = core.BNGetReportContents(self.handle, i)
+			plaintext = core.BNGetReportPlainText(self.handle, i)
+			return MarkdownReport(title, contents, plaintext, view)
+		elif report_type == ReportType.HTMLReportType:
+			contents = core.BNGetReportContents(self.handle, i)
+			plaintext = core.BNGetReportPlainText(self.handle, i)
+			return HTMLReport(title, contents, plaintext, view)
+		elif report_type == ReportType.FlowGraphReportType:
+			graph = flowgraph.FlowGraph(core.BNGetReportFlowGraph(self.handle, i))
+			return FlowGraphReport(title, graph, view)
+		raise TypeError("invalid report type %s" % repr(report_type))
+
+	def __getitem__(self, i):
+		if isinstance(i, slice) or isinstance(i, tuple):
+			raise IndexError("expected integer report index")
+		if (i < 0) or (i >= len(self)):
+			raise IndexError("index out of range")
+		return self._report_from_index(i)
+
+	def __iter__(self):
+		count = len(self)
+		for i in xrange(0, count):
+			yield self._report_from_index(i)
+
+	def __repr__(self):
+		return "<reports: %s>" % repr(list(self))
+
+	def append(self, report):
+		if report.view is None:
+			view = None
+		else:
+			view = report.view.handle
+		if isinstance(report, PlainTextReport):
+			core.BNAddPlainTextReportToCollection(self.handle, view, report.title, report.contents)
+		elif isinstance(report, MarkdownReport):
+			core.BNAddMarkdownReportToCollection(self.handle, view, report.title, report.contents, report.plaintext)
+		elif isinstance(report, HTMLReport):
+			core.BNAddHTMLReportToCollection(self.handle, view, report.title, report.contents, report.plaintext)
+		elif isinstance(report, FlowGraphReport):
+			core.BNAddGraphReportToCollection(self.handle, view, report.title, report.graph.handle)
+		else:
+			raise TypeError("expected report object")
 
 
 def markdown_to_html(contents):
@@ -525,6 +667,34 @@ def show_html_report(title, contents, plaintext=""):
 		Plain text contents
 	"""
 	core.BNShowHTMLReport(None, title, contents, plaintext)
+
+
+def show_graph_report(title, graph):
+	"""
+	``show_graph_report`` displays a flow graph in UI applications.
+
+	Note: This API function will have no effect outside the UI.
+
+	:param FlowGraph graph: Flow graph to display
+	:rtype: None
+	"""
+	func = graph.function
+	if func is None:
+		core.BNShowGraphReport(None, title, graph.handle)
+	else:
+		core.BNShowGraphReport(func.view.handle, title, graph.handle)
+
+
+def show_report_collection(title, reports):
+	"""
+	``show_report_collection`` displays mulitple reports in UI applications.
+
+	Note: This API function will have no effect outside the UI.
+
+	:param ReportCollection reports: Reports to display
+	:rtype: None
+	"""
+	core.BNShowReportCollection(title, reports.handle)
 
 
 def get_text_line_input(prompt, title):

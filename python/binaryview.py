@@ -41,6 +41,7 @@ import basicblock
 import types
 import lineardisassembly
 import metadata
+import highlight
 
 
 class BinaryDataNotification(object):
@@ -2961,6 +2962,7 @@ class BinaryView(object):
 				func = function.Function(self, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
+			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
 			tokens = []
 			for j in xrange(0, lines[i].contents.count):
@@ -2973,7 +2975,7 @@ class BinaryView(object):
 				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
 				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			contents = function.DisassemblyTextLine(addr, tokens)
+			contents = function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
 		func = None
@@ -3351,6 +3353,9 @@ class BinaryView(object):
 
 	def show_html_report(self, title, contents, plaintext = ""):
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
+
+	def show_graph_report(self, title, graph):
+		core.BNShowHTMLReport(self.handle, title, graph.handle)
 
 	def get_address_input(self, prompt, title, current_address = None):
 		if current_address is None:

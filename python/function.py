@@ -39,6 +39,7 @@ import mediumlevelil
 import binaryview
 import log
 import callingconvention
+import flowgraph
 
 
 class LookupTableEntry(object):
@@ -844,6 +845,14 @@ class Function(object):
 	def analysis_skip_override(self, override):
 		core.BNSetFunctionAnalysisSkipOverride(self.handle, override)
 
+	@property
+	def unresolved_stack_adjustment_graph(self):
+		"""Flow graph of unresolved stack adjustments (read-only)"""
+		graph = core.BNGetUnresolvedStackAdjustmentGraph(self.handle)
+		if not graph:
+			return None
+		return flowgraph.FlowGraph(graph)
+
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
@@ -1108,8 +1117,12 @@ class Function(object):
 		core.BNFreeRegisterList(flags)
 		return result
 
-	def create_graph(self):
-		return FunctionGraph(self._view, core.BNCreateFunctionGraph(self.handle))
+	def create_graph(self, graph_type = FunctionGraphType.NormalFunctionGraph, settings = None):
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return flowgraph.FlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym):
 		core.BNApplyImportedTypes(self.handle, sym.handle)
@@ -1461,6 +1474,7 @@ class Function(object):
 		result = []
 		for i in xrange(0, count.value):
 			addr = lines[i].addr
+			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = []
 			for j in xrange(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -1472,7 +1486,7 @@ class Function(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(DisassemblyTextLine(addr, tokens))
+			result.append(DisassemblyTextLine(tokens, addr, color = color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
@@ -1598,10 +1612,18 @@ class AdvancedFunctionAnalysisDataRequestor(object):
 
 
 class DisassemblyTextLine(object):
-	def __init__(self, addr, tokens, il_instr = None):
-		self.address = addr
+	def __init__(self, tokens, address = None, il_instr = None, color = None):
+		self.address = address
 		self.tokens = tokens
 		self.il_instruction = il_instr
+		if color is None:
+			self.highlight = highlight.HighlightColor()
+		else:
+			if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+				raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+			if isinstance(color, HighlightStandardColor):
+				color = highlight.HighlightColor(color)
+			self.highlight = color
 
 	def __str__(self):
 		result = ""
@@ -1610,190 +1632,9 @@ class DisassemblyTextLine(object):
 		return result
 
 	def __repr__(self):
+		if self.address is None:
+			return str(self)
 		return "<%#x: %s>" % (self.address, str(self))
-
-
-class FunctionGraphEdge(object):
-	def __init__(self, branch_type, source, target, points, back_edge):
-		self.type = BranchType(branch_type)
-		self.source = source
-		self.target = target
-		self.points = points
-		self.back_edge = back_edge
-
-	def __repr__(self):
-		return "<%s: %s>" % (self.type.name, repr(self.target))
-
-
-class FunctionGraphBlock(object):
-	def __init__(self, handle, graph):
-		self.handle = handle
-		self.graph = graph
-
-	def __del__(self):
-		core.BNFreeFunctionGraphBlock(self.handle)
-
-	def __eq__(self, value):
-		if not isinstance(value, FunctionGraphBlock):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, FunctionGraphBlock):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
-
-	@property
-	def basic_block(self):
-		"""Basic block associated with this part of the function graph (read-only)"""
-		block = core.BNGetFunctionGraphBasicBlock(self.handle)
-		func_handle = core.BNGetBasicBlockFunction(block)
-		if func_handle is None:
-			core.BNFreeBasicBlock(block)
-			return None
-
-		view = binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
-		func = Function(view, func_handle)
-
-		if core.BNIsLowLevelILBasicBlock(block):
-			block = lowlevelil.LowLevelILBasicBlock(view, block,
-				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func))
-		elif core.BNIsMediumLevelILBasicBlock(block):
-			block = mediumlevelil.MediumLevelILBasicBlock(view, block,
-				mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func))
-		else:
-			block = basicblock.BasicBlock(view, block)
-		return block
-
-	@property
-	def arch(self):
-		"""Function graph block architecture (read-only)"""
-		arch = core.BNGetFunctionGraphBlockArchitecture(self.handle)
-		if arch is None:
-			return None
-		return architecture.CoreArchitecture._from_cache(arch)
-
-	@property
-	def start(self):
-		"""Function graph block start (read-only)"""
-		return core.BNGetFunctionGraphBlockStart(self.handle)
-
-	@property
-	def end(self):
-		"""Function graph block end (read-only)"""
-		return core.BNGetFunctionGraphBlockEnd(self.handle)
-
-	@property
-	def x(self):
-		"""Function graph block X (read-only)"""
-		return core.BNGetFunctionGraphBlockX(self.handle)
-
-	@property
-	def y(self):
-		"""Function graph block Y (read-only)"""
-		return core.BNGetFunctionGraphBlockY(self.handle)
-
-	@property
-	def width(self):
-		"""Function graph block width (read-only)"""
-		return core.BNGetFunctionGraphBlockWidth(self.handle)
-
-	@property
-	def height(self):
-		"""Function graph block height (read-only)"""
-		return core.BNGetFunctionGraphBlockHeight(self.handle)
-
-	@property
-	def lines(self):
-		"""Function graph block list of lines (read-only)"""
-		count = ctypes.c_ulonglong()
-		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
-		block = self.basic_block
-		result = []
-		for i in xrange(0, count.value):
-			addr = lines[i].addr
-			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
-				il_instr = block.il_function[lines[i].instrIndex]
-			else:
-				il_instr = None
-			tokens = []
-			for j in xrange(0, lines[i].count):
-				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-				text = lines[i].tokens[j].text
-				value = lines[i].tokens[j].value
-				size = lines[i].tokens[j].size
-				operand = lines[i].tokens[j].operand
-				context = lines[i].tokens[j].context
-				confidence = lines[i].tokens[j].confidence
-				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(DisassemblyTextLine(addr, tokens, il_instr))
-		core.BNFreeDisassemblyTextLines(lines, count.value)
-		return result
-
-	@property
-	def outgoing_edges(self):
-		"""Function graph block list of outgoing edges (read-only)"""
-		count = ctypes.c_ulonglong()
-		edges = core.BNGetFunctionGraphBlockOutgoingEdges(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			branch_type = BranchType(edges[i].type)
-			target = edges[i].target
-			if target:
-				func = core.BNGetBasicBlockFunction(target)
-				if func is None:
-					core.BNFreeBasicBlock(target)
-					target = None
-				else:
-					target = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
-						core.BNNewBasicBlockReference(target))
-					core.BNFreeFunction(func)
-			points = []
-			for j in xrange(0, edges[i].pointCount):
-				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FunctionGraphEdge(branch_type, self, target, points, edges[i].backEdge))
-		core.BNFreeFunctionGraphBlockOutgoingEdgeList(edges, count.value)
-		return result
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<graph block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
-		else:
-			return "<graph block: %#x-%#x>" % (self.start, self.end)
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
-		block = self.basic_block
-		try:
-			for i in xrange(0, count.value):
-				addr = lines[i].addr
-				if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
-					il_instr = block.il_function[lines[i].instrIndex]
-				else:
-					il_instr = None
-				tokens = []
-				for j in xrange(0, lines[i].count):
-					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-					text = lines[i].tokens[j].text
-					value = lines[i].tokens[j].value
-					size = lines[i].tokens[j].size
-					operand = lines[i].tokens[j].operand
-					context = lines[i].tokens[j].context
-					confidence = lines[i].tokens[j].confidence
-					address = lines[i].tokens[j].address
-					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-				yield DisassemblyTextLine(addr, tokens, il_instr)
-		finally:
-			core.BNFreeDisassemblyTextLines(lines, count.value)
 
 
 class DisassemblySettings(object):
@@ -1831,189 +1672,6 @@ class DisassemblySettings(object):
 		if isinstance(option, str):
 			option = DisassemblyOption[option]
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
-
-
-class FunctionGraph(object):
-	def __init__(self, view, handle):
-		self.view = view
-		self.handle = handle
-		self._on_complete = None
-		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
-
-	def __del__(self):
-		self.abort()
-		core.BNFreeFunctionGraph(self.handle)
-
-	def __eq__(self, value):
-		if not isinstance(value, FunctionGraph):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, FunctionGraph):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
-
-	@property
-	def function(self):
-		"""Function for a function graph (read-only)"""
-		func = core.BNGetFunctionForFunctionGraph(self.handle)
-		if func is None:
-			return None
-		return Function(self.view, func)
-
-	@property
-	def complete(self):
-		"""Whether function graph layout is complete (read-only)"""
-		return core.BNIsFunctionGraphLayoutComplete(self.handle)
-
-	@property
-	def type(self):
-		"""Function graph type (read-only)"""
-		return FunctionGraphType(core.BNGetFunctionGraphType(self.handle))
-
-	@property
-	def blocks(self):
-		"""List of basic blocks in function (read-only)"""
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
-		core.BNFreeFunctionGraphBlockList(blocks, count.value)
-		return result
-
-	@property
-	def has_blocks(self):
-		"""Whether the function graph has at least one block (read-only)"""
-		return core.BNFunctionGraphHasBlocks(self.handle)
-
-	@property
-	def width(self):
-		"""Function graph width (read-only)"""
-		return core.BNGetFunctionGraphWidth(self.handle)
-
-	@property
-	def height(self):
-		"""Function graph height (read-only)"""
-		return core.BNGetFunctionGraphHeight(self.handle)
-
-	@property
-	def horizontal_block_margin(self):
-		return core.BNGetHorizontalFunctionGraphBlockMargin(self.handle)
-
-	@horizontal_block_margin.setter
-	def horizontal_block_margin(self, value):
-		core.BNSetFunctionGraphBlockMargins(self.handle, value, self.vertical_block_margin)
-
-	@property
-	def vertical_block_margin(self):
-		return core.BNGetVerticalFunctionGraphBlockMargin(self.handle)
-
-	@vertical_block_margin.setter
-	def vertical_block_margin(self, value):
-		core.BNSetFunctionGraphBlockMargins(self.handle, self.horizontal_block_margin, value)
-
-	@property
-	def settings(self):
-		return DisassemblySettings(core.BNGetFunctionGraphSettings(self.handle))
-
-	@property
-	def is_il(self):
-		return core.BNIsILFunctionGraph(self.handle)
-
-	@property
-	def is_low_level_il(self):
-		return core.BNIsLowLevelILFunctionGraph(self.handle)
-
-	@property
-	def is_medium_level_il(self):
-		return core.BNIsMediumLevelILFunctionGraph(self.handle)
-
-	@property
-	def il_function(self):
-		if self.is_low_level_il:
-			il_func = core.BNGetFunctionGraphLowLevelILFunction(self.handle)
-			if not il_func:
-				return None
-			return lowlevelil.LowLevelILFunction(self.function.arch, il_func, self.function)
-		if self.is_medium_level_il:
-			il_func = core.BNGetFunctionGraphMediumLevelILFunction(self.handle)
-			if not il_func:
-				return None
-			return mediumlevelil.MediumLevelILFunction(self.function.arch, il_func, self.function)
-		return None
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __repr__(self):
-		return "<graph of %s>" % repr(self.function)
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
-		try:
-			for i in xrange(0, count.value):
-				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self)
-		finally:
-			core.BNFreeFunctionGraphBlockList(blocks, count.value)
-
-	def _complete(self, ctxt):
-		try:
-			if self._on_complete is not None:
-				self._on_complete()
-		except:
-			log.log_error(traceback.format_exc())
-
-	def layout(self, graph_type = FunctionGraphType.NormalFunctionGraph):
-		if isinstance(graph_type, str):
-			graph_type = FunctionGraphType[graph_type]
-		core.BNStartFunctionGraphLayout(self.handle, graph_type)
-
-	def _wait_complete(self):
-		self._wait_cond.acquire()
-		self._wait_cond.notify()
-		self._wait_cond.release()
-
-	def layout_and_wait(self, graph_type=FunctionGraphType.NormalFunctionGraph):
-		self._wait_cond = threading.Condition()
-		self.on_complete(self._wait_complete)
-		self.layout(graph_type)
-
-		self._wait_cond.acquire()
-		while not self.complete:
-			self._wait_cond.wait()
-		self._wait_cond.release()
-
-	def on_complete(self, callback):
-		self._on_complete = callback
-		core.BNSetFunctionGraphCompleteCallback(self.handle, None, self._cb)
-
-	def abort(self):
-		core.BNAbortFunctionGraph(self.handle)
-
-	def get_blocks_in_region(self, left, top, right, bottom):
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionGraphBlocksInRegion(self.handle, left, top, right, bottom, count)
-		result = []
-		for i in xrange(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
-		core.BNFreeFunctionGraphBlockList(blocks, count.value)
-		return result
-
-	def is_option_set(self, option):
-		if isinstance(option, str):
-			option = DisassemblyOption[option]
-		return core.BNIsFunctionGraphOptionSet(self.handle, option)
-
-	def set_option(self, option, state = True):
-		if isinstance(option, str):
-			option = DisassemblyOption[option]
-		core.BNSetFunctionGraphOption(self.handle, option, state)
 
 
 class RegisterInfo(object):

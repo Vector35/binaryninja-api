@@ -494,6 +494,8 @@ namespace BinaryNinja
 	class MainThreadActionHandler;
 	class InteractionHandler;
 	class QualifiedName;
+	class FlowGraph;
+	class ReportCollection;
 	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
@@ -627,6 +629,8 @@ namespace BinaryNinja
 		const std::string& plainText = "");
 	void ShowHTMLReport(const std::string& title, const std::string& contents,
 		const std::string& plainText = "");
+	void ShowGraphReport(const std::string& title, FlowGraph* graph);
+	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
@@ -988,6 +992,9 @@ namespace BinaryNinja
 		uint64_t addr;
 		size_t instrIndex;
 		std::vector<InstructionTextToken> tokens;
+		BNHighlightColor highlight;
+
+		DisassemblyTextLine();
 	};
 
 	struct LinearDisassemblyPosition
@@ -1313,6 +1320,7 @@ namespace BinaryNinja
 		void ShowPlainTextReport(const std::string& title, const std::string& contents);
 		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
 		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		void ShowGraphReport(const std::string& title, FlowGraph* graph);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
 			uint64_t currentAddress);
@@ -2327,7 +2335,7 @@ namespace BinaryNinja
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
 	};
 
-	class FunctionGraph;
+	class FlowGraph;
 	class MediumLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -2338,6 +2346,7 @@ namespace BinaryNinja
 		Function(BNFunction* func);
 		virtual ~Function();
 
+		Ref<BinaryView> GetView() const;
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Platform> GetPlatform() const;
 		uint64_t GetStart() const;
@@ -2415,7 +2424,7 @@ namespace BinaryNinja
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
 
-		Ref<FunctionGraph> CreateFunctionGraph();
+		Ref<FlowGraph> CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings = nullptr);
 
 		std::map<int64_t, std::vector<VariableNameAndType>> GetStackLayout();
 		void CreateAutoStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const std::string& name);
@@ -2495,6 +2504,8 @@ namespace BinaryNinja
 		bool IsAnalysisSkipped();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
+
+		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -2511,79 +2522,87 @@ namespace BinaryNinja
 		void SetFunction(Function* func);
 	};
 
-	struct FunctionGraphEdge
+	class FlowGraphNode;
+
+	struct FlowGraphEdge
 	{
 		BNBranchType type;
-		Ref<BasicBlock> target;
+		Ref<FlowGraphNode> target;
 		std::vector<BNPoint> points;
 		bool backEdge;
 	};
 
-	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,
-		BNNewFunctionGraphBlockReference, BNFreeFunctionGraphBlock>
+	class FlowGraphNode: public CoreRefCountObject<BNFlowGraphNode,
+		BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
 	{
 		std::vector<DisassemblyTextLine> m_cachedLines;
-		std::vector<FunctionGraphEdge> m_cachedEdges;
+		std::vector<FlowGraphEdge> m_cachedEdges;
 		bool m_cachedLinesValid, m_cachedEdgesValid;
 
 	public:
-		FunctionGraphBlock(BNFunctionGraphBlock* block);
+		FlowGraphNode(FlowGraph* graph);
+		FlowGraphNode(BNFlowGraphNode* node);
 
 		Ref<BasicBlock> GetBasicBlock() const;
-		Ref<Architecture> GetArchitecture() const;
-		uint64_t GetStart() const;
-		uint64_t GetEnd() const;
+		void SetBasicBlock(BasicBlock* block);
 		int GetX() const;
 		int GetY() const;
 		int GetWidth() const;
 		int GetHeight() const;
 
 		const std::vector<DisassemblyTextLine>& GetLines();
-		const std::vector<FunctionGraphEdge>& GetOutgoingEdges();
+		void SetLines(const std::vector<DisassemblyTextLine>& lines);
+		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
+		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target);
+
+		BNHighlightColor GetHighlight() const;
+		void SetHighlight(const BNHighlightColor& color);
 	};
 
-	class FunctionGraph: public RefCountObject
+	class FlowGraph: public RefCountObject
 	{
-		BNFunctionGraph* m_graph;
+		BNFlowGraph* m_graph;
 		std::function<void()> m_completeFunc;
-		std::map<BNFunctionGraphBlock*, Ref<FunctionGraphBlock>> m_cachedBlocks;
+		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
 
 		static void CompleteCallback(void* ctxt);
 
 	public:
-		FunctionGraph(BNFunctionGraph* graph);
-		~FunctionGraph();
+		FlowGraph(BNFlowGraph* graph);
+		~FlowGraph();
 
-		BNFunctionGraph* GetGraphObject() const { return m_graph; }
+		BNFlowGraph* GetGraphObject() const { return m_graph; }
 
 		Ref<Function> GetFunction() const;
+		void SetFunction(Function* func);
 
-		int GetHorizontalBlockMargin() const;
-		int GetVerticalBlockMargin() const;
-		void SetBlockMargins(int horiz, int vert);
+		int GetHorizontalNodeMargin() const;
+		int GetVerticalNodeMargin() const;
+		void SetNodeMargins(int horiz, int vert);
 
-		Ref<DisassemblySettings> GetSettings();
-
-		void StartLayout(BNFunctionGraphType = NormalFunctionGraph);
+		void StartLayout();
 		bool IsLayoutComplete();
 		void OnComplete(const std::function<void()>& func);
 		void Abort();
 
-		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
-		bool HasBlocks() const;
+		std::vector<Ref<FlowGraphNode>> GetNodes();
+		Ref<FlowGraphNode> GetNode(size_t i);
+		bool HasNodes() const;
+		size_t AddNode(FlowGraphNode* node);
 
 		int GetWidth() const;
 		int GetHeight() const;
-		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
-
-		bool IsOptionSet(BNDisassemblyOption option) const;
-		void SetOption(BNDisassemblyOption option, bool state = true);
+		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
 		bool IsILGraph() const;
 		bool IsLowLevelILGraph() const;
 		bool IsMediumLevelILGraph() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		void SetLowLevelILFunction(LowLevelILFunction* func);
+		void SetMediumLevelILFunction(MediumLevelILFunction* func);
+
+		void Show(const std::string& title);
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel
@@ -3776,6 +3795,29 @@ namespace BinaryNinja
 		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
 	};
 
+	class ReportCollection: public CoreRefCountObject<BNReportCollection,
+		BNNewReportCollectionReference, BNFreeReportCollection>
+	{
+	public:
+		ReportCollection();
+		ReportCollection(BNReportCollection* reports);
+
+		size_t GetCount() const;
+		BNReportType GetType(size_t i) const;
+		Ref<BinaryView> GetView(size_t i) const;
+		std::string GetTitle(size_t i) const;
+		std::string GetContents(size_t i) const;
+		std::string GetPlainText(size_t i) const;
+		Ref<FlowGraph> GetFlowGraph(size_t i) const;
+
+		void AddPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents);
+		void AddMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText = "");
+		void AddHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText = "");
+		void AddGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
+	};
+
 	class InteractionHandler
 	{
 	public:
@@ -3784,6 +3826,8 @@ namespace BinaryNinja
 			const std::string& plainText);
 		virtual void ShowHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
 			const std::string& plainText);
+		virtual void ShowGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
+		virtual void ShowReportCollection(const std::string& title, Ref<ReportCollection> reports);
 
 		virtual bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title) = 0;
 		virtual bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);

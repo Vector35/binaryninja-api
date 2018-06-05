@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <iostream>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -215,7 +216,23 @@ int main(int argc, char* argv[])
 		if (i.second->GetClass() == StructureTypeClass)
 		{
 			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
-			fprintf(out, "\tpass\n");
+
+			// python uses str's, C uses byte-arrays
+			bool stringField = false;
+			for (auto& arg : i.second->GetStructure()->GetMembers())
+			{
+				if ((arg.type->GetClass() == PointerTypeClass) &&
+					(arg.type->GetChildType()->GetWidth() == 1) &&
+					(arg.type->GetChildType()->IsSigned()))
+					{
+						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn self._%s.decode('utf-8')\n", arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = value.encode('utf-8')\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
+						stringField = true;
+					}
+			}
+
+			if (!stringField)
+				fprintf(out, "\tpass\n");
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
@@ -280,7 +297,15 @@ int main(int argc, char* argv[])
 				fprintf(out, "%s._fields_ = [\n", name.c_str());
 				for (auto& j : type->GetStructure()->GetMembers())
 				{
-					fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
+					// To help the python->C wrappers
+					if ((j.type->GetClass() == PointerTypeClass) &&
+						(j.type->GetChildType()->GetWidth() == 1) &&
+						(j.type->GetChildType()->IsSigned()))
+						{
+							fprintf(out, "\t\t(\"_%s\", ", j.name.c_str());
+						}
+					else
+						fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
 					OutputType(out, j.type);
 					fprintf(out, "),\n");
 				}

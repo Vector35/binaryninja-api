@@ -344,12 +344,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@property
 	def name(self):
 		"""BinaryView name (read-only)"""
-		return core.BNGetBinaryViewTypeName(self.handle).decode('utf8')
+		return core.BNGetBinaryViewTypeName(self.handle)
 
 	@property
 	def long_name(self):
 		"""BinaryView long name (read-only)"""
-		return core.BNGetBinaryViewTypeLongName(self.handle).decode('utf8')
+		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
 		return "<view type: '%s'>" % self.name

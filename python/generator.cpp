@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "\tresult = %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
 			else
 				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
-			fprintf(out, "\tstring = ctypes.cast(result, ctypes.c_char_p).value\n");
+			fprintf(out, "\tstring = str(ctypes.cast(result, ctypes.c_char_p).value.decode('utf-8'))\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}

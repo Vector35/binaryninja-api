@@ -43,7 +43,7 @@ class Metadata(object):
 			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, str):
 			if raw:
-				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
+				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value.encode('utf-8'))
 				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 			else:
 				self.handle = core.BNCreateMetadataStringData(value)

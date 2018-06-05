@@ -579,7 +579,7 @@ class Type(object):
 		param_buf = (core.BNFunctionParameter * len(params))()
 		for i in range(0, len(params)):
 			if isinstance(params[i], Type):
-				param_buf[i].name = b""
+				param_buf[i].name = ""
 				param_buf[i].type = params[i].handle
 				param_buf[i].typeConfidence = params[i].confidence
 				param_buf[i].defaultLocation = True

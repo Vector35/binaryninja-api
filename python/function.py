@@ -1604,7 +1604,7 @@ class DisassemblyTextLine(object):
 	def __str__(self):
 		result = ""
 		for token in self.tokens:
-			result += token.text.decode('utf-8')
+			result += token.text
 		return result
 
 	def __repr__(self):

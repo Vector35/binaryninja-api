@@ -20,7 +20,6 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include <iostream>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -189,10 +188,6 @@ int main(int argc, char* argv[])
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
 	fprintf(out, "_base_path = None\n");
-	
-	// There's deffinately a reason this was here and I'm going to regret this later
-	// fprintf(out, "ctypes.set_conversion_mode('utf-8', 'strict')\n");
-	
 	fprintf(out, "if platform.system() == \"Darwin\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
@@ -204,6 +199,12 @@ int main(int argc, char* argv[])
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
+
+	fprintf(out, "def cstr(arg):\n");
+	fprintf(out, "\tif isinstance(arg, str):\n");
+	fprintf(out, "\t\treturn arg.encode('charmap')\n");
+	fprintf(out, "\telse:\n");
+	fprintf(out, "\t\treturn arg\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -225,8 +226,8 @@ int main(int argc, char* argv[])
 					(arg.type->GetChildType()->GetWidth() == 1) &&
 					(arg.type->GetChildType()->IsSigned()))
 					{
-						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn self._%s.decode('utf-8')\n", arg.name.c_str(), arg.name.c_str());
-						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = value.encode('utf-8')\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn self._%s.decode('charmap')\n", arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = value.encode('charmap')\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
 						stringField = true;
 					}
 			}
@@ -340,7 +341,7 @@ int main(int argc, char* argv[])
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 
-		// From python -> C python3 requires str -> str.encode('utf-8')
+		// From python -> C python3 requires str -> str.encode('charmap')
 		bool stringArgument = false;
 		for (auto& arg : i.second->GetParameters())
 		{
@@ -352,6 +353,8 @@ int main(int argc, char* argv[])
 					break;
 				}
 		}
+		if (name == "BNFreeString")
+			stringArgument = false;
 
 		bool callbackConvention = false;
 		if (name == "BNAllocString")
@@ -398,11 +401,29 @@ int main(int argc, char* argv[])
 			// Emit wrapper to get Python string and free native memory
 			fprintf(out, "def %s(*args):\n", name.c_str());
 			if (stringArgument)
-				// This can be done statically... Fix this here later
-				fprintf(out, "\tresult = %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+			{
+				fprintf(out, "\tresult = %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
 			else
 				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
-			fprintf(out, "\tstring = str(ctypes.cast(result, ctypes.c_char_p).value.decode('utf-8'))\n");
+			fprintf(out, "\tstring = str(ctypes.cast(result, ctypes.c_char_p).value.decode('charmap'))\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}
@@ -411,8 +432,26 @@ int main(int argc, char* argv[])
 			// Emit wrapper to return None on null pointer
 			fprintf(out, "def %s(*args):\n", name.c_str());
 			if (stringArgument)
-				// This can be done statically... Fix this here later
-				fprintf(out, "\tresult = %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+			{
+				fprintf(out, "\tresult = %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
 			else
 				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tif not result:\n");
@@ -422,10 +461,27 @@ int main(int argc, char* argv[])
 		else if (stringArgument)
 		{
 			fprintf(out, "def %s(*args):\n", name.c_str());
-			// This can be done statically... Fix this here later
-			fprintf(out, "\treturn %s(*(arg if type(arg) != str else arg.encode('utf-8') for arg in args))\n", funcName.c_str());
+			{
+				fprintf(out, "\treturn %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
 		}
-
 		fprintf(out, "\n");
 	}
 

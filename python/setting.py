@@ -58,11 +58,11 @@ class Setting(object):
 		length.value = len(default_value)
 		default_list = (ctypes.c_char_p * len(default_value))()
 		for i in range(len(default_value)):
-			default_list[i] = default_value[i]
+			default_list[i] = default_value[i].encode('charmap')
 		result = core.BNSettingGetStringList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
 		for i in range(length.value):
-			out_list.append(result[i])
+			out_list.append(result[i].decode('charmap'))
 		core.BNFreeStringList(result, length)
 		return out_list
 

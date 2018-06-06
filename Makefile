@@ -5,6 +5,7 @@
 #	LIB := -L$(HOME)/binaryninja/ -lbinaryninjacore
 #endif
 
+INSTALLPATH := ~/binaryninja
 
 TARGETDIR := bin
 TARGETNAME := libbinaryninjaapi
@@ -15,7 +16,7 @@ SOURCES = $(wildcard *$(SRCEXT))
 OBJECTS = $(SOURCES:.cpp=.o) json.o
 
 
-CFLAGS := -c -fPIC -O2 -pipe -std=gnu++11 -Wall -W
+CFLAGS := -c -fPIC -O2 -pipe -std=gnu++11 -Wall -W -Wextra -Wshadow
 ifeq ($(UNAME_S),Darwin)
 	CC := $(shell xcrun -f g++)
 	AR := $(shell xcrun -f ar)
@@ -38,8 +39,70 @@ $(TARGET).a: $(OBJECTS)
 json.o: ./json/jsoncpp.cpp ./json/json.h ./json/json-forwards.h
 	$(CC) $(CFLAGS) -I. -c -o $@ $<
 
-clean:
-	@echo " Cleaning...";
-	$(RM) -r *.o $(TARGETDIR)
+install: generate $(TARGET).a
+	@echo "Installing binaryninja API.";
+	cp -r python/* $(INSTALLPATH)/python/binaryninja
+	cp $(TARGETDIR)/$(TARGET).a $(INSTALLPATH)
 
-.PHONY: clean
+generator: python/generator.cpp $(TARGET).a
+	@echo "Building generator...";
+	$(CC) $(CFLAGS) -I . -L$(TARGETDIR) -lbinaryninjaapi -L$(INSTALLPATH) -lbinaryninjacore -o $@ $<
+
+generate: generator
+	LD_LIBRARY_PATH=$(INSTALLPATH) ./generator binaryninjacore.h python/_binaryninjacore.py python/enums.py
+
+python/_binaryninjacore.py: generate
+
+python/enums.py: generate
+
+python_test: environment python/_binaryninjacore.py python/enums.py
+	PYTHONPATH=$(INSTALLPATH)/python python2 suite/unit.py
+	PYTHONPATH=$(INSTALLPATH)/python python3 suite/unit.py
+
+environment: python/_binaryninjacore.py python/enums.py 
+	@echo "Copying libs to needed locations..."
+	@cp $(INSTALLPATH)/libbinaryninjacore.so.1 .
+	@cp $(INSTALLPATH)/libcurl.so.4 .
+	@cp $(INSTALLPATH)/libcrypto.so.1.0.2 .
+	@cp $(INSTALLPATH)/libssl.so.1.0.2 .
+
+	@mkdir api
+	@mkdir api/python
+	@mkdir api/python/examples
+	@cp python/examples/bin_info.py api/python/examples/
+	@cp $(INSTALLPATH)/libbinaryninjacore.so.1 api/python/
+	@cp $(INSTALLPATH)/libcurl.so.4 api/python/
+	@cp $(INSTALLPATH)/libcrypto.so.1.0.2 api/python/
+	@cp $(INSTALLPATH)/libssl.so.1.0.2 api/python/
+
+	@echo "Building 'binaryninja' Packages..."
+	@mkdir suite/binaryninja/
+	@cp -r python/* suite/binaryninja/
+	@mkdir api/python/examples/binaryninja/
+	@cp -r python/* api/python/examples/binaryninja/
+
+	@echo "Copying Architectures Over..."
+	@cp -r $(INSTALLPATH)/types/ .
+	@cp -r $(INSTALLPATH)/plugins/ .
+	@cp -r $(INSTALLPATH)/plugins/ api/python/
+
+environment_clean:
+	@echo "Removing 'binaryninja' Packages..."
+	@rm -r suite/binaryninja/
+	@rm -r api/
+	-@rm suite/*.pyc
+
+	@echo "Removing libs..."
+	@rm lib*
+
+	@echo "Removing Architectures..."
+	@rm -r types/
+	@rm -r plugins/
+
+clean: 
+	@echo " Cleaning...";
+	$(RM) -r *.o $(TARGETDIR) generator
+
+squeaky: clean environment_clean
+
+.PHONY: clean environment_clean squeaky python/_binaryninjacore.py python/enums.py

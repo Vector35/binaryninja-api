@@ -312,9 +312,6 @@ class BinaryViewTestBuilder(Builder):
         return retinfo
 
 
-
-
-
 class TestBuilder(Builder):
     """ The TestBuilder is for tests that need to be checked against
         stored oracle data that isn't from a binary. These test are
@@ -439,7 +436,6 @@ class TestBuilder(Builder):
 
         file_name = os.path.join(self.test_store, "helloworld")
         bv = binja.BinaryViewType.get_view_of_file(file_name)
-
         preprocessed = binja.preprocess_source("""
         #ifdef nonexistant
         int foo = 1;
@@ -539,6 +535,8 @@ class TestBuilder(Builder):
 
         os.unlink(file_name)
 
+        os.unlink(file_name)
+
         return retinfo
 
     def test_med_il_stack(self):
@@ -571,7 +569,6 @@ class TestBuilder(Builder):
                         retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
                         retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
                         retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
-
 
         os.unlink(file_name)
 
@@ -767,4 +764,3 @@ class VerifyBuilder(Builder):
             return [str(functions == bndb_functions and comments == bndb_comments)]
         finally:
             os.unlink(temp_name)
-

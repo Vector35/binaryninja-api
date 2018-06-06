@@ -512,6 +512,8 @@ class TestBuilder(Builder):
                         retinfo.append(str(ins.get_possible_flag_values(flag)))
                         retinfo.append(str(ins.get_possible_flag_values_after(flag)))
 
+        os.unlink(file_name)
+
         return retinfo
 
     def test_med_il_stack(self):
@@ -545,7 +547,7 @@ class TestBuilder(Builder):
                         retinfo.append(str(ins.get_possible_flag_values(flag)))
                         retinfo.append(str(ins.get_possible_flag_values_after(flag)))
 
-
+        os.unlink(file_name)
 
         return retinfo
 
@@ -556,71 +558,113 @@ class TestBuilder(Builder):
         self.unpackage_file(file_name)
         bv = binja.BinaryViewType['ELF'].open(file_name)
 
-        def on_complete(self):
-            return 'analysis completion'
-        evt = binja.AnalysisCompletionEvent(bv, on_complete)
-        bv.update_analysis_and_wait()
-
-        def data_written(self, view, offset, length):
-            pass
-        def data_inserted(self, view, offset, length):
-            pass
-        def data_removed(self, view, offset, length):
-            pass
-        def function_added(self, view, func):
-            pass
-        def function_removed(self, view, func):
-            pass
-        def function_updated(self, view, func):
-            pass
-        def function_update_requested(self, view, func):
-            pass
-        def data_var_added(self, view, var):
-            pass
-        def data_var_removed(self, view, var):
-            pass
-        def data_var_updated(self, view, var):
-            pass
-        def string_found(self, view, string_type, offset, length):
-            pass
-        def string_removed(self, view, string_type, offset, length):
-            pass
-        def type_defined(self, view, name, type):
-            pass
-        def type_undefined(self, view, name, type):
-            pass
-
-        bv.register_notification(data_written)
-        bv.register_notification(data_inserted)
-        bv.register_notification(data_removed)
-        bv.register_notification(function_added)
-        bv.register_notification(function_removed)
-        bv.register_notification(function_updated)
-        bv.register_notification(function_update_requested)
-        bv.register_notification(data_var_added)
-        bv.register_notification(data_var_removed)
-        bv.register_notification(data_var_updated)
-        bv.register_notification(string_found)
-        bv.register_notification(string_removed)
-        bv.register_notification(type_defined)
-        bv.register_notification(type_undefined)
+        results = []
         
 
-        bv.unregister_notification(data_written)
-        bv.unregister_notification(data_inserted)
-        bv.unregister_notification(data_removed)
-        bv.unregister_notification(function_added)
-        bv.unregister_notification(function_removed)
-        bv.unregister_notification(function_updated)
-        bv.unregister_notification(function_update_requested)
-        bv.unregister_notification(data_var_added)
-        bv.unregister_notification(data_var_removed)
-        bv.unregister_notification(data_var_updated)
-        bv.unregister_notification(string_found)
-        bv.unregister_notification(string_removed)
-        bv.unregister_notification(type_defined)
-        bv.unregister_notification(type_undefined)
+        def simple_complete(self):
+            results.append("analysis complete")
 
+        evt = binja.AnalysisCompletionEvent(bv, simple_complete)
+
+        class NotifyTest(binja.BinaryDataNotification):
+
+            def data_written(self, view, offset, length):
+                def data_written_complete(self):
+                    results.append("data written {0} {1}".format(offset, length))
+                evt = binja.AnalysisCompletionEvent(bv, data_written_complete)
+
+            def data_inserted(self, view, offset, length):
+                def data_inserted_complete(self):
+                    results.append("data inserted {0} {1}".format(offset, length))
+                evt = binja.AnalysisCompletionEvent(bv, data_inserted_complete)
+
+            def data_removed(self, view, offset, length):
+                def data_removed_complete(self):
+                    results.append("data removed {0} {1}".format(offset, length))
+                evt = binja.AnalysisCompletionEvent(bv, data_removed_complete)
+
+            def function_added(self, view, func):
+                def function_added_complete(self):
+                    results.append("function added {0}".format(func.name))
+                evt = binja.AnalysisCompletionEvent(bv, function_added_complete)
+
+            def function_removed(self, view, func):
+                def function_removed_complete(self):
+                    results.append("function removed {0}".format(func.name))
+                evt = binja.AnalysisCompletionEvent(bv, function_removed_complete)
+
+            def function_updated(self, view, func):
+                def function_updated_complete(self):
+                    results.append("function updated {0}".format(func.name))
+                evt = binja.AnalysisCompletionEvent(bv, function_updated_complete)
+
+            def function_update_requested(self, view, func):
+                def function_update_requested_complete(self):
+                    results.append("function update requested {0}".format(func.name))
+                evt = binja.AnalysisCompletionEvent(bv, function_update_requested_complete)
+
+            def data_var_added(self, view, var):
+                def data_var_added_complete(self):
+                    results.append("data var added {0}".format(var.name))
+                evt = binja.AnalysisCompletionEvent(bv, data_var_added_complete)
+
+            def data_var_removed(self, view, var):
+                def data_var_removed_complete(self):
+                    results.append("data var removed {0}".format(var.name))
+                evt = binja.AnalysisCompletionEvent(bv, data_var_removed_complete)
+
+            def data_var_updated(self, view, var):
+                def data_var_updated_complete(self):
+                    results.append("data var updated {0}".format(var.name))
+                evt = binja.AnalysisCompletionEvent(bv, data_var_updated_complete)
+
+            def string_found(self, view, string_type, offset, length):
+                def string_found_complete(self):
+                    results.append("string found {0} {1}".format(offset, length))
+                evt = binja.AnalysisCompletionEvent(bv, string_found_complete)
+
+            def string_removed(self, view, string_type, offset, length):
+                def string_removed_complete(self):
+                    results.append("string removed {0} {1}".format(offset, length))
+                evt = binja.AnalysisCompletionEvent(bv, string_removed_complete)
+
+            def type_defined(self, view, name, type):
+                def type_defined_complete(self):
+                    results.append("type defined {0} {1}".format(name))
+                evt = binja.AnalysisCompletionEvent(bv, type_defined_complete)
+
+            def type_undefined(self, view, name, type):
+                def type_undefined_complete(self):
+                    results.append("type undefined {0} {1}".format(name))
+                evt = binja.AnalysisCompletionEvent(bv, type_undefined_complete)
+
+
+        test = NotifyTest()
+        bv.register_notification(test)
+        sacrificial_addr = 0x84fc
+
+
+        type, name = bv.parse_type_string("int foo")
+        type_id = type.generate_auto_type_id("source", name)
+        bv.define_type(type_id, name, type)
+        bv.undefine_type(type_id)
+
+        bv.insert(sacrificial_addr, "AAAA")
+        bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
+
+        bv.write(sacrificial_addr, "BBBB")
+
+        bv.add_function(sacrificial_addr)
+        bv.remove_function(bv.get_function_at(sacrificial_addr))
+
+        bv.undefine_data_var(sacrificial_addr)
+        bv.remove(sacrificial_addr, 4)
+
+        bv.update_analysis_and_wait()
+ 
+        bv.unregister_notification(test)
+
+        return str(sorted(results))
 
     def unpackage(self, fileName):
         testname = None

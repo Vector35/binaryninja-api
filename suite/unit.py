@@ -10,6 +10,7 @@ import api_test
 import difflib
 
 
+
 class TestBinaryNinjaAPI(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -204,6 +205,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 
 
 if __name__ == "__main__":
+
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
     test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
     runner = unittest.TextTestRunner(verbosity=2)

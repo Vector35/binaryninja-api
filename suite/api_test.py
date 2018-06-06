@@ -240,7 +240,7 @@ class TimingTest(unittest.TestCase):
 			return
 
 		start_time = time.time()
-		file_names = [os.path.join(os.path.dirname(__file__), "binaries", "ntshrui.dll"),
+		file_names = [os.path.join(os.path.dirname(__file__), "binaries", "quick3dcoreplugin.dll"),
 					os.path.join(os.path.dirname(__file__), "binaries", "md5"),
 					os.path.join(os.path.dirname(__file__), "binaries", "ls")]
 

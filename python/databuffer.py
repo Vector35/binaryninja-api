@@ -51,7 +51,7 @@ class DataBuffer(object):
 	def __getitem__(self, i):
 		if isinstance(i, tuple):
 			result = ""
-			source = str(self)
+			source = bytes(self)
 			for s in i:
 				result += source[s]
 			return result
@@ -66,7 +66,7 @@ class DataBuffer(object):
 				ctypes.memmove(buf, core.BNGetDataBufferContentsAt(self.handle, start), stop - start)
 				return buf.raw
 			else:
-				return str(self)[i]
+				return bytes(self)[i]
 		elif i < 0:
 			if i >= -len(self):
 				return chr(core.BNGetDataBufferByte(self.handle, int(len(self) + i)))
@@ -86,7 +86,7 @@ class DataBuffer(object):
 			if stop < start:
 				stop = start
 			if len(value) != (stop - start):
-				data = str(self)
+				data = bytes(self)
 				data = data[0:start] + value + data[stop:]
 				core.BNSetDataBufferContents(self.handle, data, len(data))
 			else:
@@ -114,22 +114,27 @@ class DataBuffer(object):
 	def __str__(self):
 		buf = ctypes.create_string_buffer(len(self))
 		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
-		return str(buf.raw)
+		if type(buf.raw) is str:
+			return buf.raw
+		else:
+			return buf.raw.decode("charmap")
 
-	def __repr__(self):
-		return repr(str(self))
+	def __bytes__(self):
+		buf = ctypes.create_string_buffer(len(self))
+		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
+		return buf.raw
 
 	def escape(self):
 		return core.BNDataBufferToEscapedString(self.handle)
 
 	def unescape(self):
-		return DataBuffer(handle=core.BNDecodeEscapedString(str(self)))
+		return DataBuffer(handle=core.BNDecodeEscapedString(bytes(self)))
 
 	def base64_encode(self):
 		return core.BNDataBufferToBase64(self.handle)
 
 	def base64_decode(self):
-		return DataBuffer(handle = core.BNDecodeBase64(str(self)))
+		return DataBuffer(handle = core.BNDecodeBase64(bytes(self)))
 
 	def zlib_compress(self):
 		buf = core.BNZlibCompress(self.handle)

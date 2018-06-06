@@ -1068,7 +1068,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			errors[0] = core.BNAllocString(str(error_str))
 			if data is None:
 				return False
-			data = str(data)
 			buf = ctypes.create_string_buffer(len(data))
 			ctypes.memmove(buf, data, len(data))
 			core.BNSetDataBufferContents(result, buf, len(data))
@@ -2289,7 +2288,6 @@ class CoreArchitecture(Architecture):
 		:rtype: InstructionInfo
 		"""
 		info = core.BNInstructionInfo()
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), info):
@@ -2317,7 +2315,6 @@ class CoreArchitecture(Architecture):
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
-		data = str(data)
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
@@ -2354,7 +2351,6 @@ class CoreArchitecture(Architecture):
 		:return: the length of the current instruction
 		:rtype: int
 		"""
-		data = str(data)
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
@@ -2444,7 +2440,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureNeverBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2466,7 +2461,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureAlwaysBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2487,7 +2481,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureInvertBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2511,7 +2504,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.handle, buf, addr, len(data))
@@ -2533,7 +2525,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnValuePatchAvailable(self.handle, buf, addr, len(data))
@@ -2553,7 +2544,6 @@ class CoreArchitecture(Architecture):
 			'\\x90\\x90'
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureConvertToNop(self.handle, buf, addr, len(data)):
@@ -2580,7 +2570,6 @@ class CoreArchitecture(Architecture):
 			(['jmp     ', '0x9'], 5L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureAlwaysBranch(self.handle, buf, addr, len(data)):
@@ -2608,7 +2597,6 @@ class CoreArchitecture(Architecture):
 			(['jl      ', '0xa'], 6L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureInvertBranch(self.handle, buf, addr, len(data)):
@@ -2632,7 +2620,6 @@ class CoreArchitecture(Architecture):
 			(['mov     ', 'eax', ', ', '0x0'], 5L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureSkipAndReturnValue(self.handle, buf, addr, len(data), value):

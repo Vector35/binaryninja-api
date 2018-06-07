@@ -491,7 +491,7 @@ class TestBuilder(Builder):
 
     def test_low_il_stack(self):
         """LLIL stack produced different output"""
-        file_name = os.path.join(self.test_store, "ls")
+        file_name = os.path.join(self.test_store, "jumptable_reordered")
         self.unpackage_file(file_name)
         bv = binja.BinaryViewType.get_view_of_file(file_name)
         reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
@@ -518,7 +518,7 @@ class TestBuilder(Builder):
 
     def test_med_il_stack(self):
         """MLIL stack produced different output"""
-        file_name = os.path.join(self.test_store, "ls")
+        file_name = os.path.join(self.test_store, "jumptable_reordered")
         self.unpackage_file(file_name)
         bv = binja.BinaryViewType.get_view_of_file(file_name)
         reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']

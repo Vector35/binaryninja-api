@@ -101,11 +101,7 @@ class BinaryViewTestBuilder(Builder):
 
     def test_strings(self):
         """Strings list doesn't match"""
-<<<<<<< HEAD
         return [str(x.value) + ' ' + str(x.type) + ' ' + str(hex(x.start)) for x in self.bv.strings]
-=======
-        return [x.value + ' ' + str(x.type) + ' ' + hex(x.start) for x in self.bv.strings]
->>>>>>> ef3496d4002190535da0dd546bc1d8926305c90f
 
 
     def test_low_il_instructions(self):

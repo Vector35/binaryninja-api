@@ -24,19 +24,11 @@ class TestBinaryNinjaAPI(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.builder = testcommon.TestBuilder("{3}")
-<<<<<<< HEAD
      try:
             #Python 2 does not have the encodings option
             self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"), encoding='charmap')
         except TypeError:
             self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "r"))
-=======
-        try:
-            #Python 2 does not have the encodings option
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rUb"), errors="ignore")
-        except TypeError:
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rU"))
->>>>>>> ef3496d4002190535da0dd546bc1d8926305c90f
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
     def run_binary_test(self, testfile):
@@ -48,15 +40,9 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         self.assertTrue(os.path.exists(testname + ".pkl"), "Test pickle doesn't exist")
         try:
             #Python 2 does not have the encodings option
-<<<<<<< HEAD
             binary_oracle = pickle.load(open(testname + ".pkl", "rb"), encoding='charmap')
         except TypeError:
             binary_oracle = pickle.load(open(testname + ".pkl", "r"))
-=======
-            binary_oracle = pickle.load(open(testname + ".pkl", "rUb"), errors="ignore")
-        except TypeError:
-            binary_oracle = pickle.load(open(testname + ".pkl", "rU"))
->>>>>>> ef3496d4002190535da0dd546bc1d8926305c90f
 
         test_builder = testcommon.BinaryViewTestBuilder(testname, "{3}")
         for method in test_builder.methods():
@@ -111,11 +97,7 @@ verify_string = """
 class OracleTestFile:
     def __init__(self, filename):
         self.f = open(filename + ".pkl", "wb")
-<<<<<<< HEAD
         self.pkl = pickle.Pickler(self.f, protocol=2)
-=======
-        self.pkl = pickle.Pickler(self.f)
->>>>>>> ef3496d4002190535da0dd546bc1d8926305c90f
         self.filename = filename
         self.oracle_test_data = {}
 
@@ -138,7 +120,7 @@ class UnitTestFile:
         self.binary_tests = ""
 
     def close(self):
-        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store).encode('utf-8'))
+        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store).encode('charmap'))
         self.f.close()
 
     def add_verify(self, test_name):

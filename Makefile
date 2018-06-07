@@ -105,4 +105,6 @@ clean:
 
 squeaky: clean environment_clean
 
+squeaky: clean environment_clean
+
 .PHONY: clean environment_clean squeaky python/_binaryninjacore.py python/enums.py

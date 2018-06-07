@@ -24,11 +24,11 @@ class TestBinaryNinjaAPI(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.builder = testcommon.TestBuilder("{3}")
-        try:
+     try:
             #Python 2 does not have the encodings option
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rUb"), errors="ignore")
+            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"), encoding='charmap')
         except TypeError:
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rU"))
+            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "r"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
     def run_binary_test(self, testfile):
@@ -40,9 +40,9 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         self.assertTrue(os.path.exists(testname + ".pkl"), "Test pickle doesn't exist")
         try:
             #Python 2 does not have the encodings option
-            binary_oracle = pickle.load(open(testname + ".pkl", "rUb"), errors="ignore")
+            binary_oracle = pickle.load(open(testname + ".pkl", "rb"), encoding='charmap')
         except TypeError:
-            binary_oracle = pickle.load(open(testname + ".pkl", "rU"))
+            binary_oracle = pickle.load(open(testname + ".pkl", "r"))
 
         test_builder = testcommon.BinaryViewTestBuilder(testname, "{3}")
         for method in test_builder.methods():
@@ -97,7 +97,7 @@ verify_string = """
 class OracleTestFile:
     def __init__(self, filename):
         self.f = open(filename + ".pkl", "wb")
-        self.pkl = pickle.Pickler(self.f)
+        self.pkl = pickle.Pickler(self.f, protocol=2)
         self.filename = filename
         self.oracle_test_data = {}
 

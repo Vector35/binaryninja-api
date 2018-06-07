@@ -251,7 +251,7 @@ def main():
     options, args = parser.parse_args()
 
     if not os.path.exists(os.path.join(os.getcwd(), 'suite')):
-        print "Error: Please run this script from the binaryninja-api root directory"
+        print("Error: Please run this script from the binaryninja-api root directory")
         sys.exit(1)
 
     myprint("[+] INFO: Using test store: %s" % options.test_store)

@@ -23,7 +23,7 @@ import traceback
 import ctypes
 import abc
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
@@ -38,8 +38,8 @@ from binaryninja import lineardisassembly
 from binaryninja import metadata
 
 # 2-3 compatibility
-from six import with_metaclass
-from six.moves import range
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class BinaryDataNotification(object):
@@ -98,17 +98,19 @@ class StringReference(object):
 
 	@property
 	def value(self):
-		return self.view.read(self.start, self.length)
+		return self.view.read(self.start, self.length).decode("charmap")
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
 
+_pending_analysis_completion_events = {}
 class AnalysisCompletionEvent(object):
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
 	callbacks when analysis is complete. The callback runs once. A completion event must be added
-	for each new analysis in order to be notified of each analysis completion.
+	for each new analysis in order to be notified of each analysis completion.  The
+	AnalysisCompletionEvent class takes responcibility for keeping track of the object's lifetime.
 
 	:Example:
 		>>> def on_complete(self):
@@ -122,11 +124,19 @@ class AnalysisCompletionEvent(object):
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+		global _pending_analysis_completion_events
+		_pending_analysis_completion_events[id(self)] = self
 
 	def __del__(self):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		core.BNFreeAnalysisCompletionEvent(self.handle)
 
 	def _notify(self, ctxt):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		try:
 			self.callback(self)
 		except:
@@ -142,6 +152,9 @@ class AnalysisCompletionEvent(object):
 		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 
 
 class ActiveAnalysisInfo(object):
@@ -1731,10 +1744,13 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
+		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will
+ 		still get you a str in either case.
+
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
 		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
-		:rtype: str
+		:rtype: python2 - str; python3 - bytes 
 		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary
@@ -2784,7 +2800,9 @@ class BinaryView(object):
 	def add_analysis_completion_event(self, callback):
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
-		This is helpful when using asynchronously analysis.
+		This is helpful when using ``update_analysis`` which does not wait for analysis completion before returning.
+
+		The callee of this function is not resposible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
 		:param callable() callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.
@@ -3481,7 +3499,7 @@ class BinaryView(object):
 	def get_unique_section_names(self, name_list):
 		incoming_names = (ctypes.c_char_p * len(name_list))()
 		for i in range(0, len(name_list)):
-			incoming_names[i] = name_list[i]
+			incoming_names[i] = name_list[i].encode('charmap')
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		result = []
 		for i in range(0, len(name_list)):

@@ -23,23 +23,26 @@ max_confidence = 255
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
 
-#2-3 compatibility
-from six.moves import range
+# 2-3 compatibility
+from binaryninja import range
 
 
 class QualifiedName(object):
 	def __init__(self, name = []):
 		if isinstance(name, str):
 			self.name = [name]
+			self.byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
 			self.name = name.name
+			self.byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = [i.decode('utf-8') for i in name]
+			self.name = [i.decode('charmap') for i in name]
+			self.byte_name = name
 
 	def __str__(self):
 		return "::".join(self.name)
@@ -102,7 +105,7 @@ class QualifiedName(object):
 		result = core.BNQualifiedName()
 		name_list = (ctypes.c_char_p * len(self.name))()
 		for i in range(0, len(self.name)):
-			name_list[i] = self.name[i]
+			name_list[i] = self.name[i].encode('charmap')
 		result.name = name_list
 		result.nameCount = len(self.name)
 		return result
@@ -1022,7 +1025,7 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 		filename = "input"
 	dir_buf = (ctypes.c_char_p * len(include_dirs))()
 	for i in range(0, len(include_dirs)):
-		dir_buf[i] = str(include_dirs[i])
+		dir_buf[i] = include_dirs[i].encode('charmap')
 	output = ctypes.c_char_p()
 	errors = ctypes.c_char_p()
 	result = core.BNPreprocessSource(source, filename, output, errors, dir_buf, len(include_dirs))

@@ -22,20 +22,19 @@ import traceback
 import ctypes
 import abc
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import log
 from binaryninja import databuffer
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import TransformType
 
-#2-3 compatibility
-from six import with_metaclass
-from six.moves import range
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class _TransformMetaClass(type):
-
 	@property
 	def list(self):
 		binaryninja._init_plugins()
@@ -96,8 +95,6 @@ class TransformParameter(object):
 
 
 class Transform(with_metaclass(_TransformMetaClass, object)):
-
-	from binaryninja import databuffer
 	transform_type = None
 	name = None
 	long_name = None
@@ -224,7 +221,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 	def decode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
 		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
@@ -237,7 +234,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 	def encode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
 		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])

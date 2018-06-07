@@ -28,6 +28,7 @@ import traceback
 # Binary Ninja Components
 import binaryninja._binaryninjacore as core
 from binaryninja.setting import Setting
+from binaryninja import with_metaclass
 from binaryninja import startup
 from binaryninja import log
 
@@ -109,8 +110,7 @@ class _DownloadProviderMetaclass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class DownloadProvider(object):
-	__metaclass__ = _DownloadProviderMetaclass
+class DownloadProvider(with_metaclass(_DownloadProviderMetaclass, object)):
 	name = None
 	instance_class = None
 	_registered_providers = []

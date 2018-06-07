@@ -20,14 +20,15 @@
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import highlight
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
 
 # 2-3 compatibility
-from six.moves import range
+from binaryninja import range
+
 
 class BasicBlockEdge(object):
 	def __init__(self, branch_type, source, target, back_edge):

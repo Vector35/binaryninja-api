@@ -20,11 +20,12 @@
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 
 # 2-3 compatibility
-from six.moves import range
+from binaryninja import range
+
 
 class RepoPlugin(object):
 	"""
@@ -201,7 +202,6 @@ class RepositoryManager(object):
 	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
 	the plugins that are installed/unstalled enabled/disabled
 	"""
-
 	def __init__(self, handle=None):
 		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()

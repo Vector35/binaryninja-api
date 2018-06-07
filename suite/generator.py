@@ -10,24 +10,77 @@ import time
 unit_test_template = """#!/usr/bin/env python
 # This is an auto generated unit test file do not edit directly
 import os
+import sys
 import unittest
 import pickle
 import zipfile
 import testcommon
-import binaryninja
 import api_test
 import difflib
+from collections import Counter
 
+global verbose
+verbose = False
 
 class TestBinaryNinjaAPI(unittest.TestCase):
+    # Returns a tuple of:
+    #   bool   : Two lists are equal
+    #   string : The string diff
+    # Args:
+    #   list
+    #   list   : (compare list one vs list two)
+    #   string : anything additional wanted to be printed before the string diff
+    #   bool   : the ordering of the items in the two lists must be the same
+    def report(self, oracle, test, firstText='', strictOrdering = False):
+        stringDiff = ""
+
+        equality = False
+        if not strictOrdering:
+            equality = (Counter(oracle) == Counter(test))
+        else:
+            equality = (oracle == test)
+
+        if equality:
+            return (True, '')
+        elif not strictOrdering:
+            try:
+                for elem in oracle:
+                    test.remove(elem)
+                    oracle.remove(elem)  # If it's not in the test, it won't get here!
+            except ValueError:
+                pass
+
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(oracle, test):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                stringDiff += "<---" + str(skipped_lines) + ' same lines--->\\n'
+                skipped_lines = 0
+            delta = delta.replace(\'\\n\', '')
+            stringDiff += delta + \'\\n\'
+
+        stringDiffList = stringDiff.split(\'\\n\')
+
+        if len(stringDiffList) > 10:
+            if not verbose:
+                stringDiff = \'\\n\'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList[:10])
+                stringDiff += \'\\n\\n### And ' + str(len(stringDiffList)) + " more lines, use '-v' to show ###"
+        elif not verbose:
+            stringDiff = \'\\n\'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList)
+        stringDiff = \'\\n\\n\' + firstText + stringDiff
+        return (equality, stringDiff)
+
     @classmethod
     def setUpClass(self):
         self.builder = testcommon.TestBuilder("{3}")
         try:
-            #Python 2 does not have the encodings option
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rUb"), errors="ignore")
+            # Python 2 does not have the encodings option
+            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"), encoding='charmap')
         except TypeError:
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rU"))
+            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "r"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
     def run_binary_test(self, testfile):
@@ -38,10 +91,10 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 
         self.assertTrue(os.path.exists(testname + ".pkl"), "Test pickle doesn't exist")
         try:
-            #Python 2 does not have the encodings option
-            binary_oracle = pickle.load(open(testname + ".pkl", "rUb"), errors="ignore")
+            # Python 2 does not have the encodings option
+            binary_oracle = pickle.load(open(testname + ".pkl", "rb"), encoding='charmap')
         except TypeError:
-            binary_oracle = pickle.load(open(testname + ".pkl", "rU"))
+            binary_oracle = pickle.load(open(testname + ".pkl", "r"))
 
         test_builder = testcommon.BinaryViewTestBuilder(testname, "{3}")
         for method in test_builder.methods():
@@ -52,22 +105,16 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 
             result = getattr(test_builder, method).__doc__
             result += ":\\n"
-            d = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
-            skipped_lines = 0
-            for delta in d.compare(test, oracle):
-                if delta[0] == ' ':
-                    skipped_lines += 1
-                    continue
-                if skipped_lines > 0:
-                    result += "<---" + str(skipped_lines) + ' same lines--->\\n'
-                    skipped_lines = 0
-                delta = delta.replace('\\n', '')
-                result += delta + '\\n'
-            self.assertTrue(False, result)
+            report = self.report(oracle, test, result)
+            self.assertTrue(report[0], report[1])  # Test does not agree with oracle
         os.unlink(testname)
 {1}{2}
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '-v' or sys.argv[1] == '-V' or sys.argv[1] == '--verbose':
+            verbose = True
+
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
     test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
     runner = unittest.TextTestRunner(verbosity=2)
@@ -83,20 +130,8 @@ test_string = """
     def {0}(self):
         oracle = self.oracle_test_data['{0}']
         test = self.builder.{0}()
-        result = ""
-        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
-        skipped_lines = 0
-        for delta in differ.compare(test, oracle):
-            if delta[0] == ' ':
-                skipped_lines += 1
-                continue
-            if skipped_lines > 0:
-                result += "<---" + str(skipped_lines) + ' same lines--->\\n'
-                skipped_lines = 0
-            delta = delta.replace('\\n', '')
-            result += delta + '\\n'
-
-        self.assertTrue(oracle == test, result)
+        report = self.report(oracle, test)
+        self.assertTrue(report[0], report[1])  # Test does not agree with oracle
 """
 
 verify_string = """
@@ -108,7 +143,7 @@ verify_string = """
 class OracleTestFile:
     def __init__(self, filename):
         self.f = open(filename + ".pkl", "wb")
-        self.pkl = pickle.Pickler(self.f)
+        self.pkl = pickle.Pickler(self.f, protocol=2)
         self.filename = filename
         self.oracle_test_data = {}
 
@@ -131,7 +166,7 @@ class UnitTestFile:
         self.binary_tests = ""
 
     def close(self):
-        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store).encode('utf-8'))
+        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store).encode('charmap'))
         self.f.close()
 
     def add_verify(self, test_name):
@@ -146,8 +181,6 @@ class UnitTestFile:
 
 
 quiet = False
-
-
 def myprint(stuff):
     if not quiet:
         print(stuff)

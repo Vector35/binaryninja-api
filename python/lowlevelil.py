@@ -21,14 +21,14 @@
 import ctypes
 import struct
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
 from binaryninja import basicblock #required for LowLevelILBasicBlock
 
 # 2-3 compatibility
-from six.moves import range
+from binaryninja import range
 
 
 class LowLevelILLabel(object):

@@ -30,7 +30,7 @@ from binaryninja import types
 from binaryninja import lowlevelil
 
 # 2-3 compatibility
-from six.moves import range
+from binaryninja import range
 
 
 class SSAVariable(object):

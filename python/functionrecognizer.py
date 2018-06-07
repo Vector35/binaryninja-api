@@ -20,15 +20,15 @@
 
 import traceback
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
+from binaryninja import function
+from binaryninja import filemetadata
+from binaryninja import binaryview
+from binaryninja import lowlevelil
 
 
 class FunctionRecognizer(object):
-	from binaryninja import function
-	from binaryninja import filemetadata
-	from binaryninja import binaryview
-	from binaryninja import lowlevelil
 
 	_instance = None
 
@@ -54,7 +54,7 @@ class FunctionRecognizer(object):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
 			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = binaryninja.function.Function(view, handle = core.BNNewFunctionReference(func))
+			func = function.Function(view, handle = core.BNNewFunctionReference(func))
 			il = lowlevelil.LowLevelILFunction(func.arch, handle = core.BNNewLowLevelILFunctionReference(il))
 			return self.recognize_low_level_il(view, func, il)
 		except:
@@ -68,7 +68,7 @@ class FunctionRecognizer(object):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
 			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = binaryninja.function.Function(view, handle = core.BNNewFunctionReference(func))
+			func = function.Function(view, handle = core.BNNewFunctionReference(func))
 			il = mediumlevelil.MediumLevelILFunction(func.arch, handle = core.BNNewMediumLevelILFunctionReference(il))
 			return self.recognize_medium_level_il(view, func, il)
 		except:

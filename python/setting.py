@@ -20,11 +20,11 @@
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 
 # 2-3 compatibility
-from six.moves import range
+from binaryninja import range
 
 
 class Setting(object):
@@ -113,7 +113,7 @@ class Setting(object):
 		length.value = len(value)
 		default_list = (ctypes.c_char_p * len(value))()
 		for i in range(len(value)):
-			default_list[i] = value[i].encode('utf-8')
+			default_list[i] = value[i].encode('charmap')
 
 		return core.BNSettingSetStringList(self.plugin_name, name, default_list, length, auto_flush)
 

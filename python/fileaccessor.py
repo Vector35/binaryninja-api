@@ -21,11 +21,10 @@
 import traceback
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 
 class FileAccessor(object):
-
 	def __init__(self):
 		self._cb = core.BNFileAccessor()
 		self._cb.context = 0

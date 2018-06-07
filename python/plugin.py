@@ -22,15 +22,18 @@ import traceback
 import ctypes
 import threading
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import log
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import PluginCommandType
+from binaryninja import filemetadata
+from binaryninja import binaryview
+from binaryninja import function
 
-#2-3 compatibility
-from six import with_metaclass
-from six.moves import range
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class PluginCommandContext(object):
@@ -43,7 +46,6 @@ class PluginCommandContext(object):
 
 
 class _PluginCommandMetaClass(type):
-
 	@property
 	def list(self):
 		binaryninja._init_plugins()
@@ -73,11 +75,6 @@ class _PluginCommandMetaClass(type):
 
 
 class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
-
-	from binaryninja import filemetadata
-	from binaryninja import binaryview
-	from binaryninja import function
-
 	_registered_commands = []
 
 	def __init__(self, cmd):
@@ -540,7 +537,6 @@ class MainThreadAction(object):
 
 
 class MainThreadActionHandler(object):
-
 	_main_thread = None
 
 	def __init__(self):
@@ -586,7 +582,6 @@ class _BackgroundTaskMetaclass(type):
 
 
 class BackgroundTask(with_metaclass(_BackgroundTaskMetaclass, object)):
-
 	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
 		if handle is None:
 			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)

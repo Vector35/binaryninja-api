@@ -43,7 +43,8 @@ json.o: ./json/jsoncpp.cpp ./json/json.h ./json/json-forwards.h
 install: generate $(TARGET).a
 	@echo "Installing binaryninja API.";
 	cp -r python/* $(INSTALLPATH)/python/binaryninja
-	cp $(TARGETDIR)/$(TARGET).a $(INSTALLPATH)
+	cp $(TARGET).a $(INSTALLPATH)
+	@echo "Done.";
 
 generator: python/generator.cpp $(TARGET).a
 	@echo "Building generator...";
@@ -67,41 +68,41 @@ oracle: environment python/_binaryninjacore.py python/enums.py
 
 environment: python/_binaryninjacore.py python/enums.py 
 	@echo "Copying libs to needed locations..."
-	@cp $(INSTALLPATH)/libbinaryninjacore.so.1 .
-	@cp $(INSTALLPATH)/libcurl.so.4 .
-	@cp $(INSTALLPATH)/libcrypto.so.1.0.2 .
-	@cp $(INSTALLPATH)/libssl.so.1.0.2 .
+	cp $(INSTALLPATH)/libbinaryninjacore.so.1 .
+	cp $(INSTALLPATH)/libcurl.so.4 .
+	cp $(INSTALLPATH)/libcrypto.so.1.0.2 .
+	cp $(INSTALLPATH)/libssl.so.1.0.2 .
 
-	@mkdir -p api/python/examples
-	@cp python/examples/bin_info.py api/python/examples/
-	@cp $(INSTALLPATH)/libbinaryninjacore.so.1 api/python/
-	@cp $(INSTALLPATH)/libcurl.so.4 api/python/
-	@cp $(INSTALLPATH)/libcrypto.so.1.0.2 api/python/
-	@cp $(INSTALLPATH)/libssl.so.1.0.2 api/python/
+	cp $(INSTALLPATH)/libbinaryninjacore.so.1 python/
+	cp $(INSTALLPATH)/libcurl.so.4 python/
+	cp $(INSTALLPATH)/libcrypto.so.1.0.2 python/
+	cp $(INSTALLPATH)/libssl.so.1.0.2 python/
 
 	@echo "Building 'binaryninja' Packages..."
-	@mkdir -p suite/binaryninja/
-	@cp -r python/* suite/binaryninja/
-	@mkdir -p api/python/examples/binaryninja/
-	@cp -r python/* api/python/examples/binaryninja/
+	mkdir -p suite/binaryninja/
+	cp -r python/* suite/binaryninja/
+	cp -r suite/binaryninja/ python/examples/
 
 	@echo "Copying Architectures Over..."
-	@cp -r $(INSTALLPATH)/types/ .
-	@cp -r $(INSTALLPATH)/plugins/ .
-	@cp -r $(INSTALLPATH)/plugins/ api/python/
+	cp -r $(INSTALLPATH)/types/ .
+	cp -r $(INSTALLPATH)/plugins/ .
+	cp -r $(INSTALLPATH)/types/ python/
+	cp -r $(INSTALLPATH)/plugins/ python/
 
 environment_clean:
 	@echo "Removing 'binaryninja' Packages..."
-	@rm -r suite/binaryninja/
-	@rm -r api/
-	-@rm suite/*.pyc
-
+	rm -r suite/binaryninja/
+	rm -r python/examples/binaryninja/
+	
 	@echo "Removing libs..."
-	@rm lib*
+	rm lib*
+	rm python/lib*
 
 	@echo "Removing Architectures..."
-	@rm -r types/
-	@rm -r plugins/
+	rm -r types/
+	rm -r plugins/
+	rm -r python/types/
+	rm -r python/plugins/
 
 clean: 
 	@echo " Cleaning...";

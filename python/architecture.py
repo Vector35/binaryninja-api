@@ -619,7 +619,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_full_width_registers(self, ctxt, count):
 		try:
-			regs = self._full_width_regs.values()
+			regs = list(self._full_width_regs.values())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):
@@ -634,7 +634,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_registers(self, ctxt, count):
 		try:
-			regs = self._regs_by_index.keys()
+			regs = list(self._regs_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):
@@ -649,7 +649,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_flags(self, ctxt, count):
 		try:
-			flags = self._flags_by_index.keys()
+			flags = list(self._flags_by_index.keys())
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
 			for i in range(0, len(flags)):
@@ -664,7 +664,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_flag_write_types(self, ctxt, count):
 		try:
-			write_types = self._flag_write_types_by_index.keys()
+			write_types = list(self._flag_write_types_by_index.keys())
 			count[0] = len(write_types)
 			type_buf = (ctypes.c_uint * len(write_types))()
 			for i in range(0, len(write_types)):
@@ -679,7 +679,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_semantic_flag_classes(self, ctxt, count):
 		try:
-			sem_classes = self._semantic_flag_classes_by_index.keys()
+			sem_classes = list(self._semantic_flag_classes_by_index.keys())
 			count[0] = len(sem_classes)
 			class_buf = (ctypes.c_uint * len(sem_classes))()
 			for i in range(0, len(sem_classes)):
@@ -694,7 +694,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_semantic_flag_groups(self, ctxt, count):
 		try:
-			sem_groups = self._semantic_flag_groups_by_index.keys()
+			sem_groups = list(self._semantic_flag_groups_by_index.keys())
 			count[0] = len(sem_groups)
 			group_buf = (ctypes.c_uint * len(sem_groups))()
 			for i in range(0, len(sem_groups)):
@@ -933,7 +933,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_register_stacks(self, ctxt, count):
 		try:
-			regs = self._reg_stacks_by_index.keys()
+			regs = list(self._reg_stacks_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):
@@ -984,7 +984,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_all_intrinsics(self, ctxt, count):
 		try:
-			regs = self._intrinsics_by_index.keys()
+			regs = list(self._intrinsics_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):

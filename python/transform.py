@@ -219,7 +219,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 	def decode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
 		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
@@ -232,7 +232,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 	def encode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
 		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])

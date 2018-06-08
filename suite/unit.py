@@ -58,75 +58,239 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             self.assertTrue(False, result)
         os.unlink(testname)
 
-    def test_Architecture(self):
-        oracle = self.oracle_test_data['test_Architecture']
-        test = self.builder.test_Architecture()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Architecture.__doc__, oracle, test))
-
     def test_Architecture_list(self):
         oracle = self.oracle_test_data['test_Architecture_list']
         test = self.builder.test_Architecture_list()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Architecture_list.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Assemble(self):
         oracle = self.oracle_test_data['test_Assemble']
         test = self.builder.test_Assemble()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Assemble.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_BinaryViewType_list(self):
         oracle = self.oracle_test_data['test_BinaryViewType_list']
         test = self.builder.test_BinaryViewType_list()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_BinaryViewType_list.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Enumeration(self):
         oracle = self.oracle_test_data['test_Enumeration']
         test = self.builder.test_Enumeration()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Enumeration.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Function(self):
         oracle = self.oracle_test_data['test_Function']
         test = self.builder.test_Function()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Function.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Plugin_bin_info(self):
         oracle = self.oracle_test_data['test_Plugin_bin_info']
         test = self.builder.test_Plugin_bin_info()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Plugin_bin_info.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Struct(self):
         oracle = self.oracle_test_data['test_Struct']
         test = self.builder.test_Struct()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Struct.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_Types(self):
         oracle = self.oracle_test_data['test_Types']
         test = self.builder.test_Types()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_Types.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_events(self):
         oracle = self.oracle_test_data['test_events']
         test = self.builder.test_events()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_events.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_linear_disassembly(self):
         oracle = self.oracle_test_data['test_linear_disassembly']
         test = self.builder.test_linear_disassembly()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_linear_disassembly.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_low_il_stack(self):
         oracle = self.oracle_test_data['test_low_il_stack']
         test = self.builder.test_low_il_stack()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_low_il_stack.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_med_il_stack(self):
         oracle = self.oracle_test_data['test_med_il_stack']
         test = self.builder.test_med_il_stack()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_med_il_stack.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_partial_register_dataflow(self):
         oracle = self.oracle_test_data['test_partial_register_dataflow']
         test = self.builder.test_partial_register_dataflow()
-        self.assertTrue(oracle == test, "%s:\n'%s' does not equal\n'%s'" % (self.builder.test_partial_register_dataflow.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
 
     def test_verify_BNDB_round_trip(self):
         self.assertTrue(self.verifybuilder.test_verify_BNDB_round_trip(), self.test_verify_BNDB_round_trip.__doc__)

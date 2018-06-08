@@ -1831,6 +1831,7 @@ class DisassemblySettings(object):
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 
+_pending_function_graph_completion_events = {}
 class FunctionGraph(object):
 	def __init__(self, view, handle):
 		self.view = view
@@ -1964,6 +1965,8 @@ class FunctionGraph(object):
 		try:
 			if self._on_complete is not None:
 				self._on_complete()
+				global _pending_function_graph_completion_events
+				del _pending_function_graph_completion_events[id(self)]
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -1988,11 +1991,17 @@ class FunctionGraph(object):
 		self._wait_cond.release()
 
 	def on_complete(self, callback):
+		global _pending_function_graph_completion_events
+		if id(self) in _pending_function_graph_completion_events:
+			del _pending_function_graph_completion_events[id(self)]
 		self._on_complete = callback
 		core.BNSetFunctionGraphCompleteCallback(self.handle, None, self._cb)
 
 	def abort(self):
 		core.BNAbortFunctionGraph(self.handle)
+		global _pending_function_graph_completion_events
+		if id(self) in _pending_function_graph_completion_events:
+			del _pending_function_graph_completion_events[id(self)]
 
 	def get_blocks_in_region(self, left, top, right, bottom):
 		count = ctypes.c_ulonglong()

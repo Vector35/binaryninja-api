@@ -98,19 +98,29 @@ class _UpdateChannelMetaClass(type):
 		return result
 
 
+_pending_update_progress_callback = {}
 class UpdateProgressCallback(object):
 
 	def __init__(self, func):
+		global _pending_update_progress_callback
+		_pending_update_progress_callback[id(self)] = self
 		self.cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(self.callback)
 		self.func = func
 
 	def callback(self, ctxt, progress, total):
+		global _pending_update_progress_callback
+		del _pending_update_progress_callback[id(self)]
 		try:
 			if self.func is not None:
 				return self.func(progress, total)
 			return True
 		except:
 			log.log_error(traceback.format_exc())
+
+	def __del__(self):
+		global _pending_update_progress_callback
+		if id(self) in _pending_update_progress_callback:
+			del _pending_update_progress_callback[id(self)]
 
 
 class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):

@@ -36,10 +36,13 @@ class QualifiedName(object):
 	def __init__(self, name = []):
 		if isinstance(name, str):
 			self.name = [name]
+			self.byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
 			self.name = name.name
+			self.byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = [i.decode('utf-8') for i in name]
+			self.name = [i.decode('charmap') for i in name]
+			self.byte_name = name
 
 	def __str__(self):
 		return "::".join(self.name)
@@ -102,7 +105,7 @@ class QualifiedName(object):
 		result = core.BNQualifiedName()
 		name_list = (ctypes.c_char_p * len(self.name))()
 		for i in range(0, len(self.name)):
-			name_list[i] = self.name[i]
+			name_list[i] = self.name[i].encode('charmap')
 		result.name = name_list
 		result.nameCount = len(self.name)
 		return result

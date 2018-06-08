@@ -91,18 +91,18 @@ environment: environment_clean python/_binaryninjacore.py python/enums.py
 
 environment_clean:
 	@echo "Removing 'binaryninja' Packages..."
-	-rm -r suite/binaryninja/
-	-rm -r python/examples/binaryninja/
+	rm -rf suite/binaryninja/
+	rm -rf python/examples/binaryninja/
 	
 	@echo "Removing libs..."
-	-rm lib*
-	-rm python/lib*
+	rm -f lib*
+	rm -f python/lib*
 
 	@echo "Removing Architectures..."
-	-rm -r types/
-	-rm -r plugins/
-	-rm -r python/types/
-	-rm -r python/plugins/
+	rm -rf types/
+	rm -rf plugins/
+	rm -rf python/types/
+	rm -rf python/plugins/
 
 clean: 
 	@echo " Cleaning...";

@@ -104,11 +104,13 @@ class StringReference(object):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
 
+_pending_analysis_completion_events = {}
 class AnalysisCompletionEvent(object):
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
 	callbacks when analysis is complete. The callback runs once. A completion event must be added
-	for each new analysis in order to be notified of each analysis completion.
+	for each new analysis in order to be notified of each analysis completion.  The
+	AnalysisCompletionEvent class takes responcibility for keeping track of the object's lifetime.
 
 	:Example:
 		>>> def on_complete(self):
@@ -122,11 +124,19 @@ class AnalysisCompletionEvent(object):
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+		global _pending_analysis_completion_events
+		_pending_analysis_completion_events[id(self)] = self
 
 	def __del__(self):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		core.BNFreeAnalysisCompletionEvent(self.handle)
 
 	def _notify(self, ctxt):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		try:
 			self.callback(self)
 		except:
@@ -142,6 +152,9 @@ class AnalysisCompletionEvent(object):
 		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 
 
 class AnalysisProgress(object):
@@ -2732,7 +2745,9 @@ class BinaryView(object):
 	def add_analysis_completion_event(self, callback):
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
-		This is helpful when using asynchronously analysis.
+		This is helpful when using ``update_analysis`` which does not wait for analysis completion before returning.
+
+		The callee of this function is not resposible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
 		:param callable() callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.

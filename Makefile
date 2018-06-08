@@ -66,7 +66,7 @@ python_test: environment python/_binaryninjacore.py python/enums.py
 oracle: environment python/_binaryninjacore.py python/enums.py
 	python3 suite/generator.py
 
-environment: python/_binaryninjacore.py python/enums.py 
+environment: environment_clean python/_binaryninjacore.py python/enums.py 
 	@echo "Copying libs to needed locations..."
 	cp $(INSTALLPATH)/libbinaryninjacore.so.1 .
 	cp $(INSTALLPATH)/libcurl.so.4 .
@@ -91,18 +91,18 @@ environment: python/_binaryninjacore.py python/enums.py
 
 environment_clean:
 	@echo "Removing 'binaryninja' Packages..."
-	rm -r suite/binaryninja/
-	rm -r python/examples/binaryninja/
+	-rm -r suite/binaryninja/
+	-rm -r python/examples/binaryninja/
 	
 	@echo "Removing libs..."
-	rm lib*
-	rm python/lib*
+	-rm lib*
+	-rm python/lib*
 
 	@echo "Removing Architectures..."
-	rm -r types/
-	rm -r plugins/
-	rm -r python/types/
-	rm -r python/plugins/
+	-rm -r types/
+	-rm -r plugins/
+	-rm -r python/types/
+	-rm -r python/plugins/
 
 clean: 
 	@echo " Cleaning...";

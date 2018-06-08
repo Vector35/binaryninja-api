@@ -58,6 +58,24 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             self.assertTrue(False, result)
         os.unlink(testname)
 
+    def test_Architecture(self):
+        oracle = self.oracle_test_data['test_Architecture']
+        test = self.builder.test_Architecture()
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\n'
+                skipped_lines = 0
+            delta = delta.replace('\n', '')
+            result += delta + '\n'
+
+        self.assertTrue(oracle == test, result)
+
     def test_Architecture_list(self):
         oracle = self.oracle_test_data['test_Architecture_list']
         test = self.builder.test_Architecture_list()

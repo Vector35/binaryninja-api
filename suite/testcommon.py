@@ -358,10 +358,10 @@ class TestBuilder(Builder):
         file_name = os.path.join(self.test_store, "..", "pwnadventurez.nes")
         bv = binja.BinaryViewType["NES Bank 0"].open(file_name)
 
-        for i in v.platform.arch.calling_conventions:
+        for i in bv.platform.arch.calling_conventions:
             retinfo.append("Custom arch calling convention: " + str(i))
-        for i in v.platform.arch.full_width_regs:
-        retinfo.append("Custom arch full width reg: " + str(i))
+        for i in bv.platform.arch.full_width_regs:
+            retinfo.append("Custom arch full width reg: " + str(i))
 
         reg = binja.RegisterValue()
         retinfo.append("Reg entry value: " + str(reg.entry_value(bv.platform.arch, 'x')))
@@ -475,7 +475,9 @@ class TestBuilder(Builder):
         disass = bv.linear_disassembly
         retinfo = []
         for i in disass:
-            retinfo.append(str(i))
+            i = str(i)
+            i = i.replace("int32_t ", '') # done to resolve confidence ties
+            retinfo.append(i)
         return retinfo
 
     def test_partial_register_dataflow(self):

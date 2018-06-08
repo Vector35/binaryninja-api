@@ -259,6 +259,8 @@ class TimingTest(unittest.TestCase):
 				if os.path.exists(temp_name):
 					os.unlink(temp_name)
 
-		time_s = time.time() - start_time
-		commit = subprocess.check_output(["git", "rev-parse", "HEAD"])[:-1]
-		conn = urllib.urlopen("https://script.google.com/macros/s/AKfycbxrZtlgLaWt3l95_7RyH9ceDdFIBm0VaR6jG1-4UDt6CFFCFzQ/exec?BuildID=%s&Test1=%.2f" % (commit, time_s))
+		log_url = os.environ.get('BINJA_LOG_URL')
+		if log_url:
+			time_s = time.time() - start_time
+			commit = subprocess.check_output(["git", "rev-parse", "HEAD"])[:-1]
+			conn = urllib.urlopen("%s?BuildID=%s&Test1=%.2f" % (log_url, commit, time_s))

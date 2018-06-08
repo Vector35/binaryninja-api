@@ -85,7 +85,20 @@ test_string = """
     def {0}(self):
         oracle = self.oracle_test_data['{0}']
         test = self.builder.{0}()
-        self.assertTrue(oracle == test, "%s:\\n'%s' does not equal\\n'%s'" % (self.builder.{0}.__doc__, oracle, test))
+        result = ""
+        differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+        skipped_lines = 0
+        for delta in differ.compare(test, oracle):
+            if delta[0] == ' ':
+                skipped_lines += 1
+                continue
+            if skipped_lines > 0:
+                result += "<---" + str(skipped_lines) + ' same lines--->\\n'
+                skipped_lines = 0
+            delta = delta.replace('\\n', '')
+            result += delta + '\\n'
+
+        self.assertTrue(oracle == test, result)
 """
 
 verify_string = """

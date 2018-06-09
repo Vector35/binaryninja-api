@@ -19,6 +19,11 @@ def get_file_list(test_store):
 
     return all_files
 
+def remove_low_confidence(type_string):
+    low_confidence_types = ["int32_t", "void"]
+    for lct in low_confidence_types:
+        type_string = type_string.replace(lct + " ", '') # done to resolve confidence ties
+    return type_string
 
 class Builder(object):
     def __init__(self, test_store):
@@ -276,6 +281,8 @@ class BinaryViewTestBuilder(Builder):
             funcinfo.append("Function {} indirect branches test: ".format(func.name) + str(func.get_indirect_branches_at(func.start+0x10)))
             funcinfo.append("Function {} test instr highlight: ".format(func.name) + str(func.get_instr_highlight(func.start)))
             for token in func.get_type_tokens():
+                token = str(token)
+                token = remove_low_confidence(token)
                 funcinfo.append("Function {} type token: ".format(func.name) + str(token))
 
 
@@ -303,6 +310,7 @@ class BinaryViewTestBuilder(Builder):
         retinfo.append("BV start: " + hex(self.bv.start))
         retinfo.append("BV length: " + hex(len(self.bv)))
         return retinfo
+
 
 
 
@@ -352,7 +360,7 @@ class TestBuilder(Builder):
     def test_Architecture(self):
         """Architecture failure"""
         if not os.path.exists(os.path.join(os.path.expanduser("~"), '.binaryninja', 'plugins', 'nes.py')):
-            return
+            return [""]
 
         retinfo = []
         file_name = os.path.join(self.test_store, "..", "pwnadventurez.nes")
@@ -476,7 +484,7 @@ class TestBuilder(Builder):
         retinfo = []
         for i in disass:
             i = str(i)
-            i = i.replace("int32_t ", '') # done to resolve confidence ties
+            i = remove_low_confidence(i)
             retinfo.append(i)
         return retinfo
 
@@ -523,10 +531,11 @@ class TestBuilder(Builder):
 
 
                     for flag in flag_list:
-                        retinfo.append("LLIL flag {} value at: ".format(flag, ins.address) + str(ins.get_flag_value(flag)))
-                        retinfo.append("LLIL flag {} value after {}: ".format(flag, ins.address) + str(ins.get_flag_value_after(flag)))
-                        retinfo.append("LLIL flag {} possible values at: ".format(flag, ins.address) + str(ins.get_possible_flag_values(flag)))
-                        retinfo.append("LLIL flag {} values after {}: ".format(flag, ins.address) + str(ins.get_possible_flag_values_after(flag)))
+                        retinfo.append("LLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
+                        retinfo.append("LLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
+
+                        retinfo.append("LLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
+                        retinfo.append("LLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values_after(flag)))
 
         os.unlink(file_name)
 
@@ -550,17 +559,18 @@ class TestBuilder(Builder):
                     retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
                     
                     for reg in reg_list:
-                        retinfo.append("MLIL reg {} var at {}: ".format(reg, ins.address) + str(ins.get_var_for_reg(reg)))
-                        retinfo.append("MLIL reg {} value at {}: ".format(reg, ins.address) + str(ins.get_reg_value(reg)))
-                        retinfo.append("MLIL reg {} value after {}: ".format(reg, ins.address) + str(ins.get_reg_value_after(reg)))
-                        retinfo.append("MLIL reg {} possible values at {}: ".format(reg, ins.address) + str(ins.get_possible_reg_values(reg)))
-                        retinfo.append("MLIL reg {} possible values after {}: ".format(reg, ins.address) + str(ins.get_possible_reg_values_after(reg)))
+                        retinfo.append("MLIL reg {} var at {}: ".format(reg, hex(ins.address)) + str(ins.get_var_for_reg(reg)))
+                        retinfo.append("MLIL reg {} value at {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value(reg)))
+                        retinfo.append("MLIL reg {} value after {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value_after(reg)))
+                        retinfo.append("MLIL reg {} possible value at {}: ".format(reg, hex(ins.address)) + str(ins.get_possible_reg_values(reg)))
+                        retinfo.append("MLIL reg {} possible value after {}: ".format(reg, hex(ins.address)) + str(ins.get_possible_reg_values_after(reg)))
+
 
                     for flag in flag_list:
-                        retinfo.append("MLIL flag {} value at: ".format(flag, ins.address) + str(ins.get_flag_value(flag)))
-                        retinfo.append("MLIL flag {} value after {}: ".format(flag, ins.address) + str(ins.get_flag_value_after(flag)))
-                        retinfo.append("MLIL flag {} possible values at: ".format(flag, ins.address) + str(ins.get_possible_flag_values(flag)))
-                        retinfo.append("MLIL flag {} values after {}: ".format(flag, ins.address) + str(ins.get_possible_flag_values_after(flag)))
+                        retinfo.append("MLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
+                        retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
+                        retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
+                        retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
 
 
         os.unlink(file_name)
@@ -586,72 +596,72 @@ class TestBuilder(Builder):
 
             def data_written(self, view, offset, length):
                 def data_written_complete(self):
-                    results.append("data written {0} {1}".format(offset, length))
+                    results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
                 evt = binja.AnalysisCompletionEvent(bv, data_written_complete)
 
             def data_inserted(self, view, offset, length):
                 def data_inserted_complete(self):
-                    results.append("data inserted {0} {1}".format(offset, length))
+                    results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
                 evt = binja.AnalysisCompletionEvent(bv, data_inserted_complete)
 
             def data_removed(self, view, offset, length):
                 def data_removed_complete(self):
-                    results.append("data removed {0} {1}".format(offset, length))
+                    results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
                 evt = binja.AnalysisCompletionEvent(bv, data_removed_complete)
 
             def function_added(self, view, func):
                 def function_added_complete(self):
-                    results.append("function added {0}".format(func.name))
+                    results.append("function added: {0}".format(func.name))
                 evt = binja.AnalysisCompletionEvent(bv, function_added_complete)
 
             def function_removed(self, view, func):
                 def function_removed_complete(self):
-                    results.append("function removed {0}".format(func.name))
+                    results.append("function removed: {0}".format(func.name))
                 evt = binja.AnalysisCompletionEvent(bv, function_removed_complete)
 
             def function_updated(self, view, func):
                 def function_updated_complete(self):
-                    results.append("function updated {0}".format(func.name))
+                    results.append("function updated: {0}".format(func.name))
                 evt = binja.AnalysisCompletionEvent(bv, function_updated_complete)
 
             def function_update_requested(self, view, func):
                 def function_update_requested_complete(self):
-                    results.append("function update requested {0}".format(func.name))
+                    results.append("function update requested: {0}".format(func.name))
                 evt = binja.AnalysisCompletionEvent(bv, function_update_requested_complete)
 
             def data_var_added(self, view, var):
                 def data_var_added_complete(self):
-                    results.append("data var added {0}".format(var.name))
+                    results.append("data var added: {0}".format(var.name))
                 evt = binja.AnalysisCompletionEvent(bv, data_var_added_complete)
 
             def data_var_removed(self, view, var):
                 def data_var_removed_complete(self):
-                    results.append("data var removed {0}".format(var.name))
+                    results.append("data var removed: {0}".format(var.name))
                 evt = binja.AnalysisCompletionEvent(bv, data_var_removed_complete)
 
             def data_var_updated(self, view, var):
                 def data_var_updated_complete(self):
-                    results.append("data var updated {0}".format(var.name))
+                    results.append("data var updated: {0}".format(var.name))
                 evt = binja.AnalysisCompletionEvent(bv, data_var_updated_complete)
 
             def string_found(self, view, string_type, offset, length):
                 def string_found_complete(self):
-                    results.append("string found {0} {1}".format(offset, length))
+                    results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
                 evt = binja.AnalysisCompletionEvent(bv, string_found_complete)
 
             def string_removed(self, view, string_type, offset, length):
                 def string_removed_complete(self):
-                    results.append("string removed {0} {1}".format(offset, length))
+                    results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
                 evt = binja.AnalysisCompletionEvent(bv, string_removed_complete)
 
             def type_defined(self, view, name, type):
                 def type_defined_complete(self):
-                    results.append("type defined {0} {1}".format(name))
+                    results.append("type defined: {0}".format(name))
                 evt = binja.AnalysisCompletionEvent(bv, type_defined_complete)
 
             def type_undefined(self, view, name, type):
                 def type_undefined_complete(self):
-                    results.append("type undefined {0} {1}".format(name))
+                    results.append("type undefined: {0}".format(name))
                 evt = binja.AnalysisCompletionEvent(bv, type_undefined_complete)
 
 

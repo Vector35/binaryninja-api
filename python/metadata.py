@@ -22,7 +22,7 @@
 from __future__ import absolute_import
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import MetadataType
 
@@ -147,7 +147,7 @@ class Metadata(object):
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
 				for i in range(result.contents.size):
-					if type(result.contents.keys[i]) is bytes:
+					if isinstance(result.contents.keys[i], bytes):
 						yield str(result.contents.keys[i].decode('charmap'))
 					else:
 						yield result.contents.keys[i]

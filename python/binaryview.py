@@ -23,7 +23,7 @@ import traceback
 import ctypes
 import abc
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
@@ -1694,10 +1694,13 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
+		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will
+ 		still get you a str in either case.
+
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
 		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
-		:rtype: str
+		:rtype: python2 - str; python3 - bytes 
 		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary

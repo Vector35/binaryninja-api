@@ -21,9 +21,10 @@
 import ctypes
 import traceback
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
+from binaryninja import binaryview
 
 # 2-3 compatibility
 from six.moves import range
@@ -242,8 +243,6 @@ class DirectoryNameField(object):
 
 
 class InteractionHandler(object):
-
-	from binaryninja import binaryview
 	_interaction_handler = None
 
 	def __init__(self):

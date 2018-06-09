@@ -26,10 +26,10 @@ import threading
 import abc
 import sys
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-import binaryninja.log
+from binaryninja import log
 
 #2-3 compatibility
 from six import with_metaclass
@@ -75,19 +75,19 @@ class ScriptingOutputListener(object):
 		try:
 			self.notify_output(text)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _error(self, ctxt, text):
 		try:
 			self.notify_error(text)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _input_ready_state_changed(self, ctxt, state):
 		try:
 			self.notify_input_ready_state_changed(state)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def notify_output(self, text):
 		pass
@@ -123,13 +123,13 @@ class ScriptingInstance(object):
 		try:
 			self.perform_destroy_instance()
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _execute_script_input(self, ctxt, text):
 		try:
 			return self.perform_execute_script_input(text)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _set_current_binary_view(self, ctxt, view):
@@ -140,7 +140,7 @@ class ScriptingInstance(object):
 				view = None
 			self.perform_set_current_binary_view(view)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _set_current_function(self, ctxt, func):
 		try:
@@ -150,7 +150,7 @@ class ScriptingInstance(object):
 				func = None
 			self.perform_set_current_function(func)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _set_current_basic_block(self, ctxt, block):
 		try:
@@ -165,19 +165,19 @@ class ScriptingInstance(object):
 				block = None
 			self.perform_set_current_basic_block(block)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _set_current_address(self, ctxt, addr):
 		try:
 			self.perform_set_current_address(addr)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _set_current_selection(self, ctxt, begin, end):
 		try:
 			self.perform_set_current_selection(begin, end)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
@@ -318,7 +318,7 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 				return None
 			return ctypes.cast(core.BNNewScriptingInstanceReference(result.handle), ctypes.c_void_p).value
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self):
@@ -384,7 +384,7 @@ class _PythonScriptingInstanceOutput(object):
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if binaryninja.log.is_output_redirected_to_log():
+			if log.is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')
@@ -394,9 +394,9 @@ class _PythonScriptingInstanceOutput(object):
 					self.buffer = self.buffer[i + 1:]
 
 					if self.is_error:
-						binaryninja.log.log_error(line)
+						log.log_error(line)
 					else:
-						binaryninja.log.log_info(line)
+						log.log_info(line)
 			else:
 				self.orig.write(data)
 		else:

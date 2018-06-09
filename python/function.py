@@ -23,13 +23,13 @@ import threading
 import traceback
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja import associateddatastore #required in the main scope due to being an argument for _FunctionAssociatedDataStore
-from binaryninja import types
 from binaryninja import highlight
 from binaryninja import log
+from binaryninja import types
 from binaryninja.enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
@@ -49,7 +49,7 @@ class LookupTableEntry(object):
 
 
 class RegisterValue(object):
-	def __init__(self, arch = None, value = None, confidence = binaryninja.types.max_confidence):
+	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
 		self.is_constant = False
 		if value is None:
 			self.type = RegisterValueType.UndeterminedValue
@@ -1966,7 +1966,8 @@ class FunctionGraph(object):
 			if self._on_complete is not None:
 				self._on_complete()
 				global _pending_function_graph_completion_events
-				del _pending_function_graph_completion_events[id(self)]
+				if id(self) in _pending_function_graph_completion_events:
+					del _pending_function_graph_completion_events[id(self)]
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -1992,8 +1993,7 @@ class FunctionGraph(object):
 
 	def on_complete(self, callback):
 		global _pending_function_graph_completion_events
-		if id(self) in _pending_function_graph_completion_events:
-			del _pending_function_graph_completion_events[id(self)]
+		_pending_function_graph_completion_events[id(self)] = self
 		self._on_complete = callback
 		core.BNSetFunctionGraphCompleteCallback(self.handle, None, self._cb)
 

@@ -21,7 +21,7 @@
 import traceback
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja import log
@@ -32,7 +32,6 @@ from six.moves import range
 
 
 class CallingConvention(object):
-	from binaryninja import types
 	name = None
 	caller_saved_regs = []
 	int_arg_regs = []
@@ -48,7 +47,7 @@ class CallingConvention(object):
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch=None, name=None, handle=None, confidence=types.max_confidence):
+	def __init__(self, arch=None, name=None, handle=None, confidence=binaryninja.types.max_confidence):
 		if handle is None:
 			if arch is None or name is None:
 				raise ValueError("Must specify either handle or architecture and name")

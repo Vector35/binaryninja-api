@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import traceback
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja Components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore

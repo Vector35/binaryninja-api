@@ -23,7 +23,7 @@ import traceback
 import ctypes
 import abc
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (Endianness, ImplicitRegisterExtend, BranchType,
 	InstructionTextTokenType, LowLevelILFlagCondition, FlagRole)

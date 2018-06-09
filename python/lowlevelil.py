@@ -21,7 +21,7 @@
 import ctypes
 import struct
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType

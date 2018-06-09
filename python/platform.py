@@ -20,9 +20,10 @@
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
+from binaryninja import types
 
 #2-3 compatibility
 from six import with_metaclass
@@ -31,7 +32,6 @@ from six.moves import range
 
 class _PlatformMetaClass(type):
 
-	from binaryninja import types
 	@property
 	def list(self):
 		binaryninja._init_plugins()
@@ -235,8 +235,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		type_list = core.BNGetPlatformTypes(self.handle, count)
 		result = {}
 		for i in range(0, count.value):
-			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -247,8 +247,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		type_list = core.BNGetPlatformVariables(self.handle, count)
 		result = {}
 		for i in range(0, count.value):
-			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -259,8 +259,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		type_list = core.BNGetPlatformFunctions(self.handle, count)
 		result = {}
 		for i in range(0, count.value):
-			name = binaryninja.types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = binaryninja.types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(type_list[i].name)
+			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -271,8 +271,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		call_list = core.BNGetPlatformSystemCalls(self.handle, count)
 		result = {}
 		for i in range(0, count.value):
-			name = binaryninja.types.QualifiedName._from_core_struct(call_list[i].name)
-			t = binaryninja.types.Type(core.BNNewTypeReference(call_list[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(call_list[i].name)
+			t = types.Type(core.BNNewTypeReference(call_list[i].type), platform = self)
 			result[call_list[i].number] = (name, t)
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
@@ -323,25 +323,25 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		return Platform(None, handle = result), new_addr.value
 
 	def get_type_by_name(self, name):
-		name = binaryninja.types.QualifiedName(name)._get_core_struct()
+		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return binaryninja.types.Type(obj, platform = self)
+		return types.Type(obj, platform = self)
 
 	def get_variable_by_name(self, name):
-		name = binaryninja.types.QualifiedName(name)._get_core_struct()
+		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformVariableByName(self.handle, name)
 		if not obj:
 			return None
-		return binaryninja.types.Type(obj, platform = self)
+		return types.Type(obj, platform = self)
 
 	def get_function_by_name(self, name):
-		name = binaryninja.types.QualifiedName(name)._get_core_struct()
+		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformFunctionByName(self.handle, name)
 		if not obj:
 			return None
-		return binaryninja.types.Type(obj, platform = self)
+		return types.Type(obj, platform = self)
 
 	def get_system_call_name(self, number):
 		return core.BNGetPlatformSystemCallName(self.handle, number)
@@ -350,15 +350,15 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		obj = core.BNGetPlatformSystemCallType(self.handle, number)
 		if not obj:
 			return None
-		return binaryninja.types.Type(obj, platform = self)
+		return types.Type(obj, platform = self)
 
 	def generate_auto_platform_type_id(self, name):
-		name = binaryninja.types.QualifiedName(name)._get_core_struct()
+		name = types.QualifiedName(name)._get_core_struct()
 		return core.BNGenerateAutoPlatformTypeId(self.handle, name)
 
 	def generate_auto_platform_type_ref(self, type_class, name):
 		type_id = self.generate_auto_platform_type_id(name)
-		return binaryninja.types.NamedTypeReference(type_class, type_id, name)
+		return types.NamedTypeReference(type_class, type_id, name)
 
 	def get_auto_platform_type_id_source(self):
 		return core.BNGetAutoPlatformTypeIdSource(self.handle)
@@ -399,16 +399,16 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		variables = {}
 		functions = {}
 		for i in range(0, parse.typeCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
 		for i in range(0, parse.variableCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
 		for i in range(0, parse.functionCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
-		return binaryninja.types.TypeParserResult(type_dict, variables, functions)
+		return types.TypeParserResult(type_dict, variables, functions)
 
 	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
 		"""
@@ -445,13 +445,13 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		variables = {}
 		functions = {}
 		for i in range(0, parse.typeCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
 		for i in range(0, parse.variableCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
 		for i in range(0, parse.functionCount):
-			name = binaryninja.types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = binaryninja.types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
-		return binaryninja.types.TypeParserResult(type_dict, variables, functions)
+		return types.TypeParserResult(type_dict, variables, functions)

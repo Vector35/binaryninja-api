@@ -20,7 +20,7 @@
 
 import ctypes
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 import binaryninja
 from binaryninja import highlight
 from binaryninja import _binaryninjacore as core

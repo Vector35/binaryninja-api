@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 
-# Binary Ninja components -- additional imports belong in the appropriate class
+# Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import HighlightColorStyle, HighlightStandardColor
 

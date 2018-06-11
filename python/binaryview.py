@@ -341,6 +341,7 @@ class BinaryViewType(object):
 		if not isinstance(value, BinaryViewType):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
 	@property
 	def list(self):
 		"""Allow tab completion to discover metaclass list property"""

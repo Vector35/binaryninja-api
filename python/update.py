@@ -115,6 +115,7 @@ class UpdateChannel(object):
 		self.name = name
 		self.description = desc
 		self.latest_version_num = ver
+
 	@property
 	def list(self):
 		"""Allow tab completion to discover metaclass list property"""

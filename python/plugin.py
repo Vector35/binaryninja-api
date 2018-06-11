@@ -83,6 +83,11 @@ class PluginCommand(object):
 		self.description = str(cmd.description)
 		self.type = PluginCommandType(cmd.type)
 
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
 	@classmethod
 	def _default_action(cls, view, action):
 		try:
@@ -586,6 +591,11 @@ class BackgroundTask(object):
 
 	def __del__(self):
 		core.BNFreeBackgroundTask(self.handle)
+
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
 
 	@property
 	def progress(self):

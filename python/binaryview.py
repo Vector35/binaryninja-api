@@ -3447,7 +3447,7 @@ class BinaryView(object):
 	def get_unique_section_names(self, name_list):
 		incoming_names = (ctypes.c_char_p * len(name_list))()
 		for i in range(0, len(name_list)):
-			incoming_names[i] = name_list[i]
+			incoming_names[i] = name_list[i].encode('charmap')
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		result = []
 		for i in range(0, len(name_list)):

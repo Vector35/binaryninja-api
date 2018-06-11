@@ -1025,7 +1025,7 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 		filename = "input"
 	dir_buf = (ctypes.c_char_p * len(include_dirs))()
 	for i in range(0, len(include_dirs)):
-		dir_buf[i] = str(include_dirs[i])
+		dir_buf[i] = include_dirs[i].encode('charmap')
 	output = ctypes.c_char_p()
 	errors = ctypes.c_char_p()
 	result = core.BNPreprocessSource(source, filename, output, errors, dir_buf, len(include_dirs))

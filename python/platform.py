@@ -386,7 +386,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			filename = "input"
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
-			dir_buf[i] = str(include_dirs[i])
+			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
@@ -432,7 +432,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
-			dir_buf[i] = str(include_dirs[i])
+			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,

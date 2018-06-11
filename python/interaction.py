@@ -153,7 +153,11 @@ class AddressField(object):
 class ChoiceField(object):
 	"""
 	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored
-	in self.result as an index in to the coices array.
+	in self.result as an index in to the choices array.
+
+	:attr str prompt: prompt to be presented to the user
+	:attr list(str) choices: list of choices to choose from
+
 	"""
 	def __init__(self, prompt, choices):
 		self.prompt = prompt
@@ -165,7 +169,7 @@ class ChoiceField(object):
 		value.prompt = self.prompt
 		choice_buf = (ctypes.c_char_p * len(self.choices))()
 		for i in range(0, len(self.choices)):
-			choice_buf[i] = str(self.choices[i])
+			choice_buf[i] = self.choices[i].encode('charmap')
 		value.choices = choice_buf
 		value.count = len(self.choices)
 
@@ -616,7 +620,7 @@ def get_choice_input(prompt, title, choices):
 	"""
 	choice_buf = (ctypes.c_char_p * len(choices))()
 	for i in range(0, len(choices)):
-		choice_buf[i] = str(choices[i])
+		choice_buf[i] = str(choices[i]).encode('charmap')
 	value = ctypes.c_ulonglong()
 	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
 		return None

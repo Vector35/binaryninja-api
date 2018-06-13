@@ -55,7 +55,7 @@ def log(level, text):
 	:param str text: message to print
 	:rtype: None
 	"""
-	core.BNLog(level, "%s", str(text))
+	core.BNLog(level,text)
 
 
 def log_debug(text):
@@ -70,7 +70,7 @@ def log_debug(text):
 		>>> log_debug("Hotdogs!")
 		Hotdogs!
 	"""
-	core.BNLogDebug("%s", str(text))
+	core.BNLogDebug(text)
 
 
 def log_info(text):
@@ -85,7 +85,7 @@ def log_info(text):
 		Saucisson!
 		>>>
 	"""
-	core.BNLogInfo("%s", str(text))
+	core.BNLogInfo(text)
 
 
 def log_warn(text):
@@ -101,7 +101,7 @@ def log_warn(text):
 		Chilidogs!
 		>>>
 	"""
-	core.BNLogWarn("%s", str(text))
+	core.BNLogWarn(text)
 
 
 def log_error(text):
@@ -117,7 +117,7 @@ def log_error(text):
 		Spanferkel!
 		>>>
 	"""
-	core.BNLogError("%s", str(text))
+	core.BNLogError(text)
 
 
 def log_alert(text):
@@ -133,7 +133,7 @@ def log_alert(text):
 		Kielbasa!
 		>>>
 	"""
-	core.BNLogAlert("%s", str(text))
+	core.BNLogAlert(text)
 
 
 def log_to_stdout(min_level=LogLevel.InfoLog):

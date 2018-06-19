@@ -26,14 +26,15 @@ import threading
 import abc
 import sys
 
-# Binary Ninja Components
-import _binaryninjacore as core
-from enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-import binaryview
-import function
-import basicblock
-import startup
-import log
+# Binary Ninja components
+import binaryninja
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
+from binaryninja import log
+
+#2-3 compatibility
+from six import with_metaclass
+from six.moves import range
 
 
 class _ThreadActionContext(object):
@@ -135,7 +136,7 @@ class ScriptingInstance(object):
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryninja.binaryview.BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)
@@ -145,12 +146,12 @@ class ScriptingInstance(object):
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
+				func = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
 		except:
-			log.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _set_current_basic_block(self, ctxt, block):
 		try:
@@ -159,7 +160,7 @@ class ScriptingInstance(object):
 				if func is None:
 					block = None
 				else:
-					block = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
+					block = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
 					core.BNFreeFunction(func)
 			else:
 				block = None
@@ -256,30 +257,31 @@ class ScriptingInstance(object):
 
 
 class _ScriptingProviderMetaclass(type):
+
 	@property
 	def list(self):
 		"""List all ScriptingProvider types (read-only)"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(ScriptingProvider(types[i]))
 		core.BNFreeScriptingProviderList(types)
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield ScriptingProvider(types[i])
 		finally:
 			core.BNFreeScriptingProviderList(types)
 
 	def __getitem__(self, value):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		provider = core.BNGetScriptingProviderByName(str(value))
 		if provider is None:
 			raise KeyError("'%s' is not a valid scripting provider" % str(value))
@@ -292,8 +294,7 @@ class _ScriptingProviderMetaclass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class ScriptingProvider(object):
-	__metaclass__ = _ScriptingProviderMetaclass
+class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 
 	name = None
 	instance_class = None
@@ -484,7 +485,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.code = None
 			self.input = ""
 
-			self.interpreter.push("from binaryninja import *\n")
+			self.interpreter.push("from binaryninja import *")
 
 		def execute(self, code):
 			self.code = code
@@ -547,8 +548,8 @@ class PythonScriptingInstance(ScriptingInstance):
 							self.locals["current_llil"] = self.active_func.low_level_il
 							self.locals["current_mlil"] = self.active_func.medium_level_il
 
-						for line in code.split("\n"):
-							self.interpreter.push(line)
+						for line in code.split(b'\n'):
+							self.interpreter.push(line.decode('charmap'))
 
 						if self.locals["here"] != self.active_addr:
 							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
@@ -654,3 +655,4 @@ def redirect_stdio():
 	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
 	sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
 	sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)
+	sys.excepthook = sys.__excepthook__

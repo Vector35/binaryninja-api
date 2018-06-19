@@ -117,7 +117,7 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			break;
 		}
 		else if ((type->GetChildType()->GetClass() == IntegerTypeClass) &&
-		         (type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
+				 (type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
 		{
 			if (isReturnType)
 				fprintf(out, "ctypes.POINTER(ctypes.c_byte)");
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 	}
 
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
-	fprintf(stderr, "Errors: %s", errors.c_str());
+	fprintf(stderr, "Errors: %s\n", errors.c_str());
 	if (!ok)
 		return 1;
 
@@ -200,6 +200,12 @@ int main(int argc, char* argv[])
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
 
+	fprintf(out, "def cstr(arg):\n");
+	fprintf(out, "\tif isinstance(arg, str):\n");
+	fprintf(out, "\t\treturn arg.encode('charmap')\n");
+	fprintf(out, "\telse:\n");
+	fprintf(out, "\t\treturn arg\n\n");
+
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
 	for (auto& i : types)
@@ -211,7 +217,23 @@ int main(int argc, char* argv[])
 		if (i.second->GetClass() == StructureTypeClass)
 		{
 			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
-			fprintf(out, "\tpass\n");
+
+			// python uses str's, C uses byte-arrays
+			bool stringField = false;
+			for (auto& arg : i.second->GetStructure()->GetMembers())
+			{
+				if ((arg.type->GetClass() == PointerTypeClass) &&
+					(arg.type->GetChildType()->GetWidth() == 1) &&
+					(arg.type->GetChildType()->IsSigned()))
+					{
+						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn self._%s.decode('charmap')\n", arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = value.encode('charmap')\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
+						stringField = true;
+					}
+			}
+
+			if (!stringField)
+				fprintf(out, "\tpass\n");
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
@@ -227,7 +249,7 @@ int main(int argc, char* argv[])
 			}
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
-		         (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
+				 (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
 		{
 			fprintf(out, "%s = ", name.c_str());
 			OutputType(out, i.second);
@@ -276,7 +298,15 @@ int main(int argc, char* argv[])
 				fprintf(out, "%s._fields_ = [\n", name.c_str());
 				for (auto& j : type->GetStructure()->GetMembers())
 				{
-					fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
+					// To help the python->C wrappers
+					if ((j.type->GetClass() == PointerTypeClass) &&
+						(j.type->GetChildType()->GetWidth() == 1) &&
+						(j.type->GetChildType()->IsSigned()))
+						{
+							fprintf(out, "\t\t(\"_%s\", ", j.name.c_str());
+						}
+					else
+						fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
 					OutputType(out, j.type);
 					fprintf(out, "),\n");
 				}
@@ -310,6 +340,22 @@ int main(int argc, char* argv[])
 			(i.second->GetChildType()->GetChildType()->IsSigned());
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
+
+		// From python -> C python3 requires str -> str.encode('charmap')
+		bool stringArgument = false;
+		for (auto& arg : i.second->GetParameters())
+		{
+			if ((arg.type->GetClass() == PointerTypeClass) &&
+				(arg.type->GetChildType()->GetWidth() == 1) &&
+				(arg.type->GetChildType()->IsSigned()))
+				{
+					stringArgument = true;
+					break;
+				}
+		}
+		if (name == "BNFreeString")
+			stringArgument = false;
+
 		bool callbackConvention = false;
 		if (name == "BNAllocString")
 		{
@@ -321,7 +367,7 @@ int main(int argc, char* argv[])
 		}
 
 		string funcName = name;
-		if (stringResult || pointerResult)
+		if (stringResult || pointerResult || stringArgument)
 			funcName = string("_") + funcName;
 
 		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
@@ -354,8 +400,30 @@ int main(int argc, char* argv[])
 		{
 			// Emit wrapper to get Python string and free native memory
 			fprintf(out, "def %s(*args):\n", name.c_str());
-			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
-			fprintf(out, "\tstring = ctypes.cast(result, ctypes.c_char_p).value\n");
+			if (stringArgument)
+			{
+				fprintf(out, "\tresult = %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
+			else
+				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			fprintf(out, "\tstring = str(ctypes.cast(result, ctypes.c_char_p).value.decode('charmap'))\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}
@@ -363,18 +431,76 @@ int main(int argc, char* argv[])
 		{
 			// Emit wrapper to return None on null pointer
 			fprintf(out, "def %s(*args):\n", name.c_str());
-			fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			if (stringArgument)
+			{
+				fprintf(out, "\tresult = %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
+			else
+				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tif not result:\n");
 			fprintf(out, "\t\treturn None\n");
 			fprintf(out, "\treturn result\n");
 		}
+		else if (stringArgument)
+		{
+			fprintf(out, "def %s(*args):\n", name.c_str());
+			{
+				fprintf(out, "\treturn %s(", funcName.c_str());
+				string stringArgFuncCall = "";
+				size_t argN = 0;
+				for (auto& arg : i.second->GetParameters())
+				{
+					if ((arg.type->GetClass() == PointerTypeClass) &&
+						(arg.type->GetChildType()->GetWidth() == 1) &&
+						(arg.type->GetChildType()->IsSigned()))
+						{
+							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
+						}
+					else
+						stringArgFuncCall += "args[" + to_string(argN) + "], ";
+					argN++;
+				}
+				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+				stringArgFuncCall += ")\n";
+				fprintf(out, "%s", stringArgFuncCall.c_str());
+			}
+		}
+		fprintf(out, "\n");
 	}
 
 	fprintf(out, "\n# Helper functions\n");
 	fprintf(out, "def handle_of_type(value, handle_type):\n");
 	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
 	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
-	fprintf(out, "\traise ValueError, 'expected pointer to %%s' %% str(handle_type)\n");
+	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
+
+	// The following method is addapted from python/enum/__init__.py, lines 25-36
+	fprintf(out, "\ntry:\n");
+	fprintf(out, "\tbasestring\n");
+	fprintf(out, "\tunicode\n");
+	fprintf(out, "except NameError:\n");
+	fprintf(out, "\t# In Python 2 basestring is the ancestor of both str and unicode\n");
+	fprintf(out, "\t# in Python 3 it's just str, but was missing in 3.1\n");
+	fprintf(out, "\t# In Python 3 unicode no longer exists (it's just str)\n");
+	fprintf(out, "\tbasestring = str\n");
+	fprintf(out, "\tunicode = str\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
 	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");

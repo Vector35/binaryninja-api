@@ -18,55 +18,60 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import traceback
 import ctypes
 import abc
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import (Endianness, ImplicitRegisterExtend, BranchType,
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import (Endianness, ImplicitRegisterExtend, BranchType,
 	InstructionTextTokenType, LowLevelILFlagCondition, FlagRole)
-import startup
-import function
-import lowlevelil
-import callingconvention
-import platform
-import log
-import databuffer
-import types
+import binaryninja
+from binaryninja import log
 
+from binaryninja import lowlevelil
+from binaryninja import types
+from binaryninja import databuffer
+from binaryninja import platform
+from binaryninja import callingconvention
+
+# 2-3 compatibility
+from six import with_metaclass
+from six.moves import range
 
 class _ArchitectureMetaClass(type):
+
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		archs = core.BNGetArchitectureList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(CoreArchitecture._from_cache(archs[i]))
 		core.BNFreeArchitectureList(archs)
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		archs = core.BNGetArchitectureList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield CoreArchitecture._from_cache(archs[i])
 		finally:
 			core.BNFreeArchitectureList(archs)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		arch = core.BNGetArchitectureByName(name)
 		if arch is None:
 			raise KeyError("'%s' is not a valid architecture" % str(name))
 		return CoreArchitecture._from_cache(arch)
 
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("architecture 'name' is not defined")
 		arch = cls()
@@ -80,12 +85,12 @@ class _ArchitectureMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class Architecture(object):
+class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	"""
 	``class Architecture`` is the parent class for all CPU architectures. Subclasses of Architecture implement assembly,
 	disassembly, IL lifting, and patching.
 
-	``class Architecture`` has a ``__metaclass__`` with the additional methods ``register``, and supports
+	``class Architecture`` has a metaclass with the additional methods ``register``, and supports
 	iteration::
 
 		>>> #List the architectures
@@ -130,11 +135,10 @@ class Architecture(object):
 	semantic_class_for_flag_write_type = {}
 	reg_stacks = {}
 	intrinsics = {}
-	__metaclass__ = _ArchitectureMetaClass
 	next_address = 0
 
 	def __init__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 
 		if self.__class__.opcode_display_length > self.__class__.max_instr_length:
 			self.__class__.opcode_display_length = self.__class__.max_instr_length
@@ -365,11 +369,11 @@ class Architecture(object):
 		for intrinsic in self.__class__.intrinsics.keys():
 			if intrinsic not in self._intrinsics:
 				info = self.__class__.intrinsics[intrinsic]
-				for i in xrange(0, len(info.inputs)):
+				for i in range(0, len(info.inputs)):
 					if isinstance(info.inputs[i], types.Type):
-						info.inputs[i] = function.IntrinsicInput(info.inputs[i])
+						info.inputs[i] = binaryninja.function.IntrinsicInput(info.inputs[i])
 					elif isinstance(info.inputs[i], tuple):
-						info.inputs[i] = function.IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
+						info.inputs[i] = binaryninja.function.IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
 				info.index = intrinsic_index
 				self._intrinsics[intrinsic] = intrinsic_index
 				self._intrinsics_by_index[intrinsic_index] = (intrinsic, info)
@@ -397,7 +401,7 @@ class Architecture(object):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
 		core.BNFreeRegisterList(regs)
 		return result
@@ -408,7 +412,7 @@ class Architecture(object):
 		count = ctypes.c_ulonglong()
 		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
 			result[obj.name] = obj
 		core.BNFreeCallingConventionList(cc, count)
@@ -499,7 +503,7 @@ class Architecture(object):
 			result[0].archTransitionByTargetAddr = info.arch_transition_by_target_addr
 			result[0].branchDelay = info.branch_delay
 			result[0].branchCount = len(info.branches)
-			for i in xrange(0, len(info.branches)):
+			for i in range(0, len(info.branches)):
 				if isinstance(info.branches[i].type, str):
 					result[0].branchType[i] = BranchType[info.branches[i].type]
 				else:
@@ -525,7 +529,7 @@ class Architecture(object):
 			length[0] = info[1]
 			count[0] = len(tokens)
 			token_buf = (core.BNInstructionTextToken * len(tokens))()
-			for i in xrange(0, len(tokens)):
+			for i in range(0, len(tokens)):
 				if isinstance(tokens[i].type, str):
 					token_buf[i].type = InstructionTextTokenType[tokens[i].type]
 				else:
@@ -615,10 +619,10 @@ class Architecture(object):
 
 	def _get_full_width_registers(self, ctxt, count):
 		try:
-			regs = self._full_width_regs.values()
+			regs = list(self._full_width_regs.values())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = regs[i]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -630,10 +634,10 @@ class Architecture(object):
 
 	def _get_all_registers(self, ctxt, count):
 		try:
-			regs = self._regs_by_index.keys()
+			regs = list(self._regs_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = regs[i]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -645,10 +649,10 @@ class Architecture(object):
 
 	def _get_all_flags(self, ctxt, count):
 		try:
-			flags = self._flags_by_index.keys()
+			flags = list(self._flags_by_index.keys())
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
-			for i in xrange(0, len(flags)):
+			for i in range(0, len(flags)):
 				flag_buf[i] = flags[i]
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
@@ -660,10 +664,10 @@ class Architecture(object):
 
 	def _get_all_flag_write_types(self, ctxt, count):
 		try:
-			write_types = self._flag_write_types_by_index.keys()
+			write_types = list(self._flag_write_types_by_index.keys())
 			count[0] = len(write_types)
 			type_buf = (ctypes.c_uint * len(write_types))()
-			for i in xrange(0, len(write_types)):
+			for i in range(0, len(write_types)):
 				type_buf[i] = write_types[i]
 			result = ctypes.cast(type_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, type_buf)
@@ -675,10 +679,10 @@ class Architecture(object):
 
 	def _get_all_semantic_flag_classes(self, ctxt, count):
 		try:
-			sem_classes = self._semantic_flag_classes_by_index.keys()
+			sem_classes = list(self._semantic_flag_classes_by_index.keys())
 			count[0] = len(sem_classes)
 			class_buf = (ctypes.c_uint * len(sem_classes))()
-			for i in xrange(0, len(sem_classes)):
+			for i in range(0, len(sem_classes)):
 				class_buf[i] = sem_classes[i]
 			result = ctypes.cast(class_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, class_buf)
@@ -690,10 +694,10 @@ class Architecture(object):
 
 	def _get_all_semantic_flag_groups(self, ctxt, count):
 		try:
-			sem_groups = self._semantic_flag_groups_by_index.keys()
+			sem_groups = list(self._semantic_flag_groups_by_index.keys())
 			count[0] = len(sem_groups)
 			group_buf = (ctypes.c_uint * len(sem_groups))()
-			for i in xrange(0, len(sem_groups)):
+			for i in range(0, len(sem_groups)):
 				group_buf[i] = sem_groups[i]
 			result = ctypes.cast(group_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, group_buf)
@@ -726,7 +730,7 @@ class Architecture(object):
 				flags.append(self._flags[name])
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
-			for i in xrange(0, len(flags)):
+			for i in range(0, len(flags)):
 				flag_buf[i] = flags[i]
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
@@ -744,7 +748,7 @@ class Architecture(object):
 				flags = []
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
-			for i in xrange(0, len(flags)):
+			for i in range(0, len(flags)):
 				flag_buf[i] = flags[i]
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
@@ -792,7 +796,7 @@ class Architecture(object):
 				flags = []
 			count[0] = len(flags)
 			flag_buf = (ctypes.c_uint * len(flags))()
-			for i in xrange(0, len(flags)):
+			for i in range(0, len(flags)):
 				flag_buf[i] = flags[i]
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
@@ -819,7 +823,7 @@ class Architecture(object):
 				write_type_name = self._flag_write_types_by_index[write_type]
 			flag_name = self._flags_by_index[flag]
 			operand_list = []
-			for i in xrange(operand_count):
+			for i in range(operand_count):
 				if operands[i].constant:
 					operand_list.append(operands[i].value)
 				elif lowlevelil.LLIL_REG_IS_TEMP(operands[i].reg):
@@ -908,7 +912,7 @@ class Architecture(object):
 		try:
 			count[0] = len(self.global_regs)
 			reg_buf = (ctypes.c_uint * len(self.global_regs))()
-			for i in xrange(0, len(self.global_regs)):
+			for i in range(0, len(self.global_regs)):
 				reg_buf[i] = self._all_regs[self.global_regs[i]]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -929,10 +933,10 @@ class Architecture(object):
 
 	def _get_all_register_stacks(self, ctxt, count):
 		try:
-			regs = self._reg_stacks_by_index.keys()
+			regs = list(self._reg_stacks_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = regs[i]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -980,10 +984,10 @@ class Architecture(object):
 
 	def _get_all_intrinsics(self, ctxt, count):
 		try:
-			regs = self._intrinsics_by_index.keys()
+			regs = list(self._intrinsics_by_index.keys())
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
-			for i in xrange(0, len(regs)):
+			for i in range(0, len(regs)):
 				reg_buf[i] = regs[i]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
@@ -999,7 +1003,7 @@ class Architecture(object):
 				inputs = self._intrinsics_by_index[intrinsic][1].inputs
 				count[0] = len(inputs)
 				input_buf = (core.BNNameAndType * len(inputs))()
-				for i in xrange(0, len(inputs)):
+				for i in range(0, len(inputs)):
 					input_buf[i].name = inputs[i].name
 					input_buf[i].type = core.BNNewTypeReference(inputs[i].type.handle)
 					input_buf[i].typeConfidence = inputs[i].type.confidence
@@ -1020,7 +1024,7 @@ class Architecture(object):
 				raise ValueError("freeing name and type list that wasn't allocated")
 			name_and_types = self._pending_name_and_type_lists[buf.value][1]
 			count = self._pending_name_and_type_lists[buf.value][2]
-			for i in xrange(0, count):
+			for i in range(0, count):
 				core.BNFreeType(name_and_types[i].type)
 			del self._pending_name_and_type_lists[buf.value]
 		except (ValueError, KeyError):
@@ -1032,7 +1036,7 @@ class Architecture(object):
 				outputs = self._intrinsics_by_index[intrinsic][1].outputs
 				count[0] = len(outputs)
 				output_buf = (core.BNTypeWithConfidence * len(outputs))()
-				for i in xrange(0, len(outputs)):
+				for i in range(0, len(outputs)):
 					output_buf[i].type = core.BNNewTypeReference(outputs[i].handle)
 					output_buf[i].confidence = outputs[i].confidence
 				result = ctypes.cast(output_buf, ctypes.c_void_p)
@@ -1052,7 +1056,7 @@ class Architecture(object):
 				raise ValueError("freeing type list that wasn't allocated")
 			types = self._pending_type_lists[buf.value][1]
 			count = self._pending_type_lists[buf.value][2]
-			for i in xrange(0, count):
+			for i in range(0, count):
 				core.BNFreeType(types[i].type)
 			del self._pending_type_lists[buf.value]
 		except (ValueError, KeyError):
@@ -1064,7 +1068,6 @@ class Architecture(object):
 			errors[0] = core.BNAllocString(str(error_str))
 			if data is None:
 				return False
-			data = str(data)
 			buf = ctypes.create_string_buffer(len(data))
 			ctypes.memmove(buf, data, len(data))
 			core.BNSetDataBufferContents(result, buf, len(data))
@@ -1701,7 +1704,7 @@ class Architecture(object):
 		:rtype: LowLevelILExpr index
 		"""
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
-		for i in xrange(len(operands)):
+		for i in range(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
 				operand_list[i].reg = self.regs[operands[i]].index
@@ -1756,7 +1759,7 @@ class Architecture(object):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetModifiedArchitectureRegistersOnWrite(self.handle, reg, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
 		core.BNFreeRegisterList(regs)
 		return result
@@ -2065,15 +2068,15 @@ class CoreArchitecture(Architecture):
 		self._regs_by_index = {}
 		self._full_width_regs = {}
 		self.__dict__["regs"] = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureRegisterName(self.handle, regs[i])
 			info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 			full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
-			self.regs[name] = function.RegisterInfo(full_width_reg, info.size, info.offset,
+			self.regs[name] = binaryninja.function.RegisterInfo(full_width_reg, info.size, info.offset,
 				ImplicitRegisterExtend(info.extend), regs[i])
 			self._all_regs[name] = regs[i]
 			self._regs_by_index[regs[i]] = name
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 			full_width_reg = core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister)
 			if full_width_reg not in self._full_width_regs:
@@ -2085,7 +2088,7 @@ class CoreArchitecture(Architecture):
 		self._flags = {}
 		self._flags_by_index = {}
 		self.__dict__["flags"] = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureFlagName(self.handle, flags[i])
 			self._flags[name] = flags[i]
 			self._flags_by_index[flags[i]] = name
@@ -2097,7 +2100,7 @@ class CoreArchitecture(Architecture):
 		self._flag_write_types = {}
 		self._flag_write_types_by_index = {}
 		self.__dict__["flag_write_types"] = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureFlagWriteTypeName(self.handle, write_types[i])
 			self._flag_write_types[name] = write_types[i]
 			self._flag_write_types_by_index[write_types[i]] = name
@@ -2109,7 +2112,7 @@ class CoreArchitecture(Architecture):
 		self._semantic_flag_classes = {}
 		self._semantic_flag_classes_by_index = {}
 		self.__dict__["semantic_flag_classes"] = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureSemanticFlagClassName(self.handle, sem_classes[i])
 			self._semantic_flag_classes[name] = sem_classes[i]
 			self._semantic_flag_classes_by_index[sem_classes[i]] = name
@@ -2121,7 +2124,7 @@ class CoreArchitecture(Architecture):
 		self._semantic_flag_groups = {}
 		self._semantic_flag_groups_by_index = {}
 		self.__dict__["semantic_flag_groups"] = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureSemanticFlagGroupName(self.handle, sem_groups[i])
 			self._semantic_flag_groups[name] = sem_groups[i]
 			self._semantic_flag_groups_by_index[sem_groups[i]] = name
@@ -2140,7 +2143,7 @@ class CoreArchitecture(Architecture):
 			count = ctypes.c_ulonglong()
 			flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, 0, count)
 			flag_names = []
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				flag_names.append(self._flags_by_index[flags[i]])
 			core.BNFreeRegisterList(flags)
 			self.__dict__["flags_required_for_flag_condition"][cond] = flag_names
@@ -2153,7 +2156,7 @@ class CoreArchitecture(Architecture):
 				self._semantic_flag_groups[group], count)
 			flag_indexes = []
 			flag_names = []
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				flag_indexes.append(flags[i])
 				flag_names.append(self._flags_by_index[flags[i]])
 			core.BNFreeRegisterList(flags)
@@ -2168,7 +2171,7 @@ class CoreArchitecture(Architecture):
 				self._semantic_flag_groups[group], count)
 			class_index_cond = {}
 			class_cond = {}
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				class_index_cond[conditions[i].semanticClass] = conditions[i].condition
 				if conditions[i].semanticClass == 0:
 					class_cond[None] = conditions[i].condition
@@ -2186,7 +2189,7 @@ class CoreArchitecture(Architecture):
 				self._flag_write_types[write_type], count)
 			flag_indexes = []
 			flag_names = []
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				flag_indexes.append(flags[i])
 				flag_names.append(self._flags_by_index[flags[i]])
 			core.BNFreeRegisterList(flags)
@@ -2208,7 +2211,7 @@ class CoreArchitecture(Architecture):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetArchitectureGlobalRegisters(self.handle, count)
 		self.__dict__["global_regs"] = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			self.global_regs.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
 		core.BNFreeRegisterList(regs)
 
@@ -2217,17 +2220,17 @@ class CoreArchitecture(Architecture):
 		self._all_reg_stacks = {}
 		self._reg_stacks_by_index = {}
 		self.__dict__["reg_stacks"] = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureRegisterStackName(self.handle, regs[i])
 			info = core.BNGetArchitectureRegisterStackInfo(self.handle, regs[i])
 			storage = []
-			for j in xrange(0, info.storageCount):
+			for j in range(0, info.storageCount):
 				storage.append(core.BNGetArchitectureRegisterName(self.handle, info.firstStorageReg + j))
 			top_rel = []
-			for j in xrange(0, info.topRelativeCount):
+			for j in range(0, info.topRelativeCount):
 				top_rel.append(core.BNGetArchitectureRegisterName(self.handle, info.firstTopRelativeReg + j))
 			top = core.BNGetArchitectureRegisterName(self.handle, info.stackTopReg)
-			self.reg_stacks[name] = function.RegisterStackInfo(storage, top_rel, top, regs[i])
+			self.reg_stacks[name] = binaryninja.function.RegisterStackInfo(storage, top_rel, top, regs[i])
 			self._all_reg_stacks[name] = regs[i]
 			self._reg_stacks_by_index[regs[i]] = name
 		core.BNFreeRegisterList(regs)
@@ -2237,23 +2240,23 @@ class CoreArchitecture(Architecture):
 		self._intrinsics = {}
 		self._intrinsics_by_index = {}
 		self.__dict__["intrinsics"] = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = core.BNGetArchitectureIntrinsicName(self.handle, intrinsics[i])
 			input_count = ctypes.c_ulonglong()
 			inputs = core.BNGetArchitectureIntrinsicInputs(self.handle, intrinsics[i], input_count)
 			input_list = []
-			for j in xrange(0, input_count.value):
+			for j in range(0, input_count.value):
 				input_name = inputs[j].name
 				type_obj = types.Type(core.BNNewTypeReference(inputs[j].type), confidence = inputs[j].typeConfidence)
-				input_list.append(function.IntrinsicInput(type_obj, input_name))
+				input_list.append(binaryninja.function.IntrinsicInput(type_obj, input_name))
 			core.BNFreeNameAndTypeList(inputs, input_count.value)
 			output_count = ctypes.c_ulonglong()
 			outputs = core.BNGetArchitectureIntrinsicOutputs(self.handle, intrinsics[i], output_count)
 			output_list = []
-			for j in xrange(0, output_count.value):
+			for j in range(0, output_count.value):
 				output_list.append(types.Type(core.BNNewTypeReference(outputs[j].type), confidence = outputs[j].confidence))
 			core.BNFreeOutputTypeList(outputs, output_count.value)
-			self.intrinsics[name] = function.IntrinsicInfo(input_list, output_list)
+			self.intrinsics[name] = binaryninja.function.IntrinsicInfo(input_list, output_list)
 			self._intrinsics[name] = intrinsics[i]
 			self._intrinsics_by_index[intrinsics[i]] = (name, self.intrinsics[name])
 		core.BNFreeRegisterList(intrinsics)
@@ -2285,16 +2288,15 @@ class CoreArchitecture(Architecture):
 		:rtype: InstructionInfo
 		"""
 		info = core.BNInstructionInfo()
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), info):
 			return None
-		result = function.InstructionInfo()
+		result = binaryninja.function.InstructionInfo()
 		result.length = info.length
 		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
 		result.branch_delay = info.branchDelay
-		for i in xrange(0, info.branchCount):
+		for i in range(0, info.branchCount):
 			target = info.branchTarget[i]
 			if info.branchArch[i]:
 				arch = CoreArchitecture._from_cache(info.branchArch[i])
@@ -2313,7 +2315,6 @@ class CoreArchitecture(Architecture):
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
-		data = str(data)
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
@@ -2323,7 +2324,7 @@ class CoreArchitecture(Architecture):
 		if not core.BNGetInstructionText(self.handle, buf, addr, length, tokens, count):
 			return None, 0
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -2332,7 +2333,7 @@ class CoreArchitecture(Architecture):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -2350,7 +2351,6 @@ class CoreArchitecture(Architecture):
 		:return: the length of the current instruction
 		:rtype: int
 		"""
-		data = str(data)
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
@@ -2370,7 +2370,7 @@ class CoreArchitecture(Architecture):
 		"""
 		flag = self.get_flag_index(flag)
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
-		for i in xrange(len(operands)):
+		for i in range(len(operands)):
 			if isinstance(operands[i], str):
 				operand_list[i].constant = False
 				operand_list[i].reg = self.regs[operands[i]].index
@@ -2440,7 +2440,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureNeverBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2462,7 +2461,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureAlwaysBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2483,7 +2481,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureInvertBranchPatchAvailable(self.handle, buf, addr, len(data))
@@ -2507,7 +2504,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.handle, buf, addr, len(data))
@@ -2529,7 +2525,6 @@ class CoreArchitecture(Architecture):
 			False
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		return core.BNIsArchitectureSkipAndReturnValuePatchAvailable(self.handle, buf, addr, len(data))
@@ -2549,7 +2544,6 @@ class CoreArchitecture(Architecture):
 			'\\x90\\x90'
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureConvertToNop(self.handle, buf, addr, len(data)):
@@ -2576,7 +2570,6 @@ class CoreArchitecture(Architecture):
 			(['jmp     ', '0x9'], 5L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureAlwaysBranch(self.handle, buf, addr, len(data)):
@@ -2604,7 +2597,6 @@ class CoreArchitecture(Architecture):
 			(['jl      ', '0xa'], 6L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureInvertBranch(self.handle, buf, addr, len(data)):
@@ -2628,7 +2620,6 @@ class CoreArchitecture(Architecture):
 			(['mov     ', 'eax', ', ', '0x0'], 5L)
 			>>>
 		"""
-		data = str(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		if not core.BNArchitectureSkipAndReturnValue(self.handle, buf, addr, len(data), value):
@@ -2655,7 +2646,7 @@ class CoreArchitecture(Architecture):
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, sem_class, count)
 		flag_names = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			flag_names.append(self._flags_by_index[flags[i]])
 		core.BNFreeRegisterList(flags)
 		return flag_names

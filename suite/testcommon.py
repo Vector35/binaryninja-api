@@ -109,8 +109,7 @@ class BinaryViewTestBuilder(Builder):
 
     def test_strings(self):
         """Strings list doesn't match"""
-        return ["String: " + x.value + ' type: ' + str(x.type) + ' at: ' + hex(x.start) for x in self.bv.strings]
-
+        return ["String: " + str(x.value) + ' type: ' + str(x.type) + ' at: ' + str(hex(x.start)) for x in self.bv.strings]
 
     def test_low_il_instructions(self):
         """LLIL instructions produced different output"""
@@ -449,7 +448,7 @@ class TestBuilder(Builder):
         long long bar1 = 2;
         #endif
         """)
-        source = '\n'.join([i.decode("utf-8") for i in preprocessed[0].split('\n') if not b"#line" in i and len(i) > 0])
+        source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
         typelist = bv.platform.parse_types_from_source(source)
         inttype = binja.Type.int(4)
 

@@ -80,6 +80,6 @@ else:
         sys.exit(1)
 
 binaryninja_pth_path = os.path.join(install_path, 'binaryninja.pth')
-open(binaryninja_pth_path, 'wb').write(api_path)
+open(binaryninja_pth_path, 'wb').write(api_path.encode('charmap'))
 
 print("Binary Ninja API installed using {}".format(binaryninja_pth_path))

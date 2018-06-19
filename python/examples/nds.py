@@ -27,12 +27,15 @@ from binaryninja.log import log_error
 import struct
 import traceback
 
+# 2-3 compatibility
+from six.moves import range
+
 
 def crc16(data):
     crc = 0xffff
     for ch in data:
         crc ^= ord(ch)
-        for bit in xrange(0, 8):
+        for bit in range(0, 8):
             if (crc & 1) == 1:
                 crc = (crc >> 1) ^ 0xa001
             else:

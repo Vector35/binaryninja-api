@@ -23,10 +23,8 @@ import json
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import ActionType
-import startup
-import log
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import ActionType
 
 
 class UndoAction(object):
@@ -52,7 +50,7 @@ class UndoAction(object):
 
 	@classmethod
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("undo action 'name' not defined")
 		if cls.action_type is None:

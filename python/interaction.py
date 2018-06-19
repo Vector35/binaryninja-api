@@ -22,10 +22,12 @@ import ctypes
 import traceback
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
-import binaryview
-import log
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
+from binaryninja import binaryview
+
+# 2-3 compatibility
+from six.moves import range
 
 
 class LabelField(object):
@@ -151,7 +153,11 @@ class AddressField(object):
 class ChoiceField(object):
 	"""
 	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored
-	in self.result as an index in to the coices array.
+	in self.result as an index in to the choices array.
+
+	:attr str prompt: prompt to be presented to the user
+	:attr list(str) choices: list of choices to choose from
+
 	"""
 	def __init__(self, prompt, choices):
 		self.prompt = prompt
@@ -162,8 +168,8 @@ class ChoiceField(object):
 		value.type = FormInputFieldType.ChoiceFormField
 		value.prompt = self.prompt
 		choice_buf = (ctypes.c_char_p * len(self.choices))()
-		for i in xrange(0, len(self.choices)):
-			choice_buf[i] = str(self.choices[i])
+		for i in range(0, len(self.choices)):
+			choice_buf[i] = self.choices[i].encode('charmap')
 		value.choices = choice_buf
 		value.count = len(self.choices)
 
@@ -330,7 +336,7 @@ class InteractionHandler(object):
 	def _get_choice_input(self, ctxt, result, prompt, title, choice_buf, count):
 		try:
 			choices = []
-			for i in xrange(0, count):
+			for i in range(0, count):
 				choices.append(choice_buf[i])
 			value = self.get_choice_input(prompt, title, choices)
 			if value is None:
@@ -373,7 +379,7 @@ class InteractionHandler(object):
 	def _get_form_input(self, ctxt, fields, count, title):
 		try:
 			field_objs = []
-			for i in xrange(0, count):
+			for i in range(0, count):
 				if fields[i].type == FormInputFieldType.LabelFormField:
 					field_objs.append(LabelField(fields[i].prompt))
 				elif fields[i].type == FormInputFieldType.SeparatorFormField:
@@ -391,7 +397,7 @@ class InteractionHandler(object):
 					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
 				elif fields[i].type == FormInputFieldType.ChoiceFormField:
 					choices = []
-					for j in xrange(0, fields[i].count):
+					for j in range(0, fields[i].count):
 						choices.append(fields[i].choices[j])
 					field_objs.append(ChoiceField(fields[i].prompt, choices))
 				elif fields[i].type == FormInputFieldType.OpenFileNameFormField:
@@ -404,7 +410,7 @@ class InteractionHandler(object):
 					field_objs.append(LabelField(fields[i].prompt))
 			if not self.get_form_input(field_objs, title):
 				return False
-			for i in xrange(0, count):
+			for i in range(0, count):
 				field_objs[i]._fill_core_result(fields[i])
 			return True
 		except:
@@ -613,8 +619,8 @@ def get_choice_input(prompt, title, choices):
 		0L
 	"""
 	choice_buf = (ctypes.c_char_p * len(choices))()
-	for i in xrange(0, len(choices)):
-		choice_buf[i] = str(choices[i])
+	for i in range(0, len(choices)):
+		choice_buf[i] = str(choices[i]).encode('charmap')
 	value = ctypes.c_ulonglong()
 	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
 		return None
@@ -724,11 +730,11 @@ def get_form_input(fields, title):
 		3) Maybe
 		Options 1
 		>>> True
-		>>> print tex_f.result, int_f.result, choice_f.result
+		>>> print(tex_f.result, int_f.result, choice_f.result)
 		Peter 1337 0
 	"""
 	value = (core.BNFormInputField * len(fields))()
-	for i in xrange(0, len(fields)):
+	for i in range(0, len(fields)):
 		if isinstance(fields[i], str):
 			LabelField(fields[i])._fill_core_struct(value[i])
 		elif fields[i] is None:
@@ -737,7 +743,7 @@ def get_form_input(fields, title):
 			fields[i]._fill_core_struct(value[i])
 	if not core.BNGetFormInput(value, len(fields), title):
 		return False
-	for i in xrange(0, len(fields)):
+	for i in range(0, len(fields)):
 		if not (isinstance(fields[i], str) or (fields[i] is None)):
 			fields[i]._get_result(value[i])
 	core.BNFreeFormInputResults(value, len(fields))

@@ -120,6 +120,8 @@ extern "C"
 	struct BNArchitecture;
 	struct BNFunction;
 	struct BNBasicBlock;
+	struct BNDownloadProvider;
+	struct BNDownloadInstance;
 	struct BNFunctionGraph;
 	struct BNFunctionGraphBlock;
 	struct BNSymbol;
@@ -1481,6 +1483,27 @@ extern "C"
 	{
 		BNAnalysisState state;
 		size_t count, total;
+	};
+
+	struct BNDownloadInstanceOutputCallbacks
+	{
+		uint64_t (*writeCallback)(uint8_t* data, uint64_t len, void* ctxt);
+		void* writeContext;
+		bool (*progressCallback)(void* ctxt, uint64_t progress, uint64_t total);
+		void* progressContext;
+	};
+
+	struct BNDownloadInstanceCallbacks
+	{
+		void* context;
+		void (*destroyInstance)(void* ctxt);
+		int (*performRequest)(void* ctxt, const char* url);
+	};
+
+	struct BNDownloadProviderCallbacks
+	{
+		void* context;
+		BNDownloadInstance* (*createInstance)(void* ctxt);
 	};
 
 	enum BNFindFlag
@@ -3195,6 +3218,24 @@ extern "C"
 	                                     char*** outVarName,
 	                                     size_t* outVarNameElements);
 
+	// Download providers
+	BINARYNINJACOREAPI BNDownloadProvider* BNRegisterDownloadProvider(const char* name, BNDownloadProviderCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDownloadProvider** BNGetDownloadProviderList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeDownloadProviderList(BNDownloadProvider** providers);
+	BINARYNINJACOREAPI BNDownloadProvider* BNGetDownloadProviderByName(const char* name);
+
+	BINARYNINJACOREAPI char* BNGetDownloadProviderName(BNDownloadProvider* provider);
+	BINARYNINJACOREAPI BNDownloadInstance* BNCreateDownloadProviderInstance(BNDownloadProvider* provider);
+
+	BINARYNINJACOREAPI BNDownloadInstance* BNInitDownloadInstance(BNDownloadProvider* provider, BNDownloadInstanceCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDownloadInstance* BNNewDownloadInstanceReference(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI void BNFreeDownloadInstance(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI int BNPerformDownloadRequest(BNDownloadInstance* instance, const char* url, BNDownloadInstanceOutputCallbacks* callbacks);
+	BINARYNINJACOREAPI uint64_t BNWriteDataForDownloadInstance(BNDownloadInstance* instance, uint8_t* data, uint64_t len);
+	BINARYNINJACOREAPI bool BNNotifyProgressForDownloadInstance(BNDownloadInstance* instance, uint64_t progress, uint64_t total);
+	BINARYNINJACOREAPI char* BNGetErrorForDownloadInstance(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI void BNSetErrorForDownloadInstance(BNDownloadInstance* instance, const char* error);
+
 	// Scripting providers
 	BINARYNINJACOREAPI BNScriptingProvider* BNRegisterScriptingProvider(const char* name,
 		BNScriptingProviderCallbacks* callbacks);
@@ -3460,8 +3501,6 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 
-	BINARYNINJACOREAPI char* BNGetLinuxCADirectory();
-	BINARYNINJACOREAPI char* BNGetLinuxCABundlePath();
 #ifdef __cplusplus
 }
 #endif

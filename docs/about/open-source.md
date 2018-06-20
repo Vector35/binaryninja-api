@@ -22,13 +22,11 @@ The previous tools are used in the generation of our documentation, but are not 
 
 * Core
     - [discount] ([discount license] - BSD)
-    - [libcurl] ([libcurl license] - MIT/X derivative)
     - [libgit2] ([libgit2 license] - GPLv2 with linking exception)
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
     - [jemalloc] ([jemalloc license] - BSD)
-    - [openssl] ([openssl license] - openssl license)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
 
@@ -69,8 +67,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
-[libcurl]: https://curl.haxx.se/
-[libcurl license]: https://curl.haxx.se/docs/copyright.html 
 [libgit2]: https://libgit2.github.com/
 [libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
 [libmspack]: https://www.cabextract.org.uk/libmspack/
@@ -87,8 +83,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [mkdocs]: http://www.mkdocs.org/
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
-[openssl license]: https://www.openssl.org/source/license.html
-[openssl]: https://www.openssl.org/
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.txt

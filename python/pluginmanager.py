@@ -32,6 +32,7 @@ class RepoPlugin(object):
 	created by parsing the plugins.json in a plugin repository.
 	"""
 	def __init__(self, handle):
+		raise Exception("RepoPlugin temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
 
 	def __del__(self):
@@ -136,6 +137,7 @@ class Repository(object):
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
 	"""
 	def __init__(self, handle):
+		raise Exception("Repository temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepository)
 
 	def __del__(self):
@@ -199,6 +201,7 @@ class RepositoryManager(object):
 	the plugins that are installed/unstalled enabled/disabled
 	"""
 	def __init__(self, handle=None):
+		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path):

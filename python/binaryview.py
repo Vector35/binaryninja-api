@@ -2720,6 +2720,8 @@ class BinaryView(object):
 		if start is None:
 			strings = core.BNGetStrings(self.handle, count)
 		else:
+			if length is None:
+				length = self.end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in xrange(0, count.value):

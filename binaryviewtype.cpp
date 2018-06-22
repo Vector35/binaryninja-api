@@ -29,6 +29,8 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 	BinaryViewType* type = (BinaryViewType*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Create(view);
+	if (result == nullptr)
+		return nullptr;
 	return BNNewViewReference(result->GetObject());
 }
 

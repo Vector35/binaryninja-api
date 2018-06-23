@@ -80,7 +80,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             # Python 2 does not have the encodings option
             self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"), encoding='charmap')
         except TypeError:
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "r"))
+            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
     def run_binary_test(self, testfile):
@@ -94,7 +94,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             # Python 2 does not have the encodings option
             binary_oracle = pickle.load(open(testname + ".pkl", "rb"), encoding='charmap')
         except TypeError:
-            binary_oracle = pickle.load(open(testname + ".pkl", "r"))
+            binary_oracle = pickle.load(open(testname + ".pkl", "rb"))
 
         test_builder = testcommon.BinaryViewTestBuilder(testname, "{3}")
         for method in test_builder.methods():

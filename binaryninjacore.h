@@ -1476,7 +1476,8 @@ extern "C"
 	{
 		IdleState,
 		DisassembleState,
-		AnalyzeState
+		AnalyzeState,
+		ExtendedAnalyzeState
 	};
 
 	struct BNAnalysisProgress

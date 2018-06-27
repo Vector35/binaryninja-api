@@ -156,6 +156,8 @@ class AnalysisProgress(object):
 			return "Disassembling (%d/%d)" % (self.count, self.total)
 		if self.state == AnalysisState.AnalyzeState:
 			return "Analyzing (%d/%d)" % (self.count, self.total)
+		if self.state == AnalysisState.ExtendedAnalyzeState:
+			return "Extended Analysis"
 		return "Idle"
 
 	def __repr__(self):

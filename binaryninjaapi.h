@@ -1022,6 +1022,25 @@ namespace BinaryNinja
 		void Cancel();
 	};
 
+	struct ActiveAnalysisInfo
+	{
+		Ref<Function> func;
+		uint64_t analysisTime;
+		size_t updateCount;
+		size_t submitCount;
+
+		ActiveAnalysisInfo(Ref<Function> f, uint64_t t, size_t uc, size_t sc) : func(f), analysisTime(t), updateCount(uc), submitCount(sc)
+		{
+		}
+	};
+
+	struct AnalysisInfo
+	{
+		BNAnalysisState state;
+		uint64_t analysisTime;
+		std::vector<ActiveAnalysisInfo> activeInfo;
+	};
+
 	struct DataVariable
 	{
 		DataVariable() { }
@@ -1271,6 +1290,7 @@ namespace BinaryNinja
 
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
+		AnalysisInfo GetAnalysisInfo();
 		BNAnalysisProgress GetAnalysisProgress();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
@@ -1350,6 +1370,8 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
+		BNAnalysisParameters GetParametersForAnalysis();
+		void SetParametersForAnalysis(BNAnalysisParameters params);
 		uint64_t GetMaxFunctionSizeForAnalysis();
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 	};
@@ -2493,6 +2515,7 @@ namespace BinaryNinja
 
 		bool IsFunctionTooLarge();
 		bool IsAnalysisSkipped();
+		BNAnalysisSkipReason GetAnalysisSkipReason();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 	};

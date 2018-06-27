@@ -1480,10 +1480,35 @@ extern "C"
 		ExtendedAnalyzeState
 	};
 
+	struct BNActiveAnalysisInfo
+	{
+		BNFunction* func;
+		uint64_t analysisTime;
+		size_t updateCount;
+		size_t submitCount;
+	};
+
+	struct BNAnalysisInfo
+	{
+		BNAnalysisState state;
+		uint64_t analysisTime;
+		BNActiveAnalysisInfo* activeInfo;
+		size_t count;
+	};
+
 	struct BNAnalysisProgress
 	{
 		BNAnalysisState state;
 		size_t count, total;
+	};
+
+	struct BNAnalysisParameters
+	{
+		uint64_t maxAnalysisTime;
+		uint64_t maxFunctionSize;
+		uint64_t maxFunctionAnalysisTime;
+		size_t maxFunctionUpdateCount;
+		size_t maxFunctionSubmitCount;
 	};
 
 	struct BNDownloadInstanceOutputCallbacks
@@ -1788,6 +1813,14 @@ extern "C"
 		DefaultFunctionAnalysisSkip,
 		NeverSkipFunctionAnalysis,
 		AlwaysSkipFunctionAnalysis
+	};
+
+	enum BNAnalysisSkipReason
+	{
+		NoSkipReason,
+		AlwaysSkipReason,
+		ExceedFunctionSizeSkipReason,
+		ExceedFunctionAnalysisTimeSkipReason
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2479,9 +2512,12 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
 	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);
+	BINARYNINJACOREAPI BNAnalysisSkipReason BNGetAnalysisSkipReason(BNFunction* func);
 	BINARYNINJACOREAPI BNFunctionAnalysisSkipOverride BNGetFunctionAnalysisSkipOverride(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAnalysisSkipOverride(BNFunction* func, BNFunctionAnalysisSkipOverride skip);
 
+	BINARYNINJACOREAPI BNAnalysisParameters BNGetParametersForAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);
 	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
 
@@ -2491,6 +2527,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 
+	BINARYNINJACOREAPI BNAnalysisInfo* BNGetAnalysisInfo(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNFreeAnalysisInfo(BNAnalysisInfo* info);
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 	BINARYNINJACOREAPI BNBackgroundTask* BNGetBackgroundAnalysisTask(BNBinaryView* view);
 

@@ -1372,6 +1372,12 @@ bool Function::IsAnalysisSkipped()
 }
 
 
+BNAnalysisSkipReason Function::GetAnalysisSkipReason()
+{
+	return BNGetAnalysisSkipReason(m_object);
+}
+
+
 BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
 {
 	return BNGetFunctionAnalysisSkipOverride(m_object);

@@ -24,7 +24,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+from enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
 	FunctionAnalysisSkipOverride)
@@ -827,6 +827,11 @@ class Function(object):
 	def analysis_skipped(self):
 		"""Whether automatic analysis was skipped for this function"""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
+
+	@property
+	def analysis_skip_reason(self):
+		"""Function analysis skip reason"""
+		return AnalysisSkipReason(core.BNGetAnalysisSkipReason(self.handle))
 
 	@analysis_skipped.setter
 	def analysis_skipped(self, skip):

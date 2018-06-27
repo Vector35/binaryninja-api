@@ -1776,6 +1776,7 @@ bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 	result.dataOffset = segment.dataOffset;
 	result.dataLength = segment.dataLength;
 	result.flags = segment.flags;
+	result.autoDefined = segment.autoDefined;
 	return true;
 }
 

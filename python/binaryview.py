@@ -366,6 +366,11 @@ class BinaryViewType(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
+	@property
 	def name(self):
 		"""BinaryView name (read-only)"""
 		return core.BNGetBinaryViewTypeName(self.handle)

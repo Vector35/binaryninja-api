@@ -121,6 +121,11 @@ class Platform(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
+	@property
 	def default_calling_convention(self):
 		"""
 		Default calling convention.

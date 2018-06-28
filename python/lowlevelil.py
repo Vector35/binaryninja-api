@@ -1809,8 +1809,9 @@ class LowLevelILFunction(object):
 		param_list = []
 		for param in params:
 			param_list.append(param.index)
-		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
-			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list), flags = flags)
+		call_param = self.expr(LowLevelILOperation.LLIL_CALL_PARAM, len(params), self.add_operand_list(param_list).index)
+		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list).index,
+			self.arch.get_intrinsic_index(intrinsic), call_param.index, flags = flags)
 
 	def breakpoint(self):
 		"""

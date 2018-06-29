@@ -273,6 +273,40 @@ Segment::Segment(BNSegment* seg)
 }
 
 
+vector<pair<uint64_t, uint64_t>> Segment::GetRelocationRanges() const
+{
+	size_t count = 0;
+	BNRange* ranges = BNSegmentGetRelocationRanges(m_object, &count);
+	vector<pair<uint64_t, uint64_t>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({ranges[i].start, ranges[i].end});
+	}
+	BNFreeRelocationRanges(ranges);
+	return result;
+}
+
+
+vector<pair<uint64_t, uint64_t>> Segment::GetRelocationRangesAtAddress(uint64_t addr) const
+{
+	size_t count = 0;
+	BNRange* ranges = BNSegmentGetRelocationRangesAtAddress(m_object, addr, &count);
+	vector<pair<uint64_t, uint64_t>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({ranges[i].start, ranges[i].end});
+	}
+	BNFreeRelocationRanges(ranges);
+	return result;
+}
+
+
+uint64_t Segment::GetRelocationsCount() const
+{
+	return BNSegmentGetRelocationsCount(m_object);
+}
+
+
 uint64_t Segment::GetStart() const
 {
 	return BNSegmentGetStart(m_object);
@@ -906,6 +940,34 @@ void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, ui
 void BinaryView::DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc)
 {
 	BNDefineSymbolRelocation(m_object, arch->GetObject(), &info, target->GetObject(), reloc);
+}
+
+
+vector<pair<uint64_t, uint64_t>> BinaryView::GetRelocationRanges() const
+{
+	size_t count = 0;
+	BNRange* ranges = BNGetRelocationRanges(m_object, &count);
+	vector<pair<uint64_t, uint64_t>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({ranges[i].start, ranges[i].end});
+	}
+	BNFreeRelocationRanges(ranges);
+	return result;
+}
+
+
+vector<pair<uint64_t, uint64_t>> BinaryView::GetRelocationRangesAtAddress(uint64_t addr) const
+{
+	size_t count = 0;
+	BNRange* ranges = BNGetRelocationRangesAtAddress(m_object, addr, &count);
+	vector<pair<uint64_t, uint64_t>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({ranges[i].start, ranges[i].end});
+	}
+	BNFreeRelocationRanges(ranges);
+	return result;
 }
 
 

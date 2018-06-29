@@ -1042,6 +1042,10 @@ namespace BinaryNinja
 		uint32_t GetFlags() const;
 		bool IsAutoDefined() const;
 
+		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
+		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
+		uint64_t GetRelocationsCount() const;
+
 		void SetStart(uint64_t newSegmentBase);
 		void SetLength(uint64_t length);
 		void SetDataOffset(uint64_t dataOffset);
@@ -1227,6 +1231,9 @@ namespace BinaryNinja
 
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc);
+		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
+		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
+
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);
 

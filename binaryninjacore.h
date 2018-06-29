@@ -1800,6 +1800,12 @@ extern "C"
 		AlwaysSkipFunctionAnalysis
 	};
 
+	struct BNRange
+	{
+		uint64_t start;
+		uint64_t end;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -1996,6 +2002,9 @@ extern "C"
 		uint64_t target, uint64_t reloc);
 	BINARYNINJACOREAPI void BNDefineSymbolRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
 		BNSymbol* target, uint64_t reloc);
+	BINARYNINJACOREAPI BNRange* BNGetRelocationRanges(BNBinaryView* segment, size_t* count);
+	BINARYNINJACOREAPI BNRange* BNGetRelocationRangesAtAddress(BNBinaryView* segment, uint64_t addr, size_t* count);
+
 	BINARYNINJACOREAPI void BNRegisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 	BINARYNINJACOREAPI void BNUnregisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 
@@ -3522,6 +3531,11 @@ extern "C"
 		bool autoDefined);
 	BINARYNINJACOREAPI BNSegment* BNNewSegmentReference(BNSegment* seg);
 	BINARYNINJACOREAPI void BNFreeSegment(BNSegment* seg);
+
+	BINARYNINJACOREAPI BNRange* BNSegmentGetRelocationRanges(BNSegment* segment, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNSegmentGetRelocationsCount(BNSegment* segment);
+	BINARYNINJACOREAPI BNRange* BNSegmentGetRelocationRangesAtAddress(BNSegment* segment, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeRelocationRanges(BNRange* ranges);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetStart(BNSegment* segment);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetLength(BNSegment* segment);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetEnd(BNSegment* segment);

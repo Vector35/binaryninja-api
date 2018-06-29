@@ -466,6 +466,33 @@ class Segment(object):
 	def data_end(self):
 		return core.BNSegmentGetDataEnd(self.handle)
 
+	@property
+	def reloction_count(self):
+		return core.BNSegmentGetRelocationsCount(self.handle)
+
+	@property
+	def relocation_ranges(self):
+		"""List of relocation range tuples (read-only)"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNSegmentGetRelocationRanges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append((ranges[i].start, ranges[i].end))
+		core.BNFreeRelocationRanges(ranges, count)
+		return result
+
+	def relocation_ranges_at(self, addr):
+		"""List of relocation range tuples (read-only)"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNSegmentGetRelocationRangesAtAddress(self.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append((ranges[i].start, ranges[i].end))
+		core.BNFreeRelocationRanges(ranges, count)
+		return result
+
 	def __len__(self):
 		return core.BNSegmentGetLength(self.handle)
 
@@ -1073,6 +1100,29 @@ class BinaryView(object):
 	@max_function_size_for_analysis.setter
 	def max_function_size_for_analysis(self, size):
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
+
+	@property
+	def relocation_ranges(self):
+		"""List of relocation range tuples (read-only)"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNGetRelocationRanges(self.handle, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append((ranges[i].start, ranges[i].end))
+		core.BNFreeRelocationRanges(ranges, count)
+		return result
+
+	def relocation_ranges_at(self, addr):
+		"""List of relocation range tuples for a given address"""
+
+		count = ctypes.c_ulonglong()
+		ranges = core.BNGetRelocationRangesAtAddress(self.handle, addr, count)
+		result = []
+		for i in xrange(0, count.value):
+			result.append((ranges[i].start, ranges[i].end))
+		core.BNFreeRelocationRanges(ranges, count)
+		return result
 
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))

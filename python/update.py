@@ -117,11 +117,6 @@ class UpdateChannel(object):
 		self.latest_version_num = ver
 
 	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
-
-	@property
 	def versions(self):
 		"""List of versions (read-only)"""
 		count = ctypes.c_ulonglong()

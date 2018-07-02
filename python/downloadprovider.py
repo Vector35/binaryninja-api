@@ -25,20 +25,11 @@ import ctypes
 import sys
 import traceback
 
-try:
-	from urllib.parse import urlparse, urlencode
-	from urllib.request import urlopen, Request, build_opener, install_opener, ProxyHandler
-	from urllib.error import HTTPError, URLError
-except ImportError:
-	from urlparse import urlparse
-	from urllib import urlencode
-	from urllib2 import urlopen, Request, build_opener, install_opener, ProxyHandler, HTTPError, URLError
-
 # Binary Ninja Components
-import _binaryninjacore as core
+import binaryninja._binaryninjacore as core
 from binaryninja.setting import Setting
-import startup
-import log
+from binaryninja import startup
+from binaryninja import log
 
 
 class DownloadInstance(object):
@@ -64,7 +55,7 @@ class DownloadInstance(object):
 
 	def _perform_request(self, ctxt, url):
 		try:
-			return self.perform_request(ctxt, url)
+			return self.perform_request(url)
 		except:
 			log.log_error(traceback.format_exc())
 			return -1
@@ -153,58 +144,123 @@ class DownloadProvider(object):
 		return DownloadInstance(self, handle = result)
 
 
-class PythonDownloadInstance(DownloadInstance):
-	def __init__(self, provider):
-		super(PythonDownloadInstance, self).__init__(provider)
+if sys.version_info >= (2, 7, 9):
+	try:
+		from urllib.request import urlopen, build_opener, install_opener, ProxyHandler
+		from urllib.error import URLError
+	except ImportError:
+		from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError
 
-	@abc.abstractmethod
-	def perform_destroy_instance(self):
-		pass
+	class PythonDownloadInstance(DownloadInstance):
+		def __init__(self, provider):
+			super(PythonDownloadInstance, self).__init__(provider)
 
-	@abc.abstractmethod
-	def perform_request(self, ctxt, url):
-		try:
-			proxy_setting = Setting('download-client').get_string('https-proxy')
-			if proxy_setting:
-				opener = build_opener(ProxyHandler({'https': proxy_setting}))
-				install_opener(opener)
+		@abc.abstractmethod
+		def perform_destroy_instance(self):
+			pass
 
-			r = urlopen(url)
-			total_size = int(r.headers.get('content-length', 0))
-			bytes_sent = 0
-			while True:
-				data = r.read(4096)
-				if not data:
-					break
-				raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
-				bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
-				if bytes_wrote != len(raw_bytes):
-					core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+		@abc.abstractmethod
+		def perform_request(self, url):
+			try:
+				proxy_setting = Setting('download-client').get_string('https-proxy')
+				if proxy_setting:
+					opener = build_opener(ProxyHandler({'https': proxy_setting}))
+					install_opener(opener)
+
+				r = urlopen(url.decode("charmap"))
+				total_size = int(r.headers.get('content-length', 0))
+				bytes_sent = 0
+				while True:
+					data = r.read(4096)
+					if not data:
+						break
+					raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+					bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+					if bytes_wrote != len(raw_bytes):
+						core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+						return -1
+					bytes_sent = bytes_sent + bytes_wrote
+					continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
+					if continue_download is False:
+						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+						return -1
+
+				if not bytes_sent:
+					core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
 					return -1
-				bytes_sent = bytes_sent + bytes_wrote
-				continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
-				if continue_download is False:
-					core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
-					return -1
 
-			if not bytes_sent:
-				core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
+			except URLError as e:
+				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+				return -1
+			except:
+				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
+				log.log_error(traceback.format_exc())
 				return -1
 
-		except URLError as e:
-			core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-			return -1
-		except:
-			core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
-			log.log_error(traceback.format_exc())
-			return -1
+			return 0
 
-		return 0
+	class PythonDownloadProvider(DownloadProvider):
+		name = "DefaultDownloadProvider"
+		instance_class = PythonDownloadInstance
 
+	PythonDownloadProvider().register()
+else:
+	try:
+		import requests
+		from requests import pyopenssl
+		class PythonDownloadInstance(DownloadInstance):
+			def __init__(self, provider):
+				super(PythonDownloadInstance, self).__init__(provider)
 
-class PythonDownloadProvider(DownloadProvider):
-	name = "DefaultDownloadProvider"
-	instance_class = PythonDownloadInstance
+			@abc.abstractmethod
+			def perform_destroy_instance(self):
+				pass
 
+			@abc.abstractmethod
+			def perform_request(self, url):
+				try:
+					proxy_setting = Setting('download-client').get_string('https-proxy')
+					if proxy_setting:
+						proxies = {"https": proxy_setting}
+					else:
+						proxies = None
 
-PythonDownloadProvider().register()
+					r = requests.get(url.decode("charmap"), proxies=proxies)
+					if not r.ok:
+						core.BNSetErrorForDownloadInstance(self.handle, "Received error from server")
+						return -1
+					data = r.content
+					if len(data) == 0:
+						core.BNSetErrorForDownloadInstance(self.handle, "No data received from server!")
+						return -1
+					raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+					bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+					if bytes_wrote != len(raw_bytes):
+						core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+						return -1
+					continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_wrote, bytes_wrote)
+					if continue_download is False:
+						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+						return -1
+				except requests.RequestException as e:
+					core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+					return -1
+				except:
+					core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
+					log.log_error(traceback.format_exc())
+					return -1
+
+				return 0
+
+		class PythonDownloadProvider(DownloadProvider):
+			name = "DefaultDownloadProvider"
+			instance_class = PythonDownloadInstance
+
+		PythonDownloadProvider().register()
+	except ImportError:
+		log.log_error("On this version of Python, the pip requests[security] package is required for network connectivity!")
+		log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
+		log.log_error("  sudo apt install python-pip")
+		log.log_error("  python -m pip install pip --upgrade --user")
+		log.log_error("  python -m pip install requests[security] --upgrade --user")
+

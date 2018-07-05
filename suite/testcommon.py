@@ -51,7 +51,8 @@ def fixSet(string):
         return string
 
 
-def get_file_list(test_store):
+def get_file_list(test_store_rel):
+    test_store = os.path.join(os.path.dirname(__file__), test_store_rel)
     all_files = []
     for root, dir, files in os.walk(test_store):
         for file in files:
@@ -67,7 +68,6 @@ def remove_low_confidence(type_string):
 class Builder(object):
     def __init__(self, test_store):
         self.test_store = test_store
-        self.examples_dir = os.path.join(self.test_store, "..", "..", "..", "python", "examples")
 
     def methods(self):
         methodnames = []
@@ -76,11 +76,13 @@ class Builder(object):
                 methodnames.append(methodname)
         return methodnames
 
-    def unpackage_file(self, file):
-        if not os.path.exists(file):
-            with zipfile.ZipFile(file + ".zip", "r") as zf:
-                zf.extractall()
-        assert os.path.exists(file)
+    def unpackage_file(self, filename):
+        path = os.path.join(os.path.dirname(__file__), self.test_store, filename)
+        if not os.path.exists(path):
+            with zipfile.ZipFile(path + ".zip", "r") as zf:
+                zf.extractall(path = os.path.dirname(__file__))
+        assert os.path.exists(path)
+        return os.path.relpath(path)
 
 
 class BinaryViewTestBuilder(Builder):
@@ -92,9 +94,9 @@ class BinaryViewTestBuilder(Builder):
          - Function doc string used as 'on error' message
          - Should return: list of strings
     """
-    def __init__(self, filename, test_store):
-        self.filename = filename
-        self.bv = BinaryViewType.get_view_of_file(filename)
+    def __init__(self, filename):
+        self.filename = os.path.join(os.path.dirname(__file__), filename)
+        self.bv = BinaryViewType.get_view_of_file(self.filename)
         if self.bv is None:
             print("%s is not an executable format" % filename)
             return
@@ -539,7 +541,7 @@ class TestBuilder(Builder):
 
     def test_Types(self):
         """Types produced different result"""
-        file_name = os.path.join(self.test_store, "helloworld")
+        file_name = self.unpackage_file("helloworld")
         bv = binja.BinaryViewType.get_view_of_file(file_name)
 
         preprocessed = binja.preprocess_source("""
@@ -569,17 +571,16 @@ class TestBuilder(Builder):
 
     def test_Plugin_bin_info(self):
         """print_syscalls plugin produced different result"""
-        file_name = os.path.join(self.test_store, "helloworld")
-        self.unpackage_file(file_name)
-        result = subprocess.Popen(["python", os.path.join(self.examples_dir, "bin_info.py"), file_name], stdout=subprocess.PIPE).communicate()[0]
+        file_name = self.unpackage_file("helloworld")
+        bin_info_path = os.path.join(os.path.dirname(__file__), '..', 'python', 'examples', 'bin_info.py')
+        result = subprocess.Popen(["python", bin_info_path, file_name], stdout=subprocess.PIPE).communicate()[0]
         # normalize line endings and path sep
         return [line for line in result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap").split("\n")]
 
     def test_linear_disassembly(self):
         """linear_disassembly produced different result"""
-        file = os.path.join(self.test_store, "helloworld")
-        self.unpackage_file(file)
-        bv = binja.BinaryViewType['ELF'].open(file)
+        file_name = self.unpackage_file("helloworld")
+        bv = binja.BinaryViewType['ELF'].open(file_name)
         disass = bv.linear_disassembly
         retinfo = []
         for i in disass:
@@ -590,31 +591,26 @@ class TestBuilder(Builder):
 
     def test_partial_register_dataflow(self):
         """partial_register_dataflow produced different results"""
-        file_name = os.path.join(self.test_store, "partial_register_dataflow")
-        self.unpackage_file(file_name)
+        file_name = self.unpackage_file("partial_register_dataflow")
         result = []
-        try:
-            reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            for func in bv.functions:
-                llil = func.low_level_il
-                for i in range(0, llil.__len__()-1):
-                    for x in reg_list:
-                        result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value(x)).replace('L', ''))
-                        result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values(x)).replace('L', ''))
-                        result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value_after(x)).replace('L', ''))
-                        result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values_after(x)).replace('L', ''))
-            bv.file.close()
-            del bv
-        finally:
-            os.unlink(file_name)
+        reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+        bv = binja.BinaryViewType.get_view_of_file(file_name)
+        for func in bv.functions:
+            llil = func.low_level_il
+            for i in range(0, llil.__len__()-1):
+                for x in reg_list:
+                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value(x)).replace('L', ''))
+                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values(x)).replace('L', ''))
+                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value_after(x)).replace('L', ''))
+                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values_after(x)).replace('L', ''))
+        bv.file.close()
+        del bv
         return result
 
 
     def test_low_il_stack(self):
         """LLIL stack produced different output"""
-        file_name = os.path.join(self.test_store, "jumptable_reordered")
-        self.unpackage_file(file_name)
+        file_name = self.unpackage_file("jumptable_reordered")
         bv = binja.BinaryViewType.get_view_of_file(file_name)
         reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
         flag_list = ['c', 'p', 'a', 'z', 's', 'o']
@@ -631,13 +627,11 @@ class TestBuilder(Builder):
                         retinfo.append("LLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
                         retinfo.append("LLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
                         retinfo.append("LLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values_after(flag)))
-        os.unlink(file_name)
         return fixOutput(retinfo)
 
     def test_med_il_stack(self):
         """MLIL stack produced different output"""
-        file_name = os.path.join(self.test_store, "jumptable_reordered")
-        self.unpackage_file(file_name)
+        file_name = self.unpackage_file("jumptable_reordered")
         bv = binja.BinaryViewType.get_view_of_file(file_name)
         reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
         flag_list = ['c', 'p', 'a', 'z', 's', 'o']
@@ -663,13 +657,11 @@ class TestBuilder(Builder):
                         retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
                         retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
                         retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
-        os.unlink(file_name)
         return fixOutput(retinfo)
 
     def test_events(self):
         """Event failure"""
-        file_name = os.path.join(self.test_store, "helloworld")
-        self.unpackage_file(file_name)
+        file_name = self.unpackage_file("helloworld")
         bv = binja.BinaryViewType['ELF'].open(file_name)
 
         results = []
@@ -679,83 +671,44 @@ class TestBuilder(Builder):
         evt = binja.AnalysisCompletionEvent(bv, simple_complete)
 
         class NotifyTest(binja.BinaryDataNotification):
-
             def data_written(self, view, offset, length):
-                def data_written_complete(self):
-                    results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
-                evt = binja.AnalysisCompletionEvent(bv, data_written_complete)
+                results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
 
             def data_inserted(self, view, offset, length):
-                def data_inserted_complete(self):
-                    results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
-                evt = binja.AnalysisCompletionEvent(bv, data_inserted_complete)
+                results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
 
             def data_removed(self, view, offset, length):
-                def data_removed_complete(self):
-                    results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
-                evt = binja.AnalysisCompletionEvent(bv, data_removed_complete)
+                results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
             def function_added(self, view, func):
-                def function_added_complete(self):
-                    results.append("function added: {0}".format(func.name))
-                evt = binja.AnalysisCompletionEvent(bv, function_added_complete)
+                results.append("function added: {0}".format(func.name))
 
             def function_removed(self, view, func):
-                def function_removed_complete(self):
-                    results.append("function removed: {0}".format(func.name))
-                evt = binja.AnalysisCompletionEvent(bv, function_removed_complete)
-
-            def function_updated(self, view, func):
-                def function_updated_complete(self):
-                    results.append("function updated: {0}".format(func.name))
-                evt = binja.AnalysisCompletionEvent(bv, function_updated_complete)
-
-            def function_update_requested(self, view, func):
-                def function_update_requested_complete(self):
-                    results.append("function update requested: {0}".format(func.name))
-                evt = binja.AnalysisCompletionEvent(bv, function_update_requested_complete)
+                results.append("function removed: {0}".format(func.name))
 
             def data_var_added(self, view, var):
-                def data_var_added_complete(self):
-                    results.append("data var added: {0}".format(var.name))
-                evt = binja.AnalysisCompletionEvent(bv, data_var_added_complete)
+                results.append("data var added: {0}".format(hex(var.address)))
 
             def data_var_removed(self, view, var):
-                def data_var_removed_complete(self):
-                    results.append("data var removed: {0}".format(var.name))
-                evt = binja.AnalysisCompletionEvent(bv, data_var_removed_complete)
-
-            def data_var_updated(self, view, var):
-                def data_var_updated_complete(self):
-                    results.append("data var updated: {0}".format(var.name))
-                evt = binja.AnalysisCompletionEvent(bv, data_var_updated_complete)
+                results.append("data var removed: {0}".format(hex(var.address)))
 
             def string_found(self, view, string_type, offset, length):
-                def string_found_complete(self):
-                    offset = hex(offset)
-                    length = hex(length)
-                    if offset[-1] == 'L':
-                        offset = offset[:-1]
-                    if length[-1] == 'L':
-                        length = length[:-1]
-                    results.append("string found: offset {0} length {1}".format(offset, length))
-                evt = binja.AnalysisCompletionEvent(bv, string_found_complete)
+                offset = hex(offset)
+                length = hex(length)
+                if offset[-1] == 'L':
+                    offset = offset[:-1]
+                if length[-1] == 'L':
+                    length = length[:-1]
+                results.append("string found: offset {0} length {1}".format(offset, length))
 
             def string_removed(self, view, string_type, offset, length):
-                def string_removed_complete(self):
-                    results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
-                evt = binja.AnalysisCompletionEvent(bv, string_removed_complete)
+                results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
             def type_defined(self, view, name, type):
-                def type_defined_complete(self):
-                    results.append("type defined: {0}".format(name))
-                evt = binja.AnalysisCompletionEvent(bv, type_defined_complete)
+                results.append("type defined: {0}".format(name))
 
             def type_undefined(self, view, name, type):
-                def type_undefined_complete(self):
-                    results.append("type undefined: {0}".format(name))
-                evt = binja.AnalysisCompletionEvent(bv, type_undefined_complete)
-
+                results.append("type undefined: {0}".format(name))
 
         test = NotifyTest()
         bv.register_notification(test)
@@ -782,21 +735,6 @@ class TestBuilder(Builder):
         bv.unregister_notification(test)
 
         return fixOutput(sorted(results))
-
-    def unpackage(self, fileName):
-        testname = None
-        with zipfile.ZipFile(fileName, "r") as zf:
-            testname = zf.namelist()[0]
-            zf.extractall()
-
-        if not os.path.exists(testname + ".pkl"):
-            return None, None
-        binary_oracle = pickle.load(open(testname + ".pkl", "rb"))
-        return binary_oracle.oracle_test_data, testname
-
-    def cleanup_package(self, fileName):
-        if fileName.endswith(".zip"):
-            os.unlink(fileName[:-4])
 
 
 class VerifyBuilder(Builder):
@@ -826,10 +764,9 @@ class VerifyBuilder(Builder):
         #  - Save the database
         #  - Restore the datbase
         #  - Validate that the modifications are present
-        file = os.path.join(self.test_store, "helloworld")
-        self.unpackage_file(file)
+        file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType['ELF'].open(file)
+            bv = binja.BinaryViewType['ELF'].open(file_name)
             bv.update_analysis_and_wait()
             # Make some modifications to the binary view
 
@@ -844,10 +781,7 @@ class VerifyBuilder(Builder):
             bv.create_database(temp_name)
             bv.file.close()
             del bv
-        finally:
-            os.unlink(file)
 
-        try:
             bv = binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF')
             bv.update_analysis_and_wait()
             bndb_functions = self.get_functions(bv)

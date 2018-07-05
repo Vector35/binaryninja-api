@@ -14,10 +14,13 @@ import sys
 import unittest
 import pickle
 import zipfile
-import testcommon
-import api_test
 import difflib
 from collections import Counter
+
+api_suite_path = os.path.join(os.path.dirname(__file__), {4})
+sys.path.append(api_suite_path)
+import testcommon
+import api_test
 
 global verbose
 verbose = False
@@ -77,27 +80,29 @@ class TestBinaryNinjaAPI(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.builder = testcommon.TestBuilder("{3}")
+        pickle_path = os.path.join(os.path.dirname(__file__), "oracle.pkl")
         try:
             # Python 2 does not have the encodings option
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"), encoding='charmap')
+            self.oracle_test_data = pickle.load(open(pickle_path, "rb"), encoding='charmap')
         except TypeError:
-            self.oracle_test_data = pickle.load(open(os.path.join("{0}", "oracle.pkl"), "rb"))
+            self.oracle_test_data = pickle.load(open(pickle_path, "rb"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
     def run_binary_test(self, testfile):
         testname = None
-        with zipfile.ZipFile(testfile, "r") as zf:
+        with zipfile.ZipFile(os.path.join(api_suite_path, testfile), "r") as zf:
             testname = zf.namelist()[0]
-            zf.extractall()
+            zf.extractall(path=api_suite_path)
 
-        self.assertTrue(os.path.exists(testname + ".pkl"), "Test pickle doesn't exist")
+        pickle_path = os.path.join(os.path.dirname(__file__), testname + ".pkl")
+        self.assertTrue(pickle_path, "Test pickle doesn't exist")
         try:
             # Python 2 does not have the encodings option
-            binary_oracle = pickle.load(open(testname + ".pkl", "rb"), encoding='charmap')
+            binary_oracle = pickle.load(open(pickle_path, "rb"), encoding='charmap')
         except TypeError:
-            binary_oracle = pickle.load(open(testname + ".pkl", "rb"))
+            binary_oracle = pickle.load(open(pickle_path, "rb"))
 
-        test_builder = testcommon.BinaryViewTestBuilder(testname, "{3}")
+        test_builder = testcommon.BinaryViewTestBuilder(testname)
         for method in test_builder.methods():
             test = getattr(test_builder, method)()
             oracle = binary_oracle[method]
@@ -108,7 +113,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             result += ":\\n"
             report = self.report(oracle, test, result)
             self.assertTrue(report[0], report[1])  # Test does not agree with oracle
-        os.unlink(testname)
+        os.unlink(os.path.join(api_suite_path, testname))
 {1}{2}
 
 if __name__ == "__main__":
@@ -127,6 +132,7 @@ binary_test_string = """
     def test_binary__{0}(self):
         self.run_binary_test('{1}')
 """
+
 test_string = """
     def {0}(self):
         oracle = self.oracle_test_data['{0}']
@@ -167,7 +173,11 @@ class UnitTestFile:
         self.binary_tests = ""
 
     def close(self):
-        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store).encode('charmap'))
+        api_path = os.path.relpath(os.path.dirname(__file__), start=self.outdir)
+        api_path = os.path.normpath(api_path)
+        api_path = map(lambda x: '"{0}"'.format(x), api_path.split(os.sep))
+        api_path = '{0}'.format(', '.join(api_path))
+        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store, api_path).encode('charmap'))
         self.f.close()
 
     def add_verify(self, test_name):
@@ -209,7 +219,7 @@ class TestStoreError(Exception):
 
 
 def generate(test_store, outdir, exclude_binaries):
-    if not os.path.isdir(test_store):
+    if not os.path.isdir(os.path.join(os.path.dirname(__file__), test_store)):
         raise TestStoreError("Specified test store is not a directory")
 
     unittest = UnitTestFile(os.path.join(outdir, "unit.py"), outdir, test_store)
@@ -238,10 +248,12 @@ def generate(test_store, outdir, exclude_binaries):
         oraclefile = None
         if testfile.endswith(".pkl"):
             continue
+        elif testfile.endswith(".DS_Store"):
+            continue
         elif testfile.endswith(".zip"):
             # We have a zipped binary unzip it so we can rebaseline
             with zipfile.ZipFile(testfile, "r") as zf:
-                zf.extractall()
+                zf.extractall(path = os.path.dirname(__file__))
             if not os.path.exists(testfile[:-4]):
                 print("Error extracting testfile %s from zip: %s" % (testfile[:-4], testfile))
                 continue
@@ -253,14 +265,16 @@ def generate(test_store, outdir, exclude_binaries):
             # We have a binary that isn't zipped use it as a new test case
             oraclefile = testfile
 
+        oraclefile_rel = os.path.relpath(oraclefile, start=os.path.dirname(__file__))
+
         # Now generate the oracle data
-        update_progress(progress, len(allfiles), oraclefile)
-        unittest.add_binary_test(test_store, oraclefile)
+        update_progress(progress, len(allfiles), oraclefile_rel)
+        unittest.add_binary_test(test_store, oraclefile_rel)
         binary_start_time = time.time()
         if exclude_binaries:
             continue
-        test_data = testcommon.BinaryViewTestBuilder(oraclefile, test_store)
-        binary_oracle = OracleTestFile(oraclefile)
+        test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel)
+        binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel))
         for method in test_data.methods():
             binary_oracle.add_entry(test_data, method)
         binary_oracle.close()
@@ -268,7 +282,7 @@ def generate(test_store, outdir, exclude_binaries):
 
         if not os.path.exists(oraclefile + ".zip"):
             with zipfile.ZipFile(oraclefile + ".zip", "w") as zf:
-                zf.write(oraclefile)
+                zf.write(oraclefile, os.path.relpath(oraclefile, start=os.path.dirname(__file__)))
 
         os.unlink(oraclefile)
 
@@ -288,16 +302,12 @@ def main():
                       default=False, help="Exclude regeneration of binaries")
     parser.add_option("-o", "--outputdir", default="suite",
                       dest="outputdir", action="store", type="string",
-                      help="output directory where the unit.py and oracle.py files will be stored")
-    parser.add_option("-i", "--inputdir", default=os.path.join("suite", "binaries", "test_corpus"),
+                      help="output directory where the unit.py and oracle.py files will be stored (relative to cwd)")
+    parser.add_option("-i", "--inputdir", default=os.path.join("binaries", "test_corpus"),
                       dest="test_store", action="store", type="string",
-                      help="input directory containing the binaries you which to generate unit tests from")
+                      help="input directory containing the binaries you which to generate unit tests from (relative to this file)")
 
     options, args = parser.parse_args()
-
-    if not os.path.exists(os.path.join(os.getcwd(), 'suite')):
-        print("Error: Please run this script from the binaryninja-api root directory")
-        sys.exit(1)
 
     myprint("[+] INFO: Using test store: %s" % options.test_store)
     if len(testcommon.get_file_list(options.test_store)) == 0:

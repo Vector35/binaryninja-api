@@ -1,17 +1,10 @@
 import unittest
-import time
 import platform
 import os
-import tempfile
-import zipfile
-import urllib
-import subprocess
-import getpass
 from binaryninja.setting import Setting
 from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, get_qualified_name
 from binaryninja.architecture import Architecture
-from binaryninja.binaryview import BinaryViewType
 
 
 class SettingsAPI(unittest.TestCase):
@@ -226,41 +219,3 @@ class DemanglerTest(unittest.TestCase):
 		for i, test in enumerate(tests):
 			t, n = demangle_gnu3(Architecture['x86'], test)
 			assert self.get_type_string(t, n) == results[i]
-
-
-class TimingTest(unittest.TestCase):
-	def unpackage_file(self, file):
-		if not os.path.exists(file):
-			with zipfile.ZipFile(file + ".zip", "r") as zf:
-				zf.extractall()
-		assert os.path.exists(file)
-
-	def test_analysis_time(self):
-		if platform.system() != "Linux" or getpass.getuser() != "jenkins":
-			return
-
-		start_time = time.time()
-		file_names = [os.path.join(os.path.dirname(__file__), "binaries", "quick3dcoreplugin.dll"),
-					os.path.join(os.path.dirname(__file__), "binaries", "md5"),
-					os.path.join(os.path.dirname(__file__), "binaries", "ls")]
-
-		for file_name in file_names:
-			temp_name = next(tempfile._get_candidate_names()) + ".bndb"
-			self.unpackage_file(file_name)
-			try:
-				bv = BinaryViewType.get_view_of_file(file_name)
-				bv.create_database(temp_name)
-				bv.file.close()
-				bv = BinaryViewType.get_view_of_file(temp_name)
-				bv.file.close()
-			finally:
-				if os.path.exists(file_name):
-					os.unlink(file_name)
-				if os.path.exists(temp_name):
-					os.unlink(temp_name)
-
-		log_url = os.environ.get('BINJA_LOG_URL')
-		if log_url:
-			time_s = time.time() - start_time
-			commit = subprocess.check_output(["git", "rev-parse", "HEAD"])[:-1]
-			conn = urllib.urlopen("%s?BuildID=%s&Test1=%.2f" % (log_url, commit, time_s))

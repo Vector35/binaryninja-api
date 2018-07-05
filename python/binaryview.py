@@ -272,7 +272,7 @@ class BinaryDataNotificationCallbacks(object):
 
 	def _function_update_requested(self, ctxt, view, func):
 		try:
-			self.notify.function_update_requested(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_update_requested(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 

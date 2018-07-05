@@ -541,6 +541,7 @@ class TestBuilder(Builder):
         """Types produced different result"""
         file_name = os.path.join(self.test_store, "helloworld")
         bv = binja.BinaryViewType.get_view_of_file(file_name)
+
         preprocessed = binja.preprocess_source("""
         #ifdef nonexistant
         int foo = 1;
@@ -550,7 +551,7 @@ class TestBuilder(Builder):
         long long bar1 = 2;
         #endif
         """)
-        source = '\n'.join([i.decode('utf-8') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
+        source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
         typelist = bv.platform.parse_types_from_source(source)
         inttype = binja.Type.int(4)
 
@@ -566,14 +567,13 @@ class TestBuilder(Builder):
         retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
         return retinfo
 
-
     def test_Plugin_bin_info(self):
         """print_syscalls plugin produced different result"""
         file_name = os.path.join(self.test_store, "helloworld")
         self.unpackage_file(file_name)
         result = subprocess.Popen(["python", os.path.join(self.examples_dir, "bin_info.py"), file_name], stdout=subprocess.PIPE).communicate()[0]
         # normalize line endings and path sep
-        return [result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap")]
+        return [line for line in result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap").split("\n")]
 
     def test_linear_disassembly(self):
         """linear_disassembly produced different result"""

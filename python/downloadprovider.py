@@ -20,7 +20,6 @@
 
 
 import abc
-import code
 import ctypes
 import sys
 import traceback

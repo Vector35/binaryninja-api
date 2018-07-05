@@ -121,7 +121,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		try:
 			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-			func_obj = binaryninja.function.Function(view_obj, core.BNNewFunctionReference(func))
+			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -132,7 +132,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -143,7 +143,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
@@ -154,7 +154,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -165,7 +165,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
@@ -213,7 +213,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 				return True
 			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-			func_obj = binaryninja.function.Function(view_obj, core.BNNewFunctionReference(func))
+			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -227,7 +227,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -241,7 +241,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
@@ -255,7 +255,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
 			log.log_error(traceback.format_exc())
@@ -269,7 +269,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
@@ -364,7 +364,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja.startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_is_valid(view, func, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -383,7 +383,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja.startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_action(view, func, instr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_is_valid(view, func, instr, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -402,7 +402,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja.startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_is_valid(view, func, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -421,7 +421,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		startup._init_plugins()
+		binaryninja.startup._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_action(view, func, instr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_is_valid(view, func, instr, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -469,7 +469,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		elif self.command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
-			if not isinstance(context.instruction, lowlevelil.LowLevelILInstruction):
+			if not isinstance(context.instruction, binaryninja.lowlevelil.LowLevelILInstruction):
 				return False
 			if not self.command.lowLevelILInstructionIsValid:
 				return True
@@ -484,7 +484,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		elif self.command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
-			if not isinstance(context.instruction, mediumlevelil.MediumLevelILInstruction):
+			if not isinstance(context.instruction, binaryninja.mediumlevelil.MediumLevelILInstruction):
 				return False
 			if not self.command.mediumLevelILInstructionIsValid:
 				return True

@@ -13,6 +13,7 @@ from collections import Counter
 global verbose
 verbose = False
 
+
 class TestBinaryNinjaAPI(unittest.TestCase):
     # Returns a tuple of:
     #   bool   : Two lists are equal
@@ -234,12 +235,6 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 
     def test_binary___loop_constant_propagate(self):
         self.run_binary_test('suite/binaries/test_corpus/loop_constant_propagate.zip')
-
-    def test_binary___ls(self):
-        self.run_binary_test('suite/binaries/test_corpus/ls.zip')
-
-    def test_binary___md5(self):
-        self.run_binary_test('suite/binaries/test_corpus/md5.zip')
 
     def test_binary___partial_register_dataflow(self):
         self.run_binary_test('suite/binaries/test_corpus/partial_register_dataflow.zip')

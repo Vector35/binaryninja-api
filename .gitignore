@@ -33,14 +33,8 @@ api-docs/source/index.rst
 .coverage
 # Make
 generator
-libcrypto.so.1.0.2
-libcurl.so.4
-libssl.so.1.0.2
 plugins/
 python/examples/binaryninja/
-python/libcrypto.so.1.0.2
-python/libcurl.so.4
-python/libssl.so.1.0.2
 python/plugins/
 python/types/
 suite/binaryninja/

@@ -22,6 +22,7 @@ from collections import Counter
 global verbose
 verbose = False
 
+
 class TestBinaryNinjaAPI(unittest.TestCase):
     # Returns a tuple of:
     #   bool   : Two lists are equal

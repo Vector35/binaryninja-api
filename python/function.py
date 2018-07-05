@@ -26,7 +26,7 @@ import ctypes
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja import associateddatastore  #required in the main scope due to being an argument for _FunctionAssociatedDataStore
+from binaryninja import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
 from binaryninja import highlight
 from binaryninja import log
 from binaryninja import types
@@ -1631,7 +1631,7 @@ class FunctionGraphEdge(object):
 
 
 class FunctionGraphBlock(object):
-	def __init__(self, handle):
+	def __init__(self, handle, graph):
 		self.handle = handle
 		self.graph = graph
 
@@ -1657,14 +1657,14 @@ class FunctionGraphBlock(object):
 			core.BNFreeBasicBlock(block)
 			return None
 
-		view = binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
+		view = binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
 		func = Function(view, func_handle)
 
 		if core.BNIsLowLevelILBasicBlock(block):
-			block = lowlevelil.LowLevelILBasicBlock(view, block,
+			block = binaryninja.lowlevelil.LowLevelILBasicBlock(view, block,
 				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func))
 		elif core.BNIsMediumLevelILBasicBlock(block):
-			block = mediumlevelil.MediumLevelILBasicBlock(view, block,
+			block = binaryninja.mediumlevelil.MediumLevelILBasicBlock(view, block,
 				mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func))
 		else:
 			block = binaryninja.basicblock.BasicBlock(view, block)
@@ -1942,12 +1942,12 @@ class FunctionGraph(object):
 			il_func = core.BNGetFunctionGraphLowLevelILFunction(self.handle)
 			if not il_func:
 				return None
-			return lowlevelil.LowLevelILFunction(self.function.arch, il_func, self.function)
+			return binaryninja.lowlevelil.LowLevelILFunction(self.function.arch, il_func, self.function)
 		if self.is_medium_level_il:
 			il_func = core.BNGetFunctionGraphMediumLevelILFunction(self.handle)
 			if not il_func:
 				return None
-			return mediumlevelil.MediumLevelILFunction(self.function.arch, il_func, self.function)
+			return binaryninja.mediumlevelil.MediumLevelILFunction(self.function.arch, il_func, self.function)
 		return None
 
 	def __setattr__(self, name, value):

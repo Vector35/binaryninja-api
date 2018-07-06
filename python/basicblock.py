@@ -312,6 +312,8 @@ class BasicBlock(object):
 			inst_info = self.arch.get_instruction_info(data, idx)
 			inst_text = self.arch.get_instruction_text(data, idx)
 
+			if inst_info is None:
+				break
 			yield inst_text
 			idx += inst_info.length
 

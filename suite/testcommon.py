@@ -68,6 +68,7 @@ def remove_low_confidence(type_string):
 class Builder(object):
     def __init__(self, test_store):
         self.test_store = test_store
+        # binja.log.log_to_stdout(binja.LogLevel.DebugLog)  # Uncomment for more info
 
     def methods(self):
         methodnames = []
@@ -663,6 +664,7 @@ class TestBuilder(Builder):
         """Event failure"""
         file_name = self.unpackage_file("helloworld")
         bv = binja.BinaryViewType['ELF'].open(file_name)
+        bv.update_analysis_and_wait()
 
         results = []
 
@@ -693,13 +695,7 @@ class TestBuilder(Builder):
                 results.append("data var removed: {0}".format(hex(var.address)))
 
             def string_found(self, view, string_type, offset, length):
-                offset = hex(offset)
-                length = hex(length)
-                if offset[-1] == 'L':
-                    offset = offset[:-1]
-                if length[-1] == 'L':
-                    length = length[:-1]
-                results.append("string found: offset {0} length {1}".format(offset, length))
+                results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
 
             def string_removed(self, view, string_type, offset, length):
                 results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
@@ -716,20 +712,31 @@ class TestBuilder(Builder):
 
         type, name = bv.parse_type_string("int foo")
         type_id = type.generate_auto_type_id("source", name)
+
         bv.define_type(type_id, name, type)
         bv.undefine_type(type_id)
 
-        bv.insert(sacrificial_addr, "AAAA")
-        bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
+        bv.update_analysis_and_wait()
 
-        bv.write(sacrificial_addr, "BBBB")
+        bv.insert(sacrificial_addr, b"AAAA")
+        bv.update_analysis_and_wait()
+
+        bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
+        bv.update_analysis_and_wait()
+
+        bv.write(sacrificial_addr, b"BBBB")
+        bv.update_analysis_and_wait()
 
         bv.add_function(sacrificial_addr)
+        bv.update_analysis_and_wait()
+
         bv.remove_function(bv.get_function_at(sacrificial_addr))
+        bv.update_analysis_and_wait()
 
         bv.undefine_data_var(sacrificial_addr)
-        bv.remove(sacrificial_addr, 4)
+        bv.update_analysis_and_wait()
 
+        bv.remove(sacrificial_addr, 4)
         bv.update_analysis_and_wait()
 
         bv.unregister_notification(test)
@@ -745,6 +752,7 @@ class VerifyBuilder(Builder):
          - Function doc string used as 'on error' message
          - Should return: boolean
     """
+
     def __init__(self, test_store):
         super(VerifyBuilder, self).__init__(test_store)
 

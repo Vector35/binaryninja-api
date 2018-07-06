@@ -1778,6 +1778,8 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
+		if not isinstance(data, bytes):
+			raise TypeError("Must be bytes")
 		buf = databuffer.DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
@@ -1796,6 +1798,8 @@ class BinaryView(object):
 			>>> bv.read(0,8)
 			'BBBBAAAA'
 		"""
+		if not isinstance(data, bytes):
+			raise TypeError("Must be bytes")
 		buf = databuffer.DataBuffer(data)
 		return core.BNInsertViewBuffer(self.handle, addr, buf.handle)
 

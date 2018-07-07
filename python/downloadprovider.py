@@ -258,9 +258,12 @@ else:
 
 		PythonDownloadProvider().register()
 	except ImportError:
-		log.log_error("On this version of Python, the pip requests[security] package is required for network connectivity!")
-		log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
-		log.log_error("  sudo apt install python-pip")
-		log.log_error("  python -m pip install pip --upgrade --user")
-		log.log_error("  python -m pip install requests[security] --upgrade --user")
+		if sys.platform == "win32":
+			log.log_error("Provided Python version is too old! Only Python 2.7.10 and above are known to work on Windows!")
+		else:
+			log.log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
+			log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
+			log.log_error("  sudo apt install python-pip")
+			log.log_error("  python -m pip install pip --upgrade --user")
+			log.log_error("  python -m pip install requests[security] --upgrade --user")
 

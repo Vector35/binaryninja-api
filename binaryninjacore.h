@@ -1738,7 +1738,7 @@ extern "C"
 		ReadOnlyCodeSectionSemantics,
 		ReadOnlyDataSectionSemantics,
 		ReadWriteDataSectionSemantics,
-		ExternalCodeSectionSemantics
+		ExternalSectionSemantics
 	};
 
 	struct BNAddressRange

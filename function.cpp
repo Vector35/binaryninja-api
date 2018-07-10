@@ -1337,6 +1337,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 	{
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
 		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
@@ -1368,6 +1369,12 @@ bool Function::IsFunctionTooLarge()
 bool Function::IsAnalysisSkipped()
 {
 	return BNIsFunctionAnalysisSkipped(m_object);
+}
+
+
+BNAnalysisSkipReason Function::GetAnalysisSkipReason()
+{
+	return BNGetAnalysisSkipReason(m_object);
 }
 
 

@@ -195,8 +195,8 @@ bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* d
                                                     size_t* len, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(il);
-	return arch->GetInstructionLowLevelIL(data, addr, *len, func);
+	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
+	return arch->GetInstructionLowLevelIL(data, addr, *len, *func);
 }
 
 
@@ -401,8 +401,8 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(il);
-	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, func);
+	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
+	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, *func);
 }
 
 
@@ -410,16 +410,16 @@ size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelIL
 	BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(il);
-	return arch->GetFlagConditionLowLevelIL(cond, semClass, func);
+	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
+	return arch->GetFlagConditionLowLevelIL(cond, semClass, *func);
 }
 
 
 size_t Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
-	LowLevelILFunction func(il);
-	return arch->GetSemanticFlagGroupLowLevelIL(semGroup, func);
+	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
+	return arch->GetSemanticFlagGroupLowLevelIL(semGroup, *func);
 }
 
 

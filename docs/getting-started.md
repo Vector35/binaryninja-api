@@ -96,7 +96,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focuses the cross-reference pane
  - `;` : Adds a comment
- - `i` : Switches between disassembly and low-level il in graph view
+ - `i` : Cycles between disassembly, low-level il, and medium-level il in graph view
  - `y` : Change type
  - `a` : Change the data type to an ASCII string
  - [1248] : Change type directly to a data variable of the indicated widths
@@ -257,17 +257,20 @@ On windows, this is achieved through a separate launcher that loads first and re
 
 Settings are stored in the _user_ directory in the file `settings.json`. Each top level object in this file is represents a different plugin.  As of build 860 the following settings are available:
 
-|Plugin | Setting                  | Type         | Default                                        | Description                                                                                   |
-|------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
-| core  | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
-| core  | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |
-| ui    | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
-| ui    | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
-| ui    | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
-| pdb   | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
-| pdb   | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
-| pdb   | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
-| pdb   | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
+|Plugin     | Setting                  | Type         | Default                                        | Description                                                                                   |
+|----------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| analysis  | max-function-size        | integer      | 65536                                          | Any functions over this size will not be automatically analyzed and require manual override   |
+| core      | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
+| core      | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |
+| ui        | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
+| ui        | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
+| ui        | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
+| ui        | recent-file-limit        | integer      | 10                                             | Specify limit for number of recent files                                                       |
+| pdb       | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
+| pdb       | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
+| pdb       | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
+| pdb       | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
+| python    | interpreter              | string       | "python27.{dylib,dll,so.1}"                    | Python interpreter to load if one is not already present when plugins are loaded              |
 
 Below is an example `settings.json` setting various options:
 ```
@@ -277,6 +280,7 @@ Below is an example `settings.json` setting various options:
 		"activeContent" : false,
 		"colorblind" : false,
 		"debug" : true
+		"recent-file-limit" : 10
 	}
     "pdb" :
     {

@@ -304,6 +304,12 @@ class ScriptingProvider(object):
 			self.handle = core.handle_of_type(handle, core.BNScriptingProvider)
 			self.__dict__["name"] = core.BNGetScriptingProviderName(handle)
 
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
+
 	def register(self):
 		self._cb = core.BNScriptingProviderCallbacks()
 		self._cb.context = 0
@@ -650,6 +656,7 @@ original_stdin = sys.stdin
 original_stdout = sys.stdout
 original_stderr = sys.stderr
 
-sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
-sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
-sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)
+def redirect_stdio():
+	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)
+	sys.stdout = _PythonScriptingInstanceOutput(sys.stdout, False)
+	sys.stderr = _PythonScriptingInstanceOutput(sys.stderr, True)

@@ -260,6 +260,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
 		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
+		LowLevelILOperation.LLIL_TAILCALL: [("dest", "expr")],
 		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
 		LowLevelILOperation.LLIL_NORET: [],
 		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
@@ -328,6 +329,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag_ssa"), ("bit", "int")],
 		LowLevelILOperation.LLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
+		LowLevelILOperation.LLIL_TAILCALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
 		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"), ("src_memory", "int")],
 		LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
@@ -1592,10 +1594,20 @@ class LowLevelILFunction(object):
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CALL_STACK_ADJUST, dest.index, stack_adjust)
 
+	def tailcall(self, dest):
+		"""
+		``tailcall`` returns an expression which jumps (branches) to the expression ``dest``
+
+		:param LowLevelILExpr dest: the expression to jump to
+		:return: The expression ``tailcall(dest)``
+		:rtype: LowLevelILExpr
+		"""
+		return self.expr(LowLevelILOperation.LLIL_TAILCALL, dest.index)
+
 	def ret(self, dest):
 		"""
 		``ret`` returns an expression which jumps (branches) to the expression ``dest``. ``ret`` is a special alias for
-		jump that makes the disassembler top disassembling.
+		jump that makes the disassembler stop disassembling.
 
 		:param LowLevelILExpr dest: the expression to jump to
 		:return: The expression ``jump(dest)``
@@ -1797,8 +1809,9 @@ class LowLevelILFunction(object):
 		param_list = []
 		for param in params:
 			param_list.append(param.index)
-		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
-			self.arch.get_intrinsic_index(intrinsic), len(params), self.add_operand_list(param_list), flags = flags)
+		call_param = self.expr(LowLevelILOperation.LLIL_CALL_PARAM, len(params), self.add_operand_list(param_list).index)
+		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list).index,
+			self.arch.get_intrinsic_index(intrinsic), call_param.index, flags = flags)
 
 	def breakpoint(self):
 		"""

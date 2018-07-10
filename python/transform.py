@@ -200,6 +200,11 @@ class Transform(object):
 			log.log_error(traceback.format_exc())
 			return False
 
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
 	@abc.abstractmethod
 	def perform_decode(self, data, params):
 		if self.type == TransformType.InvertingTransform:

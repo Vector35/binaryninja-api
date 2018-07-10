@@ -24,7 +24,7 @@ import ctypes
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+from enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
 	FunctionAnalysisSkipOverride)
@@ -828,6 +828,11 @@ class Function(object):
 		"""Whether automatic analysis was skipped for this function"""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
 
+	@property
+	def analysis_skip_reason(self):
+		"""Function analysis skip reason"""
+		return AnalysisSkipReason(core.BNGetAnalysisSkipReason(self.handle))
+
 	@analysis_skipped.setter
 	def analysis_skipped(self, skip):
 		if skip:
@@ -1598,9 +1603,10 @@ class AdvancedFunctionAnalysisDataRequestor(object):
 
 
 class DisassemblyTextLine(object):
-	def __init__(self, addr, tokens):
+	def __init__(self, addr, tokens, il_instr = None):
 		self.address = addr
 		self.tokens = tokens
+		self.il_instruction = il_instr
 
 	def __str__(self):
 		result = ""
@@ -1625,8 +1631,9 @@ class FunctionGraphEdge(object):
 
 
 class FunctionGraphBlock(object):
-	def __init__(self, handle):
+	def __init__(self, handle, graph):
 		self.handle = handle
+		self.graph = graph
 
 	def __del__(self):
 		core.BNFreeFunctionGraphBlock(self.handle)
@@ -1645,13 +1652,22 @@ class FunctionGraphBlock(object):
 	def basic_block(self):
 		"""Basic block associated with this part of the function graph (read-only)"""
 		block = core.BNGetFunctionGraphBasicBlock(self.handle)
-		func = core.BNGetBasicBlockFunction(block)
-		if func is None:
+		func_handle = core.BNGetBasicBlockFunction(block)
+		if func_handle is None:
 			core.BNFreeBasicBlock(block)
-			block = None
+			return None
+
+		view = binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
+		func = Function(view, func_handle)
+
+		if core.BNIsLowLevelILBasicBlock(block):
+			block = lowlevelil.LowLevelILBasicBlock(view, block,
+				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func))
+		elif core.BNIsMediumLevelILBasicBlock(block):
+			block = mediumlevelil.MediumLevelILBasicBlock(view, block,
+				mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func))
 		else:
-			block = basicblock.BasicBlock(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), block)
-			core.BNFreeFunction(func)
+			block = basicblock.BasicBlock(view, block)
 		return block
 
 	@property
@@ -1697,9 +1713,14 @@ class FunctionGraphBlock(object):
 		"""Function graph block list of lines (read-only)"""
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		block = self.basic_block
 		result = []
 		for i in xrange(0, count.value):
 			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
+				il_instr = block.il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
 			tokens = []
 			for j in xrange(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -1711,7 +1732,7 @@ class FunctionGraphBlock(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(DisassemblyTextLine(addr, tokens))
+			result.append(DisassemblyTextLine(addr, tokens, il_instr))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
@@ -1756,9 +1777,14 @@ class FunctionGraphBlock(object):
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFunctionGraphBlockLines(self.handle, count)
+		block = self.basic_block
 		try:
 			for i in xrange(0, count.value):
 				addr = lines[i].addr
+				if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(block, 'il_function'):
+					il_instr = block.il_function[lines[i].instrIndex]
+				else:
+					il_instr = None
 				tokens = []
 				for j in xrange(0, lines[i].count):
 					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -1770,7 +1796,7 @@ class FunctionGraphBlock(object):
 					confidence = lines[i].tokens[j].confidence
 					address = lines[i].tokens[j].address
 					tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-				yield DisassemblyTextLine(addr, tokens)
+				yield DisassemblyTextLine(addr, tokens, il_instr)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
@@ -1858,7 +1884,7 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
+			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
 		core.BNFreeFunctionGraphBlockList(blocks, count.value)
 		return result
 
@@ -1897,6 +1923,32 @@ class FunctionGraph(object):
 	def settings(self):
 		return DisassemblySettings(core.BNGetFunctionGraphSettings(self.handle))
 
+	@property
+	def is_il(self):
+		return core.BNIsILFunctionGraph(self.handle)
+
+	@property
+	def is_low_level_il(self):
+		return core.BNIsLowLevelILFunctionGraph(self.handle)
+
+	@property
+	def is_medium_level_il(self):
+		return core.BNIsMediumLevelILFunctionGraph(self.handle)
+
+	@property
+	def il_function(self):
+		if self.is_low_level_il:
+			il_func = core.BNGetFunctionGraphLowLevelILFunction(self.handle)
+			if not il_func:
+				return None
+			return lowlevelil.LowLevelILFunction(self.function.arch, il_func, self.function)
+		if self.is_medium_level_il:
+			il_func = core.BNGetFunctionGraphMediumLevelILFunction(self.handle)
+			if not il_func:
+				return None
+			return mediumlevelil.MediumLevelILFunction(self.function.arch, il_func, self.function)
+		return None
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -1911,7 +1963,7 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocks(self.handle, count)
 		try:
 			for i in xrange(0, count.value):
-				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]))
+				yield FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self)
 		finally:
 			core.BNFreeFunctionGraphBlockList(blocks, count.value)
 
@@ -1954,7 +2006,7 @@ class FunctionGraph(object):
 		blocks = core.BNGetFunctionGraphBlocksInRegion(self.handle, left, top, right, bottom, count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i])))
+			result.append(FunctionGraphBlock(core.BNNewFunctionGraphBlockReference(blocks[i]), self))
 		core.BNFreeFunctionGraphBlockList(blocks, count.value)
 		return result
 

@@ -392,6 +392,11 @@ class Architecture(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
+	@property
 	def full_width_regs(self):
 		"""List of full width register strings (read-only)"""
 		count = ctypes.c_ulonglong()

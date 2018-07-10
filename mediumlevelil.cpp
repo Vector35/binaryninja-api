@@ -486,6 +486,12 @@ set<size_t> MediumLevelILFunction::GetSSAMemoryUses(size_t version) const
 }
 
 
+bool MediumLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
+{
+	return BNIsMediumLevelILSSAVarLive(m_object, &var.var, var.version);
+}
+
+
 set<size_t> MediumLevelILFunction::GetVariableDefinitions(const Variable& var) const
 {
 	size_t count;

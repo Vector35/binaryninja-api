@@ -30,6 +30,8 @@ import filemetadata
 import binaryview
 import function
 import log
+import lowlevelil
+import mediumlevelil
 
 
 class PluginCommandContext(object):
@@ -38,6 +40,7 @@ class PluginCommandContext(object):
 		self.address = 0
 		self.length = 0
 		self.function = None
+		self.instruction = None
 
 
 class _PluginCommandMetaClass(type):
@@ -80,6 +83,11 @@ class PluginCommand(object):
 		self.description = str(cmd.description)
 		self.type = PluginCommandType(cmd.type)
 
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
+
 	@classmethod
 	def _default_action(cls, view, action):
 		try:
@@ -114,6 +122,50 @@ class PluginCommand(object):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+
+	@classmethod
+	def _low_level_il_function_action(cls, view, func, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+
+	@classmethod
+	def _low_level_il_instruction_action(cls, view, func, instr, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj[instr])
+		except:
+			log.log_error(traceback.format_exc())
+
+	@classmethod
+	def _medium_level_il_function_action(cls, view, func, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+
+	@classmethod
+	def _medium_level_il_instruction_action(cls, view, func, instr, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -162,6 +214,62 @@ class PluginCommand(object):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _low_level_il_function_is_valid(cls, view, func, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _low_level_il_instruction_is_valid(cls, view, func, instr, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj[instr])
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _medium_level_il_function_is_valid(cls, view, func, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj)
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _medium_level_il_instruction_is_valid(cls, view, func, instr, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj[instr])
 		except:
 			log.log_error(traceback.format_exc())
 			return False
@@ -243,6 +351,82 @@ class PluginCommand(object):
 		core.BNRegisterPluginCommandForFunction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
+	def register_for_low_level_il_function(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_low_level_il_function`` Register a plugin to be called with a low level IL function argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and a ``LowLevelILFunction`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		startup._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_action(view, func, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_is_valid(view, func, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForLowLevelILFunction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
+	def register_for_low_level_il_instruction(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_low_level_il_instruction`` Register a plugin to be called with a low level IL instruction argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and a ``LowLevelILInstruction`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		startup._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_action(view, func, instr, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_is_valid(view, func, instr, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForLowLevelILInstruction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
+	def register_for_medium_level_il_function(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_medium_level_il_function`` Register a plugin to be called with a medium level IL function argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and a ``MediumLevelILFunction`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		startup._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_action(view, func, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_is_valid(view, func, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForMediumLevelILFunction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
+	def register_for_medium_level_il_instruction(cls, name, description, action, is_valid = None):
+		"""
+		``register_for_medium_level_il_instruction`` Register a plugin to be called with a medium level IL instruction argument
+
+		:param str name: name of the plugin
+		:param str description: description of the plugin
+		:param action: function to call with the ``BinaryView`` and a ``MediumLevelILInstruction`` as arguments
+		:param is_valid: optional argument of a function passed a ``BinaryView`` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		startup._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_action(view, func, instr, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_is_valid(view, func, instr, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForMediumLevelILInstruction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
 	def get_valid_list(cls, context):
 		"""Dict of registered plugins"""
 		commands = cls.list
@@ -275,6 +459,36 @@ class PluginCommand(object):
 			if not self.command.functionIsValid:
 				return True
 			return self.command.functionIsValid(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
+			if context.function is None:
+				return False
+			if not self.command.lowLevelILFunctionIsValid:
+				return True
+			return self.command.lowLevelILFunctionIsValid(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
+			if context.instruction is None:
+				return False
+			if not isinstance(context.instruction, lowlevelil.LowLevelILInstruction):
+				return False
+			if not self.command.lowLevelILInstructionIsValid:
+				return True
+			return self.command.lowLevelILInstructionIsValid(self.command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
+		elif self.command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
+			if context.function is None:
+				return False
+			if not self.command.mediumLevelILFunctionIsValid:
+				return True
+			return self.command.mediumLevelILFunctionIsValid(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
+			if context.instruction is None:
+				return False
+			if not isinstance(context.instruction, mediumlevelil.MediumLevelILInstruction):
+				return False
+			if not self.command.mediumLevelILInstructionIsValid:
+				return True
+			return self.command.mediumLevelILInstructionIsValid(self.command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
 		return False
 
 	def execute(self, context):
@@ -288,6 +502,16 @@ class PluginCommand(object):
 			self.command.rangeCommand(self.command.context, context.view.handle, context.address, context.length)
 		elif self.command.type == PluginCommandType.FunctionPluginCommand:
 			self.command.functionCommand(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
+			self.command.lowLevelILFunctionCommand(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
+			self.command.lowLevelILInstructionCommand(self.command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
+		elif self.command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
+			self.command.mediumLevelILFunctionCommand(self.command.context, context.view.handle, context.function.handle)
+		elif self.command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
+			self.command.mediumLevelILInstructionCommand(self.command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
 
 	def __repr__(self):
 		return "<PluginCommand: %s>" % self.name
@@ -341,8 +565,8 @@ class _BackgroundTaskMetaclass(type):
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		result = []
 		for i in xrange(0, count.value):
-			result.append(BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i])))
-		core.BNFreeBackgroundTaskList(tasks)
+			result.append(BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i])))
+		core.BNFreeBackgroundTaskList(tasks, count.value)
 		return result
 
 	def __iter__(self):
@@ -351,9 +575,9 @@ class _BackgroundTaskMetaclass(type):
 		tasks = core.BNGetRunningBackgroundTasks(count)
 		try:
 			for i in xrange(0, count.value):
-				yield BackgroundTask(core.BNNewBackgroundTaskReference(tasks[i]))
+				yield BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i]))
 		finally:
-			core.BNFreeBackgroundTaskList(tasks)
+			core.BNFreeBackgroundTaskList(tasks, count.value)
 
 
 class BackgroundTask(object):
@@ -367,6 +591,11 @@ class BackgroundTask(object):
 
 	def __del__(self):
 		core.BNFreeBackgroundTask(self.handle)
+
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
 
 	@property
 	def progress(self):

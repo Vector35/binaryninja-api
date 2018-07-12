@@ -541,7 +541,7 @@ class Section(object):
 
 	@property
 	def semantics(self):
-		return SectionSemantics(core.BNSectionSemantics(self.handle))
+		return SectionSemantics(core.BNSectionGetSemantics(self.handle))
 
 	@property
 	def auto_defined(self):

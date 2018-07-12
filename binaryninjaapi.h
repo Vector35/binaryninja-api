@@ -54,6 +54,7 @@ namespace BinaryNinja
 		virtual ~RefCountObject() {}
 
 		RefCountObject* GetObject() { return this; }
+		static RefCountObject* GetObject(RefCountObject* obj) { return obj; }
 
 		void AddRef()
 		{
@@ -106,6 +107,13 @@ namespace BinaryNinja
 		virtual ~CoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
+
+		static T* GetObject(CoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
 
 		void AddRef()
 		{
@@ -163,6 +171,13 @@ namespace BinaryNinja
 		virtual ~StaticCoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
+
+		static T* GetObject(StaticCoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
 
 		void AddRef()
 		{
@@ -252,32 +267,32 @@ namespace BinaryNinja
 
 		bool operator==(const T* obj) const
 		{
-			return m_obj->GetObject() == obj->GetObject();
+			return T::GetObject(m_obj) == T::GetObject(obj);
 		}
 
 		bool operator==(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() == obj.m_obj->GetObject();
+			return T::GetObject(m_obj) == T::GetObject(obj.m_obj);
 		}
 
 		bool operator!=(const T* obj) const
 		{
-			return m_obj->GetObject() != obj->GetObject();
+			return T::GetObject(m_obj) != T::GetObject(obj);
 		}
 
 		bool operator!=(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() != obj.m_obj->GetObject();
+			return T::GetObject(m_obj) != T::GetObject(obj.m_obj);
 		}
 
 		bool operator<(const T* obj) const
 		{
-			return m_obj->GetObject() < obj->GetObject();
+			return T::GetObject(m_obj) < T::GetObject(obj);
 		}
 
 		bool operator<(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() < obj.m_obj->GetObject();
+			return T::GetObject(m_obj) < T::GetObject(obj.m_obj);
 		}
 
 		T* GetPtr() const
@@ -2567,7 +2582,18 @@ namespace BinaryNinja
 
 		static void CompleteCallback(void* ctxt);
 
+		static void PrepareForLayoutCallback(void* ctxt);
+		static void PopulateNodesCallback(void* ctxt);
+		static void CompleteLayoutCallback(void* ctxt);
+
+	protected:
+		void FinishPrepareForLayout();
+		virtual void PrepareForLayout();
+		virtual void PopulateNodes();
+		virtual void CompleteLayout();
+
 	public:
+		FlowGraph();
 		FlowGraph(BNFlowGraph* graph);
 		~FlowGraph();
 

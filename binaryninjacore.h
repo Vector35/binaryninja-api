@@ -1772,6 +1772,14 @@ extern "C"
 		FlowGraphReportType
 	};
 
+	struct BNCustomFlowGraph
+	{
+		void* context;
+		void (*prepareForLayout)(void* ctxt);
+		void (*populateNodes)(void* ctxt);
+		void (*completeLayout)(void* ctxt);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2566,6 +2574,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph();
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFunctionGraph(BNFunction* func, BNFunctionGraphType type,
 		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateCustomFlowGraph(BNCustomFlowGraph* callbacks);
 	BINARYNINJACOREAPI BNFlowGraph* BNNewFlowGraphReference(BNFlowGraph* graph);
 	BINARYNINJACOREAPI void BNFreeFlowGraph(BNFlowGraph* graph);
 	BINARYNINJACOREAPI BNFunction* BNGetFunctionForFlowGraph(BNFlowGraph* graph);
@@ -2617,6 +2626,8 @@ extern "C"
 
 	BINARYNINJACOREAPI BNHighlightColor BNGetFlowGraphNodeHighlight(BNFlowGraphNode* node);
 	BINARYNINJACOREAPI void BNSetFlowGraphNodeHighlight(BNFlowGraphNode* node, BNHighlightColor color);
+
+	BINARYNINJACOREAPI void BNFinishPrepareForLayout(BNFlowGraph* graph);
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,

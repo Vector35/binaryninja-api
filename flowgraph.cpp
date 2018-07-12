@@ -24,6 +24,17 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+FlowGraph::FlowGraph()
+{
+	BNCustomFlowGraph callbacks;
+	callbacks.context = this;
+	callbacks.prepareForLayout = PrepareForLayoutCallback;
+	callbacks.populateNodes = PopulateNodesCallback;
+	callbacks.completeLayout = CompleteLayoutCallback;
+	m_graph = BNCreateCustomFlowGraph(&callbacks);
+}
+
+
 FlowGraph::FlowGraph(BNFlowGraph* graph): m_graph(graph)
 {
 }
@@ -43,6 +54,49 @@ void FlowGraph::CompleteCallback(void* ctxt)
 {
 	FlowGraph* graph = (FlowGraph*)ctxt;
 	graph->m_completeFunc();
+}
+
+
+void FlowGraph::PrepareForLayoutCallback(void* ctxt)
+{
+	FlowGraph* graph = (FlowGraph*)ctxt;
+	graph->PrepareForLayout();
+}
+
+
+void FlowGraph::PopulateNodesCallback(void* ctxt)
+{
+	FlowGraph* graph = (FlowGraph*)ctxt;
+	graph->PopulateNodes();
+}
+
+
+void FlowGraph::CompleteLayoutCallback(void* ctxt)
+{
+	FlowGraph* graph = (FlowGraph*)ctxt;
+	graph->CompleteLayout();
+}
+
+
+void FlowGraph::FinishPrepareForLayout()
+{
+	BNFinishPrepareForLayout(m_graph);
+}
+
+
+void FlowGraph::PrepareForLayout()
+{
+	FinishPrepareForLayout();
+}
+
+
+void FlowGraph::PopulateNodes()
+{
+}
+
+
+void FlowGraph::CompleteLayout()
+{
 }
 
 

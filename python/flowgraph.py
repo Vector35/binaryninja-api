@@ -24,13 +24,12 @@ import traceback
 
 # Binary Ninja components
 import _binaryninjacore as core
-from enums import (BranchType, InstructionTextTokenType, HighlightColorStyle, HighlightStandardColor)
+from enums import (BranchType, InstructionTextTokenType, HighlightStandardColor)
 import function
 import binaryview
 import lowlevelil
 import mediumlevelil
 import basicblock
-import architecture
 import log
 import interaction
 import highlight
@@ -264,7 +263,12 @@ class FlowGraphNode(object):
 class FlowGraph(object):
 	def __init__(self, handle = None):
 		if handle is None:
-			handle = core.BNCreateFlowGraph()
+			self._ext_cb = core.BNCustomFlowGraph()
+			self._ext_cb.context = 0
+			self._ext_cb.prepareForLayout = self._ext_cb.prepareForLayout.__class__(self._prepare_for_layout)
+			self._ext_cb.populateNodes = self._ext_cb.populateNodes.__class__(self._populate_nodes)
+			self._ext_cb.completeLayout = self._ext_cb.completeLayout.__class__(self._complete_layout)
+			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
 		self.handle = handle
 		self._on_complete = None
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
@@ -282,6 +286,36 @@ class FlowGraph(object):
 		if not isinstance(value, FlowGraph):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def _prepare_for_layout(self, ctxt):
+		try:
+			self.prepare_for_layout()
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _populate_nodes(self, ctxt):
+		try:
+			self.populate_nodes()
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _complete_layout(self, ctxt):
+		try:
+			self.complete_layout()
+		except:
+			log.log_error(traceback.format_exc())
+
+	def finish_prepare_for_layout(self):
+		core.BNFinishPrepareForLayout(self.handle)
+
+	def prepare_for_layout(self):
+		self.finish_prepare_for_layout()
+
+	def populate_nodes(self):
+		pass
+
+	def complete_layout(self):
+		pass
 
 	@property
 	def function(self):

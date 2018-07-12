@@ -1394,6 +1394,7 @@ namespace BinaryNinja
 		Architecture* GetArchitecture() const;
 		uint64_t GetTarget() const;
 		uint64_t GetReloc() const;
+		Ref<Symbol> GetSymbol() const;
 	};
 
 

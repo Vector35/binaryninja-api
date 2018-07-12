@@ -3525,7 +3525,7 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture* BNRelocationGetArchitecture(BNRelocation* reloc);
 	BINARYNINJACOREAPI uint64_t BNRelocationGetTarget(BNRelocation* reloc);
 	BINARYNINJACOREAPI uint64_t BNRelocationGetReloc(BNRelocation* reloc);
-
+	BINARYNINJACOREAPI BNSymbol* BNRelocationGetSymbol(BNRelocation* reloc);
 	// Segment object methods
 	BINARYNINJACOREAPI BNSegment* BNCreateSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags,
 		bool autoDefined);

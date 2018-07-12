@@ -2230,6 +2230,15 @@ uint64_t Relocation::GetReloc() const
 }
 
 
+Ref<Symbol> Relocation::GetSymbol() const
+{
+	BNSymbol* sym = BNRelocationGetSymbol(m_object);
+	if (!sym)
+		return nullptr;
+	return new Symbol(sym);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

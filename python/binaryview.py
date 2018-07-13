@@ -145,6 +145,27 @@ class AnalysisCompletionEvent(object):
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 
 
+class ActiveAnalysisInfo(object):
+	def __init__(self, func, analysis_time, update_count, submit_count):
+		self.func = func
+		self.analysis_time = analysis_time
+		self.update_count = update_count
+		self.submit_count = submit_count
+
+	def __repr__(self):
+		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self.func, self.analysis_time, self.update_count, self.submit_count)
+
+
+class AnalysisInfo(object):
+	def __init__(self, state, analysis_time, active_info):
+		self.state = AnalysisState(state)
+		self.analysis_time = analysis_time
+		self.active_info = active_info
+
+	def __repr__(self):
+		return "<AnalysisInfo %s, analysis_time %d, active_info %s>" % (self.state, self.analysis_time, self.active_info)
+
+
 class AnalysisProgress(object):
 	def __init__(self, state, count, total):
 		self.state = state
@@ -156,6 +177,8 @@ class AnalysisProgress(object):
 			return "Disassembling (%d/%d)" % (self.count, self.total)
 		if self.state == AnalysisState.AnalyzeState:
 			return "Analyzing (%d/%d)" % (self.count, self.total)
+		if self.state == AnalysisState.ExtendedAnalyzeState:
+			return "Extended Analysis"
 		return "Idle"
 
 	def __repr__(self):
@@ -341,6 +364,11 @@ class BinaryViewType(object):
 		if not isinstance(value, BinaryViewType):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
 
 	@property
 	def name(self):
@@ -1006,6 +1034,20 @@ class BinaryView(object):
 		self.file.saved = value
 
 	@property
+	def analysis_info(self):
+		"""Relevant analysis information with list of functions under active analysis (read-only)"""
+		info_ref = core.BNGetAnalysisInfo(self.handle)
+		info = info_ref[0]
+		active_info_list = []
+		for i in xrange(0, info.count):
+			func = function.Function(self, core.BNNewFunctionReference(info.activeInfo[i].func))
+			active_info = ActiveAnalysisInfo(func, info.activeInfo[i].analysisTime, info.activeInfo[i].updateCount, info.activeInfo[i].submitCount)
+			active_info_list.append(active_info)
+		result = AnalysisInfo(info.state, info.analysisTime, active_info_list)
+		core.BNFreeAnalysisInfo(info_ref)
+		return result
+
+	@property
 	def analysis_progress(self):
 		"""Status of current analysis (read-only)"""
 		result = core.BNGetAnalysisProgress(self.handle)
@@ -1091,6 +1133,14 @@ class BinaryView(object):
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
 		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+
+	@property
+	def parameters_for_analysis(self):
+		return core.BNGetParametersForAnalysis(self.handle)
+
+	@parameters_for_analysis.setter
+	def parameters_for_analysis(self, params):
+		core.BNSetParametersForAnalysis(self.handle, params)
 
 	@property
 	def max_function_size_for_analysis(self):
@@ -2821,6 +2871,8 @@ class BinaryView(object):
 		if start is None:
 			strings = core.BNGetStrings(self.handle, count)
 		else:
+			if length is None:
+				length = self.end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in xrange(0, count.value):

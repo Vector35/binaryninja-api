@@ -50,6 +50,7 @@ from .lineardisassembly import *
 from .undoaction import *
 from .highlight import *
 from .scriptingprovider import *
+from .downloadprovider import *
 from .pluginmanager import *
 from .setting import *
 from .metadata import *

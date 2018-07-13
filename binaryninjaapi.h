@@ -1019,6 +1019,25 @@ namespace BinaryNinja
 		void Cancel();
 	};
 
+	struct ActiveAnalysisInfo
+	{
+		Ref<Function> func;
+		uint64_t analysisTime;
+		size_t updateCount;
+		size_t submitCount;
+
+		ActiveAnalysisInfo(Ref<Function> f, uint64_t t, size_t uc, size_t sc) : func(f), analysisTime(t), updateCount(uc), submitCount(sc)
+		{
+		}
+	};
+
+	struct AnalysisInfo
+	{
+		BNAnalysisState state;
+		uint64_t analysisTime;
+		std::vector<ActiveAnalysisInfo> activeInfo;
+	};
+
 	struct DataVariable
 	{
 		DataVariable() { }
@@ -1302,6 +1321,7 @@ namespace BinaryNinja
 
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
+		AnalysisInfo GetAnalysisInfo();
 		BNAnalysisProgress GetAnalysisProgress();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
@@ -1381,6 +1401,8 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
+		BNAnalysisParameters GetParametersForAnalysis();
+		void SetParametersForAnalysis(BNAnalysisParameters params);
 		uint64_t GetMaxFunctionSizeForAnalysis();
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 	};
@@ -2541,6 +2563,7 @@ namespace BinaryNinja
 
 		bool IsFunctionTooLarge();
 		bool IsAnalysisSkipped();
+		BNAnalysisSkipReason GetAnalysisSkipReason();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 	};
@@ -3714,6 +3737,63 @@ namespace BinaryNinja
 			const std::string& autoTypeSource = "");
 	};
 
+	// DownloadProvider
+	class DownloadProvider;
+
+	class DownloadInstance: public CoreRefCountObject<BNDownloadInstance, BNNewDownloadInstanceReference, BNFreeDownloadInstance>
+	{
+	protected:
+		DownloadInstance(DownloadProvider* provider);
+		DownloadInstance(BNDownloadInstance* instance);
+
+		static void DestroyInstanceCallback(void* ctxt);
+		static int PerformRequestCallback(void* ctxt, const char* url);
+
+		virtual void DestroyInstance();
+
+	public:
+		virtual int PerformRequest(const std::string& url) = 0;
+
+		int PerformRequest(const std::string& url, BNDownloadInstanceOutputCallbacks* callbacks);
+
+		std::string GetError() const;
+		void SetError(const std::string& error);
+	};
+
+	class CoreDownloadInstance: public DownloadInstance
+	{
+	public:
+		CoreDownloadInstance(BNDownloadInstance* instance);
+
+		virtual int PerformRequest(const std::string& url) override;
+	};
+
+	class DownloadProvider: public StaticCoreRefCountObject<BNDownloadProvider>
+	{
+		std::string m_nameForRegister;
+
+	protected:
+		DownloadProvider(const std::string& name);
+		DownloadProvider(BNDownloadProvider* provider);
+
+		static BNDownloadInstance* CreateInstanceCallback(void* ctxt);
+
+	public:
+		virtual Ref<DownloadInstance> CreateNewInstance() = 0;
+
+		static std::vector<Ref<DownloadProvider>> GetList();
+		static Ref<DownloadProvider> GetByName(const std::string& name);
+		static void Register(DownloadProvider* provider);
+	};
+
+	class CoreDownloadProvider: public DownloadProvider
+	{
+	public:
+		CoreDownloadProvider(BNDownloadProvider* provider);
+		virtual Ref<DownloadInstance> CreateNewInstance() override;
+	};
+
+	// Scripting Provider
 	class ScriptingOutputListener
 	{
 		BNScriptingOutputListener m_callbacks;
@@ -4072,7 +4152,4 @@ namespace BinaryNinja
 		bool IsArray() const;
 		bool IsKeyValueStore() const;
 	};
-
-	std::string GetLinuxCADirectory();
-	std::string GetLinuxCABundlePath();
 }

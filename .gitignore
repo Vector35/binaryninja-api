@@ -31,3 +31,11 @@ CTestTestfile.cmake
 api-docs/source/python.rst
 api-docs/source/index.rst
 .coverage
+# Make
+generator
+plugins/
+python/examples/binaryninja/
+python/plugins/
+python/types/
+suite/binaryninja/
+types/

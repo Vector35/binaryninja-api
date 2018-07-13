@@ -22,16 +22,18 @@ import traceback
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import UpdateResult
-import startup
-import log
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import UpdateResult
+
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class _UpdateChannelMetaClass(type):
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -40,7 +42,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion))
 		core.BNFreeUpdateChannelList(channels, count.value)
 		return result
@@ -54,7 +56,7 @@ class _UpdateChannelMetaClass(type):
 		return core.BNSetActiveUpdateChannel(value)
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -63,7 +65,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion)
 		finally:
 			core.BNFreeUpdateChannelList(channels, count.value)
@@ -75,7 +77,7 @@ class _UpdateChannelMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
@@ -84,7 +86,7 @@ class _UpdateChannelMetaClass(type):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = None
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if channels[i].name == str(name):
 				result = UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion)
 				break
@@ -108,9 +110,7 @@ class UpdateProgressCallback(object):
 			log.log_error(traceback.format_exc())
 
 
-class UpdateChannel(object):
-	__metaclass__ = _UpdateChannelMetaClass
-
+class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 	def __init__(self, name, desc, ver):
 		self.name = name
 		self.description = desc
@@ -127,7 +127,7 @@ class UpdateChannel(object):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time))
 		core.BNFreeUpdateChannelVersionList(versions, count.value)
 		return result
@@ -143,7 +143,7 @@ class UpdateChannel(object):
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise IOError(error_str)
 		result = None
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if versions[i].version == self.latest_version_num:
 				result = UpdateVersion(self, versions[i].version, versions[i].notes, versions[i].time)
 				break

@@ -21,8 +21,10 @@
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-import types
+from binaryninja import _binaryninjacore as core
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 def get_qualified_name(names):
@@ -56,26 +58,28 @@ def demangle_ms(arch, mangled_name):
 		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
 		>>>
 	"""
+	from binaryninja import types
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
 	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
-		for i in xrange(outSize.value):
-			names.append(outName[i])
+		for i in range(outSize.value):
+			names.append(outName[i].decode('charmap'))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		return (types.Type(handle), names)
 	return (None, mangled_name)
 
 
 def demangle_gnu3(arch, mangled_name):
+	from binaryninja import types
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
 	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
-		for i in xrange(outSize.value):
-			names.append(outName[i])
+		for i in range(outSize.value):
+			names.append(outName[i].decode('charmap'))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		if not handle:
 			return (None, names)

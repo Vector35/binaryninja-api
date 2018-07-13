@@ -21,7 +21,10 @@
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
+from binaryninja import _binaryninjacore as core
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 class Setting(object):
@@ -45,7 +48,7 @@ class Setting(object):
 			default_list[i] = default_value[i]
 		result = core.BNSettingGetIntegerList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
-		for i in xrange(length.value):
+		for i in range(length.value):
 			out_list.append(result[i])
 		core.BNFreeSettingIntegerList(result)
 		return out_list
@@ -55,11 +58,11 @@ class Setting(object):
 		length.value = len(default_value)
 		default_list = (ctypes.c_char_p * len(default_value))()
 		for i in range(len(default_value)):
-			default_list[i] = default_value[i]
+			default_list[i] = default_value[i].encode('charmap')
 		result = core.BNSettingGetStringList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
-		for i in xrange(length.value):
-			out_list.append(result[i])
+		for i in range(length.value):
+			out_list.append(result[i].decode('charmap'))
 		core.BNFreeStringList(result, length)
 		return out_list
 
@@ -100,7 +103,7 @@ class Setting(object):
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
 		default_list = (ctypes.c_longlong * len(value))()
-		for i in xrange(len(value)):
+		for i in range(len(value)):
 			default_list[i] = value[i]
 
 		return core.BNSettingSetIntegerList(self.plugin_name, name, default_list, length, auto_flush)
@@ -109,8 +112,8 @@ class Setting(object):
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
 		default_list = (ctypes.c_char_p * len(value))()
-		for i in xrange(len(value)):
-			default_list[i] = str(value[i])
+		for i in range(len(value)):
+			default_list[i] = value[i].encode('charmap')
 
 		return core.BNSettingSetStringList(self.plugin_name, name, default_list, length, auto_flush)
 

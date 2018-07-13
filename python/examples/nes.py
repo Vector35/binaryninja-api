@@ -31,6 +31,10 @@ from binaryninja.log import log_error
 from binaryninja.enums import (BranchType, InstructionTextTokenType,
 							LowLevelILOperation, LowLevelILFlagCondition, FlagRole, SegmentFlag, SymbolType)
 
+# 2-3 compatibility
+from binaryninja import range
+
+
 InstructionNames = [
 	"brk", "ora", None, None, None, "ora", "asl", None,  # 0x00
 	"php", "ora", "asl@", None, None, "ora", "asl", None,  # 0x08
@@ -631,7 +635,7 @@ class NESView(BinaryView):
 
 
 banks = []
-for i in xrange(0, 32):
+for i in range(0, 32):
 	class NESViewBank(NESView):
 		bank = i
 		name = "NES Bank %X" % i

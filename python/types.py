@@ -30,6 +30,7 @@ from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, In
 
 # 2-3 compatibility
 from binaryninja import range
+from binaryninja import pyNativeStr
 
 
 class QualifiedName(object):
@@ -41,7 +42,7 @@ class QualifiedName(object):
 			self.name = name.name
 			self.byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = [i.decode('charmap') for i in name]
+			self.name = [pyNativeStr(i) for i in name]
 			self.byte_name = name
 
 	def __str__(self):

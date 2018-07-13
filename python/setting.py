@@ -25,6 +25,7 @@ from binaryninja import _binaryninjacore as core
 
 # 2-3 compatibility
 from binaryninja import range
+from binaryninja import pyNativeStr
 
 
 class Setting(object):
@@ -62,7 +63,7 @@ class Setting(object):
 		result = core.BNSettingGetStringList(self.plugin_name, name, default_list, ctypes.byref(length))
 		out_list = []
 		for i in range(length.value):
-			out_list.append(result[i].decode('charmap'))
+			out_list.append(pyNativeStr(result[i]))
 		core.BNFreeStringList(result, length)
 		return out_list
 

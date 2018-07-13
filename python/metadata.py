@@ -28,6 +28,7 @@ from binaryninja.enums import MetadataType
 
 # 2-3 compatibility
 from binaryninja import range
+from binaryninja import pyNativeStr
 
 
 class Metadata(object):
@@ -148,7 +149,7 @@ class Metadata(object):
 			try:
 				for i in range(result.contents.size):
 					if isinstance(result.contents.keys[i], bytes):
-						yield str(result.contents.keys[i].decode('charmap'))
+						yield str(pyNativeStr(result.contents.keys[i]))
 					else:
 						yield result.contents.keys[i]
 			finally:

@@ -51,6 +51,20 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, 'temporary_class', (), {})
 
 
+def cstr(arg):
+	if isinstance(arg, bytes) or arg is None:
+		return arg
+	else:
+		return arg.encode('charmap')
+
+
+def pyNativeStr(arg):
+	if isinstance(arg, str):
+		return arg
+	else:
+		return arg.decode('charmap')
+
+
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
 # __all__ = [

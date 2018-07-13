@@ -23,6 +23,9 @@ import ctypes
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 
+# 2-3 compatibility
+from binaryninja import pyNativeStr
+
 
 class DataBuffer(object):
 	def __init__(self, contents="", handle=None):
@@ -114,10 +117,7 @@ class DataBuffer(object):
 	def __str__(self):
 		buf = ctypes.create_string_buffer(len(self))
 		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
-		if isinstance(buf.raw, str):
-			return buf.raw
-		else:
-			return buf.raw.decode("charmap")
+		return pyNativeStr(buf.raw)
 
 	def __bytes__(self):
 		buf = ctypes.create_string_buffer(len(self))

@@ -31,6 +31,9 @@ from binaryninja import with_metaclass
 from binaryninja import startup
 from binaryninja import log
 
+# 2-3 compatibility
+from binaryninja import pyNativeStr
+
 
 class DownloadInstance(object):
 	def __init__(self, provider, handle = None):
@@ -166,7 +169,7 @@ if sys.version_info >= (2, 7, 9):
 					opener = build_opener(ProxyHandler({'https': proxy_setting}))
 					install_opener(opener)
 
-				r = urlopen(url.decode("charmap"))
+				r = urlopen(pyNativeStr(url))
 				total_size = int(r.headers.get('content-length', 0))
 				bytes_sent = 0
 				while True:
@@ -224,7 +227,7 @@ else:
 					else:
 						proxies = None
 
-					r = requests.get(url.decode("charmap"), proxies=proxies)
+					r = requests.get(pyNativeStr(url), proxies=proxies)
 					if not r.ok:
 						core.BNSetErrorForDownloadInstance(self.handle, "Received error from server")
 						return -1

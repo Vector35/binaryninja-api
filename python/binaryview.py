@@ -98,7 +98,7 @@ class StringReference(object):
 
 	@property
 	def value(self):
-		return self.view.read(self.start, self.length).decode("charmap")
+		return binaryninja.pyNativeStr(self.view.read(self.start, self.length))
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
@@ -3503,7 +3503,7 @@ class BinaryView(object):
 	def get_unique_section_names(self, name_list):
 		incoming_names = (ctypes.c_char_p * len(name_list))()
 		for i in range(0, len(name_list)):
-			incoming_names[i] = name_list[i].encode('charmap')
+			incoming_names[i] = binaryninja.cstr(name_list[i])
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		result = []
 		for i in range(0, len(name_list)):

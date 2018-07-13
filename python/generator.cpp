@@ -198,13 +198,9 @@ int main(int argc, char* argv[])
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");
-	fprintf(out, "\traise Exception(\"OS not supported\")\n\n");
+	fprintf(out, "\traise Exception(\"OS not supported\")\n\n\n");
 
-	fprintf(out, "def cstr(arg):\n");
-	fprintf(out, "\tif isinstance(arg, str):\n");
-	fprintf(out, "\t\treturn arg.encode('charmap')\n");
-	fprintf(out, "\telse:\n");
-	fprintf(out, "\t\treturn arg\n\n");
+	fprintf(out, "from binaryninja import cstr, pyNativeStr\n\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -226,8 +222,8 @@ int main(int argc, char* argv[])
 					(arg.type->GetChildType()->GetWidth() == 1) &&
 					(arg.type->GetChildType()->IsSigned()))
 					{
-						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn self._%s.decode('charmap')\n", arg.name.c_str(), arg.name.c_str());
-						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = value.encode('charmap')\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn pyNativeStr(self._%s)\n", arg.name.c_str(), arg.name.c_str());
+						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = cstr(value)\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
 						stringField = true;
 					}
 			}
@@ -423,7 +419,7 @@ int main(int argc, char* argv[])
 			}
 			else
 				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
-			fprintf(out, "\tstring = str(ctypes.cast(result, ctypes.c_char_p).value.decode('charmap'))\n");
+			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
 			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}

@@ -208,7 +208,7 @@ static void ShowGraphReportCallback(void* ctxt, BNBinaryView* view, const char* 
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
 	handler->ShowGraphReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title,
-		new FlowGraph(BNNewFlowGraphReference(graph)));
+		new CoreFlowGraph(BNNewFlowGraphReference(graph)));
 }
 
 
@@ -663,7 +663,7 @@ Ref<FlowGraph> ReportCollection::GetFlowGraph(size_t i) const
 	BNFlowGraph* graph = BNGetReportFlowGraph(m_object, i);
 	if (!graph)
 		return nullptr;
-	return new FlowGraph(graph);
+	return new CoreFlowGraph(graph);
 }
 
 

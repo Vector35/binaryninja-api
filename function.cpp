@@ -811,7 +811,7 @@ void Function::ApplyAutoDiscoveredType(Type* type)
 Ref<FlowGraph> Function::CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings)
 {
 	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type, settings ? settings->GetObject() : nullptr);
-	return new FlowGraph(graph);
+	return new CoreFlowGraph(graph);
 }
 
 
@@ -1396,7 +1396,7 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 	BNFlowGraph* graph = BNGetUnresolvedStackAdjustmentGraph(m_object);
 	if (!graph)
 		return nullptr;
-	return new FlowGraph(graph);
+	return new CoreFlowGraph(graph);
 }
 
 

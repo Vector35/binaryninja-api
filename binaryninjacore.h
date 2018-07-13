@@ -1778,6 +1778,7 @@ extern "C"
 		void (*prepareForLayout)(void* ctxt);
 		void (*populateNodes)(void* ctxt);
 		void (*completeLayout)(void* ctxt);
+		BNFlowGraph* (*update)(void* ctxt);
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2628,6 +2629,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetFlowGraphNodeHighlight(BNFlowGraphNode* node, BNHighlightColor color);
 
 	BINARYNINJACOREAPI void BNFinishPrepareForLayout(BNFlowGraph* graph);
+
+	BINARYNINJACOREAPI BNFlowGraph* BNUpdateFlowGraph(BNFlowGraph* graph);
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,

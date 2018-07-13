@@ -302,7 +302,7 @@ class InteractionHandler(object):
 				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
-			self.show_graph_report(view, title, flowgraph.FlowGraph(core.BNNewFlowGraphReference(graph)))
+			self.show_graph_report(view, title, flowgraph.CoreFlowGraph(core.BNNewFlowGraphReference(graph)))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -567,7 +567,7 @@ class ReportCollection(object):
 			plaintext = core.BNGetReportPlainText(self.handle, i)
 			return HTMLReport(title, contents, plaintext, view)
 		elif report_type == ReportType.FlowGraphReportType:
-			graph = flowgraph.FlowGraph(core.BNGetReportFlowGraph(self.handle, i))
+			graph = flowgraph.CoreFlowGraph(core.BNGetReportFlowGraph(self.handle, i))
 			return FlowGraphReport(title, graph, view)
 		raise TypeError("invalid report type %s" % repr(report_type))
 

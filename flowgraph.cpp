@@ -78,6 +78,16 @@ void FlowGraph::CompleteLayoutCallback(void* ctxt)
 }
 
 
+BNFlowGraph* FlowGraph::UpdateCallback(void* ctxt)
+{
+	FlowGraph* graph = (FlowGraph*)ctxt;
+	Ref<FlowGraph> result = graph->Update();
+	if (!result)
+		return nullptr;
+	return BNNewFlowGraphReference(result->GetGraphObject());
+}
+
+
 void FlowGraph::FinishPrepareForLayout()
 {
 	BNFinishPrepareForLayout(m_graph);
@@ -312,4 +322,24 @@ void FlowGraph::SetMediumLevelILFunction(MediumLevelILFunction* func)
 void FlowGraph::Show(const string& title)
 {
 	ShowGraphReport(title, this);
+}
+
+
+Ref<FlowGraph> FlowGraph::Update()
+{
+	return nullptr;
+}
+
+
+CoreFlowGraph::CoreFlowGraph(BNFlowGraph* graph): FlowGraph(graph)
+{
+}
+
+
+Ref<FlowGraph> CoreFlowGraph::Update()
+{
+	BNFlowGraph* graph = BNUpdateFlowGraph(GetGraphObject());
+	if (!graph)
+		return nullptr;
+	return new CoreFlowGraph(graph);
 }

@@ -2585,8 +2585,11 @@ namespace BinaryNinja
 		static void PrepareForLayoutCallback(void* ctxt);
 		static void PopulateNodesCallback(void* ctxt);
 		static void CompleteLayoutCallback(void* ctxt);
+		static BNFlowGraph* UpdateCallback(void* ctxt);
 
 	protected:
+		FlowGraph(BNFlowGraph* graph);
+
 		void FinishPrepareForLayout();
 		virtual void PrepareForLayout();
 		virtual void PopulateNodes();
@@ -2594,7 +2597,6 @@ namespace BinaryNinja
 
 	public:
 		FlowGraph();
-		FlowGraph(BNFlowGraph* graph);
 		~FlowGraph();
 
 		BNFlowGraph* GetGraphObject() const { return m_graph; }
@@ -2629,6 +2631,15 @@ namespace BinaryNinja
 		void SetMediumLevelILFunction(MediumLevelILFunction* func);
 
 		void Show(const std::string& title);
+
+		virtual Ref<FlowGraph> Update();
+	};
+
+	class CoreFlowGraph: public FlowGraph
+	{
+	public:
+		CoreFlowGraph(BNFlowGraph* graph);
+		virtual Ref<FlowGraph> Update() override;
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel

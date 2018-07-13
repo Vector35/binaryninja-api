@@ -268,6 +268,7 @@ class FlowGraph(object):
 			self._ext_cb.prepareForLayout = self._ext_cb.prepareForLayout.__class__(self._prepare_for_layout)
 			self._ext_cb.populateNodes = self._ext_cb.populateNodes.__class__(self._populate_nodes)
 			self._ext_cb.completeLayout = self._ext_cb.completeLayout.__class__(self._complete_layout)
+			self._ext_cb.update = self._ext_cb.update.__class__(self._update)
 			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
 		self.handle = handle
 		self._on_complete = None
@@ -304,6 +305,16 @@ class FlowGraph(object):
 			self.complete_layout()
 		except:
 			log.log_error(traceback.format_exc())
+
+	def _update(self, ctxt):
+		try:
+			graph = self.update()
+			if graph is None:
+				return None
+			return core.BNNewFlowGraphReference(graph.handle)
+		except:
+			log.log_error(traceback.format_exc())
+			return None
 
 	def finish_prepare_for_layout(self):
 		core.BNFinishPrepareForLayout(self.handle)
@@ -497,3 +508,17 @@ class FlowGraph(object):
 
 	def show(self, title):
 		interaction.show_graph_report(title, self)
+
+	def update(self):
+		return None
+
+
+class CoreFlowGraph(FlowGraph):
+	def __init__(self, handle):
+		super(CoreFlowGraph, self).__init__(handle)
+
+	def update(self):
+		graph = core.BNUpdateFlowGraph(self.handle)
+		if not graph:
+			return None
+		return CoreFlowGraph(graph)

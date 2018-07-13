@@ -851,7 +851,7 @@ class Function(object):
 		graph = core.BNGetUnresolvedStackAdjustmentGraph(self.handle)
 		if not graph:
 			return None
-		return flowgraph.FlowGraph(graph)
+		return flowgraph.CoreFlowGraph(graph)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -1122,7 +1122,7 @@ class Function(object):
 			settings_obj = settings.handle
 		else:
 			settings_obj = None
-		return flowgraph.FlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
+		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym):
 		core.BNApplyImportedTypes(self.handle, sym.handle)

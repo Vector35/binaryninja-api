@@ -1120,6 +1120,7 @@ extern "C"
 		size_t symbolIndex;  // Index into symbol table
 		size_t sectionIndex; // Index into the section table
 		uint64_t address;    // Absolute address or segment offset
+		bool dataRelocation; // This relocation is effecting data not code
 	};
 
 	struct BNInstructionTextToken

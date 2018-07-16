@@ -21,6 +21,7 @@ api-docs/build/*
 .env
 api-docs/source/binaryninja.*
 bin/
+suite/unit.py
 # CMake
 CMakeCache.txt
 CMakeFiles

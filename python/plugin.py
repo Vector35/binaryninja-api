@@ -24,7 +24,6 @@ import threading
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import log
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import PluginCommandType
 from binaryninja import filemetadata
@@ -96,7 +95,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _address_action(cls, view, addr, action):
@@ -105,7 +104,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _range_action(cls, view, addr, length, action):
@@ -114,7 +113,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr, length)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _function_action(cls, view, func, action):
@@ -124,7 +123,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _low_level_il_function_action(cls, view, func, action):
@@ -135,7 +134,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _low_level_il_instruction_action(cls, view, func, instr, action):
@@ -146,7 +145,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _medium_level_il_function_action(cls, view, func, action):
@@ -157,7 +156,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _medium_level_il_instruction_action(cls, view, func, instr, action):
@@ -168,7 +167,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	@classmethod
 	def _default_is_valid(cls, view, is_valid):
@@ -179,7 +178,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -191,7 +190,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -203,7 +202,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr, length)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -216,7 +215,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -230,7 +229,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -244,7 +243,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -258,7 +257,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -272,7 +271,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -552,7 +551,7 @@ class MainThreadActionHandler(object):
 		try:
 			self.add_action(MainThreadAction(action))
 		except:
-			log.log_error(traceback.format_exc())
+			binaryninja.log.log_error(traceback.format_exc())
 
 	def add_action(self, action):
 		pass

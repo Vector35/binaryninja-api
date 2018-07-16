@@ -32,7 +32,7 @@ all: $(TARGET).a
 $(TARGET).a: $(OBJECTS)
 	@mkdir -p $(TARGETDIR)
 	$(AR) rcs $@ $^
- 
+
 %.o: %.cpp
 	@echo " Compiling... $@ $<"
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
@@ -86,7 +86,7 @@ environment_clean:
 	@echo "Removing 'binaryninja' Packages..."
 	rm -rf suite/binaryninja/
 	rm -rf python/examples/binaryninja/
-	
+
 	@echo "Removing libs..."
 	rm -f libbinaryninjacore.so.1
 	rm -f python/libbinaryninjacore.so.1
@@ -97,7 +97,7 @@ environment_clean:
 	rm -rf python/types/
 	rm -rf python/plugins/
 
-clean: 
+clean:
 	@echo " Cleaning...";
 	$(RM) -r *.o $(TARGETDIR) generator
 

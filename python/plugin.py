@@ -363,7 +363,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		binaryninja.startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction))(lambda ctxt, view, func: cls._low_level_il_function_is_valid(view, func, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -382,7 +382,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		binaryninja.startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_action(view, func, instr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNLowLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._low_level_il_instruction_is_valid(view, func, instr, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -401,7 +401,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		binaryninja.startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_action(view, func, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction))(lambda ctxt, view, func: cls._medium_level_il_function_is_valid(view, func, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))
@@ -420,7 +420,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
-		binaryninja.startup._init_plugins()
+		binaryninja._init_plugins()
 		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_action(view, func, instr, action))
 		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMediumLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._medium_level_il_instruction_is_valid(view, func, instr, is_valid))
 		cls._registered_commands.append((action_obj, is_valid_obj))

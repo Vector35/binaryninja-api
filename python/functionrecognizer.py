@@ -21,15 +21,15 @@
 import traceback
 
 # Binary Ninja components
-import _binaryninjacore as core
-import function
-import filemetadata
-import binaryview
-import lowlevelil
-import log
+from binaryninja import _binaryninjacore as core
+from binaryninja import function
+from binaryninja import filemetadata
+from binaryninja import binaryview
+from binaryninja import lowlevelil
 
 
 class FunctionRecognizer(object):
+
 	_instance = None
 
 	def __init__(self):

@@ -23,16 +23,19 @@ import threading
 import traceback
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import (BranchType, InstructionTextTokenType, HighlightStandardColor)
-import function
-import binaryview
-import lowlevelil
-import mediumlevelil
-import basicblock
-import log
-import interaction
-import highlight
+import binaryninja
+from binaryninja.enums import (BranchType, InstructionTextTokenType, HighlightStandardColor)
+from binaryninja import _binaryninjacore as core
+from binaryninja import function
+from binaryninja import binaryview
+from binaryninja import lowlevelil
+from binaryninja import mediumlevelil
+from binaryninja import basicblock
+from binaryninja import log
+from binaryninja import highlight
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 class FlowGraphEdge(object):
@@ -118,7 +121,7 @@ class FlowGraphNode(object):
 		lines = core.BNGetFlowGraphNodeLines(self.handle, count)
 		block = self.basic_block
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = lines[i].addr
 			if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
 				il_instr = block.il_function[lines[i].instrIndex]
@@ -126,7 +129,7 @@ class FlowGraphNode(object):
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = []
-			for j in xrange(0, lines[i].count):
+			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
@@ -145,7 +148,7 @@ class FlowGraphNode(object):
 		if isinstance(lines, str):
 			lines = lines.split('\n')
 		line_buf = (core.BNDisassemblyTextLine * len(lines))()
-		for i in xrange(0, len(lines)):
+		for i in range(0, len(lines)):
 			line = lines[i]
 			if isinstance(line, str):
 				line = function.DisassemblyTextLine([function.InstructionTextToken(InstructionTextTokenType.TextToken, line)])
@@ -170,7 +173,7 @@ class FlowGraphNode(object):
 			line_buf[i].highlight = color._get_core_struct()
 			line_buf[i].count = len(line.tokens)
 			line_buf[i].tokens = (core.BNInstructionTextToken * len(line.tokens))()
-			for j in xrange(0, len(line.tokens)):
+			for j in range(0, len(line.tokens)):
 				line_buf[i].tokens[j].type = line.tokens[j].type
 				line_buf[i].tokens[j].text = line.tokens[j].text
 				line_buf[i].tokens[j].value = line.tokens[j].value
@@ -187,13 +190,13 @@ class FlowGraphNode(object):
 		count = ctypes.c_ulonglong()
 		edges = core.BNGetFlowGraphNodeOutgoingEdges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
 			if target:
 				target = FlowGraphNode(self.graph, core.BNNewFlowGraphNodeReference(target))
 			points = []
-			for j in xrange(0, edges[i].pointCount):
+			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
 			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge))
 		core.BNFreeFlowGraphNodeOutgoingEdgeList(edges, count.value)
@@ -235,14 +238,14 @@ class FlowGraphNode(object):
 		lines = core.BNGetFlowGraphNodeLines(self.handle, count)
 		block = self.basic_block
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				addr = lines[i].addr
 				if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
 					il_instr = block.il_function[lines[i].instrIndex]
 				else:
 					il_instr = None
 				tokens = []
-				for j in xrange(0, lines[i].count):
+				for j in range(0, lines[i].count):
 					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 					text = lines[i].tokens[j].text
 					value = lines[i].tokens[j].value
@@ -353,7 +356,7 @@ class FlowGraph(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFlowGraphNodes(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(FlowGraphNode(self, core.BNNewFlowGraphNodeReference(blocks[i])))
 		core.BNFreeFlowGraphNodeList(blocks, count.value)
 		return result
@@ -451,7 +454,7 @@ class FlowGraph(object):
 		count = ctypes.c_ulonglong()
 		nodes = core.BNGetFlowGraphNodes(self.handle, count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield FlowGraphNode(self, core.BNNewFlowGraphNodeReference(nodes[i]))
 		finally:
 			core.BNFreeFlowGraphNodeList(nodes, count.value)
@@ -492,7 +495,7 @@ class FlowGraph(object):
 		count = ctypes.c_ulonglong()
 		nodes = core.BNGetFlowGraphNodesInRegion(self.handle, left, top, right, bottom, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(FlowGraphNode(self, core.BNNewFlowGraphNodeReference(nodes[i])))
 		core.BNFreeFlowGraphNodeList(nodes, count.value)
 		return result
@@ -507,7 +510,7 @@ class FlowGraph(object):
 		return FlowGraphNode(self, node)
 
 	def show(self, title):
-		interaction.show_graph_report(title, self)
+		binaryninja.interaction.show_graph_report(title, self)
 
 	def update(self):
 		return None

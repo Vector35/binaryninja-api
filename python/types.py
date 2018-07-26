@@ -18,25 +18,32 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 max_confidence = 255
 
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
-import callingconvention
-import function
+import binaryninja
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
+
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import pyNativeStr
 
 
 class QualifiedName(object):
 	def __init__(self, name = []):
 		if isinstance(name, str):
 			self.name = [name]
+			self.byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
 			self.name = name.name
+			self.byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = name
+			self.name = [pyNativeStr(i) for i in name]
+			self.byte_name = name
 
 	def __str__(self):
 		return "::".join(self.name)
@@ -98,8 +105,8 @@ class QualifiedName(object):
 	def _get_core_struct(self):
 		result = core.BNQualifiedName()
 		name_list = (ctypes.c_char_p * len(self.name))()
-		for i in xrange(0, len(self.name)):
-			name_list[i] = self.name[i]
+		for i in range(0, len(self.name)):
+			name_list[i] = self.name[i].encode('charmap')
 		result.name = name_list
 		result.nameCount = len(self.name)
 		return result
@@ -107,7 +114,7 @@ class QualifiedName(object):
 	@classmethod
 	def _from_core_struct(cls, name):
 		result = []
-		for i in xrange(0, name.nameCount):
+		for i in range(0, name.nameCount):
 			result.append(name.name[i])
 		return QualifiedName(result)
 
@@ -292,7 +299,7 @@ class Type(object):
 		result = core.BNGetTypeCallingConvention(self.handle)
 		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+		return binaryninja.callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@property
 	def parameters(self):
@@ -300,7 +307,7 @@ class Type(object):
 		count = ctypes.c_ulonglong()
 		params = core.BNGetTypeParameters(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			param_type = Type(core.BNNewTypeReference(params[i].type), platform = self.platform, confidence = params[i].typeConfidence)
 			if params[i].defaultLocation:
 				param_location = None
@@ -310,7 +317,7 @@ class Type(object):
 					name = self.platform.arch.get_reg_name(params[i].location.storage)
 				elif params[i].location.type == VariableSourceType.StackVariableSourceType:
 					name = "arg_%x" % params[i].location.storage
-				param_location = function.Variable(None, params[i].location.type, params[i].location.index,
+				param_location = binaryninja.function.Variable(None, params[i].location.type, params[i].location.index,
 					params[i].location.storage, name, param_type)
 			result.append(FunctionParameter(param_type, params[i].name, param_location))
 		core.BNFreeTypeParameterList(params, count.value)
@@ -344,7 +351,7 @@ class Type(object):
 			return None
 		return Enumeration(result)
 
- 	@property
+	@property
 	def named_type_reference(self):
 		"""Reference to a named type (read-only)"""
 		result = core.BNGetTypeNamedTypeReference(self.handle)
@@ -376,7 +383,7 @@ class Type(object):
 
 	def __repr__(self):
 		if self.confidence < max_confidence:
-			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) / max_confidence)
+			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) // max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
@@ -403,7 +410,7 @@ class Type(object):
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokens(self.handle, platform, base_confidence, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -412,7 +419,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -423,7 +430,7 @@ class Type(object):
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokensBeforeName(self.handle, platform, base_confidence, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -432,7 +439,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -443,7 +450,7 @@ class Type(object):
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokensAfterName(self.handle, platform, base_confidence, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			token_type = InstructionTextTokenType(tokens[i].type)
 			text = tokens[i].text
 			value = tokens[i].value
@@ -452,7 +459,7 @@ class Type(object):
 			context = tokens[i].context
 			confidence = tokens[i].confidence
 			address = tokens[i].address
-			result.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
 		core.BNFreeTokenList(tokens, count.value)
 		return result
 
@@ -574,7 +581,7 @@ class Type(object):
 		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
 		"""
 		param_buf = (core.BNFunctionParameter * len(params))()
-		for i in xrange(0, len(params)):
+		for i in range(0, len(params)):
 			if isinstance(params[i], Type):
 				param_buf[i].name = ""
 				param_buf[i].type = params[i].handle
@@ -851,7 +858,7 @@ class Structure(object):
 		count = ctypes.c_ulonglong()
 		members = core.BNGetStructureMembers(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type), confidence = members[i].typeConfidence),
 				members[i].name, members[i].offset))
 		core.BNFreeStructureMemberList(members, count.value)
@@ -962,7 +969,7 @@ class Enumeration(object):
 		count = ctypes.c_ulonglong()
 		members = core.BNGetEnumerationMembers(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(EnumerationMember(members[i].name, members[i].value, members[i].isDefault))
 		core.BNFreeEnumerationMemberList(members, count.value)
 		return result
@@ -1018,8 +1025,8 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 	if filename is None:
 		filename = "input"
 	dir_buf = (ctypes.c_char_p * len(include_dirs))()
-	for i in xrange(0, len(include_dirs)):
-		dir_buf[i] = str(include_dirs[i])
+	for i in range(0, len(include_dirs)):
+		dir_buf[i] = include_dirs[i].encode('charmap')
 	output = ctypes.c_char_p()
 	errors = ctypes.c_char_p()
 	result = core.BNPreprocessSource(source, filename, output, errors, dir_buf, len(include_dirs))

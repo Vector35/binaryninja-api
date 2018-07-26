@@ -22,26 +22,25 @@ import struct
 import traceback
 import ctypes
 import abc
-import threading
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import (AnalysisState, SymbolType, InstructionTextTokenType,
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
-import function
-import startup
-import architecture
-import platform
-import associateddatastore
-import fileaccessor
-import filemetadata
-import log
-import databuffer
-import basicblock
-import types
-import lineardisassembly
-import metadata
-import highlight
+import binaryninja
+from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
+from binaryninja import log
+from binaryninja import types
+from binaryninja import fileaccessor
+from binaryninja import databuffer
+from binaryninja import basicblock
+from binaryninja import lineardisassembly
+from binaryninja import metadata
+from binaryninja import highlight
+
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class BinaryDataNotification(object):
@@ -100,21 +99,23 @@ class StringReference(object):
 
 	@property
 	def value(self):
-		return self.view.read(self.start, self.length)
+		return binaryninja.pyNativeStr(self.view.read(self.start, self.length))
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
 
 
+_pending_analysis_completion_events = {}
 class AnalysisCompletionEvent(object):
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
 	callbacks when analysis is complete. The callback runs once. A completion event must be added
-	for each new analysis in order to be notified of each analysis completion.
+	for each new analysis in order to be notified of each analysis completion.  The
+	AnalysisCompletionEvent class takes responcibility for keeping track of the object's lifetime.
 
 	:Example:
 		>>> def on_complete(self):
-		...     print "Analysis Complete", self.view
+		...     print("Analysis Complete", self.view)
 		...
 		>>> evt = AnalysisCompletionEvent(bv, on_complete)
 		>>>
@@ -124,11 +125,19 @@ class AnalysisCompletionEvent(object):
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+		global _pending_analysis_completion_events
+		_pending_analysis_completion_events[id(self)] = self
 
 	def __del__(self):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		core.BNFreeAnalysisCompletionEvent(self.handle)
 
 	def _notify(self, ctxt):
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
 		try:
 			self.callback(self)
 		except:
@@ -144,6 +153,30 @@ class AnalysisCompletionEvent(object):
 		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
+		global _pending_analysis_completion_events
+		if id(self) in _pending_analysis_completion_events:
+			del _pending_analysis_completion_events[id(self)]
+
+
+class ActiveAnalysisInfo(object):
+	def __init__(self, func, analysis_time, update_count, submit_count):
+		self.func = func
+		self.analysis_time = analysis_time
+		self.update_count = update_count
+		self.submit_count = submit_count
+
+	def __repr__(self):
+		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self.func, self.analysis_time, self.update_count, self.submit_count)
+
+
+class AnalysisInfo(object):
+	def __init__(self, state, analysis_time, active_info):
+		self.state = AnalysisState(state)
+		self.analysis_time = analysis_time
+		self.active_info = active_info
+
+	def __repr__(self):
+		return "<AnalysisInfo %s, analysis_time %d, active_info %s>" % (self.state, self.analysis_time, self.active_info)
 
 
 class AnalysisProgress(object):
@@ -157,6 +190,8 @@ class AnalysisProgress(object):
 			return "Disassembling (%d/%d)" % (self.count, self.total)
 		if self.state == AnalysisState.AnalyzeState:
 			return "Analyzing (%d/%d)" % (self.count, self.total)
+		if self.state == AnalysisState.ExtendedAnalyzeState:
+			return "Extended Analysis"
 		return "Idle"
 
 	def __repr__(self):
@@ -220,25 +255,25 @@ class BinaryDataNotificationCallbacks(object):
 
 	def _function_added(self, ctxt, view, func):
 		try:
-			self.notify.function_added(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_added(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_removed(self, ctxt, view, func):
 		try:
-			self.notify.function_removed(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_removed(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_updated(self, ctxt, view, func):
 		try:
-			self.notify.function_updated(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_updated(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_update_requested(self, ctxt, view, func):
 		try:
-			self.notify.function_update_requested(self.view, function.Function(self.view, core.BNNewFunctionReference(func)))
+			self.notify.function_update_requested(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -297,38 +332,38 @@ class BinaryDataNotificationCallbacks(object):
 
 
 class _BinaryViewTypeMetaclass(type):
+
 	@property
 	def list(self):
 		"""List all BinaryView types (read-only)"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BinaryViewType(types[i]))
 		core.BNFreeBinaryViewTypeList(types)
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetBinaryViewTypes(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield BinaryViewType(types[i])
 		finally:
 			core.BNFreeBinaryViewTypeList(types)
 
 	def __getitem__(self, value):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		view_type = core.BNGetBinaryViewTypeByName(str(value))
 		if view_type is None:
 			raise KeyError("'%s' is not a valid view type" % str(value))
 		return BinaryViewType(view_type)
 
 
-class BinaryViewType(object):
-	__metaclass__ = _BinaryViewTypeMetaclass
+class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
@@ -342,6 +377,11 @@ class BinaryViewType(object):
 		if not isinstance(value, BinaryViewType):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
 
 	@property
 	def name(self):
@@ -384,7 +424,7 @@ class BinaryViewType(object):
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
 			f.close()
-			view = filemetadata.FileMetadata().open_existing_database(filename)
+			view = binaryninja.filemetadata.FileMetadata().open_existing_database(filename)
 		else:
 			view = BinaryView.open(filename)
 
@@ -396,6 +436,9 @@ class BinaryViewType(object):
 					bv = view.get_view_of_type(available.name)
 				else:
 					bv = cls[available.name].open(filename)
+
+				if bv is None:
+					raise Exception("Unknown Architecture/Architecture Not Found (check plugins folder)")
 
 				if update_analysis:
 					bv.update_analysis_and_wait()
@@ -412,7 +455,7 @@ class BinaryViewType(object):
 		arch = core.BNGetArchitectureForViewType(self.handle, ident, endian)
 		if arch is None:
 			return None
-		return architecture.CoreArchitecture._from_cache(arch)
+		return binaryninja.architecture.CoreArchitecture._from_cache(arch)
 
 	def register_platform(self, ident, arch, plat):
 		core.BNRegisterPlatformForViewType(self.handle, ident, arch.handle, plat.handle)
@@ -424,7 +467,7 @@ class BinaryViewType(object):
 		plat = core.BNGetPlatformForViewType(self.handle, ident, arch.handle)
 		if plat is None:
 			return None
-		return platform.Platform(None, plat)
+		return binaryninja.platform.Platform(None, plat)
 
 
 class Segment(object):
@@ -566,17 +609,17 @@ class BinaryView(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
-				self.file = filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
+				self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
 			else:
 				self.file = file_metadata
 		elif self.__class__ is BinaryView:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata()
+				file_metadata = binaryninja.filemetadata.FileMetadata()
 			self.handle = core.BNCreateBinaryDataView(file_metadata.handle)
-			self.file = filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
+			self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
 		else:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			if not self.__class__._registered:
 				raise TypeError("view type not registered")
 			self._cb = core.BNCustomBinaryView()
@@ -619,7 +662,7 @@ class BinaryView(object):
 
 	@classmethod
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("view 'name' not defined")
 		if cls.long_name is None:
@@ -634,7 +677,7 @@ class BinaryView(object):
 	@classmethod
 	def _create(cls, ctxt, data):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
 			view = cls(BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data)))
 			if view is None:
 				return None
@@ -653,14 +696,14 @@ class BinaryView(object):
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if isinstance(src, fileaccessor.FileAccessor):
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata()
+				file_metadata = binaryninja.filemetadata.FileMetadata()
 			view = core.BNCreateBinaryDataViewFromFile(file_metadata.handle, src._cb)
 		else:
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata(str(src))
+				file_metadata = binaryninja.filemetadata.FileMetadata(str(src))
 			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src))
 		if view is None:
 			return None
@@ -669,9 +712,9 @@ class BinaryView(object):
 
 	@classmethod
 	def new(cls, data=None, file_metadata=None):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if file_metadata is None:
-			file_metadata = filemetadata.FileMetadata()
+			file_metadata = binaryninja.filemetadata.FileMetadata()
 		if data is None:
 			view = core.BNCreateBinaryDataView(file_metadata.handle)
 		else:
@@ -755,8 +798,8 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		try:
-			for i in xrange(0, count.value):
-				yield function.Function(self, core.BNNewFunctionReference(funcs[i]))
+			for i in range(0, count.value):
+				yield binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i]))
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
@@ -824,7 +867,7 @@ class BinaryView(object):
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
-		return architecture.CoreArchitecture._from_cache(handle=arch)
+		return binaryninja.architecture.CoreArchitecture._from_cache(handle=arch)
 
 	@arch.setter
 	def arch(self, value):
@@ -839,7 +882,7 @@ class BinaryView(object):
 		plat = core.BNGetDefaultPlatform(self.handle)
 		if plat is None:
 			return None
-		return platform.Platform(self.arch, handle=plat)
+		return binaryninja.platform.Platform(self.arch, handle=plat)
 
 	@platform.setter
 	def platform(self, value):
@@ -874,8 +917,8 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
-			result.append(function.Function(self, core.BNNewFunctionReference(funcs[i])))
+		for i in range(0, count.value):
+			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
 
@@ -890,7 +933,7 @@ class BinaryView(object):
 		func = core.BNGetAnalysisEntryPoint(self.handle)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	@property
 	def symbols(self):
@@ -898,7 +941,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbols(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			sym = types.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
 			result[sym.raw_name] = sym
 		core.BNFreeSymbolList(syms, count.value)
@@ -915,7 +958,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		types = core.BNGetBinaryViewTypesForData(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BinaryViewType(types[i]))
 		core.BNFreeBinaryViewTypeList(types)
 		return result
@@ -935,6 +978,20 @@ class BinaryView(object):
 		self.file.saved = value
 
 	@property
+	def analysis_info(self):
+		"""Relevant analysis information with list of functions under active analysis (read-only)"""
+		info_ref = core.BNGetAnalysisInfo(self.handle)
+		info = info_ref[0]
+		active_info_list = []
+		for i in xrange(0, info.count):
+			func = binaryninja.function.Function(self, core.BNNewFunctionReference(info.activeInfo[i].func))
+			active_info = ActiveAnalysisInfo(func, info.activeInfo[i].analysisTime, info.activeInfo[i].updateCount, info.activeInfo[i].submitCount)
+			active_info_list.append(active_info)
+		result = AnalysisInfo(info.state, info.analysisTime, active_info_list)
+		core.BNFreeAnalysisInfo(info_ref)
+		return result
+
+	@property
 	def analysis_progress(self):
 		"""Status of current analysis (read-only)"""
 		result = core.BNGetAnalysisProgress(self.handle)
@@ -951,7 +1008,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		var_list = core.BNGetDataVariables(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = var_list[i].address
 			var_type = types.Type(core.BNNewTypeReference(var_list[i].type), platform = self.platform, confidence = var_list[i].typeConfidence)
 			auto_discovered = var_list[i].autoDiscovered
@@ -965,7 +1022,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
 			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
 		core.BNFreeTypeList(type_list, count.value)
@@ -977,7 +1034,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		segment_list = core.BNGetSegments(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Segment(segment_list[i].start, segment_list[i].length,
 				segment_list[i].dataOffset, segment_list[i].dataLength, segment_list[i].flags, segment_list[i].autoDefined))
 		core.BNFreeSegmentList(segment_list)
@@ -989,7 +1046,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSections(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[section_list[i].name] = Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
@@ -1003,7 +1060,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(AddressRange(range_list[i].start, range_list[i].end))
 		core.BNFreeAddressRanges(range_list)
 		return result
@@ -1023,7 +1080,15 @@ class BinaryView(object):
 	def global_pointer_value(self):
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
-		return function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+		return binaryninja.function.RegisterValue(self.arch, result.value, confidence = result.confidence)
+
+	@property
+	def parameters_for_analysis(self):
+		return core.BNGetParametersForAnalysis(self.handle)
+
+	@parameters_for_analysis.setter
+	def parameters_for_analysis(self, params):
+		core.BNSetParametersForAnalysis(self.handle, params)
 
 	@property
 	def max_function_size_for_analysis(self):
@@ -1680,10 +1745,13 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
+		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will
+ 		still get you a str in either case.
+
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
 		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
-		:rtype: str
+		:rtype: python2 - str; python3 - bytes 
 		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary
@@ -1692,7 +1760,7 @@ class BinaryView(object):
 			\'\\xcf\\xfa\\xed\\xfe\'
 		"""
 		buf = databuffer.DataBuffer(handle=core.BNReadViewBuffer(self.handle, addr, length))
-		return str(buf)
+		return bytes(buf)
 
 	def write(self, addr, data):
 		"""
@@ -1711,6 +1779,8 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
+		if not isinstance(data, bytes):
+			raise TypeError("Must be bytes")
 		buf = databuffer.DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
@@ -1729,6 +1799,8 @@ class BinaryView(object):
 			>>> bv.read(0,8)
 			'BBBBAAAA'
 		"""
+		if not isinstance(data, bytes):
+			raise TypeError("Must be bytes")
 		buf = databuffer.DataBuffer(data)
 		return core.BNInsertViewBuffer(self.handle, addr, buf.handle)
 
@@ -2121,7 +2193,7 @@ class BinaryView(object):
 		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	def get_functions_at(self, addr):
 		"""
@@ -2137,8 +2209,8 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsForAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
-			result.append(function.Function(self, core.BNNewFunctionReference(funcs[i])))
+		for i in range(0, count.value):
+			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		return result
 
@@ -2146,7 +2218,7 @@ class BinaryView(object):
 		func = core.BNGetRecentAnalysisFunctionForAddress(self.handle, addr)
 		if func is None:
 			return None
-		return function.Function(self, func)
+		return binaryninja.function.Function(self, func)
 
 	def get_basic_blocks_at(self, addr):
 		"""
@@ -2159,7 +2231,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -2175,7 +2247,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		blocks = core.BNGetBasicBlocksStartingAtAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -2206,17 +2278,17 @@ class BinaryView(object):
 		else:
 			refs = core.BNGetCodeReferencesInRange(self.handle, addr, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			if refs[i].func:
-				func = function.Function(self, core.BNNewFunctionReference(refs[i].func))
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(refs[i].func))
 			else:
 				func = None
 			if refs[i].arch:
-				arch = architecture.CoreArchitecture._from_cache(refs[i].arch)
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(refs[i].arch)
 			else:
 				arch = None
 			addr = refs[i].addr
-			result.append(architecture.ReferenceSource(func, arch, addr))
+			result.append(binaryninja.architecture.ReferenceSource(func, arch, addr))
 		core.BNFreeCodeReferences(refs, count.value)
 		return result
 
@@ -2272,7 +2344,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2297,7 +2369,7 @@ class BinaryView(object):
 		else:
 			syms = core.BNGetSymbolsInRange(self.handle, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2326,7 +2398,7 @@ class BinaryView(object):
 		else:
 			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
@@ -2721,9 +2793,11 @@ class BinaryView(object):
 		if start is None:
 			strings = core.BNGetStrings(self.handle, count)
 		else:
+			if length is None:
+				length = self.end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(StringReference(self, StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
@@ -2731,7 +2805,9 @@ class BinaryView(object):
 	def add_analysis_completion_event(self, callback):
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
-		This is helpful when using asynchronously analysis.
+		This is helpful when using ``update_analysis`` which does not wait for analysis completion before returning.
+
+		The callee of this function is not resposible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
 		:param callable() callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.
@@ -2739,7 +2815,7 @@ class BinaryView(object):
 		:Example:
 
 			>>> def completionEvent():
-			...   print "done"
+			...   print("done")
 			...
 			>>> bv.add_analysis_completion_event(completionEvent)
 			<binaryninja.AnalysisCompletionEvent object at 0x10a2c9f10>
@@ -2933,7 +3009,7 @@ class BinaryView(object):
 		func = None
 		block = None
 		if pos.function:
-			func = function.Function(self, pos.function)
+			func = binaryninja.function.Function(self, pos.function)
 		if pos.block:
 			block = basicblock.BasicBlock(self, pos.block)
 		return lineardisassembly.LinearDisassemblyPosition(func, block, pos.address)
@@ -2955,17 +3031,17 @@ class BinaryView(object):
 		lines = api(self.handle, pos_obj, settings, count)
 
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			func = None
 			block = None
 			if lines[i].function:
-				func = function.Function(self, core.BNNewFunctionReference(lines[i].function))
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
 			tokens = []
-			for j in xrange(0, lines[i].contents.count):
+			for j in range(0, lines[i].contents.count):
 				token_type = InstructionTextTokenType(lines[i].contents.tokens[j].type)
 				text = lines[i].contents.tokens[j].text
 				value = lines[i].contents.tokens[j].value
@@ -2974,14 +3050,14 @@ class BinaryView(object):
 				context = lines[i].contents.tokens[j].context
 				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			contents = function.DisassemblyTextLine(tokens, addr, color = color)
+				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
 		func = None
 		block = None
 		if pos_obj.function:
-			func = function.Function(self, pos_obj.function)
+			func = binaryninja.function.Function(self, pos_obj.function)
 		if pos_obj.block:
 			block = basicblock.BasicBlock(self, pos_obj.block)
 		pos.function = func
@@ -3048,7 +3124,7 @@ class BinaryView(object):
 			>>> settings = DisassemblySettings()
 			>>> lines = bv.get_linear_disassembly(settings)
 			>>> for line in lines:
-			...  print line
+			...  print(line)
 			...  break
 			...
 			cf fa ed fe 07 00 00 01  ........
@@ -3411,7 +3487,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSectionsAt(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Section(section_list[i].name, section_list[i].type, section_list[i].start,
 				section_list[i].length, section_list[i].linkedSection, section_list[i].infoSection,
 				section_list[i].infoData, section_list[i].align, section_list[i].entrySize,
@@ -3431,11 +3507,11 @@ class BinaryView(object):
 
 	def get_unique_section_names(self, name_list):
 		incoming_names = (ctypes.c_char_p * len(name_list))()
-		for i in xrange(0, len(name_list)):
-			incoming_names[i] = name_list[i]
+		for i in range(0, len(name_list)):
+			incoming_names[i] = binaryninja.cstr(name_list[i])
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		result = []
-		for i in xrange(0, len(name_list)):
+		for i in range(0, len(name_list)):
 			result.append(str(outgoing_names[i]))
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result

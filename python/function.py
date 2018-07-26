@@ -18,28 +18,25 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import threading
 import traceback
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import (FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
+import binaryninja
+from binaryninja import _binaryninjacore as core
+from binaryninja import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
+from binaryninja import highlight
+from binaryninja import log
+from binaryninja import types
+from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
 	FunctionAnalysisSkipOverride)
-import architecture
-import platform
-import highlight
-import associateddatastore
-import types
-import basicblock
-import lowlevelil
-import mediumlevelil
-import binaryview
-import log
-import callingconvention
-import flowgraph
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 class LookupTableEntry(object):
@@ -180,7 +177,7 @@ class PossibleValueSet(object):
 		elif value.state == RegisterValueType.SignedRangeValue:
 			self.offset = value.value
 			self.ranges = []
-			for i in xrange(0, value.count):
+			for i in range(0, value.count):
 				start = value.ranges[i].start
 				end = value.ranges[i].end
 				step = value.ranges[i].step
@@ -192,7 +189,7 @@ class PossibleValueSet(object):
 		elif value.state == RegisterValueType.UnsignedRangeValue:
 			self.offset = value.value
 			self.ranges = []
-			for i in xrange(0, value.count):
+			for i in range(0, value.count):
 				start = value.ranges[i].start
 				end = value.ranges[i].end
 				step = value.ranges[i].step
@@ -200,15 +197,15 @@ class PossibleValueSet(object):
 		elif value.state == RegisterValueType.LookupTableValue:
 			self.table = []
 			self.mapping = {}
-			for i in xrange(0, value.count):
+			for i in range(0, value.count):
 				from_list = []
-				for j in xrange(0, value.table[i].fromCount):
+				for j in range(0, value.table[i].fromCount):
 					from_list.append(value.table[i].fromValues[j])
 					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
 				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
 		elif (value.state == RegisterValueType.InSetOfValues) or (value.state == RegisterValueType.NotInSetOfValues):
 			self.values = set()
-			for i in xrange(0, value.count):
+			for i in range(0, value.count):
 				self.values.add(value.valueSet[i])
 
 	def __repr__(self):
@@ -421,7 +418,7 @@ class Function(object):
 			arch = core.BNGetFunctionArchitecture(self.handle)
 			if arch is None:
 				return None
-			self._arch = architecture.CoreArchitecture._from_cache(arch)
+			self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 			return self._arch
 
 	@property
@@ -433,7 +430,7 @@ class Function(object):
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
-			self._platform = platform.Platform(None, handle = plat)
+			self._platform = binaryninja.platform.Platform(None, handle = plat)
 			return self._platform
 
 	@property
@@ -486,8 +483,8 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
-			result.append(basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+		for i in range(0, count.value):
+			result.append(binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -497,7 +494,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		addrs = core.BNGetCommentedAddresses(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[addrs[i]] = self.get_comment_at(addrs[i])
 		core.BNFreeAddressList(addrs)
 		return result
@@ -505,17 +502,17 @@ class Function(object):
 	@property
 	def low_level_il(self):
 		"""returns LowLevelILFunction used to represent Function low level IL (read-only)"""
-		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
 	def lifted_il(self):
 		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
-		return lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
 
 	@property
 	def medium_level_il(self):
 		"""Function medium level IL (read-only)"""
-		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
 
 	@property
 	def function_type(self):
@@ -532,7 +529,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
 				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
@@ -545,7 +542,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		v = core.BNGetFunctionVariables(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
 				types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence)))
 		result.sort(key = lambda x: x.identifier)
@@ -558,8 +555,8 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		branches = core.BNGetIndirectBranches(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		for i in range(0, count.value):
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -579,7 +576,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		info = core.BNGetFunctionAnalysisPerformanceInfo(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[info[i].name] = info[i].seconds
 		core.BNFreeAnalysisPerformanceInfo(info, count.value)
 		return result
@@ -613,7 +610,7 @@ class Function(object):
 		"""Registers that are used for the return value"""
 		result = core.BNGetFunctionReturnRegisters(self.handle)
 		reg_set = []
-		for i in xrange(0, result.count):
+		for i in range(0, result.count):
 			reg_set.append(self.arch.get_reg_name(result.regs[i]))
 		regs = types.RegisterSet(reg_set, confidence = result.confidence)
 		core.BNFreeRegisterSet(result)
@@ -624,7 +621,7 @@ class Function(object):
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		for i in xrange(0, len(value)):
+		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
 		if hasattr(value, 'confidence'):
 			regs.confidence = value.confidence
@@ -638,7 +635,7 @@ class Function(object):
 		result = core.BNGetFunctionCallingConvention(self.handle)
 		if not result.convention:
 			return None
-		return callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
+		return binaryninja.callingconvention.CallingConvention(None, handle = result.convention, confidence = result.confidence)
 
 	@calling_convention.setter
 	def calling_convention(self, value):
@@ -656,7 +653,7 @@ class Function(object):
 		"""List of variables for the incoming function parameters"""
 		result = core.BNGetFunctionParameterVariables(self.handle)
 		var_list = []
-		for i in xrange(0, result.count):
+		for i in range(0, result.count):
 			var_list.append(Variable(self, result.vars[i].type, result.vars[i].index, result.vars[i].storage))
 		confidence = result.confidence
 		core.BNFreeParameterVariables(result)
@@ -671,7 +668,7 @@ class Function(object):
 		var_conf = core.BNParameterVariablesWithConfidence()
 		var_conf.vars = (core.BNVariable * len(var_list))()
 		var_conf.count = len(var_list)
-		for i in xrange(0, len(var_list)):
+		for i in range(0, len(var_list)):
 			var_conf.vars[i].type = var_list[i].source_type
 			var_conf.vars[i].index = var_list[i].index
 			var_conf.vars[i].storage = var_list[i].storage
@@ -721,7 +718,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		adjust = core.BNGetFunctionRegisterStackAdjustments(self.handle, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			name = self.arch.get_reg_stack_name(adjust[i].regStack)
 			value = types.RegisterStackAdjustmentWithConfidence(adjust[i].adjustment,
 				confidence = adjust[i].confidence)
@@ -749,7 +746,7 @@ class Function(object):
 		"""Registers that are modified by this function"""
 		result = core.BNGetFunctionClobberedRegisters(self.handle)
 		reg_set = []
-		for i in xrange(0, result.count):
+		for i in range(0, result.count):
 			reg_set.append(self.arch.get_reg_name(result.regs[i]))
 		regs = types.RegisterSet(reg_set, confidence = result.confidence)
 		core.BNFreeRegisterSet(result)
@@ -760,7 +757,7 @@ class Function(object):
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		for i in xrange(0, len(value)):
+		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
 		if hasattr(value, 'confidence'):
 			regs.confidence = value.confidence
@@ -829,6 +826,11 @@ class Function(object):
 		"""Whether automatic analysis was skipped for this function"""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
 
+	@property
+	def analysis_skip_reason(self):
+		"""Function analysis skip reason"""
+		return AnalysisSkipReason(core.BNGetAnalysisSkipReason(self.handle))
+
 	@analysis_skipped.setter
 	def analysis_skipped(self, skip):
 		if skip:
@@ -851,14 +853,14 @@ class Function(object):
 		graph = core.BNGetUnresolvedStackAdjustmentGraph(self.handle)
 		if not graph:
 			return None
-		return flowgraph.CoreFlowGraph(graph)
+		return binaryninja.flowgraph.CoreFlowGraph(graph)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		try:
-			for i in xrange(0, count.value):
-				yield basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+			for i in range(0, count.value):
+				yield binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -928,7 +930,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		exits = core.BNGetLowLevelILExitsForInstruction(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(exits[i])
 		core.BNFreeILInstructionList(exits)
 		return result
@@ -940,7 +942,7 @@ class Function(object):
 		:param int addr: virtual address of the instruction to query
 		:param str reg: string value of native register to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 		:Example:
 
 			>>> func.get_reg_value_at(0x400dbe, 'rdi')
@@ -960,7 +962,7 @@ class Function(object):
 		:param int addr: virtual address of the instruction to query
 		:param str reg: string value of native register to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 		:Example:
 
 			>>> func.get_reg_value_after(0x400dbe, 'rdi')
@@ -982,7 +984,7 @@ class Function(object):
 		:param int offset: stack offset base of stack
 		:param int size: size of memory to query
 		:param Architecture arch: (optional) Architecture for the given function
-		:rtype: function.RegisterValue
+		:rtype: binaryninja.function.RegisterValue
 
 		.. note:: Stack base is zero on entry into the function unless the architecture places the return address on the
 		stack as in (x86/x86_64) where the stack base will start at address_size
@@ -1027,7 +1029,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersReadByInstruction(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(arch.get_reg_name(regs[i]))
 		core.BNFreeRegisterList(regs)
 		return result
@@ -1038,7 +1040,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(arch.get_reg_name(regs[i]))
 		core.BNFreeRegisterList(regs)
 		return result
@@ -1049,7 +1051,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			var_type = types.Type(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
 			result.append(StackVariableReference(refs[i].sourceOperand, var_type,
 				refs[i].name, Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
@@ -1063,7 +1065,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(ConstantReference(refs[i].value, refs[i].size, refs[i].pointer, refs[i].intermediate))
 		core.BNFreeConstantReferenceList(refs)
 		return result
@@ -1084,7 +1086,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagUsesForDefinition(self.handle, i, flag, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -1094,7 +1096,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagDefinitionsForUse(self.handle, i, flag, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(instrs[i])
 		core.BNFreeILInstructionList(instrs)
 		return result
@@ -1103,7 +1105,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetFlagsReadByLiftedILInstruction(self.handle, i, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self.arch._flags_by_index[flags[i]])
 		core.BNFreeRegisterList(flags)
 		return result
@@ -1112,7 +1114,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetFlagsWrittenByLiftedILInstruction(self.handle, i, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self.arch._flags_by_index[flags[i]])
 		core.BNFreeRegisterList(flags)
 		return result
@@ -1122,7 +1124,7 @@ class Function(object):
 			settings_obj = settings.handle
 		else:
 			settings_obj = None
-		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
+		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym):
 		core.BNApplyImportedTypes(self.handle, sym.handle)
@@ -1134,7 +1136,7 @@ class Function(object):
 		if source_arch is None:
 			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
-		for i in xrange(len(branches)):
+		for i in range(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNSetAutoIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
@@ -1143,7 +1145,7 @@ class Function(object):
 		if source_arch is None:
 			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
-		for i in xrange(len(branches)):
+		for i in range(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNSetUserIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
@@ -1154,8 +1156,8 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
-			result.append(IndirectBranchInfo(architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
+		for i in range(0, count.value):
+			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
 
@@ -1165,11 +1167,13 @@ class Function(object):
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			tokens = []
-			for j in xrange(0, lines[i].count):
+			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
+				if not isinstance(text, str):
+					text = text.encode("charmap")
 				value = lines[i].tokens[j].value
 				size = lines[i].tokens[j].size
 				operand = lines[i].tokens[j].operand
@@ -1201,7 +1205,7 @@ class Function(object):
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		for i in xrange(0, len(value)):
+		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
 		if hasattr(value, 'confidence'):
 			regs.confidence = value.confidence
@@ -1227,7 +1231,7 @@ class Function(object):
 		var_conf = core.BNParameterVariablesWithConfidence()
 		var_conf.vars = (core.BNVariable * len(var_list))()
 		var_conf.count = len(var_list)
-		for i in xrange(0, len(var_list)):
+		for i in range(0, len(var_list)):
 			var_conf.vars[i].type = var_list[i].source_type
 			var_conf.vars[i].index = var_list[i].index
 			var_conf.vars[i].storage = var_list[i].storage
@@ -1284,7 +1288,7 @@ class Function(object):
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		for i in xrange(0, len(value)):
+		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
 		if hasattr(value, 'confidence'):
 			regs.confidence = value.confidence
@@ -1344,7 +1348,7 @@ class Function(object):
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
 		if not block:
 			return None
-		return basicblock.BasicBlock(self._view, handle = block)
+		return binaryninja.basicblock.BasicBlock(self._view, handle = block)
 
 	def get_instr_highlight(self, addr, arch=None):
 		"""
@@ -1472,11 +1476,11 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFunctionTypeTokens(self.handle, settings, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = lines[i].addr
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = []
-			for j in xrange(0, lines[i].count):
+			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
@@ -1568,7 +1572,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		adjust = core.BNGetCallRegisterStackAdjustment(self.handle, arch.handle, addr, count)
 		result = {}
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result[arch.get_reg_stack_name(adjust[i].regStack)] = types.RegisterStackAdjustmentWithConfidence(
 				adjust[i].adjustment, confidence = adjust[i].confidence)
 		core.BNFreeRegisterStackAdjustments(adjust)

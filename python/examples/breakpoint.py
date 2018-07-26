@@ -44,7 +44,7 @@ def write_breakpoint(view, start, length):
 	if bkpt is None:
 		log_error(err)
 		return
-	view.write(start, bkpt * length / len(bkpt))
+	view.write(start, bkpt * length // len(bkpt))
 
 
 PluginCommand.register_for_range("Convert to breakpoint", "Fill region with breakpoint instructions.", write_breakpoint)

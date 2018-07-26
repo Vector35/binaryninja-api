@@ -21,9 +21,10 @@
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from .enums import PluginType, PluginUpdateStatus
-import startup
+from binaryninja import _binaryninjacore as core
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 class RepoPlugin(object):
@@ -31,7 +32,9 @@ class RepoPlugin(object):
 	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
+	from binaryninja.enums import PluginType, PluginUpdateStatus
 	def __init__(self, handle):
+		raise Exception("RepoPlugin temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
 
 	def __del__(self):
@@ -110,7 +113,7 @@ class RepoPlugin(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		plugintypes = core.BNPluginGetPluginTypes(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			result.append(PluginType(plugintypes[i]))
 		core.BNFreePluginTypes(plugintypes)
 		return result
@@ -136,6 +139,7 @@ class Repository(object):
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
 	"""
 	def __init__(self, handle):
+		raise Exception("Repository temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepository)
 
 	def __del__(self):
@@ -181,7 +185,7 @@ class Repository(object):
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			pluginlist.append(RepoPlugin(handle=result[i]))
 		core.BNFreeRepositoryPluginList(result, count.value)
 		del result
@@ -199,6 +203,7 @@ class RepositoryManager(object):
 	the plugins that are installed/unstalled enabled/disabled
 	"""
 	def __init__(self, handle=None):
+		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path):
@@ -217,7 +222,7 @@ class RepositoryManager(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
-		for i in xrange(count.value):
+		for i in range(count.value):
 			result.append(Repository(handle=repos[i]))
 		core.BNFreeRepositoryManagerRepositoriesList(repos)
 		return result
@@ -233,7 +238,7 @@ class RepositoryManager(object):
 	@property
 	def default_repository(self):
 		"""Gets the default Repository"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		return Repository(handle=core.BNRepositoryManagerGetDefaultRepository(self.handle))
 
 	def enable_plugin(self, plugin, install=True, repo=None):

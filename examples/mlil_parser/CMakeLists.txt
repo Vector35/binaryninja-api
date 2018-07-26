@@ -7,7 +7,7 @@ project(MLIL_Parser)
 #-----------------------------------------------------------------------------
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../..)
 #-----------------------------------------------------------------------------
-file( GLOB_RECURSE SRCS *.cpp *.h)
+set(SRCS src/mlil_parser.cpp)
 #-----------------------------------------------------------------------------
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #-----------------------------------------------------------------------------
@@ -31,7 +31,7 @@ else()
 		CACHE PATH "Binary Ninja user plugins directory")
 endif()
 #-----------------------------------------------------------------------------
-add_executable (${PROJECT_NAME} ${SRCS} )
+add_executable (${PROJECT_NAME} ${SRCS})
 #-----------------------------------------------------------------------------
 find_library(BINJA_API_LIBRARY binaryninjaapi
 	HINTS ${CMAKE_CURRENT_SOURCE_DIR}/../../bin ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/Release ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/Debug)

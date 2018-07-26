@@ -23,31 +23,35 @@ import ctypes
 import abc
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import TransformType
-import startup
-import log
-import databuffer
+import binaryninja
+from binaryninja import log
+from binaryninja import databuffer
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import TransformType
+
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import with_metaclass
 
 
 class _TransformMetaClass(type):
 	@property
 	def list(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(Transform(xforms[i]))
 		core.BNFreeTransformTypeList(xforms)
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield Transform(xforms[i])
 		finally:
 			core.BNFreeTransformTypeList(xforms)
@@ -59,14 +63,14 @@ class _TransformMetaClass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, name):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		xform = core.BNGetTransformByName(name)
 		if xform is None:
 			raise KeyError("'%s' is not a valid transform" % str(name))
 		return Transform(xform)
 
 	def register(cls):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("transform 'name' is not defined")
 		if cls.long_name is None:
@@ -90,14 +94,13 @@ class TransformParameter(object):
 		self.fixed_length = fixed_length
 
 
-class Transform(object):
+class Transform(with_metaclass(_TransformMetaClass, object)):
 	transform_type = None
 	name = None
 	long_name = None
 	group = None
 	parameters = []
 	_registered_cb = None
-	__metaclass__ = _TransformMetaClass
 
 	def __init__(self, handle):
 		if handle is None:
@@ -124,7 +127,7 @@ class Transform(object):
 			count = ctypes.c_ulonglong()
 			params = core.BNGetTransformParameterList(self.handle, count)
 			self.parameters = []
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				self.parameters.append(TransformParameter(params[i].name, params[i].longName, params[i].fixedLength))
 			core.BNFreeTransformParameterList(params, count.value)
 
@@ -145,7 +148,7 @@ class Transform(object):
 		try:
 			count[0] = len(self.parameters)
 			param_buf = (core.BNTransformParameterInfo * len(self.parameters))()
-			for i in xrange(0, len(self.parameters)):
+			for i in range(0, len(self.parameters)):
 				param_buf[i].name = self.parameters[i].name
 				param_buf[i].longName = self.parameters[i].long_name
 				param_buf[i].fixedLength = self.parameters[i].fixed_length
@@ -170,7 +173,7 @@ class Transform(object):
 		try:
 			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
-			for i in xrange(0, count):
+			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = str(data)
 			result = self.perform_decode(str(input_obj), param_map)
@@ -187,7 +190,7 @@ class Transform(object):
 		try:
 			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
-			for i in xrange(0, count):
+			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = str(data)
 			result = self.perform_encode(str(input_obj), param_map)
@@ -199,6 +202,11 @@ class Transform(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+	@property
+	def list(self):
+		"""Allow tab completion to discover metaclass list property"""
+		pass
 
 	@abc.abstractmethod
 	def perform_decode(self, data, params):
@@ -213,9 +221,9 @@ class Transform(object):
 	def decode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
-		for i in xrange(0, len(keys)):
+		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
 			param_buf[i].value = data.handle
@@ -226,9 +234,9 @@ class Transform(object):
 	def encode(self, input_buf, params = {}):
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
-		keys = params.keys()
+		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
-		for i in xrange(0, len(keys)):
+		for i in range(0, len(keys)):
 			data = databuffer.DataBuffer(params[keys[i]])
 			param_buf[i].name = keys[i]
 			param_buf[i].value = data.handle

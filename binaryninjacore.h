@@ -120,6 +120,8 @@ extern "C"
 	struct BNArchitecture;
 	struct BNFunction;
 	struct BNBasicBlock;
+	struct BNDownloadProvider;
+	struct BNDownloadInstance;
 	struct BNFlowGraph;
 	struct BNFlowGraphNode;
 	struct BNSymbol;
@@ -333,6 +335,7 @@ extern "C"
 		LLIL_JUMP_TO,
 		LLIL_CALL,
 		LLIL_CALL_STACK_ADJUST,
+		LLIL_TAILCALL,
 		LLIL_RET,
 		LLIL_NORET,
 		LLIL_IF,
@@ -404,6 +407,7 @@ extern "C"
 		LLIL_FLAG_BIT_SSA,
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
+		LLIL_TAILCALL_SSA,
 		LLIL_CALL_PARAM, // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA instructions
 		LLIL_CALL_STACK_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_CALL_OUTPUT_SSA, // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
@@ -848,8 +852,8 @@ extern "C"
 		MLIL_JUMP_TO,
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
-		MLIL_CALL_PARAM, // Only valid within MLIL_CALL or MLIL_SYSCALL family instructions
+		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_CALL_PARAM, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_RET, // Not valid in SSA form (see MLIL_RET_SSA)
 		MLIL_NORET,
 		MLIL_IF,
@@ -869,6 +873,8 @@ extern "C"
 		MLIL_ADD_OVERFLOW,
 		MLIL_SYSCALL, // Not valid in SSA form (see MLIL_SYSCALL_SSA)
 		MLIL_SYSCALL_UNTYPED, // Not valid in SSA form (see MLIL_SYSCALL_UNTYPED_SSA)
+		MLIL_TAILCALL, // Not valid in SSA form (see MLIL_TAILCALL_SSA)
+		MLIL_TAILCALL_UNTYPED, // Not valid in SSA form (see MLIL_TAILCALL_UNTYPED_SSA)
 		MLIL_INTRINSIC, // Not valid in SSA form (see MLIL_INTRINSIC_SSA)
 		MLIL_FREE_VAR_SLOT, // Not valid in SSA from (see MLIL_FREE_VAR_SLOT_SSA)
 		MLIL_BP,
@@ -916,8 +922,10 @@ extern "C"
 		MLIL_CALL_UNTYPED_SSA,
 		MLIL_SYSCALL_SSA,
 		MLIL_SYSCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA family instructions
-		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA family instructions
+		MLIL_TAILCALL_SSA,
+		MLIL_TAILCALL_UNTYPED_SSA,
+		MLIL_CALL_PARAM_SSA, // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
+		MLIL_CALL_OUTPUT_SSA, // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family instructions
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
@@ -1499,13 +1507,60 @@ extern "C"
 	{
 		IdleState,
 		DisassembleState,
-		AnalyzeState
+		AnalyzeState,
+		ExtendedAnalyzeState
+	};
+
+	struct BNActiveAnalysisInfo
+	{
+		BNFunction* func;
+		uint64_t analysisTime;
+		size_t updateCount;
+		size_t submitCount;
+	};
+
+	struct BNAnalysisInfo
+	{
+		BNAnalysisState state;
+		uint64_t analysisTime;
+		BNActiveAnalysisInfo* activeInfo;
+		size_t count;
 	};
 
 	struct BNAnalysisProgress
 	{
 		BNAnalysisState state;
 		size_t count, total;
+	};
+
+	struct BNAnalysisParameters
+	{
+		uint64_t maxAnalysisTime;
+		uint64_t maxFunctionSize;
+		uint64_t maxFunctionAnalysisTime;
+		size_t maxFunctionUpdateCount;
+		size_t maxFunctionSubmitCount;
+	};
+
+	struct BNDownloadInstanceOutputCallbacks
+	{
+		uint64_t (*writeCallback)(uint8_t* data, uint64_t len, void* ctxt);
+		void* writeContext;
+		bool (*progressCallback)(void* ctxt, uint64_t progress, uint64_t total);
+		void* progressContext;
+	};
+
+	struct BNDownloadInstanceCallbacks
+	{
+		void* context;
+		void (*destroyInstance)(void* ctxt);
+		int (*performRequest)(void* ctxt, const char* url);
+	};
+
+	struct BNDownloadProviderCallbacks
+	{
+		void* context;
+		BNDownloadInstance* (*createInstance)(void* ctxt);
 	};
 
 	enum BNFindFlag
@@ -1779,6 +1834,14 @@ extern "C"
 		void (*populateNodes)(void* ctxt);
 		void (*completeLayout)(void* ctxt);
 		BNFlowGraph* (*update)(void* ctxt);
+	};
+
+	enum BNAnalysisSkipReason
+	{
+		NoSkipReason,
+		AlwaysSkipReason,
+		ExceedFunctionSizeSkipReason,
+		ExceedFunctionAnalysisTimeSkipReason
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2470,9 +2533,12 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
 	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);
+	BINARYNINJACOREAPI BNAnalysisSkipReason BNGetAnalysisSkipReason(BNFunction* func);
 	BINARYNINJACOREAPI BNFunctionAnalysisSkipOverride BNGetFunctionAnalysisSkipOverride(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAnalysisSkipOverride(BNFunction* func, BNFunctionAnalysisSkipOverride skip);
 
+	BINARYNINJACOREAPI BNAnalysisParameters BNGetParametersForAnalysis(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);
 	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
 
@@ -2482,6 +2548,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 	BINARYNINJACOREAPI void BNCancelAnalysisCompletionEvent(BNAnalysisCompletionEvent* event);
 
+	BINARYNINJACOREAPI BNAnalysisInfo* BNGetAnalysisInfo(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNFreeAnalysisInfo(BNAnalysisInfo* info);
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 	BINARYNINJACOREAPI BNBackgroundTask* BNGetBackgroundAnalysisTask(BNBinaryView* view);
 
@@ -3222,6 +3290,24 @@ extern "C"
 	                                     char*** outVarName,
 	                                     size_t* outVarNameElements);
 
+	// Download providers
+	BINARYNINJACOREAPI BNDownloadProvider* BNRegisterDownloadProvider(const char* name, BNDownloadProviderCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDownloadProvider** BNGetDownloadProviderList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeDownloadProviderList(BNDownloadProvider** providers);
+	BINARYNINJACOREAPI BNDownloadProvider* BNGetDownloadProviderByName(const char* name);
+
+	BINARYNINJACOREAPI char* BNGetDownloadProviderName(BNDownloadProvider* provider);
+	BINARYNINJACOREAPI BNDownloadInstance* BNCreateDownloadProviderInstance(BNDownloadProvider* provider);
+
+	BINARYNINJACOREAPI BNDownloadInstance* BNInitDownloadInstance(BNDownloadProvider* provider, BNDownloadInstanceCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDownloadInstance* BNNewDownloadInstanceReference(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI void BNFreeDownloadInstance(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI int BNPerformDownloadRequest(BNDownloadInstance* instance, const char* url, BNDownloadInstanceOutputCallbacks* callbacks);
+	BINARYNINJACOREAPI uint64_t BNWriteDataForDownloadInstance(BNDownloadInstance* instance, uint8_t* data, uint64_t len);
+	BINARYNINJACOREAPI bool BNNotifyProgressForDownloadInstance(BNDownloadInstance* instance, uint64_t progress, uint64_t total);
+	BINARYNINJACOREAPI char* BNGetErrorForDownloadInstance(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI void BNSetErrorForDownloadInstance(BNDownloadInstance* instance, const char* error);
+
 	// Scripting providers
 	BINARYNINJACOREAPI BNScriptingProvider* BNRegisterScriptingProvider(const char* name,
 		BNScriptingProviderCallbacks* callbacks);
@@ -3508,8 +3594,6 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 
-	BINARYNINJACOREAPI char* BNGetLinuxCADirectory();
-	BINARYNINJACOREAPI char* BNGetLinuxCABundlePath();
 #ifdef __cplusplus
 }
 #endif

@@ -1107,6 +1107,10 @@ namespace BinaryNinja
 		size_t GetStackAdjustment() const { return (size_t)GetRawOperandAsInteger(1); }
 		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const { return GetRawOperandAsRegisterStackAdjustments(2); }
 	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_TAILCALL>: public LowLevelILInstructionBase
+	{
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_RET>: public LowLevelILInstructionBase
 	{
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
@@ -1161,6 +1165,19 @@ namespace BinaryNinja
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(2, version); }
 		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(1, version); }
+		void SetOutputSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs); }
+	};
+	template <> struct LowLevelILInstructionAccessor<LLIL_TAILCALL_SSA>: public LowLevelILInstructionBase
+	{
+		LowLevelILSSARegisterList GetOutputSSARegisters() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterList(1); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
+		LowLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
+		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(2, version); }
+		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
 		void SetOutputSSARegisters(const std::vector<SSARegister>& regs) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs); }
 	};
 

@@ -21,11 +21,13 @@
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
-import architecture
-import highlight
-import function
+import binaryninja
+from binaryninja import highlight
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 class BasicBlockEdge(object):
@@ -87,7 +89,7 @@ class BasicBlock(object):
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		self._func = function.Function(self.view, func)
+		self._func =binaryninja.function.Function(self.view, func)
 		return self._func
 
 	@property
@@ -100,7 +102,7 @@ class BasicBlock(object):
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = architecture.CoreArchitecture._from_cache(arch)
+		self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
 	@property
@@ -129,7 +131,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong(0)
 		edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
@@ -145,7 +147,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong(0)
 		edges = core.BNGetBasicBlockIncomingEdges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
@@ -171,7 +173,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -182,7 +184,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -201,7 +203,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -212,7 +214,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
@@ -225,7 +227,7 @@ class BasicBlock(object):
 	@property
 	def disassembly_text(self):
 		"""
-		``disassembly_text`` property which returns a list of function.DisassemblyTextLine objects for the current basic block.
+		``disassembly_text`` property which returns a list of binaryninja.function.DisassemblyTextLine objects for the current basic block.
 		:Example:
 
 			>>> current_basic_block.disassembly_text
@@ -269,12 +271,12 @@ class BasicBlock(object):
 		if len(blocks) == 0:
 			return []
 		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
-		for i in xrange(len(blocks)):
+		for i in range(len(blocks)):
 			block_set[i] = blocks[i].handle
 		count = ctypes.c_ulonglong()
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(BasicBlock(blocks[0].view, core.BNNewBasicBlockReference(out_blocks[i])))
 		core.BNFreeBasicBlockList(out_blocks, count.value)
 		return result
@@ -305,6 +307,8 @@ class BasicBlock(object):
 			inst_info = self.arch.get_instruction_info(data, idx)
 			inst_text = self.arch.get_instruction_text(data, idx)
 
+			if inst_info is None:
+				break
 			yield inst_text
 			idx += inst_info.length
 
@@ -313,7 +317,7 @@ class BasicBlock(object):
 
 	def get_disassembly_text(self, settings=None):
 		"""
-		``get_disassembly_text`` returns a list of function.DisassemblyTextLine objects for the current basic block.
+		``get_disassembly_text`` returns a list of binaryninja.function.DisassemblyTextLine objects for the current basic block.
 
 		:param DisassemblySettings settings: (optional) DisassemblySettings object
 		:Example:
@@ -328,7 +332,7 @@ class BasicBlock(object):
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetBasicBlockDisassemblyText(self.handle, settings_obj, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			addr = lines[i].addr
 			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
 				il_instr = self.il_function[lines[i].instrIndex]
@@ -336,7 +340,7 @@ class BasicBlock(object):
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = []
-			for j in xrange(0, lines[i].count):
+			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
 				text = lines[i].tokens[j].text
 				value = lines[i].tokens[j].value
@@ -345,8 +349,8 @@ class BasicBlock(object):
 				context = lines[i].tokens[j].context
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(function.DisassemblyTextLine(tokens, addr, il_instr, color))
+				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			result.append(binaryninja.function.DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 

@@ -1014,6 +1014,21 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 }
 
 
+AnalysisInfo BinaryView::GetAnalysisInfo()
+{
+	AnalysisInfo result;
+	BNAnalysisInfo* info = BNGetAnalysisInfo(m_object);
+	result.state = info->state;
+	result.analysisTime = info->analysisTime;
+	result.activeInfo.reserve(info->count);
+	for (size_t i = 0; i < info->count; i++)
+		result.activeInfo.emplace_back(new Function(BNNewFunctionReference(info->activeInfo[i].func)),
+			info->activeInfo[i].analysisTime, info->activeInfo[i].submitCount, info->activeInfo[i].updateCount);
+	BNFreeAnalysisInfo(info);
+	return result;
+}
+
+
 bool BinaryView::HasFunctions() const
 {
 	return BNHasFunctions(m_object);
@@ -1784,6 +1799,7 @@ bool BinaryView::GetSegmentAt(uint64_t addr, Segment& result)
 	result.dataOffset = segment.dataOffset;
 	result.dataLength = segment.dataLength;
 	result.flags = segment.flags;
+	result.autoDefined = segment.autoDefined;
 	return true;
 }
 
@@ -1973,6 +1989,18 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 	if (!data || !data->IsUnsignedInteger())
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
+}
+
+
+BNAnalysisParameters BinaryView::GetParametersForAnalysis()
+{
+	return BNGetParametersForAnalysis(m_object);
+}
+
+
+void BinaryView::SetParametersForAnalysis(BNAnalysisParameters params)
+{
+	BNSetParametersForAnalysis(m_object, params);
 }
 
 

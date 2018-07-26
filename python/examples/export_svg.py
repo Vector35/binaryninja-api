@@ -48,15 +48,15 @@ def save_svg(bv, function):
 
 def instruction_data_flow(function, address):
 	''' TODO:  Extract data flow information '''
-	length = function.view.get_instruction_length(address)
-	bytes = function.view.read(address, length)
+	length = binaryninja.function.view.get_instruction_length(address)
+	bytes = binaryninja.function.view.read(address, length)
 	hex = bytes.encode('hex')
 	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
 	return 'Opcode: {bytes}'.format(bytes=padded)
 
 
 def render_svg(function, origname):
-	graph = function.create_graph()
+	graph = binaryninja.function.create_graph()
 	graph.layout_and_wait()
 	heightconst = 15
 	ratio = 0.48

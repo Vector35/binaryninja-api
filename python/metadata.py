@@ -19,11 +19,16 @@
 # IN THE SOFTWARE.
 
 
+from __future__ import absolute_import
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-from enums import MetadataType
+from binaryninja import _binaryninjacore as core
+from binaryninja.enums import MetadataType
+
+# 2-3 compatibility
+from binaryninja import range
+from binaryninja import pyNativeStr
 
 
 class Metadata(object):
@@ -39,7 +44,7 @@ class Metadata(object):
 			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, str):
 			if raw:
-				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
+				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value.encode('charmap'))
 				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 			else:
 				self.handle = core.BNCreateMetadataStringData(value)
@@ -137,13 +142,16 @@ class Metadata(object):
 
 	def __iter__(self):
 		if self.is_array:
-			for i in xrange(core.BNMetadataSize(self.handle)):
+			for i in range(core.BNMetadataSize(self.handle)):
 				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
 		elif self.is_dict:
 			result = core.BNMetadataGetValueStore(self.handle)
 			try:
-				for i in xrange(result.contents.size):
-					yield result.contents.keys[i]
+				for i in range(result.contents.size):
+					if isinstance(result.contents.keys[i], bytes):
+						yield str(pyNativeStr(result.contents.keys[i]))
+					else:
+						yield result.contents.keys[i]
 			finally:
 				core.BNFreeMetadataValueStore(result)
 		else:
@@ -168,13 +176,13 @@ class Metadata(object):
 
 	def __str__(self):
 		if self.is_string:
-			return core.BNMetadataGetString(self.handle)
+			return str(core.BNMetadataGetString(self.handle))
 		if self.is_raw:
 			length = ctypes.c_ulonglong()
 			length.value = 0
 			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
 			out_list = []
-			for i in xrange(length.value):
+			for i in range(length.value):
 				out_list.append(native_list[i])
 			core.BNFreeMetadataRaw(native_list)
 			return ''.join(chr(a) for a in out_list)

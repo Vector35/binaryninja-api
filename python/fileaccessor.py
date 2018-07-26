@@ -22,9 +22,7 @@ import traceback
 import ctypes
 
 # Binary Ninja components
-import _binaryninjacore as core
-import log
-
+from binaryninja import _binaryninjacore as core
 
 class FileAccessor(object):
 	def __init__(self):

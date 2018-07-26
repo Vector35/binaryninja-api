@@ -5,6 +5,7 @@ Thumbs.db
 *.pdb
 *.ilk
 *.exp
+*.pkl
 libbinaryninja*
 binaryninjacore.lib
 binaryninjacore.dll
@@ -20,6 +21,7 @@ api-docs/build/*
 .env
 api-docs/source/binaryninja.*
 bin/
+suite/unit.py
 # CMake
 CMakeCache.txt
 CMakeFiles
@@ -30,3 +32,12 @@ CTestTestfile.cmake
 *.pyc
 api-docs/source/python.rst
 api-docs/source/index.rst
+.coverage
+# Make
+generator
+plugins/
+python/examples/binaryninja/
+python/plugins/
+python/types/
+suite/binaryninja/
+types/

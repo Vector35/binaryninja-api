@@ -46,7 +46,7 @@ Plugins are meant to be loaded into a running Binary Ninja GUI and should either
 ### Windows
 
 ```
-%APPDATA%\Binary Ninja\plugins
+%APPDATA%\Roaming\Binary Ninja\plugins
 ```
 
 ### Linux

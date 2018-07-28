@@ -1509,6 +1509,7 @@ extern "C"
 		uint64_t maxFunctionAnalysisTime;
 		size_t maxFunctionUpdateCount;
 		size_t maxFunctionSubmitCount;
+		bool suppressNewAutoFunctionAnalysis;
 	};
 
 	struct BNDownloadInstanceOutputCallbacks
@@ -1820,7 +1821,8 @@ extern "C"
 		NoSkipReason,
 		AlwaysSkipReason,
 		ExceedFunctionSizeSkipReason,
-		ExceedFunctionAnalysisTimeSkipReason
+		ExceedFunctionAnalysisTimeSkipReason,
+		NewAutoFunctionAnalysisSuppressedReason
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2520,6 +2522,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);
 	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
+	BINARYNINJACOREAPI bool BNGetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view, bool suppress);
 
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
 		void (*callback)(void* ctxt));

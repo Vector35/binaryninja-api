@@ -1374,6 +1374,8 @@ namespace BinaryNinja
 		void SetParametersForAnalysis(BNAnalysisParameters params);
 		uint64_t GetMaxFunctionSizeForAnalysis();
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
+		bool GetNewAutoFunctionAnalysisSuppressed();
+		void SetNewAutoFunctionAnalysisSuppressed(bool suppress);
 	};
 
 	class BinaryData: public BinaryView

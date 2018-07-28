@@ -2008,6 +2008,18 @@ void BinaryView::SetMaxFunctionSizeForAnalysis(uint64_t size)
 }
 
 
+bool BinaryView::GetNewAutoFunctionAnalysisSuppressed()
+{
+	return BNGetNewAutoFunctionAnalysisSuppressed(m_object);
+}
+
+
+void BinaryView::SetNewAutoFunctionAnalysisSuppressed(bool suppress)
+{
+	BNSetNewAutoFunctionAnalysisSuppressed(m_object, suppress);
+}
+
+
 BinaryData::BinaryData(FileMetadata* file): BinaryView(BNCreateBinaryDataView(file->GetObject()))
 {
 }

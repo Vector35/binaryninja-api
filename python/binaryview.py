@@ -1098,6 +1098,15 @@ class BinaryView(object):
 	def max_function_size_for_analysis(self, size):
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
 
+	@property
+	def new_auto_function_analysis_suppressed(self):
+		"""Whether or not automatically discovered functions will be analyzed"""
+		return core.BNGetNewAutoFunctionAnalysisSuppressed(self.handle)
+
+	@new_auto_function_analysis_suppressed.setter
+	def new_auto_function_analysis_suppressed(self, suppress):
+		core.BNSetNewAutoFunctionAnalysisSuppressed(self.handle, suppress)
+
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
 

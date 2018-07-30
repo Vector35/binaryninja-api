@@ -79,6 +79,9 @@ bool RelocationHandler::ApplyRelocationCallback(void* ctxt, BNBinaryView* view, 
 
 bool RelocationHandler::GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result)
 {
+	(void)view;
+	(void)arch;
+	(void)result;
 	return false;
 }
 

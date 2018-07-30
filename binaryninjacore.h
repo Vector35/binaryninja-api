@@ -997,11 +997,15 @@ extern "C"
 		bool (*navigate)(void* ctxt, const char* view, uint64_t offset);
 	};
 
-	struct BNQualifiedName
+	struct BNNameList
 	{
 		char** name;
+		char* join;
 		size_t nameCount;
 	};
+
+	typedef BNNameList BNQualifiedName;
+	typedef BNNameList BNNameSpace;
 
 	struct BNBinaryDataNotification
 	{

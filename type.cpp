@@ -24,180 +24,180 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-QualifiedName::QualifiedName()
+NameList::NameList(const string& join): m_join(join)
 {
 }
 
 
-QualifiedName::QualifiedName(const string& name)
+NameList::NameList(const string& name, const string& join): m_join(join)
 {
 	m_name.push_back(name);
 }
 
 
-QualifiedName::QualifiedName(const vector<string>& name): m_name(name)
+NameList::NameList(const vector<string>& name, const string& join): m_join(join), m_name(name)
 {
 }
 
 
-QualifiedName::QualifiedName(const QualifiedName& name): m_name(name.m_name)
+NameList::NameList(const NameList& name, const string& join): m_join(join), m_name(name.m_name)
 {
 }
 
 
-QualifiedName& QualifiedName::operator=(const string& name)
+NameList& NameList::operator=(const string& name)
 {
 	m_name = vector<string>{name};
 	return *this;
 }
 
 
-QualifiedName& QualifiedName::operator=(const vector<string>& name)
+NameList& NameList::operator=(const vector<string>& name)
 {
 	m_name = name;
 	return *this;
 }
 
 
-QualifiedName& QualifiedName::operator=(const QualifiedName& name)
+NameList& NameList::operator=(const NameList& name)
 {
 	m_name = name.m_name;
 	return *this;
 }
 
 
-bool QualifiedName::operator==(const QualifiedName& other) const
+bool NameList::operator==(const NameList& other) const
 {
 	return m_name == other.m_name;
 }
 
 
-bool QualifiedName::operator!=(const QualifiedName& other) const
+bool NameList::operator!=(const NameList& other) const
 {
 	return m_name != other.m_name;
 }
 
 
-bool QualifiedName::operator<(const QualifiedName& other) const
+bool NameList::operator<(const NameList& other) const
 {
 	return m_name < other.m_name;
 }
 
 
-QualifiedName QualifiedName::operator+(const QualifiedName& other) const
+NameList NameList::operator+(const NameList& other) const
 {
-	QualifiedName result(*this);
+	NameList result(*this);
 	result.m_name.insert(result.m_name.end(), other.m_name.begin(), other.m_name.end());
 	return result;
 }
 
 
-string& QualifiedName::operator[](size_t i)
+string& NameList::operator[](size_t i)
 {
 	return m_name[i];
 }
 
 
-const string& QualifiedName::operator[](size_t i) const
+const string& NameList::operator[](size_t i) const
 {
 	return m_name[i];
 }
 
 
-vector<string>::iterator QualifiedName::begin()
+vector<string>::iterator NameList::begin()
 {
 	return m_name.begin();
 }
 
 
-vector<string>::iterator QualifiedName::end()
+vector<string>::iterator NameList::end()
 {
 	return m_name.end();
 }
 
 
-vector<string>::const_iterator QualifiedName::begin() const
+vector<string>::const_iterator NameList::begin() const
 {
 	return m_name.begin();
 }
 
 
-vector<string>::const_iterator QualifiedName::end() const
+vector<string>::const_iterator NameList::end() const
 {
 	return m_name.end();
 }
 
 
-string& QualifiedName::front()
+string& NameList::front()
 {
 	return m_name.front();
 }
 
 
-const string& QualifiedName::front() const
+const string& NameList::front() const
 {
 	return m_name.front();
 }
 
 
-string& QualifiedName::back()
+string& NameList::back()
 {
 	return m_name.back();
 }
 
 
-const string& QualifiedName::back() const
+const string& NameList::back() const
 {
 	return m_name.back();
 }
 
 
-void QualifiedName::insert(vector<string>::iterator loc, const string& name)
+void NameList::insert(vector<string>::iterator loc, const string& name)
 {
 	m_name.insert(loc, name);
 }
 
 
-void QualifiedName::insert(vector<string>::iterator loc, vector<string>::iterator b, vector<string>::iterator e)
+void NameList::insert(vector<string>::iterator loc, vector<string>::iterator b, vector<string>::iterator e)
 {
 	m_name.insert(loc, b, e);
 }
 
 
-void QualifiedName::erase(vector<string>::iterator i)
+void NameList::erase(vector<string>::iterator i)
 {
 	m_name.erase(i);
 }
 
 
-void QualifiedName::clear()
+void NameList::clear()
 {
 	m_name.clear();
 }
 
 
-void QualifiedName::push_back(const string& name)
+void NameList::push_back(const string& name)
 {
 	m_name.push_back(name);
 }
 
 
-size_t QualifiedName::size() const
+size_t NameList::size() const
 {
 	return m_name.size();
 }
 
 
-size_t QualifiedName::StringSize() const
+size_t NameList::StringSize() const
 {
 	size_t size = 0;
 	for (auto& name : m_name)
-		size += name.size() + 2;
-	return size - 2;
+		size += name.size() + m_join.size();
+	return size - m_join.size();
 }
 
 
-string QualifiedName::GetString() const
+string NameList::GetString() const
 {
 	bool first = true;
 	string out;
@@ -205,7 +205,7 @@ string QualifiedName::GetString() const
 	{
 		if (!first)
 		{
-			out += "::" + name;
+			out = m_join + name;
 		}
 		else
 		{
@@ -218,10 +218,95 @@ string QualifiedName::GetString() const
 }
 
 
+BNNameList NameList::GetAPIObject() const
+{
+	BNNameList result;
+	result.nameCount = m_name.size();
+	result.join = BNAllocString(m_join.c_str());
+	result.name = new char*[m_name.size()];
+	for (size_t i = 0; i < m_name.size(); i++)
+		result.name[i] = BNAllocString(m_name[i].c_str());
+	return result;
+}
+
+
+void NameList::FreeAPIObject(BNNameList* name)
+{
+	for (size_t i = 0; i < name->nameCount; i++)
+		BNFreeString(name->name[i]);
+	BNFreeString(name->join);
+	delete[] name->name;
+}
+
+
+NameList NameList::FromAPIObject(BNNameList* name)
+{
+	NameList result(name->join);
+	for (size_t i = 0; i < name->nameCount; i++)
+		result.push_back(name->name[i]);
+	return result;
+}
+
+
+
+QualifiedName::QualifiedName(): NameList("::")
+{
+}
+
+
+QualifiedName::QualifiedName(const string& name): NameList(name, "::")
+{
+}
+
+
+QualifiedName::QualifiedName(const vector<string>& name): NameList(name, "::")
+{
+}
+
+
+QualifiedName::QualifiedName(const QualifiedName& name): NameList(name.m_name, "::")
+{
+}
+
+
+QualifiedName& QualifiedName::operator=(const string& name)
+{
+	m_name = vector<string>{name};
+	m_join = "::";
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const vector<string>& name)
+{
+	m_name = name;
+	m_join = "::";
+	return *this;
+}
+
+
+QualifiedName& QualifiedName::operator=(const QualifiedName& name)
+{
+	m_name = name.m_name;
+	m_join = "::";
+	return *this;
+}
+
+
+QualifiedName QualifiedName::operator+(const QualifiedName& other) const
+{
+	QualifiedName result(*this);
+	result.m_join = "::";
+	result.m_name.insert(result.m_name.end(), other.m_name.begin(), other.m_name.end());
+	return result;
+}
+
+
 BNQualifiedName QualifiedName::GetAPIObject() const
 {
 	BNQualifiedName result;
 	result.nameCount = m_name.size();
+	result.join = BNAllocString(m_join.c_str());
 	result.name = new char*[m_name.size()];
 	for (size_t i = 0; i < m_name.size(); i++)
 		result.name[i] = BNAllocString(m_name[i].c_str());
@@ -233,6 +318,7 @@ void QualifiedName::FreeAPIObject(BNQualifiedName* name)
 {
 	for (size_t i = 0; i < name->nameCount; i++)
 		BNFreeString(name->name[i]);
+	BNFreeString(name->join);
 	delete[] name->name;
 }
 
@@ -240,6 +326,89 @@ void QualifiedName::FreeAPIObject(BNQualifiedName* name)
 QualifiedName QualifiedName::FromAPIObject(BNQualifiedName* name)
 {
 	QualifiedName result;
+	for (size_t i = 0; i < name->nameCount; i++)
+		result.push_back(name->name[i]);
+	return result;
+}
+
+
+NameSpace::NameSpace(): NameList("::")
+{
+}
+
+
+NameSpace::NameSpace(const string& name): NameList(name, "::")
+{
+}
+
+
+NameSpace::NameSpace(const vector<string>& name): NameList(name, "::")
+{
+}
+
+
+NameSpace::NameSpace(const NameSpace& name): NameList(name.m_name, "::")
+{
+}
+
+
+NameSpace& NameSpace::operator=(const string& name)
+{
+	m_name = vector<string>{name};
+	m_join = "::";
+	return *this;
+}
+
+
+NameSpace& NameSpace::operator=(const vector<string>& name)
+{
+	m_name = name;
+	m_join = "::";
+	return *this;
+}
+
+
+NameSpace& NameSpace::operator=(const NameSpace& name)
+{
+	m_name = name.m_name;
+	m_join = "::";
+	return *this;
+}
+
+
+NameSpace NameSpace::operator+(const NameSpace& other) const
+{
+	NameSpace result(*this);
+	result.m_join = "::";
+	result.m_name.insert(result.m_name.end(), other.m_name.begin(), other.m_name.end());
+	return result;
+}
+
+
+BNNameSpace NameSpace::GetAPIObject() const
+{
+	BNNameSpace result;
+	result.nameCount = m_name.size();
+	result.join = BNAllocString(m_join.c_str());
+	result.name = new char*[m_name.size()];
+	for (size_t i = 0; i < m_name.size(); i++)
+		result.name[i] = BNAllocString(m_name[i].c_str());
+	return result;
+}
+
+
+void NameSpace::FreeAPIObject(BNNameSpace* name)
+{
+	for (size_t i = 0; i < name->nameCount; i++)
+		BNFreeString(name->name[i]);
+	BNFreeString(name->join);
+	delete[] name->name;
+}
+
+
+NameSpace NameSpace::FromAPIObject(BNNameSpace* name)
+{
+	NameSpace result;
 	for (size_t i = 0; i < name->nameCount; i++)
 		result.push_back(name->name[i]);
 	return result;

@@ -644,53 +644,6 @@ namespace BinaryNinja
 
 	std::string GetUniqueIdentifierString();
 
-	class QualifiedName
-	{
-		std::vector<std::string> m_name;
-
-	public:
-		QualifiedName();
-		QualifiedName(const std::string& name);
-		QualifiedName(const std::vector<std::string>& name);
-		QualifiedName(const QualifiedName& name);
-
-		QualifiedName& operator=(const std::string& name);
-		QualifiedName& operator=(const std::vector<std::string>& name);
-		QualifiedName& operator=(const QualifiedName& name);
-
-		bool operator==(const QualifiedName& other) const;
-		bool operator!=(const QualifiedName& other) const;
-		bool operator<(const QualifiedName& other) const;
-
-		QualifiedName operator+(const QualifiedName& other) const;
-
-		std::string& operator[](size_t i);
-		const std::string& operator[](size_t i) const;
-		std::vector<std::string>::iterator begin();
-		std::vector<std::string>::iterator end();
-		std::vector<std::string>::const_iterator begin() const;
-		std::vector<std::string>::const_iterator end() const;
-		std::string& front();
-		const std::string& front() const;
-		std::string& back();
-		const std::string& back() const;
-		void insert(std::vector<std::string>::iterator loc, const std::string& name);
-		void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
-			std::vector<std::string>::iterator e);
-		void erase(std::vector<std::string>::iterator i);
-		void clear();
-		void push_back(const std::string& name);
-		// Returns count of names
-		size_t size() const;
-		// Returns size of output string
-		size_t StringSize() const;
-		std::string GetString() const;
-
-		BNQualifiedName GetAPIObject() const;
-		static void FreeAPIObject(BNQualifiedName* name);
-		static QualifiedName FromAPIObject(BNQualifiedName* name);
-	};
-
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;
@@ -2095,6 +2048,89 @@ namespace BinaryNinja
 		Confidence<Ref<Type>> type;
 		bool defaultLocation;
 		Variable location;
+	};
+
+	class NameList
+	{
+	protected:
+		std::string m_join;
+		std::vector<std::string> m_name;
+	public:
+		NameList(const std::string& join);
+		NameList(const std::string& name, const std::string& join);
+		NameList(const std::vector<std::string>& name, const std::string& join);
+		NameList(const NameList& name, const std::string& join);
+
+		virtual NameList& operator=(const std::string& name);
+		virtual NameList& operator=(const std::vector<std::string>& name);
+		virtual NameList& operator=(const NameList& name);
+
+		virtual bool operator==(const NameList& other) const;
+		virtual bool operator!=(const NameList& other) const;
+		virtual bool operator<(const NameList& other) const;
+
+		virtual NameList operator+(const NameList& other) const;
+
+		virtual std::string& operator[](size_t i);
+		virtual const std::string& operator[](size_t i) const;
+		virtual std::vector<std::string>::iterator begin();
+		virtual std::vector<std::string>::iterator end();
+		virtual std::vector<std::string>::const_iterator begin() const;
+		virtual std::vector<std::string>::const_iterator end() const;
+		virtual std::string& front();
+		virtual const std::string& front() const;
+		virtual std::string& back();
+		virtual const std::string& back() const;
+		virtual void insert(std::vector<std::string>::iterator loc, const std::string& name);
+		virtual void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
+			std::vector<std::string>::iterator e);
+		virtual void erase(std::vector<std::string>::iterator i);
+		virtual void clear();
+		virtual void push_back(const std::string& name);
+		virtual size_t size() const;
+		virtual size_t StringSize() const;
+
+		virtual std::string GetString() const;
+
+		BNNameList GetAPIObject() const;
+		static void FreeAPIObject(BNNameList* name);
+		static NameList FromAPIObject(BNNameList* name);
+	};
+
+	class QualifiedName: public NameList
+	{
+	public:
+		QualifiedName();
+		QualifiedName(const std::string& name);
+		QualifiedName(const std::vector<std::string>& name);
+		QualifiedName(const QualifiedName& name);
+
+		virtual QualifiedName& operator=(const std::string& name);
+		virtual QualifiedName& operator=(const std::vector<std::string>& name);
+		virtual QualifiedName& operator=(const QualifiedName& name);
+		virtual QualifiedName operator+(const QualifiedName& other) const;
+
+		BNQualifiedName GetAPIObject() const;
+		static void FreeAPIObject(BNQualifiedName* name);
+		static QualifiedName FromAPIObject(BNQualifiedName* name);
+	};
+
+	class NameSpace: public NameList
+	{
+	public:
+		NameSpace();
+		NameSpace(const std::string& name);
+		NameSpace(const std::vector<std::string>& name);
+		NameSpace(const NameSpace& name);
+
+		virtual NameSpace& operator=(const std::string& name);
+		virtual NameSpace& operator=(const std::vector<std::string>& name);
+		virtual NameSpace& operator=(const NameSpace& name);
+		virtual NameSpace operator+(const NameSpace& other) const;
+
+		BNNameSpace GetAPIObject() const;
+		static void FreeAPIObject(BNNameSpace* name);
+		static NameSpace FromAPIObject(BNNameSpace* name);
 	};
 
 	struct QualifiedNameAndType

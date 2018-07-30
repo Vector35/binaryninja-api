@@ -44,7 +44,8 @@ FlowGraph::~FlowGraph()
 {
 	// This object is going away, so ensure that any pending completion routines are
 	// no longer called
-	Abort();
+	if (m_completeFunc)
+		Abort();
 
 	BNFreeFlowGraph(m_graph);
 }

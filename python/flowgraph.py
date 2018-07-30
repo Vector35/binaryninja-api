@@ -278,7 +278,8 @@ class FlowGraph(object):
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
 
 	def __del__(self):
-		self.abort()
+		if self._on_complete is not None:
+			self.abort()
 		core.BNFreeFlowGraph(self.handle)
 
 	def __eq__(self, value):

@@ -502,7 +502,8 @@ extern "C"
 		FunctionTypeClass = 8,
 		VarArgsTypeClass = 9,
 		ValueTypeClass = 10,
-		NamedTypeReferenceClass = 11
+		NamedTypeReferenceClass = 11,
+		WideCharTypeClass = 12
 	};
 
 	enum BNNamedTypeReferenceClass

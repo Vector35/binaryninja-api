@@ -185,10 +185,6 @@ class Symbol(object):
 	def auto(self):
 		return core.BNIsSymbolAutoDefined(self.handle)
 
-	@auto.setter
-	def auto(self, value):
-		core.BNSetSymbolAutoDefined(self.handle, value)
-
 	def __repr__(self):
 		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
 

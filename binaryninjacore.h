@@ -1004,8 +1004,19 @@ extern "C"
 		size_t nameCount;
 	};
 
-	typedef BNNameList BNQualifiedName;
-	typedef BNNameList BNNameSpace;
+	struct BNNameSpace
+	{
+		char** name;
+		char* join;
+		size_t nameCount;
+	};
+
+	struct BNQualifiedName
+	{
+		char** name;
+		char* join;
+		size_t nameCount;
+	};
 
 	struct BNBinaryDataNotification
 	{
@@ -2738,7 +2749,6 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
 	BINARYNINJACOREAPI uint64_t BNGetSymbolAddress(BNSymbol* sym);
 	BINARYNINJACOREAPI bool BNIsSymbolAutoDefined(BNSymbol* sym);
-	BINARYNINJACOREAPI void BNSetSymbolAutoDefined(BNSymbol* sym, bool val);
 
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByRawName(BNBinaryView* view, const char* name);

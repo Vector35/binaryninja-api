@@ -900,7 +900,6 @@ namespace BinaryNinja
 		std::string GetRawName() const;
 		uint64_t GetAddress() const;
 		bool IsAutoDefined() const;
-		void SetAutoDefined(bool val);
 
 		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};

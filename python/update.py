@@ -23,6 +23,8 @@ import ctypes
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
+
+import binaryninja
 from binaryninja.enums import UpdateResult
 
 # 2-3 compatibility

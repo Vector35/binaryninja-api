@@ -1116,6 +1116,12 @@ Confidence<int32_t> Function::GetCallRegisterStackAdjustment(Architecture* arch,
 }
 
 
+bool Function::IsCallInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNIsCallInstruction(m_object, arch->GetObject(), addr);
+}
+
+
 vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture* arch, uint64_t addr)
 {
 	size_t count;

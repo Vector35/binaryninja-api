@@ -2500,6 +2500,7 @@ namespace BinaryNinja
 		Confidence<size_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
 		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
+		bool IsCallInstruction(Architecture* arch, uint64_t addr);
 
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 

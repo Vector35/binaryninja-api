@@ -1586,6 +1586,11 @@ class Function(object):
 		result = types.RegisterStackAdjustmentWithConfidence(adjust.adjustment, confidence = adjust.confidence)
 		return result
 
+	def is_call_instruction(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
+
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):

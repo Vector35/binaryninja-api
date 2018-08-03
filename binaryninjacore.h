@@ -2521,6 +2521,7 @@ extern "C"
 		BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNRegisterStackAdjustment BNGetCallRegisterStackAdjustmentForRegisterStack(BNFunction* func,
 		BNArchitecture* arch, uint64_t addr, uint32_t regStack);
+	BINARYNINJACOREAPI bool BNIsCallInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, size_t* count);

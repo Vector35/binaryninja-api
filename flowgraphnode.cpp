@@ -42,7 +42,10 @@ FlowGraphNode::FlowGraphNode(BNFlowGraphNode* node)
 
 Ref<BasicBlock> FlowGraphNode::GetBasicBlock() const
 {
-	return new BasicBlock(BNGetFlowGraphBasicBlock(m_object));
+	BNBasicBlock* block = BNGetFlowGraphBasicBlock(m_object);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
 }
 
 

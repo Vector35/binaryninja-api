@@ -3680,9 +3680,10 @@ namespace BinaryNinja
 		virtual int PerformRequest(const std::string& url) = 0;
 
 		int PerformRequest(const std::string& url, BNDownloadInstanceOutputCallbacks* callbacks);
-
-		std::string GetError() const;
+		uint64_t WriteDataCallback(uint8_t* data, uint64_t len);
+		bool NotifyProgressCallback(uint64_t progress, uint64_t total);
 		void SetError(const std::string& error);
+		std::string GetError() const;
 	};
 
 	class CoreDownloadInstance: public DownloadInstance

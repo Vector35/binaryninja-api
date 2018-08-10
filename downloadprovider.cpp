@@ -41,18 +41,30 @@ int DownloadInstance::PerformRequestCallback(void* ctxt, const char* url)
 }
 
 
-string DownloadInstance::GetError() const
+uint64_t DownloadInstance::WriteDataCallback(uint8_t* data, uint64_t len)
 {
-	char* str = BNGetErrorForDownloadInstance(m_object);
-	string result = str;
-	BNFreeString(str);
-	return result;
+	return BNWriteDataForDownloadInstance(m_object, data, len);
+}
+
+
+bool DownloadInstance::NotifyProgressCallback(uint64_t progress, uint64_t total)
+{
+	return BNNotifyProgressForDownloadInstance(m_object, progress, total);
 }
 
 
 void DownloadInstance::SetError(const string& error)
 {
 	BNSetErrorForDownloadInstance(m_object, error.c_str());
+}
+
+
+string DownloadInstance::GetError() const
+{
+	char* str = BNGetErrorForDownloadInstance(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 

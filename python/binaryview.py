@@ -1747,7 +1747,7 @@ class BinaryView(object):
 		self.file.redo()
 
 	def navigate(self, view, offset):
-		self.file.navigate(view, offset)
+		return self.file.navigate(view, offset)
 
 	def read(self, addr, length):
 		"""

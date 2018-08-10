@@ -3669,6 +3669,7 @@ namespace BinaryNinja
 	protected:
 		DownloadInstance(DownloadProvider* provider);
 		DownloadInstance(BNDownloadInstance* instance);
+		virtual ~DownloadInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static int PerformRequestCallback(void* ctxt, const char* url);
@@ -3688,6 +3689,7 @@ namespace BinaryNinja
 	{
 	public:
 		CoreDownloadInstance(BNDownloadInstance* instance);
+		virtual ~CoreDownloadInstance() {};
 
 		virtual int PerformRequest(const std::string& url) override;
 	};

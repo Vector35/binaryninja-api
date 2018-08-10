@@ -10,6 +10,7 @@ DownloadInstance::DownloadInstance(DownloadProvider* provider)
 	cb.context = this;
 	cb.destroyInstance = DestroyInstanceCallback;
 	cb.performRequest = PerformRequestCallback;
+	AddRefForRegistration();
 	m_object = BNInitDownloadInstance(provider->GetObject(), &cb);
 }
 
@@ -17,6 +18,12 @@ DownloadInstance::DownloadInstance(DownloadProvider* provider)
 DownloadInstance::DownloadInstance(BNDownloadInstance* instance)
 {
 	m_object = instance;
+}
+
+
+DownloadInstance::~DownloadInstance()
+{
+	BNFreeDownloadInstance(m_object);
 }
 
 

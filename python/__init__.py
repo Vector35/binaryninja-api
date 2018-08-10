@@ -249,3 +249,6 @@ core_product_type = core.BNGetProductType()
 
 core_license_count = core.BNGetLicenseCount()
 '''License count from the license file'''
+
+core_ui_enabled = core.BNIsUIEnabled()
+'''Indicates that a UI exists and the UI has invoked BNInitUI'''

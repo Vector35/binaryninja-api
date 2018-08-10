@@ -3743,6 +3743,7 @@ namespace BinaryNinja
 	protected:
 		ScriptingInstance(ScriptingProvider* provider);
 		ScriptingInstance(BNScriptingInstance* instance);
+		virtual ~ScriptingInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
@@ -3775,6 +3776,7 @@ namespace BinaryNinja
 	{
 	public:
 		CoreScriptingInstance(BNScriptingInstance* instance);
+		virtual ~CoreScriptingInstance() {};
 
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) override;
 		virtual void SetCurrentBinaryView(BinaryView* view) override;

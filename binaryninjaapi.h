@@ -4015,21 +4015,21 @@ namespace BinaryNinja
 	class Metadata: public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
 	{
 	public:
-		Metadata(BNMetadata* structuredData);
-		Metadata(bool data);
-		Metadata(const std::string& data);
-		Metadata(uint64_t data);
-		Metadata(int64_t data);
-		Metadata(double data);
-		Metadata(const std::vector<bool>& data);
-		Metadata(const std::vector<std::string>& data);
-		Metadata(const std::vector<uint64_t>& data);
-		Metadata(const std::vector<int64_t>& data);
-		Metadata(const std::vector<double>& data);
-		Metadata(const std::vector<uint8_t>& data);
-		Metadata(const std::vector<Ref<Metadata>>& data);
-		Metadata(const std::map<std::string, Ref<Metadata>>& data);
-		Metadata(MetadataType type);
+		explicit Metadata(BNMetadata* structuredData);
+		explicit Metadata(bool data);
+		explicit Metadata(const std::string& data);
+		explicit Metadata(uint64_t data);
+		explicit Metadata(int64_t data);
+		explicit Metadata(double data);
+		explicit Metadata(const std::vector<bool>& data);
+		explicit Metadata(const std::vector<std::string>& data);
+		explicit Metadata(const std::vector<uint64_t>& data);
+		explicit Metadata(const std::vector<int64_t>& data);
+		explicit Metadata(const std::vector<double>& data);
+		explicit Metadata(const std::vector<uint8_t>& data);
+		explicit Metadata(const std::vector<Ref<Metadata>>& data);
+		explicit Metadata(const std::map<std::string, Ref<Metadata>>& data);
+		explicit Metadata(MetadataType type);
 		virtual ~Metadata() {}
 
 		bool operator==(const Metadata& rhs);

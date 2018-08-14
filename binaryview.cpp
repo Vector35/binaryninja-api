@@ -1720,7 +1720,7 @@ void BinaryView::ShowHTMLReport(const string& title, const string& contents, con
 
 void BinaryView::ShowGraphReport(const string& title, FlowGraph* graph)
 {
-	BNShowGraphReport(m_object, title.c_str(), graph->GetGraphObject());
+	BNShowGraphReport(m_object, title.c_str(), graph->GetObject());
 }
 
 

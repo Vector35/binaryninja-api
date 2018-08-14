@@ -2598,13 +2598,27 @@ namespace BinaryNinja
 		void SetHighlight(const BNHighlightColor& color);
 	};
 
-	class FlowGraph: public RefCountObject
+	class FlowGraphLayoutRequest: public RefCountObject
 	{
-		BNFlowGraph* m_graph;
+		BNFlowGraphLayoutRequest* m_object;
 		std::function<void()> m_completeFunc;
-		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
 
 		static void CompleteCallback(void* ctxt);
+
+	public:
+		FlowGraphLayoutRequest(FlowGraph* graph, const std::function<void()>& completeFunc);
+		virtual ~FlowGraphLayoutRequest();
+
+		BNFlowGraphLayoutRequest* GetObject() const { return m_object; }
+
+		Ref<FlowGraph> GetGraph() const;
+		bool IsComplete() const;
+		void Abort();
+	};
+
+	class FlowGraph: public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
+	{
+		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
 
 		static void PrepareForLayoutCallback(void* ctxt);
 		static void PopulateNodesCallback(void* ctxt);
@@ -2621,9 +2635,6 @@ namespace BinaryNinja
 
 	public:
 		FlowGraph();
-		~FlowGraph();
-
-		BNFlowGraph* GetGraphObject() const { return m_graph; }
 
 		Ref<Function> GetFunction() const;
 		void SetFunction(Function* func);
@@ -2632,10 +2643,8 @@ namespace BinaryNinja
 		int GetVerticalNodeMargin() const;
 		void SetNodeMargins(int horiz, int vert);
 
-		void StartLayout();
+		Ref<FlowGraphLayoutRequest> StartLayout(const std::function<void()>& func);
 		bool IsLayoutComplete();
-		void OnComplete(const std::function<void()>& func);
-		void Abort();
 
 		std::vector<Ref<FlowGraphNode>> GetNodes();
 		Ref<FlowGraphNode> GetNode(size_t i);

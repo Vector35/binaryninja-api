@@ -431,9 +431,9 @@ void BinaryNinja::ShowGraphReport(const string& title, FlowGraph* graph)
 {
 	Ref<Function> func = graph->GetFunction();
 	if (func)
-		BNShowGraphReport(func->GetView()->GetObject(), title.c_str(), graph->GetGraphObject());
+		BNShowGraphReport(func->GetView()->GetObject(), title.c_str(), graph->GetObject());
 	else
-		BNShowGraphReport(nullptr, title.c_str(), graph->GetGraphObject());
+		BNShowGraphReport(nullptr, title.c_str(), graph->GetObject());
 }
 
 
@@ -691,5 +691,5 @@ void ReportCollection::AddHTMLReport(Ref<BinaryView> view, const string& title, 
 
 void ReportCollection::AddGraphReport(Ref<BinaryView> view, const string& title, Ref<FlowGraph> graph)
 {
-	BNAddGraphReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), graph->GetGraphObject());
+	BNAddGraphReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), graph->GetObject());
 }

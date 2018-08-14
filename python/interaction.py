@@ -23,7 +23,7 @@ import traceback
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
+from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult, ReportType
 from binaryninja import binaryview
 from binaryninja import log
 from binaryninja import flowgraph

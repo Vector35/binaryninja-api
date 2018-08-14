@@ -263,6 +263,38 @@ class FlowGraphNode(object):
 		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle)
 
 
+class FlowGraphLayoutRequest(object):
+	def __init__(self, graph, callback = None):
+		self.on_complete = callback
+		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
+		self.handle = core.BNStartFlowGraphLayout(graph.handle, None, self._cb)
+
+	def __del__(self):
+		self.abort()
+		core.BNFreeFlowGraphLayoutRequest(self.handle)
+
+	def _complete(self, ctxt):
+		try:
+			if self._on_complete is not None:
+				self._on_complete()
+		except:
+			log.log_error(traceback.format_exc())
+
+	@property
+	def complete(self):
+		"""Whether flow graph layout is complete (read-only)"""
+		return core.BNIsFlowGraphLayoutRequestComplete(self.handle)
+
+	@property
+	def graph(self):
+		"""Flow graph that is being processed (read-only)"""
+		return CoreFlowGraph(core.BNGetGraphForFlowGraphLayoutRequest(self.handle))
+
+	def abort(self):
+		core.BNAbortFlowGraphLayoutRequest(self.handle)
+		self.on_complete = None
+
+
 class FlowGraph(object):
 	def __init__(self, handle = None):
 		if handle is None:
@@ -274,12 +306,8 @@ class FlowGraph(object):
 			self._ext_cb.update = self._ext_cb.update.__class__(self._update)
 			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
 		self.handle = handle
-		self._on_complete = None
-		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
 
 	def __del__(self):
-		if self._on_complete is not None:
-			self.abort()
 		core.BNFreeFlowGraph(self.handle)
 
 	def __eq__(self, value):
@@ -460,15 +488,8 @@ class FlowGraph(object):
 		finally:
 			core.BNFreeFlowGraphNodeList(nodes, count.value)
 
-	def _complete(self, ctxt):
-		try:
-			if self._on_complete is not None:
-				self._on_complete()
-		except:
-			log.log_error(traceback.format_exc())
-
-	def layout(self):
-		core.BNStartFlowGraphLayout(self.handle)
+	def layout(self, callback = None):
+		return FlowGraphLayoutRequest(self, callback)
 
 	def _wait_complete(self):
 		self._wait_cond.acquire()
@@ -477,20 +498,12 @@ class FlowGraph(object):
 
 	def layout_and_wait(self):
 		self._wait_cond = threading.Condition()
-		self.on_complete(self._wait_complete)
-		self.layout()
+		request = self.layout(self._wait_complete)
 
 		self._wait_cond.acquire()
-		while not self.complete:
+		while not request.complete:
 			self._wait_cond.wait()
 		self._wait_cond.release()
-
-	def on_complete(self, callback):
-		self._on_complete = callback
-		core.BNSetFlowGraphCompleteCallback(self.handle, None, self._cb)
-
-	def abort(self):
-		core.BNAbortFlowGraph(self.handle)
 
 	def get_nodes_in_region(self, left, top, right, bottom):
 		count = ctypes.c_ulonglong()

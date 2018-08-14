@@ -124,6 +124,7 @@ extern "C"
 	struct BNDownloadInstance;
 	struct BNFlowGraph;
 	struct BNFlowGraphNode;
+	struct BNFlowGraphLayoutRequest;
 	struct BNSymbol;
 	struct BNTemporaryFile;
 	struct BNLowLevelILFunction;
@@ -2654,10 +2655,13 @@ extern "C"
 	BINARYNINJACOREAPI int BNGetVerticalFlowGraphNodeMargin(BNFlowGraph* graph);
 	BINARYNINJACOREAPI void BNSetFlowGraphNodeMargins(BNFlowGraph* graph, int horiz, int vert);
 
-	BINARYNINJACOREAPI void BNStartFlowGraphLayout(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphLayoutRequest* BNStartFlowGraphLayout(BNFlowGraph* graph, void* ctxt, void (*func)(void* ctxt));
 	BINARYNINJACOREAPI bool BNIsFlowGraphLayoutComplete(BNFlowGraph* graph);
-	BINARYNINJACOREAPI void BNSetFlowGraphCompleteCallback(BNFlowGraph* graph, void* ctxt, void (*func)(void* ctxt));
-	BINARYNINJACOREAPI void BNAbortFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphLayoutRequest* BNNewFlowGraphLayoutRequestReference(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI void BNFreeFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI bool BNIsFlowGraphLayoutRequestComplete(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI BNFlowGraph* BNGetGraphForFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI void BNAbortFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* graph);
 	BINARYNINJACOREAPI bool BNIsILFlowGraph(BNFlowGraph* graph);
 	BINARYNINJACOREAPI bool BNIsLowLevelILFlowGraph(BNFlowGraph* graph);
 	BINARYNINJACOREAPI bool BNIsMediumLevelILFlowGraph(BNFlowGraph* graph);

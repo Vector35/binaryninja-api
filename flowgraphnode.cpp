@@ -26,7 +26,7 @@ using namespace std;
 
 FlowGraphNode::FlowGraphNode(FlowGraph* graph)
 {
-	m_object = BNCreateFlowGraphNode(graph->GetGraphObject());
+	m_object = BNCreateFlowGraphNode(graph->GetObject());
 	m_cachedLinesValid = false;
 	m_cachedEdgesValid = false;
 }

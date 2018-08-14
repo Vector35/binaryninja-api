@@ -24,6 +24,51 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+FlowGraphLayoutRequest::FlowGraphLayoutRequest(FlowGraph* graph, const std::function<void()>& completeFunc):
+	m_completeFunc(completeFunc)
+{
+	m_object = BNStartFlowGraphLayout(graph->GetObject(), this, CompleteCallback);
+}
+
+
+FlowGraphLayoutRequest::~FlowGraphLayoutRequest()
+{
+	// This object is going away, so ensure that any pending completion routines are
+	// no longer called
+	Abort();
+
+	BNFreeFlowGraphLayoutRequest(m_object);
+}
+
+
+void FlowGraphLayoutRequest::CompleteCallback(void* ctxt)
+{
+	FlowGraphLayoutRequest* layout = (FlowGraphLayoutRequest*)ctxt;
+	layout->m_completeFunc();
+}
+
+
+Ref<FlowGraph> FlowGraphLayoutRequest::GetGraph() const
+{
+	return new CoreFlowGraph(BNGetGraphForFlowGraphLayoutRequest(m_object));
+}
+
+
+bool FlowGraphLayoutRequest::IsComplete() const
+{
+	return BNIsFlowGraphLayoutRequestComplete(m_object);
+}
+
+
+void FlowGraphLayoutRequest::Abort()
+{
+	// Must clear the callback with the core before clearing our own function object, as until it
+	// is cleared in the core it can be called at any time from a different thread.
+	BNAbortFlowGraphLayoutRequest(m_object);
+	m_completeFunc = []() {};
+}
+
+
 FlowGraph::FlowGraph()
 {
 	BNCustomFlowGraph callbacks;
@@ -31,30 +76,13 @@ FlowGraph::FlowGraph()
 	callbacks.prepareForLayout = PrepareForLayoutCallback;
 	callbacks.populateNodes = PopulateNodesCallback;
 	callbacks.completeLayout = CompleteLayoutCallback;
-	m_graph = BNCreateCustomFlowGraph(&callbacks);
+	m_object = BNCreateCustomFlowGraph(&callbacks);
 }
 
 
-FlowGraph::FlowGraph(BNFlowGraph* graph): m_graph(graph)
+FlowGraph::FlowGraph(BNFlowGraph* graph)
 {
-}
-
-
-FlowGraph::~FlowGraph()
-{
-	// This object is going away, so ensure that any pending completion routines are
-	// no longer called
-	if (m_completeFunc)
-		Abort();
-
-	BNFreeFlowGraph(m_graph);
-}
-
-
-void FlowGraph::CompleteCallback(void* ctxt)
-{
-	FlowGraph* graph = (FlowGraph*)ctxt;
-	graph->m_completeFunc();
+	m_object = graph;
 }
 
 
@@ -85,13 +113,13 @@ BNFlowGraph* FlowGraph::UpdateCallback(void* ctxt)
 	Ref<FlowGraph> result = graph->Update();
 	if (!result)
 		return nullptr;
-	return BNNewFlowGraphReference(result->GetGraphObject());
+	return BNNewFlowGraphReference(result->GetObject());
 }
 
 
 void FlowGraph::FinishPrepareForLayout()
 {
-	BNFinishPrepareForLayout(m_graph);
+	BNFinishPrepareForLayout(m_object);
 }
 
 
@@ -113,7 +141,7 @@ void FlowGraph::CompleteLayout()
 
 Ref<Function> FlowGraph::GetFunction() const
 {
-	BNFunction* func = BNGetFunctionForFlowGraph(m_graph);
+	BNFunction* func = BNGetFunctionForFlowGraph(m_object);
 	if (!func)
 		return nullptr;
 	return new Function(BNNewFunctionReference(func));
@@ -122,60 +150,44 @@ Ref<Function> FlowGraph::GetFunction() const
 
 void FlowGraph::SetFunction(Function* func)
 {
-	BNSetFunctionForFlowGraph(m_graph, func ? func->GetObject() : nullptr);
+	BNSetFunctionForFlowGraph(m_object, func ? func->GetObject() : nullptr);
 }
 
 
 int FlowGraph::GetHorizontalNodeMargin() const
 {
-	return BNGetHorizontalFlowGraphNodeMargin(m_graph);
+	return BNGetHorizontalFlowGraphNodeMargin(m_object);
 }
 
 
 int FlowGraph::GetVerticalNodeMargin() const
 {
-	return BNGetVerticalFlowGraphNodeMargin(m_graph);
+	return BNGetVerticalFlowGraphNodeMargin(m_object);
 }
 
 
 void FlowGraph::SetNodeMargins(int horiz, int vert)
 {
-	BNSetFlowGraphNodeMargins(m_graph, horiz, vert);
+	BNSetFlowGraphNodeMargins(m_object, horiz, vert);
 }
 
 
-void FlowGraph::StartLayout()
+Ref<FlowGraphLayoutRequest> FlowGraph::StartLayout(const std::function<void()>& func)
 {
-	BNStartFlowGraphLayout(m_graph);
+	return new FlowGraphLayoutRequest(this, func);
 }
 
 
 bool FlowGraph::IsLayoutComplete()
 {
-	return BNIsFlowGraphLayoutComplete(m_graph);
-}
-
-
-void FlowGraph::OnComplete(const std::function<void()>& func)
-{
-	m_completeFunc = func;
-	BNSetFlowGraphCompleteCallback(m_graph, this, CompleteCallback);
-}
-
-
-void FlowGraph::Abort()
-{
-	// Must clear the callback with the core before clearing our own function object, as until it
-	// is cleared in the core it can be called at any time from a different thread.
-	BNAbortFlowGraph(m_graph);
-	m_completeFunc = []() {};
+	return BNIsFlowGraphLayoutComplete(m_object);
 }
 
 
 vector<Ref<FlowGraphNode>> FlowGraph::GetNodes()
 {
 	size_t count;
-	BNFlowGraphNode** nodes = BNGetFlowGraphNodes(m_graph, &count);
+	BNFlowGraphNode** nodes = BNGetFlowGraphNodes(m_object, &count);
 
 	vector<Ref<FlowGraphNode>> result;
 	result.reserve(count);
@@ -201,7 +213,7 @@ vector<Ref<FlowGraphNode>> FlowGraph::GetNodes()
 
 Ref<FlowGraphNode> FlowGraph::GetNode(size_t i)
 {
-	BNFlowGraphNode* node = BNGetFlowGraphNode(m_graph, i);
+	BNFlowGraphNode* node = BNGetFlowGraphNode(m_object, i);
 	if (!node)
 		return nullptr;
 
@@ -222,33 +234,33 @@ Ref<FlowGraphNode> FlowGraph::GetNode(size_t i)
 
 bool FlowGraph::HasNodes() const
 {
-	return BNFlowGraphHasNodes(m_graph);
+	return BNFlowGraphHasNodes(m_object);
 }
 
 
 size_t FlowGraph::AddNode(FlowGraphNode* node)
 {
 	m_cachedNodes[node->GetObject()] = node;
-	return BNAddFlowGraphNode(m_graph, node->GetObject());
+	return BNAddFlowGraphNode(m_object, node->GetObject());
 }
 
 
 int FlowGraph::GetWidth() const
 {
-	return BNGetFlowGraphWidth(m_graph);
+	return BNGetFlowGraphWidth(m_object);
 }
 
 
 int FlowGraph::GetHeight() const
 {
-	return BNGetFlowGraphHeight(m_graph);
+	return BNGetFlowGraphHeight(m_object);
 }
 
 
 vector<Ref<FlowGraphNode>> FlowGraph::GetNodesInRegion(int left, int top, int right, int bottom)
 {
 	size_t count;
-	BNFlowGraphNode** nodes = BNGetFlowGraphNodesInRegion(m_graph, left, top, right, bottom, &count);
+	BNFlowGraphNode** nodes = BNGetFlowGraphNodesInRegion(m_object, left, top, right, bottom, &count);
 
 	vector<Ref<FlowGraphNode>> result;
 	result.reserve(count);
@@ -274,25 +286,25 @@ vector<Ref<FlowGraphNode>> FlowGraph::GetNodesInRegion(int left, int top, int ri
 
 bool FlowGraph::IsILGraph() const
 {
-	return BNIsILFlowGraph(m_graph);
+	return BNIsILFlowGraph(m_object);
 }
 
 
 bool FlowGraph::IsLowLevelILGraph() const
 {
-	return BNIsLowLevelILFlowGraph(m_graph);
+	return BNIsLowLevelILFlowGraph(m_object);
 }
 
 
 bool FlowGraph::IsMediumLevelILGraph() const
 {
-	return BNIsMediumLevelILFlowGraph(m_graph);
+	return BNIsMediumLevelILFlowGraph(m_object);
 }
 
 
 Ref<LowLevelILFunction> FlowGraph::GetLowLevelILFunction() const
 {
-	BNLowLevelILFunction* func = BNGetFlowGraphLowLevelILFunction(m_graph);
+	BNLowLevelILFunction* func = BNGetFlowGraphLowLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
 	return new LowLevelILFunction(func);
@@ -301,7 +313,7 @@ Ref<LowLevelILFunction> FlowGraph::GetLowLevelILFunction() const
 
 Ref<MediumLevelILFunction> FlowGraph::GetMediumLevelILFunction() const
 {
-	BNMediumLevelILFunction* func = BNGetFlowGraphMediumLevelILFunction(m_graph);
+	BNMediumLevelILFunction* func = BNGetFlowGraphMediumLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
 	return new MediumLevelILFunction(func);
@@ -310,13 +322,13 @@ Ref<MediumLevelILFunction> FlowGraph::GetMediumLevelILFunction() const
 
 void FlowGraph::SetLowLevelILFunction(LowLevelILFunction* func)
 {
-	BNSetFlowGraphLowLevelILFunction(m_graph, func ? func->GetObject() : nullptr);
+	BNSetFlowGraphLowLevelILFunction(m_object, func ? func->GetObject() : nullptr);
 }
 
 
 void FlowGraph::SetMediumLevelILFunction(MediumLevelILFunction* func)
 {
-	BNSetFlowGraphMediumLevelILFunction(m_graph, func ? func->GetObject() : nullptr);
+	BNSetFlowGraphMediumLevelILFunction(m_object, func ? func->GetObject() : nullptr);
 }
 
 
@@ -339,7 +351,7 @@ CoreFlowGraph::CoreFlowGraph(BNFlowGraph* graph): FlowGraph(graph)
 
 Ref<FlowGraph> CoreFlowGraph::Update()
 {
-	BNFlowGraph* graph = BNUpdateFlowGraph(GetGraphObject());
+	BNFlowGraph* graph = BNUpdateFlowGraph(GetObject());
 	if (!graph)
 		return nullptr;
 	return new CoreFlowGraph(graph);

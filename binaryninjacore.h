@@ -312,6 +312,7 @@ extern "C"
 		LLIL_REG_STACK_FREE_REL, // Not valid in SSA from (see LLIL_REG_STACK_FREE_REL_SSA)
 		LLIL_CONST,
 		LLIL_CONST_PTR,
+		LLIL_RELOC_PTR,
 		LLIL_FLOAT_CONST,
 		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
 		LLIL_FLAG_BIT, // Not valid in SSA form (see LLIL_FLAG_BIT_SSA)

@@ -1226,6 +1226,7 @@ namespace BinaryNinja
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_CONST>: public LowLevelILConstantInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CONST_PTR>: public LowLevelILConstantInstruction {};
+	template <> struct LowLevelILInstructionAccessor<LLIL_RELOC_PTR>: public LowLevelILConstantInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_CONST>: public LowLevelILConstantInstruction {};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_ADD>: public LowLevelILTwoOperandInstruction {};

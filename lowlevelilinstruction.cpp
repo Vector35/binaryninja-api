@@ -171,6 +171,7 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_MEM_PHI, {DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionsLowLevelOperandUsage}},
 		{LLIL_CONST, {ConstantLowLevelOperandUsage}},
 		{LLIL_CONST_PTR, {ConstantLowLevelOperandUsage}},
+		{LLIL_RELOC_PTR, {ConstantLowLevelOperandUsage}},
 		{LLIL_FLOAT_CONST, {ConstantLowLevelOperandUsage}},
 		{LLIL_ADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_SUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
@@ -2113,6 +2114,8 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 		return dest->Const(size, GetConstant<LLIL_CONST>(), *this);
 	case LLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<LLIL_CONST_PTR>(), *this);
+	case LLIL_RELOC_PTR:
+		return dest->ConstPointer(size, GetConstant<LLIL_RELOC_PTR>(), *this);
 	case LLIL_FLOAT_CONST:
 		return dest->FloatConstRaw(size, GetConstant<LLIL_FLOAT_CONST>(), *this);
 	case LLIL_POP:
@@ -2891,6 +2894,12 @@ ExprId LowLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocati
 ExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CONST_PTR, loc, size, 0, val);
+}
+
+
+ExprId LowLevelILFunction::RelocationPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RELOC_PTR, loc, size, 0, val);
 }
 
 

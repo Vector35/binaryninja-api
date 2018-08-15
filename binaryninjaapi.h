@@ -3802,6 +3802,8 @@ namespace BinaryNinja
 	public:
 		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
 
+		std::string GetName();
+
 		static std::vector<Ref<ScriptingProvider>> GetList();
 		static Ref<ScriptingProvider> GetByName(const std::string& name);
 		static void Register(ScriptingProvider* provider);

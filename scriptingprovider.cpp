@@ -252,6 +252,15 @@ BNScriptingInstance* ScriptingProvider::CreateInstanceCallback(void* ctxt)
 }
 
 
+string ScriptingProvider::GetName()
+{
+	char* providerNameRaw = BNGetScriptingProviderName(m_object);
+	string providerName(providerNameRaw);
+	BNFreeString(providerNameRaw);
+	return providerName;
+}
+
+
 vector<Ref<ScriptingProvider>> ScriptingProvider::GetList()
 {
 	size_t count;

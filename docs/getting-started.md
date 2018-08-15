@@ -265,9 +265,10 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 | ui        | activeContent            | boolean      | True                                           | Allow Binary Ninja to connect to the web to check for updates                                 |
 | ui        | colorblind               | boolean      | True                                           | Choose colors that are visible to those with red/green colorblind                             |
 | ui        | debug                    | boolean      | False                                          | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)              |
-| ui        | recent-file-limit        | integer      | 10                                             | Specify limit for number of recent files                                                       |
+| ui        | recent-file-limit        | integer      | 10                                             | Specify limit for number of recent files                                                      |
+| ui        | scriptingprovider        | string       | "Python"                                       | Specify the registered ScriptingProvider that controls the 'Console' in the UI                |
 | pdb       | local-store-absolute     | string       | ""                                             | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
-| pdb       | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store            |
+| pdb       | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store          |
 | pdb       | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
 | pdb       | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
 | python    | interpreter              | string       | "python27.{dylib,dll,so.1}"                    | Python interpreter to load if one is not already present when plugins are loaded              |
@@ -275,13 +276,13 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 Below is an example `settings.json` setting various options:
 ```
 {
-	"ui" :
-	{
-		"activeContent" : false,
-		"colorblind" : false,
-		"debug" : true
-		"recent-file-limit" : 10
-	}
+    "ui" :
+    {
+        "activeContent" : false,
+        "colorblind" : false,
+        "debug" : true
+        "recent-file-limit" : 10
+    }
     "pdb" :
     {
         "local-store-absolute" : "C:\Symbols",

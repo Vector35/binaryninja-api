@@ -655,7 +655,8 @@ extern "C"
 	{
 		AsciiString = 0,
 		Utf16String = 1,
-		Utf32String = 2
+		Utf32String = 2,
+		Utf8String = 3
 	};
 
 	enum BNIntegerDisplayType

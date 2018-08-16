@@ -259,6 +259,7 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 
 |Plugin     | Setting                  | Type         | Default                                        | Description                                                                                   |
 |----------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
+| analysis  | autorunLinearSweep       | boolean      | True                                           | Automatically run linear sweep when opening a binary for analysis                             |
 | analysis  | max-function-size        | integer      | 65536                                          | Any functions over this size will not be automatically analyzed and require manual override   |
 | core      | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
 | core      | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |

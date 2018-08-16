@@ -612,7 +612,10 @@ class PythonScriptingInstance(ScriptingInstance):
 			return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
 		try:
-			result = code.compile_command(text)
+			if isinstance(text, str):
+				result = code.compile_command(text)
+			else:
+				result = code.compile_command(text.decode("charmap"))
 		except:
 			result = False
 

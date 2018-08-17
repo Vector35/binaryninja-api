@@ -10,6 +10,7 @@ from binaryninja.filemetadata import FileMetadata
 import subprocess
 import re
 
+binja.mainthread.set_worker_thread_count(1)
 
 # Dear people from the future: If you're adding tests or debuging an
 #  issue where python2 and python3 are producing different output

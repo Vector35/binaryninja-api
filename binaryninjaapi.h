@@ -1000,6 +1000,7 @@ namespace BinaryNinja
 		bool autoDiscovered;
 	};
 
+	class Relocation;
 	class Segment: public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
 	{
 	public:
@@ -1015,6 +1016,7 @@ namespace BinaryNinja
 
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
+		std::vector<Ref<Relocation>> GetRelocationsInRange(uint64_t addr, uint64_t size) const;
 		uint64_t GetRelocationsCount() const;
 
 		void SetStart(uint64_t newSegmentBase);
@@ -2814,6 +2816,7 @@ namespace BinaryNinja
 			uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
@@ -3146,6 +3149,7 @@ namespace BinaryNinja
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());

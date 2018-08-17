@@ -232,7 +232,8 @@ extern "C"
 		LocalVariableToken = 66,
 		ImportToken = 67,
 		AddressDisplayToken = 68,
-		IndirectImportToken = 69
+		IndirectImportToken = 69,
+		ExternalSymbolToken = 70
 	};
 
 	enum BNInstructionTextTokenContext
@@ -312,7 +313,7 @@ extern "C"
 		LLIL_REG_STACK_FREE_REL, // Not valid in SSA from (see LLIL_REG_STACK_FREE_REL_SSA)
 		LLIL_CONST,
 		LLIL_CONST_PTR,
-		LLIL_RELOC_PTR,
+		LLIL_EXTERN_PTR,
 		LLIL_FLOAT_CONST,
 		LLIL_FLAG, // Not valid in SSA form (see LLIL_FLAG_SSA)
 		LLIL_FLAG_BIT, // Not valid in SSA form (see LLIL_FLAG_BIT_SSA)
@@ -831,6 +832,7 @@ extern "C"
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
 		MLIL_CONST_PTR,
+		MLIL_EXTERN_PTR,
 		MLIL_FLOAT_CONST,
 		MLIL_IMPORT,
 		MLIL_ADD,

@@ -56,7 +56,7 @@ static void PrintOperation(BNLowLevelILOperation operation)
 	ENUM_PRINTER(LLIL_REG)
 	ENUM_PRINTER(LLIL_CONST)
 	ENUM_PRINTER(LLIL_CONST_PTR)
-	ENUM_PRINTER(LLIL_RELOC_PTR)
+	ENUM_PRINTER(LLIL_EXTERN_PTR)
 	ENUM_PRINTER(LLIL_FLAG)
 	ENUM_PRINTER(LLIL_FLAG_BIT)
 	ENUM_PRINTER(LLIL_ADD)
@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
 					{
 					case LLIL_CONST:
 					case LLIL_CONST_PTR:
-					case LLIL_RELOC_PTR:
+					case LLIL_EXTERN_PTR:
 						printf("        Found constant 0x%" PRIx64 "\n", expr.GetConstant());
 						return false; // Done parsing this
 					default:
@@ -399,10 +399,10 @@ int main(int argc, char *argv[])
 								expr.GetSourceExpr<LLIL_LOAD>().GetConstant<LLIL_CONST_PTR>());
 							return false; // Done parsing this
 						}
-						else if (expr.GetSourceExpr<LLIL_LOAD>().operation == LLIL_RELOC_PTR)
+						else if (expr.GetSourceExpr<LLIL_LOAD>().operation == LLIL_EXTERN_PTR)
 						{
 							printf("        Loading from address 0x%" PRIx64 "\n",
-								expr.GetSourceExpr<LLIL_LOAD>().GetConstant<LLIL_RELOC_PTR>());
+								expr.GetSourceExpr<LLIL_LOAD>().GetConstant<LLIL_EXTERN_PTR>());
 							return false; // Done parsing this
 						}
 						break;

@@ -989,6 +989,12 @@ namespace BinaryNinja
 		MediumLevelILIndexList GetSourceMemoryVersions() const { return GetRawOperandAsIndexList(1); }
 	};
 
+	template <> struct MediumLevelILInstructionAccessor<MLIL_EXTERN_PTR>: public MediumLevelILConstantInstruction
+	{
+		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
+		int64_t GetOffset() const { return GetRawOperandAsInteger(1); }
+	};
+
 	template <> struct MediumLevelILInstructionAccessor<MLIL_NOP>: public MediumLevelILInstructionBase {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_NORET>: public MediumLevelILInstructionBase {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_BP>: public MediumLevelILInstructionBase {};

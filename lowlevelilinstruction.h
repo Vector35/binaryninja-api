@@ -218,7 +218,8 @@ namespace BinaryNinja
 		OutputSSARegisterOrFlagListLowLevelOperandUsage,
 		SourceMemoryVersionsLowLevelOperandUsage,
 		TargetListLowLevelOperandUsage,
-		RegisterStackAdjustmentsLowLevelOperandUsage
+		RegisterStackAdjustmentsLowLevelOperandUsage,
+		OffsetLowLevelOperandUsage
 	};
 }
 
@@ -711,6 +712,7 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> SSARegister GetLowSSARegister() const { return As<N>().GetLowSSARegister(); }
 		template <BNLowLevelILOperation N> uint32_t GetIntrinsic() const { return As<N>().GetIntrinsic(); }
 		template <BNLowLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
+		template <BNLowLevelILOperation N> uint64_t GetOffset() const { return As<N>().GetOffset(); }
 		template <BNLowLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
 		template <BNLowLevelILOperation N> size_t GetStackAdjustment() const { return As<N>().GetStackAdjustment(); }
 		template <BNLowLevelILOperation N> size_t GetTarget() const { return As<N>().GetTarget(); }
@@ -775,6 +777,7 @@ namespace BinaryNinja
 		SSARegister GetLowSSARegister() const;
 		uint32_t GetIntrinsic() const;
 		int64_t GetConstant() const;
+		uint64_t GetOffset() const;
 		int64_t GetVector() const;
 		size_t GetStackAdjustment() const;
 		size_t GetTarget() const;
@@ -868,6 +871,11 @@ namespace BinaryNinja
 	struct LowLevelILConstantInstruction: public LowLevelILInstructionBase
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
+	};
+
+	struct LowLevelILOffsetInstruction: public LowLevelILInstructionBase
+	{
+		int64_t GetOffset() const { return GetRawOperandAsInteger(1); }
 	};
 
 	struct LowLevelILOneOperandInstruction: public LowLevelILInstructionBase
@@ -1216,6 +1224,12 @@ namespace BinaryNinja
 		LowLevelILIndexList GetSourceMemoryVersions() const { return GetRawOperandAsIndexList(1); }
 	};
 
+	template <> struct LowLevelILInstructionAccessor<LLIL_EXTERN_PTR>: public LowLevelILConstantInstruction
+	{
+		size_t GetConstant() const { return GetRawOperandAsIndex(0); }
+		size_t GetOffset() const { return GetRawOperandAsIndex(1); }
+	};
+
 	template <> struct LowLevelILInstructionAccessor<LLIL_NOP>: public LowLevelILInstructionBase {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_POP>: public LowLevelILInstructionBase {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_NORET>: public LowLevelILInstructionBase {};
@@ -1226,7 +1240,6 @@ namespace BinaryNinja
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_CONST>: public LowLevelILConstantInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CONST_PTR>: public LowLevelILConstantInstruction {};
-	template <> struct LowLevelILInstructionAccessor<LLIL_RELOC_PTR>: public LowLevelILConstantInstruction {};
 	template <> struct LowLevelILInstructionAccessor<LLIL_FLOAT_CONST>: public LowLevelILConstantInstruction {};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_ADD>: public LowLevelILTwoOperandInstruction {};

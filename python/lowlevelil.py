@@ -223,7 +223,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_REG_STACK_FREE_REL: [("stack", "reg_stack"), ("dest", "expr")],
 		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
 		LowLevelILOperation.LLIL_CONST_PTR: [("constant", "int")],
-		LowLevelILOperation.LLIL_RELOC_PTR: [("constant", "int")],
+		LowLevelILOperation.LLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
 		LowLevelILOperation.LLIL_FLOAT_CONST: [("constant", "float")],
 		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
 		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
@@ -1101,7 +1101,7 @@ class LowLevelILFunction(object):
 		:return: A constant expression of given value and size
 		:rtype: LowLevelILExpr
 		"""
-		return self.expr(LowLevelILOperation.LLIL_RELOC_PTR, value, size=size)
+		return self.expr(LowLevelILOperation.LLIL_EXTERN_PTR, value, size=size)
 
 	def float_const_raw(self, size, value):
 		"""

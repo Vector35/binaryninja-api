@@ -2118,7 +2118,7 @@ Ref<Section> BinaryView::GetSectionByName(const string& name)
 {
 	BNSection* section = BNGetSectionByName(m_object, name.c_str());
 	if (section)
-		return new Section(section);
+		return new Section(BNNewSectionReference(section));
 	return nullptr;
 }
 

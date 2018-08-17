@@ -3063,6 +3063,8 @@ namespace BinaryNinja
 		size_t GetMediumLevelILExprIndex(size_t expr) const;
 		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
+
+		static bool IsConstantType(BNLowLevelILOperation type) { return type == LLIL_CONST || type == LLIL_CONST_PTR || type == LLIL_EXTERN_PTR; }
 	};
 
 	struct MediumLevelILLabel: public BNMediumLevelILLabel
@@ -3393,6 +3395,8 @@ namespace BinaryNinja
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
+
+		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
 	};
 
 	class FunctionRecognizer

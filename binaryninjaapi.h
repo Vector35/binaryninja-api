@@ -2545,6 +2545,8 @@ namespace BinaryNinja
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
+
+		void RequestDebugReport(const std::string& name);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor

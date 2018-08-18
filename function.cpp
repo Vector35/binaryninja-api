@@ -1412,6 +1412,12 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 }
 
 
+void Function::RequestDebugReport(const string& name)
+{
+	BNRequestFunctionDebugReport(m_object, name.c_str());
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
 {
 	if (m_func)

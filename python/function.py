@@ -1591,6 +1591,10 @@ class Function(object):
 			arch = self.arch
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
 
+	def request_debug_report(self, name):
+		core.BNRequestFunctionDebugReport(self.handle, name)
+		self.view.update_analysis()
+
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):

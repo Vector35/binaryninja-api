@@ -215,7 +215,7 @@ static void ShowGraphReportCallback(void* ctxt, BNBinaryView* view, const char* 
 static void ShowReportCollectionCallback(void* ctxt, const char* title, BNReportCollection* reports)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowReportCollection(title, new ReportCollection(reports));
+	handler->ShowReportCollection(title, new ReportCollection(BNNewReportCollectionReference(reports)));
 }
 
 

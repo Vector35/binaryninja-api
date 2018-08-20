@@ -2937,6 +2937,7 @@ namespace BinaryNinja
 		uint32_t GetTemporaryFlagCount();
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
 
 		Ref<LowLevelILFunction> GetSSAForm() const;
 		Ref<LowLevelILFunction> GetNonSSAForm() const;
@@ -3256,6 +3257,7 @@ namespace BinaryNinja
 		void VisitAllExprs(const std::function<bool(BasicBlock* block, const MediumLevelILInstruction& expr)>& func);
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
 
 		Ref<MediumLevelILFunction> GetSSAForm() const;
 		Ref<MediumLevelILFunction> GetNonSSAForm() const;

@@ -491,6 +491,15 @@ vector<Ref<BasicBlock>> LowLevelILFunction::GetBasicBlocks() const
 }
 
 
+Ref<BasicBlock> LowLevelILFunction::GetBasicBlockForInstruction(size_t i) const
+{
+	BNBasicBlock* block = BNGetLowLevelILBasicBlockForInstruction(m_object, i);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
+}
+
+
 Ref<LowLevelILFunction> LowLevelILFunction::GetSSAForm() const
 {
 	BNLowLevelILFunction* func = BNGetLowLevelILSSAForm(m_object);

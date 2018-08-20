@@ -143,7 +143,7 @@ Now with some knowledge of the `LowLevelIL` class lets try to do something with 
 ```
 >>> for block in current_function.low_level_il:
 ...  for instr in block:
-...   if instr.operation == LowLevelILOperation.LLIL_SET_REG and instr.dest == 'rdx':
+...   if instr.operation == LowLevelILOperation.LLIL_SET_REG and instr.dest.name == 'rdx':
 ...    print instr.address, instr.instr_index, instr
 ... 
 4196490 14 rdx = [rax].q

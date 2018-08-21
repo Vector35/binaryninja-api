@@ -851,6 +851,7 @@ extern "C"
 		MLIL_LOW_PART,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
+		MLIL_RET_HINT, // Intermediate stages, does not appear in final forms
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
 		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions

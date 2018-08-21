@@ -128,6 +128,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_CALL_OUTPUT: [("dest", "var_list")],

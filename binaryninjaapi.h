@@ -3187,6 +3187,7 @@ namespace BinaryNinja
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId JumpTo(ExprId dest, const std::vector<BNMediumLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,

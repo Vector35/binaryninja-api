@@ -1950,6 +1950,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 		void (*progress)(void* ctxt, size_t progress, size_t total));
 
+	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
+	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);
+
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
 

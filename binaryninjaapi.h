@@ -821,6 +821,9 @@ namespace BinaryNinja
 
 		void SetNavigationHandler(NavigationHandler* handler);
 
+		std::string GetOriginalFilename() const;
+		void SetOriginalFilename(const std::string& name);
+
 		std::string GetFilename() const;
 		void SetFilename(const std::string& name);
 

@@ -260,6 +260,10 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 |Plugin     | Setting                  | Type         | Default                                        | Description                                                                                   |
 |----------:|-------------------------:|-------------:|-----------------------------------------------:|:----------------------------------------------------------------------------------------------|
 | analysis  | autorunLinearSweep       | boolean      | True                                           | Automatically run linear sweep when opening a binary for analysis                             |
+| analysis  | enabledUnicodeBlocks     | list(string) | []                                             | Defines which Unicode blocks to consider when searching for strings                           |
+| analysis  | enableUTF8               | boolean      | True                                           | Whether or not to consider UTF-8 code points when searching for strings                       |
+| analysis  | enableUTF16              | boolean      | True                                           | Whether or not to consider UTF-16 code points when searching for strings                      |
+| analysis  | enableUTF32              | boolean      | True                                           | Whether or not to consider UTF-32 code points when searching for strings                      |
 | analysis  | max-function-size        | integer      | 65536                                          | Any functions over this size will not be automatically analyzed and require manual override   |
 | core      | linux\_ca\_bundle        | string       | ""                                             | Certificate authority (.pem or .crt) file to be used for secure downloads                     |
 | core      | linux\_ca\_dir           | string       | ""                                             | Certificate authority directory (for distributions without a CA bundle)                       |
@@ -292,6 +296,11 @@ Below is an example `settings.json` setting various options:
     }
 }
 ```
+
+## Unicode Support
+
+Currently, Unicode support for Big Endian strings is very limited. Also, UTF-16 only supports Basic Latin code points.
+
 ## Getting Support
 
 Vector 35 offers a number of ways to get Binary Ninja [support](https://binary.ninja/support/).

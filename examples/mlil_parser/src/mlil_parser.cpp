@@ -323,17 +323,10 @@ int main(int argc, char *argv[])
 
 				// Example of using visitors to find all constants in the instruction
 				instr.VisitExprs([&](const MediumLevelILInstruction& expr) {
-					switch (expr.operation)
-					{
-					case MLIL_CONST:
-					case MLIL_CONST_PTR:
-					case MLIL_EXTERN_PTR:
+					bool status = MediumLevelILFunction::IsConstantType(expr.operation);
+					if (status)
 						printf("        Found constant 0x%" PRIx64 "\n", expr.GetConstant());
-						return false; // Done parsing this
-					default:
-						break;
-					}
-					return true; // Parse any subexpressions
+					return !status;
 				});
 
 				// Example of using the templated accessors for efficiently parsing load instructions

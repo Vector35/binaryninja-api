@@ -2417,6 +2417,7 @@ namespace BinaryNinja
 	{
 		BNRegisterValueType state;
 		int64_t value;
+		int64_t offset;
 
 		RegisterValue();
 		static RegisterValue FromAPIObject(const BNRegisterValue& value);
@@ -2427,6 +2428,7 @@ namespace BinaryNinja
 	{
 		BNRegisterValueType state;
 		int64_t value;
+		int64_t offset;
 		std::vector<BNValueRange> ranges;
 		std::set<int64_t> valueSet;
 		std::vector<LookupTableEntry> table;
@@ -3421,27 +3423,30 @@ namespace BinaryNinja
 			BNRelocationInfo* result, size_t resultCount);
 		static bool ApplyRelocationCallback(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc,
 			uint8_t* dest, size_t len);
-
+		static size_t GetOperandForExternalRelocationCallback(void* ctxt, const uint8_t* data, uint64_t addr,
+			size_t length, BNLowLevelILFunction* il, BNRelocation* relocation);
 	protected:
 		RelocationHandler();
 		RelocationHandler(BNRelocationHandler* handler);
 		static void FreeCallback(void* ctxt);
 
 	public:
-
 		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result);
 		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
 			size_t len);
+		virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
+			Ref<LowLevelILFunction> il, Ref<Relocation> relocation);
 	};
 
 	class CoreRelocationHandler: public RelocationHandler
 	{
 	public:
 		CoreRelocationHandler(BNRelocationHandler* handler);
-
 		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result) override;
 		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
 			size_t len) override;
+		virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
+			Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override;
 	};
 
 	class UpdateException: public std::exception

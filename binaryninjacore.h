@@ -64,6 +64,7 @@
 #define LLIL_GET_TEMP_REG_INDEX(n)  ((n) & 0x7fffffff)
 #define BN_INVALID_REGISTER         0xffffffff
 
+#define BN_NOCOERCE_EXTERN_PTR      0xfffffffe
 #define BN_INVALID_OPERAND          0xffffffff
 
 #define BN_INVALID_EXPR             ((size_t)-1)
@@ -733,6 +734,7 @@ extern "C"
 		EntryValue,
 		ConstantValue,
 		ConstantPointerValue,
+		ExternalPointerValue,
 		StackFrameOffset,
 		ReturnAddressValue,
 		ImportedAddressValue,
@@ -777,6 +779,7 @@ extern "C"
 	{
 		BNRegisterValueType state;
 		int64_t value;
+		int64_t offset;
 	};
 
 	struct BNRegisterValueWithConfidence
@@ -794,6 +797,7 @@ extern "C"
 	{
 		BNRegisterValueType state;
 		int64_t value;
+		int64_t offset;
 		BNValueRange* ranges;
 		int64_t* valueSet;
 		BNLookupTableEntry* table;
@@ -1124,12 +1128,13 @@ extern "C"
 		StandardRelocationType,
 		IgnoredRelocation
 	};
-
+	#define MAX_RELOCATION_SIZE 8
 	struct BNRelocationInfo
 	{
 		BNRelocationType type; // BinaryNinja Relocation Type
 		bool pcRelative;       // PC Relative or Absolute (subtract address from relocation)
 		bool baseRelative;   // Relative to start of module (Add module base to relocation)
+		uint64_t base;       // Base address for this binary view
 		size_t size;         // Size of the data to be written
 		size_t truncateSize; // After addition/subtraction truncate to
 		uint64_t nativeType; // Base type from relocation entry
@@ -1141,6 +1146,9 @@ extern "C"
 		size_t sectionIndex; // Index into the section table
 		uint64_t address;    // Absolute address or segment offset
 		bool dataRelocation; // This relocation is effecting data not code
+		uint8_t relocationDataCache[MAX_RELOCATION_SIZE];
+		struct BNRelocationInfo* prev; // Link to relocation another related relocation
+		struct BNRelocationInfo* next; // Link to relocation another related relocation
 	};
 
 	struct BNInstructionTextToken
@@ -1403,6 +1411,8 @@ extern "C"
 			size_t resultCount);
 		bool (*applyRelocation)(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest,
 			size_t len);
+		size_t (*getOperandForExternalRelocation)(void* ctxt, const uint8_t* data, uint64_t addr, size_t length,
+			BNLowLevelILFunction* il, BNRelocation* relocation);
 	};
 
 	struct BNTypeParserResult
@@ -2346,6 +2356,8 @@ extern "C"
 		BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len);
 	BINARYNINJACOREAPI bool BNRelocationHandlerDefaultApplyRelocation(BNRelocationHandler* handler, BNBinaryView* view,
 		BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len);
+	BINARYNINJACOREAPI size_t BNRelocationHandlerGetOperandForExternalRelocation(BNRelocationHandler* handler,
+		const uint8_t* data, uint64_t addr, size_t length, const BNLowLevelILFunction* il, BNRelocation* relocation);
 	// Analysis
 	BINARYNINJACOREAPI void BNAddAnalysisOption(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNAddFunctionForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);

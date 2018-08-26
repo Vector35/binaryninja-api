@@ -91,7 +91,7 @@ Variable Variable::FromIdentifier(uint64_t id)
 }
 
 
-RegisterValue::RegisterValue(): state(UndeterminedValue), value(0)
+RegisterValue::RegisterValue(): state(UndeterminedValue), value(0), offset(0)
 {
 }
 
@@ -101,6 +101,7 @@ BNRegisterValue RegisterValue::ToAPIObject()
 	BNRegisterValue result;
 	result.state = state;
 	result.value = value;
+	result.offset = offset;
 	return result;
 }
 
@@ -278,6 +279,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 	PossibleValueSet result;
 	result.state = value.state;
 	result.value = value.value;
+	result.offset = value.offset;
 	if (value.state == LookupTableValue)
 	{
 		for (size_t i = 0; i < value.count; i++)

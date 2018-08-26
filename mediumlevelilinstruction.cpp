@@ -168,7 +168,7 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
 		{MLIL_CONST, {ConstantMediumLevelOperandUsage}},
 		{MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
-		{MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage}},
+		{MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
 		{MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}},
 		{MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
 		{MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},

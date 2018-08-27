@@ -1,2 +1,0 @@
-recursive-include material *.ico *.js *.css *.html *.eot *.svg *.ttf *.woff
-recursive-exclude site *

@@ -1,15 +1,25 @@
-site_name: 'Binary Ninja Documentation'
+site_name: 'Binary Ninja User Documentation'
 site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
 repo_name: 'github'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 LLC'
-site_favicon: 'favicon.ico'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
-extra_css: ['docs.css?1492471077']
+extra_css: ['docs.css?1535411024']
+theme:
+    name: readthedocs
+    favicon: 'img/favicon.ico'
+    highlightjs: true
+    hljs_languages:
+        - cpp
+        - python
+    shortcuts:
+        help: 191    # ?
+        next: 78     # n
+        previous: 80 # p
+        search: 191   # ? / /
 
-theme_dir: 'mkdocs-material/material'
 copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'
 
 markdown_extensions:
@@ -18,7 +28,7 @@ markdown_extensions:
     - toc:
         permalink: True
 
-pages:
+nav:
     - Home: 'index.md'
     - Getting Started Guide: 'getting-started.md'
     - User Guide:

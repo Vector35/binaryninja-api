@@ -174,7 +174,7 @@ Note that any changes made in the Hex view will take effect immediately in any o
 
 The xrefs view in the lower-left shows all cross-references to a given location or reference. Note that the cross-references pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected.
 
-One fun trick that the xrefs view has up its sleeve: when in [Hex View](#hexview), a large range of memory addresses can be selected and the xrefs pane will show all xrefs to any location within that range of data.
+One fun trick that the xrefs view has up its sleeve: when in [Hex View](#hex-view), a large range of memory addresses can be selected and the xrefs pane will show all xrefs to any location within that range of data.
 
 ### Linear View
 

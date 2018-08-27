@@ -590,23 +590,23 @@ class TestBuilder(Builder):
             retinfo.append(i)
         return retinfo
 
-    def test_partial_register_dataflow(self):
-        """partial_register_dataflow produced different results"""
-        file_name = self.unpackage_file("partial_register_dataflow")
-        result = []
-        reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-        bv = binja.BinaryViewType.get_view_of_file(file_name)
-        for func in bv.functions:
-            llil = func.low_level_il
-            for i in range(0, llil.__len__()-1):
-                for x in reg_list:
-                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value(x)).replace('L', ''))
-                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values(x)).replace('L', ''))
-                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value_after(x)).replace('L', ''))
-                    result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values_after(x)).replace('L', ''))
-        bv.file.close()
-        del bv
-        return result
+    #  def test_partial_register_dataflow(self):
+    #      """partial_register_dataflow produced different results"""
+    #      file_name = self.unpackage_file("partial_register_dataflow")
+    #      result = []
+    #      reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+    #      bv = binja.BinaryViewType.get_view_of_file(file_name)
+    #      for func in bv.functions:
+    #          llil = func.low_level_il
+    #          for i in range(0, llil.__len__()-1):
+    #              for x in reg_list:
+    #                  result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value(x)).replace('L', ''))
+    #                  result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values(x)).replace('L', ''))
+    #                  result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_reg_value_after(x)).replace('L', ''))
+    #                  result.append("LLIL:" + str(i).replace('L', '') + ":" + x + ":" + str(llil[i].get_possible_reg_values_after(x)).replace('L', ''))
+    #      bv.file.close()
+    #      del bv
+    #      return result
 
 
     def test_low_il_stack(self):

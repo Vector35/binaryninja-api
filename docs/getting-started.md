@@ -33,7 +33,7 @@ Contents of the user folder includes:
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: Advanced settings (see [settings](#settings))
 
-![license popup >](/images/license-popup.png "License Popup")
+![license popup >](/img/license-popup.png "License Popup")
 
 ## License
 
@@ -57,12 +57,12 @@ You can load files in many ways:
 5. Opening a file from a URL via the `⌘-l` or `⌃-l` hotkey
 6. Opening a file using the binaryninja: url handler. For security reasons, the url handler requires you to confirm a warning before opening a file via the url handler. The url handler can open remote URLs like: `binaryninja:https://captf.com/2015/plaidctf/pwnable/datastore_7e64104f876f0aa3f8330a409d9b9924.elf`, or even local files like `binarynina://bin/ls` in cases where you wish to script up Binary Ninja from a local webapp.
 
-![recent files](/images/recent.png "Recent Files")
+![recent files](/img/recent.png "Recent Files")
 
 
 ## Analysis
 
-![auto analysis ><](/images/analysis.png "Auto Analysis")
+![auto analysis ><](/img/analysis.png "Auto Analysis")
 
 As soon as you open a file, Binary Ninja begins its auto-analysis.
 
@@ -76,7 +76,7 @@ Errors or warnings during the load of the binary are also shown in the status ba
 
 Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jmp edges, etc, can all be double-clicked to navigate. Additionally, The `g` hotkey can navigate to a specific address in the current view.
 
-![graph view](/images/view-choices.png "Different Views")
+![graph view](/img/view-choices.png "Different Views")
 
 Switching views happens multiple ways. In some instances, it's automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
 
@@ -111,11 +111,11 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
 
 ### Graph View
 
-![graph view](/images/graphview.png "Graph View")
+![graph view](/img/graphview.png "Graph View")
 
 The default view in Binary Ninja when opening a binary is a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
 
-![graph view context >](/images/graphcontext.png "Graph View Contet Menu")
+![graph view context >](/img/graphcontext.png "Graph View Contet Menu")
 
 Features of the graph view include:
 
@@ -129,7 +129,7 @@ Features of the graph view include:
 
 ### View Options
 
-![options ><](/images/options.png "options")
+![options ><](/img/options.png "options")
 
 Each of the views (Hex, Graph, Linear) have a variety of options configurable in the bottom-right of the UI.
 
@@ -162,7 +162,7 @@ Current options include:
 
 ### Hex View
 
-![hex >](/images/hex.png "hex view")
+![hex >](/img/hex.png "hex view")
 
 The hexadecimal view is useful for view raw binary files that may or may not even be executable binaries. The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that `Transform` menu options will transform the data in-place, and that these options will only work when the Hex View is in the `Raw` mode as opposd to any of the binary views (such as "ELF", "Mach-O", or "PE").
 
@@ -170,7 +170,7 @@ Note that any changes made in the Hex view will take effect immediately in any o
 
 ### Xrefs View
 
-![xrefs >](/images/xrefs.png "xrefs")
+![xrefs >](/img/xrefs.png "xrefs")
 
 The xrefs view in the lower-left shows all cross-references to a given location or reference. Note that the cross-references pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected.
 
@@ -178,7 +178,7 @@ One fun trick that the xrefs view has up its sleeve: when in [Hex View](#hexview
 
 ### Linear View
 
-![linear](/images/linear.png "linear view")
+![linear](/img/linear.png "linear view")
 
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
@@ -187,7 +187,7 @@ Linear view is most commonly used for identifying and adding type information fo
 
 ### Function List
 
-![function list >](/images/functionlist.png "Function List")
+![function list >](/img/functionlist.png "Function List")
 
 The function list in Binary Ninja shows the list of functions currently identified. As large binaries are analyzed, the list may grow during analysis. The function list starts with known functions such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions.
 
@@ -198,7 +198,7 @@ The function list also highlights imports, and functions identified with symbols
 
 ### Script (Python) Console
 
-![console >](/images/console.png "Console")
+![console >](/img/console.png "Console")
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
@@ -247,7 +247,7 @@ Binary Ninja supports loading PDB files through the built in PDB plugin. When se
 
 ## Preferences/Updates
 
-![preferences >](/images/preferences.png "Preferences")
+![preferences >](/img/preferences.png "Preferences")
 
 Binary Ninja automatically updates itself by default. This functionality can be disabled in the preferences by turning off the `Update to latest version automatically` option. Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 

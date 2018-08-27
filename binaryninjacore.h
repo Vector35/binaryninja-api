@@ -64,6 +64,7 @@
 #define LLIL_GET_TEMP_REG_INDEX(n)  ((n) & 0x7fffffff)
 #define BN_INVALID_REGISTER         0xffffffff
 
+#define BN_AUTOCOERCE_EXTERN_PTR    0xfffffffd
 #define BN_NOCOERCE_EXTERN_PTR      0xfffffffe
 #define BN_INVALID_OPERAND          0xffffffff
 

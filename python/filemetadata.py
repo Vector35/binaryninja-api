@@ -114,8 +114,17 @@ class FileMetadata(object):
 		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
+	def original_filename(self):
+		"""The original name of the binary opened if a bndb, otherwise reads or sets the current filename (read/write)"""
+		return core.BNGetOriginalFilename(self.handle)
+
+	@original_filename.setter
+	def original_filename(self, value):
+		core.BNSetOriginalFilename(self.handle, str(value))
+
+	@property
 	def filename(self):
-		"""The name of the file (read/write)"""
+		"""The name of the open bndb or binary filename (read/write)"""
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter

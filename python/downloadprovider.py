@@ -26,6 +26,8 @@ import traceback
 
 # Binary Ninja Components
 import binaryninja._binaryninjacore as core
+
+import binaryninja
 from binaryninja.setting import Setting
 from binaryninja import with_metaclass
 from binaryninja import startup
@@ -79,7 +81,7 @@ class _DownloadProviderMetaclass(type):
 	@property
 	def list(self):
 		"""List all DownloadProvider types (read-only)"""
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetDownloadProviderList(count)
 		result = []
@@ -89,7 +91,7 @@ class _DownloadProviderMetaclass(type):
 		return result
 
 	def __iter__(self):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetDownloadProviderList(count)
 		try:
@@ -99,7 +101,7 @@ class _DownloadProviderMetaclass(type):
 			core.BNFreeDownloadProviderList(types)
 
 	def __getitem__(self, value):
-		startup._init_plugins()
+		binaryninja._init_plugins()
 		provider = core.BNGetDownloadProviderByName(str(value))
 		if provider is None:
 			raise KeyError("'%s' is not a valid download provider" % str(value))

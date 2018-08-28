@@ -94,6 +94,32 @@ ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl
 
 One Gentoo user [reported][issue672] a failed SSL certificate when trying to update. The solution was to copy over `/etc/ssl/certs/ca-certificates.crt` from another Linux distribution.
 
+### NixOS
+
+Here's a customer-provided nix derivation file for the Binary Ninja demo. Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
+
+```
+{ stdenv, autoPatchelfHook, makeWrapper, fetchurl, unzip, libGL, glib, fontconfig, xlibs, dbus, xkeyboard_config }:
+stdenv.mkDerivation rec {
+  name = "binary-ninja-demo";
+  buildInputs = [ autoPatchelfHook makeWrapper unzip libGL stdenv.cc.cc.lib glib fontconfig xlibs.libXi xlibs.libXrender dbus ];
+  src = fetchurl {
+    url = "https://cdn.binary.ninja/installers/BinaryNinja-demo.zip";
+    sha256 = "1yq2kgrhrwdi7f66jm1w5sc6r49hdhqnff9b0ysr5k65w9kxhl1k";
+  };
+  
+  buildPhase = ":";
+  installPhase = ''
+    mkdir -p $out/bin
+    mkdir -p $out/opt
+    cp -r * $out/opt
+    chmod +x $out/opt/binaryninja
+    makeWrapper $out/opt/binaryninja \
+          $out/bin/binaryninja \
+          --prefix "QT_XKB_CONFIG_ROOT" ":" "${xkeyboard_config}/share/X11/xkb"
+  '';
+}```
+
 ## API
 
  - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python. Only a 64-bit Python 2.7 is supported at this time. Additionally, the [personal][purchase] edition does not support headless operation.

@@ -335,6 +335,11 @@ class MediumLevelILInstruction(object):
 		return result
 
 	@property
+	def il_basic_block(self):
+		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
+		return MediumLevelILBasicBlock(self.function.source_function.view, core.BNGetMediumLevelILBasicBlockForInstruction(self.function.handle, self.instr_index), self.function)
+
+	@property
 	def ssa_form(self):
 		"""SSA form of expression (read-only)"""
 		return MediumLevelILInstruction(self.function.ssa_form,

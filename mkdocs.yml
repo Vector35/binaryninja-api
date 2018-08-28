@@ -6,7 +6,7 @@ site_description: 'Documentation for the Binary Ninja reverse engineering platfo
 site_author: 'Vector 35 LLC'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
-extra_css: ['docs.css?1535411024']
+extra_css: ['docs.css?1535411025']
 theme:
     name: readthedocs
     favicon: 'img/favicon.ico'

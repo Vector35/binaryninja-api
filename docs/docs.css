@@ -78,11 +78,16 @@ pre {
 	color: #fff;
 }
 
-.wy-side-nav-search a:visited{
-color: #fff;
+.toctree-l1 a:visited, .toctree-l1 a:hover, .toctree-l1 a {
+color: #ccc;
 }
 
-.toctree-l1 a:visited {
-color: #ccc;
+.wy-nav-top {
+	background-color: #d73726 !important;
+	color: #fff !important;
+}
+
+.wy-nav-top a:visited, .wy-nav-top a:hover, .wy-nav-top a, .wy-side-nav-search a:visited, .wy-side-nav-search a:hover, .wy-side-nav-search a {
+color: #fff;
 }
 

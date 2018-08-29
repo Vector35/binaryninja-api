@@ -1369,7 +1369,7 @@ namespace BinaryNinja
 		BNRelocationInfo GetInfo() const;
 		Architecture* GetArchitecture() const;
 		uint64_t GetTarget() const;
-		uint64_t GetReloc() const;
+		uint64_t GetAddress() const;
 		Ref<Symbol> GetSymbol() const;
 	};
 

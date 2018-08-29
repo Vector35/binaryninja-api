@@ -2245,7 +2245,7 @@ uint64_t Relocation::GetTarget() const
 }
 
 
-uint64_t Relocation::GetReloc() const
+uint64_t Relocation::GetAddress() const
 {
 	return BNRelocationGetReloc(m_object);
 }

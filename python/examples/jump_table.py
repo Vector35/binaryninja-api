@@ -43,16 +43,16 @@ def find_jump_table(bv, addr):
 				break
 			jump_addr += info.length
 		if jump_addr >= block.end:
-			print "Unable to find jump after instruction 0x%x" % addr
+			print("Unable to find jump after instruction 0x%x" % addr)
 			continue
-		print "Jump at 0x%x" % jump_addr
+		print("Jump at 0x%x" % jump_addr)
 
 		# Collect the branch targets for any tables referenced by the clicked instruction
 		branches = []
 		for token in tokens:
 			if InstructionTextTokenType(token.type) == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
 				tbl = token.value
-				print "Found possible table at 0x%x" % tbl
+				print("Found possible table at 0x%x" % tbl)
 				i = 0
 				while True:
 					# Read the next pointer from the table
@@ -66,7 +66,7 @@ def find_jump_table(bv, addr):
 						# If the pointer is within the binary, add it as a destination and continue
 						# to the next entry
 						if (ptr >= bv.start) and (ptr < bv.end):
-							print "Found destination 0x%x" % ptr
+							print("Found destination 0x%x" % ptr)
 							branches.append((arch, ptr))
 						else:
 							# Once a value that is not a pointer is encountered, the jump table is ended

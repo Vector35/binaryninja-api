@@ -404,6 +404,15 @@ vector<Ref<BasicBlock>> MediumLevelILFunction::GetBasicBlocks() const
 }
 
 
+Ref<BasicBlock> MediumLevelILFunction::GetBasicBlockForInstruction(size_t i) const
+{
+	BNBasicBlock* block = BNGetMediumLevelILBasicBlockForInstruction(m_object, i);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
+}
+
+
 Ref<MediumLevelILFunction> MediumLevelILFunction::GetSSAForm() const
 {
 	BNMediumLevelILFunction* func = BNGetMediumLevelILSSAForm(m_object);

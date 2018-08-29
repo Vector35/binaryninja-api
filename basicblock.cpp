@@ -245,8 +245,8 @@ set<Ref<BasicBlock>> BasicBlock::GetIteratedDominanceFrontier(const set<Ref<Basi
 	delete[] blockSet;
 
 	set<Ref<BasicBlock>> result;
-	for (size_t i = 0; i < count; i++)
-		result.insert(new BasicBlock(BNNewBasicBlockReference(resultBlocks[i])));
+	for (size_t k = 0; k < count; k++)
+		result.insert(new BasicBlock(BNNewBasicBlockReference(resultBlocks[k])));
 
 	BNFreeBasicBlockList(resultBlocks, count);
 	return result;

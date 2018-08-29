@@ -774,6 +774,9 @@ namespace BinaryNinja
 
 		void SetNavigationHandler(NavigationHandler* handler);
 
+		std::string GetOriginalFilename() const;
+		void SetOriginalFilename(const std::string& name);
+
 		std::string GetFilename() const;
 		void SetFilename(const std::string& name);
 
@@ -1359,6 +1362,8 @@ namespace BinaryNinja
 		void SetParametersForAnalysis(BNAnalysisParameters params);
 		uint64_t GetMaxFunctionSizeForAnalysis();
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
+		bool GetNewAutoFunctionAnalysisSuppressed();
+		void SetNewAutoFunctionAnalysisSuppressed(bool suppress);
 	};
 
 
@@ -3023,6 +3028,7 @@ namespace BinaryNinja
 		uint32_t GetTemporaryFlagCount();
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
 
 		Ref<LowLevelILFunction> GetSSAForm() const;
 		Ref<LowLevelILFunction> GetNonSSAForm() const;
@@ -3345,6 +3351,7 @@ namespace BinaryNinja
 		void VisitAllExprs(const std::function<bool(BasicBlock* block, const MediumLevelILInstruction& expr)>& func);
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
 
 		Ref<MediumLevelILFunction> GetSSAForm() const;
 		Ref<MediumLevelILFunction> GetNonSSAForm() const;
@@ -3793,6 +3800,7 @@ namespace BinaryNinja
 	protected:
 		DownloadInstance(DownloadProvider* provider);
 		DownloadInstance(BNDownloadInstance* instance);
+		virtual ~DownloadInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static int PerformRequestCallback(void* ctxt, const char* url);
@@ -3803,15 +3811,17 @@ namespace BinaryNinja
 		virtual int PerformRequest(const std::string& url) = 0;
 
 		int PerformRequest(const std::string& url, BNDownloadInstanceOutputCallbacks* callbacks);
-
-		std::string GetError() const;
+		uint64_t WriteDataCallback(uint8_t* data, uint64_t len);
+		bool NotifyProgressCallback(uint64_t progress, uint64_t total);
 		void SetError(const std::string& error);
+		std::string GetError() const;
 	};
 
 	class CoreDownloadInstance: public DownloadInstance
 	{
 	public:
 		CoreDownloadInstance(BNDownloadInstance* instance);
+		virtual ~CoreDownloadInstance() {};
 
 		virtual int PerformRequest(const std::string& url) override;
 	};
@@ -3867,6 +3877,7 @@ namespace BinaryNinja
 	protected:
 		ScriptingInstance(ScriptingProvider* provider);
 		ScriptingInstance(BNScriptingInstance* instance);
+		virtual ~ScriptingInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
@@ -3899,6 +3910,7 @@ namespace BinaryNinja
 	{
 	public:
 		CoreScriptingInstance(BNScriptingInstance* instance);
+		virtual ~CoreScriptingInstance() {};
 
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) override;
 		virtual void SetCurrentBinaryView(BinaryView* view) override;
@@ -3920,6 +3932,8 @@ namespace BinaryNinja
 
 	public:
 		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
+
+		std::string GetName();
 
 		static std::vector<Ref<ScriptingProvider>> GetList();
 		static Ref<ScriptingProvider> GetByName(const std::string& name);
@@ -4139,21 +4153,21 @@ namespace BinaryNinja
 	class Metadata: public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
 	{
 	public:
-		Metadata(BNMetadata* structuredData);
-		Metadata(bool data);
-		Metadata(const std::string& data);
-		Metadata(uint64_t data);
-		Metadata(int64_t data);
-		Metadata(double data);
-		Metadata(const std::vector<bool>& data);
-		Metadata(const std::vector<std::string>& data);
-		Metadata(const std::vector<uint64_t>& data);
-		Metadata(const std::vector<int64_t>& data);
-		Metadata(const std::vector<double>& data);
-		Metadata(const std::vector<uint8_t>& data);
-		Metadata(const std::vector<Ref<Metadata>>& data);
-		Metadata(const std::map<std::string, Ref<Metadata>>& data);
-		Metadata(MetadataType type);
+		explicit Metadata(BNMetadata* structuredData);
+		explicit Metadata(bool data);
+		explicit Metadata(const std::string& data);
+		explicit Metadata(uint64_t data);
+		explicit Metadata(int64_t data);
+		explicit Metadata(double data);
+		explicit Metadata(const std::vector<bool>& data);
+		explicit Metadata(const std::vector<std::string>& data);
+		explicit Metadata(const std::vector<uint64_t>& data);
+		explicit Metadata(const std::vector<int64_t>& data);
+		explicit Metadata(const std::vector<double>& data);
+		explicit Metadata(const std::vector<uint8_t>& data);
+		explicit Metadata(const std::vector<Ref<Metadata>>& data);
+		explicit Metadata(const std::map<std::string, Ref<Metadata>>& data);
+		explicit Metadata(MetadataType type);
 		virtual ~Metadata() {}
 
 		bool operator==(const Metadata& rhs);

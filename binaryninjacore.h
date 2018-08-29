@@ -521,7 +521,8 @@ extern "C"
 		FunctionTypeClass = 8,
 		VarArgsTypeClass = 9,
 		ValueTypeClass = 10,
-		NamedTypeReferenceClass = 11
+		NamedTypeReferenceClass = 11,
+		WideCharTypeClass = 12
 	};
 
 	enum BNNamedTypeReferenceClass
@@ -673,7 +674,8 @@ extern "C"
 	{
 		AsciiString = 0,
 		Utf16String = 1,
-		Utf32String = 2
+		Utf32String = 2,
+		Utf8String = 3
 	};
 
 	enum BNIntegerDisplayType
@@ -1593,6 +1595,7 @@ extern "C"
 		uint64_t maxFunctionAnalysisTime;
 		size_t maxFunctionUpdateCount;
 		size_t maxFunctionSubmitCount;
+		bool suppressNewAutoFunctionAnalysis;
 	};
 
 	struct BNDownloadInstanceOutputCallbacks
@@ -1890,7 +1893,8 @@ extern "C"
 		NoSkipReason,
 		AlwaysSkipReason,
 		ExceedFunctionSizeSkipReason,
-		ExceedFunctionAnalysisTimeSkipReason
+		ExceedFunctionAnalysisTimeSkipReason,
+		NewAutoFunctionAnalysisSuppressedReason
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2015,6 +2019,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 		void (*progress)(void* ctxt, size_t progress, size_t total));
+
+	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
+	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);
 
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
@@ -2607,6 +2614,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);
 	BINARYNINJACOREAPI uint64_t BNGetMaxFunctionSizeForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetMaxFunctionSizeForAnalysis(BNBinaryView* view, uint64_t size);
+	BINARYNINJACOREAPI bool BNGetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetNewAutoFunctionAnalysisSuppressed(BNBinaryView* view, bool suppress);
 
 	BINARYNINJACOREAPI BNAnalysisCompletionEvent* BNAddAnalysisCompletionEvent(BNBinaryView* view, void* ctxt,
 		void (*callback)(void* ctxt));
@@ -2848,6 +2857,7 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryFlagCount(BNLowLevelILFunction* func);
 
 	BINARYNINJACOREAPI BNBasicBlock** BNGetLowLevelILBasicBlockList(BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetLowLevelILBasicBlockForInstruction(BNLowLevelILFunction* func, size_t i);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILSSAForm(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILNonSSAForm(BNLowLevelILFunction* func);
@@ -2969,6 +2979,7 @@ extern "C"
 		BNArchitecture* arch, size_t i, BNInstructionTextToken** tokens, size_t* count);
 
 	BINARYNINJACOREAPI BNBasicBlock** BNGetMediumLevelILBasicBlockList(BNMediumLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetMediumLevelILBasicBlockForInstruction(BNMediumLevelILFunction* func, size_t i);
 
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILSSAForm(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILNonSSAForm(BNMediumLevelILFunction* func);

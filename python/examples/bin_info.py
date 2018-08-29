@@ -20,10 +20,14 @@
 # IN THE SOFTWARE.
 
 import sys
+
 import binaryninja.log as log
 from binaryninja.binaryview import BinaryViewType
 import binaryninja.interaction as interaction
 from binaryninja.plugin import PluginCommand
+
+# 2-3 compatibility
+from binaryninja import range
 
 
 def get_bininfo(bv):
@@ -48,13 +52,13 @@ def get_bininfo(bv):
 
 	contents += "| Start | Name   |\n"
 	contents += "|------:|:-------|\n"
-	for i in xrange(min(10, len(bv.functions))):
+	for i in range(min(10, len(bv.functions))):
 		contents += "| 0x%x | %s |\n" % (bv.functions[i].start, bv.functions[i].symbol.full_name)
 
 	contents += "### First 10 Strings ###\n"
 	contents += "| Start | Length | String |\n"
 	contents += "|------:|-------:|:-------|\n"
-	for i in xrange(min(10, len(bv.strings))):
+	for i in range(min(10, len(bv.strings))):
 		start = bv.strings[i].start
 		length = bv.strings[i].length
 		string = bv.read(start, length)
@@ -67,6 +71,6 @@ def display_bininfo(bv):
 
 
 if __name__ == "__main__":
-	print get_bininfo(None)
+	print(get_bininfo(None))
 else:
 	PluginCommand.register("Binary Info", "Display basic info about the binary", display_bininfo)

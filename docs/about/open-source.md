@@ -32,6 +32,7 @@ The previous tools are used in the generation of our documentation, but are not 
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
+    - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
     - [capstone] ([capstone license] - 3-clause BSD) used in the PPC architecture module as an example of how to wrap an external disassembler
 
 * Upvector update library
@@ -97,5 +98,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [unsign]: https://github.com/steakknife/unsign
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [yasm]: http://yasm.tortall.net/
+[xed]: http://www.github.com/intelxed/xed/
+[xed license]: http://www.github.com/intelxed/xed/blob/master/LICENSE
 [zlib license]: http://www.zlib.net/zlib_license.html
 [zlib]: http://www.zlib.net/

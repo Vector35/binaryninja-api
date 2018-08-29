@@ -18,16 +18,15 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from __future__ import absolute_import
 import traceback
 import ctypes
 
-# Binary Ninja components
-import _binaryninjacore as core
-import startup
-import associateddatastore
-import log
-import binaryview
-
+# Binary Ninja Components
+import binaryninja
+from binaryninja import _binaryninjacore as core
+from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
+from binaryninja import log
 
 class NavigationHandler(object):
 	def _register(self, handle):
@@ -66,12 +65,13 @@ class _FileMetadataAssociatedDataStore(associateddatastore._AssociatedDataStore)
 
 
 class FileMetadata(object):
-	_associated_data = {}
-
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
 	"""
+
+	_associated_data = {}
+
 	def __init__(self, filename = None, handle = None):
 		"""
 		Instantiates a new FileMetadata class.
@@ -82,7 +82,7 @@ class FileMetadata(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNFileMetadata)
 		else:
-			startup._init_plugins()
+			binaryninja._init_plugins()
 			self.handle = core.BNCreateFileMetadata()
 			if filename is not None:
 				core.BNSetFilename(self.handle, str(filename))
@@ -114,8 +114,17 @@ class FileMetadata(object):
 		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
+	def original_filename(self):
+		"""The original name of the binary opened if a bndb, otherwise reads or sets the current filename (read/write)"""
+		return core.BNGetOriginalFilename(self.handle)
+
+	@original_filename.setter
+	def original_filename(self, value):
+		core.BNSetOriginalFilename(self.handle, str(value))
+
+	@property
 	def filename(self):
-		"""The name of the file (read/write)"""
+		"""The name of the open bndb or binary filename (read/write)"""
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter
@@ -167,7 +176,7 @@ class FileMetadata(object):
 		view = core.BNGetFileViewOfType(self.handle, "Raw")
 		if view is None:
 			return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	@property
 	def saved(self):
@@ -322,7 +331,7 @@ class FileMetadata(object):
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	def save_auto_snapshot(self, progress_func = None):
 		if progress_func is None:
@@ -341,7 +350,7 @@ class FileMetadata(object):
 			view = core.BNCreateBinaryViewOfType(view_type, self.raw.handle)
 			if view is None:
 				return None
-		return binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	def __setattr__(self, name, value):
 		try:

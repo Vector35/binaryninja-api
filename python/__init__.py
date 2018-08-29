@@ -19,41 +19,113 @@
 # IN THE SOFTWARE.
 
 
+from __future__ import absolute_import
 import atexit
 import sys
+import ctypes
 from time import gmtime
 
+
+# 2-3 compatibility
+try:
+	import builtins  # __builtins__ for python2
+except ImportError:
+	pass
+def range(*args):
+	""" A Python2 and Python3 Compatible Range Generator """
+	try:
+		return xrange(*args)
+	except NameError:
+		return builtins.range(*args)
+
+
+def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
+    class metaclass(type):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+
+        @classmethod
+        def __prepare__(cls, name, this_bases):
+            return meta.__prepare__(name, bases)
+    return type.__new__(metaclass, 'temporary_class', (), {})
+
+
+def cstr(arg):
+	if isinstance(arg, bytes) or arg is None:
+		return arg
+	else:
+		return arg.encode('charmap')
+
+
+def pyNativeStr(arg):
+	if isinstance(arg, str):
+		return arg
+	else:
+		return arg.decode('charmap')
+
+
 # Binary Ninja components
-import _binaryninjacore as core
-from .enums import *
-from .databuffer import *
-from .filemetadata import *
-from .fileaccessor import *
-from .binaryview import *
-from .transform import *
-from .architecture import *
-from .basicblock import *
-from .function import *
-from .log import *
-from .lowlevelil import *
-from .mediumlevelil import *
-from .types import *
-from .functionrecognizer import *
-from .update import *
-from .plugin import *
-from .callingconvention import *
-from .platform import *
-from .demangle import *
-from .mainthread import *
-from .interaction import *
-from .lineardisassembly import *
-from .undoaction import *
-from .highlight import *
-from .scriptingprovider import *
-from .downloadprovider import *
-from .pluginmanager import *
-from .setting import *
-from .metadata import *
+import binaryninja._binaryninjacore as core
+# __all__ = [
+# 	"enums",
+# 	"databuffer",
+# 	"filemetadata",
+# 	"fileaccessor",
+# 	"binaryview",
+# 	"transform",
+# 	"architecture",
+# 	"basicblock",
+# 	"function",
+# 	"log",
+# 	"lowlevelil",
+# 	"mediumlevelil",
+# 	"types",
+# 	"functionrecognizer",
+# 	"update",
+# 	"plugin",
+# 	"callingconvention",
+# 	"platform",
+# 	"demangle",
+# 	"mainthread",
+# 	"interaction",
+# 	"lineardisassembly",
+# 	"undoaction",
+# 	"highlight",
+# 	"scriptingprovider",
+# 	"pluginmanager",
+# 	"setting",
+# 	"metadata",
+# ]
+from binaryninja.enums import *
+from binaryninja.databuffer import *
+from binaryninja.filemetadata import *
+from binaryninja.fileaccessor import *
+from binaryninja.binaryview import *
+from binaryninja.transform import *
+from binaryninja.architecture import *
+from binaryninja.basicblock import *
+from binaryninja.function import *
+from binaryninja.log import *
+from binaryninja.lowlevelil import *
+from binaryninja.mediumlevelil import *
+from binaryninja.types import *
+from binaryninja.functionrecognizer import *
+from binaryninja.update import *
+from binaryninja.plugin import *
+from binaryninja.callingconvention import *
+from binaryninja.platform import *
+from binaryninja.demangle import *
+from binaryninja.mainthread import *
+from binaryninja.interaction import *
+from binaryninja.lineardisassembly import *
+from binaryninja.undoaction import *
+from binaryninja.highlight import *
+from binaryninja.scriptingprovider import *
+from binaryninja.downloadprovider import *
+from binaryninja.pluginmanager import *
+from binaryninja.setting import *
+from binaryninja.metadata import *
 
 
 def shutdown():
@@ -138,6 +210,20 @@ class _DestructionCallbackHandler(object):
 		Function._unregister(func)
 
 
+_plugin_init = False
+
+
+def _init_plugins():
+	global _plugin_init
+	if not _plugin_init:
+		_plugin_init = True
+		core.BNInitCorePlugins()
+		core.BNInitUserPlugins()
+		core.BNInitRepoPlugins()
+	if not core.BNIsLicenseValidated():
+		raise RuntimeError("License is not valid. Please supply a valid license.")
+
+
 _destruct_callbacks = _DestructionCallbackHandler()
 
 bundled_plugin_path = core.BNGetBundledPluginDirectory()
@@ -163,3 +249,6 @@ core_product_type = core.BNGetProductType()
 
 core_license_count = core.BNGetLicenseCount()
 '''License count from the license file'''
+
+core_ui_enabled = core.BNIsUIEnabled()
+'''Indicates that a UI exists and the UI has invoked BNInitUI'''

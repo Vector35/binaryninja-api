@@ -208,6 +208,21 @@ void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 }
 
 
+string FileMetadata::GetOriginalFilename() const
+{
+	char* str = BNGetOriginalFilename(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+void FileMetadata::SetOriginalFilename(const string& name)
+{
+	BNSetOriginalFilename(m_object, name.c_str());
+}
+
+
 string FileMetadata::GetFilename() const
 {
 	char* str = BNGetFilename(m_object);

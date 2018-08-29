@@ -60,6 +60,7 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	cb.setCurrentBasicBlock = SetCurrentBasicBlockCallback;
 	cb.setCurrentAddress = SetCurrentAddressCallback;
 	cb.setCurrentSelection = SetCurrentSelectionCallback;
+	AddRefForRegistration();
 	m_object = BNInitScriptingInstance(provider->GetObject(), &cb);
 }
 
@@ -67,6 +68,12 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 ScriptingInstance::ScriptingInstance(BNScriptingInstance* instance)
 {
 	m_object = instance;
+}
+
+
+ScriptingInstance::~ScriptingInstance()
+{
+	BNFreeScriptingInstance(m_object);
 }
 
 
@@ -242,6 +249,15 @@ BNScriptingInstance* ScriptingProvider::CreateInstanceCallback(void* ctxt)
 	ScriptingProvider* provider = (ScriptingProvider*)ctxt;
 	Ref<ScriptingInstance> instance = provider->CreateNewInstance();
 	return instance ? BNNewScriptingInstanceReference(instance->GetObject()) : nullptr;
+}
+
+
+string ScriptingProvider::GetName()
+{
+	char* providerNameRaw = BNGetScriptingProviderName(m_object);
+	string providerName(providerNameRaw);
+	BNFreeString(providerNameRaw);
+	return providerName;
 }
 
 

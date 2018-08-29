@@ -19,8 +19,8 @@
 # IN THE SOFTWARE.
 
 # Binary Ninja components
-import _binaryninjacore as core
-import scriptingprovider
+from binaryninja import _binaryninjacore as core
+from binaryninja import scriptingprovider
 
 
 def execute_on_main_thread(func):

@@ -2111,7 +2111,7 @@ namespace BinaryNinja
 		void SetConst(const Confidence<bool>& cnst);
 		void SetVolatile(const Confidence<bool>& vltl);
 		void SetTypeName(const QualifiedName& name);
-		Confidence<size_t> GetStackAdjustment() const;
+		Confidence<int64_t> GetStackAdjustment() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
@@ -2152,7 +2152,7 @@ namespace BinaryNinja
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 			const Confidence<Ref<CallingConvention>>& callingConvention,
 			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
-			const Confidence<size_t>& stackAdjust = Confidence<size_t>(0, 0));
+			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -2437,7 +2437,7 @@ namespace BinaryNinja
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
-		Confidence<size_t> GetStackAdjustment() const;
+		Confidence<int64_t> GetStackAdjustment() const;
 		std::map<uint32_t, Confidence<int32_t>> GetRegisterStackAdjustments() const;
 		Confidence<std::set<uint32_t>> GetClobberedRegisters() const;
 
@@ -2448,7 +2448,7 @@ namespace BinaryNinja
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
-		void SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetAutoStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetAutoRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
@@ -2459,7 +2459,7 @@ namespace BinaryNinja
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
-		void SetStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
@@ -2491,18 +2491,18 @@ namespace BinaryNinja
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
-		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
-		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
 
-		Confidence<size_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
+		Confidence<int64_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
 		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
 		bool IsCallInstruction(Architecture* arch, uint64_t addr);
@@ -2875,7 +2875,7 @@ namespace BinaryNinja
 		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
+		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,

@@ -704,13 +704,13 @@ class Function(object):
 
 	@stack_adjustment.setter
 	def stack_adjustment(self, value):
-		sc = core.BNSizeWithConfidence()
-		sc.value = int(value)
+		oc = core.BNOffsetWithConfidence()
+		oc.value = int(value)
 		if hasattr(value, 'confidence'):
-			sc.confidence = value.confidence
+			oc.confidence = value.confidence
 		else:
-			sc.confidence = types.max_confidence
-		core.BNSetUserFunctionStackAdjustment(self.handle, sc)
+			oc.confidence = types.max_confidence
+		core.BNSetUserFunctionStackAdjustment(self.handle, oc)
 
 	@property
 	def reg_stack_adjustments(self):
@@ -1262,13 +1262,13 @@ class Function(object):
 		core.BNSetAutoFunctionCanReturn(self.handle, bc)
 
 	def set_auto_stack_adjustment(self, value):
-		sc = core.BNSizeWithConfidence()
-		sc.value = int(value)
+		oc = core.BNOffsetWithConfidence()
+		oc.value = int(value)
 		if hasattr(value, 'confidence'):
-			sc.confidence = value.confidence
+			oc.confidence = value.confidence
 		else:
-			sc.confidence = types.max_confidence
-		core.BNSetAutoFunctionStackAdjustment(self.handle, sc)
+			oc.confidence = types.max_confidence
+		core.BNSetAutoFunctionStackAdjustment(self.handle, oc)
 
 	def set_auto_reg_stack_adjustments(self, value):
 		adjust = (core.BNRegisterStackAdjustment * len(value))()

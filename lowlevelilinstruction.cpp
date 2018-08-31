@@ -2498,11 +2498,11 @@ int64_t LowLevelILInstruction::GetVector() const
 }
 
 
-size_t LowLevelILInstruction::GetStackAdjustment() const
+int64_t LowLevelILInstruction::GetStackAdjustment() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(StackAdjustmentLowLevelOperandUsage, operandIndex))
-		return (size_t)GetRawOperandAsInteger(operandIndex);
+		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -3163,7 +3163,7 @@ ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
 }
 
 
-ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, size_t adjust,
+ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, int64_t adjust,
 	const std::map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
 {
 	vector<size_t> list;

@@ -630,7 +630,7 @@ class Type(object):
 		elif not isinstance(stack_adjust, SizeWithConfidence):
 			stack_adjust = SizeWithConfidence(stack_adjust)
 
-		stack_adjust_conf = core.BNSizeWithConfidence()
+		stack_adjust_conf = core.BNOffsetWithConfidence()
 		stack_adjust_conf.value = stack_adjust.value
 		stack_adjust_conf.confidence = stack_adjust.confidence
 

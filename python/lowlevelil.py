@@ -365,6 +365,7 @@ class LowLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+				value = (value & ((1 << 63) - 1)) - (value & (1 << 63))
 			elif operand_type == "float":
 				if instr.size == 4:
 					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]

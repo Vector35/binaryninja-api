@@ -116,7 +116,7 @@ class FlowGraphNode(object):
 
 	@property
 	def lines(self):
-		"""Flow graph block list of lines"""
+		"""Flow graph block list of text lines"""
 		count = ctypes.c_ulonglong()
 		lines = core.BNGetFlowGraphNodeLines(self.handle, count)
 		block = self.basic_block
@@ -260,6 +260,12 @@ class FlowGraphNode(object):
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
 	def add_outgoing_edge(self, edge_type, target):
+		"""
+		``add_outgoing_edge`` connects two flow graph nodes with an edge.
+
+		:param BranchType edge_type: Type of edge to add
+		:param FlowGraphNode target: Target node object
+		"""
 		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle)
 
 
@@ -296,6 +302,35 @@ class FlowGraphLayoutRequest(object):
 
 
 class FlowGraph(object):
+	"""
+	``class FlowGraph`` implements a directed flow graph to be shown in the UI. This class allows plugins to
+	create custom flow graphs and render them in the UI using the flow graph report API.
+
+	An example of creating a flow graph and presenting it in the UI:
+
+		>>> graph = FlowGraph()
+		>>> node_a = FlowGraphNode(graph)
+		>>> node_a.lines = ["Node A"]
+		>>> node_b = FlowGraphNode(graph)
+		>>> node_b.lines = ["Node B"]
+		>>> node_c = FlowGraphNode(graph)
+		>>> node_c.lines = ["Node C"]
+		>>> graph.append(node_a)
+		0
+		>>> graph.append(node_b)
+		1
+		>>> graph.append(node_c)
+		2
+		>>> node_a.add_outgoing_edge(BranchType.UnconditionalBranch, node_b)
+		>>> node_a.add_outgoing_edge(BranchType.UnconditionalBranch, node_c)
+		>>> show_graph_report("Custom Graph", graph)
+
+	.. note:: In the current implementation, only graphs that have a single start node where all other nodes are \
+	reachable from outgoing edges can be rendered correctly. This describes the natural limitations of a control \
+	flow graph, which is what the rendering logic was designed for. Graphs that have nodes that are only reachable \
+	from incoming edges, or graphs that have disjoint subgraphs will not render correctly. This will be fixed \
+	in a future version.
+	"""
 	def __init__(self, handle = None):
 		if handle is None:
 			self._ext_cb = core.BNCustomFlowGraph()
@@ -349,15 +384,32 @@ class FlowGraph(object):
 			return None
 
 	def finish_prepare_for_layout(self):
+		"""
+		``finish_prepare_for_layout`` signals that preparations for rendering a graph are complete.
+		This method should only be called by a ``prepare_for_layout`` reimplementation.
+		"""
 		core.BNFinishPrepareForLayout(self.handle)
 
 	def prepare_for_layout(self):
+		"""
+		``prepare_for_layout`` can be overridden by subclasses to handling preparations that must take
+		place before a flow graph is rendered, such as waiting for a function to finish analysis. If
+		this function is overridden, the ``finish_prepare_for_layout`` method must be called once
+		preparations are completed.
+		"""
 		self.finish_prepare_for_layout()
 
 	def populate_nodes(self):
+		"""
+		``prepare_for_layout`` can be overridden by subclasses to create nodes in a graph when a flow
+		graph needs to be rendered. This will happen on a worker thread and will not block the UI.
+		"""
 		pass
 
 	def complete_layout(self):
+		"""
+		``complete_layout`` can be overridden by subclasses and is called when a graph layout is completed.
+		"""
 		pass
 
 	@property
@@ -489,6 +541,16 @@ class FlowGraph(object):
 			core.BNFreeFlowGraphNodeList(nodes, count.value)
 
 	def layout(self, callback = None):
+		"""
+		``layout`` starts rendering a graph for display. Once a layout is complete, each node will contain
+		coordinates and extents that can be used to render a graph with minimum additional computation.
+		This function does not wait for the graph to be ready to display, but a callback can be provided
+		to signal when the graph is ready.
+
+		:param callable() callback: Function to be called when the graph is ready to display
+		:return: Pending flow graph layout request object
+		:rtype: FlowGraphLayoutRequest
+		"""
 		return FlowGraphLayoutRequest(self, callback)
 
 	def _wait_complete(self):
@@ -497,6 +559,13 @@ class FlowGraph(object):
 		self._wait_cond.release()
 
 	def layout_and_wait(self):
+		"""
+		``layout_and_wait`` starts rendering a graph for display, and waits for the graph to be ready to
+		display. After this function returns, each node will contain coordinates and extents that can be
+		used to render a graph with minimum additional computation.
+
+		Do not use this API on the UI thread (use ``layout`` with a callback instead).
+		"""
 		self._wait_cond = threading.Condition()
 		request = self.layout(self._wait_complete)
 
@@ -515,6 +584,13 @@ class FlowGraph(object):
 		return result
 
 	def append(self, node):
+		"""
+		``append`` adds a node to a flow graph.
+
+		:param FlowGraphNode node: Node to add
+		:return: Index of node
+		:rtype: int
+		"""
 		return core.BNAddFlowGraphNode(self.handle, node.handle)
 
 	def __getitem__(self, i):
@@ -524,9 +600,25 @@ class FlowGraph(object):
 		return FlowGraphNode(self, node)
 
 	def show(self, title):
+		"""
+		``show`` displays the graph in a new tab in the UI.
+
+		:param str title: Title to show in the new tab
+		"""
 		binaryninja.interaction.show_graph_report(title, self)
 
 	def update(self):
+		"""
+		``update`` can be overridden by subclasses to allow a graph to be updated after it has been
+		presented in the UI. This will automatically occur if the function referenced by the ``function``
+		property has been updated.
+
+		Return a new ``FlowGraph`` object with the new information if updates are desired. If the graph
+		does not need updating, ``None`` can be returned to leave the graph in its current state.
+
+		:return: Updated graph, or ``None``
+		:rtype: FlowGraph
+		"""
 		return None
 
 

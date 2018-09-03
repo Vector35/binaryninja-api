@@ -1148,6 +1148,7 @@ extern "C"
 		size_t symbolIndex;  // Index into symbol table
 		size_t sectionIndex; // Index into the section table
 		uint64_t address;    // Absolute address or segment offset
+		uint64_t target;     // Target (set automatically)
 		bool dataRelocation; // This relocation is effecting data not code
 		uint8_t relocationDataCache[MAX_RELOCATION_SIZE];
 		struct BNRelocationInfo* prev; // Link to relocation another related relocation

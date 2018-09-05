@@ -110,3 +110,13 @@ class HighlightColor(object):
 			result.b = self.blue
 
 		return result
+
+	@staticmethod
+	def _from_core_struct(color):
+		if color.style == HighlightColorStyle.StandardHighlightColor:
+			return HighlightColor(color=color.color, alpha=color.alpha)
+		elif color.style == HighlightColorStyle.MixedHighlightColor:
+			return HighlightColor(color=color.color, mix_color=color.mixColor, mix=color.mix, alpha=color.alpha)
+		elif color.style == HighlightColorStyle.CustomHighlightColor:
+			return HighlightColor(red=color.r, green=color.g, blue=color.b, alpha=color.alpha)
+		return HighlightColor(color=HighlightStandardColor.NoHighlightColor)

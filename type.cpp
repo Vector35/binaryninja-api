@@ -435,10 +435,10 @@ uint64_t Type::GetOffset() const
 }
 
 
-Confidence<size_t> Type::GetStackAdjustment() const
+Confidence<int64_t> Type::GetStackAdjustment() const
 {
-	BNSizeWithConfidence result = BNGetTypeStackAdjustment(m_object);
-	return Confidence<size_t>(result.value, result.confidence);
+	BNOffsetWithConfidence result = BNGetTypeStackAdjustment(m_object);
+	return Confidence<int64_t>(result.value, result.confidence);
 }
 
 
@@ -654,7 +654,7 @@ Ref<Type> Type::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
 Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention,
 	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg,
-	const Confidence<size_t>& stackAdjust)
+	const Confidence<int64_t>& stackAdjust)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -680,7 +680,7 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	varArgConf.value = varArg.GetValue();
 	varArgConf.confidence = varArg.GetConfidence();
 
-	BNSizeWithConfidence stackAdjustConf;
+	BNOffsetWithConfidence stackAdjustConf;
 	stackAdjustConf.value = stackAdjust.GetValue();
 	stackAdjustConf.confidence = stackAdjust.GetConfidence();
 

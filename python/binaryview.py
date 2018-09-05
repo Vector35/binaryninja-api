@@ -36,6 +36,7 @@ from binaryninja import databuffer
 from binaryninja import basicblock
 from binaryninja import lineardisassembly
 from binaryninja import metadata
+from binaryninja import highlight
 
 # 2-3 compatibility
 from binaryninja import range
@@ -3046,6 +3047,7 @@ class BinaryView(object):
 				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
+			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
 			tokens = []
 			for j in range(0, lines[i].contents.count):
@@ -3058,7 +3060,7 @@ class BinaryView(object):
 				confidence = lines[i].contents.tokens[j].confidence
 				address = lines[i].contents.tokens[j].address
 				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			contents = binaryninja.function.DisassemblyTextLine(addr, tokens)
+			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 
 		func = None
@@ -3436,6 +3438,9 @@ class BinaryView(object):
 
 	def show_html_report(self, title, contents, plaintext = ""):
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
+
+	def show_graph_report(self, title, graph):
+		core.BNShowHTMLReport(self.handle, title, graph.handle)
 
 	def get_address_input(self, prompt, title, current_address = None):
 		if current_address is None:

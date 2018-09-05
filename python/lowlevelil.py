@@ -365,6 +365,7 @@ class LowLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+				value = (value & ((1 << 63) - 1)) - (value & (1 << 63))
 			elif operand_type == "float":
 				if instr.size == 4:
 					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
@@ -733,9 +734,9 @@ class LowLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 		else:
-			func_handle = None
-			if self.source_function is not None:
-				func_handle = self.source_function.handle
+			if self.source_function is None:
+				raise ValueError("IL functions must be created with an associated function")
+			func_handle = self.source_function.handle
 			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
@@ -2352,6 +2353,13 @@ class LowLevelILFunction(object):
 		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
 			return None
 		return result
+
+	def create_graph(self, settings = None):
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateLowLevelILFunctionGraph(self.handle, settings_obj))
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):

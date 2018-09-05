@@ -119,6 +119,12 @@ Function::~Function()
 }
 
 
+Ref<BinaryView> Function::GetView() const
+{
+	return new BinaryView(BNGetFunctionData(m_object));
+}
+
+
 Ref<Platform> Function::GetPlatform() const
 {
 	return new Platform(BNGetFunctionPlatform(m_object));
@@ -532,10 +538,10 @@ Confidence<bool> Function::HasVariableArguments() const
 }
 
 
-Confidence<size_t> Function::GetStackAdjustment() const
+Confidence<int64_t> Function::GetStackAdjustment() const
 {
-	BNSizeWithConfidence sc = BNGetFunctionStackAdjustment(m_object);
-	return Confidence<size_t>(sc.value, sc.confidence);
+	BNOffsetWithConfidence oc = BNGetFunctionStackAdjustment(m_object);
+	return Confidence<int64_t>(oc.value, oc.confidence);
 }
 
 
@@ -637,12 +643,12 @@ void Function::SetAutoCanReturn(const Confidence<bool>& returns)
 }
 
 
-void Function::SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust)
+void Function::SetAutoStackAdjustment(const Confidence<int64_t>& stackAdjust)
 {
-	BNSizeWithConfidence sc;
-	sc.value = stackAdjust.GetValue();
-	sc.confidence = stackAdjust.GetConfidence();
-	BNSetAutoFunctionStackAdjustment(m_object, &sc);
+	BNOffsetWithConfidence oc;
+	oc.value = stackAdjust.GetValue();
+	oc.confidence = stackAdjust.GetConfidence();
+	BNSetAutoFunctionStackAdjustment(m_object, &oc);
 }
 
 
@@ -751,12 +757,12 @@ void Function::SetCanReturn(const Confidence<bool>& returns)
 }
 
 
-void Function::SetStackAdjustment(const Confidence<size_t>& stackAdjust)
+void Function::SetStackAdjustment(const Confidence<int64_t>& stackAdjust)
 {
-	BNSizeWithConfidence sc;
-	sc.value = stackAdjust.GetValue();
-	sc.confidence = stackAdjust.GetConfidence();
-	BNSetUserFunctionStackAdjustment(m_object, &sc);
+	BNOffsetWithConfidence oc;
+	oc.value = stackAdjust.GetValue();
+	oc.confidence = stackAdjust.GetConfidence();
+	BNSetUserFunctionStackAdjustment(m_object, &oc);
 }
 
 
@@ -802,10 +808,10 @@ void Function::ApplyAutoDiscoveredType(Type* type)
 }
 
 
-Ref<FunctionGraph> Function::CreateFunctionGraph()
+Ref<FlowGraph> Function::CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings)
 {
-	BNFunctionGraph* graph = BNCreateFunctionGraph(m_object);
-	return new FunctionGraph(graph);
+	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type, settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
 }
 
 
@@ -1020,7 +1026,7 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
-void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetAutoCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
 }
@@ -1051,7 +1057,7 @@ void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
-void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust)
+void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetUserCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
 }
@@ -1082,10 +1088,10 @@ void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
-Confidence<size_t> Function::GetCallStackAdjustment(Architecture* arch, uint64_t addr)
+Confidence<int64_t> Function::GetCallStackAdjustment(Architecture* arch, uint64_t addr)
 {
-	BNSizeWithConfidence result = BNGetCallStackAdjustment(m_object, arch->GetObject(), addr);
-	return Confidence<size_t>(result.value, result.confidence);
+	BNOffsetWithConfidence result = BNGetCallStackAdjustment(m_object, arch->GetObject(), addr);
+	return Confidence<int64_t>(result.value, result.confidence);
 }
 
 
@@ -1107,6 +1113,12 @@ Confidence<int32_t> Function::GetCallRegisterStackAdjustment(Architecture* arch,
 	BNRegisterStackAdjustment result = BNGetCallRegisterStackAdjustmentForRegisterStack(m_object,
 		arch->GetObject(), addr, regStack);
 	return Confidence<int32_t>(result.adjustment, result.confidence);
+}
+
+
+bool Function::IsCallInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNIsCallInstruction(m_object, arch->GetObject(), addr);
 }
 
 
@@ -1338,6 +1350,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
+		line.highlight = lines[i].highlight;
 		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{
@@ -1387,6 +1400,21 @@ BNFunctionAnalysisSkipOverride Function::GetAnalysisSkipOverride()
 void Function::SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip)
 {
 	BNSetFunctionAnalysisSkipOverride(m_object, skip);
+}
+
+
+Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
+{
+	BNFlowGraph* graph = BNGetUnresolvedStackAdjustmentGraph(m_object);
+	if (!graph)
+		return nullptr;
+	return new CoreFlowGraph(graph);
+}
+
+
+void Function::RequestDebugReport(const string& name)
+{
+	BNRequestFunctionDebugReport(m_object, name.c_str());
 }
 
 

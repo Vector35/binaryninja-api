@@ -738,3 +738,10 @@ Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(const MediumLevelILInst
 {
 	return GetExprType(expr.exprIndex);
 }
+
+
+Ref<FlowGraph> MediumLevelILFunction::CreateFunctionGraph(DisassemblySettings* settings)
+{
+	BNFlowGraph* graph = BNCreateMediumLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
+}

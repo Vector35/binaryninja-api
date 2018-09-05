@@ -814,6 +814,10 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
 		MediumLevelILIndexList GetTargetList() const { return GetRawOperandAsIndexList(1); }
 	};
+	template <> struct MediumLevelILInstructionAccessor<MLIL_RET_HINT>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CALL>: public MediumLevelILInstructionBase
 	{

@@ -22,6 +22,7 @@ import ctypes
 import struct
 
 # Binary Ninja components
+import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
 from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
@@ -128,6 +129,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
 		MediumLevelILOperation.MLIL_CALL_OUTPUT: [("dest", "var_list")],
@@ -229,6 +231,7 @@ class MediumLevelILInstruction(object):
 			name, operand_type = operand
 			if operand_type == "int":
 				value = instr.operands[i]
+				value = (value & ((1 << 63) - 1)) - (value & (1 << 63))
 			elif operand_type == "float":
 				if instr.size == 4:
 					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
@@ -614,9 +617,9 @@ class MediumLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNMediumLevelILFunction)
 		else:
-			func_handle = None
-			if self.source_function is not None:
-				func_handle = self.source_function.handle
+			if self.source_function is None:
+				raise ValueError("IL functions must be created with an associated function")
+			func_handle = self.source_function.handle
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
@@ -936,6 +939,13 @@ class MediumLevelILFunction(object):
 		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
 			return None
 		return result
+
+	def create_graph(self, settings = None):
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateMediumLevelILFunctionGraph(self.handle, settings_obj))
 
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):

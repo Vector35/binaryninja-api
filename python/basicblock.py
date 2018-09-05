@@ -245,14 +245,7 @@ class BasicBlock(object):
 			>>> current_basic_block.highlight
 			<color: blue>
 		"""
-		color = core.BNGetBasicBlockHighlight(self.handle)
-		if color.style == HighlightColorStyle.StandardHighlightColor:
-			return highlight.HighlightColor(color=color.color, alpha=color.alpha)
-		elif color.style == HighlightColorStyle.MixedHighlightColor:
-			return highlight.HighlightColor(color=color.color, mix_color=color.mixColor, mix=color.mix, alpha=color.alpha)
-		elif color.style == HighlightColorStyle.CustomHighlightColor:
-			return highlight.HighlightColor(red=color.r, green=color.g, blue=color.b, alpha=color.alpha)
-		return highlight.HighlightColor(color=HighlightStandardColor.NoHighlightColor)
+		return highlight.HighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
 
 	@highlight.setter
 	def highlight(self, value):
@@ -345,6 +338,7 @@ class BasicBlock(object):
 				il_instr = self.il_function[lines[i].instrIndex]
 			else:
 				il_instr = None
+			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = []
 			for j in range(0, lines[i].count):
 				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
@@ -356,7 +350,7 @@ class BasicBlock(object):
 				confidence = lines[i].tokens[j].confidence
 				address = lines[i].tokens[j].address
 				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(binaryninja.function.DisassemblyTextLine(addr, tokens, il_instr))
+			result.append(binaryninja.function.DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 

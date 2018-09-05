@@ -22,6 +22,7 @@ import ctypes
 import struct
 
 # Binary Ninja components
+import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
 from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
@@ -616,9 +617,9 @@ class MediumLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNMediumLevelILFunction)
 		else:
-			func_handle = None
-			if self.source_function is not None:
-				func_handle = self.source_function.handle
+			if self.source_function is None:
+				raise ValueError("IL functions must be created with an associated function")
+			func_handle = self.source_function.handle
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
@@ -938,6 +939,13 @@ class MediumLevelILFunction(object):
 		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
 			return None
 		return result
+
+	def create_graph(self, settings = None):
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateMediumLevelILFunctionGraph(self.handle, settings_obj))
 
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):

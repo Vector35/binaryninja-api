@@ -2663,6 +2663,10 @@ extern "C"
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph();
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFunctionGraph(BNFunction* func, BNFunctionGraphType type,
 		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateLowLevelILFunctionGraph(BNLowLevelILFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateMediumLevelILFunctionGraph(BNMediumLevelILFunction* func,
+		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateCustomFlowGraph(BNCustomFlowGraph* callbacks);
 	BINARYNINJACOREAPI BNFlowGraph* BNNewFlowGraphReference(BNFlowGraph* graph);
 	BINARYNINJACOREAPI void BNFreeFlowGraph(BNFlowGraph* graph);

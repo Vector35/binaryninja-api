@@ -3051,6 +3051,8 @@ namespace BinaryNinja
 		size_t GetMediumLevelILExprIndex(size_t expr) const;
 		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
 	struct MediumLevelILLabel: public BNMediumLevelILLabel
@@ -3382,6 +3384,8 @@ namespace BinaryNinja
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
 	class FunctionRecognizer

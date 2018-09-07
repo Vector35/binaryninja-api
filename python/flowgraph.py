@@ -281,8 +281,8 @@ class FlowGraphLayoutRequest(object):
 
 	def _complete(self, ctxt):
 		try:
-			if self._on_complete is not None:
-				self._on_complete()
+			if self.on_complete is not None:
+				self.on_complete()
 		except:
 			log.log_error(traceback.format_exc())
 

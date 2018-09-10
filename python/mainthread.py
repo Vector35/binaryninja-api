@@ -21,13 +21,14 @@
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja import scriptingprovider
+from binaryninja import plugin
 
 
 def execute_on_main_thread(func):
 	action = scriptingprovider._ThreadActionContext(func)
 	obj = core.BNExecuteOnMainThread(0, action.callback)
 	if obj:
-		return scriptingprovider.MainThreadAction(obj)
+		return plugin.MainThreadAction(obj)
 	return None
 
 

@@ -34,6 +34,7 @@ from binaryninja import range
 class CallingConvention(object):
 	name = None
 	caller_saved_regs = []
+	callee_saved_regs = []
 	int_arg_regs = []
 	float_arg_regs = []
 	arg_regs_share_index = False
@@ -56,6 +57,7 @@ class CallingConvention(object):
 			self._cb = core.BNCustomCallingConvention()
 			self._cb.context = 0
 			self._cb.getCallerSavedRegisters = self._cb.getCallerSavedRegisters.__class__(self._get_caller_saved_regs)
+			self._cb.getCalleeSavedRegisters = self._cb.getCalleeSavedRegisters.__class__(self._get_callee_saved_regs)
 			self._cb.getIntegerArgumentRegisters = self._cb.getIntegerArgumentRegisters.__class__(self._get_int_arg_regs)
 			self._cb.getFloatArgumentRegisters = self._cb.getFloatArgumentRegisters.__class__(self._get_float_arg_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
@@ -89,6 +91,15 @@ class CallingConvention(object):
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["caller_saved_regs"] = result
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetCalleeSavedRegisters(self.handle, count)
+			result = []
+			arch = self.arch
+			for i in range(0, count.value):
+				result.append(arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs, count.value)
+			self.__dict__["callee_saved_regs"] = result
 
 			count = ctypes.c_ulonglong()
 			regs = core.BNGetIntegerArgumentRegisters(self.handle, count)
@@ -159,6 +170,21 @@ class CallingConvention(object):
 	def _get_caller_saved_regs(self, ctxt, count):
 		try:
 			regs = self.__class__.caller_saved_regs
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_callee_saved_regs(self, ctxt, count):
+		try:
+			regs = self.__class__.callee_saved_regs
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):

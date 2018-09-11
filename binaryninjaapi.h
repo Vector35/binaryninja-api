@@ -3597,6 +3597,7 @@ namespace BinaryNinja
 		static void FreeCallback(void* ctxt);
 
 		static uint32_t* GetCallerSavedRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetCalleeSavedRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetFloatArgumentRegistersCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
@@ -3624,6 +3625,7 @@ namespace BinaryNinja
 		std::string GetName() const;
 
 		virtual std::vector<uint32_t> GetCallerSavedRegisters();
+		virtual std::vector<uint32_t> GetCalleeSavedRegisters();
 
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters();
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
@@ -3650,6 +3652,7 @@ namespace BinaryNinja
 		CoreCallingConvention(BNCallingConvention* cc);
 
 		virtual std::vector<uint32_t> GetCallerSavedRegisters() override;
+		virtual std::vector<uint32_t> GetCalleeSavedRegisters() override;
 
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters() override;
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters() override;

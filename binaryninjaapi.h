@@ -54,6 +54,7 @@ namespace BinaryNinja
 		virtual ~RefCountObject() {}
 
 		RefCountObject* GetObject() { return this; }
+		static RefCountObject* GetObject(RefCountObject* obj) { return obj; }
 
 		void AddRef()
 		{
@@ -106,6 +107,13 @@ namespace BinaryNinja
 		virtual ~CoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
+
+		static T* GetObject(CoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
 
 		void AddRef()
 		{
@@ -163,6 +171,13 @@ namespace BinaryNinja
 		virtual ~StaticCoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
+
+		static T* GetObject(StaticCoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
 
 		void AddRef()
 		{
@@ -252,32 +267,32 @@ namespace BinaryNinja
 
 		bool operator==(const T* obj) const
 		{
-			return m_obj->GetObject() == obj->GetObject();
+			return T::GetObject(m_obj) == T::GetObject(obj);
 		}
 
 		bool operator==(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() == obj.m_obj->GetObject();
+			return T::GetObject(m_obj) == T::GetObject(obj.m_obj);
 		}
 
 		bool operator!=(const T* obj) const
 		{
-			return m_obj->GetObject() != obj->GetObject();
+			return T::GetObject(m_obj) != T::GetObject(obj);
 		}
 
 		bool operator!=(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() != obj.m_obj->GetObject();
+			return T::GetObject(m_obj) != T::GetObject(obj.m_obj);
 		}
 
 		bool operator<(const T* obj) const
 		{
-			return m_obj->GetObject() < obj->GetObject();
+			return T::GetObject(m_obj) < T::GetObject(obj);
 		}
 
 		bool operator<(const Ref<T>& obj) const
 		{
-			return m_obj->GetObject() < obj.m_obj->GetObject();
+			return T::GetObject(m_obj) < T::GetObject(obj.m_obj);
 		}
 
 		T* GetPtr() const
@@ -494,6 +509,8 @@ namespace BinaryNinja
 	class MainThreadActionHandler;
 	class InteractionHandler;
 	class QualifiedName;
+	class FlowGraph;
+	class ReportCollection;
 	struct FormInputField;
 
 	/*! Logs to the error console with the given BNLogLevel.
@@ -627,6 +644,8 @@ namespace BinaryNinja
 		const std::string& plainText = "");
 	void ShowHTMLReport(const std::string& title, const std::string& contents,
 		const std::string& plainText = "");
+	void ShowGraphReport(const std::string& title, FlowGraph* graph);
+	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
@@ -940,6 +959,9 @@ namespace BinaryNinja
 		uint64_t addr;
 		size_t instrIndex;
 		std::vector<InstructionTextToken> tokens;
+		BNHighlightColor highlight;
+
+		DisassemblyTextLine();
 	};
 
 	struct LinearDisassemblyPosition
@@ -1321,6 +1343,7 @@ namespace BinaryNinja
 		void ShowPlainTextReport(const std::string& title, const std::string& contents);
 		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
 		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
+		void ShowGraphReport(const std::string& title, FlowGraph* graph);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
 			uint64_t currentAddress);
@@ -2173,7 +2196,7 @@ namespace BinaryNinja
 		void SetConst(const Confidence<bool>& cnst);
 		void SetVolatile(const Confidence<bool>& vltl);
 		void SetTypeName(const QualifiedName& name);
-		Confidence<size_t> GetStackAdjustment() const;
+		Confidence<int64_t> GetStackAdjustment() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
@@ -2214,7 +2237,7 @@ namespace BinaryNinja
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 			const Confidence<Ref<CallingConvention>>& callingConvention,
 			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
-			const Confidence<size_t>& stackAdjust = Confidence<size_t>(0, 0));
+			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
 
  		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -2441,7 +2464,7 @@ namespace BinaryNinja
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
 	};
 
-	class FunctionGraph;
+	class FlowGraph;
 	class MediumLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -2452,6 +2475,7 @@ namespace BinaryNinja
 		Function(BNFunction* func);
 		virtual ~Function();
 
+		Ref<BinaryView> GetView() const;
 		Ref<Architecture> GetArchitecture() const;
 		Ref<Platform> GetPlatform() const;
 		uint64_t GetStart() const;
@@ -2500,7 +2524,7 @@ namespace BinaryNinja
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		Confidence<std::vector<Variable>> GetParameterVariables() const;
 		Confidence<bool> HasVariableArguments() const;
-		Confidence<size_t> GetStackAdjustment() const;
+		Confidence<int64_t> GetStackAdjustment() const;
 		std::map<uint32_t, Confidence<int32_t>> GetRegisterStackAdjustments() const;
 		Confidence<std::set<uint32_t>> GetClobberedRegisters() const;
 
@@ -2511,7 +2535,7 @@ namespace BinaryNinja
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
-		void SetAutoStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetAutoStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetAutoRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
@@ -2522,14 +2546,14 @@ namespace BinaryNinja
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
-		void SetStackAdjustment(const Confidence<size_t>& stackAdjust);
+		void SetStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
 		void ApplyImportedTypes(Symbol* sym);
 		void ApplyAutoDiscoveredType(Type* type);
 
-		Ref<FunctionGraph> CreateFunctionGraph();
+		Ref<FlowGraph> CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings = nullptr);
 
 		std::map<int64_t, std::vector<VariableNameAndType>> GetStackLayout();
 		void CreateAutoStackVariable(int64_t offset, const Confidence<Ref<Type>>& type, const std::string& name);
@@ -2554,20 +2578,21 @@ namespace BinaryNinja
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
-		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
-		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<size_t>& adjust);
+		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
 
-		Confidence<size_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
+		Confidence<int64_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
 		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
+		bool IsCallInstruction(Architecture* arch, uint64_t addr);
 
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 
@@ -2610,6 +2635,10 @@ namespace BinaryNinja
 		BNAnalysisSkipReason GetAnalysisSkipReason();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
+
+		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
+
+		void RequestDebugReport(const std::string& name);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -2626,79 +2655,118 @@ namespace BinaryNinja
 		void SetFunction(Function* func);
 	};
 
-	struct FunctionGraphEdge
+	class FlowGraphNode;
+
+	struct FlowGraphEdge
 	{
 		BNBranchType type;
-		Ref<BasicBlock> target;
+		Ref<FlowGraphNode> target;
 		std::vector<BNPoint> points;
 		bool backEdge;
 	};
 
-	class FunctionGraphBlock: public CoreRefCountObject<BNFunctionGraphBlock,
-		BNNewFunctionGraphBlockReference, BNFreeFunctionGraphBlock>
+	class FlowGraphNode: public CoreRefCountObject<BNFlowGraphNode,
+		BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
 	{
 		std::vector<DisassemblyTextLine> m_cachedLines;
-		std::vector<FunctionGraphEdge> m_cachedEdges;
+		std::vector<FlowGraphEdge> m_cachedEdges;
 		bool m_cachedLinesValid, m_cachedEdgesValid;
 
 	public:
-		FunctionGraphBlock(BNFunctionGraphBlock* block);
+		FlowGraphNode(FlowGraph* graph);
+		FlowGraphNode(BNFlowGraphNode* node);
 
 		Ref<BasicBlock> GetBasicBlock() const;
-		Ref<Architecture> GetArchitecture() const;
-		uint64_t GetStart() const;
-		uint64_t GetEnd() const;
+		void SetBasicBlock(BasicBlock* block);
 		int GetX() const;
 		int GetY() const;
 		int GetWidth() const;
 		int GetHeight() const;
 
 		const std::vector<DisassemblyTextLine>& GetLines();
-		const std::vector<FunctionGraphEdge>& GetOutgoingEdges();
+		void SetLines(const std::vector<DisassemblyTextLine>& lines);
+		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
+		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target);
+
+		BNHighlightColor GetHighlight() const;
+		void SetHighlight(const BNHighlightColor& color);
 	};
 
-	class FunctionGraph: public RefCountObject
+	class FlowGraphLayoutRequest: public RefCountObject
 	{
-		BNFunctionGraph* m_graph;
+		BNFlowGraphLayoutRequest* m_object;
 		std::function<void()> m_completeFunc;
-		std::map<BNFunctionGraphBlock*, Ref<FunctionGraphBlock>> m_cachedBlocks;
 
 		static void CompleteCallback(void* ctxt);
 
 	public:
-		FunctionGraph(BNFunctionGraph* graph);
-		~FunctionGraph();
+		FlowGraphLayoutRequest(FlowGraph* graph, const std::function<void()>& completeFunc);
+		virtual ~FlowGraphLayoutRequest();
 
-		BNFunctionGraph* GetGraphObject() const { return m_graph; }
+		BNFlowGraphLayoutRequest* GetObject() const { return m_object; }
+
+		Ref<FlowGraph> GetGraph() const;
+		bool IsComplete() const;
+		void Abort();
+	};
+
+	class FlowGraph: public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
+	{
+		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
+
+		static void PrepareForLayoutCallback(void* ctxt);
+		static void PopulateNodesCallback(void* ctxt);
+		static void CompleteLayoutCallback(void* ctxt);
+		static BNFlowGraph* UpdateCallback(void* ctxt);
+
+	protected:
+		FlowGraph(BNFlowGraph* graph);
+
+		void FinishPrepareForLayout();
+		virtual void PrepareForLayout();
+		virtual void PopulateNodes();
+		virtual void CompleteLayout();
+
+	public:
+		FlowGraph();
 
 		Ref<Function> GetFunction() const;
+		void SetFunction(Function* func);
 
-		int GetHorizontalBlockMargin() const;
-		int GetVerticalBlockMargin() const;
-		void SetBlockMargins(int horiz, int vert);
+		int GetHorizontalNodeMargin() const;
+		int GetVerticalNodeMargin() const;
+		void SetNodeMargins(int horiz, int vert);
 
-		Ref<DisassemblySettings> GetSettings();
-
-		void StartLayout(BNFunctionGraphType = NormalFunctionGraph);
+		Ref<FlowGraphLayoutRequest> StartLayout(const std::function<void()>& func);
 		bool IsLayoutComplete();
-		void OnComplete(const std::function<void()>& func);
-		void Abort();
 
-		std::vector<Ref<FunctionGraphBlock>> GetBlocks();
-		bool HasBlocks() const;
+		std::vector<Ref<FlowGraphNode>> GetNodes();
+		Ref<FlowGraphNode> GetNode(size_t i);
+		bool HasNodes() const;
+		size_t AddNode(FlowGraphNode* node);
 
 		int GetWidth() const;
 		int GetHeight() const;
-		std::vector<Ref<FunctionGraphBlock>> GetBlocksInRegion(int left, int top, int right, int bottom);
-
-		bool IsOptionSet(BNDisassemblyOption option) const;
-		void SetOption(BNDisassemblyOption option, bool state = true);
+		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
 		bool IsILGraph() const;
 		bool IsLowLevelILGraph() const;
 		bool IsMediumLevelILGraph() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		void SetLowLevelILFunction(LowLevelILFunction* func);
+		void SetMediumLevelILFunction(MediumLevelILFunction* func);
+
+		void Show(const std::string& title);
+
+		virtual Ref<FlowGraph> Update();
+	};
+
+	class CoreFlowGraph: public FlowGraph
+	{
+	public:
+		CoreFlowGraph(BNFlowGraph* graph);
+		virtual Ref<FlowGraph> Update() override;
 	};
 
 	struct LowLevelILLabel: public BNLowLevelILLabel
@@ -2895,7 +2963,7 @@ namespace BinaryNinja
 		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallStackAdjust(ExprId dest, size_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
+		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
@@ -3073,6 +3141,8 @@ namespace BinaryNinja
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
 
 		static bool IsConstantType(BNLowLevelILOperation type) { return type == LLIL_CONST || type == LLIL_CONST_PTR || type == LLIL_EXTERN_PTR; }
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
 	struct MediumLevelILLabel: public BNMediumLevelILLabel
@@ -3216,6 +3286,7 @@ namespace BinaryNinja
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId JumpTo(ExprId dest, const std::vector<BNMediumLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
@@ -3406,6 +3477,8 @@ namespace BinaryNinja
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
 
 		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
 	class FunctionRecognizer
@@ -4009,6 +4082,29 @@ namespace BinaryNinja
 		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
 	};
 
+	class ReportCollection: public CoreRefCountObject<BNReportCollection,
+		BNNewReportCollectionReference, BNFreeReportCollection>
+	{
+	public:
+		ReportCollection();
+		ReportCollection(BNReportCollection* reports);
+
+		size_t GetCount() const;
+		BNReportType GetType(size_t i) const;
+		Ref<BinaryView> GetView(size_t i) const;
+		std::string GetTitle(size_t i) const;
+		std::string GetContents(size_t i) const;
+		std::string GetPlainText(size_t i) const;
+		Ref<FlowGraph> GetFlowGraph(size_t i) const;
+
+		void AddPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents);
+		void AddMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText = "");
+		void AddHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
+			const std::string& plainText = "");
+		void AddGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
+	};
+
 	class InteractionHandler
 	{
 	public:
@@ -4017,6 +4113,8 @@ namespace BinaryNinja
 			const std::string& plainText);
 		virtual void ShowHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
 			const std::string& plainText);
+		virtual void ShowGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
+		virtual void ShowReportCollection(const std::string& title, Ref<ReportCollection> reports);
 
 		virtual bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title) = 0;
 		virtual bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);

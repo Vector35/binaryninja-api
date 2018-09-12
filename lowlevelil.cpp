@@ -766,3 +766,10 @@ size_t LowLevelILFunction::GetMappedMediumLevelILExprIndex(size_t expr) const
 {
 	return BNGetMappedMediumLevelILExprIndex(m_object, expr);
 }
+
+
+Ref<FlowGraph> LowLevelILFunction::CreateFunctionGraph(DisassemblySettings* settings)
+{
+	BNFlowGraph* graph = BNCreateLowLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
+}

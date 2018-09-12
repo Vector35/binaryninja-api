@@ -15,11 +15,11 @@ Binaries are installed in the following locations by default:
 - Linux: Wherever you extract it! (No standard location)
 
 !!! Warning "Warning"
-    Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja may replace any files included in these folders. 
+    Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja may replace any files included in these folders.
 
 ### User Folder
 
-The base locations of user folders are: 
+The base locations of user folders are:
 
 - OS X: `~/Library/Application Support/Binary Ninja`
 - Linux: `~/.binaryninja`
@@ -277,7 +277,15 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 | pdb       | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
 | pdb       | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
 | python    | interpreter              | string       | "python27.{dylib,dll,so.1}"                    | Python interpreter to load if one is not already present when plugins are loaded              |
-
+| arch    | x86.disassemblyFlavor      | string       | "BN_INTEL"                                     | "BN_INTEL", "INTEL", or "AT&T"              |
+| arch    | x86.disassemblySeperator   | string       | ", "                                           | What to put between operands in disassembly tokens              |
+| arch    | x86.disassemblyLowercase   | bool         | True                                           | Lowercase opcodes, operands, and registers (False for uppercase)              |
+	"arch" :
+	{
+		// "x86.disassemblyFlavor" : "AT&T",
+		// "x86.disassemblyFlavor" : "BN_INTEL",
+		"x86.disassemblyLowercase" : true,
+		"x86.disassemblySeperator" : ", "
 Below is an example `settings.json` setting various options:
 ```
 {

@@ -96,6 +96,7 @@ import binaryninja._binaryninjacore as core
 # 	"pluginmanager",
 # 	"setting",
 # 	"metadata",
+# 	"flowgraph",
 # ]
 from binaryninja.enums import *
 from binaryninja.databuffer import *
@@ -126,6 +127,7 @@ from binaryninja.downloadprovider import *
 from binaryninja.pluginmanager import *
 from binaryninja.setting import *
 from binaryninja.metadata import *
+from binaryninja.flowgraph import *
 
 
 def shutdown():

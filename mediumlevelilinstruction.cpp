@@ -122,6 +122,7 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_ADDRESS_OF_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
 		{MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
 		{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetListMediumLevelOperandUsage}},
+		{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
 		{MLIL_CALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
 			ParameterExprsMediumLevelOperandUsage}},
 		{MLIL_CALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
@@ -1323,6 +1324,7 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 	case MLIL_BOOL_TO_INT:
 	case MLIL_JUMP:
 	case MLIL_JUMP_TO:
+	case MLIL_RET_HINT:
 	case MLIL_IF:
 	case MLIL_UNIMPL_MEM:
 	case MLIL_LOAD:
@@ -1592,6 +1594,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_LOW_PART:
 	case MLIL_BOOL_TO_INT:
 	case MLIL_JUMP:
+	case MLIL_RET_HINT:
 	case MLIL_UNIMPL_MEM:
 	case MLIL_FSQRT:
 	case MLIL_FNEG:
@@ -2503,6 +2506,12 @@ ExprId MediumLevelILFunction::JumpTo(ExprId dest, const vector<BNMediumLevelILLa
 	const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_JUMP_TO, loc, 0, dest, targets.size(), AddLabelList(targets));
+}
+
+
+ExprId MediumLevelILFunction::ReturnHint(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_RET_HINT, loc, 0, dest);
 }
 
 

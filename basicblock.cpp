@@ -72,6 +72,21 @@ void DisassemblySettings::SetMaximumSymbolWidth(size_t width)
 }
 
 
+DisassemblyTextLine::DisassemblyTextLine()
+{
+	addr = 0;
+	instrIndex = BN_INVALID_EXPR;
+	highlight.style = StandardHighlightColor;
+	highlight.color = NoHighlightColor;
+	highlight.mixColor = NoHighlightColor;
+	highlight.mix = 0;
+	highlight.r = 0;
+	highlight.g = 0;
+	highlight.b = 0;
+	highlight.alpha = 0;
+}
+
+
 BasicBlock::BasicBlock(BNBasicBlock* block)
 {
 	m_object = block;
@@ -277,6 +292,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 		DisassemblyTextLine line;
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
+		line.highlight = lines[i].highlight;
 		line.tokens.reserve(lines[i].count);
 		for (size_t j = 0; j < lines[i].count; j++)
 		{

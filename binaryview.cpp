@@ -1739,6 +1739,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
 		line.contents.instrIndex = lines[i].contents.instrIndex;
+		line.contents.highlight = lines[i].contents.highlight;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
@@ -1788,6 +1789,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
 		line.contents.instrIndex = lines[i].contents.instrIndex;
+		line.contents.highlight = lines[i].contents.highlight;
 		line.contents.tokens.reserve(lines[i].contents.count);
 		for (size_t j = 0; j < lines[i].contents.count; j++)
 		{
@@ -1977,6 +1979,12 @@ void BinaryView::ShowMarkdownReport(const string& title, const string& contents,
 void BinaryView::ShowHTMLReport(const string& title, const string& contents, const string& plainText)
 {
 	BNShowHTMLReport(m_object, title.c_str(), contents.c_str(), plainText.c_str());
+}
+
+
+void BinaryView::ShowGraphReport(const string& title, FlowGraph* graph)
+{
+	BNShowGraphReport(m_object, title.c_str(), graph->GetObject());
 }
 
 

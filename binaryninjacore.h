@@ -124,8 +124,9 @@ extern "C"
 	struct BNBasicBlock;
 	struct BNDownloadProvider;
 	struct BNDownloadInstance;
-	struct BNFunctionGraph;
-	struct BNFunctionGraphBlock;
+	struct BNFlowGraph;
+	struct BNFlowGraphNode;
+	struct BNFlowGraphLayoutRequest;
 	struct BNSymbol;
 	struct BNTemporaryFile;
 	struct BNLowLevelILFunction;
@@ -146,6 +147,7 @@ extern "C"
 	struct BNRepoPlugin;
 	struct BNRepositoryManager;
 	struct BNMetadata;
+	struct BNReportCollection;
 	struct BNRelocation;
 	struct BNSegment;
 	struct BNSection;
@@ -874,6 +876,7 @@ extern "C"
 		MLIL_LOW_PART,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
+		MLIL_RET_HINT, // Intermediate stages, does not appear in final forms
 		MLIL_CALL, // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
 		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
@@ -1275,13 +1278,42 @@ extern "C"
 		float y;
 	};
 
-	struct BNFunctionGraphEdge
+	struct BNFlowGraphEdge
 	{
 		BNBranchType type;
-		BNBasicBlock* target;
+		BNFlowGraphNode* target;
 		BNPoint* points;
 		size_t pointCount;
 		bool backEdge;
+	};
+
+	enum BNHighlightColorStyle
+	{
+		StandardHighlightColor = 0,
+		MixedHighlightColor = 1,
+		CustomHighlightColor = 2
+	};
+
+	enum BNHighlightStandardColor
+	{
+		NoHighlightColor = 0,
+		BlueHighlightColor = 1,
+		GreenHighlightColor = 2,
+		CyanHighlightColor = 3,
+		RedHighlightColor = 4,
+		MagentaHighlightColor = 5,
+		YellowHighlightColor = 6,
+		OrangeHighlightColor = 7,
+		WhiteHighlightColor = 8,
+		BlackHighlightColor = 9
+	};
+
+	struct BNHighlightColor
+	{
+		BNHighlightColorStyle style;
+		BNHighlightStandardColor color;
+		BNHighlightStandardColor mixColor;
+		uint8_t mix, r, g, b, alpha;
 	};
 
 	struct BNDisassemblyTextLine
@@ -1290,6 +1322,7 @@ extern "C"
 		size_t instrIndex;
 		BNInstructionTextToken* tokens;
 		size_t count;
+		BNHighlightColor highlight;
 	};
 
 	struct BNLinearDisassemblyLine
@@ -1340,6 +1373,12 @@ extern "C"
 	struct BNSizeWithConfidence
 	{
 		size_t value;
+		uint8_t confidence;
+	};
+
+	struct BNOffsetWithConfidence
+	{
+		int64_t value;
 		uint8_t confidence;
 	};
 
@@ -1688,35 +1727,6 @@ extern "C"
 		BNMetadata** values;
 	};
 
-	enum BNHighlightColorStyle
-	{
-		StandardHighlightColor = 0,
-		MixedHighlightColor = 1,
-		CustomHighlightColor = 2
-	};
-
-	enum BNHighlightStandardColor
-	{
-		NoHighlightColor = 0,
-		BlueHighlightColor = 1,
-		GreenHighlightColor = 2,
-		CyanHighlightColor = 3,
-		RedHighlightColor = 4,
-		MagentaHighlightColor = 5,
-		YellowHighlightColor = 6,
-		OrangeHighlightColor = 7,
-		WhiteHighlightColor = 8,
-		BlackHighlightColor = 9
-	};
-
-	struct BNHighlightColor
-	{
-		BNHighlightColorStyle style;
-		BNHighlightStandardColor color;
-		BNHighlightStandardColor mixColor;
-		uint8_t mix, r, g, b, alpha;
-	};
-
 	enum BNMessageBoxIcon
 	{
 		InformationIcon,
@@ -1778,6 +1788,8 @@ extern "C"
 			const char* plaintext);
 		void (*showHTMLReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents,
 			const char* plaintext);
+		void (*showGraphReport)(void* ctxt, BNBinaryView* view, const char* title, BNFlowGraph* graph);
+		void (*showReportCollection)(void* ctxt, const char* title, BNReportCollection* reports);
 		bool (*getTextLineInput)(void* ctxt, char** result, const char* prompt, const char* title);
 		bool (*getIntegerInput)(void* ctxt, int64_t* result, const char* prompt, const char* title);
 		bool (*getAddressInput)(void* ctxt, uint64_t* result, const char* prompt, const char* title,
@@ -1881,6 +1893,23 @@ extern "C"
 		DefaultFunctionAnalysisSkip,
 		NeverSkipFunctionAnalysis,
 		AlwaysSkipFunctionAnalysis
+	};
+
+	enum BNReportType
+	{
+		PlainTextReportType,
+		MarkdownReportType,
+		HTMLReportType,
+		FlowGraphReportType
+	};
+
+	struct BNCustomFlowGraph
+	{
+		void* context;
+		void (*prepareForLayout)(void* ctxt);
+		void (*populateNodes)(void* ctxt);
+		void (*completeLayout)(void* ctxt);
+		BNFlowGraph* (*update)(void* ctxt);
 	};
 
 	struct BNRange
@@ -2462,7 +2491,7 @@ extern "C"
 	BINARYNINJACOREAPI BNParameterVariablesWithConfidence BNGetFunctionParameterVariables(BNFunction* func);
 	BINARYNINJACOREAPI void BNFreeParameterVariables(BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionHasVariableArguments(BNFunction* func);
-	BINARYNINJACOREAPI BNSizeWithConfidence BNGetFunctionStackAdjustment(BNFunction* func);
+	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetFunctionStackAdjustment(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterStackAdjustment* BNGetFunctionRegisterStackAdjustments(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeRegisterStackAdjustments(BNRegisterStackAdjustment* adjustments);
 	BINARYNINJACOREAPI BNRegisterSetWithConfidence BNGetFunctionClobberedRegisters(BNFunction* func);
@@ -2474,7 +2503,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetAutoFunctionParameterVariables(BNFunction* func, BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI void BNSetAutoFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetAutoFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
-	BINARYNINJACOREAPI void BNSetAutoFunctionStackAdjustment(BNFunction* func, BNSizeWithConfidence* stackAdjust);
+	BINARYNINJACOREAPI void BNSetAutoFunctionStackAdjustment(BNFunction* func, BNOffsetWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI void BNSetAutoFunctionRegisterStackAdjustments(BNFunction* func,
 		BNRegisterStackAdjustment* adjustments, size_t count);
 	BINARYNINJACOREAPI void BNSetAutoFunctionClobberedRegisters(BNFunction* func, BNRegisterSetWithConfidence* regs);
@@ -2485,7 +2514,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetUserFunctionParameterVariables(BNFunction* func, BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI void BNSetUserFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetUserFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
-	BINARYNINJACOREAPI void BNSetUserFunctionStackAdjustment(BNFunction* func, BNSizeWithConfidence* stackAdjust);
+	BINARYNINJACOREAPI void BNSetUserFunctionStackAdjustment(BNFunction* func, BNOffsetWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI void BNSetUserFunctionRegisterStackAdjustments(BNFunction* func,
 		BNRegisterStackAdjustment* adjustments, size_t count);
 	BINARYNINJACOREAPI void BNSetUserFunctionClobberedRegisters(BNFunction* func, BNRegisterSetWithConfidence* regs);
@@ -2578,9 +2607,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
 
 	BINARYNINJACOREAPI void BNSetAutoCallStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-		size_t adjust, uint8_t confidence);
+		int64_t adjust, uint8_t confidence);
 	BINARYNINJACOREAPI void BNSetUserCallStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
-		size_t adjust, uint8_t confidence);
+		int64_t adjust, uint8_t confidence);
 	BINARYNINJACOREAPI void BNSetAutoCallRegisterStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 		BNRegisterStackAdjustment* adjust, size_t count);
 	BINARYNINJACOREAPI void BNSetUserCallRegisterStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
@@ -2590,11 +2619,12 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetUserCallRegisterStackAdjustmentForRegisterStack(BNFunction* func,
 		BNArchitecture* arch, uint64_t addr, uint32_t regStack, int32_t adjust, uint8_t confidence);
 
-	BINARYNINJACOREAPI BNSizeWithConfidence BNGetCallStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetCallStackAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNRegisterStackAdjustment* BNGetCallRegisterStackAdjustment(BNFunction* func,
 		BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNRegisterStackAdjustment BNGetCallRegisterStackAdjustmentForRegisterStack(BNFunction* func,
 		BNArchitecture* arch, uint64_t addr, uint32_t regStack);
+	BINARYNINJACOREAPI bool BNIsCallInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI BNInstructionTextLine* BNGetFunctionBlockAnnotations(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, size_t* count);
@@ -2698,6 +2728,10 @@ extern "C"
 	BINARYNINJACOREAPI BNPerformanceInfo* BNGetFunctionAnalysisPerformanceInfo(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeAnalysisPerformanceInfo(BNPerformanceInfo* info, size_t count);
 
+	BINARYNINJACOREAPI BNFlowGraph* BNGetUnresolvedStackAdjustmentGraph(BNFunction* func);
+
+	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
+
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);
 	BINARYNINJACOREAPI BNDisassemblySettings* BNNewDisassemblySettingsReference(BNDisassemblySettings* settings);
@@ -2713,56 +2747,73 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings, size_t width);
 
-	// Function graph
-	BINARYNINJACOREAPI BNFunctionGraph* BNCreateFunctionGraph(BNFunction* func);
-	BINARYNINJACOREAPI BNFunctionGraph* BNNewFunctionGraphReference(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI void BNFreeFunctionGraph(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI BNFunction* BNGetFunctionForFunctionGraph(BNFunctionGraph* graph);
+	// Flow graphs
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph();
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateFunctionGraph(BNFunction* func, BNFunctionGraphType type,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateLowLevelILFunctionGraph(BNLowLevelILFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateMediumLevelILFunctionGraph(BNMediumLevelILFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateCustomFlowGraph(BNCustomFlowGraph* callbacks);
+	BINARYNINJACOREAPI BNFlowGraph* BNNewFlowGraphReference(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNFreeFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNFunction* BNGetFunctionForFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNSetFunctionForFlowGraph(BNFlowGraph* graph, BNFunction* func);
 
-	BINARYNINJACOREAPI int BNGetHorizontalFunctionGraphBlockMargin(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI int BNGetVerticalFunctionGraphBlockMargin(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI void BNSetFunctionGraphBlockMargins(BNFunctionGraph* graph, int horiz, int vert);
+	BINARYNINJACOREAPI int BNGetHorizontalFlowGraphNodeMargin(BNFlowGraph* graph);
+	BINARYNINJACOREAPI int BNGetVerticalFlowGraphNodeMargin(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNSetFlowGraphNodeMargins(BNFlowGraph* graph, int horiz, int vert);
 
-	BINARYNINJACOREAPI BNDisassemblySettings* BNGetFunctionGraphSettings(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphLayoutRequest* BNStartFlowGraphLayout(BNFlowGraph* graph, void* ctxt, void (*func)(void* ctxt));
+	BINARYNINJACOREAPI bool BNIsFlowGraphLayoutComplete(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphLayoutRequest* BNNewFlowGraphLayoutRequestReference(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI void BNFreeFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI bool BNIsFlowGraphLayoutRequestComplete(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI BNFlowGraph* BNGetGraphForFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* layout);
+	BINARYNINJACOREAPI void BNAbortFlowGraphLayoutRequest(BNFlowGraphLayoutRequest* graph);
+	BINARYNINJACOREAPI bool BNIsILFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI bool BNIsLowLevelILFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI bool BNIsMediumLevelILFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFlowGraphLowLevelILFunction(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFlowGraphMediumLevelILFunction(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNSetFlowGraphLowLevelILFunction(BNFlowGraph* graph, BNLowLevelILFunction* func);
+	BINARYNINJACOREAPI void BNSetFlowGraphMediumLevelILFunction(BNFlowGraph* graph, BNMediumLevelILFunction* func);
 
-	BINARYNINJACOREAPI void BNStartFunctionGraphLayout(BNFunctionGraph* graph, BNFunctionGraphType type);
-	BINARYNINJACOREAPI bool BNIsFunctionGraphLayoutComplete(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI void BNSetFunctionGraphCompleteCallback(BNFunctionGraph* graph, void* ctxt, void (*func)(void* ctxt));
-	BINARYNINJACOREAPI void BNAbortFunctionGraph(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI BNFunctionGraphType BNGetFunctionGraphType(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI bool BNIsILFunctionGraph(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI bool BNIsLowLevelILFunctionGraph(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI bool BNIsMediumLevelILFunctionGraph(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionGraphLowLevelILFunction(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionGraphMediumLevelILFunction(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphNode** BNGetFlowGraphNodes(BNFlowGraph* graph, size_t* count);
+	BINARYNINJACOREAPI BNFlowGraphNode* BNGetFlowGraphNode(BNFlowGraph* graph, size_t i);
+	BINARYNINJACOREAPI BNFlowGraphNode** BNGetFlowGraphNodesInRegion(
+		BNFlowGraph* graph, int left, int top, int right, int bottom, size_t* count);
+	BINARYNINJACOREAPI void BNFreeFlowGraphNodeList(BNFlowGraphNode** nodes, size_t count);
+	BINARYNINJACOREAPI bool BNFlowGraphHasNodes(BNFlowGraph* graph);
+	BINARYNINJACOREAPI size_t BNAddFlowGraphNode(BNFlowGraph* graph, BNFlowGraphNode* node);
 
-	BINARYNINJACOREAPI BNFunctionGraphBlock** BNGetFunctionGraphBlocks(BNFunctionGraph* graph, size_t* count);
-	BINARYNINJACOREAPI BNFunctionGraphBlock** BNGetFunctionGraphBlocksInRegion(
-		BNFunctionGraph* graph, int left, int top, int right, int bottom, size_t* count);
-	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockList(BNFunctionGraphBlock** blocks, size_t count);
-	BINARYNINJACOREAPI bool BNFunctionGraphHasBlocks(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI int BNGetFlowGraphWidth(BNFlowGraph* graph);
+	BINARYNINJACOREAPI int BNGetFlowGraphHeight(BNFlowGraph* graph);
 
-	BINARYNINJACOREAPI int BNGetFunctionGraphWidth(BNFunctionGraph* graph);
-	BINARYNINJACOREAPI int BNGetFunctionGraphHeight(BNFunctionGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphNode* BNCreateFlowGraphNode(BNFlowGraph* graph);
+	BINARYNINJACOREAPI BNFlowGraphNode* BNNewFlowGraphNodeReference(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI void BNFreeFlowGraphNode(BNFlowGraphNode* node);
 
-	BINARYNINJACOREAPI bool BNIsFunctionGraphOptionSet(BNFunctionGraph* graph, BNDisassemblyOption option);
-	BINARYNINJACOREAPI void BNSetFunctionGraphOption(BNFunctionGraph* graph, BNDisassemblyOption option, bool state);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetFlowGraphBasicBlock(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI void BNSetFlowGraphBasicBlock(BNFlowGraphNode* node, BNBasicBlock* block);
+	BINARYNINJACOREAPI int BNGetFlowGraphNodeX(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI int BNGetFlowGraphNodeY(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI int BNGetFlowGraphNodeWidth(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI int BNGetFlowGraphNodeHeight(BNFlowGraphNode* node);
 
-	BINARYNINJACOREAPI BNFunctionGraphBlock* BNNewFunctionGraphBlockReference(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI void BNFreeFunctionGraphBlock(BNFunctionGraphBlock* block);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFlowGraphNodeLines(BNFlowGraphNode* node, size_t* count);
+	BINARYNINJACOREAPI void BNSetFlowGraphNodeLines(BNFlowGraphNode* node, BNDisassemblyTextLine* lines, size_t count);
+	BINARYNINJACOREAPI BNFlowGraphEdge* BNGetFlowGraphNodeOutgoingEdges(BNFlowGraphNode* node, size_t* count);
+	BINARYNINJACOREAPI void BNFreeFlowGraphNodeOutgoingEdgeList(BNFlowGraphEdge* edges, size_t count);
+	BINARYNINJACOREAPI void BNAddFlowGraphNodeOutgoingEdge(BNFlowGraphNode* node, BNBranchType type, BNFlowGraphNode* target);
 
-	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionGraphBasicBlock(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI BNArchitecture* BNGetFunctionGraphBlockArchitecture(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockStart(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI uint64_t BNGetFunctionGraphBlockEnd(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI int BNGetFunctionGraphBlockX(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI int BNGetFunctionGraphBlockY(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI int BNGetFunctionGraphBlockWidth(BNFunctionGraphBlock* block);
-	BINARYNINJACOREAPI int BNGetFunctionGraphBlockHeight(BNFunctionGraphBlock* block);
+	BINARYNINJACOREAPI BNHighlightColor BNGetFlowGraphNodeHighlight(BNFlowGraphNode* node);
+	BINARYNINJACOREAPI void BNSetFlowGraphNodeHighlight(BNFlowGraphNode* node, BNHighlightColor color);
 
-	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFunctionGraphBlockLines(BNFunctionGraphBlock* block, size_t* count);
-	BINARYNINJACOREAPI BNFunctionGraphEdge* BNGetFunctionGraphBlockOutgoingEdges(BNFunctionGraphBlock* block, size_t* count);
-	BINARYNINJACOREAPI void BNFreeFunctionGraphBlockOutgoingEdgeList(BNFunctionGraphEdge* edges, size_t count);
+	BINARYNINJACOREAPI void BNFinishPrepareForLayout(BNFlowGraph* graph);
+
+	BINARYNINJACOREAPI BNFlowGraph* BNUpdateFlowGraph(BNFlowGraph* graph);
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,
@@ -3073,7 +3124,7 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(BNTypeWithConfidence* type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNTypeWithConfidence* returnValue,
 		BNCallingConventionWithConfidence* callingConvention, BNFunctionParameter* params,
-		size_t paramCount, BNBoolWithConfidence* varArg, BNSizeWithConfidence* stackAdjust);
+		size_t paramCount, BNBoolWithConfidence* varArg, BNOffsetWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
@@ -3106,7 +3157,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNTypeSetMemberAccess(BNType* type, BNMemberAccessWithConfidence* access);
 	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, BNBoolWithConfidence* vltl);
-	BINARYNINJACOREAPI BNSizeWithConfidence BNGetTypeStackAdjustment(BNType* type);
+	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeStackAdjustment(BNType* type);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type, BNPlatform* platform);
@@ -3449,6 +3500,8 @@ extern "C"
 		const char* plaintext);
 	BINARYNINJACOREAPI void BNShowHTMLReport(BNBinaryView* view, const char* title, const char* contents,
 		const char* plaintext);
+	BINARYNINJACOREAPI void BNShowGraphReport(BNBinaryView* view, const char* title, BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNShowReportCollection(const char* title, BNReportCollection* reports);
 	BINARYNINJACOREAPI bool BNGetTextLineInput(char** result, const char* prompt, const char* title);
 	BINARYNINJACOREAPI bool BNGetIntegerInput(int64_t* result, const char* prompt, const char* title);
 	BINARYNINJACOREAPI bool BNGetAddressInput(uint64_t* result, const char* prompt, const char* title,
@@ -3463,6 +3516,25 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeFormInputResults(BNFormInputField* fields, size_t count);
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
 		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
+
+	BINARYNINJACOREAPI BNReportCollection* BNCreateReportCollection(void);
+	BINARYNINJACOREAPI BNReportCollection* BNNewReportCollectionReference(BNReportCollection* reports);
+	BINARYNINJACOREAPI void BNFreeReportCollection(BNReportCollection* reports);
+	BINARYNINJACOREAPI size_t BNGetReportCollectionCount(BNReportCollection* reports);
+	BINARYNINJACOREAPI BNReportType BNGetReportType(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI BNBinaryView* BNGetReportView(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI char* BNGetReportTitle(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI char* BNGetReportContents(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI char* BNGetReportPlainText(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI BNFlowGraph* BNGetReportFlowGraph(BNReportCollection* reports, size_t i);
+	BINARYNINJACOREAPI void BNAddPlainTextReportToCollection(BNReportCollection* reports, BNBinaryView* view,
+		const char* title, const char* contents);
+	BINARYNINJACOREAPI void BNAddMarkdownReportToCollection(BNReportCollection* reports, BNBinaryView* view,
+		const char* title, const char* contents, const char* plaintext);
+	BINARYNINJACOREAPI void BNAddHTMLReportToCollection(BNReportCollection* reports, BNBinaryView* view,
+		const char* title, const char* contents, const char* plaintext);
+	BINARYNINJACOREAPI void BNAddGraphReportToCollection(BNReportCollection* reports, BNBinaryView* view,
+		const char* title, BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch,
 	                                       const char* mangledName,

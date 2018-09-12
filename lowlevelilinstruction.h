@@ -714,7 +714,7 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
 		template <BNLowLevelILOperation N> uint64_t GetOffset() const { return As<N>().GetOffset(); }
 		template <BNLowLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
-		template <BNLowLevelILOperation N> size_t GetStackAdjustment() const { return As<N>().GetStackAdjustment(); }
+		template <BNLowLevelILOperation N> int64_t GetStackAdjustment() const { return As<N>().GetStackAdjustment(); }
 		template <BNLowLevelILOperation N> size_t GetTarget() const { return As<N>().GetTarget(); }
 		template <BNLowLevelILOperation N> size_t GetTrueTarget() const { return As<N>().GetTrueTarget(); }
 		template <BNLowLevelILOperation N> size_t GetFalseTarget() const { return As<N>().GetFalseTarget(); }
@@ -779,7 +779,7 @@ namespace BinaryNinja
 		int64_t GetConstant() const;
 		uint64_t GetOffset() const;
 		int64_t GetVector() const;
-		size_t GetStackAdjustment() const;
+		int64_t GetStackAdjustment() const;
 		size_t GetTarget() const;
 		size_t GetTrueTarget() const;
 		size_t GetFalseTarget() const;
@@ -1112,7 +1112,7 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_CALL_STACK_ADJUST>: public LowLevelILInstructionBase
 	{
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		size_t GetStackAdjustment() const { return (size_t)GetRawOperandAsInteger(1); }
+		int64_t GetStackAdjustment() const { return GetRawOperandAsInteger(1); }
 		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const { return GetRawOperandAsRegisterStackAdjustments(2); }
 	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_TAILCALL>: public LowLevelILInstructionBase

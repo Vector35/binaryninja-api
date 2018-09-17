@@ -3,4 +3,4 @@
 	url = https://github.com/Vector35/asmx86.git
 [submodule "suite/binaries"]
 	path = suite/binaries
-	url = git@github.com:Vector35/BinaryTestCases.git
+	url = https://github.com/Vector35/BinaryTestCases.git

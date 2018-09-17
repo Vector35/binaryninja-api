@@ -303,7 +303,7 @@ class BasicBlock(object):
 
 		idx = start
 		while idx < end:
-			data = self.view.read(idx, self.arch.max_instr_length)
+			data = self.view.read(idx, min(self.arch.max_instr_length, end - idx))
 			inst_info = self.arch.get_instruction_info(data, idx)
 			inst_text = self.arch.get_instruction_text(data, idx)
 

@@ -396,9 +396,18 @@ int main(int argc, char* argv[])
 			// As of writing this, only BNLog's have variable instruction lengths, but in an attempt not to break in the future:
 			if (funcName.compare(0, 6, "_BNLog") == 0)
 			{
-				fprintf(out, "def %s(*args):\n", name.c_str());
-				fprintf(out, "\treturn %s(*[cstr(arg) for arg in args])\n\n", funcName.c_str());
-				continue;
+				if (funcName != "_BNLog")
+				{
+					fprintf(out, "def %s(*args):\n", name.c_str());
+					fprintf(out, "\treturn %s(*[cstr(arg) for arg in args])\n\n", funcName.c_str());
+					continue;
+				}
+				else
+				{
+					fprintf(out, "def %s(level, *args):\n", name.c_str());
+					fprintf(out, "\treturn %s(level, *[cstr(arg) for arg in args])\n\n", funcName.c_str());
+					continue;
+				}
 			}
 		}
 

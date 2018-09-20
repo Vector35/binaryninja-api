@@ -192,6 +192,13 @@ BNSymbolType Symbol::GetType() const
 }
 
 
+NameSpace Symbol::GetNameSpace() const
+{
+	BNNameSpace name = BNGetSymbolNameSpace(m_object);
+	return NameSpace::FromAPIObject(&name);
+}
+
+
 string Symbol::GetShortName() const
 {
 	char* name = BNGetSymbolShortName(m_object);
@@ -1274,6 +1281,7 @@ vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 		result.push_back(new Function(BNNewFunctionReference(list[i])));
 
 	BNFreeFunctionList(list, count);
+
 	return result;
 }
 
@@ -1515,9 +1523,19 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 }
 
 
-void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
+void BinaryView::DefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
 {
-	BNDefineAutoSymbol(m_object, sym->GetObject());
+	BNNameSpace ns;
+	ns.join = BNAllocString(nameSpace.GetJoinString().c_str());
+	ns.name = new char*[nameSpace.size()];
+	for (size_t i = 0; i < nameSpace.size(); i++)
+		ns.name[i] = BNAllocString(nameSpace[i].c_str());
+	ns.nameCount = nameSpace.size();
+	BNDefineAutoSymbol(m_object, sym->GetObject(), &ns);
+	BNFreeString(ns.join);
+	for (size_t i = 0; i < nameSpace.size(); i++)
+		BNFreeString(ns.name[i]);
+	delete[] ns.name;
 }
 
 

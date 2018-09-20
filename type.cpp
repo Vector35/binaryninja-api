@@ -385,6 +385,12 @@ NameSpace NameSpace::operator+(const NameSpace& other) const
 }
 
 
+bool NameSpace::IsDefaultNameSpace() const
+{
+	return ((GetString() == DEFAULT_INTERNAL_NAMESPACE) || (GetString() == DEFAULT_EXTERNAL_NAMESPACE));
+}
+
+
 BNNameSpace NameSpace::GetAPIObject() const
 {
 	BNNameSpace result;
@@ -406,7 +412,7 @@ void NameSpace::FreeAPIObject(BNNameSpace* name)
 }
 
 
-NameSpace NameSpace::FromAPIObject(BNNameSpace* name)
+NameSpace NameSpace::FromAPIObject(const BNNameSpace* name)
 {
 	NameSpace result;
 	for (size_t i = 0; i < name->nameCount; i++)

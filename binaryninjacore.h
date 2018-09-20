@@ -98,6 +98,9 @@
 #define BN_MINIMUM_CONFIDENCE   1
 #define BN_HEURISTIC_CONFIDENCE 192
 
+#define DEFAULT_INTERNAL_NAMESPACE "INTERNAL"
+#define DEFAULT_EXTERNAL_NAMESPACE "EXTERNAL"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -228,7 +231,8 @@ extern "C"
 		KeywordToken = 19,
 		TypeNameToken = 20,
 		FieldNameToken = 21,
-
+		NameSpaceToken = 22,
+		NameSpaceSeparatorToken = 23,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -2821,6 +2825,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbol* BNNewSymbolReference(BNSymbol* sym);
 	BINARYNINJACOREAPI void BNFreeSymbol(BNSymbol* sym);
 	BINARYNINJACOREAPI BNSymbolType BNGetSymbolType(BNSymbol* sym);
+	BINARYNINJACOREAPI BNNameSpace BNGetSymbolNameSpace(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolShortName(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolFullName(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
@@ -2837,7 +2842,7 @@ extern "C"
 	                                                        uint64_t start, uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeSymbolList(BNSymbol** syms, size_t count);
 
-	BINARYNINJACOREAPI void BNDefineAutoSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNDefineAutoSymbol(BNBinaryView* view, BNSymbol* sym, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI void BNUndefineAutoSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNDefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNUndefineUserSymbol(BNBinaryView* view, BNSymbol* sym);

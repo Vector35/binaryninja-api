@@ -119,6 +119,10 @@ class QualifiedName(object):
 		return QualifiedName(result)
 
 
+class NameSpace(QualifiedName):
+	def __str__(self):
+		return ":".join(self.name)
+
 class Symbol(object):
 	"""
 	Symbols are defined as one of the following types:
@@ -162,6 +166,11 @@ class Symbol(object):
 	def type(self):
 		"""Symbol type (read-only)"""
 		return SymbolType(core.BNGetSymbolType(self.handle))
+
+	@property
+	def namespace(self):
+		"""Symbol namespace (read-only)"""
+		return SymbolNameSpace(core.BNGetSymbolNameSpace(self.handle))
 
 	@property
 	def name(self):

@@ -1544,6 +1544,7 @@ extern "C"
 		void (*freeObject)(void* ctxt);
 
 		uint32_t* (*getCallerSavedRegisters)(void* ctxt, size_t* count);
+		uint32_t* (*getCalleeSavedRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getIntegerArgumentRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getFloatArgumentRegisters)(void* ctxt, size_t* count);
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs);
@@ -3320,6 +3321,7 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture* BNGetCallingConventionArchitecture(BNCallingConvention* cc);
 	BINARYNINJACOREAPI char* BNGetCallingConventionName(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t* BNGetCallerSavedRegisters(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetCalleeSavedRegisters(BNCallingConvention* cc, size_t* count);
 
 	BINARYNINJACOREAPI uint32_t* BNGetIntegerArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetFloatArgumentRegisters(BNCallingConvention* cc, size_t* count);

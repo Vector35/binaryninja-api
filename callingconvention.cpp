@@ -36,6 +36,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.context = this;
 	cc.freeObject = FreeCallback;
 	cc.getCallerSavedRegisters = GetCallerSavedRegistersCallback;
+	cc.getCalleeSavedRegisters = GetCalleeSavedRegistersCallback;
 	cc.getIntegerArgumentRegisters = GetIntegerArgumentRegistersCallback;
 	cc.getFloatArgumentRegisters = GetFloatArgumentRegistersCallback;
 	cc.freeRegisterList = FreeRegisterListCallback;
@@ -68,6 +69,19 @@ uint32_t* CallingConvention::GetCallerSavedRegistersCallback(void* ctxt, size_t*
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	vector<uint32_t> regs = cc->GetCallerSavedRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetCalleeSavedRegistersCallback(void* ctxt, size_t* count)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	vector<uint32_t> regs = cc->GetCalleeSavedRegisters();
 	*count = regs.size();
 
 	uint32_t* result = new uint32_t[regs.size()];
@@ -234,6 +248,12 @@ vector<uint32_t> CallingConvention::GetCallerSavedRegisters()
 }
 
 
+vector<uint32_t> CallingConvention::GetCalleeSavedRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
 vector<uint32_t> CallingConvention::GetIntegerArgumentRegisters()
 {
 	return vector<uint32_t>();
@@ -329,6 +349,17 @@ vector<uint32_t> CoreCallingConvention::GetCallerSavedRegisters()
 {
 	size_t count;
 	uint32_t* regs = BNGetCallerSavedRegisters(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetCalleeSavedRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetCalleeSavedRegisters(m_object, &count);
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
 	BNFreeRegisterList(regs);

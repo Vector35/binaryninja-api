@@ -303,14 +303,12 @@ class BasicBlock(object):
 
 		idx = start
 		while idx < end:
-			data = self.view.read(idx, self.arch.max_instr_length)
-			inst_info = self.arch.get_instruction_info(data, idx)
+			data = self.view.read(idx, min(self.arch.max_instr_length, end - idx))
 			inst_text = self.arch.get_instruction_text(data, idx)
-
-			if inst_info is None:
+			if inst_text[1] == 0:
 				break
 			yield inst_text
-			idx += inst_info.length
+			idx += inst_text[1]
 
 	def mark_recent_use(self):
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)

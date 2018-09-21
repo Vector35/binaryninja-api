@@ -141,5 +141,5 @@ size_t CoreRelocationHandler::GetOperandForExternalRelocation(const uint8_t* dat
 	Ref<LowLevelILFunction> il, Ref<Relocation> relocation)
 {
 	return BNRelocationHandlerGetOperandForExternalRelocation(m_object, data, addr, length, il->GetObject(),
-		relocation->GetObject());
+		BNNewRelocationReference(relocation->GetObject()));
 }

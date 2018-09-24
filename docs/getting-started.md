@@ -280,12 +280,7 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 | arch    | x86.disassemblyFlavor      | string       | "BN_INTEL"                                     | "BN_INTEL", "INTEL", or "AT&T"              |
 | arch    | x86.disassemblySeperator   | string       | ", "                                           | What to put between operands in disassembly tokens              |
 | arch    | x86.disassemblyLowercase   | bool         | True                                           | Lowercase opcodes, operands, and registers (False for uppercase)              |
-	"arch" :
-	{
-		// "x86.disassemblyFlavor" : "AT&T",
-		// "x86.disassemblyFlavor" : "BN_INTEL",
-		"x86.disassemblyLowercase" : true,
-		"x86.disassemblySeperator" : ", "
+
 Below is an example `settings.json` setting various options:
 ```
 {

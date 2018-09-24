@@ -276,10 +276,10 @@ Settings are stored in the _user_ directory in the file `settings.json`. Each to
 | pdb       | local-store-relative     | string       | "symbols"                                      | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store          |
 | pdb       | auto-download-pdb        | boolean      | True                                           | Automatically download pdb files from specified symbol servers                                |
 | pdb       | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"] | List of servers to query for pdb symbols.                                                     |
-| python    | interpreter              | string       | "python27.{dylib,dll,so.1}"                    | Python interpreter to load if one is not already present when plugins are loaded              |
-| arch    | x86.disassemblyFlavor      | string       | "BN_INTEL"                                     | "BN_INTEL", "INTEL", or "AT&T"              |
-| arch    | x86.disassemblySeperator   | string       | ", "                                           | What to put between operands in disassembly tokens              |
-| arch    | x86.disassemblyLowercase   | bool         | True                                           | Lowercase opcodes, operands, and registers (False for uppercase)              |
+| python    | interpreter              | string       | "{/path/,C:\\Path\\}python27.{dylib,dll,so.1}" | Python interpreter to load if one is not already present when plugins are loaded              |
+| arch      | x86.disassemblyFlavor    | string       | "BN_INTEL"                                     | "BN_INTEL", "INTEL", or "AT&T"              |
+| arch      | x86.disassemblySeperator | string       | ", "                                           | What to put between operands in disassembly tokens              |
+| arch      | x86.disassemblyLowercase | bool         | True                                           | Lowercase opcodes, operands, and registers (False for uppercase)              |
 
 Below is an example `settings.json` setting various options:
 ```
@@ -288,15 +288,19 @@ Below is an example `settings.json` setting various options:
     {
         "activeContent" : false,
         "colorblind" : false,
-        "debug" : true
+        "debug" : true,
         "recent-file-limit" : 10
     }
     "pdb" :
     {
-        "local-store-absolute" : "C:\Symbols",
+        "local-store-absolute" : "C:\\Symbols",
         "local-store-relative" : "",
         "symbol-server-list" : ["http://mysymbolserver.company.lan"]
-    }
+    },
+	"python":
+	{
+		"interpreter": "C:\\Users\\Binja\\AppData\\Local\\Programs\\Python\\Python37\\python37.dll"
+	}
 }
 ```
 

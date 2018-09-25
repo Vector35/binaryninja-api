@@ -587,7 +587,7 @@ class ReportCollection(object):
 
 	def __iter__(self):
 		count = len(self)
-		for i in xrange(0, count):
+		for i in range(0, count):
 			yield self._report_from_index(i)
 
 	def __repr__(self):

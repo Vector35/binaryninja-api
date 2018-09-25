@@ -983,7 +983,7 @@ class BinaryView(object):
 		info_ref = core.BNGetAnalysisInfo(self.handle)
 		info = info_ref[0]
 		active_info_list = []
-		for i in xrange(0, info.count):
+		for i in range(0, info.count):
 			func = binaryninja.function.Function(self, core.BNNewFunctionReference(info.activeInfo[i].func))
 			active_info = ActiveAnalysisInfo(func, info.activeInfo[i].analysisTime, info.activeInfo[i].updateCount, info.activeInfo[i].submitCount)
 			active_info_list.append(active_info)

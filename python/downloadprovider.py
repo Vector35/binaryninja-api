@@ -35,6 +35,7 @@ from binaryninja import log
 
 # 2-3 compatibility
 from binaryninja import pyNativeStr
+from binaryninja import range
 
 
 class DownloadInstance(object):
@@ -85,7 +86,7 @@ class _DownloadProviderMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetDownloadProviderList(count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append(DownloadProvider(types[i]))
 		core.BNFreeDownloadProviderList(types)
 		return result
@@ -95,7 +96,7 @@ class _DownloadProviderMetaclass(type):
 		count = ctypes.c_ulonglong()
 		types = core.BNGetDownloadProviderList(count)
 		try:
-			for i in xrange(0, count.value):
+			for i in range(0, count.value):
 				yield DownloadProvider(types[i])
 		finally:
 			core.BNFreeDownloadProviderList(types)

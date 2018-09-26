@@ -604,8 +604,10 @@ class BinaryView(object):
 	registered_view_type = None
 	next_address = 0
 	_associated_data = {}
+	_registered_instances = []
 
 	def __init__(self, file_metadata=None, parent_view=None, handle=None):
+		self._must_free = True
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
@@ -625,6 +627,7 @@ class BinaryView(object):
 			self._cb = core.BNCustomBinaryView()
 			self._cb.context = 0
 			self._cb.init = self._cb.init.__class__(self._init)
+			self._cb.freeObject = self._cb.freeObject.__class__(self._free_object)
 			self._cb.read = self._cb.read.__class__(self._read)
 			self._cb.write = self._cb.write.__class__(self._write)
 			self._cb.insert = self._cb.insert.__class__(self._insert)
@@ -647,6 +650,8 @@ class BinaryView(object):
 			if parent_view is not None:
 				parent_view = parent_view.handle
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, parent_view, self._cb)
+			self.__class__._registered_instances.append(self)
+			self._must_free = False
 		self.notifications = {}
 		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
@@ -681,7 +686,7 @@ class BinaryView(object):
 			view = cls(BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data)))
 			if view is None:
 				return None
-			return ctypes.cast(core.BNNewViewReference(view.handle), ctypes.c_void_p).value
+			return ctypes.cast(view.handle, ctypes.c_void_p).value
 		except:
 			log.log_error(traceback.format_exc())
 			return None
@@ -792,7 +797,8 @@ class BinaryView(object):
 	def __del__(self):
 		for i in self.notifications.values():
 			i._unregister()
-		core.BNFreeBinaryView(self.handle)
+		if self._must_free:
+			core.BNFreeBinaryView(self.handle)
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong(0)
@@ -1189,6 +1195,12 @@ class BinaryView(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+	def _free_object(self, ctxt):
+		try:
+			self.__class__._registered_instances.remove(self)
+		except:
+			log.log_error(traceback.format_exc())
 
 	def _read(self, ctxt, dest, offset, length):
 		try:

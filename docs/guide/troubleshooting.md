@@ -118,7 +118,8 @@ stdenv.mkDerivation rec {
           $out/bin/binaryninja \
           --prefix "QT_XKB_CONFIG_ROOT" ":" "${xkeyboard_config}/share/X11/xkb"
   '';
-}```
+}
+```
 
 ## API
 

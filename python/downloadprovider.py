@@ -39,6 +39,7 @@ from binaryninja import range
 
 
 class DownloadInstance(object):
+	_registered_instances = []
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNDownloadInstanceCallbacks()
@@ -46,15 +47,18 @@ class DownloadInstance(object):
 			self._cb.destroyInstance = self._cb.destroyInstance.__class__(self._destroy_instance)
 			self._cb.performRequest = self._cb.performRequest.__class__(self._perform_request)
 			self.handle = core.BNInitDownloadInstance(provider.handle, self._cb)
+			self.__class__._registered_instances.append(self)
 		else:
 			self.handle = core.handle_of_type(handle, core.BNDownloadInstance)
-		self._outputCallbacks = None
+		self._must_free = handle is not None
 
 	def __del__(self):
-		core.BNFreeDownloadInstance(self.handle)
+		if self._must_free:
+			core.BNFreeDownloadInstance(self.handle)
 
 	def _destroy_instance(self, ctxt):
 		try:
+			self.__class__._registered_instances.remove(self)
 			self.perform_destroy_instance()
 		except:
 			log.log_error(traceback.format_exc())

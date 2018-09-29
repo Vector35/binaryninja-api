@@ -31,7 +31,8 @@ NameList::NameList(const string& join): m_join(join)
 
 NameList::NameList(const string& name, const string& join): m_join(join)
 {
-	m_name.push_back(name);
+	if (!name.empty())
+		m_name.push_back(name);
 }
 
 
@@ -44,6 +45,8 @@ NameList::NameList(const NameList& name, const string& join): m_join(join), m_na
 {
 }
 
+NameList::~NameList()
+{}
 
 NameList& NameList::operator=(const string& name)
 {
@@ -269,6 +272,10 @@ QualifiedName::QualifiedName(const QualifiedName& name): NameList(name.m_name, "
 }
 
 
+QualifiedName::~QualifiedName()
+{}
+
+
 QualifiedName& QualifiedName::operator=(const string& name)
 {
 	m_name = vector<string>{name};
@@ -352,6 +359,10 @@ NameSpace::NameSpace(const NameSpace& name): NameList(name.m_name, "::")
 }
 
 
+NameSpace::~NameSpace()
+{}
+
+
 NameSpace& NameSpace::operator=(const string& name)
 {
 	m_name = vector<string>{name};
@@ -405,6 +416,8 @@ BNNameSpace NameSpace::GetAPIObject() const
 
 void NameSpace::FreeAPIObject(BNNameSpace* name)
 {
+	if (!name)
+		return;
 	for (size_t i = 0; i < name->nameCount; i++)
 		BNFreeString(name->name[i]);
 	BNFreeString(name->join);
@@ -415,6 +428,8 @@ void NameSpace::FreeAPIObject(BNNameSpace* name)
 NameSpace NameSpace::FromAPIObject(const BNNameSpace* name)
 {
 	NameSpace result;
+	if (!name)
+		return result;
 	for (size_t i = 0; i < name->nameCount; i++)
 		result.push_back(name->name[i]);
 	return result;

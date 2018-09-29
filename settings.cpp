@@ -17,7 +17,10 @@ int64_t Setting::GetInteger(const std::string& pluginName, const std::string& na
 
 std::string Setting::GetString(const std::string& pluginName, const std::string& name, const std::string& defaultValue)
 {
-	return BNSettingGetString(pluginName.c_str(), name.c_str(), defaultValue.c_str());
+	char* str = BNSettingGetString(pluginName.c_str(), name.c_str(), defaultValue.c_str());
+	string result(str);
+	BNFreeString(str);
+	return result;
 }
 
 double Setting::GetDouble(const std::string& pluginName, const std::string& name, double defaultValue)

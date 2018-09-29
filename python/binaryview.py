@@ -1011,12 +1011,41 @@ class BinaryView(object):
 	def symbols(self):
 		"""Dict of symbols (read-only)"""
 		count = ctypes.c_ulonglong(0)
-		syms = core.BNGetSymbols(self.handle, count)
+		syms = core.BNGetSymbols(self.handle, count, None)
 		result = {}
 		for i in range(0, count.value):
 			sym = types.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
-			result[sym.raw_name] = sym
+			if sym.raw_name in result:
+				result[sym.raw_name] = [result[sym.raw_name], sym]
+			else:
+				result[sym.raw_name] = sym
 		core.BNFreeSymbolList(syms, count.value)
+		return result
+
+	@property
+	def internal_namespace(self):
+		"""Internal namespace for the current BinaryView"""
+		ns = core.BNGetInternalNameSpace(self.handle)
+		result = types.NameSpace._from_core_struct(ns)
+		core.BNFreeNameSpace(ns)
+		return result
+
+	@property
+	def external_namespace(self):
+		"""External namespace for the current BinaryView"""
+		ns = core.BNGetExternalNameSpace(self.handle)
+		result = types.NameSpace._from_core_struct(ns)
+		core.BNFreeNameSpace(ns)
+		return result
+
+	@property
+	def namespaces(self):
+		count = ctypes.c_ulonglong(0)
+		nameSpaceList = core.BNGetNameSpaces(self.handle, count)
+		result = []
+		for i in range(count.value):
+			result.append(types.NameSpace._from_core_struct(nameSpaceList[i]))
+		core.BNFreeNameSpaceList(nameSpaceList, count.value);
 		return result
 
 	@property
@@ -2402,12 +2431,13 @@ class BinaryView(object):
 		core.BNFreeCodeReferences(refs, count.value)
 		return result
 
-	def get_symbol_at(self, addr):
+	def get_symbol_at(self, addr, namespace=None):
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.
 
 		:param int addr: virtual address to query for symbol
 		:return: Symbol for the given virtual address
+		:param NameSpace namespace: the namespace of the symbols to retrieve
 		:rtype: Symbol
 		:Example:
 
@@ -2415,17 +2445,23 @@ class BinaryView(object):
 			<FunctionSymbol: "_start" @ 0x100001174>
 			>>>
 		"""
-		sym = core.BNGetSymbolByAddress(self.handle, addr)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+
+		sym = core.BNGetSymbolByAddress(self.handle, addr, namespace)
 		if sym is None:
 			return None
 		return types.Symbol(None, None, None, handle = sym)
 
-	def get_symbol_by_raw_name(self, name):
+	def get_symbol_by_raw_name(self, name, namespace=None):
 		"""
 		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
 
 		:param str name: raw (mangled) name of Symbol to be retrieved
 		:return: Symbol object corresponding to the provided raw name
+		:param NameSpace namespace: the namespace to search for the given symbol
 		:rtype: Symbol
 		:Example:
 
@@ -2433,17 +2469,22 @@ class BinaryView(object):
 			<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>
 			>>>
 		"""
-		sym = core.BNGetSymbolByRawName(self.handle, name)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		sym = core.BNGetSymbolByRawName(self.handle, name, namespace)
 		if sym is None:
 			return None
 		return types.Symbol(None, None, None, handle = sym)
 
-	def get_symbols_by_name(self, name):
+	def get_symbols_by_name(self, name, namespace=None):
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name.
 
 		:param str name: name of Symbol object to be retrieved
 		:return: Symbol object corresponding to the provided name
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: Symbol
 		:Example:
 
@@ -2451,15 +2492,19 @@ class BinaryView(object):
 			[<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>]
 			>>>
 		"""
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
 		count = ctypes.c_ulonglong(0)
-		syms = core.BNGetSymbolsByName(self.handle, name, count)
+		syms = core.BNGetSymbolsByName(self.handle, name, count, namespace)
 		result = []
 		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
-	def get_symbols(self, start = None, length = None):
+	def get_symbols(self, start=None, length=None, namespace=None):
 		"""
 		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
 
@@ -2474,17 +2519,21 @@ class BinaryView(object):
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
 		if start is None:
-			syms = core.BNGetSymbols(self.handle, count)
+			syms = core.BNGetSymbols(self.handle, count, namespace)
 		else:
-			syms = core.BNGetSymbolsInRange(self.handle, start, length, count)
+			syms = core.BNGetSymbolsInRange(self.handle, start, length, count, namespace)
 		result = []
 		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
-	def get_symbols_of_type(self, sym_type, start = None, length = None):
+	def get_symbols_of_type(self, sym_type, start=None, length=None, namespace=None):
 		"""
 		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
 		 provided range.
@@ -2502,9 +2551,13 @@ class BinaryView(object):
 		"""
 		if isinstance(sym_type, str):
 			sym_type = SymbolType[sym_type]
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
 		count = ctypes.c_ulonglong(0)
 		if start is None:
-			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count)
+			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count, namespace)
 		else:
 			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
 		result = []
@@ -2513,18 +2566,24 @@ class BinaryView(object):
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
-	def define_auto_symbol(self, sym):
+	def define_auto_symbol(self, sym, namespace=None):
 		"""
-		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects.
+		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects in a given
+		namespace.
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		core.BNDefineAutoSymbol(self.handle, sym.handle)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		core.BNDefineAutoSymbol(self.handle, sym.handle, namespace)
 
-	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None):
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None, namespace=None):
 		"""
 		``define_auto_symbol_and_var_or_function``
 
@@ -2533,6 +2592,7 @@ class BinaryView(object):
 		:param Symbol sym: the symbol to define
 		:param SymbolType sym_type: Type of symbol being defined
 		:param Platform plat: (optional) platform
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
 		if plat is None:
@@ -2541,36 +2601,55 @@ class BinaryView(object):
 			plat = plat.handle
 		if sym_type is not None:
 			sym_type = sym_type.handle
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type, namespace)
 
-	def undefine_auto_symbol(self, sym):
+	def undefine_auto_symbol(self, sym, namespace=None):
 		"""
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		core.BNUndefineAutoSymbol(self.handle, sym.handle)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		core.BNUndefineAutoSymbol(self.handle, sym.handle, namespace)
 
-	def define_user_symbol(self, sym):
+	def define_user_symbol(self, sym, namespace=None):
 		"""
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		core.BNDefineUserSymbol(self.handle, sym.handle)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		core.BNDefineUserSymbol(self.handle, sym.handle, namespace)
 
-	def undefine_user_symbol(self, sym):
+	def undefine_user_symbol(self, sym, namespace=None):
 		"""
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
+		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		core.BNUndefineUserSymbol(self.handle, sym.handle)
+		if isinstance(namespace, str):
+			namespace = types.NameSpace(namespace)
+		if isinstance(namespace, types.NameSpace):
+			namespace = namespace._get_core_struct()
+		core.BNUndefineUserSymbol(self.handle, sym.handle, namespace)
 
 	def define_imported_function(self, import_addr_sym, func):
 		"""

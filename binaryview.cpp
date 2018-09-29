@@ -195,7 +195,8 @@ BNSymbolType Symbol::GetType() const
 NameSpace Symbol::GetNameSpace() const
 {
 	BNNameSpace name = BNGetSymbolNameSpace(m_object);
-	return NameSpace::FromAPIObject(&name);
+	NameSpace result = NameSpace::FromAPIObject(&name);
+	BNFreeNameSpace(&name);
 }
 
 
@@ -1430,28 +1431,31 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t le
 }
 
 
-Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr)
+Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace)
 {
-	BNSymbol* sym = BNGetSymbolByAddress(m_object, addr);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol* sym = BNGetSymbolByAddress(m_object, addr, &ns);
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);
 }
 
 
-Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name)
+Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name, const NameSpace& nameSpace)
 {
-	BNSymbol* sym = BNGetSymbolByRawName(m_object, name.c_str());
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol* sym = BNGetSymbolByRawName(m_object, name.c_str(), &ns);
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);
 }
 
 
-vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
+vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name, const NameSpace& nameSpace)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsByName(m_object, name.c_str(), &count);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbolsByName(m_object, name.c_str(), &count, &ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1463,10 +1467,11 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name)
 }
 
 
-vector<Ref<Symbol>> BinaryView::GetSymbols()
+vector<Ref<Symbol>> BinaryView::GetSymbols(const NameSpace& nameSpace)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbols(m_object, &count);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbols(m_object, &count, &ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1478,10 +1483,11 @@ vector<Ref<Symbol>> BinaryView::GetSymbols()
 }
 
 
-vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
+vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsInRange(m_object, start, len, &count);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbolsInRange(m_object, start, len, &count, &ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1493,10 +1499,11 @@ vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len)
 }
 
 
-vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
+vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsOfType(m_object, type, &count);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbolsOfType(m_object, type, &count, &ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1508,10 +1515,11 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type)
 }
 
 
-vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len)
+vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace)
 {
 	size_t count;
-	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_object, type, start, len, &count);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_object, type, start, len, &count, &ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1525,42 +1533,37 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 
 void BinaryView::DefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
 {
-	BNNameSpace ns;
-	ns.join = BNAllocString(nameSpace.GetJoinString().c_str());
-	ns.name = new char*[nameSpace.size()];
-	for (size_t i = 0; i < nameSpace.size(); i++)
-		ns.name[i] = BNAllocString(nameSpace[i].c_str());
-	ns.nameCount = nameSpace.size();
+	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNDefineAutoSymbol(m_object, sym->GetObject(), &ns);
-	BNFreeString(ns.join);
-	for (size_t i = 0; i < nameSpace.size(); i++)
-		BNFreeString(ns.name[i]);
-	delete[] ns.name;
 }
 
 
-void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
+void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type, const NameSpace& nameSpace)
 {
+	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(),
-		type ? type->GetObject() : nullptr);
+		type ? type->GetObject() : nullptr, &ns);
 }
 
 
-void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
+void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
 {
-	BNUndefineAutoSymbol(m_object, sym->GetObject());
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNUndefineAutoSymbol(m_object, sym->GetObject(), &ns);
 }
 
 
-void BinaryView::DefineUserSymbol(Ref<Symbol> sym)
+void BinaryView::DefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
 {
-	BNDefineUserSymbol(m_object, sym->GetObject());
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNDefineUserSymbol(m_object, sym->GetObject(), &ns);
 }
 
 
-void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
+void BinaryView::UndefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
 {
-	BNUndefineUserSymbol(m_object, sym->GetObject());
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNUndefineUserSymbol(m_object, sym->GetObject(), &ns);
 }
 
 
@@ -2259,9 +2262,39 @@ void BinaryView::SetNewAutoFunctionAnalysisSuppressed(bool suppress)
 }
 
 
+set<NameSpace> BinaryView::GetNameSpaces() const
+{
+	set<NameSpace> nameSpaces;
+	size_t count = 0;
+	BNNameSpace* nameSpaceList = BNGetNameSpaces(m_object, &count);
+	for (size_t i = 0; i < count; i++)
+		nameSpaces.insert(NameSpace::FromAPIObject(&nameSpaceList[i]));
+	BNFreeNameSpaceList(nameSpaceList, count);
+	return nameSpaces;
+}
+
+
+NameSpace BinaryView::GetInternalNameSpace() const
+{
+	BNNameSpace ns = BNGetInternalNameSpace(m_object);
+	NameSpace nameSpace = NameSpace::FromAPIObject(&ns);
+	BNFreeNameSpace(&ns);
+	return nameSpace;
+}
+
+
+NameSpace BinaryView::GetExternalNameSpace() const
+{
+	BNNameSpace ns = BNGetExternalNameSpace(m_object);
+	NameSpace nameSpace = NameSpace::FromAPIObject(&ns);
+	BNFreeNameSpace(&ns);
+	return nameSpace;
+}
+
+
 Relocation::Relocation(BNRelocation* reloc)
 {
-        m_object = reloc;
+	m_object = reloc;
 }
 
 

@@ -919,6 +919,7 @@ namespace BinaryNinja
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
 		NameList(const NameList& name, const std::string& join);
+		virtual ~NameList();
 
 		virtual NameList& operator=(const std::string& name);
 		virtual NameList& operator=(const std::vector<std::string>& name);
@@ -965,6 +966,7 @@ namespace BinaryNinja
 		QualifiedName(const std::string& name);
 		QualifiedName(const std::vector<std::string>& name);
 		QualifiedName(const QualifiedName& name);
+		virtual ~QualifiedName();
 
 		virtual QualifiedName& operator=(const std::string& name);
 		virtual QualifiedName& operator=(const std::vector<std::string>& name);
@@ -983,6 +985,7 @@ namespace BinaryNinja
 		NameSpace(const std::string& name);
 		NameSpace(const std::vector<std::string>& name);
 		NameSpace(const NameSpace& name);
+		virtual ~NameSpace();
 
 		virtual NameSpace& operator=(const std::string& name);
 		virtual NameSpace& operator=(const std::vector<std::string>& name);
@@ -1354,20 +1357,20 @@ namespace BinaryNinja
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
 
-		Ref<Symbol> GetSymbolByAddress(uint64_t addr);
-		Ref<Symbol> GetSymbolByRawName(const std::string& name);
-		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name);
-		std::vector<Ref<Symbol>> GetSymbols();
-		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len);
-		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type);
-		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len);
+		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace=NameSpace());
+		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetSymbols(const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
 
 		void DefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
-		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
-		void UndefineAutoSymbol(Ref<Symbol> sym);
+		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type, const NameSpace& nameSpace=NameSpace());
+		void UndefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
 
-		void DefineUserSymbol(Ref<Symbol> sym);
-		void UndefineUserSymbol(Ref<Symbol> sym);
+		void DefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
+		void UndefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
 
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
 
@@ -1474,6 +1477,10 @@ namespace BinaryNinja
 		void SetMaxFunctionSizeForAnalysis(uint64_t size);
 		bool GetNewAutoFunctionAnalysisSuppressed();
 		void SetNewAutoFunctionAnalysisSuppressed(bool suppress);
+
+		std::set<NameSpace> GetNameSpaces() const;
+		NameSpace GetInternalNameSpace() const;
+		NameSpace GetExternalNameSpace() const;
 	};
 
 

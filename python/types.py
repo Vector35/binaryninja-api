@@ -123,6 +123,22 @@ class NameSpace(QualifiedName):
 	def __str__(self):
 		return ":".join(self.name)
 
+	def _get_core_struct(self):
+		result = core.BNNameSpace()
+		name_list = (ctypes.c_char_p * len(self.name))()
+		for i in range(0, len(self.name)):
+			name_list[i] = self.name[i].encode('charmap')
+		result.name = name_list
+		result.nameCount = len(self.name)
+		return result
+
+	@classmethod
+	def _from_core_struct(cls, name):
+		result = []
+		for i in range(0, name.nameCount):
+			result.append(name.name[i])
+		return NameSpace(result)
+
 class Symbol(object):
 	"""
 	Symbols are defined as one of the following types:
@@ -135,6 +151,7 @@ class Symbol(object):
 		ImportedFunctionSymbol      Symbol for Function that is not defined in the current binary
 		DataSymbol                  Symbol for Data in the current binary
 		ImportedDataSymbol          Symbol for Data that is not defined in the current binary
+		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 		=========================== ==============================================================
 	"""
 	def __init__(self, sym_type, addr, short_name, full_name = None, raw_name = None, handle = None):
@@ -170,7 +187,10 @@ class Symbol(object):
 	@property
 	def namespace(self):
 		"""Symbol namespace (read-only)"""
-		return SymbolNameSpace(core.BNGetSymbolNameSpace(self.handle))
+		ns = core.BNGetSymbolNameSpace(self.handle)
+		result = NameSpace._from_core_struct(ns)
+		core.BNFreeNameSpace(ns)
+		return result
 
 	@property
 	def name(self):

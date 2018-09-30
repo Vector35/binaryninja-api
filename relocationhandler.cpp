@@ -108,6 +108,11 @@ bool RelocationHandler::ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> 
 size_t RelocationHandler::GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
 	Ref<LowLevelILFunction> il, Ref<Relocation> relocation)
 {
+	(void)data;
+	(void)addr;
+	(void)length;
+	(void)il;
+	(void)relocation;
 	return BN_INVALID_OPERAND;
 }
 

@@ -197,6 +197,7 @@ NameSpace Symbol::GetNameSpace() const
 	BNNameSpace name = BNGetSymbolNameSpace(m_object);
 	NameSpace result = NameSpace::FromAPIObject(&name);
 	BNFreeNameSpace(&name);
+	return result;
 }
 
 

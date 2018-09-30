@@ -1436,6 +1436,7 @@ Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr, const NameSpace& nameS
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol* sym = BNGetSymbolByAddress(m_object, addr, &ns);
+	NameSpace::FreeAPIObject(&ns);
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);

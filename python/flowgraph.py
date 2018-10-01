@@ -554,8 +554,6 @@ class FlowGraph(object):
 		return FlowGraphLayoutRequest(self, callback)
 
 	def _wait_complete(self):
-		self._wait_cond.acquire()
-		self._wait_cond.notify()
 		self._wait_cond.release()
 
 	def layout_and_wait(self):
@@ -566,12 +564,13 @@ class FlowGraph(object):
 
 		Do not use this API on the UI thread (use ``layout`` with a callback instead).
 		"""
-		self._wait_cond = threading.Condition()
+		self._wait_cond = threading.Lock()
+		
+		self._wait_cond.acquire()
+		
 		request = self.layout(self._wait_complete)
 
 		self._wait_cond.acquire()
-		while not request.complete:
-			self._wait_cond.wait()
 		self._wait_cond.release()
 
 	def get_nodes_in_region(self, left, top, right, bottom):

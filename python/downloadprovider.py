@@ -153,7 +153,7 @@ class DownloadProvider(with_metaclass(_DownloadProviderMetaclass, object)):
 		return DownloadInstance(self, handle = result)
 
 
-if sys.version_info >= (2, 7, 9):
+if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 	try:
 		from urllib.request import urlopen, build_opener, install_opener, ProxyHandler
 		from urllib.error import URLError
@@ -216,7 +216,8 @@ if sys.version_info >= (2, 7, 9):
 else:
 	try:
 		import requests
-		from requests import pyopenssl
+		if sys.platform != "win32":
+			from requests import pyopenssl
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):
 				super(PythonDownloadInstance, self).__init__(provider)
@@ -268,7 +269,9 @@ else:
 		PythonDownloadProvider().register()
 	except ImportError:
 		if sys.platform == "win32":
-			log.log_error("Provided Python version is too old! Only Python 2.7.10 and above are known to work on Windows!")
+			log.log_error("The pip requests package is required for network connectivity!")
+			log.log_error("Please install the requests package into the selected Python environment:")
+			log.log_error("  python -m pip install requests")
 		else:
 			log.log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
 			log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")

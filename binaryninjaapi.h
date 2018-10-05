@@ -1001,11 +1001,13 @@ namespace BinaryNinja
 	class Symbol: public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
 	{
 	public:
-		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName, uint64_t addr);
-		Symbol(BNSymbolType type, const std::string& name, uint64_t addr);
+		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
+			uint64_t addr, BNSymbolBinding binding=NoBinding);
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding=NoBinding);
 		Symbol(BNSymbol* sym);
 
 		BNSymbolType GetType() const;
+		BNSymbolBinding GetBinding() const;
 		std::string GetShortName() const;
 		std::string GetFullName() const;
 		std::string GetRawName() const;

@@ -26,7 +26,7 @@ import ctypes
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import SymbolType, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
+from binaryninja.enums import SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
 
 # 2-3 compatibility
 from binaryninja import range
@@ -154,7 +154,7 @@ class Symbol(object):
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 		=========================== ==============================================================
 	"""
-	def __init__(self, sym_type, addr, short_name, full_name = None, raw_name = None, handle = None):
+	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
 		else:
@@ -164,7 +164,9 @@ class Symbol(object):
 				full_name = short_name
 			if raw_name is None:
 				raw_name = full_name
-			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr)
+			if binding is None:
+				binding = SymbolBinding.NoBinding
+			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding)
 
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
@@ -183,6 +185,11 @@ class Symbol(object):
 	def type(self):
 		"""Symbol type (read-only)"""
 		return SymbolType(core.BNGetSymbolType(self.handle))
+
+	@property
+	def binding(self):
+		"""Symbol binding (read-only)"""
+		return SymbolBinding(core.BNGetSymbolBinding(self.handle))
 
 	@property
 	def namespace(self):

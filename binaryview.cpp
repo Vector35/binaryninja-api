@@ -168,15 +168,16 @@ BinaryDataNotification::BinaryDataNotification()
 }
 
 
-Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr)
+Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
+	BNSymbolBinding binding)
 {
-	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr);
+	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding);
 }
 
 
-Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr)
+Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding)
 {
-	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr);
+	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding);
 }
 
 
@@ -189,6 +190,12 @@ Symbol::Symbol(BNSymbol* sym)
 BNSymbolType Symbol::GetType() const
 {
 	return BNGetSymbolType(m_object);
+}
+
+
+BNSymbolBinding Symbol::GetBinding() const
+{
+	return BNGetSymbolBinding(m_object);
 }
 
 

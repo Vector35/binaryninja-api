@@ -511,7 +511,7 @@ class Segment(object):
 		return core.BNSegmentGetDataEnd(self.handle)
 
 	@property
-	def reloction_count(self):
+	def relocation_count(self):
 		return core.BNSegmentGetRelocationsCount(self.handle)
 
 	@property

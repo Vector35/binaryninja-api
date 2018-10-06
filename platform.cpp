@@ -448,6 +448,7 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
 		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
 	}
+	delete[] includeDirList;
 	BNFreeTypeParserResult(&result);
 	return true;
 }

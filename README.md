@@ -12,7 +12,7 @@ Please note that the [dev](/Vector35/binaryninja-api/tree/dev/) branch tracks ch
 
 Public contributions are welcome to this repository. All the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja).
 
-If interested in contributing, first please read and sign the [Contribution License Agreement](https://binary.ninja/cla.pdf). Next, email your signed copy of the license to info@binary.ninja along with your github username. Once that email is confirmed, any pending pull requests will be evaluated for inclusion.
+If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online. 
 
 ## Issues
 

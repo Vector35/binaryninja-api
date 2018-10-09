@@ -256,29 +256,30 @@ On windows, this is achieved through a separate launcher that loads first and re
 
 Settings are stored in the _user_ directory in the file `settings.json`. Each top level object in this file is represents a different plugin.  As of build 860 the following settings are available:
 
-|Plugin     | Setting                  | Type         | Default                                            | Description                                                                                         |
-|----------:|-------------------------:|-------------:|---------------------------------------------------:|:----------------------------------------------------------------------------------------------------|
-| analysis  | autorunLinearSweep       | boolean      | True                                               | Automatically run linear sweep when opening a binary for analysis                                   |
-| analysis  | enabledUnicodeBlocks     | list(string) | []                                                 | Defines which Unicode blocks to consider when searching for strings                                 |
-| analysis  | enableUTF8               | boolean      | True                                               | Whether or not to consider UTF-8 code points when searching for strings                             |
-| analysis  | enableUTF16              | boolean      | True                                               | Whether or not to consider UTF-16 code points when searching for strings                            |
-| analysis  | enableUTF32              | boolean      | True                                               | Whether or not to consider UTF-32 code points when searching for strings                            |
-| analysis  | max-function-size        | integer      | 65536                                              | Any functions over this size will not be automatically analyzed and require manual override         |
-| core      | linux\_ca\_bundle        | string       | ""                                                 | Certificate authority (.pem or .crt) file to be used for secure downloads                           |
-| core      | linux\_ca\_dir           | string       | ""                                                 | Certificate authority directory (for distributions without a CA bundle)                             |
-| ui        | activeContent            | boolean      | True                                               | Allow Binary Ninja to connect to the web to check for updates                                       |
-| ui        | colorblind               | boolean      | True                                               | Choose colors that are visible to those with red/green colorblind                                   |
-| ui        | debug                    | boolean      | False                                              | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)                    |
-| ui        | recent-file-limit        | integer      | 10                                                 | Specify limit for number of recent files                                                            |
-| ui        | scriptingProvider        | string       | "Python"                                           | Specify the registered ScriptingProvider that controls the 'Console' in the UI                      |
-| pdb       | local-store-absolute     | string       | ""                                                 | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
-| pdb       | local-store-relative     | string       | "symbols"                                          | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store                |
-| pdb       | auto-download-pdb        | boolean      | True                                               | Automatically download pdb files from specified symbol servers                                      |
-| pdb       | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"]     | List of servers to query for pdb symbols.                                                           |
-| python    | interpreter              | string       | "{/path/,C:\\\\Path\\\\}python27.{dylib,dll,so.1}" | Python interpreter to load if one is not already present when plugins are loaded                    |
-| arch      | x86.disassemblyFlavor    | string       | "BN_INTEL"                                         | "BN_INTEL", "INTEL", or "AT&T"                                                                      |
-| arch      | x86.disassemblySeperator | string       | ", "                                               | What to put between operands in disassembly tokens                                                  |
-| arch      | x86.disassemblyLowercase | bool         | True                                               | Lowercase opcodes, operands, and registers (False for uppercase)                                    |
+|Plugin           | Setting                  | Type         | Default                                            | Description                                                                                         |
+|----------------:|-------------------------:|-------------:|---------------------------------------------------:|:----------------------------------------------------------------------------------------------------|
+| analysis        | autorunLinearSweep       | boolean      | True                                               | Automatically run linear sweep when opening a binary for analysis                                   |
+| analysis        | enableUTF8               | boolean      | True                                               | Whether or not to consider UTF-8 code points when searching for strings                             |
+| analysis        | enableUTF16              | boolean      | True                                               | Whether or not to consider UTF-16 code points when searching for strings                            |
+| analysis        | enableUTF32              | boolean      | True                                               | Whether or not to consider UTF-32 code points when searching for strings                            |
+| analysis        | enabledUnicodeBlocks     | list(string) | []                                                 | Defines which Unicode blocks to consider when searching for strings                                 |
+| analysis        | max-function-size        | integer      | 65536                                              | Any functions over this size will not be automatically analyzed and require manual override         |
+| arch            | x86.disassemblyFlavor    | string       | "BN_INTEL"                                         | "BN_INTEL", "INTEL", or "AT&T"                                                                      |
+| arch            | x86.disassemblyLowercase | bool         | True                                               | Lowercase opcodes, operands, and registers (False for uppercase)                                    |
+| arch            | x86.disassemblySeperator | string       | ", "                                               | What to put between operands in disassembly tokens                                                  |
+| core            | linux\_ca\_bundle        | string       | ""                                                 | Certificate authority (.pem or .crt) file to be used for secure downloads                           |
+| core            | linux\_ca\_dir           | string       | ""                                                 | Certificate authority directory (for distributions without a CA bundle)                             |
+| download-client | https-proxy              | string       | ""                                                 | urllib proxyhandler (probably not what you want--by default urllib follows system proxy settings)   |
+| pdb             | auto-download-pdb        | boolean      | True                                               | Automatically download pdb files from specified symbol servers                                      |
+| pdb             | local-store-absolute     | string       | ""                                                 | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
+| pdb             | local-store-relative     | string       | "symbols"                                          | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store                |
+| pdb             | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"]     | List of servers to query for pdb symbols.                                                           |
+| python          | interpreter              | string       | "{/path/,C:\\\\Path\\\\}python27.{dylib,dll,so.1}" | Python interpreter to load if one is not already present when plugins are loaded                    |
+| ui              | activeContent            | boolean      | True                                               | Allow Binary Ninja to connect to the web to check for updates                                       |
+| ui              | colorblind               | boolean      | True                                               | Choose colors that are visible to those with red/green colorblind                                   |
+| ui              | debug                    | boolean      | False                                              | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)                    |
+| ui              | recent-file-limit        | integer      | 10                                                 | Specify limit for number of recent files                                                            |
+| ui              | scriptingProvider        | string       | "Python"                                           | Specify the registered ScriptingProvider that controls the 'Console' in the UI                      |
 
 Below is an example `settings.json` setting various options:
 ```

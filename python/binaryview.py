@@ -3692,8 +3692,8 @@ class BinaryView(object):
 		return result
 
 	def get_section_by_name(self, name):
-		section = core.BNSection()
-		if not core.BNGetSectionByName(self.handle, name, section):
+		section = core.BNGetSectionByName(self.handle, name)
+		if not section:
 			return None
 		result = Section(section)
 		core.BNFreeSection(section)

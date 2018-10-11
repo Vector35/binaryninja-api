@@ -537,6 +537,22 @@ class Segment(object):
 		core.BNFreeRelocationRanges(ranges, count)
 		return result
 
+	def __del__(self):
+		core.BNFreeSegment(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, Segment):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, Segment):
+			return False
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
+
+	def __hash__(self):
+		return hash(self.handle.contents)
+
 	def __len__(self):
 		return core.BNSegmentGetLength(self.handle)
 
@@ -565,23 +581,23 @@ class Section(object):
 
 	@property
 	def linked_section(self):
-		return core.BNSectionLinkedSection(self.handle)
+		return core.BNSectionGetLinkedSection(self.handle)
 
 	@property
 	def info_section(self):
-		return core.BNSectionInfoSection(self.handle)
+		return core.BNSectionGetInfoSection(self.handle)
 
 	@property
 	def info_data(self):
-		return core.BNSectionInfoData(self.handle)
+		return core.BNSectionGetInfoData(self.handle)
 
 	@property
 	def align(self):
-		return core.BNSectionAlign(self.handle)
+		return core.BNSectionGetAlign(self.handle)
 
 	@property
 	def entry_size(self):
-		return core.BNSectionEntrySize(self.handle)
+		return core.BNSectionGetEntrySize(self.handle)
 
 	@property
 	def semantics(self):
@@ -589,11 +605,27 @@ class Section(object):
 
 	@property
 	def auto_defined(self):
-		return core.BNSectionAutoDefined(self.handle)
+		return core.BNSectionIsAutoDefined(self.handle)
 
 	@property
 	def end(self):
 		return self.start + len(self)
+
+	def __del__(self):
+		core.BNFreeSection(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, Section):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, Section):
+			return False
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
+
+	def __hash__(self):
+		return hash(self.handle.contents)
 
 	def __len__(self):
 		return core.BNSectionGetLength(self.handle)
@@ -1153,7 +1185,7 @@ class BinaryView(object):
 		section_list = core.BNGetSections(self.handle, count)
 		result = {}
 		for i in range(0, count.value):
-			result[core.BNSectionGetName(section_list[i])] = Section(section_list[i])
+			result[core.BNSectionGetName(section_list[i])] = Section(core.BNNewSectionReference(section_list[i]))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3658,7 +3690,7 @@ class BinaryView(object):
 		seg = core.BNGetSegmentAt(self.handle, addr)
 		if not seg:
 			return None
-		return Segment(seg)
+		return Segment(core.BNNewSegmentReference(seg))
 
 	def get_address_for_data_offset(self, offset):
 		address = ctypes.c_ulonglong()
@@ -3687,7 +3719,7 @@ class BinaryView(object):
 		section_list = core.BNGetSectionsAt(self.handle, addr, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(Section(section_list[i]))
+			result.append(Section(core.BNNewSectionReference(section_list[i])))
 		core.BNFreeSectionList(section_list, count.value)
 		return result
 
@@ -3695,8 +3727,7 @@ class BinaryView(object):
 		section = core.BNGetSectionByName(self.handle, name)
 		if not section:
 			return None
-		result = Section(section)
-		core.BNFreeSection(section)
+		result = Section(core.BNNewSectionReference(section))
 		return result
 
 	def get_unique_section_names(self, name_list):

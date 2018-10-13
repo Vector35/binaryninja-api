@@ -224,9 +224,9 @@ class PossibleValueSet(object):
 		if self.type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
 		if self.type == RegisterValueType.InSetOfValues:
-			return "<in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in self.values))
+			return "<in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in sorted(self.values)))
 		if self.type == RegisterValueType.NotInSetOfValues:
-			return "<not in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in self.values))
+			return "<not in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in sorted(self.values)))
 		if self.type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"

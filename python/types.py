@@ -154,7 +154,7 @@ class Symbol(object):
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 		=========================== ==============================================================
 	"""
-	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None):
+	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
 		else:
@@ -166,7 +166,11 @@ class Symbol(object):
 				raw_name = full_name
 			if binding is None:
 				binding = SymbolBinding.NoBinding
-			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding)
+			if isinstance(namespace, str):
+				namespace = NameSpace(namespace)
+			if isinstance(namespace, NameSpace):
+				namespace = namespace._get_core_struct()
+			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, namespace)
 
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)

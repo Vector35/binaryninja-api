@@ -2180,8 +2180,8 @@ extern "C"
 
 	BINARYNINJACOREAPI BNNameSpace* BNGetNameSpaces(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeNameSpaceList(BNNameSpace* nameSpace, size_t count);
-	BINARYNINJACOREAPI BNNameSpace BNGetExternalNameSpace(BNBinaryView* view);
-	BINARYNINJACOREAPI BNNameSpace BNGetInternalNameSpace(BNBinaryView* view);
+	BINARYNINJACOREAPI BNNameSpace BNGetExternalNameSpace();
+	BINARYNINJACOREAPI BNNameSpace BNGetInternalNameSpace();
 	BINARYNINJACOREAPI void BNFreeNameSpace(BNNameSpace* name);
 
 	BINARYNINJACOREAPI BNAddressRange* BNGetAllocatedRanges(BNBinaryView* view, size_t* count);
@@ -2827,7 +2827,7 @@ extern "C"
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,
-		const char* rawName, uint64_t addr, BNSymbolBinding binding);
+		const char* rawName, uint64_t addr, BNSymbolBinding binding, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol* BNNewSymbolReference(BNSymbol* sym);
 	BINARYNINJACOREAPI void BNFreeSymbol(BNSymbol* sym);
 	BINARYNINJACOREAPI BNSymbolType BNGetSymbolType(BNSymbol* sym);
@@ -2849,13 +2849,13 @@ extern "C"
 	                                                        uint64_t start, uint64_t len, size_t* count, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI void BNFreeSymbolList(BNSymbol** syms, size_t count);
 
-	BINARYNINJACOREAPI void BNDefineAutoSymbol(BNBinaryView* view, BNSymbol* sym, const BNNameSpace* nameSpace);
-	BINARYNINJACOREAPI void BNUndefineAutoSymbol(BNBinaryView* view, BNSymbol* sym, const BNNameSpace* nameSpace);
-	BINARYNINJACOREAPI void BNDefineUserSymbol(BNBinaryView* view, BNSymbol* sym, const BNNameSpace* nameSpace);
-	BINARYNINJACOREAPI void BNUndefineUserSymbol(BNBinaryView* view, BNSymbol* sym, const BNNameSpace* nameSpace);
+	BINARYNINJACOREAPI void BNDefineAutoSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNUndefineAutoSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNDefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
+	BINARYNINJACOREAPI void BNUndefineUserSymbol(BNBinaryView* view, BNSymbol* sym);
 	BINARYNINJACOREAPI void BNDefineImportedFunction(BNBinaryView* view, BNSymbol* importAddressSym, BNFunction* func);
 	BINARYNINJACOREAPI void BNDefineAutoSymbolAndVariableOrFunction(BNBinaryView* view, BNPlatform* platform,
-		BNSymbol* sym, BNType* type, const BNNameSpace* nameSpace);
+		BNSymbol* sym, BNType* type);
 
 	BINARYNINJACOREAPI BNSymbol* BNImportedFunctionFromImportAddressSymbol(BNSymbol* sym, uint64_t addr);
 

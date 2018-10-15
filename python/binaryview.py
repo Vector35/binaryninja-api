@@ -1060,24 +1060,25 @@ class BinaryView(object):
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
-	@property
+	@classmethod
 	def internal_namespace(self):
 		"""Internal namespace for the current BinaryView"""
-		ns = core.BNGetInternalNameSpace(self.handle)
+		ns = core.BNGetInternalNameSpace()
 		result = types.NameSpace._from_core_struct(ns)
 		core.BNFreeNameSpace(ns)
 		return result
 
-	@property
+	@classmethod
 	def external_namespace(self):
 		"""External namespace for the current BinaryView"""
-		ns = core.BNGetExternalNameSpace(self.handle)
+		ns = core.BNGetExternalNameSpace()
 		result = types.NameSpace._from_core_struct(ns)
 		core.BNFreeNameSpace(ns)
 		return result
 
 	@property
 	def namespaces(self):
+		"""Returns a list of namespaces for the current BinaryView"""
 		count = ctypes.c_ulonglong(0)
 		nameSpaceList = core.BNGetNameSpaces(self.handle, count)
 		result = []
@@ -2610,7 +2611,7 @@ class BinaryView(object):
 		core.BNFreeSymbolList(syms, count.value)
 		return result
 
-	def define_auto_symbol(self, sym, namespace=None):
+	def define_auto_symbol(self, sym):
 		"""
 		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects in a given
 		namespace.
@@ -2618,16 +2619,11 @@ class BinaryView(object):
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		if isinstance(namespace, str):
-			namespace = types.NameSpace(namespace)
-		if isinstance(namespace, types.NameSpace):
-			namespace = namespace._get_core_struct()
-		core.BNDefineAutoSymbol(self.handle, sym.handle, namespace)
+		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
-	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None, namespace=None):
+	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None):
 		"""
 		``define_auto_symbol_and_var_or_function``
 
@@ -2636,7 +2632,6 @@ class BinaryView(object):
 		:param Symbol sym: the symbol to define
 		:param SymbolType sym_type: Type of symbol being defined
 		:param Platform plat: (optional) platform
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
 		if plat is None:
@@ -2645,55 +2640,36 @@ class BinaryView(object):
 			plat = plat.handle
 		if sym_type is not None:
 			sym_type = sym_type.handle
-		if isinstance(namespace, str):
-			namespace = types.NameSpace(namespace)
-		if isinstance(namespace, types.NameSpace):
-			namespace = namespace._get_core_struct()
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type, namespace)
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type)
 
-	def undefine_auto_symbol(self, sym, namespace=None):
+	def undefine_auto_symbol(self, sym):
 		"""
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		if isinstance(namespace, str):
-			namespace = types.NameSpace(namespace)
-		if isinstance(namespace, types.NameSpace):
-			namespace = namespace._get_core_struct()
-		core.BNUndefineAutoSymbol(self.handle, sym.handle, namespace)
+		core.BNUndefineAutoSymbol(self.handle, sym.handle)
 
-	def define_user_symbol(self, sym, namespace=None):
+	def define_user_symbol(self, sym):
 		"""
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		if isinstance(namespace, str):
-			namespace = types.NameSpace(namespace)
-		if isinstance(namespace, types.NameSpace):
-			namespace = namespace._get_core_struct()
-		core.BNDefineUserSymbol(self.handle, sym.handle, namespace)
+		core.BNDefineUserSymbol(self.handle, sym.handle)
 
-	def undefine_user_symbol(self, sym, namespace=None):
+	def undefine_user_symbol(self, sym):
 		"""
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
 		:param Symbol sym: the symbol to undefine
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: None
 		"""
-		if isinstance(namespace, str):
-			namespace = types.NameSpace(namespace)
-		if isinstance(namespace, types.NameSpace):
-			namespace = namespace._get_core_struct()
-		core.BNUndefineUserSymbol(self.handle, sym.handle, namespace)
+		core.BNUndefineUserSymbol(self.handle, sym.handle)
 
 	def define_imported_function(self, import_addr_sym, func):
 		"""

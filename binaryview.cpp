@@ -169,15 +169,20 @@ BinaryDataNotification::BinaryDataNotification()
 
 
 Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
-	BNSymbolBinding binding)
+	BNSymbolBinding binding, const NameSpace& nameSpace)
 {
-	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding, &ns);
+	NameSpace::FreeAPIObject(&ns);
 }
 
 
-Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding)
+Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding, const NameSpace& nameSpace)
 {
-	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding);
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding, &ns);
+	NameSpace::FreeAPIObject(&ns);
+
 }
 
 
@@ -1540,39 +1545,34 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 }
 
 
-void BinaryView::DefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
+void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 {
-	BNNameSpace ns = nameSpace.GetAPIObject();
-	BNDefineAutoSymbol(m_object, sym->GetObject(), &ns);
+	BNDefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type, const NameSpace& nameSpace)
+void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
 {
-	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(),
-		type ? type->GetObject() : nullptr, &ns);
+		type ? type->GetObject() : nullptr);
 }
 
 
-void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
+void BinaryView::UndefineAutoSymbol(Ref<Symbol> sym)
 {
-	BNNameSpace ns = nameSpace.GetAPIObject();
-	BNUndefineAutoSymbol(m_object, sym->GetObject(), &ns);
+	BNUndefineAutoSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::DefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
+void BinaryView::DefineUserSymbol(Ref<Symbol> sym)
 {
-	BNNameSpace ns = nameSpace.GetAPIObject();
-	BNDefineUserSymbol(m_object, sym->GetObject(), &ns);
+	BNDefineUserSymbol(m_object, sym->GetObject());
 }
 
 
-void BinaryView::UndefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace)
+void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
 {
-	BNNameSpace ns = nameSpace.GetAPIObject();
-	BNUndefineUserSymbol(m_object, sym->GetObject(), &ns);
+	BNUndefineUserSymbol(m_object, sym->GetObject());
 }
 
 
@@ -2283,18 +2283,18 @@ set<NameSpace> BinaryView::GetNameSpaces() const
 }
 
 
-NameSpace BinaryView::GetInternalNameSpace() const
+NameSpace BinaryView::GetInternalNameSpace()
 {
-	BNNameSpace ns = BNGetInternalNameSpace(m_object);
+	BNNameSpace ns = BNGetInternalNameSpace();
 	NameSpace nameSpace = NameSpace::FromAPIObject(&ns);
 	BNFreeNameSpace(&ns);
 	return nameSpace;
 }
 
 
-NameSpace BinaryView::GetExternalNameSpace() const
+NameSpace BinaryView::GetExternalNameSpace()
 {
-	BNNameSpace ns = BNGetExternalNameSpace(m_object);
+	BNNameSpace ns = BNGetExternalNameSpace();
 	NameSpace nameSpace = NameSpace::FromAPIObject(&ns);
 	BNFreeNameSpace(&ns);
 	return nameSpace;

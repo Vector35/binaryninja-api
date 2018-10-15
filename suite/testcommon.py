@@ -117,7 +117,7 @@ class BinaryViewTestBuilder(Builder):
         """Function.symbol.name list doesnt match"""
         result = []
         for x in self.bv.functions:
-            result.append("Symbol: " + x.symbol.name + ' ' + str(x.symbol.type) + ' ' + hex(x.symbol.address))
+            result.append("Symbol: " + x.symbol.name + ' ' + str(x.symbol.type) + ' ' + hex(x.symbol.address) + ' ' + str(x.symbol.namespace))
         return fixOutput(result)
 
     def test_function_can_return(self):
@@ -157,6 +157,14 @@ class BinaryViewTestBuilder(Builder):
     def test_symbols(self):
         """Symbols list doesn't match"""
         return ["Symbol: " + str(i) for i in sorted(self.bv.symbols)]
+
+    def test_symbol_namespaces(self):
+        """Symbol namespaces don't match"""
+        return self.bv.namespaces
+
+    def test_internal_external_namespaces(self):
+        """Symbol namespaces don't match"""
+        return [BinaryView.internal_namespace(), BinaryView.external_namespace()]
 
     def test_strings(self):
         """Strings list doesn't match"""

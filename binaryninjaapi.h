@@ -1002,8 +1002,9 @@ namespace BinaryNinja
 	{
 	public:
 		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
-			uint64_t addr, BNSymbolBinding binding=NoBinding);
-		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding=NoBinding);
+			uint64_t addr, BNSymbolBinding binding=NoBinding, const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE));
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding=NoBinding,
+			const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE));
 		Symbol(BNSymbol* sym);
 
 		BNSymbolType GetType() const;
@@ -1367,12 +1368,12 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace=NameSpace());
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
 
-		void DefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
-		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type, const NameSpace& nameSpace=NameSpace());
-		void UndefineAutoSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
+		void DefineAutoSymbol(Ref<Symbol> sym);
+		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
+		void UndefineAutoSymbol(Ref<Symbol> sym);
 
-		void DefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
-		void UndefineUserSymbol(Ref<Symbol> sym, const NameSpace& nameSpace=NameSpace());
+		void DefineUserSymbol(Ref<Symbol> sym);
+		void UndefineUserSymbol(Ref<Symbol> sym);
 
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
 
@@ -1481,8 +1482,8 @@ namespace BinaryNinja
 		void SetNewAutoFunctionAnalysisSuppressed(bool suppress);
 
 		std::set<NameSpace> GetNameSpaces() const;
-		NameSpace GetInternalNameSpace() const;
-		NameSpace GetExternalNameSpace() const;
+		static NameSpace GetInternalNameSpace();
+		static NameSpace GetExternalNameSpace();
 	};
 
 

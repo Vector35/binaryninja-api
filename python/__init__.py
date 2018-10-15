@@ -125,7 +125,7 @@ from binaryninja.highlight import *
 from binaryninja.scriptingprovider import *
 from binaryninja.downloadprovider import *
 from binaryninja.pluginmanager import *
-from binaryninja.setting import *
+from binaryninja.settings import *
 from binaryninja.metadata import *
 from binaryninja.flowgraph import *
 

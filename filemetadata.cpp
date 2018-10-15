@@ -17,7 +17,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-
+#include <cstring>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -98,8 +98,9 @@ char* UndoAction::SerializeCallback(void* ctxt)
 	{
 		UndoAction* action = (UndoAction*)ctxt;
 		Value data = action->Serialize();
-		FastWriter writer;
-		string json = writer.write(data);
+		Json::StreamWriterBuilder builder;
+		builder["indentation"] = "";
+		string json = Json::writeString(builder, data);
 		return BNAllocString(json.c_str());
 	}
 	catch (exception& e)
@@ -140,9 +141,10 @@ bool UndoActionType::DeserializeCallback(void* ctxt, const char* data, BNUndoAct
 	try
 	{
 		UndoActionType* type = (UndoActionType*)ctxt;
-		Reader reader;
+		unique_ptr<CharReader> reader(CharReaderBuilder().newCharReader());
 		Value val;
-		if (!reader.parse(data, val, false))
+		string errors;
+		if (!reader->parse(data, data + strlen(data), &val, &errors))
 		{
 			LogError("Invalid JSON while deserializing undo action");
 			return false;

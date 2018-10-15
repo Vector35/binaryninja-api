@@ -1,178 +1,207 @@
 #include "binaryninjaapi.h"
+#include "json/json.h"
 #include <string.h>
 
 using namespace BinaryNinja;
 using namespace std;
 
 
-bool Setting::GetBool(const std::string& pluginName, const std::string& name, bool defaultValue)
+bool Settings::RegisterGroup(const string& group, const string& title)
 {
-	return BNSettingGetBool(pluginName.c_str(), name.c_str(), defaultValue);
+	return BNSettingsRegisterGroup(m_registry.c_str(), group.c_str(), title.c_str());
 }
 
-int64_t Setting::GetInteger(const std::string& pluginName, const std::string& name, int64_t defaultValue)
+
+bool Settings::RegisterSetting(const string& id, const string& properties)
 {
-	return BNSettingGetInteger(pluginName.c_str(), name.c_str(), defaultValue);
+	return BNSettingsRegisterSetting(m_registry.c_str(), id.c_str(), properties.c_str());
 }
 
-std::string Setting::GetString(const std::string& pluginName, const std::string& name, const std::string& defaultValue)
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property)
 {
-	char* str = BNSettingGetString(pluginName.c_str(), name.c_str(), defaultValue.c_str());
-	string result(str);
-	BNFreeString(str);
+	return BNSettingsUpdateProperty(m_registry.c_str(), id.c_str(), property.c_str());
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, bool value)
+{
+	return BNSettingsUpdateBoolProperty(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, double value)
+{
+	return BNSettingsUpdateDoubleProperty(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, int value)
+{
+	return BNSettingsUpdateInt64Property(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, int64_t value)
+{
+	return BNSettingsUpdateInt64Property(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, uint64_t value)
+{
+	return BNSettingsUpdateUInt64Property(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, const char* value)
+{
+	return BNSettingsUpdateStringProperty(m_registry.c_str(), id.c_str(), property.c_str(), value);
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, const std::string& value)
+{
+	return BNSettingsUpdateStringProperty(m_registry.c_str(), id.c_str(), property.c_str(), value.c_str());
+}
+
+
+bool Settings::UpdateProperty(const std::string& id, const std::string& property, const std::vector<std::string>& value)
+{
+	char** buffer = new char*[value.size()];
+	if (!buffer)
+		return false;
+
+	for (size_t i = 0; i < value.size(); i++)
+		buffer[i] = BNAllocString(value[i].c_str());
+
+	bool result = BNSettingsUpdateStringListProperty(m_registry.c_str(), id.c_str(), property.c_str(), (const char**)buffer, value.size());
+	BNFreeStringList(buffer, value.size());
 	return result;
 }
 
-double Setting::GetDouble(const std::string& pluginName, const std::string& name, double defaultValue)
+
+string Settings::GetSchema()
 {
-	return BNSettingGetDouble(pluginName.c_str(), name.c_str(), defaultValue);
+	char* schemaStr = BNSettingsGetSchema(m_registry.c_str());
+	string schema(schemaStr);
+	BNFreeString(schemaStr);
+	return schema;
 }
 
-std::vector<int64_t> Setting::GetIntegerList(const std::string& pluginName,
-	const std::string& name,
-	const std::vector<int64_t>& defaultValue)
-{
-	int64_t* buffer = new int64_t[defaultValue.size()];
-	memcpy(&buffer[0], &defaultValue[0], sizeof(int64_t) * defaultValue.size());
-	size_t size = defaultValue.size();
-	int64_t* outBuffer = BNSettingGetIntegerList(pluginName.c_str(), name.c_str(), buffer, &size);
-	delete[] buffer;
 
-	vector<int64_t> out(outBuffer, outBuffer + size);
-	BNFreeSettingIntegerList(outBuffer);
-	return out;
+bool Settings::Reset(const string& id, Ref<BinaryView> view, BNSettingsScope scope)
+{
+	return BNSettingsReset(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
 }
 
-std::vector<std::string> Setting::GetStringList(const std::string& pluginName,
-	const std::string& name,
-	const std::vector<std::string>& defaultValue)
+
+bool Settings::ResetAll(Ref<BinaryView> view, BNSettingsScope scope)
 {
-	char** buffer = new char*[defaultValue.size()];
-	for (size_t i = 0; i < defaultValue.size(); i++)
-		buffer[i] = BNAllocString(defaultValue[i].c_str());
-	size_t size = defaultValue.size();
-	char** outBuffer = (char**)BNSettingGetStringList(pluginName.c_str(), name.c_str(), (const char**)buffer, &size);
+	return BNSettingsResetAll(m_registry.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+template<> bool Settings::Get<bool>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	return BNSettingsGetBool(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+template<> double Settings::Get<double>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	return BNSettingsGetDouble(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+template<> int64_t Settings::Get<int64_t>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	return BNSettingsGetInt64(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+template<> uint64_t Settings::Get<uint64_t>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	return BNSettingsGetUInt64(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+template<> string Settings::Get<string>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	char* tmpStr = BNSettingsGetString(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);
+	string result(tmpStr);
+	BNFreeString(tmpStr);
+	return result;
+}
+
+
+template<> vector<string> Settings::Get<vector<string>>(const string& id, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	size_t size = 0;
+	char** outBuffer = (char**)BNSettingsGetStringList(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope, &size);
 
 	vector<string> result;
 	result.reserve(size);
 	for (size_t i = 0; i < size; i++)
 		result.emplace_back(outBuffer[i]);
 
-	for (size_t i = 0; i < defaultValue.size(); i++)
-		BNFreeString(buffer[i]);
-	delete[] buffer;
 	BNFreeStringList(outBuffer, size);
 	return result;
 }
 
 
-bool Setting::IsPresent(const std::string& pluginName, const std::string& name)
+bool Settings::Set(const string& id, bool value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsPresent(pluginName.c_str(), name.c_str());
+	return BNSettingsSetBool(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsBool(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, double value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsBool(pluginName.c_str(), name.c_str());
+	return BNSettingsSetDouble(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsInteger(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, int value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsInteger(pluginName.c_str(), name.c_str());
+	return BNSettingsSetInt64(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsString(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, int64_t value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsString(pluginName.c_str(), name.c_str());
+	return BNSettingsSetInt64(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsIntegerList(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, uint64_t value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsIntegerList(pluginName.c_str(), name.c_str());
+	return BNSettingsSetUInt64(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsStringList(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, const char* value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsStringList(pluginName.c_str(), name.c_str());
+	return BNSettingsSetString(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value);
 }
 
-bool Setting::IsDouble(const std::string& pluginName, const std::string& name)
+
+bool Settings::Set(const string& id, const string& value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingIsDouble(pluginName.c_str(), name.c_str());
+	return BNSettingsSetString(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), value.c_str());
 }
 
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	bool value,
-	bool autoFlush)
-{
-	return BNSettingSetBool(settingGroup.c_str(), name.c_str(), value, autoFlush);
-}
 
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	int64_t value,
-	bool autoFlush)
-{
-	return BNSettingSetInteger(settingGroup.c_str(), name.c_str(), value, autoFlush);
-}
-
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	const std::string& value,
-	bool autoFlush)
-{
-	return BNSettingSetString(settingGroup.c_str(), name.c_str(), value.c_str(), autoFlush);
-}
-
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	const std::vector<int64_t>& value,
-	bool autoFlush)
-{
-	return BNSettingSetIntegerList(settingGroup.c_str(), name.c_str(), &value[0], value.size(), autoFlush);
-}
-
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	const std::vector<std::string>& value,
-	bool autoFlush)
+bool Settings::Set(const string& id, const vector<string>& value, Ref<BinaryView> view, BNSettingsScope scope)
 {
 	char** buffer = new char*[value.size()];
 	if (!buffer)
 		return false;
+
 	for (size_t i = 0; i < value.size(); i++)
 		buffer[i] = BNAllocString(value[i].c_str());
 
-	bool result = BNSettingSetStringList(settingGroup.c_str(),
-			name.c_str(),
-			(const char**)buffer,
-			value.size(),
-			autoFlush);
-
+	bool result = BNSettingsSetStringList(m_registry.c_str(), view ? view->GetObject() : nullptr, scope, id.c_str(), (const char**)buffer, value.size());
 	BNFreeStringList(buffer, value.size());
 	return result;
-}
-
-bool Setting::Set(const std::string& settingGroup,
-	const std::string& name,
-	double value,
-	bool autoFlush)
-{
-	return BNSettingSetDouble(settingGroup.c_str(), name.c_str(), value, autoFlush);
-}
-
-bool Setting::RemoveSettingGroup(const std::string& settingGroup, bool autoFlush)
-{
-	return BNSettingRemoveSettingGroup(settingGroup.c_str(), autoFlush);
-}
-
-bool Setting::RemoveSetting(const std::string& settingGroup, const std::string& setting, bool autoFlush)
-{
-	return BNSettingRemoveSetting(settingGroup.c_str(), setting.c_str(), autoFlush);
-}
-
-bool Setting::FlushSettings()
-{
-	return BNSettingFlushSettings();
 }

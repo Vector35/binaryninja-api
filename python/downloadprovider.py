@@ -28,7 +28,7 @@ import traceback
 import binaryninja._binaryninjacore as core
 
 import binaryninja
-from binaryninja.setting import Setting
+from binaryninja.settings import Settings
 from binaryninja import with_metaclass
 from binaryninja import startup
 from binaryninja import log
@@ -171,7 +171,7 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 		@abc.abstractmethod
 		def perform_request(self, url):
 			try:
-				proxy_setting = Setting('download-client').get_string('https-proxy')
+				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
 				if proxy_setting:
 					opener = build_opener(ProxyHandler({'https': proxy_setting}))
 					install_opener(opener)
@@ -209,7 +209,7 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 			return 0
 
 	class PythonDownloadProvider(DownloadProvider):
-		name = "DefaultDownloadProvider"
+		name = "PythonDownloadProvider"
 		instance_class = PythonDownloadInstance
 
 	PythonDownloadProvider().register()
@@ -229,7 +229,7 @@ else:
 			@abc.abstractmethod
 			def perform_request(self, url):
 				try:
-					proxy_setting = Setting('download-client').get_string('https-proxy')
+					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
 					if proxy_setting:
 						proxies = {"https": proxy_setting}
 					else:
@@ -263,7 +263,7 @@ else:
 				return 0
 
 		class PythonDownloadProvider(DownloadProvider):
-			name = "DefaultDownloadProvider"
+			name = "PythonDownloadProvider"
 			instance_class = PythonDownloadInstance
 
 		PythonDownloadProvider().register()

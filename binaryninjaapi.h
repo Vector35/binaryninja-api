@@ -4211,53 +4211,50 @@ namespace BinaryNinja
 		Ref<Repository> GetDefaultRepository();
 	};
 
-	class Setting
+	class Settings
 	{
+		std::string m_registry;
+
 	public:
-		static bool GetBool(const std::string& settingGroup, const std::string& name, bool defaultValue);
-		static int64_t GetInteger(const std::string& settingGroup, const std::string& name, int64_t defaultValue=0);
-		static std::string GetString(const std::string& settingGroup, const std::string& name, const std::string& defaultValue="");
-		static std::vector<int64_t> GetIntegerList(const std::string& settingGroup, const std::string& name, const std::vector<int64_t>& defaultValue={});
-		static std::vector<std::string> GetStringList(const std::string& settingGroup, const std::string& name, const std::vector<std::string>& defaultValue={});
-		static double GetDouble(const std::string& settingGroup, const std::string& name, double defaultValue=0.0);
+		Settings(const std::string& registry = "default") : m_registry(registry) { }
 
-		static bool IsPresent(const std::string& settingGroup, const std::string& name);
-		static bool IsBool(const std::string& settingGroup, const std::string& name);
-		static bool IsInteger(const std::string& settingGroup, const std::string& name);
-		static bool IsString(const std::string& settingGroup, const std::string& name);
-		static bool IsIntegerList(const std::string& settingGroup, const std::string& name);
-		static bool IsStringList(const std::string& settingGroup, const std::string& name);
-		static bool IsDouble(const std::string& settingGroup, const std::string& name);
+		bool RegisterGroup(const std::string& group, const std::string& title);
+		bool RegisterSetting(const std::string& id, const std::string& properties);
 
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			bool value,
-			bool autoFlush=true);
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			int64_t value,
-			bool autoFlush=true);
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			const std::string& value,
-			bool autoFlush=true);
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			const std::vector<int64_t>& value,
-			bool autoFlush=true);
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			const std::vector<std::string>& value,
-			bool autoFlush=true);
-		static bool Set(const std::string& settingGroup,
-			const std::string& name,
-			double value,
-			bool autoFlush=true);
+		bool UpdateProperty(const std::string& id, const std::string& property);
+		bool UpdateProperty(const std::string& id, const std::string& property, bool value);
+		bool UpdateProperty(const std::string& id, const std::string& property, double value);
+		bool UpdateProperty(const std::string& id, const std::string& property, int value);
+		bool UpdateProperty(const std::string& id, const std::string& property, int64_t value);
+		bool UpdateProperty(const std::string& id, const std::string& property, uint64_t value);
+		bool UpdateProperty(const std::string& id, const std::string& property, const char* value);
+		bool UpdateProperty(const std::string& id, const std::string& property, const std::string& value);
+		bool UpdateProperty(const std::string& id, const std::string& property, const std::vector<std::string>& value);
 
-		static bool RemoveSettingGroup(const std::string& settingGroup, bool autoFlush=true);
-		static bool RemoveSetting(const std::string& settingGroup, const std::string& setting, bool autoFlush=true);
-		static bool FlushSettings();
+		std::string GetSchema();
+
+		bool Reset(const std::string& id, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool ResetAll(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+
+		template<typename T> T Get(const std::string& id, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
+
+		bool Set(const std::string& id, bool value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, double value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, int value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, int64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, uint64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& id, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 	};
+
+	// explicit specializations
+	template<> bool Settings::Get<bool>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> double Settings::Get<double>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> int64_t Settings::Get<int64_t>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> uint64_t Settings::Get<uint64_t>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> std::string Settings::Get<std::string>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 

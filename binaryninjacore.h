@@ -1085,8 +1085,6 @@ extern "C"
 		bool (*isRelocatable)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
-		void (*defineRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
-		void (*defineSymbolRelocation) (void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* target, uint64_t reloc);
 	};
 
 	struct BNCustomBinaryViewType

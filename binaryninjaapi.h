@@ -1246,8 +1246,6 @@ namespace BinaryNinja
 		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
-		static void DefineRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, uint64_t target, uint64_t reloc);
-		static void DefineSymbolRelocationCallback(void* ctxt, BNArchitecture* arch, BNRelocationInfo* info, BNSymbol* target, uint64_t reloc);
 	public:
 		BinaryView(BNBinaryView* view);
 

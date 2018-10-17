@@ -2185,6 +2185,9 @@ namespace BinaryNinja
 	public:
 		Type(BNType* type);
 
+		bool operator==(const Type& other);
+		bool operator!=(const Type& other);
+
 		BNTypeClass GetClass() const;
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
@@ -2209,6 +2212,7 @@ namespace BinaryNinja
 		void SetVolatile(const Confidence<bool>& vltl);
 		void SetTypeName(const QualifiedName& name);
 		Confidence<int64_t> GetStackAdjustment() const;
+		QualifiedName GetStructureName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
@@ -4323,5 +4327,31 @@ namespace BinaryNinja
 		bool IsRaw() const;
 		bool IsArray() const;
 		bool IsKeyValueStore() const;
+	};
+
+	class DataRenderer: public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
+	{
+		static bool IsValidForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
+			BNType** typeCtx, size_t ctxCount);
+		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCxt,
+			size_t ctxCount);
+		static void FreeCallback(void* ctxt);
+	public:
+		DataRenderer();
+		DataRenderer(BNDataRenderer* renderer);
+		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<Type*>& context);
+		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
+			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<Type*>& context);
+
+		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<Type*>& context);
+		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<Type*>& context);
+	};
+
+	class DataRendererContainer
+	{
+	public:
+		static void RegisterGenericDataRenderer(DataRenderer* renderer);
+		static void RegisterTypeSpecificDataRenderer(DataRenderer* renderer);
 	};
 }

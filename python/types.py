@@ -266,12 +266,12 @@ class Type(object):
 	def __eq__(self, value):
 		if not isinstance(value, Type):
 			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+		return core.BNTypesEqual(self.handle, value.handle)
 
 	def __ne__(self, value):
 		if not isinstance(value, Type):
 			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+		return core.BNTypesNotEqual(self.handle, value.handle)
 
 	@property
 	def type_class(self):
@@ -299,6 +299,16 @@ class Type(object):
 		"""Whether type is const (read-only)"""
 		result = core.BNIsTypeConst(self.handle)
 		return BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@const.setter
+	def const(self, value):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = max_confidence
+		core.BNTypeSetConst(self.handle, bc)
 
 	@property
 	def modified(self):

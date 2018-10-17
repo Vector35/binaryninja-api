@@ -128,6 +128,7 @@ from binaryninja.pluginmanager import *
 from binaryninja.settings import *
 from binaryninja.metadata import *
 from binaryninja.flowgraph import *
+from binaryninja.datarender import *
 
 
 def shutdown():

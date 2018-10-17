@@ -58,7 +58,8 @@ class DownloadInstance(object):
 
 	def _destroy_instance(self, ctxt):
 		try:
-			self.__class__._registered_instances.remove(self)
+			if self in self.__class__._registered_instances:
+				self.__class__._registered_instances.remove(self)
 			self.perform_destroy_instance()
 		except:
 			log.log_error(traceback.format_exc())

@@ -156,6 +156,9 @@ extern "C"
 	struct BNSection;
 	struct BNRelocationInfo;
 	struct BNRelocationHandler;
+	struct BNDataBuffer;
+	struct BNDataRenderer;
+	struct BNDataRendererContainer;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
@@ -1818,6 +1821,17 @@ extern "C"
 		void (*destructFunction)(void* ctxt, BNFunction* func);
 	};
 
+	struct BNCustomDataRenderer
+	{
+		void* context;
+		void (*freeObject)(void* ctxt);
+		bool (*isValidForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNType** typeCtx,
+			size_t ctxCount);
+		BNDisassemblyTextLine* (*getLinesForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCtx,
+			size_t ctxCount);
+	};
+
 	enum BNSegmentFlag
 	{
 		SegmentExecutable = 1,
@@ -3131,6 +3145,8 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetMediumLevelILExprType(BNMediumLevelILFunction* func, size_t expr);
 
 	// Types
+	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);
+	BINARYNINJACOREAPI bool BNTypesNotEqual(BNType* a, BNType* b);
 	BINARYNINJACOREAPI BNType* BNCreateVoidType(void);
 	BINARYNINJACOREAPI BNType* BNCreateBoolType(void);
 	BINARYNINJACOREAPI BNType* BNCreateIntegerType(size_t width, BNBoolWithConfidence* sign, const char* altName);
@@ -3178,6 +3194,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeStackAdjustment(BNType* type);
+	BINARYNINJACOREAPI BNQualifiedName BNTypeGetStructureName(BNType* type);
 
 	BINARYNINJACOREAPI char* BNGetTypeString(BNType* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeStringBeforeName(BNType* type, BNPlatform* platform);
@@ -3776,6 +3793,19 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNSectionGetEntrySize(BNSection* section);
 	BINARYNINJACOREAPI BNSectionSemantics BNSectionGetSemantics(BNSection* section);
 	BINARYNINJACOREAPI bool BNSectionIsAutoDefined(BNSection* section);
+
+	// Custom Data Render methods
+	BINARYNINJACOREAPI BNDataRenderer* BNCreateDataRenderer(BNCustomDataRenderer* renderer);
+	BINARYNINJACOREAPI BNDataRenderer* BNNewDataRendererReference(BNDataRenderer* renderer);
+	BINARYNINJACOREAPI bool BNIsValidForData(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
+		BNType** typeCtx, size_t ctxCount);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLinesForData(void* ctxt, BNBinaryView* view, uint64_t addr,
+		BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
+		BNType** typeCtx, size_t ctxCount);
+	BINARYNINJACOREAPI void BNFreeDataRenderer(BNDataRenderer* renderer);
+	BINARYNINJACOREAPI BNDataRendererContainer* BNGetDataRendererContainer();
+	BINARYNINJACOREAPI void BNRegisterGenericDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);
+	BINARYNINJACOREAPI void BNRegisterTypeSpecificDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);
 #ifdef __cplusplus
 }
 #endif

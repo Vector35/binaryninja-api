@@ -518,6 +518,10 @@ class Type(object):
 		return Type(core.BNCreateBoolType())
 
 	@classmethod
+	def char(self):
+		return Type.int(1, True)
+
+	@classmethod
 	def int(self, width, sign = None, altname=""):
 		"""
 		``int`` class method for creating an int Type.

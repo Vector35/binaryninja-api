@@ -208,7 +208,7 @@ string NameList::GetString() const
 	{
 		if (!first)
 		{
-			out = m_join + name;
+			out += m_join + name;
 		}
 		else
 		{

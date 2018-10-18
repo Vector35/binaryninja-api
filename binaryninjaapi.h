@@ -1142,8 +1142,6 @@ namespace BinaryNinja
 		void SetDataOffset(uint64_t dataOffset);
 		void SetDataLength(uint64_t dataLength);
 		void SetFlags(uint64_t flags);
-
-		size_t Read(BinaryView* view, uint8_t* dest, uint64_t offset, size_t len);
 	};
 
 	class Section: public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>

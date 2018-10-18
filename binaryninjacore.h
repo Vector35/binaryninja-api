@@ -3752,7 +3752,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNSegmentSetDataOffset(BNSegment* segment, uint64_t dataOffset);
 	BINARYNINJACOREAPI void BNSegmentSetDataLength(BNSegment* segment, uint64_t dataLength);
 	BINARYNINJACOREAPI void BNSegmentSetFlags(BNSegment* segment, uint32_t flags);
-	BINARYNINJACOREAPI size_t BNSegmentRead(BNSegment* segment, BNBinaryView* view, uint8_t* dest, uint64_t offset, size_t len);
 
 	// Section object methods
 	BINARYNINJACOREAPI BNSection* BNNewSectionReference(BNSection* section);

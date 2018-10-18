@@ -394,12 +394,6 @@ void Segment::SetFlags(uint64_t flags)
 }
 
 
-size_t Segment::Read(BinaryView* view, uint8_t* dest, uint64_t offset, size_t len)
-{
-	return BNSegmentRead(m_object, view->GetObject(), dest, offset, len);
-}
-
-
 Section::Section(BNSection* sec)
 {
 	m_object = sec;

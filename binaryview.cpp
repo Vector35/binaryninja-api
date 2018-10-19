@@ -1430,6 +1430,7 @@ Ref<Symbol> BinaryView::GetSymbolByRawName(const string& name, const NameSpace& 
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol* sym = BNGetSymbolByRawName(m_object, name.c_str(), &ns);
+	NameSpace::FreeAPIObject(&ns);
 	if (!sym)
 		return nullptr;
 	return new Symbol(sym);
@@ -1441,6 +1442,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name, const NameS
 	size_t count;
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol** syms = BNGetSymbolsByName(m_object, name.c_str(), &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1457,6 +1459,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols(const NameSpace& nameSpace)
 	size_t count;
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol** syms = BNGetSymbols(m_object, &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1473,6 +1476,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbols(uint64_t start, uint64_t len, const N
 	size_t count;
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol** syms = BNGetSymbolsInRange(m_object, start, len, &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1489,6 +1493,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, const NameSp
 	size_t count;
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol** syms = BNGetSymbolsOfType(m_object, type, &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);
@@ -1505,6 +1510,7 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 	size_t count;
 	BNNameSpace ns = nameSpace.GetAPIObject();
 	BNSymbol** syms = BNGetSymbolsOfTypeInRange(m_object, type, start, len, &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
 
 	vector<Ref<Symbol>> result;
 	result.reserve(count);

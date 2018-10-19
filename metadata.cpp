@@ -112,7 +112,10 @@ bool Metadata::GetBoolean() const
 
 string Metadata::GetString() const
 {
-	return BNMetadataGetString(m_object);
+	char* str = BNMetadataGetString(m_object);
+	string result = string(str);
+	BNFreeString(str);
+	return result;
 }
 
 uint64_t Metadata::GetUnsignedInteger() const

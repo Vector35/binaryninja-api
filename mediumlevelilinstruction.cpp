@@ -1161,12 +1161,12 @@ size_t MediumLevelILInstructionBase::GetNonSSAExprIndex() const
 
 MediumLevelILInstruction MediumLevelILInstructionBase::GetSSAForm() const
 {
-	Ref<MediumLevelILFunction> ssa = function->GetSSAForm().GetPtr();
+	Ref<MediumLevelILFunction> ssa = function->GetSSAForm();
 	if (!ssa)
 		return *this;
 	size_t expr = GetSSAExprIndex();
 	size_t instr = GetSSAInstructionIndex();
-	return MediumLevelILInstruction(ssa, ssa->GetRawExpr(GetSSAExprIndex()), expr, instr);
+	return MediumLevelILInstruction(ssa, ssa->GetRawExpr(expr), expr, instr);
 }
 
 
@@ -1177,7 +1177,7 @@ MediumLevelILInstruction MediumLevelILInstructionBase::GetNonSSAForm() const
 		return *this;
 	size_t expr = GetNonSSAExprIndex();
 	size_t instr = GetNonSSAInstructionIndex();
-	return MediumLevelILInstruction(nonSsa, nonSsa->GetRawExpr(GetSSAExprIndex()), expr, instr);
+	return MediumLevelILInstruction(nonSsa, nonSsa->GetRawExpr(expr), expr, instr);
 }
 
 

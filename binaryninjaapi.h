@@ -672,10 +672,12 @@ namespace BinaryNinja
 		DataBuffer(size_t len);
 		DataBuffer(const void* data, size_t len);
 		DataBuffer(const DataBuffer& buf);
+		DataBuffer(DataBuffer&& buf);
 		DataBuffer(BNDataBuffer* buf);
 		~DataBuffer();
 
 		DataBuffer& operator=(const DataBuffer& buf);
+		DataBuffer& operator=(DataBuffer&& buf);
 
 		BNDataBuffer* GetBufferObject() const { return m_buffer; }
 

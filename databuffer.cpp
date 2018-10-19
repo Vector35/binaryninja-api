@@ -47,6 +47,11 @@ DataBuffer::DataBuffer(const DataBuffer& buf)
 	m_buffer = BNDuplicateDataBuffer(buf.m_buffer);
 }
 
+DataBuffer::DataBuffer(DataBuffer&& buf)
+{
+	m_buffer = buf.m_buffer;
+	buf.m_buffer = BNCreateDataBuffer(nullptr, 0);
+}
 
 DataBuffer::DataBuffer(BNDataBuffer* buf)
 {
@@ -62,11 +67,27 @@ DataBuffer::~DataBuffer()
 
 DataBuffer& DataBuffer::operator=(const DataBuffer& buf)
 {
-	BNFreeDataBuffer(m_buffer);
-	m_buffer = BNDuplicateDataBuffer(buf.m_buffer);
+	if (this != &buf)
+	{
+		BNFreeDataBuffer(m_buffer);
+		m_buffer = BNDuplicateDataBuffer(buf.m_buffer);
+	}
+
 	return *this;
 }
 
+DataBuffer& DataBuffer::operator=(DataBuffer&& buf)
+{
+	if (this != &buf)
+	{
+		BNClearDataBuffer(m_buffer);
+		BNDataBuffer* temp = m_buffer;
+		m_buffer = buf.m_buffer;
+		buf.m_buffer = temp;
+	}
+
+	return *this;
+}
 
 void* DataBuffer::GetData()
 {

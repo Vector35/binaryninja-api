@@ -85,6 +85,9 @@ class Builder(object):
         assert os.path.exists(path)
         return os.path.relpath(path)
 
+    def delete_package(self, filename):
+        path = os.path.join(os.path.dirname(__file__), self.test_store, filename)
+        os.unlink(path)
 
 class BinaryViewTestBuilder(Builder):
     """ The BinaryViewTestBuilder is for test that are verified against a binary.
@@ -551,52 +554,61 @@ class TestBuilder(Builder):
     def test_Types(self):
         """Types produced different result"""
         file_name = self.unpackage_file("helloworld")
-        bv = binja.BinaryViewType.get_view_of_file(file_name)
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
 
-        preprocessed = binja.preprocess_source("""
-        #ifdef nonexistant
-        int foo = 1;
-        long long foo1 = 1;
-        #else
-        int bar = 2;
-        long long bar1 = 2;
-        #endif
-        """)
-        source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
-        typelist = bv.platform.parse_types_from_source(source)
-        inttype = binja.Type.int(4)
+            preprocessed = binja.preprocess_source("""
+            #ifdef nonexistant
+            int foo = 1;
+            long long foo1 = 1;
+            #else
+            int bar = 2;
+            long long bar1 = 2;
+            #endif
+            """)
+            source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
+            typelist = bv.platform.parse_types_from_source(source)
+            inttype = binja.Type.int(4)
 
-        tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
-        namedtype = binja.NamedTypeReference()
+            tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
+            namedtype = binja.NamedTypeReference()
 
-        retinfo = []
-        for i in range(len(typelist.variables)):
-            for j in typelist.variables.popitem():
-                retinfo.append("Type: " + str(j))
-        retinfo.append("Named Type: " + str(namedtype))
+            retinfo = []
+            for i in range(len(typelist.variables)):
+                for j in typelist.variables.popitem():
+                    retinfo.append("Type: " + str(j))
+            retinfo.append("Named Type: " + str(namedtype))
 
-        retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
-        return retinfo
+            retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
+            return retinfo
+        finally:
+            self.delete_package("helloworld")
 
     def test_Plugin_bin_info(self):
         """print_syscalls plugin produced different result"""
         file_name = self.unpackage_file("helloworld")
-        bin_info_path = os.path.join(os.path.dirname(__file__), '..', 'python', 'examples', 'bin_info.py')
-        result = subprocess.Popen(["python", bin_info_path, file_name], stdout=subprocess.PIPE).communicate()[0]
-        # normalize line endings and path sep
-        return [line for line in result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap").split("\n")]
+        try:
+            bin_info_path = os.path.join(os.path.dirname(__file__), '..', 'python', 'examples', 'bin_info.py')
+            result = subprocess.Popen(["python", bin_info_path, file_name], stdout=subprocess.PIPE).communicate()[0]
+            # normalize line endings and path sep
+            return [line for line in result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap").split("\n")]
+        finally:
+            self.delete_package("helloworld")
 
     def test_linear_disassembly(self):
         """linear_disassembly produced different result"""
         file_name = self.unpackage_file("helloworld")
-        bv = binja.BinaryViewType['ELF'].open(file_name)
-        disass = bv.linear_disassembly
-        retinfo = []
-        for i in disass:
-            i = str(i)
-            i = remove_low_confidence(i)
-            retinfo.append(i)
-        return retinfo
+        try:
+            bv = binja.BinaryViewType['ELF'].open(file_name)
+            disass = bv.linear_disassembly
+            retinfo = []
+            for i in disass:
+                i = str(i)
+                i = remove_low_confidence(i)
+                retinfo.append(i)
+            return retinfo
+        finally:
+            self.delete_package("helloworld")
 
     #  def test_partial_register_dataflow(self):
     #      """partial_register_dataflow produced different results"""
@@ -620,136 +632,145 @@ class TestBuilder(Builder):
     def test_low_il_stack(self):
         """LLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
-        bv = binja.BinaryViewType.get_view_of_file(file_name)
-        reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-        flag_list = ['c', 'p', 'a', 'z', 's', 'o']
-        retinfo = []
-        for func in bv.functions:
-            for bb in func.low_level_il.basic_blocks:
-                for ins in bb:
-                    retinfo.append("LLIL first stack element: " + str(ins.get_stack_contents(0,1)))
-                    retinfo.append("LLIL second stack element: " + str(ins.get_stack_contents_after(0,1)))
-                    retinfo.append("LLIL possible first stack element: " + str(ins.get_possible_stack_contents(0,1)))
-                    retinfo.append("LLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0,1)))
-                    for flag in flag_list:
-                        retinfo.append("LLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
-                        retinfo.append("LLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
-                        retinfo.append("LLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
-                        retinfo.append("LLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values_after(flag)))
-        return fixOutput(retinfo)
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+            flag_list = ['c', 'p', 'a', 'z', 's', 'o']
+            retinfo = []
+            for func in bv.functions:
+                for bb in func.low_level_il.basic_blocks:
+                    for ins in bb:
+                        retinfo.append("LLIL first stack element: " + str(ins.get_stack_contents(0,1)))
+                        retinfo.append("LLIL second stack element: " + str(ins.get_stack_contents_after(0,1)))
+                        retinfo.append("LLIL possible first stack element: " + str(ins.get_possible_stack_contents(0,1)))
+                        retinfo.append("LLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0,1)))
+                        for flag in flag_list:
+                            retinfo.append("LLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
+                            retinfo.append("LLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
+                            retinfo.append("LLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
+                            retinfo.append("LLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values_after(flag)))
+            return fixOutput(retinfo)
+        finally:
+            self.delete_package("jumptable_reordered")
 
     def test_med_il_stack(self):
         """MLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
-        bv = binja.BinaryViewType.get_view_of_file(file_name)
-        reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-        flag_list = ['c', 'p', 'a', 'z', 's', 'o']
-        retinfo = []
-        for func in bv.functions:
-            for bb in func.medium_level_il.basic_blocks:
-                for ins in bb:
-                    retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
-                    retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))
-                    retinfo.append("MLIL second stack element: " + str(ins.get_stack_contents_after(0, 1)))
-                    retinfo.append("MLIL possible first stack element: " + str(ins.get_possible_stack_contents(0, 1)))
-                    retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+            flag_list = ['c', 'p', 'a', 'z', 's', 'o']
+            retinfo = []
+            for func in bv.functions:
+                for bb in func.medium_level_il.basic_blocks:
+                    for ins in bb:
+                        retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
+                        retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))
+                        retinfo.append("MLIL second stack element: " + str(ins.get_stack_contents_after(0, 1)))
+                        retinfo.append("MLIL possible first stack element: " + str(ins.get_possible_stack_contents(0, 1)))
+                        retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
 
-                    for reg in reg_list:
-                        retinfo.append("MLIL reg {} var at {}: ".format(reg, hex(ins.address)) + str(ins.get_var_for_reg(reg)))
-                        retinfo.append("MLIL reg {} value at {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value(reg)))
-                        retinfo.append("MLIL reg {} value after {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value_after(reg)))
-                        retinfo.append("MLIL reg {} possible value at {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values(reg))))
-                        retinfo.append("MLIL reg {} possible value after {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values_after(reg))))
+                        for reg in reg_list:
+                            retinfo.append("MLIL reg {} var at {}: ".format(reg, hex(ins.address)) + str(ins.get_var_for_reg(reg)))
+                            retinfo.append("MLIL reg {} value at {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value(reg)))
+                            retinfo.append("MLIL reg {} value after {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value_after(reg)))
+                            retinfo.append("MLIL reg {} possible value at {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values(reg))))
+                            retinfo.append("MLIL reg {} possible value after {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values_after(reg))))
 
-                    for flag in flag_list:
-                        retinfo.append("MLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
-                        retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
-                        retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
-                        retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
-        return fixOutput(retinfo)
+                        for flag in flag_list:
+                            retinfo.append("MLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
+                            retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
+                            retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
+                            retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
+            return fixOutput(retinfo)
+        finally:
+            self.delete_package("jumptable_reordered")
 
     def test_events(self):
         """Event failure"""
         file_name = self.unpackage_file("helloworld")
-        bv = binja.BinaryViewType['ELF'].open(file_name)
-        bv.update_analysis_and_wait()
+        try:
+            bv = binja.BinaryViewType['ELF'].open(file_name)
+            bv.update_analysis_and_wait()
 
-        results = []
+            results = []
 
-        def simple_complete(self):
-            results.append("analysis complete")
-        evt = binja.AnalysisCompletionEvent(bv, simple_complete)
+            def simple_complete(self):
+                results.append("analysis complete")
+            evt = binja.AnalysisCompletionEvent(bv, simple_complete)
 
-        class NotifyTest(binja.BinaryDataNotification):
-            def data_written(self, view, offset, length):
-                results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
+            class NotifyTest(binja.BinaryDataNotification):
+                def data_written(self, view, offset, length):
+                    results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
 
-            def data_inserted(self, view, offset, length):
-                results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
+                def data_inserted(self, view, offset, length):
+                    results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
 
-            def data_removed(self, view, offset, length):
-                results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
+                def data_removed(self, view, offset, length):
+                    results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
-            def function_added(self, view, func):
-                results.append("function added: {0}".format(func.name))
+                def function_added(self, view, func):
+                    results.append("function added: {0}".format(func.name))
 
-            def function_removed(self, view, func):
-                results.append("function removed: {0}".format(func.name))
+                def function_removed(self, view, func):
+                    results.append("function removed: {0}".format(func.name))
 
-            def data_var_added(self, view, var):
-                results.append("data var added: {0}".format(hex(var.address)))
+                def data_var_added(self, view, var):
+                    results.append("data var added: {0}".format(hex(var.address)))
 
-            def data_var_removed(self, view, var):
-                results.append("data var removed: {0}".format(hex(var.address)))
+                def data_var_removed(self, view, var):
+                    results.append("data var removed: {0}".format(hex(var.address)))
 
-            def string_found(self, view, string_type, offset, length):
-                results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
+                def string_found(self, view, string_type, offset, length):
+                    results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
 
-            def string_removed(self, view, string_type, offset, length):
-                results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
+                def string_removed(self, view, string_type, offset, length):
+                    results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
-            def type_defined(self, view, name, type):
-                results.append("type defined: {0}".format(name))
+                def type_defined(self, view, name, type):
+                    results.append("type defined: {0}".format(name))
 
-            def type_undefined(self, view, name, type):
-                results.append("type undefined: {0}".format(name))
+                def type_undefined(self, view, name, type):
+                    results.append("type undefined: {0}".format(name))
 
-        test = NotifyTest()
-        bv.register_notification(test)
-        sacrificial_addr = 0x84fc
+            test = NotifyTest()
+            bv.register_notification(test)
+            sacrificial_addr = 0x84fc
 
-        type, name = bv.parse_type_string("int foo")
-        type_id = type.generate_auto_type_id("source", name)
+            type, name = bv.parse_type_string("int foo")
+            type_id = type.generate_auto_type_id("source", name)
 
-        bv.define_type(type_id, name, type)
-        bv.undefine_type(type_id)
+            bv.define_type(type_id, name, type)
+            bv.undefine_type(type_id)
 
-        bv.update_analysis_and_wait()
+            bv.update_analysis_and_wait()
 
-        bv.insert(sacrificial_addr, b"AAAA")
-        bv.update_analysis_and_wait()
+            bv.insert(sacrificial_addr, b"AAAA")
+            bv.update_analysis_and_wait()
 
-        bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
-        bv.update_analysis_and_wait()
+            bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
+            bv.update_analysis_and_wait()
 
-        bv.write(sacrificial_addr, b"BBBB")
-        bv.update_analysis_and_wait()
+            bv.write(sacrificial_addr, b"BBBB")
+            bv.update_analysis_and_wait()
 
-        bv.add_function(sacrificial_addr)
-        bv.update_analysis_and_wait()
+            bv.add_function(sacrificial_addr)
+            bv.update_analysis_and_wait()
 
-        bv.remove_function(bv.get_function_at(sacrificial_addr))
-        bv.update_analysis_and_wait()
+            bv.remove_function(bv.get_function_at(sacrificial_addr))
+            bv.update_analysis_and_wait()
 
-        bv.undefine_data_var(sacrificial_addr)
-        bv.update_analysis_and_wait()
+            bv.undefine_data_var(sacrificial_addr)
+            bv.update_analysis_and_wait()
 
-        bv.remove(sacrificial_addr, 4)
-        bv.update_analysis_and_wait()
+            bv.remove(sacrificial_addr, 4)
+            bv.update_analysis_and_wait()
 
-        bv.unregister_notification(test)
+            bv.unregister_notification(test)
 
-        return fixOutput(sorted(results))
+            return fixOutput(sorted(results))
+        finally:
+            self.delete_package("helloworld")
 
 
 class VerifyBuilder(Builder):
@@ -805,6 +826,7 @@ class VerifyBuilder(Builder):
             # force windows to close the handle to the bndb that we want to delete
             bv.file.close()
             del bv
+            os.unlink(temp_name)
             return [str(functions == bndb_functions and comments == bndb_comments)]
         finally:
-            os.unlink(temp_name)
+            self.delete_package("helloworld")

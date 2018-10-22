@@ -154,18 +154,28 @@ class Settings(object):
 		return (out_list, SettingsScope(c_scope.value))
 
 	def set_bool(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
 		return core.BNSettingsSetBool(self.registry_id, view, scope, id, value)
 
 	def set_double(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
 		return core.BNSettingsSetDouble(self.registry_id, view, scope, id, value)
 
 	def set_integer(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
 		return core.BNSettingsSetUInt64(self.registry_id, view, scope, id, value)
 
 	def set_string(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
 		return core.BNSettingsSetString(self.registry_id, view, scope, id, value)
 
 	def set_string_list(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
 		length = ctypes.c_ulonglong()
 		length.value = len(value)
 		string_list = (ctypes.c_char_p * len(value))()

@@ -1708,6 +1708,11 @@ uint64_t BinaryView::GetPreviousDataBeforeAddress(uint64_t addr)
 	return BNGetPreviousDataBeforeAddress(m_object, addr);
 }
 
+uint64_t BinaryView::GetPreviousDataVariableBeforeAddress(uint64_t addr)
+{
+	return BNGetPreviousDataVariableBeforeAddress(m_object, addr);
+}
+
 
 LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr,
 	DisassemblySettings* settings)

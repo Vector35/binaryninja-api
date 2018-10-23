@@ -48,8 +48,8 @@ help:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
-	rm $(SOURCEDIR)/binaryninja.*.rst
-	rm $(SOURCEDIR)/python.rst
+	rm -f $(SOURCEDIR)/binaryninja.*.rst
+	rm -f $(SOURCEDIR)/index.rst
 
 .PHONY: html
 html:

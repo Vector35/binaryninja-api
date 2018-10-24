@@ -28,6 +28,8 @@ else:
 
 sys.path.insert(0, bnpath)
 import binaryninja
+binaryninja._init_plugins() #force license check
+binaryninja.core_serial = "REDACTED"
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)

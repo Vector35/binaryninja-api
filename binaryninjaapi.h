@@ -1357,6 +1357,8 @@ namespace BinaryNinja
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
+		std::vector<uint64_t> GetDataReferences(uint64_t addr);
+		std::vector<uint64_t> GetDataReferences(uint64_t addr, uint64_t len);
 
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace=NameSpace());
 		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace=NameSpace());

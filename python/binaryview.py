@@ -2476,6 +2476,20 @@ class BinaryView(object):
 		core.BNFreeCodeReferences(refs, count.value)
 		return result
 
+	def get_data_refs(self, addr, length=None):
+		count = ctypes.c_ulonglong(0)
+		if length is None:
+			refs = core.BNGetDataReferences(self.handle, addr, count)
+		else:
+			refs = core.BNGetDataReferencesInRange(self.handle, addr, length, count)
+
+		result = []
+		for i in range(0, count.value):
+			result.append(refs[i])
+		core.BNFreeDataReferences(refs, count.value)
+		return result
+
+
 	def get_symbol_at(self, addr, namespace=None):
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.

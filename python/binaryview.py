@@ -420,7 +420,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		"""
 		sqlite = "SQLite format 3"
 		if filename.endswith(".bndb"):
-			f = open(filename, 'r')
+			f = open(filename, 'rb')
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
 			f.close()

@@ -113,7 +113,7 @@ size_t RelocationHandler::GetOperandForExternalRelocation(const uint8_t* data, u
 	(void)length;
 	(void)il;
 	(void)relocation;
-	return BN_INVALID_OPERAND;
+	return BN_AUTOCOERCE_EXTERN_PTR;
 }
 
 

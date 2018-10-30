@@ -43,7 +43,7 @@ class SSAVariable(object):
 		return "<ssa %s version %d>" % (repr(self.var), self.version)
 
 	def __eq__(self, other):
-		return (
+		return isinstance(other, SSAVariable) and (
 			(self.var, self.version) ==
 			(other.var, other.version)
 		)

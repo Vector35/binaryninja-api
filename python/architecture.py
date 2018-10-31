@@ -1784,12 +1784,12 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str code: string representation of the instructions to be assembled
 		:param int addr: virtual address that the instructions will be loaded at
-		:return: the bytes for the assembled instructions or error string
-		:rtype: (a tuple of instructions and empty string) or (or None and error string)
+		:return: the bytes for the assembled instructions
+		:rtype: Python3 - a 'bytes' object; Python2 - a 'bytes' object
 		:Example:
 
 			>>> arch.assemble("je 10")
-			('\\x0f\\x84\\x04\\x00\\x00\\x00', '')
+			'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
 		return self.perform_assemble(code, addr)
@@ -2416,17 +2416,17 @@ class CoreArchitecture(Architecture):
 		:param str code: string representation of the instructions to be assembled
 		:param int addr: virtual address that the instructions will be loaded at
 		:return: the bytes for the assembled instructions
-		:rtype: Python3 - a 'bytes' object; Python2 - a 'str'
+		:rtype: Python3 - a 'bytes' object; Python2 - a 'bytes' object
 		:Example:
 
 			>>> arch.assemble("je 10")
-			('\\x0f\\x84\\x04\\x00\\x00\\x00', '')
+			'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
 		result = databuffer.DataBuffer()
 		errors = ctypes.c_char_p()
 		if not core.BNAssemble(self.handle, code, addr, result.handle, errors):
-			raise ValueError("Could not assemble")
+			raise ValueError("Could not assemble: %s" % errors.value)
 		if isinstance(str(result), bytes):
 			return str(result)
 		else:

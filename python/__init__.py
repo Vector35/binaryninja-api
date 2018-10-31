@@ -229,29 +229,40 @@ def _init_plugins():
 
 _destruct_callbacks = _DestructionCallbackHandler()
 
-bundled_plugin_path = core.BNGetBundledPluginDirectory()
-user_plugin_path = core.BNGetUserPluginDirectory()
+def bundled_plugin_path():
+	return core.BNGetBundledPluginDirectory()
 
-core_version = core.BNGetVersionString()
-'''Core version'''
+def user_plugin_path():
+	return core.BNGetUserPluginDirectory()
 
-core_build_id = core.BNGetBuildId()
-'''Build ID'''
+def core_version():
+	'''Core version'''
+	return core.BNGetVersionString()
 
-core_serial = core.BNGetSerialNumber()
-'''Serial Number'''
+def core_build_id():
+	'''Build ID'''
+	core.BNGetBuildId()
 
-core_expires = gmtime(core.BNGetLicenseExpirationTime())
-'''License Expiration'''
+def core_serial():
+	'''Serial Number'''
+	return core.BNGetSerialNumber()
 
-core_product = core.BNGetProduct()
-'''Product string from the license file'''
+def core_expires():
+	'''License Expiration'''
+	return gmtime(core.BNGetLicenseExpirationTime())
 
-core_product_type = core.BNGetProductType()
-'''Product type from the license file'''
+def core_product():
+	'''Product string from the license file'''
+	return core.BNGetProduct()
 
-core_license_count = core.BNGetLicenseCount()
-'''License count from the license file'''
+def core_product_type():
+	'''Product type from the license file'''
+	return core.BNGetProductType()
 
-core_ui_enabled = core.BNIsUIEnabled()
-'''Indicates that a UI exists and the UI has invoked BNInitUI'''
+def core_license_count():
+	'''License count from the license file'''
+	return core.BNGetLicenseCount()
+
+def core_ui_enabled():
+	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
+	return core.BNIsUIEnabled()

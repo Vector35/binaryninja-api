@@ -16,7 +16,7 @@ setvars()
 	APPCOMMENT="Binary Ninja: A Reverse Engineering Platform"
 	BNPATH="$(dirname $(readlink -f "$0"))/.."
 	EXEC="${BNPATH}/binaryninja"
-	PNG="${BNPATH}/docs/images/logo.png"
+	PNG="${BNPATH}/docs/img/logo.png"
 	EXT="bndb"
 	if [ "$ROOT" == "root" ]
 	then

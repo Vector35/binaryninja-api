@@ -2362,6 +2362,7 @@ namespace BinaryNinja
 		BNBranchType type;
 		Ref<BasicBlock> target;
 		bool backEdge;
+		bool fallThrough;
 	};
 
 	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>

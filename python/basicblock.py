@@ -31,19 +31,20 @@ from binaryninja import range
 
 
 class BasicBlockEdge(object):
-	def __init__(self, branch_type, source, target, back_edge):
+	def __init__(self, branch_type, source, target, back_edge, fall_through):
 		self.type = branch_type
 		self.source = source
 		self.target = target
 		self.back_edge = back_edge
+		self.fall_through = fall_through
 
 	def __eq__(self, value):
 		if not isinstance(value, BasicBlockEdge):
 			return False
-		return (self.type, self.source, self.target, self.back_edge) == (value.type, value.source, value.target, value.back_edge)
+		return (self.type, self.source, self.target, self.back_edge, self.fall_through) == (value.type, value.source, value.target, value.back_edge, value.fall_through)
 
 	def __hash__(self):
-		return hash((self.type, self.source, self.target, self.back_edge))
+		return hash((self.type, self.source, self.target, self.back_edge, self.fall_through))
 
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
@@ -137,7 +138,7 @@ class BasicBlock(object):
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
-			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge))
+			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge, edges[i].fallThrough))
 		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 
@@ -153,7 +154,7 @@ class BasicBlock(object):
 				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
 			else:
 				target = None
-			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge))
+			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
 		core.BNFreeBasicBlockEdgeList(edges, count.value)
 		return result
 

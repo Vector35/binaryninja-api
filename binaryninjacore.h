@@ -1274,6 +1274,7 @@ extern "C"
 		BNBranchType type;
 		BNBasicBlock* target;
 		bool backEdge;
+		bool fallThrough;
 	};
 
 	struct BNPoint

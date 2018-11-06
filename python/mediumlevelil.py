@@ -71,6 +71,12 @@ class MediumLevelILOperationAndSize(object):
 			return "<%s>" % self.operation.name
 		return "<%s %d>" % (self.operation.name, self.size)
 
+	def __eq__(self, other):
+		if isinstance(other, MediumLevelILOperation):
+			return other == self.operation
+		if isinstance(other, MediumLevelILOperationAndSize):
+			return other.size == self.size and other.operation == self.operation
+
 
 class MediumLevelILInstruction(object):
 	"""

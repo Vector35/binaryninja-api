@@ -418,7 +418,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		:return: returns a BinaryView object for the given filename.
 		:rtype: BinaryView or None
 		"""
-		sqlite = "SQLite format 3"
+		sqlite = b"SQLite format 3"
 		if filename.endswith(".bndb"):
 			f = open(filename, 'rb')
 			if f is None or f.read(len(sqlite)) != sqlite:

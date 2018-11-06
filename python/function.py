@@ -293,6 +293,8 @@ class Variable(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, Variable):
+			return False
 		return (self.identifier, self.function) == (other.identifier, other.function)
 
 	def __hash__(self):

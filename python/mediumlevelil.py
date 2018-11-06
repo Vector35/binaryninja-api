@@ -76,6 +76,8 @@ class MediumLevelILOperationAndSize(object):
 			return other == self.operation
 		if isinstance(other, MediumLevelILOperationAndSize):
 			return other.size == self.size and other.operation == self.operation
+		else:
+			return False
 
 
 class MediumLevelILInstruction(object):

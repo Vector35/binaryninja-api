@@ -22,11 +22,12 @@ import struct
 import traceback
 import ctypes
 import abc
+import numbers
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics)
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag)
 import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
 from binaryninja import log
@@ -37,6 +38,7 @@ from binaryninja import basicblock
 from binaryninja import lineardisassembly
 from binaryninja import metadata
 from binaryninja import highlight
+from binaryninja import function
 
 # 2-3 compatibility
 from binaryninja import range
@@ -3614,25 +3616,73 @@ class BinaryView(object):
 		"""
 		core.BNRegisterPlatformTypes(self.handle, platform.handle)
 
-	def find_next_data(self, start, data, flags = 0):
+	def find_next_data(self, start, data, flags=FindFlag.FindCaseSensitive):
 		"""
-		``find_next_data`` searchs for the bytes in data starting at the virtual address ``start`` either, case-sensitive,
-		or case-insensitive.
+		``find_next_data`` searchs for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
-		:param str data: bytes to search for
-		:param FindFlags flags: case-sensitivity flag, one of the following:
+		:param str data: data to search for
+		:param FindFlag flags: (optional) defaults to case-insensitive data search
 
-			==================== ======================
-			FindFlags            Description
-			==================== ======================
-			NoFindFlags          Case-sensitive find
-			FindCaseInsensitive  Case-insensitive find
-			==================== ======================
+			====================  ============================
+			FindFlag              Description
+			====================  ============================
+			FindCaseSensitive     Case-sensitive search
+			FindCaseInsensitive   Case-insensitive search
+			===================== ============================
 		"""
 		buf = databuffer.DataBuffer(str(data))
 		result = ctypes.c_ulonglong()
 		if not core.BNFindNextData(self.handle, start, buf.handle, result, flags):
+			return None
+		return result.value
+
+
+	def find_next_text(self, start, text, settings=None, flags=FindFlag.FindCaseSensitive):
+		"""
+		``find_next_text`` searchs for string ``text`` occuring in the linear view output starting at the virtual
+		address ``start`` until the end of the BinaryView.
+
+		:param int start: virtual address to start searching from.
+		:param str text: text to search for
+		:param FindFlag flags: (optional) defaults to case-insensitive data search
+
+			====================  ============================
+			FindFlag              Description
+			====================  ============================
+			FindCaseSensitive     Case-sensitive search
+			FindCaseInsensitive   Case-insensitive search
+			===================== ============================
+		"""
+		if not isinstance(text, str):
+			raise TypeError("text parameter is not str type")
+		if settings is None:
+			settings = function.DisassemblySettings()
+		if not isinstance(settings, function.DisassemblySettings):
+			raise TypeError("settings parameter is not DisassemblySettings type")
+
+		result = ctypes.c_ulonglong()
+		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags):
+			return None
+		return result.value
+
+	def find_next_constant(self, start, constant, settings=None):
+		"""
+		``find_next_constant`` searchs for integer constant ``constant`` occuring in the linear view output starting at the virtual
+		address ``start`` until the end of the BinaryView.
+
+		:param int start: virtual address to start searching from.
+		:param int constant: constant to search for
+		"""
+		if not isinstance(constant, numbers.Integral):
+			raise TypeError("constant parameter is not integral type")
+		if settings is None:
+			settings = function.DisassemblySettings()
+		if not isinstance(settings, function.DisassemblySettings):
+			raise TypeError("settings parameter is not DisassemblySettings type")
+
+		result = ctypes.c_ulonglong()
+		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle):
 			return None
 		return result.value
 
@@ -3797,6 +3847,49 @@ class BinaryView(object):
 			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
+
+	def parse_expression(self, expression, here=0):
+		"""
+		Evaluates an string expression to an integer value.
+
+		The parser uses the following rules:
+			- symbols are defined by the lexer as `[A-Za-z0-9_:<>][A-Za-z0-9_:$\-<>]+` or anything enclosed in either single or
+		      double quotes
+			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivilent to `printf + 0x10` If decimal numbers required use the decimal prefix.
+			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
+			  - 0x - Hexadecimal
+			  - 0n - Decimal
+			  - 0 - Octal
+			- In the case of an ambiguous number/symbol (one with no prefix) for instance `12345` we will first attempt
+			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
+			  it to a hexadecmial number.
+			- The following operations are valid: +, -, *, /, %, (), &, |, ^, ~
+			- In addition to the above operators there are _il-style_ dereference operators
+			  - [<expression>] - read the _current address size_ at <expression>
+			  - [<expression>].b - read the byte at <expression>
+			  - [<expression>].w - read the word (2 bytes) at <expression>
+			  - [<expression>].d - read the dword (4 bytes) at <expression>
+			  - [<expression>].q - read the quadword (8 bytes) at <expression>
+			- The `$here` keyword can be used in calculations and is defined as the `here` parameter
+
+		:param string expression: Arithmetic expression to be evaluated
+		:param int here: (optional) Base address for relative expressions, defaults to zero
+		:rtype: int
+		"""
+		offset = ctypes.c_ulonglong()
+		errors = ctypes.c_char_p()
+		if not core.BNParseExpression(self.handle, expression, offset, here, errors):
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise ValueError(error_str)
+		return offset.value
+
+	def eval(self, expression, here=0):
+		"""
+		Evaluates an string expression to an integer value. This is a more concise alias for the `parse_expression` API
+		See `parse_expression` for details on usage.
+		"""
+		return self.parse_expression(expression, here)
 
 
 class BinaryReader(object):

@@ -377,7 +377,7 @@ class BinaryViewTestBuilder(Builder):
 
 
 class TestBuilder(Builder):
-    """ The TestBuilder is for tests that need to be checked againsttest_BinaryView
+    """ The TestBuilder is for tests that need to be checked against a
         stored oracle data that isn't from a binary. These test are
         generated on your local machine then run again on the build
         machine to verify correctness.
@@ -790,6 +790,27 @@ class VerifyBuilder(Builder):
 
     def get_comments(self, bv):
         return bv.functions[0].comments
+
+    def test_expression_parse(self):
+        file_name = self.unpackage_file("helloworld")
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            assert bv.parse_expression("1 + 1") == 2
+            assert bv.parse_expression("-1 + 1") == 0
+            assert bv.parse_expression("1 - 1") == 0
+            assert bv.parse_expression("1 + -1") == 0
+            assert bv.parse_expression("[0x8000]") == 0x464c457f
+            assert bv.parse_expression("[0x8000]b") == 0
+            assert bv.parse_expression("[0x8000].b") == 0x7f
+            assert bv.parse_expression("[0x8000].w") == 0x457f
+            assert bv.parse_expression("[0x8000].d") == 0x464c457f
+            assert bv.parse_expression("[0x8000].q") == 0x10101464c457f
+            assert bv.parse_expression("$here + 1", 12345) == 12345 + 1
+            assert bv.parse_expression("_start") == 0x830c
+            assert bv.parse_expression("_start + 4") == 0x8310
+            return True
+        finally:
+            self.delete_package("helloworld")
 
     def test_verify_BNDB_round_trip(self):
         """Binary Ninja Database output doesn't match its input"""

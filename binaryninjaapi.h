@@ -1429,7 +1429,9 @@ namespace BinaryNinja
 
 		void RegisterPlatformTypes(Platform* platform);
 
-		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = NoFindFlags);
+		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& addr, BNFindFlag flags = FindCaseSensitive);
+		bool FindNextText(uint64_t start, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings, BNFindFlag flags = FindCaseSensitive);
+		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings);
 
 		void Reanalyze();
 
@@ -1484,6 +1486,8 @@ namespace BinaryNinja
 		std::set<NameSpace> GetNameSpaces() const;
 		static NameSpace GetInternalNameSpace();
 		static NameSpace GetExternalNameSpace();
+
+		bool ParseExpression(const std::string& expression, uint64_t &offset, uint64_t here, std::string& errorString);
 	};
 
 

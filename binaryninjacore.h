@@ -1667,7 +1667,7 @@ extern "C"
 
 	enum BNFindFlag
 	{
-		NoFindFlags = 0,
+		FindCaseSensitive = 0,
 		FindCaseInsensitive = 1
 	};
 
@@ -2174,6 +2174,10 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNFindNextData(BNBinaryView* view, uint64_t start, BNDataBuffer* data, uint64_t* result,
 		BNFindFlag flags);
+	BINARYNINJACOREAPI bool BNFindNextText(BNBinaryView* view, uint64_t start, const char* data, uint64_t* result,
+		BNDisassemblySettings* settings, BNFindFlag flags);
+	BINARYNINJACOREAPI bool BNFindNextConstant(BNBinaryView* view, uint64_t start, uint64_t constant, uint64_t* result,
+		BNDisassemblySettings* settings);
 
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length,
 		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
@@ -3810,6 +3814,10 @@ extern "C"
 	BINARYNINJACOREAPI BNDataRendererContainer* BNGetDataRendererContainer();
 	BINARYNINJACOREAPI void BNRegisterGenericDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);
 	BINARYNINJACOREAPI void BNRegisterTypeSpecificDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);
+
+	BINARYNINJACOREAPI bool BNParseExpression(BNBinaryView* view, const char* expression, uint64_t* offset, uint64_t here, char** errorString);
+	BINARYNINJACOREAPI void BNFreeParseError(char* errorString);
+
 #ifdef __cplusplus
 }
 #endif

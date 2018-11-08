@@ -2426,6 +2426,8 @@ class CoreArchitecture(Architecture):
 		result = databuffer.DataBuffer()
 		errors = ctypes.c_char_p()
 		if not core.BNAssemble(self.handle, code, addr, result.handle, errors):
+			error_str = errors.value
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise ValueError("Could not assemble: %s" % errors.value)
 		if isinstance(str(result), bytes):
 			return str(result)

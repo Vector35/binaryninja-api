@@ -557,12 +557,20 @@ class PythonScriptingInstance(ScriptingInstance):
 						for line in code.split(b'\n'):
 							self.interpreter.push(line.decode('charmap'))
 
-						if self.locals["here"] != self.active_addr:
-							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
-								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
-						elif self.locals["current_address"] != self.active_addr:
-							if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
-								sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+						tryNavigate = True
+						if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
+							try:
+								self.locals["here"] = self.active_view.parse_expression(self.locals["here"], self.active_addr)
+							except ValueError as e:
+								sys.stderr.write(e)
+								tryNavigate = False
+						if tryNavigate:
+							if self.locals["here"] != self.active_addr:
+								if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
+									sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
+							elif self.locals["current_address"] != self.active_addr:
+								if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
+									sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
 						if self.active_view is not None:
 							self.active_view.update_analysis()
 					except:

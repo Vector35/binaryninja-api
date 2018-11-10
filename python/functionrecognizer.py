@@ -26,6 +26,8 @@ from binaryninja import function
 from binaryninja import filemetadata
 from binaryninja import binaryview
 from binaryninja import lowlevelil
+from binaryninja import log
+from binaryninja import mediumlevelil
 
 
 class FunctionRecognizer(object):

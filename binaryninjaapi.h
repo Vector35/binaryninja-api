@@ -1430,8 +1430,16 @@ namespace BinaryNinja
 		void RegisterPlatformTypes(Platform* platform);
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& addr, BNFindFlag flags = FindCaseSensitive);
-		bool FindNextText(uint64_t start, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings, BNFindFlag flags = FindCaseSensitive);
+		bool FindNextText(uint64_t start, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
+			BNFindFlag flags = FindCaseSensitive);
 		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings);
+
+		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+			const std::function<bool(size_t current, size_t total)>& progress);
+		bool FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
+			BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress);
+		bool FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings,
+			const std::function<bool(size_t current, size_t total)>& progress);
 
 		void Reanalyze();
 

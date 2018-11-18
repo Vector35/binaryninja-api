@@ -2001,6 +2001,46 @@ bool BinaryView::FindNextConstant(uint64_t start, uint64_t constant, uint64_t& r
 }
 
 
+struct FindProgressCallbackContext
+{
+	std::function<bool(size_t, size_t)> func;
+};
+
+
+static bool FindProgressCallback(void* ctxt, size_t progress, size_t total)
+{
+	FindProgressCallbackContext* cb = (FindProgressCallbackContext*)ctxt;
+	return cb->func(progress, total);
+}
+
+
+bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+	const std::function<bool(size_t current, size_t total)>& progress)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	return BNFindNextDataWithProgress(m_object, start, end, data.GetBufferObject(), &addr, flags, &fp, FindProgressCallback);
+}
+
+
+bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
+	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	return BNFindNextTextWithProgress(m_object, start, end, data.c_str(), &addr, settings->GetObject(), flags, &fp, FindProgressCallback);
+}
+
+
+bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings,
+	const std::function<bool(size_t current, size_t total)>& progress)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	return BNFindNextConstantWithProgress(m_object, start, end, constant, &addr, settings->GetObject(), &fp, FindProgressCallback);
+}
+
+
 void BinaryView::Reanalyze()
 {
 	BNReanalyzeAllFunctions(m_object);

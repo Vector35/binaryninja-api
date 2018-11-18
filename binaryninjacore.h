@@ -2179,6 +2179,13 @@ extern "C"
 	BINARYNINJACOREAPI bool BNFindNextConstant(BNBinaryView* view, uint64_t start, uint64_t constant, uint64_t* result,
 		BNDisassemblySettings* settings);
 
+	BINARYNINJACOREAPI bool BNFindNextDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, BNDataBuffer* data, uint64_t* result, BNFindFlag flags,
+		void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+	BINARYNINJACOREAPI bool BNFindNextTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, const char* data, uint64_t* result,
+		BNDisassemblySettings* settings, BNFindFlag flags, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+	BINARYNINJACOREAPI bool BNFindNextConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, uint64_t constant, uint64_t* result,
+		BNDisassemblySettings* settings, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length,
 		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
 	BINARYNINJACOREAPI void BNRemoveAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length);

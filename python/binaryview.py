@@ -1122,7 +1122,7 @@ class BinaryView(object):
 	@property
 	def analysis_info(self):
 		"""Provides instantaneous analysis state information and a list of current functions under analysis (read-only). 
-		All times are given in units of milliseconds (ms). Per function `analysis_time` is the aggregation of time spend 
+		All times are given in units of milliseconds (ms). Per function `analysis_time` is the aggregation of time spent 
 		performing incremental updates and is reset on a full function update. Per function `update_count` tracks the 
 		current number of incremental updates and is reset on a full function update. Per function `submit_count` tracks the 
 		current number of full updates that have completed. Note that the `submit_count` is currently not reset across analysis updates."""

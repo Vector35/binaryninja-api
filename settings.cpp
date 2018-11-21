@@ -90,6 +90,21 @@ string Settings::GetSchema()
 }
 
 
+bool Settings::DeserializeSettings(const string& contents, Ref<BinaryView> view, BNSettingsScope scope)
+{
+	return BNDeserializeSettings(m_registry.c_str(), contents.c_str(), view ? view->GetObject() : nullptr, scope);
+}
+
+
+string Settings::SerializeSettings(Ref<BinaryView> view, BNSettingsScope scope)
+{
+	char* settingsStr = BNSerializeSettings(m_registry.c_str(), view ? view->GetObject() : nullptr, scope);
+	string settings(settingsStr);
+	BNFreeString(settingsStr);
+	return settings;
+}
+
+
 bool Settings::Reset(const string& id, Ref<BinaryView> view, BNSettingsScope scope)
 {
 	return BNSettingsReset(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);

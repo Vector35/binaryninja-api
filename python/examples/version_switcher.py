@@ -24,6 +24,7 @@ import sys
 from binaryninja.update import UpdateChannel, are_auto_updates_enabled, set_auto_updates_enabled, is_update_installation_pending, install_pending_update
 from binaryninja import core_version
 import datetime
+from six.moves import input
 
 chandefault = UpdateChannel.list[0].name
 channel = None
@@ -56,7 +57,7 @@ def select(version):
 		print("-----")
 		print("\t1)\tSwitch to version")
 		print("\t2)\tMain Menu")
-		selection = raw_input('Choice: ')
+		selection = input('Choice: ')
 		if selection.isdigit():
 			selection = int(selection)
 		else:
@@ -96,7 +97,7 @@ def list_channels():
 		for index, item in enumerate(channel_list):
 			print("\t%d)\t%s" % (index + 1, item.name))
 		print("\t%d)\t%s" % (len(channel_list) + 1, "Main Menu"))
-		selection = raw_input('Choice: ')
+		selection = input('Choice: ')
 		if selection.isdigit():
 			selection = int(selection)
 		else:
@@ -128,7 +129,7 @@ def main():
 		print("\t%d)\t%s" % (len(versions) + 1, "Switch Channel"))
 		print("\t%d)\t%s" % (len(versions) + 2, "Toggle Auto Updates"))
 		print("\t%d)\t%s" % (len(versions) + 3, "Exit"))
-		selection = raw_input('Choice: ')
+		selection = input('Choice: ')
 		if selection.isdigit():
 			selection = int(selection)
 		else:

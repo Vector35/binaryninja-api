@@ -230,21 +230,48 @@ def _init_plugins():
 _destruct_callbacks = _DestructionCallbackHandler()
 
 def bundled_plugin_path():
+	"""
+		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/getting-started.html#binary-path>`_
+
+		:return: current bundled plugin path
+		:rtype: str, or None on failure
+	"""
 	return core.BNGetBundledPluginDirectory()
 
 def user_plugin_path():
+	"""
+		``user_plugin_path`` returns a string containing the current plugin path inside the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
+
+		:return: current user plugin path
+		:rtype: str, or None on failure
+	"""
 	return core.BNGetUserPluginDirectory()
 
 def core_version():
-	'''Core version'''
+	"""
+		``core_version`` returns a string containing the current version
+
+		:return: current version
+		:rtype: str, or None on failure
+	"""
 	return core.BNGetVersionString()
 
 def core_build_id():
-	'''Build ID'''
+	"""
+		``core_build_id`` returns a string containing the current build id
+
+		:return: current build id
+		:rtype: str, or None on failure
+	"""
 	core.BNGetBuildId()
 
 def core_serial():
-	'''Serial Number'''
+	"""
+		``core_serial`` returns a string containing the current serial number
+
+		:return: current serial
+		:rtype: str, or None on failure
+	"""
 	return core.BNGetSerialNumber()
 
 def core_expires():

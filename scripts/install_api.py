@@ -42,7 +42,7 @@ def validate_path(path):
 
     try:
         from binaryninja import core_version
-        print("Found Binary Ninja core version: {}".format(core_version))
+        print("Found Binary Ninja core version: {}".format(core_version()))
     except ImportError:
         sys.path = old_path
         return False

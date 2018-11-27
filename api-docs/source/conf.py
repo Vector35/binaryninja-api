@@ -29,7 +29,6 @@ else:
 sys.path.insert(0, bnpath)
 import binaryninja
 binaryninja._init_plugins() #force license check
-binaryninja.core_serial = "REDACTED"
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
@@ -144,8 +143,8 @@ author = u'Vector 35 LLC'
 # built documents.
 #
 # The short X.Y version.
-version = u'.'.join(unicode(binaryninja.core_version).split('.')[0:2])
-release = unicode(binaryninja.core_version)
+version = u'.'.join(unicode(binaryninja.core_version()).split('.')[0:2])
+release = unicode(binaryninja.core_version())
 
 language = 'en'
 
@@ -192,11 +191,11 @@ html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = u'Binary Ninja Documentation v1.0.1'
+html_title = u'Binary Ninja API Documentation v' + version
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
-# html_short_title = None
+html_short_title = u'BN API'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -207,7 +206,7 @@ html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
 #
-# html_favicon = None
+html_favicon = u'../../docs/img/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -258,7 +257,7 @@ html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #
-# html_show_sphinx = True
+html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
 #

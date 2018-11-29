@@ -7,6 +7,11 @@ import sys
 import os
 from site import getsitepackages, getusersitepackages, check_enableusersite
 
+# Hacky command line parsing to accept a silent-install -s flag like linux-setup.sh:
+INTERACTIVE = True
+if '-s' in sys.argv[1:]:
+    INTERACTIVE = False
+
 try:
     import binaryninja
     print("Binary Ninja API already Installed")
@@ -51,9 +56,12 @@ def validate_path(path):
 
 
 while not validate_path(api_path):
-    print("\nBinary Ninja not found. Please provide the path to Binary " + \
-          "Ninja's install directory: \n [{}] : ".format(api_path))
+    print("\nBinary Ninja not found.")
+    if not INTERACTIVE:
+        print("Non-interactive mode selected, failing.")
+        sys.exit(-1)
 
+    print("Please provide the path to Binary Ninja's install directory: \n [{}] : ".format(api_path))
     new_path = sys.stdin.readline().strip()
     if len(new_path) == 0:
         print("\nInvalid path")

@@ -65,7 +65,7 @@ lastrun()
 pythonpath()
 {
 	echo Configuring python path
-	if [ "USERINTERACTIVE" == "true" ]
+	if [ "$USERINTERACTIVE" == "true" ]
 	then
 	    ${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
 	else

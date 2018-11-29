@@ -67,10 +67,12 @@ pythonpath()
 	echo Configuring python path
 	if [ "$USERINTERACTIVE" == "true" ]
 	then
-	    ${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT
+		SILENT="-s"
 	else
-	    ${SUDO}python ${BNPATH}/scripts/install_api.py $ROOT -s
+		SILENT=""
 	fi
+	python -V >/dev/null 2>&1 && ${SUDO}python ${BNPATH}/scripts/install_api.py ${ROOT} ${SILENT}
+	python3 -V >/dev/null 2>&1 && ${SUDO}python3 ${BNPATH}/scripts/install_api.py ${ROOT} ${SILENT}
 }
 
 createdesktopfile()

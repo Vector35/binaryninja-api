@@ -1941,6 +1941,7 @@ extern "C"
 		AlwaysSkipReason,
 		ExceedFunctionSizeSkipReason,
 		ExceedFunctionAnalysisTimeSkipReason,
+		ExceedFunctionUpdateCountSkipReason,
 		NewAutoFunctionAnalysisSuppressedReason
 	};
 

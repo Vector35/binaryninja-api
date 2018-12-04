@@ -338,17 +338,7 @@ class BasicBlock(object):
 			else:
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
-			tokens = []
-			for j in range(0, lines[i].count):
-				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-				text = lines[i].tokens[j].text
-				value = lines[i].tokens[j].value
-				size = lines[i].tokens[j].size
-				operand = lines[i].tokens[j].operand
-				context = lines[i].tokens[j].context
-				confidence = lines[i].tokens[j].confidence
-				address = lines[i].tokens[j].address
-				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
 			result.append(binaryninja.function.DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result

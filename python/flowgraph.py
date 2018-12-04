@@ -128,17 +128,7 @@ class FlowGraphNode(object):
 			else:
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
-			tokens = []
-			for j in range(0, lines[i].count):
-				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-				text = lines[i].tokens[j].text
-				value = lines[i].tokens[j].value
-				size = lines[i].tokens[j].size
-				operand = lines[i].tokens[j].operand
-				context = lines[i].tokens[j].context
-				confidence = lines[i].tokens[j].confidence
-				address = lines[i].tokens[j].address
-				tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			tokens = function.InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
 			result.append(function.DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -172,16 +162,7 @@ class FlowGraphNode(object):
 				color = highlight.HighlightColor(color)
 			line_buf[i].highlight = color._get_core_struct()
 			line_buf[i].count = len(line.tokens)
-			line_buf[i].tokens = (core.BNInstructionTextToken * len(line.tokens))()
-			for j in range(0, len(line.tokens)):
-				line_buf[i].tokens[j].type = line.tokens[j].type
-				line_buf[i].tokens[j].text = line.tokens[j].text
-				line_buf[i].tokens[j].value = line.tokens[j].value
-				line_buf[i].tokens[j].size = line.tokens[j].size
-				line_buf[i].tokens[j].operand = line.tokens[j].operand
-				line_buf[i].tokens[j].context = line.tokens[j].context
-				line_buf[i].tokens[j].confidence = line.tokens[j].confidence
-				line_buf[i].tokens[j].address = line.tokens[j].address
+			line_buf[i].tokens = function.InstructionTextToken.get_instruction_lines(line.tokens)
 		core.BNSetFlowGraphNodeLines(self.handle, line_buf, len(lines))
 
 	@property
@@ -244,17 +225,7 @@ class FlowGraphNode(object):
 					il_instr = block.il_function[lines[i].instrIndex]
 				else:
 					il_instr = None
-				tokens = []
-				for j in range(0, lines[i].count):
-					token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-					text = lines[i].tokens[j].text
-					value = lines[i].tokens[j].value
-					size = lines[i].tokens[j].size
-					operand = lines[i].tokens[j].operand
-					context = lines[i].tokens[j].context
-					confidence = lines[i].tokens[j].confidence
-					address = lines[i].tokens[j].address
-					tokens.append(function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+				tokens = function.InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
 				yield function.DisassemblyTextLine(tokens, addr, il_instr)
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)

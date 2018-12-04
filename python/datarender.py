@@ -112,18 +112,7 @@ class DataRenderer(object):
 			view = BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
 			type = Type(handle=core.BNNewTypeReference(type))
 
-			prefixTokens = []
-			for i in range(prefixCount):
-				token_type = InstructionTextTokenType(prefix[i].type)
-				text = prefix[i].text
-				value = prefix[i].value
-				size = prefix[i].size
-				operand = prefix[i].operand
-				context = prefix[i].context
-				address = prefix[i].address
-				confidence = prefix[i].confidence
-				prefixTokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-
+			prefixTokens = InstructionTextToken.get_instruction_lines(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
 				pycontext.append(Type(core.BNNewTypeReference(typeCtx[i])))
@@ -140,8 +129,6 @@ class DataRenderer(object):
 				if isinstance(color, HighlightStandardColor):
 					color = highlight.HighlightColor(color)
 				line_buf[i].highlight = color._get_core_struct()
-				line_buf[i].count = len(line.tokens)
-				line_buf[i].tokens = (core.BNInstructionTextToken * len(line.tokens))()
 				if line.address is None:
 					if len(line.tokens) > 0:
 						line_buf[i].addr = line.tokens[0].address
@@ -153,15 +140,9 @@ class DataRenderer(object):
 					line_buf[i].instrIndex = line.il_instruction.instr_index
 				else:
 					line_buf[i].instrIndex = 0xffffffffffffffff
-				for j in range(len(line.tokens)):
-					line_buf[i].tokens[j].type = line.tokens[j].type
-					line_buf[i].tokens[j].text = line.tokens[j].text
-					line_buf[i].tokens[j].value = line.tokens[j].value
-					line_buf[i].tokens[j].size = line.tokens[j].size
-					line_buf[i].tokens[j].operand = line.tokens[j].operand
-					line_buf[i].tokens[j].context = line.tokens[j].context
-					line_buf[i].tokens[j].confidence = line.tokens[j].confidence
-					line_buf[i].tokens[j].address = line.tokens[j].address
+
+				line_buf[i].count = len(line.tokens)
+				line_buf[i].tokens = InstructionTextToken.get_instruction_lines(line.tokens)
 
 			return ctypes.cast(line_buf, ctypes.c_void_p).value
 		except:

@@ -533,19 +533,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			tokens = info[0]
 			length[0] = info[1]
 			count[0] = len(tokens)
-			token_buf = (core.BNInstructionTextToken * len(tokens))()
-			for i in range(0, len(tokens)):
-				if isinstance(tokens[i].type, str):
-					token_buf[i].type = InstructionTextTokenType[tokens[i].type]
-				else:
-					token_buf[i].type = tokens[i].type
-				token_buf[i].text = tokens[i].text
-				token_buf[i].value = tokens[i].value
-				token_buf[i].size = tokens[i].size
-				token_buf[i].operand = tokens[i].operand
-				token_buf[i].context = tokens[i].context
-				token_buf[i].confidence = tokens[i].confidence
-				token_buf[i].address = tokens[i].address
+			token_buf = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens)
 			result[0] = token_buf
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
@@ -2328,17 +2316,7 @@ class CoreArchitecture(Architecture):
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
 		if not core.BNGetInstructionText(self.handle, buf, addr, length, tokens, count):
 			return None, 0
-		result = []
-		for i in range(0, count.value):
-			token_type = InstructionTextTokenType(tokens[i].type)
-			text = tokens[i].text
-			value = tokens[i].value
-			size = tokens[i].size
-			operand = tokens[i].operand
-			context = tokens[i].context
-			confidence = tokens[i].confidence
-			address = tokens[i].address
-			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 

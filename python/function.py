@@ -1164,7 +1164,7 @@ class Function(object):
 		count = ctypes.c_ulonglong()
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
 		result = []
-		for i in range(0, count.value):
+		for i in range(count.value):
 			result.append(IndirectBranchInfo(binaryninja.architecture.CoreArchitecture._from_cache(branches[i].sourceArch), branches[i].sourceAddr, binaryninja.architecture.CoreArchitecture._from_cache(branches[i].destArch), branches[i].destAddr, branches[i].autoDefined))
 		core.BNFreeIndirectBranchList(branches)
 		return result
@@ -1175,21 +1175,8 @@ class Function(object):
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, count)
 		result = []
-		for i in range(0, count.value):
-			tokens = []
-			for j in range(0, lines[i].count):
-				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-				text = lines[i].tokens[j].text
-				if not isinstance(text, str):
-					text = text.encode("charmap")
-				value = lines[i].tokens[j].value
-				size = lines[i].tokens[j].size
-				operand = lines[i].tokens[j].operand
-				context = lines[i].tokens[j].context
-				confidence = lines[i].tokens[j].confidence
-				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-			result.append(tokens)
+		for i in range(count.value):
+			result.append(InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count))
 		core.BNFreeInstructionTextLines(lines, count.value)
 		return result
 
@@ -1487,17 +1474,7 @@ class Function(object):
 		for i in range(0, count.value):
 			addr = lines[i].addr
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
-			tokens = []
-			for j in range(0, lines[i].count):
-				token_type = InstructionTextTokenType(lines[i].tokens[j].type)
-				text = lines[i].tokens[j].text
-				value = lines[i].tokens[j].value
-				size = lines[i].tokens[j].size
-				operand = lines[i].tokens[j].operand
-				context = lines[i].tokens[j].context
-				confidence = lines[i].tokens[j].confidence
-				address = lines[i].tokens[j].address
-				tokens.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			tokens = InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
 			result.append(DisassemblyTextLine(tokens, addr, color = color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
@@ -1815,7 +1792,7 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeName=""):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
@@ -1824,6 +1801,44 @@ class InstructionTextToken(object):
 		self.context = InstructionTextTokenContext(context)
 		self.confidence = confidence
 		self.address = address
+		self.typeName = typeName
+
+	@classmethod
+	def get_instruction_lines(cls, tokens, count=0):
+		""" Helper method for converting between core.BNInstructionTextToken and InstructionTextToken lists """
+		if isinstance(tokens, list):
+			result = (core.BNInstructionTextToken * len(tokens))()
+			for j in range(len(tokens)):
+				result.type = tokens[j].type
+				result.text = tokens[j].text
+				result.value = tokens[j].value
+				result.size = tokens[j].size
+				result.operand = tokens[j].operand
+				result.context = tokens[j].context
+				result.confidence = tokens[j].confidence
+				result.address = tokens[j].address
+				result.typeName = tokens[j].typeName
+			return result
+
+		if not isinstance(tokens, core.BNInstructionTextToken):
+			raise TypeError("tokens is not of type core.BNInstructionTextToken")
+		result = []
+		for j in range(count):
+			token_type = InstructionTextTokenType(tokens[j].type)
+			text = tokens[j].text
+			if not isinstance(text, str):
+				text = text.encode("charmap")
+			value = tokens[j].value
+			size = tokens[j].size
+			operand = tokens[j].operand
+			context = tokens[j].context
+			confidence = tokens[j].confidence
+			address = tokens[j].address
+			typeName = tokens[j].typeName
+			if not isinstance(typeName, str):
+				typeName = typeName.encode("charmap")
+			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeName))
+		return result
 
 	def __str__(self):
 		return self.text

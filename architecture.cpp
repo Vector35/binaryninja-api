@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <cstdint>
 #include <inttypes.h>
+#include <vector>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -54,22 +55,73 @@ InstructionTextToken::InstructionTextToken(): type(TextToken), value(0), confide
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
-	size_t s, size_t o, uint8_t c) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext),
-	confidence(c), address(0)
+	size_t s, size_t o, uint8_t c, const vector<string>& n) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext),
+	confidence(c), address(0), typeNames(n)
 {
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstructionTextTokenContext ctxt,
-	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c):
-	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), confidence(c), address(a)
+	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c, const vector<string>& n):
+	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), confidence(c), address(a), typeNames(n)
 {
 }
 
 
 InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
 {
-	return InstructionTextToken(type, context, text, address, value, size, operand, conf);
+	return InstructionTextToken(type, context, text, address, value, size, operand, conf, typeNames);
+}
+
+
+static void ConvertInstructionTextToken(const InstructionTextToken& token, BNInstructionTextToken* result)
+{
+	result->type = token.type;
+	result->text = BNAllocString(token.text.c_str());
+	result->value = token.value;
+	result->size = token.size;
+	result->operand = token.operand;
+	result->context = token.context;
+	result->confidence = token.confidence;
+	result->address = token.address;
+	result->typeNames = new char*[token.typeNames.size()];
+	for (size_t i = 0; i < token.typeNames.size(); i++)
+		result->typeNames[i] = BNAllocString(token.typeNames[i].c_str());
+	result->namesCount = token.typeNames.size();
+}
+
+
+BNInstructionTextToken* InstructionTextToken::CreateInstructionTextTokenList(const vector<InstructionTextToken>& tokens)
+{
+	BNInstructionTextToken* result = new BNInstructionTextToken[tokens.size()];
+	for (size_t i = 0; i < tokens.size(); i++)
+		ConvertInstructionTextToken(tokens[i], &result[i]);
+	return result;
+}
+
+
+vector<InstructionTextToken> InstructionTextToken::ConvertAndFreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count)
+{
+	auto result = ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
+}
+
+
+vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenList(const BNInstructionTextToken* tokens, size_t count)
+{
+	vector<InstructionTextToken> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		vector<string> names;
+		names.reserve(tokens[i].namesCount);
+		for (size_t j = 0; j < tokens[i].namesCount; j++)
+			names.push_back(tokens[i].typeNames[j]);
+		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
+			tokens[i].operand, tokens[i].confidence, names);
+	}
+	return result;
 }
 
 
@@ -168,27 +220,14 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 	}
 
 	*count = tokens.size();
-	*result = new BNInstructionTextToken[tokens.size()];
-	for (size_t i = 0; i < tokens.size(); i++)
-	{
-		(*result)[i].type = tokens[i].type;
-		(*result)[i].text = BNAllocString(tokens[i].text.c_str());
-		(*result)[i].value = tokens[i].value;
-		(*result)[i].size = tokens[i].size;
-		(*result)[i].operand = tokens[i].operand;
-		(*result)[i].context = tokens[i].context;
-		(*result)[i].confidence = tokens[i].confidence;
-		(*result)[i].address = tokens[i].address;
-	}
+	*result = InstructionTextToken::CreateInstructionTextTokenList(tokens);
 	return true;
 }
 
 
 void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count)
 {
-	for (size_t i = 0; i < count; i++)
-		BNFreeString(tokens[i].text);
-	delete[] tokens;
+	BNFreeInstructionText(tokens, count);
 }
 
 
@@ -1312,14 +1351,7 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 	if (!BNGetInstructionText(m_object, data, addr, &len, &tokens, &count))
 		return false;
 
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address,
-			tokens[i].value, tokens[i].size, tokens[i].operand, tokens[i].confidence);
-	}
-
-	BNFreeInstructionText(tokens, count);
+	result = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 	return true;
 }
 

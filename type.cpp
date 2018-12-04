@@ -684,14 +684,7 @@ vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseCon
 	BNInstructionTextToken* tokens = BNGetTypeTokens(m_object,
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
-	vector<InstructionTextToken> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
-			tokens[i].operand, tokens[i].confidence);
-
-	BNFreeTokenList(tokens, count);
-	return result;
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
 
 
@@ -700,15 +693,7 @@ vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8
 	size_t count;
 	BNInstructionTextToken* tokens = BNGetTypeTokensBeforeName(m_object,
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
-
-	vector<InstructionTextToken> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
-			tokens[i].operand, tokens[i].confidence);
-
-	BNFreeTokenList(tokens, count);
-	return result;
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
 
 
@@ -718,14 +703,7 @@ vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_
 	BNInstructionTextToken* tokens = BNGetTypeTokensAfterName(m_object,
 		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
 
-	vector<InstructionTextToken> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
-			tokens[i].operand, tokens[i].confidence);
-
-	BNFreeTokenList(tokens, count);
-	return result;
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
 
 

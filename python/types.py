@@ -455,18 +455,8 @@ class Type(object):
 		if self.platform is not None:
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokens(self.handle, platform, base_confidence, count)
-		result = []
-		for i in range(0, count.value):
-			token_type = InstructionTextTokenType(tokens[i].type)
-			text = tokens[i].text
-			value = tokens[i].value
-			size = tokens[i].size
-			operand = tokens[i].operand
-			context = tokens[i].context
-			confidence = tokens[i].confidence
-			address = tokens[i].address
-			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-		core.BNFreeTokenList(tokens, count.value)
+		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
 	def get_tokens_before_name(self, base_confidence = max_confidence):
@@ -475,18 +465,8 @@ class Type(object):
 		if self.platform is not None:
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokensBeforeName(self.handle, platform, base_confidence, count)
-		result = []
-		for i in range(0, count.value):
-			token_type = InstructionTextTokenType(tokens[i].type)
-			text = tokens[i].text
-			value = tokens[i].value
-			size = tokens[i].size
-			operand = tokens[i].operand
-			context = tokens[i].context
-			confidence = tokens[i].confidence
-			address = tokens[i].address
-			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-		core.BNFreeTokenList(tokens, count.value)
+		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
 	def get_tokens_after_name(self, base_confidence = max_confidence):
@@ -495,18 +475,8 @@ class Type(object):
 		if self.platform is not None:
 			platform = self.platform.handle
 		tokens = core.BNGetTypeTokensAfterName(self.handle, platform, base_confidence, count)
-		result = []
-		for i in range(0, count.value):
-			token_type = InstructionTextTokenType(tokens[i].type)
-			text = tokens[i].text
-			value = tokens[i].value
-			size = tokens[i].size
-			operand = tokens[i].operand
-			context = tokens[i].context
-			confidence = tokens[i].confidence
-			address = tokens[i].address
-			result.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
-		core.BNFreeTokenList(tokens, count.value)
+		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
 	@classmethod

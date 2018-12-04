@@ -1132,24 +1132,7 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 	vector<vector<InstructionTextToken>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		vector<InstructionTextToken> line;
-		line.reserve(lines[i].count);
-		for (size_t j = 0; j < lines[i].count; j++)
-		{
-			InstructionTextToken token;
-			token.type = lines[i].tokens[j].type;
-			token.text = lines[i].tokens[j].text;
-			token.value = lines[i].tokens[j].value;
-			token.size = lines[i].tokens[j].size;
-			token.operand = lines[i].tokens[j].operand;
-			token.context = lines[i].tokens[j].context;
-			token.confidence = lines[i].tokens[j].confidence;
-			token.address = lines[i].tokens[j].address;
-			line.push_back(token);
-		}
-		result.push_back(line);
-	}
+		result.push_back(InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count));
 
 	BNFreeInstructionTextLines(lines, count);
 	return result;
@@ -1353,20 +1336,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
-		line.tokens.reserve(lines[i].count);
-		for (size_t j = 0; j < lines[i].count; j++)
-		{
-			InstructionTextToken token;
-			token.type = lines[i].tokens[j].type;
-			token.text = lines[i].tokens[j].text;
-			token.value = lines[i].tokens[j].value;
-			token.size = lines[i].tokens[j].size;
-			token.operand = lines[i].tokens[j].operand;
-			token.context = lines[i].tokens[j].context;
-			token.confidence = lines[i].tokens[j].confidence;
-			token.address = lines[i].tokens[j].address;
-			line.tokens.push_back(token);
-		}
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
 		result.push_back(line);
 	}
 

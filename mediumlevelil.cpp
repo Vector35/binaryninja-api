@@ -338,13 +338,7 @@ bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<
 	if (!BNGetMediumLevelILExprText(m_object, arch->GetObject(), expr, &list, &count))
 		return false;
 
-	tokens.clear();
-	tokens.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
-			list[i].operand, list[i].confidence);
-
-	BNFreeInstructionText(list, count);
+	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);
 	return true;
 }
 
@@ -358,13 +352,7 @@ bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arc
 		instr, &list, &count))
 		return false;
 
-	tokens.clear();
-	tokens.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		tokens.emplace_back(list[i].type, list[i].context, list[i].text, list[i].address, list[i].value, list[i].size,
-			list[i].operand, list[i].confidence);
-
-	BNFreeInstructionText(list, count);
+	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);
 	return true;
 }
 

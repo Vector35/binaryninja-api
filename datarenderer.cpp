@@ -59,13 +59,8 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	DataRenderer* renderer = (DataRenderer*)ctxt;
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	vector<InstructionTextToken> prefixes;
-	prefixes.reserve(prefixCount);
-	for (size_t i = 0; i < prefixCount; i++)
-	{
-		prefixes.emplace_back(prefix[i].type, prefix[i].context, prefix[i].text, prefix[i].address,
-			prefix[i].value, prefix[i].size, prefix[i].operand, prefix[i].confidence);
-	}
+	vector<InstructionTextToken> prefixes = InstructionTextToken::ConvertInstructionTextTokenList(prefix, prefixCount);
+
 	vector<Type*> context;
 	context.reserve(ctxCount);
 	for (size_t i = 0; i < ctxCount; i++)
@@ -79,20 +74,8 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 		buf[i].addr = line.addr;
 		buf[i].instrIndex = line.instrIndex;
 		buf[i].highlight = line.highlight;
-		buf[i].tokens = new BNInstructionTextToken[line.tokens.size()];
+		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
 		buf[i].count = line.tokens.size();
-		for (size_t j = 0; j < line.tokens.size(); j++)
-		{
-			const InstructionTextToken& token = line.tokens[j];
-			buf[i].tokens[j].type = token.type;
-			buf[i].tokens[j].text = BNAllocString(token.text.c_str());
-			buf[i].tokens[j].value = token.value;
-			buf[i].tokens[j].size = token.size;
-			buf[i].tokens[j].operand = token.operand;
-			buf[i].tokens[j].context = token.context;
-			buf[i].tokens[j].confidence = token.confidence;
-			buf[i].tokens[j].address = token.address;
-		}
 	}
 	return buf;
 }
@@ -119,18 +102,7 @@ bool DataRenderer::IsValidForData(BinaryView* data, uint64_t addr, Type* type, v
 vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
 	const std::vector<InstructionTextToken>& prefix, size_t width, vector<Type*>& context)
 {
-	BNInstructionTextToken* prefixes = new BNInstructionTextToken[prefix.size()];
-	for (size_t i = 0; i < prefix.size(); i++)
-	{
-		prefixes[i].type = prefix[i].type;
-		prefixes[i].text = BNAllocString(prefix[i].text.c_str());
-		prefixes[i].value = prefix[i].value;
-		prefixes[i].size = prefix[i].size;
-		prefixes[i].operand = prefix[i].operand;
-		prefixes[i].context = prefix[i].context;
-		prefixes[i].confidence = prefix[i].confidence;
-		prefixes[i].address = prefix[i].address;
-	}
+	BNInstructionTextToken* prefixes = InstructionTextToken::CreateInstructionTextTokenList(prefix);
 	BNType** typeCtx = new BNType*[context.size()];
 	for (size_t i = 0; i < context.size(); i++)
 		typeCtx[i] = context[i]->GetObject();
@@ -140,10 +112,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 		prefix.size(), width, &count, typeCtx, context.size());
 
 	delete[] typeCtx;
-	for (size_t i = 0; i < prefix.size(); i++)
-		BNFreeString(prefixes[i].text);
-
-	delete[] prefixes;
+	BNFreeInstructionText(prefixes, prefix.size());
 	vector<DisassemblyTextLine> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
@@ -152,20 +121,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
-		line.tokens.reserve(lines[i].count);
-		for (size_t j = 0; j < lines[i].count; j++)
-		{
-			InstructionTextToken token;
-			token.type = lines[i].tokens[j].type;
-			token.text = lines[i].tokens[j].text;
-			token.value = lines[i].tokens[j].value;
-			token.size = lines[i].tokens[j].size;
-			token.operand = lines[i].tokens[j].operand;
-			token.context = lines[i].tokens[j].context;
-			token.confidence = lines[i].tokens[j].confidence;
-			token.address = lines[i].tokens[j].address;
-			line.tokens.push_back(token);
-		}
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
 		result.push_back(line);
 	}
 	return result;

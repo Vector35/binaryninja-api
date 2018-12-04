@@ -3271,17 +3271,7 @@ class BinaryView(object):
 				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
-			tokens = []
-			for j in range(0, lines[i].contents.count):
-				token_type = InstructionTextTokenType(lines[i].contents.tokens[j].type)
-				text = lines[i].contents.tokens[j].text
-				value = lines[i].contents.tokens[j].value
-				size = lines[i].contents.tokens[j].size
-				operand = lines[i].contents.tokens[j].operand
-				context = lines[i].contents.tokens[j].context
-				confidence = lines[i].contents.tokens[j].confidence
-				address = lines[i].contents.tokens[j].address
-				tokens.append(binaryninja.function.InstructionTextToken(token_type, text, value, size, operand, context, address, confidence))
+			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
 			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
 

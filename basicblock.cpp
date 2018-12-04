@@ -295,20 +295,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
-		line.tokens.reserve(lines[i].count);
-		for (size_t j = 0; j < lines[i].count; j++)
-		{
-			InstructionTextToken token;
-			token.type = lines[i].tokens[j].type;
-			token.text = lines[i].tokens[j].text;
-			token.value = lines[i].tokens[j].value;
-			token.size = lines[i].tokens[j].size;
-			token.operand = lines[i].tokens[j].operand;
-			token.context = lines[i].tokens[j].context;
-			token.confidence = lines[i].tokens[j].confidence;
-			token.address = lines[i].tokens[j].address;
-			line.tokens.push_back(token);
-		}
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
 		result.push_back(line);
 	}
 

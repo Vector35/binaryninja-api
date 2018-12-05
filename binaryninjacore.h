@@ -508,6 +508,7 @@ extern "C"
 		ShowVariableTypesWhenAssigned = 4,
 		ShowDefaultRegisterTypes = 5,
 		ShowCallParameterNames = 6,
+		ShowRegisterHighlight = 7,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,

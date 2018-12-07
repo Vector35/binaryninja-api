@@ -1495,7 +1495,7 @@ namespace BinaryNinja
 		static NameSpace GetInternalNameSpace();
 		static NameSpace GetExternalNameSpace();
 
-		bool ParseExpression(const std::string& expression, uint64_t &offset, uint64_t here, std::string& errorString);
+		static bool ParseExpression(Ref<BinaryView> view, const std::string& expression, uint64_t &offset, uint64_t here, std::string& errorString);
 	};
 
 

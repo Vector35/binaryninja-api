@@ -2354,10 +2354,10 @@ NameSpace BinaryView::GetExternalNameSpace()
 }
 
 
-bool BinaryView::ParseExpression(const string& expression, uint64_t &offset, uint64_t here, string& errorString)
+bool BinaryView::ParseExpression(Ref<BinaryView> view, const string& expression, uint64_t &offset, uint64_t here, string& errorString)
 {
 	char* err = nullptr;
-	if (!BNParseExpression(m_object, expression.c_str(), &offset, here, &err))
+	if (!BNParseExpression(view ? view->GetObject() : nullptr, expression.c_str(), &offset, here, &err))
 	{
 		LogDebug("Failed to parse expression: '%s': Error: '%s'", expression.c_str(), err);
 		errorString = string(err);

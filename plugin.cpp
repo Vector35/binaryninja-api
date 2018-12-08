@@ -404,7 +404,7 @@ vector<PluginCommand> PluginCommand::GetValidList(const PluginCommandContext& ct
 
 bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 {
-	if (!ctxt.view)
+	if (!ctxt.binaryView)
 		return false;
 
 	switch (m_command.type)
@@ -412,29 +412,29 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 	case DefaultPluginCommand:
 		if (!m_command.defaultIsValid)
 			return true;
-		return m_command.defaultIsValid(m_command.context, ctxt.view->GetObject());
+		return m_command.defaultIsValid(m_command.context, ctxt.binaryView->GetObject());
 	case AddressPluginCommand:
 		if (!m_command.addressIsValid)
 			return true;
-		return m_command.addressIsValid(m_command.context, ctxt.view->GetObject(), ctxt.address);
+		return m_command.addressIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.address);
 	case RangePluginCommand:
 		if (ctxt.length == 0)
 			return false;
 		if (!m_command.rangeIsValid)
 			return true;
-		return m_command.rangeIsValid(m_command.context, ctxt.view->GetObject(), ctxt.address, ctxt.length);
+		return m_command.rangeIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.address, ctxt.length);
 	case FunctionPluginCommand:
 		if (!ctxt.function)
 			return false;
 		if (!m_command.functionIsValid)
 			return true;
-		return m_command.functionIsValid(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
+		return m_command.functionIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.function->GetObject());
 	case LowLevelILFunctionPluginCommand:
 		if (!ctxt.lowLevelILFunction)
 			return false;
 		if (!m_command.lowLevelILFunctionIsValid)
 			return true;
-		return m_command.lowLevelILFunctionIsValid(m_command.context, ctxt.view->GetObject(),
+		return m_command.lowLevelILFunctionIsValid(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.lowLevelILFunction->GetObject());
 	case LowLevelILInstructionPluginCommand:
 		if (!ctxt.lowLevelILFunction)
@@ -443,14 +443,14 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 			return false;
 		if (!m_command.lowLevelILInstructionIsValid)
 			return true;
-		return m_command.lowLevelILInstructionIsValid(m_command.context, ctxt.view->GetObject(),
+		return m_command.lowLevelILInstructionIsValid(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.lowLevelILFunction->GetObject(), ctxt.instrIndex);
 	case MediumLevelILFunctionPluginCommand:
 		if (!ctxt.mediumLevelILFunction)
 			return false;
 		if (!m_command.mediumLevelILFunctionIsValid)
 			return true;
-		return m_command.mediumLevelILFunctionIsValid(m_command.context, ctxt.view->GetObject(),
+		return m_command.mediumLevelILFunctionIsValid(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.mediumLevelILFunction->GetObject());
 	case MediumLevelILInstructionPluginCommand:
 		if (!ctxt.mediumLevelILFunction)
@@ -459,7 +459,7 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 			return false;
 		if (!m_command.mediumLevelILInstructionIsValid)
 			return true;
-		return m_command.mediumLevelILInstructionIsValid(m_command.context, ctxt.view->GetObject(),
+		return m_command.mediumLevelILInstructionIsValid(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.mediumLevelILFunction->GetObject(), ctxt.instrIndex);
 	default:
 		return false;
@@ -475,31 +475,31 @@ void PluginCommand::Execute(const PluginCommandContext& ctxt) const
 	switch (m_command.type)
 	{
 	case DefaultPluginCommand:
-		m_command.defaultCommand(m_command.context, ctxt.view->GetObject());
+		m_command.defaultCommand(m_command.context, ctxt.binaryView->GetObject());
 		break;
 	case AddressPluginCommand:
-		m_command.addressCommand(m_command.context, ctxt.view->GetObject(), ctxt.address);
+		m_command.addressCommand(m_command.context, ctxt.binaryView->GetObject(), ctxt.address);
 		break;
 	case RangePluginCommand:
-		m_command.rangeCommand(m_command.context, ctxt.view->GetObject(), ctxt.address, ctxt.length);
+		m_command.rangeCommand(m_command.context, ctxt.binaryView->GetObject(), ctxt.address, ctxt.length);
 		break;
 	case FunctionPluginCommand:
-		m_command.functionCommand(m_command.context, ctxt.view->GetObject(), ctxt.function->GetObject());
+		m_command.functionCommand(m_command.context, ctxt.binaryView->GetObject(), ctxt.function->GetObject());
 		break;
 	case LowLevelILFunctionPluginCommand:
-		m_command.lowLevelILFunctionCommand(m_command.context, ctxt.view->GetObject(),
+		m_command.lowLevelILFunctionCommand(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.lowLevelILFunction->GetObject());
 		break;
 	case LowLevelILInstructionPluginCommand:
-		m_command.lowLevelILInstructionCommand(m_command.context, ctxt.view->GetObject(),
+		m_command.lowLevelILInstructionCommand(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.lowLevelILFunction->GetObject(), ctxt.instrIndex);
 		break;
 	case MediumLevelILFunctionPluginCommand:
-		m_command.mediumLevelILFunctionCommand(m_command.context, ctxt.view->GetObject(),
+		m_command.mediumLevelILFunctionCommand(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.mediumLevelILFunction->GetObject());
 		break;
 	case MediumLevelILInstructionPluginCommand:
-		m_command.mediumLevelILInstructionCommand(m_command.context, ctxt.view->GetObject(),
+		m_command.mediumLevelILInstructionCommand(m_command.context, ctxt.binaryView->GetObject(),
 			ctxt.mediumLevelILFunction->GetObject(), ctxt.instrIndex);
 		break;
 	default:

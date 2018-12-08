@@ -3604,7 +3604,7 @@ namespace BinaryNinja
 
 	struct PluginCommandContext
 	{
-		Ref<BinaryView> view;
+		Ref<BinaryView> binaryView;
 		uint64_t address, length;
 		size_t instrIndex;
 		Ref<Function> function;

@@ -41,3 +41,4 @@ python/plugins/
 python/types/
 suite/binaryninja/
 types/
+.vscode

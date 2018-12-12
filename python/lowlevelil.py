@@ -721,7 +721,7 @@ class LowLevelILFunction(object):
 		LLFC_ULE                u<=        Unsigned less than or equal
 		LLFC_SGE                s>=        Signed greater than or equal
 		LLFC_UGE                u>=        Unsigned greater than or equal
-		LLFC_SGT                s>         Signed greather than
+		LLFC_SGT                s>         Signed greater than
 		LLFC_UGT                u>         Unsigned greater than
 		LLFC_NEG                -          Negative
 		LLFC_POS                +          Positive

@@ -792,6 +792,13 @@ class LowLevelILFunction(object):
 		return result
 
 	@property
+	def instructions(self):
+		"""A generator of llil instructions of the current llil function"""
+		for block in self.basic_blocks:
+			for i in block:
+				yield i
+
+	@property
 	def ssa_form(self):
 		"""Low level IL in SSA form (read-only)"""
 		result = core.BNGetLowLevelILSSAForm(self.handle)

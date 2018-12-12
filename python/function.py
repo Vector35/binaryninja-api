@@ -503,6 +503,11 @@ class Function(object):
 
 	@property
 	def low_level_il(self):
+		"""Deprecated property provided for compatibility. Use llil instead."""
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
+
+	@property
+	def llil(self):
 		"""returns LowLevelILFunction used to represent Function low level IL (read-only)"""
 		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
@@ -513,6 +518,11 @@ class Function(object):
 
 	@property
 	def medium_level_il(self):
+		"""Deprecated property provided for compatibility. Use mlil instead."""
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+
+	@property
+	def mlil(self):
 		"""Function medium level IL (read-only)"""
 		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
 
@@ -786,13 +796,13 @@ class Function(object):
 	@property
 	def llil_basic_blocks(self):
 		"""A generator of all LowLevelILBasicBlock objects in the current function"""
-		for block in self.low_level_il:
+		for block in self.llil:
 			yield block
 
 	@property
 	def mlil_basic_blocks(self):
 		"""A generator of all MediumLevelILBasicBlock objects in the current function"""
-		for block in self.medium_level_il:
+		for block in self.mlil:
 			yield block
 
 	@property
@@ -806,17 +816,13 @@ class Function(object):
 
 	@property
 	def llil_instructions(self):
-		"""A generator of llil instructions of the current function"""
-		for block in self.llil_basic_blocks:
-			for i in block:
-				yield i
+		"""Deprecated method provided for compatibility. Use llil.instructions instead.  Was: A generator of llil instructions of the current function"""
+		return self.llil.instructions
 
 	@property
 	def mlil_instructions(self):
-		"""A generator of mlil instructions of the current function"""
-		for block in self.mlil_basic_blocks:
-			for i in block:
-				yield i
+		"""Deprecated method provided for compatibility. Use mlil.instructions instead.  Was: A generator of mlil instructions of the current function"""
+		return self.mlil.instructions
 
 	@property
 	def too_large(self):
@@ -886,7 +892,7 @@ class Function(object):
 		return core.BNGetCommentForAddress(self.handle, addr)
 
 	def set_comment(self, addr, comment):
-		"""Deprecated use set_comment_at instead"""
+		"""Deprecated method provided for compatibility. Use set_comment_at instead."""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def set_comment_at(self, addr, comment):
@@ -921,10 +927,10 @@ class Function(object):
 
 		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
 
-		if idx == len(self.low_level_il):
+		if idx == len(self.llil):
 			return None
 
-		return self.low_level_il[idx]
+		return self.llil[idx]
 
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:

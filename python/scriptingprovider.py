@@ -551,8 +551,8 @@ class PythonScriptingInstance(ScriptingInstance):
 							self.locals["current_llil"] = None
 							self.locals["current_mlil"] = None
 						else:
-							self.locals["current_llil"] = self.active_func.low_level_il
-							self.locals["current_mlil"] = self.active_func.medium_level_il
+							self.locals["current_llil"] = self.active_func.llil
+							self.locals["current_mlil"] = self.active_func.mlil
 
 						for line in code.split(b'\n'):
 							self.interpreter.push(line.decode('charmap'))

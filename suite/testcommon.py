@@ -153,7 +153,7 @@ class BinaryViewTestBuilder(Builder):
         """Function med_il_basic_block list doesn't match"""
         ilbblist = []
         for func in self.bv.functions:
-            for bb in func.medium_level_il.basic_blocks:
+            for bb in func.mlil.basic_blocks:
                 ilbblist.append("MLIL basic block {} start: ".format(str(bb)) + hex(bb.start) + ' end: ' + hex(bb.end) + ' outgoing_edges: ' + str(len(bb.outgoing_edges)))
         return fixOutput(ilbblist)
 
@@ -216,7 +216,7 @@ class BinaryViewTestBuilder(Builder):
         """MLIL instructions produced different output"""
         retinfo = []
         for func in self.bv.functions:
-            for bb in func.medium_level_il.basic_blocks:
+            for bb in func.mlil.basic_blocks:
                 for ins in bb:
                     retinfo.append("Expression type: " + str(ins.expr_type))
                     retinfo.append("LLIL: " + str(ins.low_level_il))
@@ -251,7 +251,7 @@ class BinaryViewTestBuilder(Builder):
         """Function med_il_vars doesn't match"""
         varlist = []
         for func in self.bv.functions:
-            func = func.medium_level_il
+            func = func.mlil
             for bb in func.basic_blocks:
                 for instruction in bb:
                     instruction = instruction.ssa_form
@@ -662,7 +662,7 @@ class TestBuilder(Builder):
             flag_list = ['c', 'p', 'a', 'z', 's', 'o']
             retinfo = []
             for func in bv.functions:
-                for bb in func.medium_level_il.basic_blocks:
+                for bb in func.mlil.basic_blocks:
                     for ins in bb:
                         retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
                         retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))

@@ -673,6 +673,13 @@ class MediumLevelILFunction(object):
 		return result
 
 	@property
+	def instructions(self):
+		"""A generator of mlil instructions of the current function"""
+		for block in self.basic_blocks:
+			for i in block:
+				yield i
+
+	@property
 	def ssa_form(self):
 		"""Medium level IL in SSA form (read-only)"""
 		result = core.BNGetMediumLevelILSSAForm(self.handle)

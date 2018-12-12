@@ -874,7 +874,7 @@ class BinaryView(object):
 	def mlil_basic_blocks(self):
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
-			for il_block in func.medium_level_il.basic_blocks:
+			for il_block in func.mlil.basic_blocks:
 				yield il_block
 
 	@property

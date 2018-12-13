@@ -1939,6 +1939,8 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			\'\\xcf\\xfa\\xed\\xfe\'
 		"""
+		if (addr < 0) or (length < 0):
+			raise ValueError("length and address must both be positive")
 		buf = databuffer.DataBuffer(handle=core.BNReadViewBuffer(self.handle, addr, length))
 		return bytes(buf)
 

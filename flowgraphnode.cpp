@@ -110,12 +110,11 @@ void FlowGraphNode::SetLines(const vector<DisassemblyTextLine>& lines)
 	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
 	for (size_t i = 0; i < lines.size(); i++)
 	{
-		const DisassemblyTextLine& line = lines[i];
-		buf[i].addr = line.addr;
-		buf[i].instrIndex = line.instrIndex;
-		buf[i].highlight = line.highlight;
-		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
-		buf[i].count = line.tokens.size();
+		buf[i].addr = lines[i].addr;
+		buf[i].instrIndex = lines[i].instrIndex;
+		buf[i].highlight = lines[i].highlight;
+		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
+		buf[i].count = lines[i].tokens.size();
 	}
 
 	BNSetFlowGraphNodeLines(m_object, buf, lines.size());

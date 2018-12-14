@@ -1792,7 +1792,7 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeName=""):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeNames=[]):
 		self.type = InstructionTextTokenType(token_type)
 		self.text = text
 		self.value = value
@@ -1801,7 +1801,7 @@ class InstructionTextToken(object):
 		self.context = InstructionTextTokenContext(context)
 		self.confidence = confidence
 		self.address = address
-		self.typeName = typeName
+		self.typeNames = typeNames
 
 	@classmethod
 	def get_instruction_lines(cls, tokens, count=0):
@@ -1809,35 +1809,39 @@ class InstructionTextToken(object):
 		if isinstance(tokens, list):
 			result = (core.BNInstructionTextToken * len(tokens))()
 			for j in range(len(tokens)):
-				result.type = tokens[j].type
-				result.text = tokens[j].text
-				result.value = tokens[j].value
-				result.size = tokens[j].size
-				result.operand = tokens[j].operand
-				result.context = tokens[j].context
-				result.confidence = tokens[j].confidence
-				result.address = tokens[j].address
-				result.typeName = tokens[j].typeName
+				result[j].type = tokens[j].type
+				result[j].text = tokens[j].text
+				result[j].value = tokens[j].value
+				result[j].size = tokens[j].size
+				result[j].operand = tokens[j].operand
+				result[j].context = tokens[j].context
+				result[j].confidence = tokens[j].confidence
+				result[j].address = tokens[j].address
+				result[j].nameCount = len(tokens[j].typeNames)
+				result[j].typeNames = (ctypes.c_char_p * len(tokens[j].typeNames))()
+				for i in range(len(tokens[j].typeNames)):
+					result[j].typeNames[i] = binaryninja.cstr(tokens[j].typeNames[i])
 			return result
 
-		if not isinstance(tokens, core.BNInstructionTextToken):
-			raise TypeError("tokens is not of type core.BNInstructionTextToken")
 		result = []
 		for j in range(count):
 			token_type = InstructionTextTokenType(tokens[j].type)
 			text = tokens[j].text
 			if not isinstance(text, str):
-				text = text.encode("charmap")
+				text = text.decode("charmap")
 			value = tokens[j].value
 			size = tokens[j].size
 			operand = tokens[j].operand
 			context = tokens[j].context
 			confidence = tokens[j].confidence
 			address = tokens[j].address
-			typeName = tokens[j].typeName
-			if not isinstance(typeName, str):
-				typeName = typeName.encode("charmap")
-			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeName))
+			typeNames = []
+			for i in range(tokens[j].namesCount):
+				if not isinstance(tokens[j].typeNames[i], str):
+					typeNames.append(tokens[j].typeNames[i].decode("charmap"))
+				else:
+					typeNames.append(tokens[j].typeNames[i])
+			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeNames))
 		return result
 
 	def __str__(self):

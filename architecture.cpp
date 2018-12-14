@@ -91,19 +91,19 @@ static void ConvertInstructionTextToken(const InstructionTextToken& token, BNIns
 }
 
 
+vector<InstructionTextToken> InstructionTextToken::ConvertAndFreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count)
+{
+	auto result = ConvertInstructionTextTokenList(tokens, count);
+	BNFreeInstructionText(tokens, count);
+	return result;
+}
+
+
 BNInstructionTextToken* InstructionTextToken::CreateInstructionTextTokenList(const vector<InstructionTextToken>& tokens)
 {
 	BNInstructionTextToken* result = new BNInstructionTextToken[tokens.size()];
 	for (size_t i = 0; i < tokens.size(); i++)
 		ConvertInstructionTextToken(tokens[i], &result[i]);
-	return result;
-}
-
-
-vector<InstructionTextToken> InstructionTextToken::ConvertAndFreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count)
-{
-	auto result = ConvertInstructionTextTokenList(tokens, count);
-	BNFreeInstructionText(tokens, count);
 	return result;
 }
 

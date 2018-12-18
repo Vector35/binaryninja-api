@@ -588,6 +588,7 @@ namespace BinaryNinja
 
 	std::string GetPathRelativeToBundledPluginDirectory(const std::string& path);
 	std::string GetPathRelativeToUserPluginDirectory(const std::string& path);
+	std::string GetPathRelativeToUserDirectory(const std::string& path);
 
 	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
 	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);

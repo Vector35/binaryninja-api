@@ -1998,6 +1998,7 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNGetPathRelativeToBundledPluginDirectory(const char* path);
 	BINARYNINJACOREAPI char* BNGetPathRelativeToUserPluginDirectory(const char* path);
+	BINARYNINJACOREAPI char* BNGetPathRelativeToUserDirectory(const char* path);
 
 	BINARYNINJACOREAPI bool BNExecuteWorkerProcess(const char* path, const char* args[],
 	                                               BNDataBuffer* input, char** output, char** error,

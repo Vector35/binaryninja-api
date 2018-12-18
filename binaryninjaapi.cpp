@@ -142,6 +142,17 @@ string BinaryNinja::GetPathRelativeToUserPluginDirectory(const string& rel)
 }
 
 
+string BinaryNinja::GetPathRelativeToUserDirectory(const string& rel)
+{
+	char* path = BNGetPathRelativeToUserDirectory(rel.c_str());
+	if (!path)
+		return rel;
+	string result = path;
+	BNFreeString(path);
+	return result;
+}
+
+
 bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>& args, const DataBuffer& input,
                                        string& output, string& errors, bool stdoutIsText, bool stderrIsText)
 {

@@ -227,7 +227,9 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 
 void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count)
 {
-	BNFreeInstructionText(tokens, count);
+	for (size_t i = 0; i < count; i++)
+		BNFreeString(tokens[i].text);
+	delete[] tokens;
 }
 
 

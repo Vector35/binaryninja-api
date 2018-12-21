@@ -32,6 +32,7 @@ Contents of the user folder includes:
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: Advanced settings (see [settings](#settings))
+- `keybindings.json`: Custom keybindings (see [keybindings](#custom-keybindings))
 
 ![license popup >](/img/license-popup.png "License Popup")
 
@@ -304,6 +305,21 @@ Below is an example `settings.json` setting various options:
 	}
 }
 ```
+
+## Custom Keybindings
+
+Custom keybindings can be stored in the [_user_ directory](#user-folder) in the file `keybindings.json`. Actions can be referenced for keybindings using the name that appears in the menu. If the desired action is in a submenu, use the full path to the item separated by `\\` (for example, `"New\\Binary Data"`). Below is an example keybindings file:
+
+```
+{
+    "Reanalyze" : "Ctrl+Shift+R",
+    "Log" : "Ctrl+L"
+}
+```
+
+Note
+!!! Tip "Note"
+    On Mac OS X, `Ctrl` refers to the Command key, while `Meta` refers to the Control key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
 
 ## Unicode Support
 

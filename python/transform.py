@@ -93,6 +93,11 @@ class TransformParameter(object):
 			self.long_name = long_name
 		self.fixed_length = fixed_length
 
+	def __repr__(self):
+		return "<TransformParameter: {} fixed length: {}>".format(
+			self.long_name, self.fixed_length
+		)
+
 
 class Transform(with_metaclass(_TransformMetaClass, object)):
 	transform_type = None

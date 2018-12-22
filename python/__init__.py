@@ -51,6 +51,12 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, 'temporary_class', (), {})
 
 
+try:
+	long = long
+except NameError:
+	long = int
+
+
 def cstr(arg):
 	if isinstance(arg, bytes) or arg is None:
 		return arg

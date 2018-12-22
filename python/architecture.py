@@ -38,7 +38,7 @@ from binaryninja import callingconvention
 # 2-3 compatibility
 from binaryninja import range
 from binaryninja import with_metaclass
-
+from binaryninja import long
 
 class _ArchitectureMetaClass(type):
 

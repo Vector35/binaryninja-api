@@ -42,9 +42,9 @@ class Metadata(object):
 				self.handle = core.BNCreateMetadataUnsignedIntegerData(value)
 		elif isinstance(value, bool):
 			self.handle = core.BNCreateMetadataBooleanData(value)
-		elif isinstance(value, str):
+		elif isinstance(value, (str, bytes)):
 			if raw:
-				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value.encode('charmap'))
+				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
 				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 			else:
 				self.handle = core.BNCreateMetadataStringData(value)
@@ -68,7 +68,7 @@ class Metadata(object):
 		if self.is_integer:
 			return int(self)
 		elif self.is_string or self.is_raw:
-			return str(self)
+			return bytes(self)
 		elif self.is_float:
 			return float(self)
 		elif self.is_boolean:
@@ -188,6 +188,9 @@ class Metadata(object):
 			return ''.join(chr(a) for a in out_list)
 
 		raise ValueError("Metadata object not a string or raw type")
+
+	def __bytes__(self):
+		return bytes(bytearray(ord(i) for i in self.__str__()))
 
 	def __int__(self):
 		if self.is_signed_integer:

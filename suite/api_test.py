@@ -99,13 +99,13 @@ class MetaddataAPI(unittest.TestCase):
 		assert md.is_string
 		assert str(md) == "asdf"
 		assert len(md) == 4
-		assert md.value == "asdf"
+		assert md.value.decode("charmap") == "asdf"
 
 		md = Metadata("\x00\x00\x41\x00", raw=True)
 		assert md.is_raw
 		assert len(md) == 4
 		assert str(md) == "\x00\x00\x41\x00"
-		assert md.value == "\x00\x00\x41\x00"
+		assert md.value.decode("charmap") == "\x00\x00\x41\x00"
 
 	def test_metadata_compound_types(self):
 		md = Metadata([1, 2, 3])

@@ -190,7 +190,7 @@ class Metadata(object):
 		raise ValueError("Metadata object not a string or raw type")
 
 	def __bytes__(self):
-		return bytes(bytearray(ord(i) for i in self.__str__()))
+		return bytes(bytearray(ord(i) for i in self.__str__())
 
 	def __int__(self):
 		if self.is_signed_integer:

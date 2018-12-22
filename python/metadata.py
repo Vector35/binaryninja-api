@@ -44,6 +44,8 @@ class Metadata(object):
 			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, (str, bytes)):
 			if raw:
+				if isinstance(value, str):
+					value = bytes(bytearray(ord(i) for i in value))
 				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
 				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 			else:

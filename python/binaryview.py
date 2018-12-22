@@ -3823,7 +3823,9 @@ class BinaryView(object):
 			>>> bv.query_metadata("string")
 			'my_data'
 		"""
-		core.BNBinaryViewStoreMetadata(self.handle, key, metadata.Metadata(md).handle)
+		if not isinstance(md, metadata.Metadata):
+			md = metadata.Metadata(md)
+		core.BNBinaryViewStoreMetadata(self.handle, key, md.handle)
 
 	def remove_metadata(self, key):
 		"""

@@ -1051,6 +1051,7 @@ namespace BinaryNinja
 
 		InstructionTextToken WithConfidence(uint8_t conf);
 		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
+		static void FreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count);
 		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count);
 		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(const BNInstructionTextToken* tokens, size_t count);
 	};

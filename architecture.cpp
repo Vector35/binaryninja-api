@@ -107,6 +107,21 @@ BNInstructionTextToken* InstructionTextToken::CreateInstructionTextTokenList(con
 	return result;
 }
 
+void InstructionTextToken::FreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count)
+{
+	for (size_t i = 0; i < count; i++)
+	{
+		BNInstructionTextToken* token = &tokens[i];
+
+		BNFreeString(token->text);
+
+		for (size_t j = 0; j < token->namesCount; ++j)
+			BNFreeString(token->typeNames[j]);
+
+		delete[] token->typeNames;
+	}
+	delete[] tokens;
+}
 
 vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenList(const BNInstructionTextToken* tokens, size_t count)
 {
@@ -227,9 +242,7 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 
 void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count)
 {
-	for (size_t i = 0; i < count; i++)
-		BNFreeString(tokens[i].text);
-	delete[] tokens;
+	InstructionTextToken::FreeInstructionTextTokenList(tokens, count);
 }
 
 

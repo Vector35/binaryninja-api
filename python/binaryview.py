@@ -113,7 +113,7 @@ class AnalysisCompletionEvent(object):
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
 	callbacks when analysis is complete. The callback runs once. A completion event must be added
 	for each new analysis in order to be notified of each analysis completion.  The
-	AnalysisCompletionEvent class takes responcibility for keeping track of the object's lifetime.
+	AnalysisCompletionEvent class takes responsibility for keeping track of the object's lifetime.
 
 	:Example:
 		>>> def on_complete(self):
@@ -694,7 +694,7 @@ class BinaryView(object):
 	using the ``update_analysis()`` method instead.
 
 	By standard python convention methods which start with '_' should be considered private and should not be called
-	externally. Additionanlly, methods which begin with ``perform_`` should not be called either and are
+	externally. Additionally, methods which begin with ``perform_`` should not be called either and are
 	used explicitly for subclassing the BinaryView.
 
 	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
@@ -1816,7 +1816,7 @@ class BinaryView(object):
 		``get_view_of_type`` returns the BinaryView associated with the provided name if it exists.
 
 		:param str name: Name of the view to be retrieved
-		:return: BinaryView object assocated with the provided name or None on failure
+		:return: BinaryView object associated with the provided name or None on failure
 		:rtype: BinaryView or None
 		"""
 		return self.file.get_view_of_type(name)
@@ -1870,7 +1870,7 @@ class BinaryView(object):
 
 	def undo(self):
 		"""
-		``undo`` undo the last commited action in the undo database.
+		``undo`` undo the last committed action in the undo database.
 
 		:rtype: None
 		:Example:
@@ -1895,7 +1895,7 @@ class BinaryView(object):
 
 	def redo(self):
 		"""
-		``redo`` redo the last commited action in the undo database.
+		``redo`` redo the last committed action in the undo database.
 
 		:rtype: None
 		:Example:
@@ -2844,7 +2844,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address of the instruction to conver to nops
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -2881,7 +2881,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address of the instruction to be modified
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -2907,7 +2907,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address of the instruction to be modified
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -2933,7 +2933,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address of the instruction to be modified
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -2953,12 +2953,12 @@ class BinaryView(object):
 	def skip_and_return_value(self, addr, value, arch=None):
 		"""
 		``skip_and_return_value`` convert the ``call`` instruction of architecture ``arch`` at the virtual address
-		``addr`` to the equivilent of returning a value.
+		``addr`` to the equivalent of returning a value.
 
 		:param int addr: virtual address of the instruction to be modified
 		:param int value: value to make the instruction *return*
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -3038,7 +3038,7 @@ class BinaryView(object):
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
 		This is helpful when using ``update_analysis`` which does not wait for analysis completion before returning.
 
-		The callee of this function is not resposible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
+		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
 		:param callable() callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.
@@ -3223,7 +3223,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address of linear disassembly position
 		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object
-		:return: An instantied :py:class:`LinearDisassemblyPosition` object for the provided virtual address
+		:return: An instantiated :py:class:`LinearDisassemblyPosition` object for the provided virtual address
 		:rtype: LinearDisassemblyPosition
 		:Example:
 
@@ -3614,7 +3614,7 @@ class BinaryView(object):
 
 	def find_next_data(self, start, data, flags=FindFlag.FindCaseSensitive):
 		"""
-		``find_next_data`` searchs for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
+		``find_next_data`` searches for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
 		:param str data: data to search for
@@ -3636,7 +3636,7 @@ class BinaryView(object):
 
 	def find_next_text(self, start, text, settings=None, flags=FindFlag.FindCaseSensitive):
 		"""
-		``find_next_text`` searchs for string ``text`` occuring in the linear view output starting at the virtual
+		``find_next_text`` searches for string ``text`` occurring in the linear view output starting at the virtual
 		address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
@@ -3664,7 +3664,7 @@ class BinaryView(object):
 
 	def find_next_constant(self, start, constant, settings=None):
 		"""
-		``find_next_constant`` searchs for integer constant ``constant`` occuring in the linear view output starting at the virtual
+		``find_next_constant`` searches for integer constant ``constant`` occurring in the linear view output starting at the virtual
 		address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
@@ -3803,7 +3803,7 @@ class BinaryView(object):
 	def store_metadata(self, key, md):
 		"""
 		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using 
-		`store_metadata` can be retrieved when the database is reopend. Objects stored are not arbitrary python 
+		`store_metadata` can be retrieved when the database is reopened. Objects stored are not arbitrary python
 		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata` 
 		for more information. Python objects could obviously be serialized using pickle but this intentionally
 		a task left to the user since there is the potential security issues.
@@ -3853,7 +3853,7 @@ class BinaryView(object):
 		The parser uses the following rules:
 			- symbols are defined by the lexer as `[A-Za-z0-9_:<>][A-Za-z0-9_:$\-<>]+` or anything enclosed in either single or
 		      double quotes
-			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivilent to `printf + 0x10` If decimal numbers required use the decimal prefix.
+			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
 			  - 0x - Hexadecimal
 			  - 0n - Decimal
@@ -3991,7 +3991,7 @@ class BinaryReader(object):
 
 	def read8(self):
 		"""
-		``read8`` returns a one byte integer from offet incrementing the offset.
+		``read8`` returns a one byte integer from offset incrementing the offset.
 
 		:return: byte at offset.
 		:rtype: int, or None on failure
@@ -4009,7 +4009,7 @@ class BinaryReader(object):
 
 	def read16(self):
 		"""
-		``read16`` returns a two byte integer from offet incrementing the offset by two, using specified endianness.
+		``read16`` returns a two byte integer from offset incrementing the offset by two, using specified endianness.
 
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
@@ -4027,7 +4027,7 @@ class BinaryReader(object):
 
 	def read32(self):
 		"""
-		``read32`` returns a four byte integer from offet incrementing the offset by four, using specified endianness.
+		``read32`` returns a four byte integer from offset incrementing the offset by four, using specified endianness.
 
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
@@ -4045,7 +4045,7 @@ class BinaryReader(object):
 
 	def read64(self):
 		"""
-		``read64`` returns an eight byte integer from offet incrementing the offset by eight, using specified endianness.
+		``read64`` returns an eight byte integer from offset incrementing the offset by eight, using specified endianness.
 
 		:return: an eight byte integer at offset.
 		:rtype: int, or None on failure
@@ -4063,7 +4063,7 @@ class BinaryReader(object):
 
 	def read16le(self):
 		"""
-		``read16le`` returns a two byte little endian integer from offet incrementing the offset by two.
+		``read16le`` returns a two byte little endian integer from offset incrementing the offset by two.
 
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
@@ -4081,7 +4081,7 @@ class BinaryReader(object):
 
 	def read32le(self):
 		"""
-		``read32le`` returns a four byte little endian integer from offet incrementing the offset by four.
+		``read32le`` returns a four byte little endian integer from offset incrementing the offset by four.
 
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
@@ -4099,7 +4099,7 @@ class BinaryReader(object):
 
 	def read64le(self):
 		"""
-		``read64le`` returns an eight byte little endian integer from offet incrementing the offset by eight.
+		``read64le`` returns an eight byte little endian integer from offset incrementing the offset by eight.
 
 		:return: a eight byte integer at offset.
 		:rtype: int, or None on failure
@@ -4117,7 +4117,7 @@ class BinaryReader(object):
 
 	def read16be(self):
 		"""
-		``read16be`` returns a two byte big endian integer from offet incrementing the offset by two.
+		``read16be`` returns a two byte big endian integer from offset incrementing the offset by two.
 
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
@@ -4135,7 +4135,7 @@ class BinaryReader(object):
 
 	def read32be(self):
 		"""
-		``read32be`` returns a four byte big endian integer from offet incrementing the offset by four.
+		``read32be`` returns a four byte big endian integer from offset incrementing the offset by four.
 
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
@@ -4153,7 +4153,7 @@ class BinaryReader(object):
 
 	def read64be(self):
 		"""
-		``read64be`` returns an eight byte big endian integer from offet incrementing the offset by eight.
+		``read64be`` returns an eight byte big endian integer from offset incrementing the offset by eight.
 
 		:return: a eight byte integer at offset.
 		:rtype: int, or None on failure

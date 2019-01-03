@@ -1030,9 +1030,9 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 	"""
 	``preprocess_source`` run the C preprocessor on the given source or source filename.
 
-	:param str source: source to preprocess
-	:param str filename: optional filename to preprocess
-	:param list(str) include_dirs: list of string directorires to use as include directories.
+	:param str source: source to pre-process
+	:param str filename: optional filename to pre-process
+	:param list(str) include_dirs: list of string directories to use as include directories.
 	:return: returns a tuple of (preprocessed_source, error_string)
 	:rtype: tuple(str,str)
 	:Example:

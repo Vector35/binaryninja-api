@@ -224,7 +224,7 @@ def set_auto_updates_enabled(enabled):
 	"""
 	``set_auto_updates_enabled`` sets auto update enabled status.
 
-	:param bool enabled: True to enable update, Flase to disable updates.
+	:param bool enabled: True to enable update, False to disable updates.
 	:rtype: None
 	"""
 	core.BNSetAutoUpdatesEnabled(enabled)

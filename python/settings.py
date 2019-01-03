@@ -39,7 +39,7 @@ class Settings(object):
 
 		:param str group: a unique identifier
 		:param str title: a user friendly name appropriate for UI presentation
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 
@@ -55,7 +55,7 @@ class Settings(object):
 
 		:param str id: a unique setting identifier in the form <group>.<id>
 		:param str properties: a JSON string describes the setting schema
-		:return: True on success, False on falure.
+		:return: True on success, False on failure.
 		:rtype: bool
 		:Example:
 

@@ -60,7 +60,7 @@ def log(level, text):
 
 def log_debug(text):
 	"""
-	``log_debug`` Logs debuging information messages to the console.
+	``log_debug`` Logs debugging information messages to the console.
 
 	:param str text: message to print
 	:rtype: None
@@ -165,7 +165,7 @@ def log_to_stderr(min_level):
 
 def log_to_file(min_level, path, append = False):
 	"""
-	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwritting.
+	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwriting.
 
 	:param int min_level: minimum level to log to
 	:param str path: path to log to

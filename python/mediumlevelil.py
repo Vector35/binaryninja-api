@@ -787,7 +787,7 @@ class MediumLevelILFunction(object):
 		"""
 		``add_label_list`` returns a label list expression for the given list of MediumLevelILLabel objects.
 
-		:param list(MediumLevelILLabel) lables: the list of MediumLevelILLabel to get a label list expression from
+		:param list(MediumLevelILLabel) labels: the list of MediumLevelILLabel to get a label list expression from
 		:return: the label list expression
 		:rtype: MediumLevelILExpr
 		"""
@@ -973,7 +973,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 			return self.il_function[self.end + idx]
 
 	def _create_instance(self, view, handle):
-		"""Internal method by super to instantiante child instances"""
+		"""Internal method by super to instantiate child instances"""
 		return MediumLevelILBasicBlock(view, handle, self.il_function)
 
 	def __hash__(self):

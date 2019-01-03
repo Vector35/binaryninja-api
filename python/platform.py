@@ -95,7 +95,7 @@ class _PlatformMetaClass(type):
 
 class Platform(with_metaclass(_PlatformMetaClass, object)):
 	"""
-	``class Platform`` contains all information releated to the execution environment of the binary, mainly the
+	``class Platform`` contains all information related to the execution environment of the binary, mainly the
 	calling conventions used.
 	"""
 	name = None

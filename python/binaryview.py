@@ -1744,7 +1744,7 @@ class BinaryView(object):
 		"""
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
 
-		.. note:: This method **should** be implmented for custom BinaryViews that are executable.
+		.. note:: This method **should** be implemented for custom BinaryViews that are executable.
 		.. warning:: This method **must not** be called directly.
 
 		:return: the virtual address of the entry point
@@ -2843,7 +2843,7 @@ class BinaryView(object):
 		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
 		file must be saved in order to preserve the changes made.
 
-		:param int addr: virtual address of the instruction to conver to nops
+		:param int addr: virtual address of the instruction to convert to nops
 		:param Architecture arch: (optional) the architecture of the instructions if different from the default
 		:return: True on success, False on failure.
 		:rtype: bool
@@ -3339,7 +3339,7 @@ class BinaryView(object):
 		 and thus will contain both data views, and disassembly.
 
 		:param DisassemblySettings settings: instance specifying the desired output formatting.
-		:return: An iterator containing formatted dissassembly lines.
+		:return: An iterator containing formatted disassembly lines.
 		:rtype: LinearDisassemblyIterator
 		:Example:
 
@@ -3459,7 +3459,7 @@ class BinaryView(object):
 
 	def get_type_id(self, name):
 		"""
-		``get_type_id`` returns the unique indentifier of the defined type whose name corresponds with the
+		``get_type_id`` returns the unique identifier of the defined type whose name corresponds with the
 		provided ``name``
 
 		:param QualifiedName name: Type name to lookup
@@ -3861,7 +3861,7 @@ class BinaryView(object):
 			  - 0 - Octal
 			- In the case of an ambiguous number/symbol (one with no prefix) for instance `12345` we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
-			  it to a hexadecmial number.
+			  it to a hexadecimal number.
 			- The following operations are valid: +, -, *, /, %, (), &, |, ^, ~
 			- In addition to the above operators there are _il-style_ dereference operators
 			  - [<expression>] - read the _current address size_ at <expression>

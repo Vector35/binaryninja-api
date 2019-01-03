@@ -1192,7 +1192,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
-		:return: a :py:class:`InstructionInfo` object containing the length and branche types for the given instruction
+		:return: a :py:class:`InstructionInfo` object containing the length and branch types for the given instruction
 		:rtype: InstructionInfo
 		"""
 		raise NotImplementedError
@@ -1412,7 +1412,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		.. note:: Architecture subclasses should implement this method.
 
 		.. note :: The instruction info object should always set the InstructionInfo.length to the instruction length, \
-		and the branches of the proper types shoulde be added if the instruction is a branch.
+		and the branches of the proper types should be added if the instruction is a branch.
 
 		If the instruction is a branch instruction architecture plugins should add a branch of the proper type:
 
@@ -1635,7 +1635,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def get_flag_write_type_by_name(self, write_type):
 		"""
-		``get_flag_write_type_by_name`` gets the flag write type name for the flage write type.
+		``get_flag_write_type_by_name`` gets the flag write type name for the flag write type.
 
 		:param int write_type: flag write type
 		:return: flag write type
@@ -2273,7 +2273,7 @@ class CoreArchitecture(Architecture):
 		``addr`` with data ``data``.
 
 		.. note :: The instruction info object should always set the InstructionInfo.length to the instruction length, \
-		and the branches of the proper types shoulde be added if the instruction is a branch.
+		and the branches of the proper types should be added if the instruction is a branch.
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``

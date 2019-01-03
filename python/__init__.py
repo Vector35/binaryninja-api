@@ -164,7 +164,7 @@ _plugin_api_name = "python2"
 
 
 class PluginManagerLoadPluginCallback(object):
-	"""Callback for BNLoadPluginForApi("python2", ...), dynamicly loads python plugins."""
+	"""Callback for BNLoadPluginForApi("python2", ...), dynamically loads python plugins."""
 	def __init__(self):
 		self.cb = ctypes.CFUNCTYPE(
 			ctypes.c_bool,
@@ -178,7 +178,7 @@ class PluginManagerLoadPluginCallback(object):
 			plugin = repo[plugin_path]
 
 			if plugin.api != _plugin_api_name:
-				raise ValueError("Plugin api name is not " + _plugin_api_name)
+				raise ValueError("Plugin API name is not " + _plugin_api_name)
 
 			if not plugin.installed:
 				plugin.installed = True

@@ -31,7 +31,7 @@ from binaryninja import pyNativeStr
 
 def get_qualified_name(names):
 	"""
-	``get_qualified_name`` gets a qualified name for the provied name list.
+	``get_qualified_name`` gets a qualified name for the provided name list.
 
 	:param list(str) names: name list to qualify
 	:return: a qualified name

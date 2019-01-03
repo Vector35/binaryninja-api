@@ -74,7 +74,7 @@ class RepoPlugin(object):
 
 	@property
 	def api(self):
-		"""string indicating the api used by the plugin"""
+		"""string indicating the API used by the plugin"""
 		return core.BNPluginGetApi(self.handle)
 
 	@property
@@ -120,7 +120,7 @@ class RepoPlugin(object):
 
 	@property
 	def url(self):
-		"""String url of the plugin's git repository"""
+		"""String URL of the plugin's git repository"""
 		return core.BNPluginGetUrl(self.handle)
 
 	@property
@@ -156,7 +156,7 @@ class Repository(object):
 
 	@property
 	def url(self):
-		"""String url of the git repository where the plugin repository's are stored"""
+		"""String URL of the git repository where the plugin repository's are stored"""
 		return core.BNRepositoryGetUrl(self.handle)
 
 	@property
@@ -200,7 +200,7 @@ class Repository(object):
 class RepositoryManager(object):
 	"""
 	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
-	the plugins that are installed/unstalled enabled/disabled
+	the plugins that are installed/uninstalled enabled/disabled
 	"""
 	def __init__(self, handle=None):
 		raise Exception("RepositoryManager temporarily disabled!")
@@ -376,7 +376,7 @@ class RepositoryManager(object):
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
-		:param str url: Url to the git repository where the plugins are stored.
+		:param str url: URL to the git repository where the plugins are stored.
 		:param str repopath: path to where the repository will be stored on disk locally
 		:param str localreference: Optional reference to the local tracking branch typically "master"
 		:param str remotereference: Optional reference to the remote tracking branch typically "origin"

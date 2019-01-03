@@ -925,7 +925,7 @@ class LowLevelILFunction(object):
 		:param int size: size of the register parameter in bytes
 		:param str hi: the high register name
 		:param str lo: the low register name
-		:param LowLevelILExpr value: an expression to set the split regiters to
+		:param LowLevelILExpr value: an expression to set the split registers to
 		:param str flags: which flags are set by this operation
 		:return: The expression ``hi:lo = value``
 		:rtype: LowLevelILExpr
@@ -1549,7 +1549,7 @@ class LowLevelILFunction(object):
 		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
 
 		:param int size: the size of the result in bytes
-		:param LowLevelILExpr value: the expression to sign extn
+		:param LowLevelILExpr value: the expression to sign extend
 		:param str flags: optional, flags to set
 		:return: The expression ``sx.<size>(value)``
 		:rtype: LowLevelILExpr
@@ -1749,7 +1749,7 @@ class LowLevelILFunction(object):
 	def compare_signed_greater_equal(self, size, a, b):
 		"""
 		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed greater than or equal toexpression ``b``
+		signed greater than or equal to expression ``b``
 
 		:param int size: size in bytes
 		:param LowLevelILExpr a: LHS of comparison
@@ -2390,7 +2390,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 			return self.il_function[self.end + idx]
 
 	def _create_instance(self, view, handle):
-		"""Internal method by super to instantiante child instances"""
+		"""Internal method by super to instantiate child instances"""
 		return LowLevelILBasicBlock(view, handle, self.il_function)
 
 	def __hash__(self):

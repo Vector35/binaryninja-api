@@ -76,7 +76,7 @@ class BasicBlock(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	def _create_instance(self, view, handle):
-		"""Internal method used to instantiante child instances"""
+		"""Internal method used to instantiate child instances"""
 		return BasicBlock(view, handle)
 
 	def __hash__(self):

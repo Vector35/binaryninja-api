@@ -411,12 +411,13 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return self.create(data)
 
 	@classmethod
-	def get_view_of_file(cls, filename, update_analysis=True):
+	def get_view_of_file(cls, filename, update_analysis=True, progress_func=None):
 		"""
 		``get_view_of_file`` returns the first available, non-Raw `BinaryView` available.
 
 		:param str filename: Path to filename or bndb
 		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
+		:param callable() progress_func: optional function to be called with the current progress and total count.
 		:return: returns a BinaryView object for the given filename.
 		:rtype: BinaryView or None
 		"""
@@ -426,7 +427,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
 			f.close()
-			view = binaryninja.filemetadata.FileMetadata().open_existing_database(filename)
+			view = binaryninja.filemetadata.FileMetadata().open_existing_database(filename, progress_func)
 		else:
 			view = BinaryView.open(filename)
 

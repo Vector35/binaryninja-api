@@ -5,7 +5,14 @@
 
 import sys
 import os
-from site import getsitepackages, getusersitepackages, check_enableusersite
+from site import check_enableusersite
+
+# Handle both normal environments and virtualenvs
+from distutils.sysconfig import get_python_lib as getsitepackages
+try: 
+    from site import getusersitepackages
+except ImportError:
+    getusersitepackages = getsitepackages
 
 # Hacky command line parsing to accept a silent-install -s flag like linux-setup.sh:
 INTERACTIVE = True

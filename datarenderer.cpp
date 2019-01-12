@@ -113,8 +113,12 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 
 	delete[] typeCtx;
 	for (size_t i = 0; i < prefix.size(); i++)
+	{
 		BNFreeString(prefixes[i].text);
-
+		for (size_t j = 0; j < prefixes[j].namesCount; j++)
+			BNFreeString(prefixes[i].typeNames[j]);
+		delete[] prefixes[i].typeNames;
+	}
 	delete[] prefixes;
 
 	vector<DisassemblyTextLine> result;

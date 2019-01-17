@@ -10,7 +10,7 @@ BINARY NINJA SOFTWARE LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS LICENSE AGREEMENT (”LICENSE”). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS LICENSE. IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
-This License is entered into by and between you (“you” or “your”) and Vector 35 LLC, a Florida limited liability company (“us,” “we” or “our”).
+This License is entered into by and between you (“you” or “your”) and Vector 35 Inc, a Delaware corporation (“us,” “we” or “our”).
 
 We will license Binary Ninja™, a software application (the “Software”), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
 
@@ -48,7 +48,7 @@ BINARY NINJA SOFTWARE LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS LICENSE AGREEMENT ("LICENSE"). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS LICENSE. IF YOU ARE ENTERING INTO THIS LICENSE ON BEHALF OF A COMPANY OR OTHER LEGAL ENTITY, YOU REPRESENT THAT YOU HAVE THE AUTHORITY TO BIND SUCH ENTITY TO THE TERMS AND CONDITIONS OF THIS LICENSE AND, IN SUCH EVENT, "YOU" AND "YOUR" AS USED IN THIS LICENSE SHALL REFER TO SUCH ENTITY, IF YOU DO NOT HAVE SUCH AUTHORITY, OR IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
-This License is entered into by and between you ("you" or "your") and Vector 35 LLC, a Florida limited liability company ("us", "we" or "our").
+This License is entered into by and between you ("you" or "your") and Vector 35 Inc, a Delaware corporation ("us", "we" or "our").
 
 We will license Binary Ninja™, a software application (the "Software"), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
 
@@ -88,7 +88,7 @@ BINARY NINJA SOFTWARE LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS LICENSE AGREEMENT (”LICENSE”). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS LICENSE. IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
-This License is entered into by and between you (“you” or “your”) and Vector 35 LLC, a Florida limited liability company (“us,” “we” or “our”).
+This License is entered into by and between you (“you” or “your”) and Vector 35 Inc, a Delaware corporation (“us,” “we” or “our”).
 
 We will license Binary Ninja™, a software application (the “Software”), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
 
@@ -126,7 +126,7 @@ BINARY NINJA SOFTWARE LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS LICENSE AGREEMENT ("LICENSE"). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS LICENSE. IF YOU ARE ENTERING INTO THIS LICENSE ON BEHALF OF A COMPANY OR OTHER LEGAL ENTITY, YOU REPRESENT THAT YOU HAVE THE AUTHORITY TO BIND SUCH ENTITY TO THE TERMS AND CONDITIONS OF THIS LICENSE AND, IN SUCH EVENT, "YOU" AND "YOUR" AS USED IN THIS LICENSE SHALL REFER TO SUCH ENTITY, IF YOU DO NOT HAVE SUCH AUTHORITY, OR IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
-This License is entered into by and between you ("you" or "your") and Vector 35 LLC, a Florida limited liability company ("us", "we" or "our").
+This License is entered into by and between you ("you" or "your") and Vector 35 Inc, a Delaware corporation ("us", "we" or "our").
 
 We will license Binary Ninja™, a software application (the "Software"), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
 
@@ -164,7 +164,7 @@ BINARY NINJA™ TRIAL PERIOD SOFTWARE DEMONSTRATION LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS TRIAL PERIOD DEMONSTRATION LICENSE AGREEMENT ("DEMONSTRATION LICENSE"). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS DEMONSTRATION LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS DEMONSTRATION LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS DEMONSTRATION LICENSE. IF YOU ARE ENTERING INTO THIS DEMONSTRATION LICENSE ON BEHALF OF A COMPANY OR OTHER LEGAL ENTITY, YOU REPRESENT THAT YOU HAVE THE AUTHORITY TO BIND SUCH ENTITY TO THE TERMS AND CONDITIONS OF THIS DEMONSTRATION LICENSE AND, IN SUCH EVENT, "YOU" AND "YOUR" AS USED IN THIS DEMONSTRATION LICENSE SHALL REFER TO SUCH ENTITY, IF YOU DO NOT HAVE SUCH AUTHORITY, OR IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS DEMONSTRATION LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
-This Demonstration License is entered into by and between you ("you" or "your") and Vector 35 LLC, a Florida limited liability company ("us", "we" or "our").
+This Demonstration License is entered into by and between you ("you" or "your") and Vector 35 Inc, a Delaware corporation ("us", "we" or "our").
 
 We will license a “free to use” demonstration version of Binary Ninja™, a software application (the "Demonstration Software"), to you under the mutual terms and conditions in this Demonstration License for your internal evaluation purposes only. Notwithstanding anything to the contrary in this Demonstration License, we reserve the right to revoke or terminate the Demonstration Software and this Demonstration License any at any time in our sole discretion.  By installing the Demonstration Software, you agree to be bound by the terms of this Demonstration License. If you do not agree to the terms of this Demonstration License, please do not install or attempt to use the Demonstration Software.
 

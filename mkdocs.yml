@@ -3,7 +3,7 @@ site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
 repo_name: 'github'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
-site_author: 'Vector 35 LLC'
+site_author: 'Vector 35 Inc'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
 extra_css: ['docs.css?1535411025']
@@ -20,7 +20,7 @@ theme:
         previous: 80 # p
         search: 191   # ? / /
 
-copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 LLC'
+copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 Inc'
 
 markdown_extensions:
     - codehilite

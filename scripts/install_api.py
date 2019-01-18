@@ -8,10 +8,11 @@ import os
 from site import check_enableusersite
 
 # Handle both normal environments and virtualenvs
-from distutils.sysconfig import get_python_lib as getsitepackages
 try: 
-    from site import getusersitepackages
+    from site import getusersitepackages, getsitepackages
 except ImportError:
+    from sysconfig import get_path
+    getsitepackages = lambda: get_path('purelib')
     getusersitepackages = getsitepackages
 
 # Hacky command line parsing to accept a silent-install -s flag like linux-setup.sh:

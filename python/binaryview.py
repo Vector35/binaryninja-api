@@ -524,7 +524,7 @@ class Segment(object):
 		count = ctypes.c_ulonglong()
 		ranges = core.BNSegmentGetRelocationRanges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append((ranges[i].start, ranges[i].end))
 		core.BNFreeRelocationRanges(ranges, count)
 		return result
@@ -535,7 +535,7 @@ class Segment(object):
 		count = ctypes.c_ulonglong()
 		ranges = core.BNSegmentGetRelocationRangesAtAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append((ranges[i].start, ranges[i].end))
 		core.BNFreeRelocationRanges(ranges, count)
 		return result
@@ -1249,7 +1249,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRanges(self.handle, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append((ranges[i].start, ranges[i].end))
 		core.BNFreeRelocationRanges(ranges, count)
 		return result
@@ -1260,7 +1260,7 @@ class BinaryView(object):
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRangesAtAddress(self.handle, addr, count)
 		result = []
-		for i in xrange(0, count.value):
+		for i in range(0, count.value):
 			result.append((ranges[i].start, ranges[i].end))
 		core.BNFreeRelocationRanges(ranges, count)
 		return result

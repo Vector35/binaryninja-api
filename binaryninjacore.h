@@ -2740,7 +2740,10 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text,
 		BNQualifiedNameAndType* result, char** errors);
+	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text,
+		BNQualifiedNameAndType** result, size_t* count, char** errors);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
+	BINARYNINJACOREAPI void BNFreeQualifiedNameAndTypeArray(BNQualifiedNameAndType* obj, size_t count);
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeList(BNQualifiedNameAndType* types, size_t count);

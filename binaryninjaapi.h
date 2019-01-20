@@ -1421,6 +1421,7 @@ namespace BinaryNinja
 			DisassemblySettings* settings);
 
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
+		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& result, std::string& errors);
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
 		Ref<Type> GetTypeByName(const QualifiedName& name);

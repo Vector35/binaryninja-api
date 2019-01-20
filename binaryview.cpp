@@ -1842,6 +1842,30 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 }
 
 
+bool BinaryView::ParseTypeString(const string& text, std::map<QualifiedName, Ref<Type>>& result, string& errors)
+{
+	BNQualifiedNameAndType* nt;
+	char* errorStr;
+	size_t count;
+
+	if (!BNParseTypesString(m_object, text.c_str(), &nt, &count, &errorStr))
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+		return false;
+	}
+
+	for(size_t i = 0; i < count; i++)
+	{
+		result[QualifiedName::FromAPIObject(&nt[i].name)] = new Type(BNNewTypeReference(nt[i].type));
+	}
+	BNFreeQualifiedNameAndTypeArray(nt, count);
+
+	errors = "";
+	return true;
+}
+
+
 map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 {
 	size_t count;

@@ -25,6 +25,7 @@ import ctypes
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import ActionType
+import binaryninja
 
 
 class UndoAction(object):

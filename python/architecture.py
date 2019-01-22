@@ -2308,6 +2308,11 @@ class CoreArchitecture(Architecture):
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
+		if not isinstance(data, bytes):
+			if isinstance(data, str):
+				data=data.encode()
+			else:
+				raise TypeError("Must be bytes or str")
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
 		length.value = len(data)

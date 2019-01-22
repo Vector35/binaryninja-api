@@ -1963,8 +1963,12 @@ class BinaryView(object):
 			'AAAA'
 		"""
 		if not isinstance(data, bytes):
-			raise TypeError("Must be bytes")
-		buf = databuffer.DataBuffer(data)
+			if isinstance(data, str):
+				buf = databuffer.DataBuffer(data.encode())
+			else:
+				raise TypeError("Must be bytes or str")
+		else:
+			buf = databuffer.DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
 	def insert(self, addr, data):

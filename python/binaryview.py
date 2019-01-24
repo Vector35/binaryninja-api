@@ -24,10 +24,12 @@ import ctypes
 import abc
 import numbers
 
+from collections import OrderedDict
+
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag)
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag, TypeClass)
 import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
 from binaryninja import log
@@ -4449,3 +4451,149 @@ class BinaryWriter(object):
 			>>>
 		"""
 		core.BNSeekBinaryWriterRelative(self.handle, offset)
+
+class StructuredDataValue(object):
+	def __init__(self, type, address, value):
+		self._type = type
+		self._address = address
+		self._value = value
+
+	@property
+	def type(self):
+		return self._type
+
+	@property
+	def width(self):
+		return self._type.width
+
+	@property
+	def address(self):
+		return self._address
+
+	@property
+	def value(self):
+		return self._value
+
+	@property
+	def int(self):
+		return int(self)
+
+	@property
+	def str(self):
+		return str(self)
+
+	def __int__(self):
+		if self._type.width == 1:
+			code = "B"
+		elif self._type.width == 2:
+			code = "H"
+		elif self._type.width == 4:
+			code = "I"
+		elif self._type.width == 8:
+			code = "Q"
+		else:
+			raise Exception("Could not convert to integer with width {}".format(self._type.width))
+
+		return struct.unpack(code, self._value)[0]
+
+	def __str__(self):
+		decode_str = "{}B".format(self._type.width)
+		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
+
+	def __repr__(self):
+		return "<StructuredDataValue type:{} value:{}>".format(str(self._type), str(self))
+
+
+class StructuredDataView(object):
+	"""
+		``class StructuredDataView`` is a convenience class for reading structured binary data.
+
+		StructuredDataView can be instantiated as follows:
+
+			>>> from binaryninja import *
+			>>> bv = BinaryViewType['Mach-O'].open("/bin/ls")
+			>>> structure = "Elf64_Header"
+			>>> address = bv.start
+			>>> elf = StructuredDataView(bv, structure, address)
+			>>>
+
+		Once instantiated, members can be accessed:
+
+			>>> print("{:x}".format(elf.machine))
+			003e
+			>>>
+
+		"""
+	_structure = None
+	_structure_name = None
+	_address = 0
+	_bv = None
+	_members = OrderedDict()
+
+	def __init__(self, bv, structure_name, address):
+		self._bv = bv
+		self._structure_name = structure_name
+		self._address = address
+
+		self._lookup_structure()
+		self._define_members()
+
+	def _lookup_structure(self):
+		s = self._bv.types.get(self._structure_name, None)
+		if s is None:
+			raise Exception("Could not find structure with name: {}".format(self._structure_name))
+
+		if s.type_class != TypeClass.StructureTypeClass:
+			raise Exception("{} is not a StructureTypeClass, got: {}".format(self._structure_name, s._type_class))
+
+		self._structure = s.structure
+
+	def _define_members(self):
+		for m in self._structure.members:
+			self._members[m.name] = m
+
+	def __getattr__(self, key):
+		m = self._members.get(key, None)
+		if m is None:
+			return self.__getattribute__(key)
+
+		return self[key]
+
+	def __getitem__(self, key):
+		m = self._members.get(key, None)
+		if m is None:
+			return super(StructuredDataView, self).__getitem__(key)
+
+		ty = m.type
+		offset = m.offset
+		width = ty.width
+
+		value = self._bv.read(self._address + offset, width)
+		return StructuredDataValue(ty, self._address + offset, value)
+
+	def __str__(self):
+		rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
+		for k in self._members:
+			m = self._members[k]
+
+			ty = m.type
+			offset = m.offset
+
+			formatted_offset = "{:=+x}".format(offset)
+			formatted_type = "{:s} {:s}".format(str(ty), k)
+
+			value = self[k]
+			if value.width in (1, 2, 4, 8):
+				formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
+			else:
+				formatted_value = str(value)
+
+			rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
+
+		rv += "}\n"
+
+		return rv
+
+	def __repr__(self):
+		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
+																			  self._structure.width, self._address)

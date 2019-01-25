@@ -70,7 +70,10 @@ class Settings(object):
 		return core.BNSettingsUpdateProperty(self.registry_id, tr(), id, setting_property)
 
 	def get_schema(self):
-		return core.BNSettingsGetSchema(self.registry_id);
+		return core.BNSettingsGetSchema(self.registry_id)
+
+	def copy_value(self, dest_registry_id, id):
+		return core.BNSettingsCopyValue(self.registry_id, dest_registry_id, id)
 
 	def reset(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:

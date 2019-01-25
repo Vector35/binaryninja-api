@@ -105,6 +105,12 @@ string Settings::SerializeSettings(Ref<BinaryView> view, BNSettingsScope scope)
 }
 
 
+bool Settings::CopyValue(const string& destRegistry, const string& id)
+{
+	return BNSettingsCopyValue(m_registry.c_str(), destRegistry.c_str(), id.c_str());
+}
+
+
 bool Settings::Reset(const string& id, Ref<BinaryView> view, BNSettingsScope scope)
 {
 	return BNSettingsReset(m_registry.c_str(), id.c_str(), view ? view->GetObject() : nullptr, scope);

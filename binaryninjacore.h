@@ -3699,6 +3699,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNDeserializeSettings(const char* registry, const char* contents, BNBinaryView* view, BNSettingsScope scope);
 	BINARYNINJACOREAPI char* BNSerializeSettings(const char* registry, BNBinaryView* view, BNSettingsScope scope);
 
+	BINARYNINJACOREAPI bool BNSettingsCopyValue(const char* registry, const char* destRegistry, const char* id);
 	BINARYNINJACOREAPI bool BNSettingsReset(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope scope);
 	BINARYNINJACOREAPI bool BNSettingsResetAll(const char* registry, BNBinaryView* view, BNSettingsScope scope);
 

@@ -554,12 +554,20 @@ class LowLevelILInstruction(object):
 		return binaryninja.mediumlevelil.MediumLevelILInstruction(self.function.medium_level_il, expr)
 
 	@property
+	def mlil(self):
+		return self.medium_level_il
+
+	@property
 	def mapped_medium_level_il(self):
 		"""Gets the mapped medium level IL expression corresponding to this expression"""
 		expr = self.function.get_mapped_medium_level_il_expr_index(self.expr_index)
 		if expr is None:
 			return None
 		return binaryninja.mediumlevelil.MediumLevelILInstruction(self.function.mapped_medium_level_il, expr)
+
+	@property
+	def mmlil(self):
+		return self.mapped_medium_level_il
 
 	@property
 	def value(self):
@@ -813,6 +821,10 @@ class LowLevelILFunction(object):
 		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
 
 	@property
+	def mlil(self):
+		return self.medium_level_il
+
+	@property
 	def mapped_medium_level_il(self):
 		"""Medium level IL with mappings between low level IL and medium level IL. Unused stores are not removed.
 		Typically, this should only be used to answer queries on assembly or low level IL where the query is
@@ -821,6 +833,10 @@ class LowLevelILFunction(object):
 		if not result:
 			return None
 		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def mmlil(self):
+		return self.mapped_medium_level_il
 
 	def __setattr__(self, name, value):
 		try:

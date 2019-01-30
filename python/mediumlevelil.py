@@ -387,6 +387,11 @@ class MediumLevelILInstruction(object):
 		return lowlevelil.LowLevelILInstruction(self.function.low_level_il.ssa_form, expr)
 
 	@property
+	def llil(self):
+		"""Alias for low_level_il"""
+		return self.low_level_il
+
+	@property
 	def ssa_memory_version(self):
 		"""Version of active memory contents in SSA form for this instruction"""
 		return core.BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.instr_index)
@@ -692,6 +697,11 @@ class MediumLevelILFunction(object):
 		if not result:
 			return None
 		return lowlevelil.LowLevelILFunction(self.arch, result, self.source_function)
+
+	@property
+	def llil(self):
+		"""Alias for low_level_il"""
+		return self.low_level_il
 
 	def __setattr__(self, name, value):
 		try:

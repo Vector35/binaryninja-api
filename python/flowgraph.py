@@ -51,14 +51,20 @@ class FlowGraphEdge(object):
 
 
 class FlowGraphNode(object):
-	def __init__(self, graph, handle = None):
+	def __init__(self, graph = None, handle = None):
 		if handle is None:
+			if graph is None:
+				self.handle = None
+				raise ValueError("flow graph node must be associated with a graph")
 			handle = core.BNCreateFlowGraphNode(graph.handle)
 		self.handle = handle
 		self.graph = graph
+		if self.graph is None:
+			self.graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
 
 	def __del__(self):
-		core.BNFreeFlowGraphNode(self.handle)
+		if self.handle is not None:
+			core.BNFreeFlowGraphNode(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, FlowGraphNode):
@@ -91,7 +97,7 @@ class FlowGraphNode(object):
 			block = mediumlevelil.MediumLevelILBasicBlock(view, block,
 				mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func))
 		else:
-			block = basicblock.BasicBlock(view, block)
+			block = basicblock.BasicBlock(block, view)
 		return block
 
 	@property
@@ -389,7 +395,7 @@ class FlowGraph(object):
 		func = core.BNGetFunctionForFlowGraph(self.handle)
 		if func is None:
 			return None
-		return function.Function(binaryview.BinaryView(handle = core.BNGetFunctionData(func)), func)
+		return function.Function(handle = func)
 
 	@function.setter
 	def function(self, func):

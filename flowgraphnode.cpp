@@ -40,6 +40,15 @@ FlowGraphNode::FlowGraphNode(BNFlowGraphNode* node)
 }
 
 
+Ref<FlowGraph> FlowGraphNode::GetGraph() const
+{
+	BNFlowGraph* graph = BNGetFlowGraphNodeOwner(m_object);
+	if (!graph)
+		return nullptr;
+	return new CoreFlowGraph(graph);
+}
+
+
 Ref<BasicBlock> FlowGraphNode::GetBasicBlock() const
 {
 	BNBasicBlock* block = BNGetFlowGraphBasicBlock(m_object);

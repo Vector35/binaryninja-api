@@ -470,7 +470,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		plat = core.BNGetPlatformForViewType(self.handle, ident, arch.handle)
 		if plat is None:
 			return None
-		return binaryninja.platform.Platform(None, plat)
+		return binaryninja.platform.Platform(handle = plat)
 
 
 class Segment(object):
@@ -2429,7 +2429,7 @@ class BinaryView(object):
 		blocks = core.BNGetBasicBlocksForAddress(self.handle, addr, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -2445,7 +2445,7 @@ class BinaryView(object):
 		blocks = core.BNGetBasicBlocksStartingAtAddress(self.handle, addr, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(basicblock.BasicBlock(self, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -2453,7 +2453,7 @@ class BinaryView(object):
 		block = core.BNGetRecentBasicBlockForAddress(self.handle, addr)
 		if block is None:
 			return None
-		return basicblock.BasicBlock(self, block)
+		return basicblock.BasicBlock(block, self)
 
 	def get_code_refs(self, addr, length=None):
 		"""
@@ -3247,7 +3247,7 @@ class BinaryView(object):
 		if pos.function:
 			func = binaryninja.function.Function(self, pos.function)
 		if pos.block:
-			block = basicblock.BasicBlock(self, pos.block)
+			block = basicblock.BasicBlock(pos.block, self)
 		return lineardisassembly.LinearDisassemblyPosition(func, block, pos.address)
 
 	def _get_linear_disassembly_lines(self, api, pos, settings):
@@ -3273,7 +3273,7 @@ class BinaryView(object):
 			if lines[i].function:
 				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
-				block = basicblock.BasicBlock(self, core.BNNewBasicBlockReference(lines[i].block))
+				block = basicblock.BasicBlock(core.BNNewBasicBlockReference(lines[i].block), self)
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
 			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
@@ -3285,7 +3285,7 @@ class BinaryView(object):
 		if pos_obj.function:
 			func = binaryninja.function.Function(self, pos_obj.function)
 		if pos_obj.block:
-			block = basicblock.BasicBlock(self, pos_obj.block)
+			block = basicblock.BasicBlock(pos_obj.block, self)
 		pos.function = func
 		pos.block = block
 		pos.address = pos_obj.address

@@ -357,17 +357,24 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 class Function(object):
 	_associated_data = {}
 
-	def __init__(self, view, handle):
-		self._view = view
-		self.handle = core.handle_of_type(handle, core.BNFunction)
+	def __init__(self, view = None, handle = None):
 		self._advanced_analysis_requests = 0
+		if handle is None:
+			self.handle = None
+			raise NotImplementedError("creation of standalone 'Function' objects is not implemented")
+		self.handle = core.handle_of_type(handle, core.BNFunction)
+		if view is None:
+			self._view = binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(self.handle))
+		else:
+			self._view = view
 		self._arch = None
 		self._platform = None
 
 	def __del__(self):
-		if self._advanced_analysis_requests > 0:
-			core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
-		core.BNFreeFunction(self.handle)
+		if self.handle is not None:
+			if self._advanced_analysis_requests > 0:
+				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
+			core.BNFreeFunction(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, Function):
@@ -432,7 +439,7 @@ class Function(object):
 			plat = core.BNGetFunctionPlatform(self.handle)
 			if plat is None:
 				return None
-			self._platform = binaryninja.platform.Platform(None, handle = plat)
+			self._platform = binaryninja.platform.Platform(handle = plat)
 			return self._platform
 
 	@property
@@ -486,7 +493,7 @@ class Function(object):
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -868,7 +875,7 @@ class Function(object):
 		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
 		try:
 			for i in range(0, count.value):
-				yield binaryninja.basicblock.BasicBlock(self._view, core.BNNewBasicBlockReference(blocks[i]))
+				yield binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -1343,7 +1350,7 @@ class Function(object):
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
 		if not block:
 			return None
-		return binaryninja.basicblock.BasicBlock(self._view, handle = block)
+		return binaryninja.basicblock.BasicBlock(block, self._view)
 
 	def get_instr_highlight(self, addr, arch=None):
 		"""

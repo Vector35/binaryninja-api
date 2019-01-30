@@ -154,7 +154,7 @@ class ScriptingInstance(object):
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewFunctionReference(func))
+				func = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
@@ -168,7 +168,8 @@ class ScriptingInstance(object):
 				if func is None:
 					block = None
 				else:
-					block = binaryninja.basicblock.BasicBlock(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)), core.BNNewBasicBlockReference(block))
+					block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(block),
+						binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)))
 					core.BNFreeFunction(func)
 			else:
 				block = None

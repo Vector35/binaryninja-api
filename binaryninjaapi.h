@@ -2715,6 +2715,7 @@ namespace BinaryNinja
 		FlowGraphNode(FlowGraph* graph);
 		FlowGraphNode(BNFlowGraphNode* node);
 
+		Ref<FlowGraph> GetGraph() const;
 		Ref<BasicBlock> GetBasicBlock() const;
 		void SetBasicBlock(BasicBlock* block);
 		int GetX() const;

@@ -727,19 +727,27 @@ class LowLevelILFunction(object):
 		LLFC_NO                 !overflow  No overflow
 		======================= ========== ===============================
 	"""
-	def __init__(self, arch, handle = None, source_func = None):
+	def __init__(self, arch = None, handle = None, source_func = None):
 		self.arch = arch
 		self.source_function = source_func
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
+			if self.source_function is None:
+				self.source_function = binaryninja.function.Function(handle = core.BNGetLowLevelILOwnerFunction(self.handle))
+			if self.arch is None:
+				self.arch = self.source_function.arch
 		else:
 			if self.source_function is None:
+				self.handle = None
 				raise ValueError("IL functions must be created with an associated function")
+			if self.arch is None:
+				self.arch = self.source_function.arch
 			func_handle = self.source_function.handle
 			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
-		core.BNFreeLowLevelILFunction(self.handle)
+		if self.handle is not None:
+			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, LowLevelILFunction):
@@ -2389,7 +2397,7 @@ class LowLevelILFunction(object):
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):
-		super(LowLevelILBasicBlock, self).__init__(view, handle)
+		super(LowLevelILBasicBlock, self).__init__(handle, view)
 		self.il_function = owner
 
 	def __iter__(self):

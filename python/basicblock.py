@@ -56,8 +56,8 @@ class BasicBlockEdge(object):
 
 
 class BasicBlock(object):
-	def __init__(self, view, handle):
-		self.view = view
+	def __init__(self, handle, view = None):
+		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
 		self._arch = None
 		self._func = None
@@ -75,9 +75,9 @@ class BasicBlock(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
-	def _create_instance(self, view, handle):
+	def _create_instance(self, handle, view):
 		"""Internal method used to instantiate child instances"""
-		return BasicBlock(view, handle)
+		return BasicBlock(handle, view)
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.arch.name))
@@ -90,8 +90,16 @@ class BasicBlock(object):
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		self._func =binaryninja.function.Function(self.view, func)
+		self._func =binaryninja.function.Function(self._view, func)
 		return self._func
+
+	@property
+	def view(self):
+		"""Binary view that contains the basic block (read-ony)"""
+		if self._view is not None:
+			return self._view
+		self._view = self.function.view
+		return self._view
 
 	@property
 	def arch(self):
@@ -135,7 +143,7 @@ class BasicBlock(object):
 		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
+				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), self.view)
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge, edges[i].fallThrough))
@@ -151,7 +159,7 @@ class BasicBlock(object):
 		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = self._create_instance(self.view, core.BNNewBasicBlockReference(edges[i].target))
+				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), self.view)
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
@@ -175,7 +183,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockDominators(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -186,7 +194,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -196,7 +204,7 @@ class BasicBlock(object):
 		result = core.BNGetBasicBlockImmediateDominator(self.handle)
 		if not result:
 			return None
-		return self._create_instance(self.view, result)
+		return self._create_instance(result, self.view)
 
 	@property
 	def dominator_tree_children(self):
@@ -205,7 +213,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -216,7 +224,7 @@ class BasicBlock(object):
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(self._create_instance(self.view, core.BNNewBasicBlockReference(blocks[i])))
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
 		core.BNFreeBasicBlockList(blocks, count.value)
 		return result
 
@@ -278,7 +286,7 @@ class BasicBlock(object):
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
 		result = []
 		for i in range(0, count.value):
-			result.append(BasicBlock(blocks[0].view, core.BNNewBasicBlockReference(out_blocks[i])))
+			result.append(BasicBlock(core.BNNewBasicBlockReference(out_blocks[i]), blocks[0].view))
 		core.BNFreeBasicBlockList(out_blocks, count.value)
 		return result
 

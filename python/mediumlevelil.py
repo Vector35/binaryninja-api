@@ -615,19 +615,27 @@ class MediumLevelILFunction(object):
 	objects can be added to the MediumLevelILFunction by calling ``append`` and passing the result of the various class
 	methods which return MediumLevelILExpr objects.
 	"""
-	def __init__(self, arch, handle = None, source_func = None):
+	def __init__(self, arch = None, handle = None, source_func = None):
 		self.arch = arch
 		self.source_function = source_func
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNMediumLevelILFunction)
+			if self.source_function is None:
+				self.source_function = binaryninja.function.Function(handle = core.BNGetMediumLevelILOwnerFunction(self.handle))
+			if self.arch is None:
+				self.arch = self.source_function.arch
 		else:
 			if self.source_function is None:
+				self.handle = None
 				raise ValueError("IL functions must be created with an associated function")
+			if self.arch is None:
+				self.arch = self.source_function.arch
 			func_handle = self.source_function.handle
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):
-		core.BNFreeMediumLevelILFunction(self.handle)
+		if self.handle is not None:
+			core.BNFreeMediumLevelILFunction(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, MediumLevelILFunction):
@@ -966,7 +974,7 @@ class MediumLevelILFunction(object):
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):
-		super(MediumLevelILBasicBlock, self).__init__(view, handle)
+		super(MediumLevelILBasicBlock, self).__init__(handle, view)
 		self.il_function = owner
 
 	def __iter__(self):

@@ -51,6 +51,7 @@ class CallingConvention(object):
 	def __init__(self, arch=None, name=None, handle=None, confidence=binaryninja.types.max_confidence):
 		if handle is None:
 			if arch is None or name is None:
+				self.handle = None
 				raise ValueError("Must specify either handle or architecture and name")
 			self.arch = arch
 			self._pending_reg_lists = {}
@@ -155,7 +156,8 @@ class CallingConvention(object):
 		self.confidence = confidence
 
 	def __del__(self):
-		core.BNFreeCallingConvention(self.handle)
+		if self.handle is not None:
+			core.BNFreeCallingConvention(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, CallingConvention):
@@ -308,8 +310,7 @@ class CallingConvention(object):
 
 	def _get_incoming_reg_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
-				core.BNNewFunctionReference(func))
+			func_obj = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
 		except:
@@ -320,8 +321,7 @@ class CallingConvention(object):
 
 	def _get_incoming_flag_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
-				core.BNNewFunctionReference(func))
+			func_obj = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
 		except:
@@ -335,8 +335,7 @@ class CallingConvention(object):
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
-					core.BNNewFunctionReference(func))
+				func_obj = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
 			in_var_obj = binaryninja.function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
 			out_var = self.perform_get_incoming_var_for_parameter_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
@@ -353,8 +352,7 @@ class CallingConvention(object):
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = binaryninja.function.Function(binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)),
-					core.BNNewFunctionReference(func))
+				func_obj = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
 			in_var_obj = binaryninja.function.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
 			out_var = self.perform_get_parameter_var_for_incoming_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type

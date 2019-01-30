@@ -39,7 +39,7 @@ class _PlatformMetaClass(type):
 		platforms = core.BNGetPlatformList(count)
 		result = []
 		for i in range(0, count.value):
-			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
+			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
@@ -60,7 +60,7 @@ class _PlatformMetaClass(type):
 		platforms = core.BNGetPlatformList(count)
 		try:
 			for i in range(0, count.value):
-				yield Platform(None, core.BNNewPlatformReference(platforms[i]))
+				yield Platform(handle = core.BNNewPlatformReference(platforms[i]))
 		finally:
 			core.BNFreePlatformList(platforms, count.value)
 
@@ -75,7 +75,7 @@ class _PlatformMetaClass(type):
 		platform = core.BNGetPlatformByName(str(value))
 		if platform is None:
 			raise KeyError("'%s' is not a valid platform" % str(value))
-		return Platform(None, platform)
+		return Platform(handle = platform)
 
 	def get_list(cls, os = None, arch = None):
 		binaryninja._init_plugins()
@@ -88,7 +88,7 @@ class _PlatformMetaClass(type):
 			platforms = core.BNGetPlatformListByArchitecture(os, arch.handle)
 		result = []
 		for i in range(0, count.value):
-			result.append(Platform(None, core.BNNewPlatformReference(platforms[i])))
+			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
@@ -100,8 +100,11 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 	"""
 	name = None
 
-	def __init__(self, arch, handle = None):
+	def __init__(self, arch = None, handle = None):
 		if handle is None:
+			if arch is None:
+				self.handle = None
+				raise ValueError("platform must have an associated architecture")
 			self.arch = arch
 			self.handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
 		else:
@@ -110,7 +113,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			self.arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(self.handle))
 
 	def __del__(self):
-		core.BNFreePlatform(self.handle)
+		if self.handle is not None:
+			core.BNFreePlatform(self.handle)
 
 	def __eq__(self, value):
 		if not isinstance(value, Platform):
@@ -316,7 +320,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
 		if not result:
 			return None
-		return Platform(None, handle = result)
+		return Platform(handle = result)
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
@@ -325,7 +329,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		new_addr = ctypes.c_ulonglong()
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
-		return Platform(None, handle = result), new_addr.value
+		return Platform(handle = result), new_addr.value
 
 	def get_type_by_name(self, name):
 		name = types.QualifiedName(name)._get_core_struct()

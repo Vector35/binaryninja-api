@@ -990,7 +990,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
-	def _create_instance(self, view, handle):
+	def _create_instance(self, handle, view):
 		"""Internal method by super to instantiate child instances"""
 		return MediumLevelILBasicBlock(view, handle, self.il_function)
 

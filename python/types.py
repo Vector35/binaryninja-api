@@ -296,7 +296,7 @@ class Type(object):
 
 	@property
 	def const(self):
-		"""Whether type is const (read-only)"""
+		"""Whether type is const (read/write)"""
 		result = core.BNIsTypeConst(self.handle)
 		return BoolWithConfidence(result.value, confidence = result.confidence)
 

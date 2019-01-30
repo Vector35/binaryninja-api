@@ -107,6 +107,7 @@ class ScriptingInstance(object):
 			self._cb.context = 0
 			self._cb.destroyInstance = self._cb.destroyInstance.__class__(self._destroy_instance)
 			self._cb.executeScriptInput = self._cb.executeScriptInput.__class__(self._execute_script_input)
+			self._cb.cancelScriptInput = self._cb.cancelScriptInput.__class__(self._cancel_script_input)
 			self._cb.setCurrentBinaryView = self._cb.setCurrentBinaryView.__class__(self._set_current_binary_view)
 			self._cb.setCurrentFunction = self._cb.setCurrentFunction.__class__(self._set_current_function)
 			self._cb.setCurrentBasicBlock = self._cb.setCurrentBasicBlock.__class__(self._set_current_basic_block)
@@ -132,6 +133,13 @@ class ScriptingInstance(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
+
+	def _cancel_script_input(self, ctxt):
+		try:
+			return self.perform_cancel_script_input()
+		except:
+			log.log_error(traceback.format_exc())
+			return ScriptingProviderExecuteResult.ScriptExecutionCancelled
 
 	def _set_current_binary_view(self, ctxt, view):
 		try:
@@ -189,6 +197,10 @@ class ScriptingInstance(object):
 		return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	@abc.abstractmethod
+	def perform_cancel_script_input(self):
+		return ScriptingProviderExecuteResult.ScriptExecutionCancelled
+
+	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		raise NotImplementedError
 
@@ -224,6 +236,9 @@ class ScriptingInstance(object):
 
 	def execute_script_input(self, text):
 		return core.BNExecuteScriptInput(self.handle, text)
+
+	def cancel_script_input(self, text):
+		return core.BNCancelScriptInput(self.handle)
 
 	def set_current_binary_view(self, view):
 		if view is not None:
@@ -634,6 +649,14 @@ class PythonScriptingInstance(ScriptingInstance):
 		self.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
 		self.interpreter.execute(text)
 		return ScriptingProviderExecuteResult.SuccessfulScriptExecution
+
+	@abc.abstractmethod
+	def perform_cancel_script_input(self):
+		for tid, tobj in threading._active.items():
+			if tobj is self.interpreter:
+				if ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(KeyboardInterrupt)) != 1:
+					ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), None)
+				break
 
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):

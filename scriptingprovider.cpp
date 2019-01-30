@@ -55,6 +55,7 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	cb.context = this;
 	cb.destroyInstance = DestroyInstanceCallback;
 	cb.executeScriptInput = ExecuteScriptInputCallback;
+	cb.cancelScriptInput = CancelScriptInputCallback;
 	cb.setCurrentBinaryView = SetCurrentBinaryViewCallback;
 	cb.setCurrentFunction = SetCurrentFunctionCallback;
 	cb.setCurrentBasicBlock = SetCurrentBasicBlockCallback;
@@ -88,6 +89,13 @@ BNScriptingProviderExecuteResult ScriptingInstance::ExecuteScriptInputCallback(v
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
 	return instance->ExecuteScriptInput(input);
+}
+
+
+void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
+{
+	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	instance->CancelScriptInput();
 }
 
 
@@ -130,6 +138,10 @@ void ScriptingInstance::DestroyInstance()
 {
 }
 
+
+void ScriptingInstance::CancelScriptInput()
+{
+}
 
 void ScriptingInstance::SetCurrentBinaryView(BinaryView*)
 {
@@ -200,6 +212,12 @@ CoreScriptingInstance::CoreScriptingInstance(BNScriptingInstance* instance): Scr
 BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInput(const string& input)
 {
 	return BNExecuteScriptInput(m_object, input.c_str());
+}
+
+
+void CoreScriptingInstance::CancelScriptInput()
+{
+	BNCancelScriptInput(m_object);
 }
 
 

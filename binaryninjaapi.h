@@ -3997,6 +3997,7 @@ namespace BinaryNinja
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
+		static void CancelScriptInputCallback(void* ctxt);
 		static void SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view);
 		static void SetCurrentFunctionCallback(void* ctxt, BNFunction* func);
 		static void SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block);
@@ -4007,6 +4008,7 @@ namespace BinaryNinja
 
 	public:
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) = 0;
+		virtual void CancelScriptInput();
 		virtual void SetCurrentBinaryView(BinaryView* view);
 		virtual void SetCurrentFunction(Function* func);
 		virtual void SetCurrentBasicBlock(BasicBlock* block);
@@ -4029,6 +4031,7 @@ namespace BinaryNinja
 		virtual ~CoreScriptingInstance() {};
 
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) override;
+		virtual void CancelScriptInput() override;
 		virtual void SetCurrentBinaryView(BinaryView* view) override;
 		virtual void SetCurrentFunction(Function* func) override;
 		virtual void SetCurrentBasicBlock(BasicBlock* block) override;

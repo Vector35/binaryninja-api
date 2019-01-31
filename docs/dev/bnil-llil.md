@@ -8,7 +8,7 @@ The Lifted IL is very similar to the LLIL and is primarily of interest for Archi
 
 ## Introduction by example
 
-Since doing is the easiest way to learn lets start with a simple example binary and step through analyzing it using the python console. 
+Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console. 
 
 ![Low Level IL Option >](/img/llil_option.png)
 
@@ -38,7 +38,7 @@ First we use the global magic variable `current_function` which gives us the pyt
 
 Next we get the [`lowlevelil.LowLevelILFunction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html) from the `Function` class: `current_function.low_level_il`. Iterating over the `LowLevelILFunction` class provides access to the [`lowlevelil.LowLevelILBasicBlock`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html) classes for this function. Inside the loop we can now iterate over the `LowLevelILBasicBlock` class which provides access to the individual [`lowlevelil.LowLevelILInstruction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILInstruction.html) classes.
 
-Finally, we can print out the attributes of the instruction. We first print out `address` which is the address of the corresponding assembly language instruction.  Next, we print the `instr_index`, this you can think of as the address of the IL instruction. Since translating assembly language is a many-to-many relationship we may see multiple IL instructions needed to represent a single assembly language instruction, and thus each IL instruction needs to have its own index separate from its address. Finally, we print out the instruction text.
+Finally, we can print out the attributes of the instruction. We first print out `address` which is the address of the corresponding assembly language instruction.  Next, we print the `instr_index`, this you can think of as the address of the IL instruction. Since translating assembly language is a many-to-many relationship, we may see multiple IL instructions needed to represent a single assembly language instruction, and thus each IL instruction needs to have its own index separate from its address. Finally, we print out the instruction text.
 
 In python, iterating over a class is a distinct operation from subscripting.  This separation is used in the `LowLevelILFunction` class. If you iterate over a `LowLevelILFunction` you get a list of `LowLevelILBasicBlocks`, however if you subscript a `LowLevelILFunction` you actually get the `LowLevelILInstruction` whose `instr_index` corresponds to the subscript:
 
@@ -53,7 +53,7 @@ In python, iterating over a class is a distinct operation from subscripting.  Th
 ```
 
 ## Low Level IL Instructions
-Now that we've established how to access LLIL Functions, Blocks, and Instructions, lets focus in on the instructions themselves. LLIL instructions are infinite length and structured as an expression tree. An expression tree means that instruction operands can be composed of operation. Thus we can have an IL instruction like this:
+Now that we've established how to access LLIL Functions, Blocks, and Instructions, let's focus in on the instructions themselves. LLIL instructions are infinite length and structured as an expression tree. An expression tree means that instruction operands can be composed of operation. Thus we can have an IL instruction like this:
 
 ```
 eax = eax + ecx * 4
@@ -72,7 +72,7 @@ eax  +
 ```
 There are quite a few reasons that we chose to use expression trees that we won't go into in detail here, but suffice it to say lifting to this form and reading this form are both much easier than other forms.
 
-Now lets get back to the examples. First let's pick an instruction to work with:
+Now let's get back to the examples. First let's pick an instruction to work with:
 
 ```
 >>> instr = current_function.low_level_il[2]
@@ -138,7 +138,7 @@ For the above instruction, we have a few operations we can perform:
 8L
 ```
 
-Now with some knowledge of the `LowLevelIL` class lets try to do something with it. Lets say our goal is to find all the times the register `rdx` is written to in the current function. This code is straight forward:
+Now with some knowledge of the `LowLevelIL` class let's try to do something with it. Let's say our goal is to find all the times the register `rdx` is written to in the current function. This code is straight forward:
 
 ```
 >>> for block in current_function.low_level_il:
@@ -157,7 +157,7 @@ Now with some knowledge of the `LowLevelIL` class lets try to do something with 
 
 ## The Instructions
 
-Going into gross detail on all the instructions is out of scope of the this article, but we'll go over the different instructions types and speak generally about how they are used.
+Going into gross detail on all the instructions is out of scope of this article, but we'll go over the different instructions types and speak generally about how they are used.
 
 	
 ### Registers, Constants & Flags
@@ -166,7 +166,7 @@ When parsing an instruction tree the terminals are registers, constants and flag
 
 * **`LLIL_REG`** - A register, terminal
 * **`LLIL_CONST`** - A constant integer value, terminal
-* **`LLIL_SET_REG`** - Sets a register to the results of the of the IL operation in `src` attribute.
+* **`LLIL_SET_REG`** - Sets a register to the results of the IL operation in `src` attribute.
 * **`LLIL_SET_REG_SPLIT`** - Uses a pair of registers as one double sized register, setting both registers at once.
 * **`LLIL_SET_FLAG`** - Sets the specified flag to the IL operation in `src` attribute.
 
@@ -176,15 +176,15 @@ Reading and writing memory is accomplished through the following instructions.
 
 * **`LLIL_LOAD`** - Load a value from memory.
 * **`LLIL_STORE`** - Store a value to memory.
-* **`LLIL_PUSH`** - Store value to stack adjusting stack pointer by sizeof(value) after the store.
-* **`LLIL_POP`** - Load value from stack adjusting stack pointer by sizeof(value) after the store.
+* **`LLIL_PUSH`** - Store value to stack; adjusting stack pointer by sizeof(value) after the store.
+* **`LLIL_POP`** - Load value from stack; adjusting stack pointer by sizeof(value) after the store.
 
 
 ### Control Flow & Conditionals
 
-Control flow transfering instructions and comparison instructions are straight forward enough, but one instruction that deserves more attention is the `if` instruction. To understand the `if` instruction we need to first understand the concept of labels.
+Control flow transfering- and comparison instructions are straightforward enough, but one instruction that deserves more attention is the `if` instruction. To understand the `if` instruction we need to first understand the concept of labels.
 
-Labels function much like they do in C code. They can be put anywhere in the emitted IL and serve as a destination for the `if` and `goto` instructions.  Labels are required because one assembly language instruction can translate to multiple IL instructions, and you need to be able to branch to any of the emitted IL instructions. Lets consider the following x86 instruction `cmove` (Conditional move if equal flag is set):
+Labels function much like they do in C code. They can be put anywhere in the emitted IL and serve as a destination for the `if` and `goto` instructions.  Labels are required because one assembly language instruction can translate to multiple IL instructions, and you need to be able to branch to any of the emitted IL instructions. Let's consider the following x86 instruction `cmove` (Conditional move if equal flag is set):
 
 ```
 test    eax, eax
@@ -199,15 +199,15 @@ To translate this instruction to IL we have to first create true and false label
 2 @ 00000002 goto 3
 ``` 
 
-As you can see from the above code labels are really just used internaly and aren't explicitly marked. In addition to `if` and `goto`, the `jump_to` IL instruction is the only other instruction that operates on labels.  The rest of the IL control flow instructions operate on addresses rather than labels, much like actual assembly language instructions. Note that an architecture plugin author should not be emitting `jump_to` IL instructions as those are generated by the analysis automatically. 
+As you can see from the above code, labels are really just used internaly and aren't explicitly marked. In addition to `if` and `goto`, the `jump_to` IL instruction is the only other instruction that operates on labels.  The rest of the IL control flow instructions operate on addresses rather than labels, much like actual assembly language instructions. Note that an architecture plugin author should not be emitting `jump_to` IL instructions as those are generated by the analysis automatically. 
 
 * **`LLIL_JUMP`** - Branch execution to the result of the IL operation.
 * **`LLIL_JUMP_TO`** - Jump table construct, contains an expression and list of possible targets.
 * **`LLIL_CALL`** - Branch execution to the result of the IL operation.
 * **`LLIL_RET`** - Return execution to the caller.
 * **`LLIL_NORET`** - Instruction emitted automatically after syscall or call instruction which cause the program to terminate.
-* **`LLIL_IF`** - If provides conditional execution. If cond is true execution branches to the true label and false label otherwise.
-* **`LLIL_GOTO`** - Goto is used to branch to an IL label, this is different than jump since jump can only jump to addresses.
+* **`LLIL_IF`** - `If` provides conditional execution. If condition is true execution branches to the true label and false label otherwise.
+* **`LLIL_GOTO`** - `Goto` is used to branch to an IL label, this is different than jump since jump can only jump to addresses.
 * **`LLIL_FLAG_COND`** - Returns the flag condition expression for the specified flag condition.
 * **`LLIL_CMP_E`** - equality
 * **`LLIL_CMP_NE`** - not equal
@@ -257,7 +257,7 @@ The double precision instruction multiply, divide, modulus instructions are part
 
 ### Special instructions
 
-The rest of the instructions are pretty much self explanitory to anyone with familiarity with assembly languages.
+The rest of the instructions are pretty much self-explanatory to anyone with familiarity with assembly languages.
 
 * **`LLIL_NOP`** - No operation
 * **`LLIL_SX`** - Sign extend

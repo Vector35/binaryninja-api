@@ -531,7 +531,10 @@ class LowLevelILInstruction(object):
 	@property
 	def il_basic_block(self):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
-		return LowLevelILBasicBlock(self.function.source_function.view, core.BNGetLowLevelILBasicBlockForInstruction(self.function.handle, self.instr_index), self.function)
+		view = None
+		if self.function.source_function is not None:
+			view = self.function.source_function.view
+		return LowLevelILBasicBlock(view, core.BNGetLowLevelILBasicBlockForInstruction(self.function.handle, self.instr_index), self.function)
 
 	@property
 	def ssa_form(self):
@@ -733,16 +736,20 @@ class LowLevelILFunction(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
 			if self.source_function is None:
-				self.source_function = binaryninja.function.Function(handle = core.BNGetLowLevelILOwnerFunction(self.handle))
+				source_handle = core.BNGetLowLevelILOwnerFunction(self.handle)
+				if source_handle:
+					self.source_function = binaryninja.function.Function(handle = source_handle)
+				else:
+					self.source_function = None
 			if self.arch is None:
 				self.arch = self.source_function.arch
 		else:
-			if self.source_function is None:
-				self.handle = None
-				raise ValueError("IL functions must be created with an associated function")
 			if self.arch is None:
 				self.arch = self.source_function.arch
-			func_handle = self.source_function.handle
+			if self.source_function is None:
+				func_handle = None
+			else:
+				func_handle = self.source_function.handle
 			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
 	def __del__(self):

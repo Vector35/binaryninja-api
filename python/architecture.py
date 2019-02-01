@@ -2253,8 +2253,9 @@ class CoreArchitecture(Architecture):
 			self._intrinsics[name] = intrinsics[i]
 			self._intrinsics_by_index[intrinsics[i]] = (name, self.intrinsics[name])
 		core.BNFreeRegisterList(intrinsics)
-		global _architecture_cache
-		_architecture_cache[ctypes.addressof(handle.contents)] = self
+		if type(self) is CoreArchitecture:
+			global _architecture_cache
+			_architecture_cache[ctypes.addressof(handle.contents)] = self
 
 	@classmethod
 	def _from_cache(cls, handle):

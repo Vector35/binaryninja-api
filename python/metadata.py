@@ -21,6 +21,7 @@
 
 from __future__ import absolute_import
 import ctypes
+import numbers
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
@@ -35,7 +36,7 @@ class Metadata(object):
 	def __init__(self, value=None, signed=None, raw=None, handle=None):
 		if handle is not None:
 			self.handle = handle
-		elif isinstance(value, int):
+		elif isinstance(value, numbers.Integral):
 			if signed:
 				self.handle = core.BNCreateMetadataSignedIntegerData(value)
 			else:
@@ -52,7 +53,7 @@ class Metadata(object):
 				self.handle = core.BNCreateMetadataStringData(value)
 		elif isinstance(value, float):
 			self.handle = core.BNCreateMetadataDoubleData(value)
-		elif isinstance(value, list):
+		elif isinstance(value, (list, tuple)):
 			self.handle = core.BNCreateMetadataOfType(MetadataType.ArrayDataType)
 			for elm in value:
 				md = Metadata(elm, signed, raw)
@@ -63,13 +64,15 @@ class Metadata(object):
 				md = Metadata(value[elm], signed, raw)
 				core.BNMetadataSetValueForKey(self.handle, str(elm), md.handle)
 		else:
-			raise ValueError("List doesn't not contain type of: int, bool, str, float, list, dict")
+			raise ValueError("{} doesn't contain type of: int, bool, str, float, list, dict".format(type(value).__name__))
 
 	@property
 	def value(self):
 		if self.is_integer:
 			return int(self)
-		elif self.is_string or self.is_raw:
+		elif self.is_string:
+			return str(self)
+		elif self.is_raw:
 			return bytes(self)
 		elif self.is_float:
 			return float(self)

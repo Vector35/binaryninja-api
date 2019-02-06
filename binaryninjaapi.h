@@ -3749,6 +3749,7 @@ namespace BinaryNinja
 		std::string GetName() const { return m_command.name; }
 		std::string GetDescription() const { return m_command.description; }
 		BNPluginCommandType GetType() const { return m_command.type; }
+		const BNPluginCommand* GetObject() const { return &m_command; }
 
 		bool IsValid(const PluginCommandContext& ctxt) const;
 		void Execute(const PluginCommandContext& ctxt) const;

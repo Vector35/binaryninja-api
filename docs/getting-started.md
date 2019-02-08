@@ -93,7 +93,7 @@ Switching views happens multiple ways. In some instances, it's automatic (clicki
  - `[SPACE]` : Toggle between linear view and graph view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
- - `u` : Undefine a symbol
+ - `u` : Undefine an existing symbol (only for removing new user-defined names)
  - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focuses the cross-reference pane
  - `;` : Adds a comment

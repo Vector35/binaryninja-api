@@ -1,0 +1,7 @@
+add_subdirectory(bin-info)
+add_subdirectory(breakpoint)
+add_subdirectory(cmdline_disasm)
+add_subdirectory(llil_parser)
+add_subdirectory(mlil_parser)
+add_subdirectory(print_syscalls)
+add_subdirectory(x86_extension)

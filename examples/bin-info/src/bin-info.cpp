@@ -10,11 +10,12 @@
 
 #include "binaryninjacore.h"
 #include "binaryninjaapi.h"
+#include "lowlevelilinstruction.h"
 
 using namespace BinaryNinja;
 using namespace std;
 
-#ifndef __WIN32__
+#ifndef _WIN32
 #include <libgen.h>
 #include <dlfcn.h>
 string get_plugins_directory()
@@ -30,7 +31,7 @@ string get_plugins_directory()
 #else
 string get_plugins_directory()
 {
-    return "C:\\Program Files\\Vector35\\Binary Ninja\\plugins\\";
+    return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
 }
 #endif
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    /* In order to initiate the bundled plugins properly, the location 
+    /* In order to initiate the bundled plugins properly, the location
      * of where bundled plugins directory is must be set. Since
      * libbinaryninjacore is in the path get the path to it and use it to
      * determine the plugins directory */
@@ -64,23 +65,24 @@ int main(int argc, char *argv[])
     InitCorePlugins();
     InitUserPlugins();
 
-    auto bd = BinaryData(new FileMetadata(), fname);
-    BinaryView *bv;
-
-    for (auto type : BinaryViewType::GetViewTypes()) {
-        if (type->IsTypeValidForData(&bd) && type->GetName() != "Raw") {
-            bv = type->Create(&bd);
+    Ref<BinaryData> bd = new BinaryData(new FileMetadata(), argv[1]);
+    Ref<BinaryView> bv;
+    for (auto type : BinaryViewType::GetViewTypes())
+    {
+        if (type->IsTypeValidForData(bd) && type->GetName() != "Raw")
+        {
+            bv = type->Create(bd);
             break;
         }
     }
 
-    if (bv->GetTypeName() == "Raw"){
-        cerr << "Error: Unable to get any other view type besides Raw";
-        exit(-1);
+    if (!bv || bv->GetTypeName() == "Raw")
+    {
+        fprintf(stderr, "Input file does not appear to be an exectuable\n");
+        return -1;
     }
 
-    bv->UpdateAnalysis();
-    while (bv->GetAnalysisProgress().state != IdleState);
+    bv->UpdateAnalysisAndWait();
 
     cout << "Target:   " << fname << endl << endl;
     cout << "TYPE:     " << bv->GetTypeName() << endl;

@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
-project(breakpoint CXX)
+project(x86_extension CXX)
 
 add_library(${PROJECT_NAME} SHARED
-    src/breakpoint.cpp)
+    src/x86_extension.cpp
+    src/asmx86/asmx86.c
+    src/asmx86/asmx86.h)
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)

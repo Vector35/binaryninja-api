@@ -33,6 +33,7 @@ CTestTestfile.cmake
 api-docs/source/python.rst
 api-docs/source/index.rst
 .coverage
+build
 # Make
 generator
 plugins/

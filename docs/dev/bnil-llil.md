@@ -2,7 +2,7 @@
 
 The Binary Ninja Intermediate Language (BNIL) is a semantic representation of the assembly language instructions for a native architecture in Binary Ninja.  BNIL is actually a family of intermediate languages that work together to provide functionality at different abstraction layers. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family. 
 
-![BNIL-LLIL Selected](/img/BNIL.png)
+![BNIL-LLIL Selected](../img/BNIL.png)
 
 The Lifted IL is very similar to the LLIL and is primarily of interest for Architecture plugin authors. If you're writing an analysis plugin, you'll always want to be working at LLIL or higher. During each stage of the lifting process a number of transformations take place, and each layer of IL can have different instructions. Because of this, you can not rely on an instruction from one layer existing in another.
 
@@ -10,7 +10,7 @@ The Lifted IL is very similar to the LLIL and is primarily of interest for Archi
 
 Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console. 
 
-![Low Level IL Option >](/img/llil_option.png)
+![Low Level IL Option >](../img/llil_option.png)
 
  - Download [chal1](../files/chal1) and open it with Binary Ninja
  - Next, bring up the `Low Level IL` view by clicking in the options pane at the bottom of the screen

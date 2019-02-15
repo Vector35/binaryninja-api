@@ -1,17 +1,12 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
-project(mlil_parser CXX)
+project(cmdline_disasm CXX)
 
 add_executable(${PROJECT_NAME}
-    src/mlil_parser.cpp)
+    src/disasm.cpp)
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)
-
-if (NOT WIN32)
-    target_link_libraries(${PROJECT_NAME}
-    dl)
-endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 11

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
-project(mlil_parser CXX)
+project(print_syscalls CXX)
 
 add_executable(${PROJECT_NAME}
-    src/mlil_parser.cpp)
+    src/arm-syscall.cpp)
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)

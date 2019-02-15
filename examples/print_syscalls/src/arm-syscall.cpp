@@ -9,11 +9,12 @@
 
 #include "binaryninjacore.h"
 #include "binaryninjaapi.h"
+#include "lowlevelilinstruction.h"
 
 using namespace BinaryNinja;
 using namespace std;
 
-#ifndef __WIN32__
+#ifndef _WIN32
 #include <libgen.h>
 #include <dlfcn.h>
 string get_plugins_directory()
@@ -29,7 +30,7 @@ string get_plugins_directory()
 #else
 string get_plugins_directory()
 {
-    return "C:\\Program Files\\Vector35\\Binary Ninja\\plugins\\";
+    return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
 }
 #endif
 
@@ -63,23 +64,24 @@ int main(int argc, char *argv[])
     InitCorePlugins();
     InitUserPlugins();
 
-    auto bd = BinaryData(new FileMetadata(), fname);
-    BinaryView *bv = 0;
-
-    for (auto type : BinaryViewType::GetViewTypesForData(&bd)) {
-        if (type->GetName() != "Raw") {
-            bv = type->Create(&bd);
+    Ref<BinaryData> bd = new BinaryData(new FileMetadata(), argv[1]);
+    Ref<BinaryView> bv;
+    for (auto type : BinaryViewType::GetViewTypes())
+    {
+        if (type->IsTypeValidForData(bd) && type->GetName() != "Raw")
+        {
+            bv = type->Create(bd);
             break;
         }
     }
 
-    if (!bv || bv->GetTypeName() == "Raw"){
-        cerr << "Error: Unable to get any other view type besides Raw";
-        exit(-1);
+    if (!bv || bv->GetTypeName() == "Raw")
+    {
+        fprintf(stderr, "Input file does not appear to be an exectuable\n");
+        return -1;
     }
 
-    bv->UpdateAnalysis();
-    while (bv->GetAnalysisProgress().state != IdleState);
+    bv->UpdateAnalysisAndWait();
 
     auto arch = bv->GetDefaultArchitecture();
     auto platform = bv->GetDefaultPlatform();
@@ -100,7 +102,7 @@ int main(int argc, char *argv[])
             auto instr = (*il_func)[il_func->GetIndexForInstruction(i)];
 
             if (instr.operation == LLIL_SYSCALL) {
-                auto reg_value = func->GetRegisterValueAtLowLevelILInstruction(i, reg);
+                auto reg_value = il_func->GetRegisterValueAtInstruction(reg, i);
 
                 cout <<  "System call address: 0x"
                      << hex << instr.address

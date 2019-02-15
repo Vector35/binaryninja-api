@@ -8,7 +8,7 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-#ifndef __WIN32__
+#ifndef _WIN32
 #include <libgen.h>
 #include <dlfcn.h>
 static string GetPluginsDirectory()
@@ -24,7 +24,7 @@ static string GetPluginsDirectory()
 #else
 static string GetPluginsDirectory()
 {
-	return "C:\\Program Files\\Vector35\\Binary Ninja\\plugins\\";
+	return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
 }
 #endif
 

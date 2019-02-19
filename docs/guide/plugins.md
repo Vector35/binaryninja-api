@@ -28,6 +28,8 @@ after cloning or else the submodules will not actually be downloaded.
 
 ### Installing via the API
 
+(NOTE THAT THIS API IS TEMPORARILY DISABLED TO BETTER SUPPORT A WIDER VARIETY OF LINUX DISTRIBUTIONS)
+
 Binary Ninja now offers a [PluginManager API] which can simplify the process of finding and installing plugins. From the console:
 
 ```
@@ -77,6 +79,10 @@ To start, we suggest you download the [sample plugin] as a template since it con
 - Next, update the `LICENSE`
 - For small scripts, you can include all the code inside of `__init__.py`, though we recommend for most larger scripts that init just act as an initializer and call into functions organized appropriately in other files.
 
+### Plugin Debugging Mode
+
+Available via the [preferences] dialog, enabling plugin debugging mode will not only enable additional IL types via the UI.
+
 ### UI Elements
 
 While it is possible to use Qt to directly create [UI enhancements] to Binary Ninja, we don't recommend it. First, there's a chance that we'll change UI platforms in the future (in particular because Qt's QWidget performance is actually getting worse with newer versions and they're trying to move everyone to QTQuick which might as well be Electron). Secondly, it is much more difficult for other users to install your plugin given the much more complicated dependencies and cross-platform headache of setup.
@@ -100,3 +106,4 @@ For the Personal edition, we recommend simply commenting out the `register_` fun
 [angr]: https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/angr_plugin.py
 [nampa]: https://github.com/kenoph/nampa
 [installing the API]: https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py
+[preferences the API]: https://docs.binary.ninja/getting-started.html#preferencesupdates

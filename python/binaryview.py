@@ -3701,9 +3701,39 @@ class BinaryView(object):
 		core.BNShowPlainTextReport(self.handle, title, contents)
 
 	def show_markdown_report(self, title, contents, plaintext = ""):
+		"""
+		``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line
+		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+
+		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
+			a simple text prompt is used.
+
+		:param str contents: markdown contents to display
+		:param str plaintext: Plain text version to display (used on the command-line)
+		:rtype: None
+		:Example:
+			>>> bv.show_markdown_report("title", "##Contents", "Plain text contents")
+			Plain text contents
+		"""
 		core.BNShowMarkdownReport(self.handle, title, contents, plaintext)
 
 	def show_html_report(self, title, contents, plaintext = ""):
+		"""
+		``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line
+		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+
+		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
+			a simple text prompt is used.
+
+		:param str contents: HTML contents to display
+		:param str plaintext: Plain text version to display (used on the command-line)
+		:rtype: None
+		:Example:
+			>>> bv.show_html_report("title", "<h1>Contents</h1>", "Plain text contents")
+			Plain text contents
+		"""
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
 
 	def show_graph_report(self, title, graph):

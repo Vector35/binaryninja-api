@@ -643,8 +643,8 @@ def show_plain_text_report(title, contents):
 def show_markdown_report(title, contents, plaintext=""):
 	"""
 	``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line
-	applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-	``binaryninja://?expr='_start'`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+	applications. This API doesn't support hyperlinking into the BinaryView, use the BinaryView.show_markdown_report
+	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used.
@@ -662,8 +662,8 @@ def show_markdown_report(title, contents, plaintext=""):
 def show_html_report(title, contents, plaintext=""):
 	"""
 	``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line
-	applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-	``binaryninja://?expr='_start'`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+	applications. This API doesn't support hyperlinking into the BinaryView, use the BinaryView.show_html_report
+	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used.

@@ -68,6 +68,16 @@ InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstr
 }
 
 
+InstructionTextToken::InstructionTextToken(const BNInstructionTextToken& token):
+	type(token.type), text(token.text), value(token.value), size(token.size), operand(token.operand),
+	context(token.context), confidence(token.confidence), address(token.address)
+{
+	typeNames.reserve(token.namesCount);
+	for (size_t j = 0; j < token.namesCount; j++)
+		typeNames.push_back(token.typeNames[j]);
+}
+
+
 InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
 {
 	return InstructionTextToken(type, context, text, address, value, size, operand, conf, typeNames);
@@ -113,14 +123,7 @@ vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenLi
 	vector<InstructionTextToken> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		vector<string> names;
-		names.reserve(tokens[i].namesCount);
-		for (size_t j = 0; j < tokens[i].namesCount; j++)
-			names.push_back(tokens[i].typeNames[j]);
-		result.emplace_back(tokens[i].type, tokens[i].context, tokens[i].text, tokens[i].address, tokens[i].value, tokens[i].size,
-			tokens[i].operand, tokens[i].confidence, names);
-	}
+		result.emplace_back(tokens[i]);
 	return result;
 }
 
@@ -2136,4 +2139,249 @@ void ArchitectureHook::Register(BNCustomArchitecture* callbacks)
 {
 	AddRefForRegistration();
 	m_object = BNRegisterArchitectureHook(m_base->GetObject(), callbacks);
+}
+
+
+DisassemblyTextRenderer::DisassemblyTextRenderer(Function* func, DisassemblySettings* settings)
+{
+	m_object = BNCreateDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+}
+
+
+DisassemblyTextRenderer::DisassemblyTextRenderer(LowLevelILFunction* func, DisassemblySettings* settings)
+{
+	m_object = BNCreateLowLevelILDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+}
+
+
+DisassemblyTextRenderer::DisassemblyTextRenderer(MediumLevelILFunction* func, DisassemblySettings* settings)
+{
+	m_object = BNCreateMediumLevelILDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+}
+
+
+DisassemblyTextRenderer::DisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer)
+{
+	m_object = renderer;
+}
+
+
+Ref<BasicBlock> DisassemblyTextRenderer::GetBasicBlock() const
+{
+	BNBasicBlock* block = BNGetDisassemblyTextRendererBasicBlock(m_object);
+	if (block)
+		return new BasicBlock(block);
+	return nullptr;
+}
+
+
+Ref<Architecture> DisassemblyTextRenderer::GetArchitecture() const
+{
+	return new CoreArchitecture(BNGetDisassemblyTextRendererArchitecture(m_object));
+}
+
+
+Ref<DisassemblySettings> DisassemblyTextRenderer::GetSettings() const
+{
+	return new DisassemblySettings(BNGetDisassemblyTextRendererSettings(m_object));
+}
+
+
+Ref<Function> DisassemblyTextRenderer::GetFunction() const
+{
+	return new Function(BNGetDisassemblyTextRendererFunction(m_object));
+}
+
+
+Ref<LowLevelILFunction> DisassemblyTextRenderer::GetLowLevelILFunction() const
+{
+	BNLowLevelILFunction* result = BNGetDisassemblyTextRendererLowLevelILFunction(m_object);
+	if (result)
+		return new LowLevelILFunction(result);
+	return nullptr;
+}
+
+
+Ref<MediumLevelILFunction> DisassemblyTextRenderer::GetMediumLevelILFunction() const
+{
+	BNMediumLevelILFunction* result = BNGetDisassemblyTextRendererMediumLevelILFunction(m_object);
+	if (result)
+		return new MediumLevelILFunction(result);
+	return nullptr;
+}
+
+
+void DisassemblyTextRenderer::SetBasicBlock(BasicBlock* block)
+{
+	BNSetDisassemblyTextRendererBasicBlock(m_object, block ? block->GetObject() : nullptr);
+}
+
+
+void DisassemblyTextRenderer::SetArchitecture(Architecture* arch)
+{
+	BNSetDisassemblyTextRendererArchitecture(m_object, arch->GetObject());
+}
+
+
+void DisassemblyTextRenderer::SetSettings(DisassemblySettings* settings)
+{
+	BNSetDisassemblyTextRendererSettings(m_object, settings ? settings->GetObject() : nullptr);
+}
+
+
+bool DisassemblyTextRenderer::IsIL() const
+{
+	return BNIsILDisassemblyTextRenderer(m_object);
+}
+
+
+bool DisassemblyTextRenderer::HasDataFlow() const
+{
+	return BNDisassmblyTextRendererHasDataFlow(m_object);
+}
+
+
+void DisassemblyTextRenderer::GetInstructionAnnotations(vector<InstructionTextToken>& tokens, uint64_t addr)
+{
+	size_t count = 0;
+	BNInstructionTextToken* result = BNGetDisassemblyTextRendererInstructionAnnotations(m_object, addr, &count);
+	vector<InstructionTextToken> newTokens;
+	newTokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result, count);
+	tokens.insert(tokens.end(), newTokens.begin(), newTokens.end());
+}
+
+
+bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
+	vector<InstructionTextToken>& tokens, uint64_t& displayAddr)
+{
+	BNInstructionTextToken* outTokens = nullptr;
+	size_t count = 0;
+	if (!BNGetDisassemblyTextRendererInstructionText(m_object, addr, &len, &outTokens, &count, &displayAddr))
+		return false;
+	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(outTokens, count);
+	return true;
+}
+
+
+bool DisassemblyTextRenderer::GetDisassemblyText(uint64_t addr, size_t& len, vector<DisassemblyTextLine>& lines)
+{
+	BNDisassemblyTextLine* result = nullptr;
+	size_t count = 0;
+	if (!BNGetDisassemblyTextRendererLines(m_object, addr, &len, &result, &count))
+		return false;
+
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = result[i].addr;
+		line.instrIndex = result[i].instrIndex;
+		line.highlight = result[i].highlight;
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		lines.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(result, count);
+	return true;
+}
+
+
+void DisassemblyTextRenderer::ResetDeduplicatedComments()
+{
+	BNResetDisassemblyTextRendererDeduplicatedComments(m_object);
+}
+
+
+bool DisassemblyTextRenderer::AddSymbolToken(vector<InstructionTextToken>& tokens, uint64_t addr, size_t size, size_t operand)
+{
+	BNInstructionTextToken* result = nullptr;
+	size_t count = 0;
+	if (!BNGetDisassemblyTextRendererSymbolTokens(m_object, addr, size, operand, &result, &count))
+		return false;
+	vector<InstructionTextToken> newTokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result, count);
+	tokens.insert(tokens.end(), newTokens.begin(), newTokens.end());
+	return true;
+}
+
+
+void DisassemblyTextRenderer::AddStackVariableReferenceTokens(vector<InstructionTextToken>& tokens,
+	const StackVariableReference& ref)
+{
+	BNStackVariableReference stackRef;
+	stackRef.sourceOperand = ref.sourceOperand;
+	stackRef.type = ref.type.GetValue() ? ref.type->GetObject() : nullptr;
+	stackRef.typeConfidence = ref.type.GetConfidence();
+	stackRef.name = BNAllocString(ref.name.c_str());
+	stackRef.varIdentifier = ref.var.ToIdentifier();
+	stackRef.referencedOffset = ref.referencedOffset;
+	stackRef.size = ref.size;
+
+	size_t count = 0;
+	BNInstructionTextToken* result = BNGetDisassemblyTextRendererStackVariableReferenceTokens(
+		m_object, &stackRef, &count);
+	BNFreeString(stackRef.name);
+
+	vector<InstructionTextToken> newTokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result, count);
+	tokens.insert(tokens.end(), newTokens.begin(), newTokens.end());
+}
+
+
+bool DisassemblyTextRenderer::IsIntegerToken(BNInstructionTextTokenType type)
+{
+	return BNIsIntegerToken(type);
+}
+
+
+void DisassemblyTextRenderer::AddIntegerToken(vector<InstructionTextToken>& tokens, const InstructionTextToken& token,
+	Architecture* arch, uint64_t addr)
+{
+	BNInstructionTextToken inToken;
+	ConvertInstructionTextToken(token, &inToken);
+
+	size_t count = 0;
+	BNInstructionTextToken* result = BNGetDisassemblyTextRendererIntegerTokens(m_object, &inToken,
+		arch ? arch->GetObject() : nullptr, addr, &count);
+
+	vector<InstructionTextToken> newTokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result, count);
+	tokens.insert(tokens.end(), newTokens.begin(), newTokens.end());
+
+	BNFreeString(inToken.text);
+	for (size_t i = 0; i < inToken.namesCount; i++)
+		BNFreeString(inToken.typeNames[i]);
+	delete[] inToken.typeNames;
+}
+
+
+void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<DisassemblyTextLine>& lines,
+	const string& comment, bool hasAutoAnnotations, const string& leadingSpaces)
+{
+	BNDisassemblyTextLine inLine;
+	inLine.addr = line.addr;
+	inLine.instrIndex = line.instrIndex;
+	inLine.highlight = line.highlight;
+	inLine.count = line.tokens.size();
+	inLine.tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
+
+	size_t count = 0;
+	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(m_object, &inLine, &count,
+		comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str());
+
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = result[i].addr;
+		line.instrIndex = result[i].instrIndex;
+		line.highlight = result[i].highlight;
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		lines.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(result, count);
+	for (size_t i = 0; i < inLine.count; i++)
+	{
+		BNFreeString(inLine.tokens[i].text);
+		for (size_t j = 0; j < inLine.tokens[j].namesCount; j++)
+			BNFreeString(inLine.tokens[i].typeNames[j]);
+		delete[] inLine.tokens[i].typeNames;
+	}
+	delete[] inLine.tokens;
 }

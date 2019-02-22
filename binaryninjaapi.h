@@ -1048,6 +1048,7 @@ namespace BinaryNinja
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
 			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
 			size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE, const std::vector<std::string>& typeName={});
+		InstructionTextToken(const BNInstructionTextToken& token);
 
 		InstructionTextToken WithConfidence(uint8_t conf);
 		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
@@ -4385,5 +4386,50 @@ namespace BinaryNinja
 	public:
 		static void RegisterGenericDataRenderer(DataRenderer* renderer);
 		static void RegisterTypeSpecificDataRenderer(DataRenderer* renderer);
+	};
+
+	class DisassemblyTextRenderer: public CoreRefCountObject<BNDisassemblyTextRenderer,
+		BNNewDisassemblyTextRendererReference, BNFreeDisassemblyTextRenderer>
+	{
+	public:
+		DisassemblyTextRenderer(Function* func, DisassemblySettings* settings = nullptr);
+		DisassemblyTextRenderer(LowLevelILFunction* func, DisassemblySettings* settings = nullptr);
+		DisassemblyTextRenderer(MediumLevelILFunction* func, DisassemblySettings* settings = nullptr);
+		DisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer);
+
+		Ref<Function> GetFunction() const;
+		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
+		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+
+		Ref<BasicBlock> GetBasicBlock() const;
+		Ref<Architecture> GetArchitecture() const;
+		Ref<DisassemblySettings> GetSettings() const;
+		void SetBasicBlock(BasicBlock* block);
+		void SetArchitecture(Architecture* arch);
+		void SetSettings(DisassemblySettings* settings);
+
+		virtual bool IsIL() const;
+		virtual bool HasDataFlow() const;
+
+		virtual void GetInstructionAnnotations(std::vector<InstructionTextToken>& tokens, uint64_t addr);
+		virtual bool GetInstructionText(uint64_t addr, size_t& len,
+			std::vector<InstructionTextToken>& tokens, uint64_t& displayAddr);
+
+		virtual bool GetDisassemblyText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
+		void ResetDeduplicatedComments();
+
+		bool AddSymbolToken(std::vector<InstructionTextToken>& tokens, uint64_t addr, size_t size, size_t operand);
+		void AddStackVariableReferenceTokens(std::vector<InstructionTextToken>& tokens,
+			const StackVariableReference& ref);
+
+		static bool IsIntegerToken(BNInstructionTextTokenType type);
+		void AddIntegerToken(std::vector<InstructionTextToken>& tokens, const InstructionTextToken& token,
+			Architecture* arch, uint64_t addr);
+
+		void WrapComment(DisassemblyTextLine& line,
+			std::vector<DisassemblyTextLine>& lines,
+			const std::string& comment,
+			bool hasAutoAnnotations,
+			const std::string& leadingSpaces="  ");
 	};
 }

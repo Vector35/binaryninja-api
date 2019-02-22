@@ -1856,3 +1856,195 @@ class InstructionTextToken(object):
 
 	def __repr__(self):
 		return repr(self.text)
+
+
+class DisassemblyTextRenderer(object):
+	def __init__(self, func = None, settings = None, handle = None):
+		if handle is None:
+			if func is None:
+				raise ValueError("function required for disassembly")
+			settings_obj = None
+			if settings is not None:
+				settings_obj = settings.handle
+			if isinstance(func, Function):
+				self.handle = core.BNCreateDisassemblyTextRenderer(func.handle, settings_obj)
+			elif isinstance(func, binaryninja.lowlevelil.LowLevelILFunction):
+				self.handle = core.BNCreateLowLevelILDisassemblyTextRenderer(func.handle, settings_obj)
+			elif isinstance(func, binaryninja.mediumlevelil.MediumLevelILFunction):
+				self.handle = core.BNCreateMediumLevelILDisassemblyTextRenderer(func.handle, settings_obj)
+			else:
+				raise TypeError("invalid function object")
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeDisassemblyTextRenderer(self.handle)
+
+	@property
+	def function(self):
+		return Function(handle = core.BNGetDisassemblyTextRendererFunction(self.handle))
+
+	@property
+	def il_function(self):
+		llil = core.BNGetDisassemblyTextRendererLowLevelILFunction(self.handle)
+		if llil:
+			return binaryninja.lowlevelil.LowLevelILFunction(handle = llil)
+		mlil = core.BNGetDisassemblyTextRendererMediumLevelILFunction(self.handle)
+		if mlil:
+			return binaryninja.mediumlevelil.MediumLevelILFunction(handle = mlil)
+		return None
+
+	@property
+	def basic_block(self):
+		result = core.BNGetDisassemblyTextRendererBasicBlock(self.handle)
+		if result:
+			return binaryninja.basicblock.BasicBlock(handle = result)
+		return None
+
+	@basic_block.setter
+	def basic_block(self, block):
+		if block is not None:
+			core.BNSetDisassemblyTextRendererBasicBlock(self.handle, block.handle)
+		core.BNSetDisassemblyTextRendererBasicBlock(self.handle, None)
+
+	@property
+	def arch(self):
+		return binaryninja.architecture.Architecture(handle = core.BNSetDisassemblyTextRendererArchitecture(self.handle))
+
+	@arch.setter
+	def arch(self, arch):
+		core.BNSetDisassemblyTextRendererArchitecture(self.handle, arch.handle)
+
+	@property
+	def settings(self):
+		return DisassemblySettings(handle = core.BNGetDisassemblyTextRendererSettings(self.handle))
+
+	@settings.setter
+	def settings(self, settings):
+		if settings is not None:
+			core.BNSetDisassemblyTextRendererSettings(self.handle, settings.handle)
+		core.BNSetDisassemblyTextRendererSettings(self.handle, None)
+
+	@property
+	def il(self):
+		return core.BNIsILDisassemblyTextRenderer(self.handle)
+
+	@property
+	def has_data_flow(self):
+		return core.BNDisassmblyTextRendererHasDataFlow(self.handle)
+
+	def get_instruction_annotations(self, addr):
+		count = ctypes.c_ulonglong()
+		tokens = core.BNGetDisassemblyTextRendererInstructionAnnotations(self.handle, addr, count)
+		result = InstructionTextToken.get_instruction_lines(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
+		return result
+
+	def get_instruction_text(self, addr):
+		count = ctypes.c_ulonglong()
+		length = ctypes.c_ulonglong()
+		display_addr = ctypes.c_ulonglong()
+		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
+		if not core.BNGetDisassemblyTextRendererInstructionText(self.handle, addr, length, tokens, count, display_addr):
+			return None, 0, 0
+		result = InstructionTextToken.get_instruction_lines(tokens, count.value)
+		core.BNFreeInstructionText(tokens, count.value)
+		return result, length.value, display_addr.value
+
+	def get_disassembly_text(self, addr):
+		count = ctypes.c_ulonglong()
+		length = ctypes.c_ulonglong()
+		length.value = 0
+		lines = ctypes.POINTER(core.BNDisassemblyTextLine)()
+		ok = core.BNGetDisassemblyTextRendererLines(self.handle, addr, length, lines, count)
+		if not ok:
+			return None, 0
+		il_function = self.il_function
+		result = []
+		for i in range(0, count.value):
+			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and (il_function is not None):
+				il_instr = il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
+			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
+			tokens = InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
+			result.append(DisassemblyTextLine(tokens, addr, il_instr, color))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
+		return (result, length.value)
+
+	def reset_deduplicated_comments(self):
+		core.BNResetDisassemblyTextRendererDeduplicatedComments(self.handle)
+
+	def add_symbol_token(self, tokens, addr, size, operand = None):
+		if operand is None:
+			operand = 0xffffffff
+		count = ctypes.c_ulonglong()
+		new_tokens = ctypes.POINTER(core.BNInstructionTextToken)()
+		if not core.BNGetDisassemblyTextRendererSymbolTokens(self.handle, addr, size, operand, new_tokens, count):
+			return False
+		result = binaryninja.function.InstructionTextToken.get_instruction_lines(new_tokens, count.value)
+		tokens += result
+		core.BNFreeInstructionText(new_tokens, count.value)
+		return True
+
+	def add_stack_var_reference_tokens(self, tokens, ref):
+		stack_ref = core.BNStackVariableReference()
+		if ref.source_operand is None:
+			stack_ref.sourceOperand = 0xffffffff
+		else:
+			stack_ref.sourceOperand = ref.source_operand
+		if ref.type is None:
+			stack_ref.type = None
+			stack_ref.typeConfidence = 0
+		else:
+			stack_ref.type = ref.type.handle
+			stack_ref.typeConfidence = ref.type.confidence
+		stack_ref.name = ref.name
+		stack_ref.varIdentifier = ref.var.identifier
+		stack_ref.referencedOffset = ref.referenced_offset
+		stack_ref.size = ref.size
+		count = ctypes.c_ulonglong()
+		new_tokens = core.BNGetDisassemblyTextRendererStackVariableReferenceTokens(self.handle, stack_ref, count)
+		result = InstructionTextToken.get_instruction_lines(new_tokens, count.value)
+		tokens += result
+		core.BNFreeInstructionText(new_tokens, count.value)
+
+	@classmethod
+	def is_integer_token(self, token):
+		return core.BNIsIntegerToken(token)
+
+	def add_integer_token(self, tokens, int_token, addr, arch = None):
+		if arch is not None:
+			arch = arch.handle
+		in_token_obj = InstructionTextToken.get_instruction_lines([int_token])
+		count = ctypes.c_ulonglong()
+		new_tokens = core.BNGetDisassemblyTextRendererIntegerTokens(self.handle, in_token_obj, arch, addr, count)
+		result = InstructionTextToken.get_instruction_lines(new_tokens, count.value)
+		tokens += result
+		core.BNFreeInstructionText(new_tokens, count.value)
+
+	def wrap_comment(self, lines, cur_line, comment, has_auto_annotations, leading_spaces = "  "):
+		cur_line_obj = core.BNDisassemblyTextLine()
+		cur_line_obj.addr = cur_line.address
+		if cur_line.il_instruction is None:
+			cur_line_obj.instrIndex = 0xffffffffffffffff
+		else:
+			cur_line_obj.instrIndex = cur_line.il_instruction.instr_index
+		cur_line_obj.highlight = cur_line.highlight._get_core_struct()
+		cur_line_obj.tokens = InstructionTextToken.get_instruction_lines(cur_line.tokens)
+		cur_line_obj.count = len(cur_line.tokens)
+		count = ctypes.c_ulonglong()
+		new_lines = core.BNDisassemblyTextRendererWrapComment(self.handle, cur_line_obj, count, comment,
+			has_auto_annotations, leading_spaces)
+		il_function = self.il_function
+		for i in range(0, count.value):
+			addr = new_lines[i].addr
+			if (new_lines[i].instrIndex != 0xffffffffffffffff) and (il_function is not None):
+				il_instr = il_function[new_lines[i].instrIndex]
+			else:
+				il_instr = None
+			color = highlight.HighlightColor._from_core_struct(new_lines[i].highlight)
+			tokens = InstructionTextToken.get_instruction_lines(new_lines[i].tokens, new_lines[i].count)
+			lines.append(DisassemblyTextLine(tokens, addr, il_instr, color))
+		core.BNFreeDisassemblyTextLines(new_lines, count.value)

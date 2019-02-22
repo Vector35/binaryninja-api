@@ -355,7 +355,7 @@ class FlowGraph(object):
 			graph = self.update()
 			if graph is None:
 				return None
-			return core.BNNewFlowGraphReference(graph.handle)
+			return ctypes.cast(core.BNNewFlowGraphReference(graph.handle), ctypes.c_void_p).value
 		except:
 			log.log_error(traceback.format_exc())
 			return None

@@ -159,6 +159,7 @@ extern "C"
 	struct BNDataBuffer;
 	struct BNDataRenderer;
 	struct BNDataRendererContainer;
+	struct BNDisassemblyTextRenderer;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
@@ -2608,6 +2609,43 @@ extern "C"
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDisassemblyTextLines(BNDisassemblyTextLine* lines, size_t count);
+
+	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateDisassemblyTextRenderer(BNFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateLowLevelILDisassemblyTextRenderer(BNLowLevelILFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateMediumLevelILDisassemblyTextRenderer(BNMediumLevelILFunction* func,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNNewDisassemblyTextRendererReference(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI void BNFreeDisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNFunction* BNGetDisassemblyTextRendererFunction(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetDisassemblyTextRendererLowLevelILFunction(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetDisassemblyTextRendererMediumLevelILFunction(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetDisassemblyTextRendererBasicBlock(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNArchitecture* BNGetDisassemblyTextRendererArchitecture(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNDisassemblySettings* BNGetDisassemblyTextRendererSettings(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI void BNSetDisassemblyTextRendererBasicBlock(BNDisassemblyTextRenderer* renderer, BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNSetDisassemblyTextRendererArchitecture(BNDisassemblyTextRenderer* renderer, BNArchitecture* arch);
+	BINARYNINJACOREAPI void BNSetDisassemblyTextRendererSettings(BNDisassemblyTextRenderer* renderer, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI bool BNIsILDisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI bool BNDisassmblyTextRendererHasDataFlow(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererInstructionAnnotations(
+		BNDisassemblyTextRenderer* renderer, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererInstructionText(BNDisassemblyTextRenderer* renderer,
+		uint64_t addr, size_t* len, BNInstructionTextToken** result, size_t* count, uint64_t* displayAddr);
+	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererLines(BNDisassemblyTextRenderer* renderer,
+		uint64_t addr, size_t* len, BNDisassemblyTextLine** result, size_t* count);
+	BINARYNINJACOREAPI void BNResetDisassemblyTextRendererDeduplicatedComments(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererSymbolTokens(BNDisassemblyTextRenderer* renderer, uint64_t addr,
+		size_t size, size_t operand, BNInstructionTextToken** result, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererStackVariableReferenceTokens(
+		BNDisassemblyTextRenderer* renderer, BNStackVariableReference* ref, size_t* count);
+	BINARYNINJACOREAPI bool BNIsIntegerToken(BNInstructionTextTokenType type);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererIntegerTokens(BNDisassemblyTextRenderer* renderer,
+		BNInstructionTextToken* token, BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNDisassemblyTextRendererWrapComment(BNDisassemblyTextRenderer* renderer,
+		const BNDisassemblyTextLine* inLine, size_t* outLineCount, const char* comment, bool hasAutoAnnotations,
+		const char* leadingSpaces);
 
 	BINARYNINJACOREAPI void BNMarkFunctionAsRecentlyUsed(BNFunction* func);
 	BINARYNINJACOREAPI void BNMarkBasicBlockAsRecentlyUsed(BNBasicBlock* block);

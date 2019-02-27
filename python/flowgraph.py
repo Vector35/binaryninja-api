@@ -78,7 +78,7 @@ class FlowGraphNode(object):
 
 	@property
 	def basic_block(self):
-		"""Basic block associated with this part of the flow graph (read-only)"""
+		"""Basic block associated with this part of the flow graph"""
 		block = core.BNGetFlowGraphBasicBlock(self.handle)
 		if not block:
 			return None
@@ -99,6 +99,13 @@ class FlowGraphNode(object):
 		else:
 			block = basicblock.BasicBlock(block, view)
 		return block
+
+	@basic_block.setter
+	def basic_block(self, block):
+		if block is None:
+			core.BNSetFlowGraphBasicBlock(self.handle, None)
+		else:
+			core.BNSetFlowGraphBasicBlock(self.handle, block.handle)
 
 	@property
 	def x(self):

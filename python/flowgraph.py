@@ -24,7 +24,7 @@ import traceback
 
 # Binary Ninja components
 import binaryninja
-from binaryninja.enums import (BranchType, InstructionTextTokenType, HighlightStandardColor)
+from binaryninja.enums import (BranchType, InstructionTextTokenType, HighlightStandardColor, FlowGraphOption)
 from binaryninja import _binaryninjacore as core
 from binaryninja import function
 from binaryninja import binaryview
@@ -411,6 +411,20 @@ class FlowGraph(object):
 		core.BNSetFunctionForFlowGraph(self.handle, func)
 
 	@property
+	def view(self):
+		"""Binary view for a flow graph"""
+		view = core.BNGetViewForFlowGraph(self.handle)
+		if view is None:
+			return None
+		return binaryview.BinaryView(handle = view)
+
+	@view.setter
+	def view(self, view):
+		if view is not None:
+			view = view.handle
+		core.BNSetViewForFlowGraph(self.handle, view)
+
+	@property
 	def complete(self):
 		"""Whether flow graph layout is complete (read-only)"""
 		return core.BNIsFlowGraphLayoutComplete(self.handle)
@@ -502,6 +516,60 @@ class FlowGraph(object):
 			core.BNSetFlowGraphMediumLevelILFunction(self.handle, None)
 		else:
 			raise TypeError("expected IL function for setting il_function property")
+
+	@property
+	def uses_block_highlights(self):
+		"""Set if flow graph uses the standard basic block highlighting settings"""
+		return self.is_option_set(FlowGraphOption.FlowGraphUsesBlockHighlights)
+
+	@uses_block_highlights.setter
+	def uses_block_highlights(self, value):
+		self.set_option(FlowGraphOption.FlowGraphUsesBlockHighlights, value)
+
+	@property
+	def uses_instruction_highlights(self):
+		"""Set if flow graph uses the standard instruction highlighting settings"""
+		return self.is_option_set(FlowGraphOption.FlowGraphUsesInstructionHighlights)
+
+	@uses_instruction_highlights.setter
+	def uses_instruction_highlights(self, value):
+		self.set_option(FlowGraphOption.FlowGraphUsesInstructionHighlights, value)
+
+	@property
+	def includes_user_comments(self):
+		"""Set if flow graph includes comments made by the user"""
+		return self.is_option_set(FlowGraphOption.FlowGraphIncludesUserComments)
+
+	@includes_user_comments.setter
+	def includes_user_comments(self, value):
+		self.set_option(FlowGraphOption.FlowGraphIncludesUserComments, value)
+
+	@property
+	def allows_patching(self):
+		"""Set if flow graph should allow modification of code from within the graph view"""
+		return self.is_option_set(FlowGraphOption.FlowGraphAllowsPatching)
+
+	@allows_patching.setter
+	def allows_patching(self, value):
+		self.set_option(FlowGraphOption.FlowGraphAllowsPatching, value)
+
+	@property
+	def allows_inline_instruction_editing(self):
+		"""Set if flow graph should allow inline instruction editing (assembly only)"""
+		return self.is_option_set(FlowGraphOption.FlowGraphAllowsInlineInstructionEditing)
+
+	@allows_inline_instruction_editing.setter
+	def allows_inline_instruction_editing(self, value):
+		self.set_option(FlowGraphOption.FlowGraphAllowsInlineInstructionEditing, value)
+
+	@property
+	def shows_secondary_reg_highlighting(self):
+		"""Set if flow graph should highlight associated registers in the UI"""
+		return self.is_option_set(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting)
+
+	@shows_secondary_reg_highlighting.setter
+	def shows_secondary_reg_highlighting(self, value):
+		self.set_option(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting, value)
 
 	def __setattr__(self, name, value):
 		try:
@@ -603,6 +671,12 @@ class FlowGraph(object):
 		:rtype: FlowGraph
 		"""
 		return None
+
+	def set_option(self, option, value = True):
+		core.BNSetFlowGraphOption(self.handle, option, value)
+
+	def is_option_set(self, option):
+		return core.BNIsFlowGraphOptionSet(self.handle, option)
 
 
 class CoreFlowGraph(FlowGraph):

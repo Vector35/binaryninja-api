@@ -702,6 +702,16 @@ extern "C"
 		PointerDisplayType
 	};
 
+	enum BNFlowGraphOption
+	{
+		FlowGraphUsesBlockHighlights,
+		FlowGraphUsesInstructionHighlights,
+		FlowGraphIncludesUserComments,
+		FlowGraphAllowsPatching,
+		FlowGraphAllowsInlineInstructionEditing,
+		FlowGraphShowsSecondaryRegisterHighlighting
+	};
+
 	struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
@@ -2860,6 +2870,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeFlowGraph(BNFlowGraph* graph);
 	BINARYNINJACOREAPI BNFunction* BNGetFunctionForFlowGraph(BNFlowGraph* graph);
 	BINARYNINJACOREAPI void BNSetFunctionForFlowGraph(BNFlowGraph* graph, BNFunction* func);
+	BINARYNINJACOREAPI BNBinaryView* BNGetViewForFlowGraph(BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNSetViewForFlowGraph(BNFlowGraph* graph, BNBinaryView* view);
 
 	BINARYNINJACOREAPI int BNGetHorizontalFlowGraphNodeMargin(BNFlowGraph* graph);
 	BINARYNINJACOREAPI int BNGetVerticalFlowGraphNodeMargin(BNFlowGraph* graph);
@@ -2915,6 +2927,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFinishPrepareForLayout(BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI BNFlowGraph* BNUpdateFlowGraph(BNFlowGraph* graph);
+
+	BINARYNINJACOREAPI void BNSetFlowGraphOption(BNFlowGraph* graph, BNFlowGraphOption option, bool value);
+	BINARYNINJACOREAPI bool BNIsFlowGraphOptionSet(BNFlowGraph* graph, BNFlowGraphOption option);
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,

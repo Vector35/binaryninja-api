@@ -148,9 +148,24 @@ Ref<Function> FlowGraph::GetFunction() const
 }
 
 
+Ref<BinaryView> FlowGraph::GetView() const
+{
+	BNBinaryView* view = BNGetViewForFlowGraph(m_object);
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
+}
+
+
 void FlowGraph::SetFunction(Function* func)
 {
 	BNSetFunctionForFlowGraph(m_object, func ? func->GetObject() : nullptr);
+}
+
+
+void FlowGraph::SetView(BinaryView* view)
+{
+	BNSetViewForFlowGraph(m_object, view ? view->GetObject() : nullptr);
 }
 
 
@@ -341,6 +356,18 @@ void FlowGraph::Show(const string& title)
 Ref<FlowGraph> FlowGraph::Update()
 {
 	return nullptr;
+}
+
+
+void FlowGraph::SetOption(BNFlowGraphOption option, bool value)
+{
+	BNSetFlowGraphOption(m_object, option, value);
+}
+
+
+bool FlowGraph::IsOptionSet(BNFlowGraphOption option)
+{
+	return BNIsFlowGraphOptionSet(m_object, option);
 }
 
 

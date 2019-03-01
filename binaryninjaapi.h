@@ -2776,7 +2776,9 @@ namespace BinaryNinja
 		FlowGraph();
 
 		Ref<Function> GetFunction() const;
+		Ref<BinaryView> GetView() const;
 		void SetFunction(Function* func);
+		void SetView(BinaryView* view);
 
 		int GetHorizontalNodeMargin() const;
 		int GetVerticalNodeMargin() const;
@@ -2805,6 +2807,9 @@ namespace BinaryNinja
 		void Show(const std::string& title);
 
 		virtual Ref<FlowGraph> Update();
+
+		void SetOption(BNFlowGraphOption option, bool value = true);
+		bool IsOptionSet(BNFlowGraphOption option);
 	};
 
 	class CoreFlowGraph: public FlowGraph

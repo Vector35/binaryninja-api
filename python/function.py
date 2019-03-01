@@ -1932,7 +1932,7 @@ class DisassemblyTextRenderer(object):
 
 	@property
 	def has_data_flow(self):
-		return core.BNDisassmblyTextRendererHasDataFlow(self.handle)
+		return core.BNDisassemblyTextRendererHasDataFlow(self.handle)
 
 	def get_instruction_annotations(self, addr):
 		count = ctypes.c_ulonglong()

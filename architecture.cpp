@@ -2237,7 +2237,7 @@ bool DisassemblyTextRenderer::IsIL() const
 
 bool DisassemblyTextRenderer::HasDataFlow() const
 {
-	return BNDisassmblyTextRendererHasDataFlow(m_object);
+	return BNDisassemblyTextRendererHasDataFlow(m_object);
 }
 
 

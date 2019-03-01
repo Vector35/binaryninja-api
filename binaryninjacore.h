@@ -2628,7 +2628,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyTextRendererArchitecture(BNDisassemblyTextRenderer* renderer, BNArchitecture* arch);
 	BINARYNINJACOREAPI void BNSetDisassemblyTextRendererSettings(BNDisassemblyTextRenderer* renderer, BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI bool BNIsILDisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer);
-	BINARYNINJACOREAPI bool BNDisassmblyTextRendererHasDataFlow(BNDisassemblyTextRenderer* renderer);
+	BINARYNINJACOREAPI bool BNDisassemblyTextRendererHasDataFlow(BNDisassemblyTextRenderer* renderer);
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererInstructionAnnotations(
 		BNDisassemblyTextRenderer* renderer, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererInstructionText(BNDisassemblyTextRenderer* renderer,

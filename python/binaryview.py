@@ -2492,11 +2492,52 @@ class BinaryView(object):
 		return result
 
 	def get_data_refs(self, addr, length=None):
+		"""
+		``get_data_refs`` returns a list of virtual addresses of data which references ``addr``. Optionally specifying
+		a length. When ``length`` is set ``get_data_refs`` returns the data which references in the range ``addr``-``addr``+``length``.
+
+		:param int addr: virtual address to query for references
+		:param int length: optional length of query
+		:return: list of integers
+		:rtype: list(integer)
+		:Example:
+
+			>>> bv.get_data_refs(here)
+			[4203812]
+			>>>
+		"""
 		count = ctypes.c_ulonglong(0)
 		if length is None:
 			refs = core.BNGetDataReferences(self.handle, addr, count)
 		else:
 			refs = core.BNGetDataReferencesInRange(self.handle, addr, length, count)
+
+		result = []
+		for i in range(0, count.value):
+			result.append(refs[i])
+		core.BNFreeDataReferences(refs, count.value)
+		return result
+
+	def get_data_refs_from(self, addr, length=None):
+		"""
+		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
+		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
+
+		:param int addr: virtual address to query for references
+		:param int length: optional length of query
+		:return: list of integers
+		:rtype: list(integer)
+		:Example:
+
+			>>> bv.get_data_refs_from(here)
+			[4200327]
+			>>>
+		"""
+		count = ctypes.c_ulonglong(0)
+		if length is None:
+			refs = core.BNGetDataReferencesFrom(self.handle, addr, count)
+		else:
+			refs = core.BNGetDataReferencesFromInRange(self.handle, addr, length, count)
 
 		result = []
 		for i in range(0, count.value):

@@ -1435,6 +1435,26 @@ vector<uint64_t> BinaryView::GetDataReferences(uint64_t addr, uint64_t len)
 }
 
 
+vector<uint64_t> BinaryView::GetDataReferencesFrom(uint64_t addr)
+{
+	size_t count;
+	uint64_t* refs = BNGetDataReferencesFrom(m_object, addr, &count);
+	vector<uint64_t> result(refs, &refs[count]);
+	BNFreeDataReferences(refs);
+	return result;
+}
+
+
+vector<uint64_t> BinaryView::GetDataReferencesFrom(uint64_t addr, uint64_t len)
+{
+	size_t count;
+	uint64_t* refs = BNGetDataReferencesFromInRange(m_object, addr, len, &count);
+	vector<uint64_t> result(refs, &refs[count]);
+	BNFreeDataReferences(refs);
+	return result;
+}
+
+
 Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace)
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();

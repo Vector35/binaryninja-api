@@ -2656,6 +2656,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeCodeReferences(BNReferenceSource* refs, size_t count);
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferences(BNBinaryView* view, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesInRange(BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count);
+	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesFrom(BNBinaryView* view, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesFromInRange(BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDataReferences(uint64_t* refs);
 
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);

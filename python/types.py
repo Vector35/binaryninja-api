@@ -421,6 +421,9 @@ class Type(object):
 		result = core.BNGetTypeStackAdjustment(self.handle)
 		return SizeWithConfidence(result.value, confidence = result.confidence)
 
+	def __len__(self):
+		return self.width
+
 	def __str__(self):
 		platform = None
 		if self.platform is not None:

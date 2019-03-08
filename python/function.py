@@ -389,6 +389,41 @@ class Function(object):
 	def __hash__(self):
 		return hash((self.start, self.arch.name, self.platform.name))
 
+	def __getitem__(self, i):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		try:
+			if i < 0:
+				i = count.value + i
+			if i < 0 or i >= count.value:
+				raise IndexError("index out of range")
+			block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
+			return block
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		try:
+			for i in range(0, count.value):
+				yield binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
+
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<func: %s@%#x>" % (arch.name, self.start)
+		else:
+			return "<func: %#x>" % self.start
+
 	@classmethod
 	def _unregister(cls, func):
 		handle = ctypes.cast(func, ctypes.c_void_p)
@@ -869,28 +904,6 @@ class Function(object):
 		if not graph:
 			return None
 		return binaryninja.flowgraph.CoreFlowGraph(graph)
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-		try:
-			for i in range(0, count.value):
-				yield binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<func: %s@%#x>" % (arch.name, self.start)
-		else:
-			return "<func: %#x>" % self.start
 
 	def mark_recent_use(self):
 		core.BNMarkFunctionAsRecentlyUsed(self.handle)

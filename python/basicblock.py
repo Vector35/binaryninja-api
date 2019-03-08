@@ -25,6 +25,7 @@ import binaryninja
 from binaryninja import highlight
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
+from binaryninja import log
 
 # 2-3 compatibility
 from binaryninja import range
@@ -61,6 +62,8 @@ class BasicBlock(object):
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
 		self._arch = None
 		self._func = None
+		self._instStarts = None
+		self._instLengths = None
 
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
@@ -75,12 +78,71 @@ class BasicBlock(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
+
+	def __len__(self):
+		return int(core.BNGetBasicBlockLength(self.handle))
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
+		else:
+			return "<block: %#x-%#x>" % (self.start, self.end)
+
+	def __iter__(self):
+		if self._instStarts is None:
+			# no cache is instruction start cache is built so we don't build one
+			# because the user is likely iterating only
+			idx = self.start
+			while idx < self.end:
+				data = self.view.read(idx, min(self.arch.max_instr_length, self.end - idx))
+				inst_text = self.arch.get_instruction_text(data, idx)
+				if inst_text[1] == 0:
+					break
+				yield inst_text
+				idx += inst_text[1]
+		else:
+			for start, length in zip(self._instStarts, self._instLengths):
+				inst_text = self.arch.get_instruction_text(self.view.read(start, length), start)
+				if inst_text[1] == 0:
+					break
+				yield inst_text
+
+	def __getitem__(self, i):
+		self._buildStartCache()
+		start = self._instStarts[i]
+		length = self._instLengths[i]
+		data = self.view.read(start, length)
+		return self.arch.get_instruction_text(data, start)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self.arch.name))
+
+	def _buildStartCache(self):
+		if self._instStarts is None:
+			# build the instruction start cache
+			self._instLengths = []
+			self._instStarts = []
+			start = self.start
+			while start < self.end:
+				length = self.view.get_instruction_length(start)
+				self._instLengths.append(length)
+				self._instStarts.append(start)
+				start += length
+
 	def _create_instance(self, handle, view):
 		"""Internal method used to instantiate child instances"""
 		return BasicBlock(handle, view)
 
-	def __hash__(self):
-		return hash((self.start, self.end, self.arch.name))
+	@property
+	def instruction_count(self):
+		self._buildStartCache()
+		return len(self._instStarts)
 
 	@property
 	def function(self):
@@ -289,35 +351,6 @@ class BasicBlock(object):
 			result.append(BasicBlock(core.BNNewBasicBlockReference(out_blocks[i]), blocks[0].view))
 		core.BNFreeBasicBlockList(out_blocks, count.value)
 		return result
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __len__(self):
-		return int(core.BNGetBasicBlockLength(self.handle))
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
-		else:
-			return "<block: %#x-%#x>" % (self.start, self.end)
-
-	def __iter__(self):
-		start = self.start
-		end = self.end
-
-		idx = start
-		while idx < end:
-			data = self.view.read(idx, min(self.arch.max_instr_length, end - idx))
-			inst_text = self.arch.get_instruction_text(data, idx)
-			if inst_text[1] == 0:
-				break
-			yield inst_text
-			idx += inst_text[1]
 
 	def mark_recent_use(self):
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)

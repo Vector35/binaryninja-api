@@ -33,6 +33,8 @@ from binaryninja.types import Type
 from binaryninja import highlight
 
 class DataRenderer(object):
+	_registered_renderers = []
+
 	"""
 	DataRenderer objects tell the Linear View how to render specific types.
 
@@ -83,9 +85,11 @@ class DataRenderer(object):
 
 	def register_type_specific(self):
 		core.BNRegisterTypeSpecificDataRenderer(core.BNGetDataRendererContainer(), self.handle)
+		self.__class__._registered_renderers.append(self)
 
 	def register_generic(self):
 		core.BNRegisterGenericDataRenderer(core.BNGetDataRendererContainer(), self.handle)
+		self.__class__._registered_renderers.append(self)
 
 	def _free_object(self, ctxt):
 		try:

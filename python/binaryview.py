@@ -3190,15 +3190,7 @@ class BinaryView(object):
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
-		next_data_var_addr = core.BNGetNextDataVariableAfterAddress(self.handle, addr)
-		if next_data_var_addr == addr:
-			# core.BNGetNextDataVariableAfterAddress always returns an next addr,
-			# even if there isn't a data var after addr
-			return None
-		var = core.BNDataVariable()
-		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_addr, var):
-			raise ValueError("expected data variable at 0x{addr:x}".format(addr=next_data_var_addr))
-		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+		return self.data_vars[core.BNGetNextDataVariableAfterAddress(self.handle, addr)]
 
 	def get_previous_function_start_before(self, addr):
 		"""

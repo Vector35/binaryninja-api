@@ -3179,20 +3179,26 @@ class BinaryView(object):
 
 	def get_next_data_var_after(self, addr):
 		"""
-		``get_next_data_var_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
+		``get_next_data_var_after`` retrieves the next :py:Class:`DataVariable`, or None.
 
 		:param int addr: the virtual address to start looking from.
-		:return: the virtual address of the next :py:Class:`DataVariable`
-		:rtype: int
+		:return: the next :py:Class:`DataVariable`
+		:rtype: DataVariable
 		:Example:
 
-			>>> hex(bv.get_next_data_var_after(0x10000000))
-			'0x1000003cL'
-			>>> bv.get_data_var_at(0x1000003c)
+			>>> bv.get_next_data_var_after(0x10000000)
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
-		return core.BNGetNextDataVariableAfterAddress(self.handle, addr)
+		next_data_var_addr = core.BNGetNextDataVariableAfterAddress(self.handle, addr)
+		if next_data_var_addr == addr:
+			# core.BNGetNextDataVariableAfterAddress always returns an next addr,
+			# even if there isn't a data var after addr
+			return None
+		var = core.BNDataVariable()
+		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_addr, var):
+			raise ValueError("expected data variable at 0x{addr:x}".format(addr=next_data_var_addr))
+		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
 
 	def get_previous_function_start_before(self, addr):
 		"""

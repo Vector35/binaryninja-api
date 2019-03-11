@@ -3190,7 +3190,7 @@ class BinaryView(object):
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
-		return self.data_vars.get(core.BNGetNextDataVariableAfterAddress(self.handle, addr), None)
+		return self.data_vars.get(core.BNGetNextDataVariableAfterAddress(self.handle, addr))
 
 	def get_previous_function_start_before(self, addr):
 		"""

@@ -780,6 +780,9 @@ class LowLevelILFunction(object):
 			arch = self.arch
 		core.BNLowLevelILSetCurrentAddress(self.handle, arch.handle, value)
 
+	def set_current_source_block(self, block):
+		core.BNLowLevelILSetCurrentSourceBlock(self.handle, block.handle)
+
 	@property
 	def temp_reg_count(self):
 		"""Number of temporary registers (read-only)"""

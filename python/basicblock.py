@@ -176,6 +176,14 @@ class BasicBlock(object):
 		return self._arch
 
 	@property
+	def source_block(self):
+		"""Basic block source block (read-only)"""
+		block = core.BNGetBasicBlockSource(self.handle)
+		if block is None:
+			return None
+		return BasicBlock(block, self._view)
+
+	@property
 	def start(self):
 		"""Basic block start (read-only)"""
 		return core.BNGetBasicBlockStart(self.handle)

@@ -752,6 +752,9 @@ class LowLevelILFunction(object):
 				func_handle = self.source_function.handle
 			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
+	def __hash__(self):
+		return hash('LLIL') + hash(self.source_function)
+
 	def __del__(self):
 		if self.handle is not None:
 			core.BNFreeLowLevelILFunction(self.handle)

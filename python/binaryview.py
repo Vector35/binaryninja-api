@@ -4652,7 +4652,7 @@ class StructuredDataView(object):
 		self._define_members()
 
 	def _lookup_structure(self):
-		s = self._bv.types.get(self._structure_name, None)
+		s = self._bv.get_type_by_name(self._structure_name)
 		if s is None:
 			raise Exception("Could not find structure with name: {}".format(self._structure_name))
 
@@ -4710,3 +4710,6 @@ class StructuredDataView(object):
 	def __repr__(self):
 		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
 																			  self._structure.width, self._address)
+
+	def __len__(self):
+		return self._structure.width

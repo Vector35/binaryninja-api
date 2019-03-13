@@ -208,6 +208,7 @@ extern "C"
 		FunctionReturn = 4,
 		SystemCall = 5,
 		IndirectBranch = 6,
+		ExceptionBranch = 7,
 		UnresolvedBranch = 127
 	};
 
@@ -1648,6 +1649,13 @@ extern "C"
 		size_t count, total;
 	};
 
+	enum BNAnalysisMode
+	{
+		FullAnalysisMode,
+		BasicAnalysisMode,
+		ControlFlowAnalysisMode
+	};
+
 	struct BNAnalysisParameters
 	{
 		uint64_t maxAnalysisTime;
@@ -1656,6 +1664,8 @@ extern "C"
 		size_t maxFunctionUpdateCount;
 		size_t maxFunctionSubmitCount;
 		bool suppressNewAutoFunctionAnalysis;
+		BNAnalysisMode mode;
+		bool alwaysAnalyzeIndirectBranches;
 	};
 
 	struct BNDownloadInstanceOutputCallbacks
@@ -1958,7 +1968,8 @@ extern "C"
 		ExceedFunctionSizeSkipReason,
 		ExceedFunctionAnalysisTimeSkipReason,
 		ExceedFunctionUpdateCountSkipReason,
-		NewAutoFunctionAnalysisSuppressedReason
+		NewAutoFunctionAnalysisSuppressedReason,
+		BasicAnalysisSkipReason
 	};
 
 	enum BNSettingsScope

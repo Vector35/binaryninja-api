@@ -1294,6 +1294,8 @@ namespace BinaryNinja
 
 		size_t Remove(uint64_t offset, uint64_t len);
 
+		std::vector<float> GetEntropy(uint64_t offset, size_t len, size_t blockSize);
+
 		BNModificationStatus GetModification(uint64_t offset);
 		std::vector<BNModificationStatus> GetModification(uint64_t offset, size_t len);
 

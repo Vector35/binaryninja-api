@@ -2031,6 +2031,26 @@ class BinaryView(object):
 		"""
 		return core.BNRemoveViewData(self.handle, addr, length)
 
+	def get_entropy(self, addr, length, block_size=0):
+		"""
+		``get_entropy`` returns the shannon entropy given the start ``addr``, ``length`` in bytes, and optionally in
+		``block_size`` chunks.
+
+		:param int addr: virtual address
+		:param int length: total length in bytes
+		:param int block_size: optional block size
+		:return: list of entropy values for each chunk`
+		:rtype: list of entropy values or an empty list
+		"""
+		if block_size == 0:
+			block_size = length
+		data = (ctypes.c_float * ((length // block_size) + 1))()
+		length = core.BNGetEntropy(self.handle, addr, length, block_size, data)
+		result = []
+		for i in range(0, length):
+			result.append(float(data[i]))
+		return result
+
 	def get_modification(self, addr, length=None):
 		"""
 		``get_modification`` returns the modified bytes of up to ``length`` bytes from virtual address ``addr``, or if

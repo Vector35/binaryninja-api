@@ -890,6 +890,24 @@ size_t BinaryView::InsertBuffer(uint64_t offset, const DataBuffer& data)
 }
 
 
+vector<float> BinaryView::GetEntropy(uint64_t offset, size_t len, size_t blockSize)
+{
+	if (!blockSize)
+		blockSize = len;
+
+	float* entopy = new float[(len / blockSize) + 1];
+	len = BNGetEntropy(m_object, offset, len, blockSize, entopy);
+
+	vector<float> result;
+	result.reserve(len);
+	for (size_t i = 0; i < len; i++)
+		result.push_back(entopy[i]);
+
+	delete[] entopy;
+	return result;
+}
+
+
 vector<BNModificationStatus> BinaryView::GetModification(uint64_t offset, size_t len)
 {
 	BNModificationStatus* mod = new BNModificationStatus[len];

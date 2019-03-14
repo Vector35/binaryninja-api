@@ -2127,6 +2127,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNNotifyDataInserted(BNBinaryView* view, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI void BNNotifyDataRemoved(BNBinaryView* view, uint64_t offset, uint64_t len);
 
+	BINARYNINJACOREAPI size_t BNGetEntropy(BNBinaryView* view, uint64_t offset, size_t len, size_t blockSize, float* result);
+
 	BINARYNINJACOREAPI BNModificationStatus BNGetModification(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI size_t BNGetModificationArray(BNBinaryView* view, uint64_t offset, BNModificationStatus* result, size_t len);
 

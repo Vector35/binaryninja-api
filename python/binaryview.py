@@ -3103,7 +3103,7 @@ class BinaryView(object):
 		:param int start: optional virtual address to start the string list from, defaults to start of the binary
 		:param int length: optional length range to return strings from, defaults to length of the binary
 		:return: a list of all strings or a list of strings defined between ``start`` and ``start+length``
-		:rtype: list(str())
+		:rtype: list(StringReference)
 		:Example:
 
 			>>> bv.get_strings(0x1000004d, 1)
@@ -3122,6 +3122,44 @@ class BinaryView(object):
 			result.append(StringReference(self, StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
+	
+	def get_ascii_string_at(self, addr, min_length=4, max_length=None, require_cstring=True):
+		"""
+		``get_ascii_string_at`` returns the string found at ``addr``
+
+		:param int addr: virtual address to start the string
+		:param int min_length: minimum length to define a string
+		:param int max_length: max length string to return
+		:param bool require_cstring: only return 0x0-terminated strings
+		:return: the string found at ``addr`` or None if a string does not exist
+		:rtype: StringReference or None
+		:Example:
+
+			>>> s1 = bv.get_ascii_string_at(0x70d0)
+			>>> s1
+			[<AsciiString: 0x70d0, len 0xb>]
+			>>> s1.value
+			'AWAVAUATUSH'
+			>>> s2 = bv.get_ascii_string_at(0x70d1)
+			>>> s2
+			[<AsciiString: 0x70d1, len 0xa>]
+			>>> s2.value
+			'WAVAUATUSH'
+		"""
+		br = BinaryReader(self)
+		br.seek(addr)
+		length = 0
+		c = br.read8()
+		while c > 0 and c <= 0x7f:
+			if length == max_length:
+				break
+			length += 1
+			c = br.read8()
+		if length < min_length:
+			return None
+		if require_cstring and c != 0:
+			return None
+		return StringReference(self, StringType.AsciiString, addr, length)
 
 	def add_analysis_completion_event(self, callback):
 		"""

@@ -1,6 +1,53 @@
 import time
 from binaryninja.binaryview import StructuredDataView
+import binaryninjaui
+from binaryninjaui import ThemeColor, ViewFrame
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout
+from PySide2.QtGui import QPalette
+
+
+class ClickableLabel(QLabel):
+	def __init__(self, text, color, func):
+		super(ClickableLabel, self).__init__(text)
+		style = QPalette(self.palette())
+		style.setColor(QPalette.WindowText, color)
+		self.setPalette(style)
+		self.setFont(binaryninjaui.getMonospaceFont(self))
+		self.func = func
+
+	def mousePressEvent(self, event):
+		self.func()
+
+
+class ClickableAddressLabel(ClickableLabel):
+	def __init__(self, text):
+		super(ClickableAddressLabel, self).__init__(text, binaryninjaui.getThemeColor(ThemeColor.AddressColor), self.clickEvent)
+		self.address = int(text, 0)
+
+	def clickEvent(self):
+		viewFrame = ViewFrame.viewFrameForWidget(self)
+		viewFrame.navigate("Linear:" + viewFrame.getCurrentDataType(), self.address)
+
+
+class ClickableCodeLabel(ClickableLabel):
+	def __init__(self, text):
+		super(ClickableCodeLabel, self).__init__(text, binaryninjaui.getThemeColor(ThemeColor.CodeSymbolColor), self.clickEvent)
+		self.address = int(text, 0)
+
+	def clickEvent(self):
+		viewFrame = ViewFrame.viewFrameForWidget(self)
+		viewFrame.navigate("Graph:" + viewFrame.getCurrentDataType(), self.address)
+
+
+class GenericHeaders(object):
+	def __init__(self, data):
+		self.fields = []
+		self.fields.append(("Type", data.view_type))
+		if data.platform is not None:
+			self.fields.append(("Platform", data.platform.name))
+		if data.is_valid_offset(data.entry_point):
+			self.fields.append(("Entry Point", "0x%x" % data.entry_point, "code"))
+		self.columns = 1
 
 
 class PEHeaders(object):
@@ -42,10 +89,10 @@ class PEHeaders(object):
 		self.fields.append(("Timestamp", time.strftime("%c", time.localtime(int(coff.timeDateStamp)))))
 
 		base = int(peopt.imageBase)
-		self.fields.append(("Image Base", "0x%x" % base))
+		self.fields.append(("Image Base", "0x%x" % base, "ptr"))
 
 		entry_point = base + int(peopt.addressOfEntryPoint)
-		self.fields.append(("Entry Point", "0x%x" % entry_point))
+		self.fields.append(("Entry Point", "0x%x" % entry_point, "code"))
 
 		section_align = int(peopt.sectionAlignment)
 		self.fields.append(("Section Alignment", "0x%x" % section_align))
@@ -57,11 +104,11 @@ class PEHeaders(object):
 		self.fields.append(("Checksum", "0x%.8x" % checksum))
 
 		code_base = base + int(peopt.baseOfCode)
-		self.fields.append(("Base of Code", "0x%x" % code_base))
+		self.fields.append(("Base of Code", "0x%x" % code_base, "ptr"))
 
 		if not is64bit:
 			data_base = base + int(peopt.baseOfData)
-			self.fields.append(("Base of Data", "0x%x" % data_base))
+			self.fields.append(("Base of Data", "0x%x" % data_base, "ptr"))
 
 		code_size = int(peopt.sizeOfCode)
 		self.fields.append(("Size of Code", "0x%x" % code_size))
@@ -126,6 +173,9 @@ class PEHeaders(object):
 		if len(dll_char_values) > 0:
 			self.fields.append(("DLL Characteristics", dll_char_values))
 
+		self.columns = 3
+		self.rows_per_column = 9
+
 
 class HeaderWidget(QWidget):
 	def __init__(self, parent, header):
@@ -138,18 +188,35 @@ class HeaderWidget(QWidget):
 		for field in header.fields:
 			name = field[0]
 			value = field[1]
-			layout.addWidget(QLabel(name + ": "), row, col)
+			fieldType = ""
+			if len(field) > 2:
+				fieldType = field[2]
+			layout.addWidget(QLabel(name + ": "), row, col * 3)
 			if isinstance(value, list):
 				for i in range(0, len(value)):
-					layout.addWidget(QLabel(value[i]), row, col + 1)
+					if fieldType == "ptr":
+						label = ClickableAddressLabel(value[i])
+					elif fieldType == "code":
+						label = ClickableCodeLabel(value[i])
+					else:
+						label = QLabel(value[i])
+						label.setFont(binaryninjaui.getMonospaceFont(self))
+					layout.addWidget(label, row, col * 3 + 1)
 					row += 1
 			else:
-				layout.addWidget(QLabel(value), row, col + 1)
+				if fieldType == "ptr":
+					label = ClickableAddressLabel(value)
+				elif fieldType == "code":
+					label = ClickableCodeLabel(value)
+				else:
+					label = QLabel(value)
+					label.setFont(binaryninjaui.getMonospaceFont(self))
+				layout.addWidget(label, row, col * 3 + 1)
 				row += 1
-			if (row >= 9) and (col < 6):
+			if (header.columns > 1) and (row >= header.rows_per_column) and ((col + 1) < header.columns):
 				row = 0
-				col += 3
-		layout.setColumnMinimumWidth(2, 20)
-		layout.setColumnMinimumWidth(5, 20)
-		layout.setColumnStretch(8, 1)
+				col += 1
+		for col in range(1, header.columns):
+			layout.setColumnMinimumWidth(col * 3 - 1, 20)
+		layout.setColumnStretch(header.columns * 3 - 1, 1)
 		self.setLayout(layout)

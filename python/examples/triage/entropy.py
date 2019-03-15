@@ -3,7 +3,8 @@ import threading
 from PySide2.QtWidgets import QWidget
 from PySide2.QtGui import QImage, QColor, QPainter
 from PySide2.QtCore import Qt, QSize, QTimer
-from binaryninjaui import ViewFrame
+import binaryninjaui
+from binaryninjaui import ViewFrame, ThemeColor
 
 
 class EntropyThread(threading.Thread):
@@ -17,30 +18,22 @@ class EntropyThread(threading.Thread):
 	def run(self):
 		width = self.image.width()
 		for i in range(0, width):
-			block = self.data.read(self.data.start + i * self.block_size, self.block_size)
-			if len(block) == 0:
-				v = 0
-			else:
-				dist = [0] * 0x100
-				for j in range(0, len(block)):
-					value = ord(block[j:j+1])
-					dist[value] += 1
-				s = 0
-				for j in range(0, 256):
-					if dist[j] != 0:
-						s += (float(dist[j]) / len(block)) * math.log(float(dist[j]) / len(block))
-				s = s / math.log(1 / 256.0)
-				v = int(s * 255)
+			v = int(self.data.get_entropy(self.data.start + i * self.block_size, self.block_size)[0] * 255)
 			if v >= 240:
-				self.image.setPixelColor(i, 0, QColor(v, v, v / 4, 255))
+				color = binaryninjaui.getThemeColor(ThemeColor.YellowStandardHighlightColor)
+				self.image.setPixelColor(i, 0, color)
 			else:
-				self.image.setPixelColor(i, 0, QColor(v / 4, v / 4, v, 255))
+				baseColor = binaryninjaui.getThemeColor(ThemeColor.FeatureMapBaseColor)
+				entropyColor = binaryninjaui.getThemeColor(ThemeColor.BlueStandardHighlightColor)
+				color = binaryninjaui.mixColor(baseColor, entropyColor, v)
+				self.image.setPixelColor(i, 0, color)
 			self.updated = True
 
 
 class EntropyWidget(QWidget):
-	def __init__(self, parent, data):
+	def __init__(self, parent, view, data):
 		super(EntropyWidget, self).__init__(parent)
+		self.view = view
 		self.data = data
 		self.raw_data = data.file.raw
 
@@ -54,7 +47,7 @@ class EntropyWidget(QWidget):
 
 		self.timer = QTimer()
 		self.timer.timeout.connect(self.timerEvent)
-		self.timer.setInterval(250)
+		self.timer.setInterval(100)
 		self.timer.setSingleShot(False)
 		self.timer.start()
 
@@ -81,11 +74,4 @@ class EntropyWidget(QWidget):
 			return
 		frac = float(event.x()) / self.rect().width()
 		offset = int(frac * self.width * self.block_size)
-		addr = self.data.get_address_for_data_offset(offset)
-		view_frame = ViewFrame.viewFrameForWidget(self)
-		if view_frame is None:
-			return
-		if addr is None:
-			view_frame.navigate("Hex:Raw", offset)
-		else:
-			view_frame.navigate("Linear:" + view_frame.getCurrentDataType(), addr)
+		self.view.navigateToFileOffset(offset)

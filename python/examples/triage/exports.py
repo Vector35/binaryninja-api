@@ -1,28 +1,29 @@
 from PySide2.QtWidgets import QTreeView
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
-from binaryninja.enums import SymbolType
+from binaryninja.enums import SymbolType, SymbolBinding
 import binaryninjaui
 from binaryninjaui import ViewFrame
 
 
-class GenericImportsModel(QAbstractItemModel):
+class GenericExportsModel(QAbstractItemModel):
 	def __init__(self, data):
-		super(GenericImportsModel, self).__init__()
+		super(GenericExportsModel, self).__init__()
 		self.entries = []
-		self.has_modules = False
+		self.addr_col = 0
 		self.name_col = 1
-		self.module_col = None
 		self.ordinal_col = None
 		self.total_cols = 2
-		for sym in data.get_symbols_of_type(SymbolType.ImportAddressSymbol):
-			self.entries.append(sym)
-			if str(sym.namespace) != "BNINTERNALNAMESPACE":
-				self.has_modules = True
-		if self.has_modules:
-			self.name_col = 3
-			self.module_col = 1
-			self.ordinal_col = 2
-			self.total_cols = 4
+		for sym in data.get_symbols_of_type(SymbolType.FunctionSymbol):
+			if sym.binding == SymbolBinding.GlobalBinding:
+				self.entries.append(sym)
+		for sym in data.get_symbols_of_type(SymbolType.DataSymbol):
+			if sym.binding == SymbolBinding.GlobalBinding:
+				self.entries.append(sym)
+		if data.view_type == "PE":
+			self.ordinal_col = 0
+			self.addr_col = 1
+			self.name_col = 2
+			self.total_cols = 3
 
 	def columnCount(self, parent):
 		return self.total_cols
@@ -37,19 +38,10 @@ class GenericImportsModel(QAbstractItemModel):
 			return None
 		if index.row() >= len(self.entries):
 			return None
-		if index.column() == 0:
+		if index.column() == self.addr_col:
 			return "0x%x" % self.entries[index.row()].address
 		if index.column() == self.name_col:
-			name = self.entries[index.row()].full_name
-			if name.endswith("@GOT"):
-				name = name[:-len("@GOT")]
-			elif name.endswith("@PLT"):
-				name = name[:-len("@PLT")]
-			elif name.endswith("@IAT"):
-				name = name[:-len("@IAT")]
-			return name
-		if index.column() == self.module_col:
-			return self.getNamespace(self.entries[index.row()])
+			return self.entries[index.row()].full_name
 		if index.column() == self.ordinal_col:
 			return str(self.entries[index.row()].ordinal)
 		return None
@@ -59,12 +51,10 @@ class GenericImportsModel(QAbstractItemModel):
 			return None
 		if role != Qt.DisplayRole:
 			return None
-		if section == 0:
-			return "Entry"
+		if section == self.addr_col:
+			return "Address"
 		if section == self.name_col:
 			return "Name"
-		if section == self.module_col:
-			return "Module"
 		if section == self.ordinal_col:
 			return "Ordinal"
 		return None
@@ -86,32 +76,24 @@ class GenericImportsModel(QAbstractItemModel):
 			return None
 		return self.entries[index.row()]
 
-	def getNamespace(self, sym):
-		name = str(sym.namespace)
-		if name == "BNINTERNALNAMESPACE":
-			return ""
-		return name
-
 	def sort(self, col, order):
 		self.beginResetModel()
-		if col == 0:
+		if col == self.addr_col:
 			self.entries.sort(key = lambda sym: sym.address, reverse = order != Qt.AscendingOrder)
 		elif col == self.name_col:
 			self.entries.sort(key = lambda sym: sym.full_name, reverse = order != Qt.AscendingOrder)
-		elif col == self.module_col:
-			self.entries.sort(key = lambda sym: self.getNamespace(sym), reverse = order != Qt.AscendingOrder)
 		elif col == self.ordinal_col:
 			self.entries.sort(key = lambda sym: sym.ordinal, reverse = order != Qt.AscendingOrder)
 		self.endResetModel()
 
 
-class ImportsWidget(QTreeView):
+class ExportsWidget(QTreeView):
 	def __init__(self, parent, view, data):
-		super(ImportsWidget, self).__init__(parent)
+		super(ExportsWidget, self).__init__(parent)
 		self.data = data
 		self.view = view
 
-		self.model = GenericImportsModel(self.data)
+		self.model = GenericExportsModel(self.data)
 		self.setModel(self.model)
 		self.setRootIsDecorated(False)
 		self.setUniformRowHeights(True)
@@ -123,16 +105,19 @@ class ImportsWidget(QTreeView):
 
 		self.setFont(binaryninjaui.getMonospaceFont(self))
 
-		self.selectionModel().currentChanged.connect(self.importSelected)
-		self.doubleClicked.connect(self.importDoubleClicked)
+		self.selectionModel().currentChanged.connect(self.exportSelected)
+		self.doubleClicked.connect(self.exportDoubleClicked)
 
-	def importSelected(self, cur, prev):
+	def exportSelected(self, cur, prev):
 		sym = self.model.getSymbol(cur)
 		if sym is not None:
 			self.view.setCurrentOffset(sym.address)
 
-	def importDoubleClicked(self, cur):
+	def exportDoubleClicked(self, cur):
 		sym = self.model.getSymbol(cur)
 		if sym is not None:
 			viewFrame = ViewFrame.viewFrameForWidget(self)
-			viewFrame.navigate("Linear:" + viewFrame.getCurrentDataType(), sym.address)
+			if len(self.data.get_functions_at(sym.address)) > 0:
+				viewFrame.navigate("Graph:" + viewFrame.getCurrentDataType(), sym.address)
+			else:
+				viewFrame.navigate("Linear:" + viewFrame.getCurrentDataType(), sym.address)

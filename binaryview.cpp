@@ -169,18 +169,19 @@ BinaryDataNotification::BinaryDataNotification()
 
 
 Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
-	BNSymbolBinding binding, const NameSpace& nameSpace)
+	BNSymbolBinding binding, const NameSpace& nameSpace, uint64_t ordinal)
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();
-	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding, &ns);
+	m_object = BNCreateSymbol(type, shortName.c_str(), fullName.c_str(), rawName.c_str(), addr, binding, &ns, ordinal);
 	NameSpace::FreeAPIObject(&ns);
 }
 
 
-Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding, const NameSpace& nameSpace)
+Symbol::Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding,
+	const NameSpace& nameSpace, uint64_t ordinal)
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();
-	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding, &ns);
+	m_object = BNCreateSymbol(type, name.c_str(), name.c_str(), name.c_str(), addr, binding, &ns, ordinal);
 	NameSpace::FreeAPIObject(&ns);
 
 }
@@ -243,6 +244,12 @@ string Symbol::GetRawName() const
 uint64_t Symbol::GetAddress() const
 {
 	return BNGetSymbolAddress(m_object);
+}
+
+
+uint64_t Symbol::GetOrdinal() const
+{
+	return BNGetSymbolOrdinal(m_object);
 }
 
 

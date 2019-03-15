@@ -2944,7 +2944,7 @@ extern "C"
 
 	// Symbols
 	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,
-		const char* rawName, uint64_t addr, BNSymbolBinding binding, const BNNameSpace* nameSpace);
+		const char* rawName, uint64_t addr, BNSymbolBinding binding, const BNNameSpace* nameSpace, uint64_t ordinal);
 	BINARYNINJACOREAPI BNSymbol* BNNewSymbolReference(BNSymbol* sym);
 	BINARYNINJACOREAPI void BNFreeSymbol(BNSymbol* sym);
 	BINARYNINJACOREAPI BNSymbolType BNGetSymbolType(BNSymbol* sym);
@@ -2954,6 +2954,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetSymbolFullName(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
 	BINARYNINJACOREAPI uint64_t BNGetSymbolAddress(BNSymbol* sym);
+	BINARYNINJACOREAPI uint64_t BNGetSymbolOrdinal(BNSymbol* sym);
 	BINARYNINJACOREAPI bool BNIsSymbolAutoDefined(BNSymbol* sym);
 
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByAddress(BNBinaryView* view, uint64_t addr, const BNNameSpace* nameSpace);

@@ -154,7 +154,7 @@ class Symbol(object):
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 		=========================== ==============================================================
 	"""
-	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None):
+	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None, ordinal=0):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNSymbol)
 		else:
@@ -170,7 +170,7 @@ class Symbol(object):
 				namespace = NameSpace(namespace)
 			if isinstance(namespace, NameSpace):
 				namespace = namespace._get_core_struct()
-			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, namespace)
+			self.handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, namespace, ordinal)
 
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
@@ -227,6 +227,11 @@ class Symbol(object):
 	def address(self):
 		"""Symbol address (read-only)"""
 		return core.BNGetSymbolAddress(self.handle)
+
+	@property
+	def ordinal(self):
+		"""Symbol ordinal (read-only)"""
+		return core.BNGetSymbolOrdinal(self.handle)
 
 	@property
 	def auto(self):

@@ -1005,9 +1005,10 @@ namespace BinaryNinja
 	{
 	public:
 		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
-			uint64_t addr, BNSymbolBinding binding=NoBinding, const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE));
+			uint64_t addr, BNSymbolBinding binding=NoBinding, const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE),
+			uint64_t ordinal=0);
 		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding=NoBinding,
-			const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE));
+			const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal=0);
 		Symbol(BNSymbol* sym);
 
 		BNSymbolType GetType() const;
@@ -1016,6 +1017,7 @@ namespace BinaryNinja
 		std::string GetFullName() const;
 		std::string GetRawName() const;
 		uint64_t GetAddress() const;
+		uint64_t GetOrdinal() const;
 		bool IsAutoDefined() const;
 		NameSpace GetNameSpace() const;
 

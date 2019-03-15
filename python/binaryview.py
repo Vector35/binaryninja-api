@@ -2039,14 +2039,17 @@ class BinaryView(object):
 		:param int addr: virtual address
 		:param int length: total length in bytes
 		:param int block_size: optional block size
-		:return: list of entropy values for each chunk`
+		:return: list of entropy values for each chunk
 		:rtype: list of entropy values or an empty list
 		"""
+		result = []
+		if length == 0:
+			return result
 		if block_size == 0:
 			block_size = length
 		data = (ctypes.c_float * ((length // block_size) + 1))()
 		length = core.BNGetEntropy(self.handle, addr, length, block_size, data)
-		result = []
+
 		for i in range(0, length):
 			result.append(float(data[i]))
 		return result

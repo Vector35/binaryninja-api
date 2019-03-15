@@ -1,29 +1,32 @@
-from PySide2.QtWidgets import QTreeView
+from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.enums import SymbolType, SymbolBinding
 import binaryninjaui
-from binaryninjaui import ViewFrame
+from binaryninjaui import ViewFrame, FilterTarget, FilteredView
 
 
 class GenericExportsModel(QAbstractItemModel):
 	def __init__(self, data):
 		super(GenericExportsModel, self).__init__()
-		self.entries = []
+		self.allEntries = []
 		self.addr_col = 0
 		self.name_col = 1
 		self.ordinal_col = None
 		self.total_cols = 2
+		self.sortCol = 0
+		self.sortOrder = Qt.AscendingOrder
 		for sym in data.get_symbols_of_type(SymbolType.FunctionSymbol):
 			if sym.binding == SymbolBinding.GlobalBinding:
-				self.entries.append(sym)
+				self.allEntries.append(sym)
 		for sym in data.get_symbols_of_type(SymbolType.DataSymbol):
 			if sym.binding == SymbolBinding.GlobalBinding:
-				self.entries.append(sym)
+				self.allEntries.append(sym)
 		if data.view_type == "PE":
 			self.ordinal_col = 0
 			self.addr_col = 1
 			self.name_col = 2
 			self.total_cols = 3
+		self.entries = list(self.allEntries)
 
 	def columnCount(self, parent):
 		return self.total_cols
@@ -76,21 +79,37 @@ class GenericExportsModel(QAbstractItemModel):
 			return None
 		return self.entries[index.row()]
 
-	def sort(self, col, order):
-		self.beginResetModel()
+	def performSort(self, col, order):
 		if col == self.addr_col:
 			self.entries.sort(key = lambda sym: sym.address, reverse = order != Qt.AscendingOrder)
 		elif col == self.name_col:
 			self.entries.sort(key = lambda sym: sym.full_name, reverse = order != Qt.AscendingOrder)
 		elif col == self.ordinal_col:
 			self.entries.sort(key = lambda sym: sym.ordinal, reverse = order != Qt.AscendingOrder)
+
+	def sort(self, col, order):
+		self.beginResetModel()
+		self.sortCol = col
+		self.sortOrder = order
+		self.performSort(col, order)
+		self.endResetModel()
+
+	def setFilter(self, filterText):
+		self.beginResetModel()
+		self.entries = []
+		for entry in self.allEntries:
+			if FilteredView.match(entry.full_name, filterText):
+				self.entries.append(entry)
+		self.performSort(self.sortCol, self.sortOrder)
 		self.endResetModel()
 
 
-class ExportsWidget(QTreeView):
+class ExportsTreeView(QTreeView, FilterTarget):
 	def __init__(self, parent, view, data):
-		super(ExportsWidget, self).__init__(parent)
+		QTreeView.__init__(self, parent)
+		FilterTarget.__init__(self)
 		self.data = data
+		self.parent = parent
 		self.view = view
 
 		self.model = GenericExportsModel(self.data)
@@ -101,7 +120,6 @@ class ExportsWidget(QTreeView):
 		self.sortByColumn(0, Qt.AscendingOrder)
 		if self.model.ordinal_col is not None:
 			self.setColumnWidth(self.model.ordinal_col, 55)
-		self.setMinimumSize(QSize(100, 196))
 
 		self.setFont(binaryninjaui.getMonospaceFont(self))
 
@@ -121,3 +139,43 @@ class ExportsWidget(QTreeView):
 				viewFrame.navigate("Graph:" + viewFrame.getCurrentDataType(), sym.address)
 			else:
 				viewFrame.navigate("Linear:" + viewFrame.getCurrentDataType(), sym.address)
+
+	def setFilter(self, filterText):
+		self.model.setFilter(filterText)
+
+	def scrollToFirstItem(self):
+		self.scrollToTop()
+
+	def scrollToCurrentItem(self):
+		self.scrollTo(self.currentIndex())
+
+	def selectFirstItem(self):
+		self.setCurrentIndex(self.model.index(0, 0, QModelIndex()))
+
+	def activateFirstItem(self):
+		self.exportDoubleClicked(self.model.index(0, 0, QModelIndex()))
+
+	def closeFilter(self):
+		self.setFocus(Qt.OtherFocusReason)
+
+	def keyPressEvent(self, event):
+		if (len(event.text()) == 1) and (ord(event.text()[0:1]) > 32) and (ord(event.text()[0:1]) < 127):
+			self.parent.filter.showFilter(event.text())
+			event.accept()
+		elif (event.key() == Qt.Key_Return) or (event.key() == Qt.Key_Enter):
+			sel = self.selectedIndexes()
+			if len(sel) != 0:
+				self.exportDoubleClicked(sel[0])
+		super(ExportsTreeView, self).keyPressEvent(event)
+
+
+class ExportsWidget(QWidget):
+	def __init__(self, parent, view, data):
+		super(ExportsWidget, self).__init__(parent)
+		layout = QVBoxLayout()
+		layout.setContentsMargins(0, 0, 0, 0)
+		self.imports = ExportsTreeView(self, view, data)
+		self.filter = FilteredView(self, self.imports, self.imports)
+		layout.addWidget(self.filter, 1)
+		self.setLayout(layout)
+		self.setMinimumSize(QSize(100, 196))

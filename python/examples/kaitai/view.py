@@ -207,12 +207,28 @@ class KaitaiViewType(ViewType):
 		# data.file:	FileMetadata
 		# data.raw:		BinaryView
 
-		if binaryView == binaryView.file.raw:
-			#print 'returning priority=100 for FileView'
-			return 100
-		else:
-			#print 'returning priority 0, not given a raw view'
-			return 0
+		priority = 0
+		isExec = binaryView.executable
+		weRecognize = kshelpers.id_data(binaryView.read(0,16)) != None
+			
+		# NOTE: ui/shared/hexeditor.cpp has the hex editor at priority 20 when
+		# executable, and 10 otherwise
+
+		if isExec and weRecognize:
+			#print 'priority=25 to slightly beat out the hex editor case=(executable, recognize)'
+			priority = 25
+		if isExec and not weRecognize:
+			#print 'priority=15 to lose to the hex editor case=(executable, !recognize)'
+			priority = 15
+		if not isExec and weRecognize:
+			#print 'priority=100 to beat out everything case=(!executable, recognize)'
+			priority = 100
+		if not isExec and not weRecognize:
+			#print 'priority=5 to lose to hex editor case=(!executable, !recognize)'
+			priority = 5
+			
+		#print 'returning priority=%d for KaitaiViewType' % priority
+		return priority
 
 	def create(self, binaryView, view_frame):
 		return KaitaiView(view_frame, binaryView)

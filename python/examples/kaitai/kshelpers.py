@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import io
 import sys
 import types
@@ -9,22 +11,49 @@ import binaryninja
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QTreeWidgetItem
 
-from kaitaistruct import KaitaiStruct
+from .kaitaistruct import KaitaiStruct
+
+#sys.path.append('kaitai_struct_formats/archive')
+#sys.path.append('kaitai_struct_formats/cad')
+#sys.path.append('kaitai_struct_formats/common')
+#sys.path.append('kaitai_struct_formats/database')
+#sys.path.append('./kaitai_struct_formats/executable')
+#sys.path.append('kaitai_struct_formats/filesystem')
+#sys.path.append('kaitai_struct_formats/firmware')
+#sys.path.append('kaitai_struct_formats/font')
+#sys.path.append('kaitai_struct_formats/game')
+#sys.path.append('kaitai_struct_formats/geospatial')
+#sys.path.append('kaitai_struct_formats/hardware')
+#sys.path.append('kaitai_struct_formats/image')
+#sys.path.append('kaitai_struct_formats/log')
+#sys.path.append('kaitai_struct_formats/machine_code')
+#sys.path.append('kaitai_struct_formats/media')
+#sys.path.append('kaitai_struct_formats/network')
+#sys.path.append('kaitai_struct_formats/scientific')
+#sys.path.append('kaitai_struct_formats/security')
+#sys.path.append('kaitai_struct_formats/serialization')
+#sys.path.append('kaitai_struct_formats/windows')
 
 #------------------------------------------------------------------------------
 # id and parse
 #------------------------------------------------------------------------------
 
 def id_data(data):
-	if len(data) < 4:
+	if len(data) < 16:
 		return None
 
 	if data[0:4] == "\x7fELF":
 		return 'elf'
-	elif data[0:4] in ['\xfe\xed\xfa\xce', '\xce\xfa\xed\xfe', '\xfe\xed\xfa\xcf', '\xcf\xfa\xed\xfe']:
+	if data[0:4] in ['\xfe\xed\xfa\xce', '\xce\xfa\xed\xfe', '\xfe\xed\xfa\xcf', '\xcf\xfa\xed\xfe']:
 		return 'macho'
-	elif data[0:2] == 'MZ':
+	if data[0:2] == 'MZ':
 		return 'pe'
+	if data[0:8] == '\x89\x50\x4e\x47\x0d\x0a\x1a\x0a':
+		return 'png'
+	if data[2:11] == '0xFF\xe0\x00\x10JFIF\x00':
+		return 'jpeg'
+	if data[0:6] == 'GIF89a':
+		return 'gif'
 
 	return None
 
@@ -36,14 +65,23 @@ def id_file(fpath):
 
 def getKaitaiModuleFromFileType(ftype):
 	if ftype == 'elf':
-		from elf import Elf
+		from .kaitai_struct_formats.executable.elf import Elf
 		return Elf
 	elif ftype == 'macho':
-		from mach_o import MachO
+		from .kaitai_struct_formats.executable.mach_o import MachO
 		return MachO
 	elif ftype == 'pe':
-		from microsoft_pe import MicrosoftPe
+		from .kaitai_struct_formats.executable.microsoft_pe import MicrosoftPe
 		return MicrosoftPe
+	elif ftype == 'png':
+		from .kaitai_struct_formats.image.png import Png
+		return Png
+	elif ftype == 'jpeg':
+		from .kaitai_struct_formats.image.jpeg import Jpeg
+		return Jpeg
+	elif ftype == 'gif':
+		from .kaitai_struct_formats.image.gif import Gif
+		return Gif
 
 	return None
 
@@ -168,6 +206,137 @@ def dump(obj, depth=0):
 		print indent + repr(obj)
 		#else:
 		#	print '%s%s: %s' % (indent, fieldName, repr(subObj))
+
+def import_all_formats():
+	from .kaitai_struct_formats.archive.cpio_old_le import CpioOldLe
+	from .kaitai_struct_formats.archive.gzip import Gzip
+	from .kaitai_struct_formats.archive.lzh import Lzh
+	from .kaitai_struct_formats.archive.rar import Rar
+	from .kaitai_struct_formats.archive.zip import Zip
+	from .kaitai_struct_formats.cad.monomakh_sapr_chg import MonomakhSaprChg
+	from .kaitai_struct_formats.common.bcd import Bcd
+	from .kaitai_struct_formats.common.vlq_base128_be import VlqBase128Be
+	from .kaitai_struct_formats.common.vlq_base128_le import VlqBase128Le
+	from .kaitai_struct_formats.database.dbf import Dbf
+	from .kaitai_struct_formats.database.gettext_mo import GettextMo
+	from .kaitai_struct_formats.database.sqlite3 import Sqlite3
+	from .kaitai_struct_formats.database.tsm import Tsm
+	from .kaitai_struct_formats.executable.dex import Dex
+	from .kaitai_struct_formats.executable.dos_mz import DosMz
+	from .kaitai_struct_formats.executable.elf import Elf
+	from .kaitai_struct_formats.executable.java_class import JavaClass
+	from .kaitai_struct_formats.executable.mach_o import MachO
+	from .kaitai_struct_formats.executable.microsoft_pe import MicrosoftPe
+	from .kaitai_struct_formats.executable.python_pyc_27 import PythonPyc27
+	from .kaitai_struct_formats.executable.swf import Swf
+	from .kaitai_struct_formats.filesystem.apm_partition_table import ApmPartitionTable
+	from .kaitai_struct_formats.filesystem.apple_single_double import AppleSingleDouble
+	from .kaitai_struct_formats.filesystem.cramfs import Cramfs
+	from .kaitai_struct_formats.filesystem.ext2 import Ext2
+	from .kaitai_struct_formats.filesystem.gpt_partition_table import GptPartitionTable
+	from .kaitai_struct_formats.filesystem.iso9660 import Iso9660
+	from .kaitai_struct_formats.filesystem.luks import Luks
+	from .kaitai_struct_formats.filesystem.lvm2 import Lvm2
+	from .kaitai_struct_formats.filesystem.mbr_partition_table import MbrPartitionTable
+	from .kaitai_struct_formats.filesystem.tr_dos_image import TrDosImage
+	from .kaitai_struct_formats.filesystem.vdi import Vdi
+	from .kaitai_struct_formats.filesystem.vfat import Vfat
+	from .kaitai_struct_formats.filesystem.vmware_vmdk import VmwareVmdk
+	from .kaitai_struct_formats.firmware.andes_firmware import AndesFirmware
+	from .kaitai_struct_formats.firmware.ines import Ines
+	from .kaitai_struct_formats.firmware.uimage import Uimage
+	from .kaitai_struct_formats.font.ttf import Ttf
+	from .kaitai_struct_formats.game.allegro_dat import AllegroDat
+	from .kaitai_struct_formats.game.doom_wad import DoomWad
+	from .kaitai_struct_formats.game.dune_2_pak import Dune2Pak
+	from .kaitai_struct_formats.game.fallout2_dat import Fallout2Dat
+	from .kaitai_struct_formats.game.fallout_dat import FalloutDat
+	from .kaitai_struct_formats.game.ftl_dat import FtlDat
+	from .kaitai_struct_formats.game.gran_turismo_vol import GranTurismoVol
+	from .kaitai_struct_formats.game.heaps_pak import HeapsPak
+	from .kaitai_struct_formats.game.heroes_of_might_and_magic_agg import HeroesOfMightAndMagicAgg
+	from .kaitai_struct_formats.game.heroes_of_might_and_magic_bmp import HeroesOfMightAndMagicBmp
+	from .kaitai_struct_formats.game.quake_mdl import QuakeMdl
+	from .kaitai_struct_formats.game.quake_pak import QuakePak
+	from .kaitai_struct_formats.game.renderware_binary_stream import RenderwareBinaryStream
+	from .kaitai_struct_formats.game.saints_row_2_vpp_pc import SaintsRow2VppPc
+	from .kaitai_struct_formats.game.warcraft_2_pud import Warcraft2Pud
+	from .kaitai_struct_formats.geospatial.shapefile_index import ShapefileIndex
+	from .kaitai_struct_formats.geospatial.shapefile_main import ShapefileMain
+	from .kaitai_struct_formats.hardware.edid import Edid
+	from .kaitai_struct_formats.hardware.mifare.mifare_classic import MifareClassic
+	from .kaitai_struct_formats.image.bmp import Bmp
+	from .kaitai_struct_formats.image.dicom import Dicom
+	from .kaitai_struct_formats.image.exif import Exif
+	from .kaitai_struct_formats.image.exif_be import ExifBe
+	from .kaitai_struct_formats.image.exif_le import ExifLe
+	from .kaitai_struct_formats.image.gif import Gif
+	from .kaitai_struct_formats.image.icc_4 import Icc4
+	from .kaitai_struct_formats.image.ico import Ico
+	from .kaitai_struct_formats.image.jpeg import Jpeg
+	from .kaitai_struct_formats.image.pcx import Pcx
+	from .kaitai_struct_formats.image.pcx_dcx import PcxDcx
+	from .kaitai_struct_formats.image.png import Png
+	from .kaitai_struct_formats.image.psx_tim import PsxTim
+	from .kaitai_struct_formats.image.tga import Tga
+	from .kaitai_struct_formats.image.wmf import Wmf
+	from .kaitai_struct_formats.image.xwd import Xwd
+	from .kaitai_struct_formats.log.aix_utmp import AixUtmp
+	from .kaitai_struct_formats.log.glibc_utmp import GlibcUtmp
+	from .kaitai_struct_formats.log.systemd_journal import SystemdJournal
+	from .kaitai_struct_formats.log.windows_evt_log import WindowsEvtLog
+	from .kaitai_struct_formats.machine_code.code_6502 import Code6502
+	from .kaitai_struct_formats.media.avi import Avi
+	from .kaitai_struct_formats.media.blender_blend import BlenderBlend
+	from .kaitai_struct_formats.media.creative_voice_file import CreativeVoiceFile
+	from .kaitai_struct_formats.media.genmidi_op2 import GenmidiOp2
+	from .kaitai_struct_formats.media.id3v1_1 import Id3v11
+	from .kaitai_struct_formats.media.id3v2_3 import Id3v23
+	from .kaitai_struct_formats.media.id3v2_4 import Id3v24
+	from .kaitai_struct_formats.media.magicavoxel_vox import MagicavoxelVox
+	from .kaitai_struct_formats.media.ogg import Ogg
+	from .kaitai_struct_formats.media.quicktime_mov import QuicktimeMov
+	from .kaitai_struct_formats.media.standard_midi_file import StandardMidiFile
+	from .kaitai_struct_formats.media.stl import Stl
+	from .kaitai_struct_formats.media.tracker_modules.fasttracker_xm_module import FasttrackerXmModule
+	from .kaitai_struct_formats.media.tracker_modules.s3m import S3m
+	from .kaitai_struct_formats.media.vp8_ivf import Vp8Ivf
+	from .kaitai_struct_formats.media.wav import Wav
+	from .kaitai_struct_formats.network.bitcoin_transaction import BitcoinTransaction
+	from .kaitai_struct_formats.network.dns_packet import DnsPacket
+	from .kaitai_struct_formats.network.ethernet_frame import EthernetFrame
+	from .kaitai_struct_formats.network.hccap import Hccap
+	from .kaitai_struct_formats.network.hccapx import Hccapx
+	from .kaitai_struct_formats.network.icmp_packet import IcmpPacket
+	from .kaitai_struct_formats.network.ipv4_packet import Ipv4Packet
+	from .kaitai_struct_formats.network.ipv6_packet import Ipv6Packet
+	from .kaitai_struct_formats.network.microsoft_network_monitor_v2 import MicrosoftNetworkMonitorV2
+	from .kaitai_struct_formats.network.packet_ppi import PacketPpi
+	from .kaitai_struct_formats.network.pcap import Pcap
+	from .kaitai_struct_formats.network.protocol_body import ProtocolBody
+	from .kaitai_struct_formats.network.rtcp_payload import RtcpPayload
+	from .kaitai_struct_formats.network.rtp_packet import RtpPacket
+	from .kaitai_struct_formats.network.tcp_segment import TcpSegment
+	from .kaitai_struct_formats.network.tls_client_hello import TlsClientHello
+	from .kaitai_struct_formats.network.udp_datagram import UdpDatagram
+	from .kaitai_struct_formats.scientific.nt_mdt.nt_mdt import NtMdt
+	from .kaitai_struct_formats.scientific.nt_mdt.nt_mdt_pal import NtMdtPal
+	from .kaitai_struct_formats.scientific.spectroscopy.avantes_roh60 import AvantesRoh60
+	from .kaitai_struct_formats.scientific.spectroscopy.specpr import Specpr
+	from .kaitai_struct_formats.security.openpgp_message import OpenpgpMessage
+	from .kaitai_struct_formats.security.ssh_public_key import SshPublicKey
+	from .kaitai_struct_formats.serialization.asn1.asn1_der import Asn1Der
+	from .kaitai_struct_formats.serialization.bson import Bson
+	from .kaitai_struct_formats.serialization.google_protobuf import GoogleProtobuf
+	from .kaitai_struct_formats.serialization.microsoft_cfb import MicrosoftCfb
+	from .kaitai_struct_formats.serialization.msgpack import Msgpack
+	from .kaitai_struct_formats.serialization.ruby_marshal import RubyMarshal
+	from .kaitai_struct_formats.windows.regf import Regf
+	from .kaitai_struct_formats.windows.windows_lnk_file import WindowsLnkFile
+	from .kaitai_struct_formats.windows.windows_minidump import WindowsMinidump
+	from .kaitai_struct_formats.windows.windows_resource_file import WindowsResourceFile
+	from .kaitai_struct_formats.windows.windows_shell_items import WindowsShellItems
+	from .kaitai_struct_formats.windows.windows_systemtime import WindowsSystemtime
 
 #------------------------------------------------------------------------------
 # Qt/Kaitai OOP
@@ -428,7 +597,7 @@ def populate_child(ksobj, fieldName, fieldLabel, fieldValue, widget):
 		widget.setEnd(end)
 
 #------------------------------------------------------------------------------
-# main() - for dev testing
+# main()/ - for dev testing
 #------------------------------------------------------------------------------
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QHBoxLayout
 from binaryninja.enums import SectionSemantics
 import binaryninjaui
-from binaryninjaui import ThemeColor, ViewFrame
+from binaryninjaui import ThemeColor, ViewFrame, UIContext
 from . import headers
 
 
@@ -14,7 +14,7 @@ class SegmentsWidget(QWidget):
 		layout = QGridLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
 		layout.setVerticalSpacing(1)
-		layout.setHorizontalSpacing(16)
+		layout.setHorizontalSpacing(UIContext.getScaledWindowSize(16, 16).width())
 
 		self.segments = []
 		for segment in data.segments:
@@ -69,7 +69,7 @@ class SectionsWidget(QWidget):
 		layout = QGridLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
 		layout.setVerticalSpacing(1)
-		layout.setHorizontalSpacing(16)
+		layout.setHorizontalSpacing(UIContext.getScaledWindowSize(16, 16).width())
 
 		maxNameLen = 0
 		for section in data.sections.values():

@@ -1,5 +1,6 @@
 # coding: utf8
 
+import sys
 from PySide2.QtWidgets import QAbstractScrollArea, QAbstractSlider
 from PySide2.QtGui import QPainter, QPalette, QFont
 from PySide2.QtCore import Qt, QTimer, QRect
@@ -102,14 +103,14 @@ class ByteView(QAbstractScrollArea, View):
 		self.actionHandler().bindAction("Page Down", UIAction(lambda ctxt: self.pageDown(False)))
 		self.actionHandler().bindAction("Extend Selection Page Up", UIAction(lambda ctxt: self.pageUp(True)))
 		self.actionHandler().bindAction("Extend Selection Page Down", UIAction(lambda ctxt: self.pageDown(True)))
-		self.actionHandler().bindAction("Move Cursor to Start Of Line", UIAction(lambda ctxt: self.moveToStartOfLine(False)))
-		self.actionHandler().bindAction("Move Cursor to End Of Line", UIAction(lambda ctxt: self.moveToEndOfLine(False)))
-		self.actionHandler().bindAction("Move Cursor to Start Of View", UIAction(lambda ctxt: self.moveToStartOfView(False)))
-		self.actionHandler().bindAction("Move Cursor to End Of View", UIAction(lambda ctxt: self.moveToEndOfView(False)))
-		self.actionHandler().bindAction("Extend Selection to Start Of Line", UIAction(lambda ctxt: self.moveToStartOfLine(True)))
-		self.actionHandler().bindAction("Extend Selection to End Of Line", UIAction(lambda ctxt: self.moveToEndOfLine(True)))
-		self.actionHandler().bindAction("Extend Selection to Start Of View", UIAction(lambda ctxt: self.moveToStartOfView(True)))
-		self.actionHandler().bindAction("Extend Selection to End Of View", UIAction(lambda ctxt: self.moveToEndOfView(True)))
+		self.actionHandler().bindAction("Move Cursor to Start of Line", UIAction(lambda ctxt: self.moveToStartOfLine(False)))
+		self.actionHandler().bindAction("Move Cursor to End of Line", UIAction(lambda ctxt: self.moveToEndOfLine(False)))
+		self.actionHandler().bindAction("Move Cursor to Start of View", UIAction(lambda ctxt: self.moveToStartOfView(False)))
+		self.actionHandler().bindAction("Move Cursor to End of View", UIAction(lambda ctxt: self.moveToEndOfView(False)))
+		self.actionHandler().bindAction("Extend Selection to Start of Line", UIAction(lambda ctxt: self.moveToStartOfLine(True)))
+		self.actionHandler().bindAction("Extend Selection to End of Line", UIAction(lambda ctxt: self.moveToEndOfLine(True)))
+		self.actionHandler().bindAction("Extend Selection to Start of View", UIAction(lambda ctxt: self.moveToStartOfView(True)))
+		self.actionHandler().bindAction("Extend Selection to End of View", UIAction(lambda ctxt: self.moveToEndOfView(True)))
 
 	def getData(self):
 		return self.data
@@ -202,9 +203,12 @@ class ByteView(QAbstractScrollArea, View):
 	def createRenderContext(self):
 		render = RenderContext(self)
 		userFont = binaryninjaui.getMonospaceFont(self)
-		# Some fonts aren't fixed width across all characters, use a known good one
-		font = QFont("Menlo", userFont.pointSize())
-		font.setKerning(False)
+		if sys.platform == "darwin":
+			# Some fonts aren't fixed width across all characters, use a known good one
+			font = QFont("Menlo", userFont.pointSize())
+			font.setKerning(False)
+		else:
+			font = userFont
 		render.setFont(font)
 		return render
 
@@ -212,6 +216,8 @@ class ByteView(QAbstractScrollArea, View):
 		self.addrWidth = max(len("%x" % self.data.end), 8)
 		render = self.createRenderContext()
 		cols = ((width - 4) // render.getFontWidth()) - (self.addrWidth + 2)
+		if cols < 1:
+			cols = 1
 		if cols != self.cols:
 			self.cols = cols
 			if self.topLine < len(self.lines):
@@ -642,6 +648,7 @@ class ByteView(QAbstractScrollArea, View):
 						self.cursorAddr = self.lines[i - self.visibleRows].address
 					elif self.cursorAddr >= (self.lines[i - self.visibleRows].address + self.lines[i - self.visibleRows].length):
 						self.cursorAddr = self.lines[i - self.visibleRows].address + self.lines[i - self.visibleRows].length - 1
+					break
 		self.adjustAddressAfterBackwardMovement()
 		if self.topLine > self.visibleRows:
 			self.topLine -= self.visibleRows
@@ -668,8 +675,9 @@ class ByteView(QAbstractScrollArea, View):
 					self.cursorAddr = self.lines[i + self.visibleRows].address + lineOfs
 					if self.cursorAddr < self.lines[i + self.visibleRows].address:
 						self.cursorAddr = self.lines[i + self.visibleRows].address
-					elif self.cursorAddr >= (self.lines[i + self.visibleRows].address + self.lines[i - self.visibleRows].length):
-						self.cursorAddr = self.lines[i + self.visibleRows].address + self.lines[i - self.visibleRows].length - 1
+					elif self.cursorAddr >= (self.lines[i + self.visibleRows].address + self.lines[i + self.visibleRows].length):
+						self.cursorAddr = self.lines[i + self.visibleRows].address + self.lines[i + self.visibleRows].length - 1
+					break
 		self.adjustAddressAfterForwardMovement()
 		if (self.topLine + self.visibleRows) < len(self.lines):
 			self.topLine += self.visibleRows

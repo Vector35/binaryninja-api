@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.enums import SymbolType
 import binaryninjaui
-from binaryninjaui import ViewFrame, FilterTarget, FilteredView
+from binaryninjaui import ViewFrame, FilterTarget, FilteredView, UIContext
 
 
 class GenericImportsModel(QAbstractItemModel):
@@ -195,4 +195,4 @@ class ImportsWidget(QWidget):
 		self.filter = FilteredView(self, self.imports, self.imports)
 		layout.addWidget(self.filter, 1)
 		self.setLayout(layout)
-		self.setMinimumSize(QSize(100, 196))
+		self.setMinimumSize(UIContext.getScaledWindowSize(100, 196))

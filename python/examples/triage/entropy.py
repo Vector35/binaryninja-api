@@ -4,7 +4,7 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtGui import QImage, QColor, QPainter
 from PySide2.QtCore import Qt, QSize, QTimer
 import binaryninjaui
-from binaryninjaui import ViewFrame, ThemeColor
+from binaryninjaui import ViewFrame, ThemeColor, UIContext
 
 
 class EntropyThread(threading.Thread):
@@ -51,7 +51,7 @@ class EntropyWidget(QWidget):
 		self.timer.setSingleShot(False)
 		self.timer.start()
 
-		self.setMinimumHeight(32)
+		self.setMinimumHeight(UIContext.getScaledWindowSize(32, 32).height())
 
 	def paintEvent(self, event):
 		p = QPainter(self)

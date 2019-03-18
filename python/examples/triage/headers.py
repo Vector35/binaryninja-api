@@ -1,7 +1,7 @@
 import time
 from binaryninja.binaryview import StructuredDataView
 import binaryninjaui
-from binaryninjaui import ThemeColor, ViewFrame
+from binaryninjaui import ThemeColor, ViewFrame, UIContext
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout
 from PySide2.QtGui import QPalette
 
@@ -217,6 +217,6 @@ class HeaderWidget(QWidget):
 				row = 0
 				col += 1
 		for col in range(1, header.columns):
-			layout.setColumnMinimumWidth(col * 3 - 1, 20)
+			layout.setColumnMinimumWidth(col * 3 - 1, UIContext.getScaledWindowSize(20, 20).width())
 		layout.setColumnStretch(header.columns * 3 - 1, 1)
 		self.setLayout(layout)

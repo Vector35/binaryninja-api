@@ -1,4 +1,11 @@
+# python stuff
+import io
+import os
+import sys
+import types
 import traceback
+
+# binja stuff
 import binaryninjaui
 from binaryninja.settings import Settings
 from binaryninja import log
@@ -8,11 +15,10 @@ from binaryninja import binaryview
 from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit
 from PySide2.QtCore import Qt
 
-import types
-
-import kshelpers
-from kaitaistruct import KaitaiStruct
-import io
+if sys.version_info[0] == 2:
+	import kshelpers
+else:
+	from . import kshelpers
 
 class KaitaiView(QScrollArea, View):
 	def __init__(self, parent, binaryView):
@@ -66,12 +72,12 @@ class KaitaiView(QScrollArea, View):
 
 		kaitaiIO = kshelpers.KaitaiBinaryViewIO(self.binaryView)
 		if not kaitaiIO:
-			print 'ERROR: initializing kaitai binary view'
-		parsed = kshelpers.parse_io(kaitaiIO)
+			print('ERROR: initializing kaitai binary view')
+		parsed = kshelpers.parseIo(kaitaiIO)
 		if not parsed:
-			print 'ERROR: parsing the binary view'
+			print('ERROR: parsing the binary view')
 
-		tree = kshelpers.build_qtree(parsed)
+		tree = kshelpers.buildQtree(parsed)
 		if not tree:
 			return
 
@@ -118,7 +124,7 @@ class KaitaiView(QScrollArea, View):
 		return middle
 
 	def setCurrentOffset(self, offset):
-		print 'setCurrentOffset(0x%X)' % offset
+		print('setCurrentOffset(0x%X)' % offset)
 		self.rootSelectionStart = offset
 		UIContext.updateStatus(True)
 
@@ -192,7 +198,7 @@ class KaitaiView(QScrollArea, View):
 			self.ioCurrent = _io
 
 		# now position selection in whatever HexEditor is current
-		#print 'selecting to [0x%X, 0x%X)' % (start, end)
+		#print('selecting to [0x%X, 0x%X)' % (start, end))
 		self.hexWidget.setSelectionRange(start, end)
 
 		# set hex group title to reflect current selection
@@ -209,25 +215,33 @@ class KaitaiViewType(ViewType):
 
 		priority = 0
 		isExec = binaryView.executable
-		weRecognize = kshelpers.id_data(binaryView.read(0,16)) != None
+		weRecognize = kshelpers.idData(binaryView.read(0,16), len(binaryView)) != None
 			
 		# NOTE: ui/shared/hexeditor.cpp has the hex editor at priority 20 when
 		# executable, and 10 otherwise
 
-		if isExec and weRecognize:
-			#print 'priority=25 to slightly beat out the hex editor case=(executable, recognize)'
-			priority = 25
-		if isExec and not weRecognize:
-			#print 'priority=15 to lose to the hex editor case=(executable, !recognize)'
-			priority = 15
-		if not isExec and weRecognize:
-			#print 'priority=100 to beat out everything case=(!executable, recognize)'
-			priority = 100
-		if not isExec and not weRecognize:
-			#print 'priority=5 to lose to hex editor case=(!executable, !recognize)'
-			priority = 5
+		if not weRecognize:
+			priority = 0
+		else:
+			if isExec:
+				priority = 21
+			else:
+				priority = 11
+
+#		if isExec and weRecognize:
+#			print('priority=25 to slightly beat out the hex editor case=(executable, recognize)')
+#			priority = 25
+#		if isExec and not weRecognize:
+#			print('priority=15 to lose to the hex editor case=(executable, !recognize)')
+#			priority = 15
+#		if not isExec and weRecognize:
+#			print('priority=100 to beat out everything case=(!executable, recognize)')
+#			priority = 100
+#		if not isExec and not weRecognize:
+#			print('priority=5 to lose to hex editor case=(!executable, !recognize)')
+#			priority = 5
 			
-		#print 'returning priority=%d for KaitaiViewType' % priority
+		#print('returning priority=%d for KaitaiViewType' % priority)
 		return priority
 
 	def create(self, binaryView, view_frame):

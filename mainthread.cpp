@@ -80,3 +80,9 @@ void BinaryNinja::ExecuteOnMainThreadAndWait(const function<void()>& action)
 	ctxt.action = action;
 	BNExecuteOnMainThreadAndWait(&ctxt, ExecuteActionLocal);
 }
+
+
+bool BinaryNinja::IsMainThread()
+{
+	return BNIsMainThread();
+}

@@ -3603,6 +3603,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNWaitForMainThreadAction(BNMainThreadAction* action);
 	BINARYNINJACOREAPI BNMainThreadAction* BNExecuteOnMainThread(void* ctxt, void (*func)(void* ctxt));
 	BINARYNINJACOREAPI void BNExecuteOnMainThreadAndWait(void* ctxt, void (*func)(void* ctxt));
+	BINARYNINJACOREAPI bool BNIsMainThread(void);
 
 	// Worker thread queue management
 	BINARYNINJACOREAPI void BNWorkerEnqueue(void* ctxt, void (*action)(void* ctxt));

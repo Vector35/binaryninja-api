@@ -58,3 +58,7 @@ def get_worker_thread_count():
 
 def set_worker_thread_count(count):
 	core.BNSetWorkerThreadCount(count)
+
+
+def is_main_thread():
+	return core.BNIsMainThread()

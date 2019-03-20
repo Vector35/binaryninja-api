@@ -8,7 +8,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from protocol_body import ProtocolBody
+from . import protocol_body
 class Ipv4Packet(KaitaiStruct):
     SEQ_FIELDS = ["b1", "b2", "total_length", "identification", "b67", "ttl", "protocol", "header_checksum", "src_ip_addr", "dst_ip_addr", "options", "body"]
     def __init__(self, _io, _parent=None, _root=None):
@@ -57,7 +57,7 @@ class Ipv4Packet(KaitaiStruct):
         self._debug['body']['start'] = self._io.pos()
         self._raw_body = self._io.read_bytes((self.total_length - self.ihl_bytes))
         io = KaitaiStream(BytesIO(self._raw_body))
-        self.body = ProtocolBody(self.protocol, io)
+        self.body = protocol_body.ProtocolBody(self.protocol, io)
         self.body._read()
         self._debug['body']['end'] = self._io.pos()
 

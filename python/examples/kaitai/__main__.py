@@ -118,36 +118,40 @@ if __name__ == '__main__':
 		print('importing every format...')
 
 		module_names = [
-			'cpio_old_le', 'gzip', 'lzh', 'rar', 'zip', 'monomakh_sapr_chg', 'bcd',
-			'vlq_base128_be', 'vlq_base128_le', 'dbf', 'gettext_mo', 'sqlite3', 'tsm',
-			'dex', 'dos_mz', 'elf', 'java_class', 'mach_o', 'microsoft_pe',
-			'python_pyc_27', 'swf', 'apm_partition_table', 'apple_single_double', 'cramfs',
-			'ext2', 'gpt_partition_table', 'iso9660', 'luks', 'lvm2',
-			'mbr_partition_table', 'tr_dos_image', 'vdi', 'vfat', 'vmware_vmdk',
-			'andes_firmware', 'ines', 'uimage', 'ttf', 'allegro_dat', 'doom_wad',
-			'dune_2_pak', 'fallout2_dat', 'fallout_dat', 'ftl_dat', 'gran_turismo_vol',
-			'heaps_pak', 'heroes_of_might_and_magic_agg', 'heroes_of_might_and_magic_bmp',
-			'quake_mdl', 'quake_pak', 'renderware_binary_stream', 'saints_row_2_vpp_pc',
-			'warcraft_2_pud', 'shapefile_index', 'shapefile_main', 'edid',
-			'mifare_classic', 'bmp', 'dicom', 'exif', 'exif_be', 'exif_le', 'gif', 'icc_4',
-			'ico', 'jpeg', 'pcx', 'pcx_dcx', 'png', 'psx_tim', 'tga', 'wmf', 'xwd',
-			'aix_utmp', 'glibc_utmp', 'systemd_journal', 'windows_evt_log', 'code_6502',
-			'avi', 'blender_blend', 'creative_voice_file', 'genmidi_op2', 'id3v1_1',
-			'id3v2_3', 'id3v2_4', 'magicavoxel_vox', 'ogg', 'quicktime_mov',
-			'standard_midi_file', 'stl', 'fasttracker_xm_module', 's3m', 'vp8_ivf', 'wav',
-			'bitcoin_transaction', 'dns_packet', 'ethernet_frame', 'hccap', 'hccapx',
-			'icmp_packet', 'ipv4_packet', 'ipv6_packet', 'microsoft_network_monitor_v2',
-			'packet_ppi', 'pcap', 'protocol_body', 'rtcp_payload', 'rtp_packet',
-			'tcp_segment', 'tls_client_hello', 'udp_datagram', 'nt_mdt', 'nt_mdt_pal',
-			'avantes_roh60', 'specpr', 'openpgp_message', 'ssh_public_key', 'asn1_der',
-			'bson', 'google_protobuf', 'microsoft_cfb', 'msgpack', 'ruby_marshal', 'regf',
-			'windows_lnk_file', 'windows_minidump', 'windows_resource_file',
-			'windows_shell_items', 'windows_systemtime'
+		'aix_utmp', 'allegro_dat', 'andes_firmware', 'apm_partition_table',
+		'apple_single_double', 'asn1_der', 'avantes_roh60', 'avi', 'bcd',
+		'bitcoin_transaction', 'blender_blend', 'bmp', 'bson', 'code_6502', 'cpio_old_le',
+		'cramfs', 'creative_voice_file', 'dbf', 'dex', 'dicom', 'dns_packet', 'doom_wad',
+		'dos_mz', 'dune_2_pak', 'edid', 'elf', 'exif', 'exif_be', 'exif_le',
+		'ext2', 'fallout2_dat', 'fallout_dat', 'fasttracker_xm_module', 'ftl_dat',
+		'genmidi_op2', 'gettext_mo', 'gif', 'glibc_utmp', 'google_protobuf',
+		'gpt_partition_table', 'gran_turismo_vol', 'gzip', 'hccap', 'hccapx', 'heaps_pak',
+		'heroes_of_might_and_magic_agg', 'heroes_of_might_and_magic_bmp', 'icc_4',
+		'icmp_packet', 'ico', 'id3v1_1', 'id3v2_3', 'id3v2_4', 'ines',
+		'iso9660', 'java_class', 'jpeg', 'luks', 'lvm2', 'lzh', 'mach_o',
+		'magicavoxel_vox', 'mbr_partition_table', 'microsoft_cfb',
+		'microsoft_pe', 'mifare_classic',
+		'monomakh_sapr_chg', 'msgpack', 'nt_mdt', 'nt_mdt_pal', 'ogg', 'openpgp_message',
+		'pcx', 'pcx_dcx', 'png', 'psx_tim',
+		'python_pyc_27', 'quake_mdl', 'quake_pak', 'quicktime_mov', 'rar', 'regf',
+		'renderware_binary_stream', 'rtcp_payload', 'rtp_packet', 'ruby_marshal', 's3m',
+		'saints_row_2_vpp_pc', 'shapefile_index', 'shapefile_main', 'specpr', 'sqlite3',
+		'ssh_public_key', 'standard_midi_file', 'stl', 'swf', 'systemd_journal',
+		'tcp_segment', 'tga', 'tls_client_hello', 'tr_dos_image', 'tsm', 'ttf',
+		'udp_datagram', 'uimage', 'vdi', 'vfat', 'vlq_base128_be', 'vlq_base128_le',
+		'vmware_vmdk', 'vp8_ivf', 'warcraft_2_pud', 'wav', 'windows_evt_log',
+		'windows_lnk_file', 'windows_minidump', 'windows_resource_file',
+		'windows_shell_items', 'windows_systemtime', 'wmf', 'xwd', 'zip',
 		]
+
+		if sys.version_info[0] == 3:
+			module_names += ['ipv4_packet', 'ipv6_packet', 'protocol_body',
+				'microsoft_network_monitor_v2', 'packet_ppi', 'pcap',
+				'ethernet_frame']
 
 		(npass, nfail) = (0,0)
 
-		for module_name in module_names:
+		for module_name in sorted(module_names):
 			class_name = ''.join(map(lambda x: x.capitalize(), module_name.split('_')))
 
 			print('from %s import %s...' % (module_name, class_name), end='')
@@ -162,8 +166,8 @@ if __name__ == '__main__':
 
 		ntests = 1.0*npass + nfail
 		assert(ntests == len(module_names))
-		print('passes %d of %d (rate: %f%%)' % (npass, ntests, npass/ntests))
-		print('failures %d of %d (rate: %f%%)' % (nfail, ntests, nfail/ntests))
+		print('passes %d of %d (rate: %0.1f%%)' % (npass, ntests, 100*npass/ntests))
+		print('failures %d of %d (rate: %0.1f%%)' % (nfail, ntests, 100*nfail/ntests))
 
 	if cmd == 'dumpbinja':
 		fpath = sys.argv[2]

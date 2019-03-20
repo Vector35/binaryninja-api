@@ -30,7 +30,7 @@ class Warcraft2Pud(KaitaiStruct):
         computer = 1
         passive_computer = 2
         nobody = 3
-        computer = 4
+        computer_ = 4
         human = 5
         rescue_passive = 6
         rescue_active = 7

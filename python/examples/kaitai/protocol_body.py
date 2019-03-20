@@ -9,11 +9,11 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from udp_datagram import UdpDatagram
-from icmp_packet import IcmpPacket
-from tcp_segment import TcpSegment
-from ipv4_packet import Ipv4Packet
-from ipv6_packet import Ipv6Packet
+from . import udp_datagram
+from . import icmp_packet
+from . import tcp_segment
+from . import ipv4_packet
+from . import ipv6_packet
 class ProtocolBody(KaitaiStruct):
     """Protocol body represents particular payload on transport level (OSI
     layer 4).
@@ -192,22 +192,22 @@ class ProtocolBody(KaitaiStruct):
             self.body = self._root.NoNextHeader(self._io, self, self._root)
             self.body._read()
         elif _on == self._root.ProtocolEnum.ipv4:
-            self.body = Ipv4Packet(self._io)
+            self.body = ipv4_packet.Ipv4Packet(self._io)
             self.body._read()
         elif _on == self._root.ProtocolEnum.udp:
-            self.body = UdpDatagram(self._io)
+            self.body = udp_datagram.UdpDatagram(self._io)
             self.body._read()
         elif _on == self._root.ProtocolEnum.icmp:
-            self.body = IcmpPacket(self._io)
+            self.body = icmp_packet.IcmpPacket(self._io)
             self.body._read()
         elif _on == self._root.ProtocolEnum.hopopt:
             self.body = self._root.OptionHopByHop(self._io, self, self._root)
             self.body._read()
         elif _on == self._root.ProtocolEnum.ipv6:
-            self.body = Ipv6Packet(self._io)
+            self.body = ipv6_packet.Ipv6Packet(self._io)
             self.body._read()
         elif _on == self._root.ProtocolEnum.tcp:
-            self.body = TcpSegment(self._io)
+            self.body = tcp_segment.TcpSegment(self._io)
             self.body._read()
         self._debug['body']['end'] = self._io.pos()
 

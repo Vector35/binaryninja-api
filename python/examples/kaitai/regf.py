@@ -10,25 +10,6 @@ if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
 class Regf(KaitaiStruct):
-    """This spec allows to parse files used by Microsoft Windows family of
-    operating systems to store parts of its "registry". "Registry" is a
-    hierarchical database that is used to store system settings (global
-    configuration, per-user, per-application configuration, etc).
-    
-    Typically, registry files are stored in:
-    
-    * System-wide: several files in `%SystemRoot%\System32\Config\`
-    * User-wide:
-      * `%USERPROFILE%\Ntuser.dat`
-      * `%USERPROFILE%\Local Settings\Application Data\Microsoft\Windows\Usrclass.dat` (localized, Windows 2000, Server 2003 and Windows XP)
-      * `%USERPROFILE%\AppData\Local\Microsoft\Windows\Usrclass.dat` (non-localized, Windows Vista and later)
-    
-    Note that one typically can't access files directly on a mounted
-    filesystem with a running Windows OS.
-    
-    .. seealso::
-       Source - https://github.com/libyal/libregf/blob/master/documentation/Windows%20NT%20Registry%20File%20(REGF)%20format.asciidoc
-    """
     SEQ_FIELDS = ["header", "hive_bins"]
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io

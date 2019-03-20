@@ -9,8 +9,8 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from ethernet_frame import EthernetFrame
-from packet_ppi import PacketPpi
+from . import ethernet_frame
+from . import packet_ppi
 class Pcap(KaitaiStruct):
     """PCAP (named after libpcap / winpcap) is a popular format for saving
     network traffic grabbed by network sniffers. It is typically
@@ -219,12 +219,12 @@ class Pcap(KaitaiStruct):
             if _on == self._root.Linktype.ppi:
                 self._raw_body = self._io.read_bytes(self.incl_len)
                 io = KaitaiStream(BytesIO(self._raw_body))
-                self.body = PacketPpi(io)
+                self.body = packet_ppi.PacketPpi(io)
                 self.body._read()
             elif _on == self._root.Linktype.ethernet:
                 self._raw_body = self._io.read_bytes(self.incl_len)
                 io = KaitaiStream(BytesIO(self._raw_body))
-                self.body = EthernetFrame(io)
+                self.body = ethernet_frame.EthernetFrame(io)
                 self.body._read()
             else:
                 self.body = self._io.read_bytes(self.incl_len)

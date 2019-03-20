@@ -8,7 +8,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from pcx import Pcx
+from .pcx import Pcx
 class PcxDcx(KaitaiStruct):
     """DCX is a simple extension of PCX image format allowing to bundle
     many PCX images (typically, pages of a document) in one file. It saw

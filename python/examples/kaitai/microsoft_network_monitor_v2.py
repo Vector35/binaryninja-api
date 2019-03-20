@@ -9,8 +9,8 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from windows_systemtime import WindowsSystemtime
-from ethernet_frame import EthernetFrame
+from . import windows_systemtime
+from . import ethernet_frame
 class MicrosoftNetworkMonitorV2(KaitaiStruct):
     """Microsoft Network Monitor (AKA Netmon) is a proprietary Microsoft's
     network packet sniffing and analysis tool. It can save captured
@@ -151,7 +151,7 @@ class MicrosoftNetworkMonitorV2(KaitaiStruct):
         self.mac_type = KaitaiStream.resolve_enum(self._root.Linktype, self._io.read_u2le())
         self._debug['mac_type']['end'] = self._io.pos()
         self._debug['time_capture_start']['start'] = self._io.pos()
-        self.time_capture_start = WindowsSystemtime(self._io)
+        self.time_capture_start = windows_systemtime.WindowsSystemtime(self._io)
         self.time_capture_start._read()
         self._debug['time_capture_start']['end'] = self._io.pos()
         self._debug['frame_table_ofs']['start'] = self._io.pos()
@@ -279,7 +279,7 @@ class MicrosoftNetworkMonitorV2(KaitaiStruct):
             if _on == self._root.Linktype.ethernet:
                 self._raw_body = self._io.read_bytes(self.inc_len)
                 io = KaitaiStream(BytesIO(self._raw_body))
-                self.body = EthernetFrame(io)
+                self.body = ethernet_frame.EthernetFrame(io)
                 self.body._read()
             else:
                 self.body = self._io.read_bytes(self.inc_len)

@@ -9,7 +9,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from vlq_base128_le import VlqBase128Le
+from .vlq_base128_le import VlqBase128Le
 class Dex(KaitaiStruct):
     """Android OS applications executables are typically stored in its own
     format, optimized for more efficient execution in Dalvik virtual

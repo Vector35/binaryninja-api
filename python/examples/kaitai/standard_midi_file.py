@@ -9,7 +9,7 @@ from enum import Enum
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from vlq_base128_be import VlqBase128Be
+from .vlq_base128_be import VlqBase128Be
 class StandardMidiFile(KaitaiStruct):
     """Standard MIDI file, typically knows just as "MID", is a standard way
     to serialize series of MIDI events, which is a protocol used in many

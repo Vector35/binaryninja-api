@@ -9,7 +9,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from ethernet_frame import EthernetFrame
+from . import ethernet_frame
 class PacketPpi(KaitaiStruct):
     """PPI is a standard for link layer packet encapsulation, proposed as
     generic extensible container to store both captured in-band data and
@@ -163,7 +163,7 @@ class PacketPpi(KaitaiStruct):
         elif _on == self._root.Linktype.ethernet:
             self._raw_body = self._io.read_bytes_full()
             io = KaitaiStream(BytesIO(self._raw_body))
-            self.body = EthernetFrame(io)
+            self.body = ethernet_frame.EthernetFrame(io)
             self.body._read()
         else:
             self.body = self._io.read_bytes_full()

@@ -9,7 +9,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from vlq_base128_be import VlqBase128Be
+from .vlq_base128_be import VlqBase128Be
 class Sqlite3(KaitaiStruct):
     """SQLite3 is a popular serverless SQL engine, implemented as a library
     to be used within other applications. It keeps its databases as

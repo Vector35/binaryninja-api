@@ -9,7 +9,7 @@ import collections
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from exif import Exif
+from .exif import Exif
 class Jpeg(KaitaiStruct):
 
     class ComponentId(Enum):

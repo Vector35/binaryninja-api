@@ -152,26 +152,26 @@ class OpenpgpMessage(KaitaiStruct):
         private_experimental_algorithm_10 = 110
 
     class SubpacketTypes(Enum):
-        reserved = 0
-        reserved = 1
+        reserved0 = 0
+        reserved1 = 1
         signature_creation_time = 2
         signature_expiration_time = 3
         exportable_certification = 4
         trust_signature = 5
         regular_expression = 6
         revocable = 7
-        reserved = 8
+        reserved8 = 8
         key_expiration_time = 9
         placeholder_for_backward_compatibility = 10
         preferred_symmetric_algorithms = 11
         revocation_key = 12
-        reserved = 13
-        reserved = 14
-        reserved = 15
+        reserved13 = 13
+        reserved14 = 14
+        reserved15 = 15
         issuer = 16
-        reserved = 17
-        reserved = 18
-        reserved = 19
+        reserved17 = 17
+        reserved18 = 18
+        reserved19 = 19
         notation_data = 20
         preferred_hash_algorithms = 21
         preferred_compression_algorithms = 22

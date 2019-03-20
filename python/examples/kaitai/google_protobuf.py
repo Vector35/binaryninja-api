@@ -9,7 +9,7 @@ from enum import Enum
 if parse_version(ks_version) < parse_version('0.7'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.7 or later is required, but you have %s" % (ks_version))
 
-from vlq_base128_le import VlqBase128Le
+from .vlq_base128_le import VlqBase128Le
 class GoogleProtobuf(KaitaiStruct):
     """Google Protocol Buffers (AKA protobuf) is a popular data
     serialization scheme used for communication protocols, data storage,

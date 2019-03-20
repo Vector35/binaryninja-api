@@ -1774,7 +1774,7 @@ class Dicom(KaitaiStruct):
         alpha_lut_transfer_function = 2626576
         icc_profile = 2629632
         color_space = 2629634
-        lossy_image_compression = 2629904
+        lossy_image_compression_ = 2629904
         lossy_image_compression_ratio = 2629906
         lossy_image_compression_method = 2629908
         modality_lut_sequence = 2633728

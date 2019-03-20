@@ -12,13 +12,21 @@ from binaryninja import log
 from binaryninja import _binaryninjacore as core
 from binaryninjaui import View, ViewType, ViewFrame, UIContext, HexEditor
 from binaryninja import binaryview
-from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit
+from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit, QHeaderView
 from PySide2.QtCore import Qt
 
 if sys.version_info[0] == 2:
 	import kshelpers
 else:
 	from . import kshelpers
+
+class MyQTreeWidget(QTreeWidget):
+	def __init__(self):
+		QTreeWidget.__init__(self)
+
+	def resizeEvent(self, event):
+		QTreeWidget.resizeEvent(self, event)
+		self.scrollTo(self.currentIndex())
 
 class KaitaiView(QScrollArea, View):
 	def __init__(self, parent, binaryView):
@@ -37,30 +45,23 @@ class KaitaiView(QScrollArea, View):
 		self.ioCurrent = None
 
 		container = QWidget(self)
-		layout = QVBoxLayout()
+		self.layout = QVBoxLayout()
 
-		self.treeGroup = QGroupBox("Data Tree:")
-		treeLayout = QVBoxLayout()
-		self.treeWidget = QTreeWidget()
+		self.treeWidget = MyQTreeWidget()
 		self.treeWidget.setColumnCount(4)
 		self.treeWidget.setHeaderLabels(['label','value','start','end'])
 		self.treeWidget.itemSelectionChanged.connect(self.onTreeSelect)
+
 		self.structPath = QLineEdit("root")
 		self.structPath.setDisabled(True)
-		treeLayout.addWidget(self.structPath)
-		treeLayout.addWidget(self.treeWidget)
-		self.treeGroup.setLayout(treeLayout)
 
-		self.hexGroup = QGroupBox("Hex View:")
-		self.hexLayout = QVBoxLayout()
 		self.hexWidget = HexEditor(binaryView, ViewFrame.viewFrameForWidget(self), 0)
-		self.hexLayout.addWidget(self.hexWidget)
-		self.hexGroup.setLayout(self.hexLayout)
 
-		layout.addWidget(self.treeGroup)
-		layout.addWidget(self.hexGroup)
-		#layout.addStretch(1)
-		container.setLayout(layout)
+		self.layout.addWidget(self.treeWidget)
+		self.layout.addWidget(self.structPath)
+		self.layout.addWidget(self.hexWidget)
+		#self.layout.addStretch(1)
+		container.setLayout(self.layout)
 		self.setWidgetResizable(True)
 		self.setWidget(container)
 
@@ -98,12 +99,7 @@ class KaitaiView(QScrollArea, View):
 			# add root's children as top level items
 			self.treeWidget.insertTopLevelItems(0, tree.takeChildren())
 
-		#self.treeWidget.expandAll()
-		width = self.treeWidget.width()
-		self.treeWidget.setColumnWidth(0, .4*width)
-		self.treeWidget.setColumnWidth(1, .2*width)
-		self.treeWidget.setColumnWidth(2, .1*width)
-		self.treeWidget.setColumnWidth(3, .1*width)
+
 		# enable sorting
 		self.treeWidget.setSortingEnabled(True)
 		self.treeWidget.sortByColumn(2, Qt.AscendingOrder)
@@ -114,17 +110,52 @@ class KaitaiView(QScrollArea, View):
 		self.hexWidget.setSelectionRange(0,1)
 		self.treeWidget.setUniformRowHeights(True)
 
-	# callback!
+	# Qt callbacks
+	def resizeEvent(self, event):
+		width = self.treeWidget.width()
+		self.treeWidget.setColumnWidth(0, .6*width)
+		self.treeWidget.setColumnWidth(1, .2*width)
+		self.treeWidget.setColumnWidth(2, .1*width)
+		self.treeWidget.setColumnWidth(3, .1*width)
+
+		QScrollArea.resizeEvent(self, event)
+
+	# binja callbacks
 	def getData(self):
 		return self.binaryView
 
-	# callback!
+	def getStart(self):
+		result = self.binaryView.start
+		#print('getStart() returning '+str(result))
+		return result
+
+	def getEnd(self):
+		result = self.binaryView.end
+		#print('getEnd() returning '+str(result))
+		return result
+
+	def getLength(self):
+		result = len(self.binaryView)
+		#print('getLength() returning '+str(result))
+		return result
+
 	def getCurrentOffset(self):
-		middle = self.rootSelectionStart + int((self.rootSelectionEnd - self.rootSelectionStart)/2)
-		return middle
+		result = self.rootSelectionStart + int((self.rootSelectionEnd - self.rootSelectionStart)/2)
+		#result = self.rootSelectionStart
+		#print('getCurrentOffset() returning '+str(result))
+		return result
+
+	def getSelectionOffsets(self):
+		result = None
+		if self.hexWidget:
+			result = self.hexWidget.getSelectionOffsets()
+		else:
+			result = (self.rootSelectionStart, self.rootSelectionStart)
+		#print('getSelectionOffsets() returning '+str(result))
+		return result
 
 	def setCurrentOffset(self, offset):
-		print('setCurrentOffset(0x%X)' % offset)
+		#print('setCurrentOffset(0x%X)' % offset)
 		self.rootSelectionStart = offset
 		UIContext.updateStatus(True)
 
@@ -132,6 +163,11 @@ class KaitaiView(QScrollArea, View):
 		return binaryninjaui.getMonospaceFont(self)
 
 	def navigate(self, addr):
+		#print('navigate()')
+		return False
+
+	def navigateToFileOffset(self, offset):
+		#print('navigateToFileOffset()')
 		return False
 
 	def onTreeSelect(self, wtf=None):
@@ -176,7 +212,7 @@ class KaitaiView(QScrollArea, View):
 		# current kaitai object is on a different io? then swap HexEditor
 		if _io != self.ioCurrent:
 			# delete old view
-			layoutItem = self.hexLayout.takeAt(0)
+			layoutItem = self.layout.takeAt(2)
 			hexEditorWidget = layoutItem.widget()
 			hexEditorWidget.setParent(None)
 			hexEditorWidget.deleteLater()
@@ -194,7 +230,7 @@ class KaitaiView(QScrollArea, View):
 				bv = binaryview.BinaryView.new(data)
 				self.hexWidget = HexEditor(bv, ViewFrame.viewFrameForWidget(self), 0)
 
-			self.hexLayout.addWidget(self.hexWidget)
+			self.layout.addWidget(self.hexWidget)
 			self.ioCurrent = _io
 
 		# now position selection in whatever HexEditor is current
@@ -202,7 +238,7 @@ class KaitaiView(QScrollArea, View):
 		self.hexWidget.setSelectionRange(start, end)
 
 		# set hex group title to reflect current selection
-		self.hexGroup.setTitle('Hex View @ [0x%X, 0x%X)' % (start, end))
+		#self.hexGroup.setTitle('Hex View @ [0x%X, 0x%X)' % (start, end))
 
 class KaitaiViewType(ViewType):
 	def __init__(self):
@@ -210,39 +246,35 @@ class KaitaiViewType(ViewType):
 
 	# binaryView:		BinaryView
 	def getPriority(self, binaryView, filename):
-		# data.file:	FileMetadata
-		# data.raw:		BinaryView
+		#return 100
+		#print('len(bv)=0x%X executable=%d bytes=%s' % (len(binaryView), binaryView.executable, repr(binaryView.read(0,4))))
 
-		priority = 0
-		isExec = binaryView.executable
-		weRecognize = kshelpers.idData(binaryView.read(0,16), len(binaryView)) != None
-			
-		# NOTE: ui/shared/hexeditor.cpp has the hex editor at priority 20 when
-		# executable, and 10 otherwise
+		# executable means the view is mapped like an OS loader would load an executable (eg: view=ELF)
+		# !executable means executable image is not mapped (eg: view=Raw) (or something like .png is loaded)
+		if binaryView.executable:
+			return 0
 
-		if not weRecognize:
-			priority = 0
-		else:
-			if isExec:
-				priority = 21
-			else:
-				priority = 11
+		if binaryView.start != 0:
+			return 0
 
-#		if isExec and weRecognize:
-#			print('priority=25 to slightly beat out the hex editor case=(executable, recognize)')
-#			priority = 25
-#		if isExec and not weRecognize:
-#			print('priority=15 to lose to the hex editor case=(executable, !recognize)')
-#			priority = 15
-#		if not isExec and weRecognize:
-#			print('priority=100 to beat out everything case=(!executable, recognize)')
-#			priority = 100
-#		if not isExec and not weRecognize:
-#			print('priority=5 to lose to hex editor case=(!executable, !recognize)')
-#			priority = 5
-			
-		#print('returning priority=%d for KaitaiViewType' % priority)
-		return priority
+		if os.path.getsize(binaryView.file.filename) != len(binaryView):
+			return 0
+
+		dataSample = binaryView.read(0, 16)
+		if len(dataSample) != 16:
+			return 0
+
+		# if we don't recognize it, return 0
+		ksModuleName = kshelpers.idData(dataSample, len(binaryView))
+		if not ksModuleName:
+			return 0
+
+		# for executables, yield triage (25)
+		if ksModuleName in ['elf', 'microsoft_pe', 'mach_o']:
+			return 24
+
+		#
+		return 100
 
 	def create(self, binaryView, view_frame):
 		return KaitaiView(view_frame, binaryView)

@@ -13,6 +13,8 @@
 
 #define FUNCTION_LIST_UPDATE_INTERVAL 250
 
+class FunctionsView;
+
 class BINARYNINJAUIAPI FunctionListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -103,12 +105,13 @@ class BINARYNINJAUIAPI FunctionList: public QListView, public FilterTarget
 
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
+	FunctionsView* m_functionsView;
 	FunctionListModel* m_list;
 	QTimer* m_updateTimer;
 	bool m_disableScrollToFunction;
 
 public:
-	FunctionList(QWidget* parent, ViewFrame* frame, BinaryViewRef data);
+	FunctionList(FunctionsView* parent, ViewFrame* frame, BinaryViewRef data);
 
 	void updateFonts();
 	void setCurrentFunction(FunctionRef func);

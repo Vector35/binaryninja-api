@@ -23,7 +23,6 @@ public:
 	MiniGraph(QWidget* parent);
 	~MiniGraph();
 
-	virtual bool isAvailable(ViewFrame* frame) override;
 	virtual void notifyViewChanged(ViewFrame* frame) override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
 

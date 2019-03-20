@@ -62,10 +62,10 @@ public:
 	QWidget* getParentWindow() { return m_parentWindow; }
 
 	virtual void focusInput() { };
-	virtual bool isAvailable(ViewFrame* /*frame*/) { return true; };
 	virtual void notifyViewChanged(ViewFrame* /*frame*/) { };
 	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; };
 	virtual void updateFonts() { };
+	virtual void updateTheme() { };
 };
 
 class BINARYNINJAUIAPI DockHandler: public QObject

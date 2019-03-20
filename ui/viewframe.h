@@ -157,7 +157,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	Q_OBJECT
 
 private:
-	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data);
+	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createExtendedViews = true);
 	HistoryEntry* getHistoryEntry();
 
 	FileContext* m_context;
@@ -165,14 +165,11 @@ private:
 	QWidget* m_view;
 	QWidget* m_viewContainer;
 	QVBoxLayout* m_viewLayout;
-	std::map<QString, QPointer<QWidget>> m_extendedViewCache;
+	std::map<QString, std::map<QString, QPointer<QWidget>>> m_extViewCache;
 	std::map<QString, QWidget*> m_viewCache;
 	std::stack<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
-
-	FunctionsView* m_funcs = nullptr;
-	FeatureMap* m_featureMap = nullptr;
 
 	UIActionHandler m_actionHandler;
 
@@ -190,7 +187,6 @@ public:
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
-	FunctionsView* getFunctionsView() const { return m_funcs; }
 
 	QString getTabName();
 	QString getShortFileName();
@@ -220,6 +216,7 @@ public:
 	bool navigateToFunction(FunctionRef func, uint64_t offset, bool updateInfo = true);
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target);
 	QString getTypeForView(QWidget* view);
+	QString getDataTypeForView(const QString& type);
 	QString getDataTypeForView(QWidget* view);
 
 	bool closeRequest();

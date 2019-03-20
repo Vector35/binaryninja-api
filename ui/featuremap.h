@@ -71,7 +71,8 @@ public:
 	void backgroundRefresh();
 	std::pair<uint64_t, bool> getOffsetForAddress(uint64_t addr);
 	void setCurrentLocation(uint64_t address);
-	void updateTheme();
+
+	virtual void updateTheme() override;
 
 	void renderDataVariable(const BinaryNinja::DataVariable& var, bool ignoreString = false);
 

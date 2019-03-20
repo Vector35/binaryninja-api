@@ -10,10 +10,14 @@
 #  endif
 #else
 #ifdef _MSC_VER
-#  ifdef BINARYNINJAUI_LIBRARY
-#    define BINARYNINJAUIAPI __declspec(dllexport)
+#  ifndef DEMO_VERSION
+#   ifdef BINARYNINJAUI_LIBRARY
+#     define BINARYNINJAUIAPI __declspec(dllexport)
+#   else
+#     define BINARYNINJAUIAPI __declspec(dllimport)
+#   endif
 #  else
-#    define BINARYNINJAUIAPI __declspec(dllimport)
+#   define BINARYNINJAUIAPI
 #  endif
 #else
 #define BINARYNINJAUIAPI

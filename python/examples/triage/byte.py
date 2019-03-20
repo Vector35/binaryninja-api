@@ -43,6 +43,12 @@ class ByteView(QAbstractScrollArea, View):
 			u'≡', u'±', u'≥', u'≤', u'⌠', u'⌡', u'÷', u'≈', u'°', u'∙', u'·', u'√', u'ⁿ', u'²', u'■', u' '
 		]
 
+		if sys.version_info.major == 2:
+			mapping = {}
+			for i in range(0, 256):
+				mapping[chr(i)] = self.byte_mapping[i]
+			self.byte_mapping = mapping
+
 		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 		self.setFocusPolicy(Qt.StrongFocus)
@@ -508,7 +514,7 @@ class ByteView(QAbstractScrollArea, View):
 				caretTextColor = self.palette().color(QPalette.Base)
 				byteValue = self.data.read(lineStartAddr + cursorCol, 1)
 				if len(byteValue) == 1:
-					byteStr = self.byte_mapping[ord(byteValue)]
+					byteStr = self.byte_mapping[byteValue[0]]
 					render.drawText(p, 2 + (self.addrWidth + 2 + cursorCol) * charWidth, 2 + y * charHeight, caretTextColor, byteStr)
 
 	def wheelEvent(self, event):

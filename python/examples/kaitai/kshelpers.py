@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import traceback
+
 import io
 import os
 import sys
@@ -27,6 +29,7 @@ else:
 # length:	int		total length of data
 def idData(dataSample, length):
 	result = None
+	#print('idData() here with sample: %s' % repr(dataSample))
 
 	if len(dataSample) < 16:
 		return result
@@ -46,7 +49,7 @@ def idData(dataSample, length):
 	if dataSample[0:2] in [b'BM', b'BA', b'CI', b'CP', b'IC', b'PT'] and struct.unpack('<I', dataSample[2:6])[0]==length:
 		result = 'bmp'
 
-	#print('ioData() returning \'%s\'' % result)
+	#print('idData() returning \'%s\'' % result)
 	return result
 
 def idFile(fpath):
@@ -66,8 +69,9 @@ def ksImportClass(moduleName):
 	try:
 		#print('__package__: -%s-' % __package__)	# 'kaitai'
 		#print('__name__: -%s-' % __name__)			# 'kaitai.kshelpers'
-
 		#print('moduleName: -%s-' % moduleName)
+		#print('importlib.import_module(.%s, %s)' % (moduleName, __package__))
+		print('importing kaitai module "%s"' % moduleName)
 		module = importlib.import_module('.'+moduleName, __package__)
 		className = ksModuleToClass(moduleName)
 		#print('className: -%s-' % className)
@@ -78,28 +82,41 @@ def ksImportClass(moduleName):
 
 	return classThing
 
-def parseFpath(fpath):
-	ksClass = ksImportClass(idFile(fpath))
+def parseFpath(fpath, ksModuleName=None):
+	if not ksModuleName:
+		ksModuleName = idFile(fpath)
+	#print('parseFpath() using kaitai format: %s' % ksModuleName)
+
+	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
 	parsed = ksClass.from_file(fpath)
 	parsed._read()
 	return parsed
 
-def parseData(data):
-	ksClass = ksImportClass(idData(data), len(data))
+def parseData(data, ksModuleName=None):
+	if not ksModuleName:
+		ksModuleName = idData(data, len(data))
+	#print('parseData() using kaitai format: %s' % ksModuleName)
+
+	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
 	parsed = ksClass.from_bytes(data)
 	parsed._read()
 	return parsed
 
-def parseIo(ioObj):
+def parseIo(ioObj, ksModuleName=None):
 	ioObj.seek(0, io.SEEK_END)
 	length = ioObj.tell()
 
+	if not ksModuleName:
+		ioObj.seek(0, io.SEEK_SET)
+		ksModuleName = idData(ioObj.read(16), length)
+	#print('parseIo() using kaitai format: %s' % ksModuleName)
+
 	ioObj.seek(0, io.SEEK_SET)
-	ksClass = ksImportClass(idData(ioObj.read(16), length))
+	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
 	ioObj.seek(0, io.SEEK_SET)

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # python stuff
 import io
 import os
@@ -6,14 +8,16 @@ import types
 import traceback
 
 # binja stuff
-import binaryninjaui
-from binaryninja.settings import Settings
 from binaryninja import log
-from binaryninja import _binaryninjacore as core
-from binaryninjaui import View, ViewType, ViewFrame, UIContext, HexEditor
 from binaryninja import binaryview
-from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit, QHeaderView
+from binaryninja.settings import Settings
+from binaryninja import _binaryninjacore as core
+from binaryninjaui import View, ViewType, ViewFrame, UIContext, HexEditor, getMonospaceFont
+
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit, QHeaderView
+
+from . import menu
 
 if sys.version_info[0] == 2:
 	import kshelpers
@@ -68,15 +72,19 @@ class KaitaiView(QScrollArea, View):
 		self.kaitaiParse()
 
 	# parse the file using Kaitai, construct the TreeWidget
-	def kaitaiParse(self):
-		parsed = None
+	def kaitaiParse(self, formatName=None):
+		#print('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
+
+		if len(self.binaryView) == 0:
+			return
 
 		kaitaiIO = kshelpers.KaitaiBinaryViewIO(self.binaryView)
 		if not kaitaiIO:
 			print('ERROR: initializing kaitai binary view')
-		parsed = kshelpers.parseIo(kaitaiIO)
+		parsed = kshelpers.parseIo(kaitaiIO, formatName)
 		if not parsed:
 			print('ERROR: parsing the binary view')
+			return
 
 		tree = kshelpers.buildQtree(parsed)
 		if not tree:
@@ -240,6 +248,9 @@ class KaitaiView(QScrollArea, View):
 		# set hex group title to reflect current selection
 		#self.hexGroup.setTitle('Hex View @ [0x%X, 0x%X)' % (start, end))
 
+	def getStatusBarWidget(self):
+		return menu.KaitaiStatusBarWidget(self)
+
 class KaitaiViewType(ViewType):
 	def __init__(self):
 		super(KaitaiViewType, self).__init__("Kaitai", "Kaitai")
@@ -252,22 +263,19 @@ class KaitaiViewType(ViewType):
 		# executable means the view is mapped like an OS loader would load an executable (eg: view=ELF)
 		# !executable means executable image is not mapped (eg: view=Raw) (or something like .png is loaded)
 		if binaryView.executable:
-			return 0
+			return 1
 
 		if binaryView.start != 0:
-			return 0
-
-		if os.path.getsize(binaryView.file.filename) != len(binaryView):
-			return 0
+			return 1
 
 		dataSample = binaryView.read(0, 16)
 		if len(dataSample) != 16:
-			return 0
+			return 1
 
 		# if we don't recognize it, return 0
 		ksModuleName = kshelpers.idData(dataSample, len(binaryView))
 		if not ksModuleName:
-			return 0
+			return 1
 
 		# for executables, yield triage (25)
 		if ksModuleName in ['elf', 'microsoft_pe', 'mach_o']:

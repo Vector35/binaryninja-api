@@ -73,6 +73,7 @@ struct BINARYNINJAUIAPI UIAction
 
 	static void registerAction(const QString& name, const QKeySequence& defaultKeyBinding = QKeySequence());
 	static void registerAction(const QString& name, const QList<QKeySequence>& defaultKeyBinding);
+	static void unregisterAction(const QString& name);
 
 	static void registerTransformActions();
 	static void registerPluginCommandActions();
@@ -223,6 +224,7 @@ public:
 	QWidget* widget() { return m_handlerWidget; }
 
 	static void updateActionBindings(const QString& name);
+	static bool isActionBoundToAnyHandler(const QString& name);
 	static void addGlobalMenuAction(const QString& name);
 	static void removeGlobalMenuAction(const QString& name);
 

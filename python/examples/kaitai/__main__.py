@@ -9,7 +9,6 @@ import sys
 import types
 import importlib
 
-import binaryninja
 
 if sys.version_info[0] == 2:
 	import kaitaistruct
@@ -171,6 +170,7 @@ if __name__ == '__main__':
 
 	if cmd == 'dumpbinja':
 		fpath = sys.argv[2]
+		import binaryninja
 		binaryView = binaryninja.BinaryViewType['Raw'].open(fpath)
 		kaitaiIo = KaitaiBinaryViewIO(binaryView)
 		parsed = parse_io(kaitaiIo)

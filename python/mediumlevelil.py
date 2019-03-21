@@ -634,7 +634,7 @@ class MediumLevelILFunction(object):
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
 	def __hash__(self):
-		return hash('MLIL') + hash(self.source_function)
+		return hash(('MLIL', self.source_function))
 
 	def __del__(self):
 		if self.handle is not None:

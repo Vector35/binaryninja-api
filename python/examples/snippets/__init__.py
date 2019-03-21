@@ -13,7 +13,7 @@ from binaryninja import user_plugin_path
 from binaryninja.plugin import PluginCommand, MainThreadActionHandler
 from binaryninja.mainthread import execute_on_main_thread
 from binaryninja.log import (log_info, log_warn, log_alert, log_debug)
-from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler)
+from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu)
 
 snippetPath = os.path.realpath(os.path.join(user_plugin_path(), "..", "snippets"))
 
@@ -42,6 +42,28 @@ def loadSnippetFromFile(snippetPath):
                 qKeySequence,
                 ''.join(snippetText[2:])
         )
+
+def executeSnippet(code, context):
+    snippetGlobals = {}
+    snippetGlobals['current_view'] = context.binaryView
+    snippetGlobals['bv'] = context.binaryView
+    snippetGlobals['current_function'] = context.function
+    #snippetGlobals['current_basic_block'] = context.block
+    snippetGlobals['current_address'] = context.address
+    snippetGlobals['here'] = context.address
+    snippetGlobals['current_selection'] = (context.address, context.address+context.length)
+    snippetGlobals['current_llil'] = context.lowLevelILFunction
+    snippetGlobals['current_mlil'] = context.mediumLevelILFunction
+
+    exec("from binaryninja import *", snippetGlobals)
+    exec(code, snippetGlobals)
+    if snippetGlobals['here'] != context.address:
+        context.binaryView.file.navigate(context.binaryView.file.view, snippetGlobals['here'])
+    if snippetGlobals['current_address'] != context.address:
+        context.binaryView.file.navigate(context.binaryView.file.view, snippetGlobals['current_address'])
+
+def makeSnippetFunction(code):
+    return lambda context: executeSnippet(code, context)
 
 class Snippets(QDialog):
 
@@ -149,31 +171,10 @@ class Snippets(QDialog):
         self.deleteSnippetButton.clicked.connect(self.deleteSnippet)
         self.newFolderButton.clicked.connect(self.newFolder)
 
-    def executeSnippet(self, code, context):
-        snippetGlobals = {}
-        snippetGlobals['current_view'] = context.binaryView
-        snippetGlobals['bv'] = context.binaryView
-        snippetGlobals['current_function'] = context.function
-        #snippetGlobals['current_basic_block'] = context.block
-        snippetGlobals['current_address'] = context.address
-        snippetGlobals['here'] = context.address
-        snippetGlobals['current_selection'] = (context.address, context.address+context.length)
-        snippetGlobals['current_llil'] = context.lowLevelILFunction
-        snippetGlobals['current_mlil'] = context.mediumLevelILFunction
-
-        exec("from binaryninja import *", snippetGlobals)
-        exec(code, snippetGlobals)
-        if snippetGlobals['here'] != context.address:
-            context.binaryView.file.navigate(context.binaryView.file.view, snippetGlobals['here'])
-        if snippetGlobals['current_address'] != context.address:
-            context.binaryView.file.navigate(context.binaryView.file.view, snippetGlobals['current_address'])
-
-    def makeSnippetFunction(self, code):
-        return lambda context: self.executeSnippet(code, context)
-
     def registerAllSnippets(self):
         for action in list(filter(lambda x: x.startswith("Snippet\\"), UIAction.getAllRegisteredActions())):
-            UIAction.registerAction(action, [])
+            UIActionHandler.globalActions().unbindAction(action)
+            UIAction.unregisterAction(action)
 
         for snippet in includeWalk(snippetPath, ".py"):
             (snippetDescription, snippetKey, snippetCode) = loadSnippetFromFile(snippet)
@@ -182,7 +183,7 @@ class Snippets(QDialog):
             else:
                 actionText = "Snippet\\" + snippetDescription
             UIAction.registerAction(actionText, snippetKey)
-            UIActionHandler.globalActions().bindAction(actionText, UIAction(self.makeSnippetFunction(snippetCode)))
+            UIActionHandler.globalActions().bindAction(actionText, UIAction(makeSnippetFunction(snippetCode)))
 
     def clearSelection(self):
         self.keySequenceEdit.clear()
@@ -287,7 +288,7 @@ class Snippets(QDialog):
     def clearHotkey(self):
         self.keySequenceEdit.clear()
 
-def launchPlugin(bv):
+def launchPlugin(context):
     snippets = Snippets()
     snippets.exec_()
 
@@ -297,5 +298,6 @@ if __name__ == '__main__':
     snippets.show()
     sys.exit(app.exec_())
 else:
-    PluginCommand.register("Snippet Editor", "Sample UI Plugin for small code snippets to be able to executed on a hotkey.", launchPlugin)
-    #MainThreadActionHandler.register()
+    UIAction.registerAction("Snippet Editor...")
+    UIActionHandler.globalActions().bindAction("Snippet Editor...", UIAction(launchPlugin))
+    Menu.mainMenu("Tools").addAction("Snippet Editor...", "Snippet")

@@ -73,17 +73,14 @@ class KaitaiView(QScrollArea, View):
 
 	# parse the file using Kaitai, construct the TreeWidget
 	def kaitaiParse(self, formatName=None):
-		#print('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
+		#log_debug('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
 
 		if len(self.binaryView) == 0:
 			return
 
 		kaitaiIO = kshelpers.KaitaiBinaryViewIO(self.binaryView)
-		if not kaitaiIO:
-			print('ERROR: initializing kaitai binary view')
 		parsed = kshelpers.parseIo(kaitaiIO, formatName)
 		if not parsed:
-			print('ERROR: parsing the binary view')
 			return
 
 		tree = kshelpers.buildQtree(parsed)
@@ -106,7 +103,6 @@ class KaitaiView(QScrollArea, View):
 		else:
 			# add root's children as top level items
 			self.treeWidget.insertTopLevelItems(0, tree.takeChildren())
-
 
 		# enable sorting
 		self.treeWidget.setSortingEnabled(True)
@@ -134,23 +130,23 @@ class KaitaiView(QScrollArea, View):
 
 	def getStart(self):
 		result = self.binaryView.start
-		#print('getStart() returning '+str(result))
+		#log.log_debug('getStart() returning '+str(result))
 		return result
 
 	def getEnd(self):
 		result = self.binaryView.end
-		#print('getEnd() returning '+str(result))
+		#log.log_debug('getEnd() returning '+str(result))
 		return result
 
 	def getLength(self):
 		result = len(self.binaryView)
-		#print('getLength() returning '+str(result))
+		#log.log_debug('getLength() returning '+str(result))
 		return result
 
 	def getCurrentOffset(self):
 		result = self.rootSelectionStart + int((self.rootSelectionEnd - self.rootSelectionStart)/2)
 		#result = self.rootSelectionStart
-		#print('getCurrentOffset() returning '+str(result))
+		#log.log_debug('getCurrentOffset() returning '+str(result))
 		return result
 
 	def getSelectionOffsets(self):
@@ -159,11 +155,11 @@ class KaitaiView(QScrollArea, View):
 			result = self.hexWidget.getSelectionOffsets()
 		else:
 			result = (self.rootSelectionStart, self.rootSelectionStart)
-		#print('getSelectionOffsets() returning '+str(result))
+		#log.log_debug('getSelectionOffsets() returning '+str(result))
 		return result
 
 	def setCurrentOffset(self, offset):
-		#print('setCurrentOffset(0x%X)' % offset)
+		#log.log_debug('setCurrentOffset(0x%X)' % offset)
 		self.rootSelectionStart = offset
 		UIContext.updateStatus(True)
 
@@ -171,16 +167,19 @@ class KaitaiView(QScrollArea, View):
 		return binaryninjaui.getMonospaceFont(self)
 
 	def navigate(self, addr):
-		#print('navigate()')
+		#log.log_debug('navigate()')
 		return False
 
 	def navigateToFileOffset(self, offset):
-		#print('navigateToFileOffset()')
+		#log.log_debug('navigateToFileOffset()')
 		return False
 
 	def onTreeSelect(self, wtf=None):
 		# get KaitaiTreeWidgetItem
-		item = self.treeWidget.selectedItems()[0]
+		items = self.treeWidget.selectedItems()
+		if not items or len(items)<1:
+			return
+		item = items[0]
 
 		# build path, inform user
 		structPath = item.label
@@ -242,7 +241,7 @@ class KaitaiView(QScrollArea, View):
 			self.ioCurrent = _io
 
 		# now position selection in whatever HexEditor is current
-		#print('selecting to [0x%X, 0x%X)' % (start, end))
+		#log.log_debug('selecting to [0x%X, 0x%X)' % (start, end))
 		self.hexWidget.setSelectionRange(start, end)
 
 		# set hex group title to reflect current selection
@@ -258,7 +257,7 @@ class KaitaiViewType(ViewType):
 	# binaryView:		BinaryView
 	def getPriority(self, binaryView, filename):
 		#return 100
-		#print('len(bv)=0x%X executable=%d bytes=%s' % (len(binaryView), binaryView.executable, repr(binaryView.read(0,4))))
+		#log.log_debug('len(bv)=0x%X executable=%d bytes=%s' % (len(binaryView), binaryView.executable, repr(binaryView.read(0,4))))
 
 		# executable means the view is mapped like an OS loader would load an executable (eg: view=ELF)
 		# !executable means executable image is not mapped (eg: view=Raw) (or something like .png is loaded)

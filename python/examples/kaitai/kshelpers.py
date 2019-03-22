@@ -411,10 +411,11 @@ def createLeaf(fieldName, obj):
 
 	fieldValue = None
 
-	if isinstance(obj, str):
-		fieldValue = repr(obj)
-	elif isinstance(obj, bytes):
-		fieldValue = repr(obj)
+	if isinstance(obj, str) or isinstance(obj, bytes):
+		if len(obj) > 8:
+			fieldValue = str(repr(obj[0:8])) + '...'
+		else:
+			fieldValue = repr(obj)
 	elif sys.version_info[0] == 2 and objtype == types.UnicodeType:
 		fieldValue = repr(obj)
 	elif isinstance(obj, int):

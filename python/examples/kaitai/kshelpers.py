@@ -48,6 +48,12 @@ def idData(dataSample, length):
 		result = 'gif'
 	if dataSample[0:2] in [b'BM', b'BA', b'CI', b'CP', b'IC', b'PT'] and struct.unpack('<I', dataSample[2:6])[0]==length:
 		result = 'bmp'
+	if dataSample[0:2] == b'PK' and dataSample[2:4] in [b'\x01\x02', b'\x03\x04', b'\x05\x06']:
+		result = 'zip'
+	if dataSample[0:6] == b'Rar!\x1a\x07':
+		result = 'rar'
+	if dataSample[0:2] == b'\x1f\x8b' and dataSample[2:3]==b'\x08':
+		result = 'gzip'
 
 	#print('idData() returning \'%s\'' % result)
 	return result

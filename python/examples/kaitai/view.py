@@ -28,9 +28,64 @@ class MyQTreeWidget(QTreeWidget):
 	def __init__(self):
 		QTreeWidget.__init__(self)
 
+		self.oldWidth = 0
+		self.oldHeight = 0
+
+		self.queueInitialExpansion = False
+
 	def resizeEvent(self, event):
 		QTreeWidget.resizeEvent(self, event)
-		self.scrollTo(self.currentIndex())
+
+		if self.queueInitialExpansion:
+			self.expandNicely()
+			self.queueInitialExpansion = False
+
+		newWidth = self.width()
+		newHeight = self.height()
+
+		#log.log_debug('QTreeWidget resizeEvent(), now I\'m %dx%d' % (newWidth, newHeight))
+
+		if newWidth == self.oldWidth and newHeight == self.oldHeight:
+			return
+
+		self.oldWidth = newWidth
+		self.oldHeight = newHeight
+
+		self.setColumnWidthsNicely()
+
+	def setColumnWidthsNicely(self):
+		width = self.width()
+		self.setColumnWidth(0, .6*width)
+		self.setColumnWidth(1, .2*width)
+		self.setColumnWidth(2, .1*width)
+		self.setColumnWidth(3, .1*width)
+
+	def expandNicely(self):
+		visibleRows = self.topLevelItemCount()
+		if not visibleRows:
+			return
+
+		height = self.height()
+		rowHeight = self.visualItemRect(self.topLevelItem(0)).height()
+		rowCapacity = height / rowHeight
+
+		queue = []
+		for i in range(visibleRows):
+			queue.append(self.topLevelItem(i))
+
+		while visibleRows < rowCapacity:
+			#log.log_debug('visibleRows=%d, rowCapacity=%d len(queue)=%d' % (visibleRows, rowCapacity, len(queue)))
+			if not queue:
+				break
+
+			item = queue[0]
+			queue = queue[1:]
+
+			if not item.isExpanded():
+				item.setExpanded(True)
+				for i in range(item.childCount()):
+					queue.append(item.child(i))
+					visibleRows += 1
 
 class KaitaiView(QScrollArea, View):
 	def __init__(self, parent, binaryView):
@@ -86,11 +141,14 @@ class KaitaiView(QScrollArea, View):
 		# it SEEMS as if parsing is finished at this moment, but some parsing
 		# is postponed until attributes are accessed, so we must try/catch here
 		tree = None
-		try:
+		if True:
+			try:
+				tree = kshelpers.buildQtree(parsed)
+			except Exception as e:
+				log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
+				true = None
+		else:
 			tree = kshelpers.buildQtree(parsed)
-		except Exception as e:
-			log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
-			true = None
 
 		if not tree:
 			return
@@ -121,16 +179,7 @@ class KaitaiView(QScrollArea, View):
 		self.rootSelectionEnd = 1
 		self.hexWidget.setSelectionRange(0,1)
 		self.treeWidget.setUniformRowHeights(True)
-
-	# Qt callbacks
-	def resizeEvent(self, event):
-		width = self.treeWidget.width()
-		self.treeWidget.setColumnWidth(0, .6*width)
-		self.treeWidget.setColumnWidth(1, .2*width)
-		self.treeWidget.setColumnWidth(2, .1*width)
-		self.treeWidget.setColumnWidth(3, .1*width)
-
-		QScrollArea.resizeEvent(self, event)
+		self.treeWidget.queueInitialExpansion = True
 
 	# binja callbacks
 	def getData(self):

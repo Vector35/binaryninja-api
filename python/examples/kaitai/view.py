@@ -31,14 +31,15 @@ class MyQTreeWidget(QTreeWidget):
 		self.oldWidth = 0
 		self.oldHeight = 0
 
-		self.queueInitialExpansion = False
+		self.queueInitialPresentation = False
 
 	def resizeEvent(self, event):
 		QTreeWidget.resizeEvent(self, event)
 
-		if self.queueInitialExpansion:
-			self.expandNicely()
-			self.queueInitialExpansion = False
+		if self.queueInitialPresentation:
+			self.initialPresentation()
+
+		self.scrollTo(self.currentIndex())
 
 		newWidth = self.width()
 		newHeight = self.height()
@@ -52,6 +53,14 @@ class MyQTreeWidget(QTreeWidget):
 		self.oldHeight = newHeight
 
 		self.setColumnWidthsNicely()
+
+	def initialPresentation(self):
+		self.expandNicely()
+
+		if self.topLevelItemCount():
+			self.topLevelItem(0).setSelected(True)
+
+		self.queueInitialPresentation = False
 
 	def setColumnWidthsNicely(self):
 		width = self.width()
@@ -177,9 +186,10 @@ class KaitaiView(QScrollArea, View):
 		# TODO: select first item, maybe expand a few things
 		self.rootSelectionStart = 0
 		self.rootSelectionEnd = 1
-		self.hexWidget.setSelectionRange(0,1)
+
 		self.treeWidget.setUniformRowHeights(True)
-		self.treeWidget.queueInitialExpansion = True
+		self.treeWidget.queueInitialPresentation = True
+
 
 	# binja callbacks
 	def getData(self):

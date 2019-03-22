@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import sys
+
 # binja stuff
 from binaryninjaui import StatusBarWidget, ContextMenuManager, Menu, UIActionHandler, UIAction
 
@@ -123,16 +125,20 @@ class KaitaiOptionsWidget(QLabel):
 		UIAction.registerAction("media\\wav")
 		UIAction.registerAction("network\\bitcoin_transaction")
 		UIAction.registerAction("network\\dns_packet")
-		UIAction.registerAction("network\\ethernet_frame")
 		UIAction.registerAction("network\\hccap")
 		UIAction.registerAction("network\\hccapx")
 		UIAction.registerAction("network\\icmp_packet")
-		UIAction.registerAction("network\\ipv4_packet")
-		UIAction.registerAction("network\\ipv6_packet")
-		UIAction.registerAction("network\\microsoft_network_monitor_v2")
-		UIAction.registerAction("network\\packet_ppi")
-		UIAction.registerAction("network\\pcap")
-		UIAction.registerAction("network\\protocol_body")
+
+		# currently on py3 can handle the circular dependency hell
+		if sys.version_info[0] == 3:
+			UIAction.registerAction("network\\ethernet_frame")
+			UIAction.registerAction("network\\ipv4_packet")
+			UIAction.registerAction("network\\ipv6_packet")
+			UIAction.registerAction("network\\microsoft_network_monitor_v2")
+			UIAction.registerAction("network\\packet_ppi")
+			UIAction.registerAction("network\\pcap")
+			UIAction.registerAction("network\\protocol_body")
+
 		UIAction.registerAction("network\\rtcp_payload")
 		UIAction.registerAction("network\\rtp_packet")
 		UIAction.registerAction("network\\tcp_segment")
@@ -253,16 +259,19 @@ class KaitaiOptionsWidget(QLabel):
 		self.menu.addAction("media\\wav", "formats")
 		self.menu.addAction("network\\bitcoin_transaction", "formats")
 		self.menu.addAction("network\\dns_packet", "formats")
-		self.menu.addAction("network\\ethernet_frame", "formats")
 		self.menu.addAction("network\\hccap", "formats")
 		self.menu.addAction("network\\hccapx", "formats")
 		self.menu.addAction("network\\icmp_packet", "formats")
-		self.menu.addAction("network\\ipv4_packet", "formats")
-		self.menu.addAction("network\\ipv6_packet", "formats")
-		self.menu.addAction("network\\microsoft_network_monitor_v2", "formats")
-		self.menu.addAction("network\\packet_ppi", "formats")
-		self.menu.addAction("network\\pcap", "formats")
-		self.menu.addAction("network\\protocol_body", "formats")
+
+		if sys.version_info[0] == 3:
+			self.menu.addAction("network\\ethernet_frame", "formats")
+			self.menu.addAction("network\\ipv4_packet", "formats")
+			self.menu.addAction("network\\ipv6_packet", "formats")
+			self.menu.addAction("network\\microsoft_network_monitor_v2", "formats")
+			self.menu.addAction("network\\packet_ppi", "formats")
+			self.menu.addAction("network\\pcap", "formats")
+			self.menu.addAction("network\\protocol_body", "formats")
+
 		self.menu.addAction("network\\rtcp_payload", "formats")
 		self.menu.addAction("network\\rtp_packet", "formats")
 		self.menu.addAction("network\\tcp_segment", "formats")
@@ -383,16 +392,19 @@ class KaitaiOptionsWidget(QLabel):
 		self.actionHandler.bindAction("media\\wav", UIAction(self.on_wav))
 		self.actionHandler.bindAction("network\\bitcoin_transaction", UIAction(self.on_bitcoin_transaction))
 		self.actionHandler.bindAction("network\\dns_packet", UIAction(self.on_dns_packet))
-		self.actionHandler.bindAction("network\\ethernet_frame", UIAction(self.on_ethernet_frame))
 		self.actionHandler.bindAction("network\\hccap", UIAction(self.on_hccap))
 		self.actionHandler.bindAction("network\\hccapx", UIAction(self.on_hccapx))
 		self.actionHandler.bindAction("network\\icmp_packet", UIAction(self.on_icmp_packet))
-		self.actionHandler.bindAction("network\\ipv4_packet", UIAction(self.on_ipv4_packet))
-		self.actionHandler.bindAction("network\\ipv6_packet", UIAction(self.on_ipv6_packet))
-		self.actionHandler.bindAction("network\\microsoft_network_monitor_v2", UIAction(self.on_microsoft_network_monitor_v2))
-		self.actionHandler.bindAction("network\\packet_ppi", UIAction(self.on_packet_ppi))
-		self.actionHandler.bindAction("network\\pcap", UIAction(self.on_pcap))
-		self.actionHandler.bindAction("network\\protocol_body", UIAction(self.on_protocol_body))
+
+		if sys.version_info[0] == 3:
+			self.actionHandler.bindAction("network\\ethernet_frame", UIAction(self.on_ethernet_frame))
+			self.actionHandler.bindAction("network\\ipv4_packet", UIAction(self.on_ipv4_packet))
+			self.actionHandler.bindAction("network\\ipv6_packet", UIAction(self.on_ipv6_packet))
+			self.actionHandler.bindAction("network\\microsoft_network_monitor_v2", UIAction(self.on_microsoft_network_monitor_v2))
+			self.actionHandler.bindAction("network\\packet_ppi", UIAction(self.on_packet_ppi))
+			self.actionHandler.bindAction("network\\pcap", UIAction(self.on_pcap))
+			self.actionHandler.bindAction("network\\protocol_body", UIAction(self.on_protocol_body))
+
 		self.actionHandler.bindAction("network\\rtcp_payload", UIAction(self.on_rtcp_payload))
 		self.actionHandler.bindAction("network\\rtp_packet", UIAction(self.on_rtp_packet))
 		self.actionHandler.bindAction("network\\tcp_segment", UIAction(self.on_tcp_segment))
@@ -826,7 +838,7 @@ class KaitaiStatusBarWidget(StatusBarWidget):
 
 		self.layout = QHBoxLayout(self)
 		self.layout.setContentsMargins(0,0,0,0)
-		
+
 		self.options = KaitaiOptionsWidget(self)
 		self.layout.addWidget(self.options)
 

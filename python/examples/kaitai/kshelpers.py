@@ -70,7 +70,7 @@ def ksImportClass(moduleName):
 	global __name__, __package__
 	if not moduleName:
 		return None
-	
+
 	classThing = None
 	try:
 		#log.log_debug('__package__: -%s-' % __package__)	# 'kaitai'
@@ -315,7 +315,7 @@ def buildQtree(ksobj):
 		if ('_m_'+fieldName) in fields:
 			# favor the '_m_' version which seems to get the debug info
 			continue
-		
+
 		subObj = getattr(ksobj, fieldName)
 
 		child = None

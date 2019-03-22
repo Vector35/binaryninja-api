@@ -72,18 +72,26 @@ class KaitaiView(QScrollArea, View):
 		self.kaitaiParse()
 
 	# parse the file using Kaitai, construct the TreeWidget
-	def kaitaiParse(self, formatName=None):
+	def kaitaiParse(self, ksModuleName=None):
 		#log_debug('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
 
 		if len(self.binaryView) == 0:
 			return
 
 		kaitaiIO = kshelpers.KaitaiBinaryViewIO(self.binaryView)
-		parsed = kshelpers.parseIo(kaitaiIO, formatName)
+		parsed = kshelpers.parseIo(kaitaiIO, ksModuleName)
 		if not parsed:
 			return
 
-		tree = kshelpers.buildQtree(parsed)
+		# it SEEMS as if parsing is finished at this moment, but some parsing
+		# is postponed until attributes are accessed, so we must try/catch here
+		tree = None
+		try:
+			tree = kshelpers.buildQtree(parsed)
+		except Exception as e:
+			log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
+			true = None
+
 		if not tree:
 			return
 
@@ -262,7 +270,7 @@ class KaitaiViewType(ViewType):
 		# executable means the view is mapped like an OS loader would load an executable (eg: view=ELF)
 		# !executable means executable image is not mapped (eg: view=Raw) (or something like .png is loaded)
 		if binaryView.executable:
-			return 1
+			return 0
 
 		if binaryView.start != 0:
 			return 1
@@ -276,7 +284,7 @@ class KaitaiViewType(ViewType):
 		if not ksModuleName:
 			return 1
 
-		# for executables, yield triage (25)
+		# for executables, yield to triage (25)
 		if ksModuleName in ['elf', 'microsoft_pe', 'mach_o']:
 			return 24
 

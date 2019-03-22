@@ -121,7 +121,7 @@ class KaitaiView(QScrollArea, View):
 		self.treeWidget.itemSelectionChanged.connect(self.onTreeSelect)
 
 		self.structPath = QLineEdit("root")
-		self.structPath.setDisabled(True)
+		self.structPath.setReadOnly(True)
 
 		self.hexWidget = HexEditor(binaryView, ViewFrame.viewFrameForWidget(self), 0)
 

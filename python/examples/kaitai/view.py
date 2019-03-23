@@ -253,7 +253,10 @@ class KaitaiView(QScrollArea, View):
 		itemTmp = item
 		while itemTmp.parent():
 			itemTmp = itemTmp.parent()
-			structPath = itemTmp.label + '.' + structPath
+			label = itemTmp.label
+			if label.startswith('_m_'):
+				label = label[3:]
+			structPath = label + '.' + structPath
 		self.structPath.setText('root.' + structPath)
 
 		#

@@ -33,7 +33,7 @@ class KaitaiStruct(object):
         f = open(filename, 'rb')
         try:
             return cls(KaitaiStream(f))
-        except Exception:
+        except Exception as e:
             # close file descriptor, then reraise the exception
             f.close()
             raise
@@ -375,5 +375,5 @@ class KaitaiStream(object):
         """
         try:
             return enum_obj(value)
-        except ValueError:
+        except ValueError as e:
             return value

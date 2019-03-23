@@ -42,19 +42,19 @@ def dump(obj, depth=0):
 	indent = '    '*depth
 
 	if isinstance(obj, kaitaistruct.KaitaiStruct):
-		for fieldName in dir(obj):
-			if hasattr(obj, fieldName):
-				getattr(obj, fieldName)
+		fieldNames = []
+		for candidate in dir(obj):
+			if candidate != '_debug' and candidate.startswith('_'):
+				continue
+			if candidate in dump_exceptions:
+				continue
+			try:
+				if getattr(obj, candidate, False):
+					fieldNames.append(candidate)
+			except Exception:
+				pass
 
-		for fieldName in dir(obj):
-			#print('considering field: %s (hasattr returns: %d)' % (fieldName, hasattr(obj, fieldName)))
-			if fieldName != '_debug' and fieldName.startswith('_'):
-				continue
-			if fieldName in dump_exceptions:
-				continue
-			if not hasattr(obj, fieldName):
-				continue
-
+		for fieldName in fieldNames:
 			subObj = getattr(obj, fieldName)
 
 			if type(subObj) == types.MethodType:

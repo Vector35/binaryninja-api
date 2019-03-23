@@ -137,7 +137,7 @@ class KaitaiView(QScrollArea, View):
 
 	# parse the file using Kaitai, construct the TreeWidget
 	def kaitaiParse(self, ksModuleName=None):
-		#log_debug('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
+		log.log_debug('kaitaiParse() with len(bv)=%d and bv.file.filename=%s' % (len(self.binaryView), self.binaryView.file.filename))
 
 		if len(self.binaryView) == 0:
 			return
@@ -155,7 +155,7 @@ class KaitaiView(QScrollArea, View):
 				tree = kshelpers.buildQtree(parsed)
 			except Exception as e:
 				log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
-				true = None
+				tree = None
 		else:
 			tree = kshelpers.buildQtree(parsed)
 

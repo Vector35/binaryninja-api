@@ -84,7 +84,6 @@ def ksImportClass(moduleName):
 		classThing = getattr(module, className)
 	except Exception as e:
 		log.log_error('importing kaitai module %s' % moduleName)
-		#log.log_debug(e)
 		pass
 
 	return classThing
@@ -97,11 +96,13 @@ def parseFpath(fpath, ksModuleName=None):
 	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
+	parsed = None
 	try:
 		parsed = ksClass.from_file(fpath)
 		parsed._read()
-	except Exception:
-		log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
+	except Exception as e:
+		log.log_error('parseFpath(): kaitai module %s threw exception, check file type' % ksModuleName)
+		parsed = None
 
 	return parsed
 
@@ -113,11 +114,13 @@ def parseData(data, ksModuleName=None):
 	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
+	parsed = None
 	try:
 		parsed = ksClass.from_bytes(data)
 		parsed._read()
-	except Exception:
-		log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
+	except Exception as e:
+		log.log_error('parseData(): kaitai module %s threw exception, check file type' % ksModuleName)
+		parsed = None
 
 	return parsed
 
@@ -134,12 +137,13 @@ def parseIo(ioObj, ksModuleName=None):
 	ksClass = ksImportClass(ksModuleName)
 	if not ksClass: return None
 
+	parsed = None
 	try:
 		ioObj.seek(0, io.SEEK_SET)
 		parsed = ksClass.from_io(ioObj)
 		parsed._read()
-	except Exception:
-		log.log_error('kaitai module %s threw exception, check file type' % ksModuleName)
+	except Exception as e:
+		log.log_error('parseIo(): kaitai module %s threw exception, check file type' % ksModuleName)
 		parsed = None
 
 	return parsed
@@ -300,19 +304,20 @@ def buildQtree(ksobj):
 	qwi = KaitaiTreeWidgetItem()
 	qwi.setKaitaiObject(ksobj)
 
-	for fieldName in dir(ksobj):
-		if hasattr(ksobj, fieldName):
-			getattr(ksobj, fieldName)
+	fieldNames = []
+	for candidate in dir(ksobj):
+		if candidate.startswith('_') and (not candidate.startswith('_m_')):
+			continue
+		if candidate in exceptions:
+			continue
+		try:
+			if getattr(ksobj, candidate, False):
+				fieldNames.append(candidate)
+		except Exception:
+			pass
 
-	fields = dir(ksobj)
-	for fieldName in fields:
-		if fieldName.startswith('_') and (not fieldName.startswith('_m_')):
-			continue
-		if fieldName in exceptions:
-			continue
-		if not hasattr(ksobj, fieldName):
-			continue
-		if ('_m_'+fieldName) in fields:
+	for fieldName in fieldNames:
+		if ('_m_'+fieldName) in fieldNames:
 			# favor the '_m_' version which seems to get the debug info
 			continue
 

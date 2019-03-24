@@ -304,7 +304,10 @@ def buildQtree(ksobj):
 	qwi = KaitaiTreeWidgetItem()
 	qwi.setKaitaiObject(ksobj)
 
-	fieldNames = []
+	fieldNames = set()
+
+	# first pass: access fields that may be properties, which could compute
+	#             internal results (often '_m_XXX' fields)
 	for candidate in dir(ksobj):
 		if candidate.startswith('_') and (not candidate.startswith('_m_')):
 			continue
@@ -312,15 +315,25 @@ def buildQtree(ksobj):
 			continue
 		try:
 			if getattr(ksobj, candidate, False):
-				fieldNames.append(candidate)
+				fieldNames.add(candidate)
+		except Exception:
+			pass
+
+	# second pass: collect the '_m_XXX' fields which have the debug start/end
+	#              marks, remove the 'XXX' counterpart, if it exists
+	for candidate in filter(lambda x: x.startswith('_m_'), dir(ksobj)):
+		try:
+			if not getattr(ksobj, candidate, False):
+				continue
+
+			fieldNames.add(candidate)
+			if candidate[3:] in fieldNames:
+				fieldNames.remove(candidate[3:])
+
 		except Exception:
 			pass
 
 	for fieldName in fieldNames:
-		if ('_m_'+fieldName) in fieldNames:
-			# favor the '_m_' version which seems to get the debug info
-			continue
-
 		subObj = getattr(ksobj, fieldName)
 
 		child = None

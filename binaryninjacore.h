@@ -1149,7 +1149,8 @@ extern "C"
 		ELFCopyRelocationType,
 		ELFJumpSlotRelocationType,
 		StandardRelocationType,
-		IgnoredRelocation
+		IgnoredRelocation,
+		UnhandledRelocation
 	};
 	#define MAX_RELOCATION_SIZE 8
 	struct BNRelocationInfo

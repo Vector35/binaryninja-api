@@ -260,6 +260,7 @@ extern "C"
 	enum BNLinearDisassemblyLineType
 	{
 		BlankLineType,
+		BasicLineType,
 		CodeDisassemblyLineType,
 		DataVariableLineType,
 		HexDumpLineType,

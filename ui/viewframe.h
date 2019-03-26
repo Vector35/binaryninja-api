@@ -36,6 +36,7 @@ class BINARYNINJAUIAPI View
 protected:
 	Menu m_contextMenu;
 	UIActionHandler m_actionHandler;
+	bool m_binaryDataNavigable = false;
 
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
 	BinaryNinja::DataBuffer readDataFromClipboard(TransformRef xform);
@@ -73,6 +74,9 @@ public:
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);
+
+	bool isBinaryDataNavigable() { return m_binaryDataNavigable; }
+	void setBinaryDataNavigable(bool navigable) { m_binaryDataNavigable = navigable; }
 
 	virtual bool closeRequest() { return true; }
 	virtual void closing() {}

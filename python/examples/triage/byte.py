@@ -22,6 +22,7 @@ class ByteView(QAbstractScrollArea, View):
 	def __init__(self, parent, data):
 		QAbstractScrollArea.__init__(self, parent)
 		View.__init__(self)
+		View.setBinaryDataNavigable(self, True)
 		self.setupView(self)
 		self.data = data
 		self.byte_mapping = [

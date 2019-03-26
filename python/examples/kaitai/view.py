@@ -101,6 +101,7 @@ class KaitaiView(QScrollArea, View):
 		QScrollArea.__init__(self, parent)
 
 		View.__init__(self)
+		View.setBinaryDataNavigable(self, True)
 		self.setupView(self)
 
 		# BinaryViewType
@@ -234,8 +235,10 @@ class KaitaiView(QScrollArea, View):
 		return binaryninjaui.getMonospaceFont(self)
 
 	def navigate(self, addr):
-		#log.log_debug('navigate()')
-		return False
+		self.rootSelectionStart = addr
+		self.rootSelectionEnd = addr+1
+		self.hexWidget.setSelectionRange(addr, addr+1)
+		return True
 
 	def navigateToFileOffset(self, offset):
 		#log.log_debug('navigateToFileOffset()')

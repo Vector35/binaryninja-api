@@ -2,7 +2,7 @@ import os
 from PySide2.QtWidgets import QWidget, QTreeView, QFileSystemModel, QVBoxLayout, QMessageBox, QAbstractItemView
 from PySide2.QtGui import QKeySequence
 from PySide2.QtCore import QSettings
-from binaryninjaui import UIActionHandler, UIAction, Menu, FileContext, ContextMenuManager
+from binaryninjaui import UIActionHandler, UIAction, Menu, FileContext, ContextMenuManager, UIContext
 from binaryninja.settings import Settings
 
 
@@ -138,3 +138,5 @@ UIAction.registerAction("Open Selected Files")
 
 UIActionHandler.globalActions().bindAction("Open for Triage...", UIAction(openForTriage))
 Menu.mainMenu("File").addAction("Open for Triage...", "Open")
+
+UIContext.registerFileOpenMode("Triage...", "Open file(s) for quick analysis in the Triage Summary view.", "Open for Triage...")

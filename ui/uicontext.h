@@ -23,6 +23,7 @@ public:
 	virtual ~UIContextHandler();
 	virtual void updateStatus(bool updateInfo) = 0;
 	virtual void notifyThemeChanged() = 0;
+	virtual void registerFileOpenMode(const QString& buttonName, const QString& description, const QString& action);
 };
 
 class BINARYNINJAUIAPI UIContext
@@ -59,6 +60,7 @@ public:
 	static void closePreview();
 	static bool sendPreviewWheelEvent(QWheelEvent* event);
 	static void closeOtherActiveModalWidget(QWidget* current);
+	static void registerFileOpenMode(const QString& buttonName, const QString& description, const QString& action);
 
 	static UIContext* contextForWidget(QWidget* widget);
 	static UIContext* activeContext();

@@ -71,10 +71,10 @@ class TriageFilePicker(QWidget):
 
 				f.createBinaryViews()
 				for data in f.getAllDataViews():
-					Settings().set_string("analysis.mode", Settings().get_string("triage.analysis_mode"), data)
-					Settings().set_bool("triage.always_prefer", True, data)
+					Settings().set_string("analysis.mode", Settings().get_string("triage.analysisMode"), data)
+					Settings().set_bool("triage.preferSummaryView", True, data)
 					if data.view_type != "Raw":
-						linearSweepMode = Settings().get_string("triage.linear_sweep")
+						linearSweepMode = Settings().get_string("triage.linearSweep")
 						if linearSweepMode == "none":
 							Settings().set_bool("analysis.linearSweep.autorun", False, data)
 						elif linearSweepMode == "partial":
@@ -105,7 +105,7 @@ def openForTriage(context):
 	currentContext.createTabForWidget("Open for Triage", fp)
 
 
-Settings().register_setting("triage.analysis_mode", """
+Settings().register_setting("triage.analysisMode", """
 	{
 		"title" : "Triage Analysis Mode",
 		"type" : "string",
@@ -119,7 +119,7 @@ Settings().register_setting("triage.analysis_mode", """
 	}
 	""")
 
-Settings().register_setting("triage.linear_sweep", """
+Settings().register_setting("triage.linearSweep", """
 	{
 		"title" : "Triage Linear Sweep Mode",
 		"type" : "string",

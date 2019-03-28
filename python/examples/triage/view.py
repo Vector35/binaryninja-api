@@ -172,8 +172,8 @@ class TriageViewType(ViewType):
 
 	def getPriority(self, data, filename):
 		is_full = Settings().get_string("analysis.mode", data) == "full"
-		always_prefer = Settings().get_bool("triage.always_prefer", data)
-		prefer_for_raw = Settings().get_bool("triage.prefer_for_raw", data)
+		always_prefer = Settings().get_bool("triage.preferSummaryView", data)
+		prefer_for_raw = Settings().get_bool("triage.preferSummaryViewForRaw", data)
 		if data.executable and (always_prefer or not is_full):
 			return 100
 		if len(data) > 0:
@@ -187,21 +187,21 @@ class TriageViewType(ViewType):
 
 
 Settings().register_group("triage", "Triage")
-Settings().register_setting("triage.always_prefer", """
+Settings().register_setting("triage.preferSummaryView", """
 	{
-		"title" : "Always Prefer Triage Summary View",
+		"title" : "Prefer Triage Summary View",
 		"type" : "boolean",
 		"default" : false,
-		"description" : "Always prefer opening binaries in Triage Summary view, even when performing full analysis."
+		"description" : "Always prefer Triage Summary View when opening a binary, even when performing full analysis."
 	}
 	""")
 
-Settings().register_setting("triage.prefer_for_raw", """
+Settings().register_setting("triage.preferSummaryViewForRaw", """
 	{
 		"title" : "Prefer Triage Summary View for Raw Files",
 		"type" : "boolean",
 		"default" : true,
-		"description" : "Prefer opening raw files in Triage Summary view."
+		"description" : "Prefer Triage Summary View when opening a binary that is Raw file type."
 	}
 	""")
 

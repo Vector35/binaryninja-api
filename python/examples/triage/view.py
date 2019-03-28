@@ -26,7 +26,7 @@ class TriageView(QScrollArea, View):
 		container = QWidget(self)
 		layout = QVBoxLayout()
 
-		entropyGroup = QGroupBox("Entropy")
+		entropyGroup = QGroupBox("Entropy", container)
 		entropyLayout = QVBoxLayout()
 		entropyLayout.addWidget(entropy.EntropyWidget(entropyGroup, self, self.data))
 		entropyGroup.setLayout(entropyLayout)
@@ -42,7 +42,7 @@ class TriageView(QScrollArea, View):
 			log.log_error(traceback.format_exc())
 
 		if hdr is not None:
-			headerGroup = QGroupBox("Headers")
+			headerGroup = QGroupBox("Headers", container)
 			headerLayout = QVBoxLayout()
 			headerWidget = headers.HeaderWidget(headerGroup, hdr)
 			headerLayout.addWidget(headerWidget)
@@ -52,13 +52,13 @@ class TriageView(QScrollArea, View):
 		if self.data.executable:
 			importExportSplitter = QSplitter(Qt.Horizontal)
 
-			importGroup = QGroupBox("Imports")
+			importGroup = QGroupBox("Imports", container)
 			importLayout = QVBoxLayout()
 			importLayout.addWidget(imports.ImportsWidget(importGroup, self, self.data))
 			importGroup.setLayout(importLayout)
 			importExportSplitter.addWidget(importGroup)
 
-			exportGroup = QGroupBox("Exports")
+			exportGroup = QGroupBox("Exports", container)
 			exportLayout = QVBoxLayout()
 			exportLayout.addWidget(exports.ExportsWidget(exportGroup, self, self.data))
 			exportGroup.setLayout(exportLayout)
@@ -67,7 +67,7 @@ class TriageView(QScrollArea, View):
 			layout.addWidget(importExportSplitter)
 
 			if self.data.view_type != "PE":
-				segmentsGroup = QGroupBox("Segments")
+				segmentsGroup = QGroupBox("Segments", container)
 				segmentsLayout = QVBoxLayout()
 				segmentsWidget = sections.SegmentsWidget(segmentsGroup, self.data)
 				segmentsLayout.addWidget(segmentsWidget)
@@ -76,7 +76,7 @@ class TriageView(QScrollArea, View):
 				if len(segmentsWidget.segments) == 0:
 					segmentsGroup.hide()
 
-			sectionsGroup = QGroupBox("Sections")
+			sectionsGroup = QGroupBox("Sections", container)
 			sectionsLayout = QVBoxLayout()
 			sectionsWidget = sections.SectionsWidget(sectionsGroup, self.data)
 			sectionsLayout.addWidget(sectionsWidget)

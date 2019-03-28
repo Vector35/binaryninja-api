@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.enums import SymbolType
 import binaryninjaui
-from binaryninjaui import ViewFrame, FilterTarget, FilteredView, UIContext
+from binaryninjaui import ViewFrame, FilterTarget, FilteredView, UIContext, UIActionHandler
 
 
 class GenericImportsModel(QAbstractItemModel):
@@ -131,6 +131,11 @@ class ImportsTreeView(QTreeView, FilterTarget):
 		self.data = data
 		self.parent = parent
 		self.view = view
+
+		# Allow view-specific shortcuts when imports are focused
+		self.actionHandler = UIActionHandler()
+		self.actionHandler.setupActionHandler(self)
+		self.actionHandler.setActionContext(lambda: self.view.actionContext())
 
 		self.model = GenericImportsModel(self.data)
 		self.setModel(self.model)

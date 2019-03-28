@@ -63,6 +63,8 @@ class BINARYNINJAUIAPI CrossReferenceList: public QListView, public DockContextH
 	QPoint m_hoverPos;
 
 	uint64_t m_curRefTarget = 0;
+	bool m_navigating = false;
+	bool m_navToNextOrPrevStarted = false;
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
@@ -72,16 +74,19 @@ protected:
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
 	virtual void updateFonts() override;
 	virtual void wheelEvent(QWheelEvent* e) override;
+	void goToReference(const QModelIndex& idx);
 
 private Q_SLOTS:
-	void goToReference(const QModelIndex& idx);
 	void hoverTimerEvent();
+	void referenceActivated(const QModelIndex& idx);
 
 public:
 	CrossReferenceList(ViewFrame* view, BinaryViewRef data);
 	virtual ~CrossReferenceList();
 
 	void setCurrentSelection(uint64_t begin, uint64_t end);
+	void navigateToNext();
+	void navigateToPrev();
 
 	bool hasSelection();
 };

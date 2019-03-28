@@ -212,17 +212,17 @@ class DataVariable(object):
 	@property
 	def data_refs_from(self):
 		"""data cross references from this data variable (read-only)"""
-		return self.view.get_data_refs_from(self.address, len(self.type))
+		return self.view.get_data_refs_from(self.address, max(1, len(self)))
 
 	@property
 	def data_refs(self):
 		"""data cross references to this data variable (read-only)"""
-		return self.view.get_data_refs(self.address, len(self.type))
+		return self.view.get_data_refs(self.address, max(1, len(self)))
 
 	@property
 	def code_refs(self):
 		"""code references to this data variable (read-only)"""
-		return self.view.get_code_refs(self.address, len(self.type))
+		return self.view.get_code_refs(self.address, max(1, len(self)))
 
 	def __len__(self):
 		return len(self.type)

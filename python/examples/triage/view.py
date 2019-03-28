@@ -94,6 +94,7 @@ class TriageView(QScrollArea, View):
 			layout.addStretch(1)
 		else:
 			self.byteView = byte.ByteView(self, self.data)
+			View.setBinaryDataNavigable(self, True)
 			layout.addWidget(self.byteView, 1)
 
 		container.setLayout(layout)
@@ -124,9 +125,10 @@ class TriageView(QScrollArea, View):
 		return binaryninjaui.getMonospaceFont(self)
 
 	def navigate(self, addr):
-		if self.byteView is not None:
+		if self.byteView:
+			return self.byteView.navigate(addr)
+		else:
 			return self.navigate(addr)
-		return False
 
 	def startFullAnalysis(self):
 		Settings().set_string("analysis.mode", "full", self.data)

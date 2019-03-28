@@ -2412,11 +2412,11 @@ namespace BinaryNinja
 		bool HasUndeterminedOutgoingEdges() const;
 		bool CanExit() const;
 
-		std::set<Ref<BasicBlock>> GetDominators() const;
-		std::set<Ref<BasicBlock>> GetStrictDominators() const;
-		Ref<BasicBlock> GetImmediateDominator() const;
-		std::set<Ref<BasicBlock>> GetDominatorTreeChildren() const;
-		std::set<Ref<BasicBlock>> GetDominanceFrontier() const;
+		std::set<Ref<BasicBlock>> GetDominators(bool post = false) const;
+		std::set<Ref<BasicBlock>> GetStrictDominators(bool post = false) const;
+		Ref<BasicBlock> GetImmediateDominator(bool post = false) const;
+		std::set<Ref<BasicBlock>> GetDominatorTreeChildren(bool post = false) const;
+		std::set<Ref<BasicBlock>> GetDominanceFrontier(bool post = false) const;
 		static std::set<Ref<BasicBlock>> GetIteratedDominanceFrontier(const std::set<Ref<BasicBlock>>& blocks);
 
 		void MarkRecentUse();

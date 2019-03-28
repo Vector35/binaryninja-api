@@ -249,7 +249,18 @@ class BasicBlock(object):
 	def dominators(self):
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
-		blocks = core.BNGetBasicBlockDominators(self.handle, count)
+		blocks = core.BNGetBasicBlockDominators(self.handle, count, False)
+		result = []
+		for i in range(0, count.value):
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def post_dominators(self):
+		"""List of dominators for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominators(self.handle, count, True)
 		result = []
 		for i in range(0, count.value):
 			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
@@ -260,7 +271,7 @@ class BasicBlock(object):
 	def strict_dominators(self):
 		"""List of strict dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
-		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count)
+		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, False)
 		result = []
 		for i in range(0, count.value):
 			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
@@ -270,7 +281,15 @@ class BasicBlock(object):
 	@property
 	def immediate_dominator(self):
 		"""Immediate dominator of this basic block (read-only)"""
-		result = core.BNGetBasicBlockImmediateDominator(self.handle)
+		result = core.BNGetBasicBlockImmediateDominator(self.handle, False)
+		if not result:
+			return None
+		return self._create_instance(result, self.view)
+
+	@property
+	def immediate_post_dominator(self):
+		"""Immediate dominator of this basic block (read-only)"""
+		result = core.BNGetBasicBlockImmediateDominator(self.handle, True)
 		if not result:
 			return None
 		return self._create_instance(result, self.view)
@@ -279,7 +298,18 @@ class BasicBlock(object):
 	def dominator_tree_children(self):
 		"""List of child blocks in the dominator tree for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
-		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count)
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False)
+		result = []
+		for i in range(0, count.value):
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def post_dominator_tree_children(self):
+		"""List of child blocks in the post dominator tree for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True)
 		result = []
 		for i in range(0, count.value):
 			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
@@ -290,7 +320,18 @@ class BasicBlock(object):
 	def dominance_frontier(self):
 		"""Dominance frontier for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
-		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count)
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, False)
+		result = []
+		for i in range(0, count.value):
+			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))
+		core.BNFreeBasicBlockList(blocks, count.value)
+		return result
+
+	@property
+	def post_dominance_frontier(self):
+		"""Post dominance frontier for this basic block (read-only)"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, True)
 		result = []
 		for i in range(0, count.value):
 			result.append(self._create_instance(core.BNNewBasicBlockReference(blocks[i]), self.view))

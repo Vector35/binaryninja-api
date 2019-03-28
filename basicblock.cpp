@@ -185,10 +185,10 @@ bool BasicBlock::CanExit() const
 }
 
 
-set<Ref<BasicBlock>> BasicBlock::GetDominators() const
+set<Ref<BasicBlock>> BasicBlock::GetDominators(bool post) const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetBasicBlockDominators(m_object, &count);
+	BNBasicBlock** blocks = BNGetBasicBlockDominators(m_object, &count, post);
 
 	set<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -199,10 +199,10 @@ set<Ref<BasicBlock>> BasicBlock::GetDominators() const
 }
 
 
-set<Ref<BasicBlock>> BasicBlock::GetStrictDominators() const
+set<Ref<BasicBlock>> BasicBlock::GetStrictDominators(bool post) const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetBasicBlockStrictDominators(m_object, &count);
+	BNBasicBlock** blocks = BNGetBasicBlockStrictDominators(m_object, &count, post);
 
 	set<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -213,19 +213,19 @@ set<Ref<BasicBlock>> BasicBlock::GetStrictDominators() const
 }
 
 
-Ref<BasicBlock> BasicBlock::GetImmediateDominator() const
+Ref<BasicBlock> BasicBlock::GetImmediateDominator(bool post) const
 {
-	BNBasicBlock* result = BNGetBasicBlockImmediateDominator(m_object);
+	BNBasicBlock* result = BNGetBasicBlockImmediateDominator(m_object, post);
 	if (!result)
 		return nullptr;
 	return new BasicBlock(result);
 }
 
 
-set<Ref<BasicBlock>> BasicBlock::GetDominatorTreeChildren() const
+set<Ref<BasicBlock>> BasicBlock::GetDominatorTreeChildren(bool post) const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetBasicBlockDominatorTreeChildren(m_object, &count);
+	BNBasicBlock** blocks = BNGetBasicBlockDominatorTreeChildren(m_object, &count, post);
 
 	set<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)
@@ -236,10 +236,10 @@ set<Ref<BasicBlock>> BasicBlock::GetDominatorTreeChildren() const
 }
 
 
-set<Ref<BasicBlock>> BasicBlock::GetDominanceFrontier() const
+set<Ref<BasicBlock>> BasicBlock::GetDominanceFrontier(bool post) const
 {
 	size_t count;
-	BNBasicBlock** blocks = BNGetBasicBlockDominanceFrontier(m_object, &count);
+	BNBasicBlock** blocks = BNGetBasicBlockDominanceFrontier(m_object, &count, post);
 
 	set<Ref<BasicBlock>> result;
 	for (size_t i = 0; i < count; i++)

@@ -24,17 +24,15 @@ import ctypes
 
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.filemetadata import FileMetadata
-from binaryninja.binaryview import BinaryView
-from binaryninja.function import (DisassemblyTextLine, InstructionTextToken)
-from binaryninja.enums import InstructionTextTokenType, TypeClass, HighlightStandardColor
-from binaryninja.log import log_error
-from binaryninja.types import Type
+from binaryninja import filemetadata
+from binaryninja import binaryview
+from binaryninja import function
+from binaryninja import enums
+from binaryninja import log
+from binaryninja import types
 from binaryninja import highlight
 
 class DataRenderer(object):
-	_registered_renderers = []
-
 	"""
 	DataRenderer objects tell the Linear View how to render specific types.
 
@@ -51,24 +49,26 @@ class DataRenderer(object):
 	a "type specific" renderer. For instance there is a generic struct render which renders any struct that hasn't
 	been explicitly overridden by a "type specific" renderer.
 
-	In the below example we create a data renderer that overrides the default display for `struct BAR`.
+	In the below example we create a data renderer that overrides the default display for `struct BAR`::
 
-	class BarDataRenderer(DataRenderer):
-		def __init__(self):
-			DataRenderer.__init__(self)
+		class BarDataRenderer(DataRenderer):
+			def __init__(self):
+				DataRenderer.__init__(self)
+		
+			def perform_is_valid_for_data(self, ctxt, view, addr, type, context):
+				return DataRenderer.is_type_of_struct_name(type, "BAR", context)
+		
+			def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context):
+				prefix.append(InstructionTextToken(InstructionTextTokenType.TextToken, "I'm in ur BAR"))
+				return [DisassemblyTextLine(prefix, addr)]
 
-		def perform_is_valid_for_data(self, ctxt, view, addr, type, context):
-			return DataRenderer.is_type_of_struct_name(type, "BAR", context)
-
-		def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context):
-			prefix.append(InstructionTextToken(InstructionTextTokenType.TextToken, "I'm in ur BAR"))
-			return [DisassemblyTextLine(prefix, addr)]
-
-		def __del__(self):
-			pass
-
-	BarDataRenderer().register_type_specific()
+			def __del__(self):
+				pass
+		
+		BarDataRenderer().register_type_specific()
 	"""
+	_registered_renderers = []
+
 	def __init__(self, context=None):
 		self._cb = core.BNCustomDataRenderer()
 		self._cb.context = context
@@ -79,8 +79,8 @@ class DataRenderer(object):
 
 	@classmethod
 	def is_type_of_struct_name(cls, type, name, context):
-		return (type.type_class == TypeClass.StructureTypeClass and len(context) > 0
-			and context[0].type_class == TypeClass.NamedTypeReferenceClass and
+		return (type.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
+			and context[0].type_class == enums.TypeClass.NamedTypeReferenceClass and
 			context[0].named_type_reference.name == name)
 
 	def register_type_specific(self):
@@ -95,28 +95,28 @@ class DataRenderer(object):
 		try:
 			self.perform_free_object(ctxt)
 		except:
-			log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def _is_valid_for_data(self, ctxt, view, addr, type, context, ctxCount):
 		try:
-			file_metadata = FileMetadata(handle=core.BNGetFileForView(view))
-			view = BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
-			type = Type(handle=core.BNNewTypeReference(type))
+			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
+			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
+			type = types.Type(handle=core.BNNewTypeReference(type))
 			pycontext = []
 			for i in range(0, ctxCount):
 				pycontext.append(Type(core.BNNewTypeReference(context[i])))
 			return self.perform_is_valid_for_data(ctxt, view, addr, type, pycontext)
 		except:
-			log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
 	def _get_lines_for_data(self, ctxt, view, addr, type, prefix, prefixCount, width, count, typeCtx, ctxCount):
 		try:
-			file_metadata = FileMetadata(handle=core.BNGetFileForView(view))
-			view = BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
+			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
 			type = Type(handle=core.BNNewTypeReference(type))
 
-			prefixTokens = InstructionTextToken.get_instruction_lines(prefix, prefixCount)
+			prefixTokens = function.InstructionTextToken.get_instruction_lines(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
 				pycontext.append(Type(core.BNNewTypeReference(typeCtx[i])))
@@ -128,9 +128,9 @@ class DataRenderer(object):
 			for i in range(len(result)):
 				line = result[i]
 				color = line.highlight
-				if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+				if not isinstance(color, enums.HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 					raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
-				if isinstance(color, HighlightStandardColor):
+				if isinstance(color, enums.HighlightStandardColor):
 					color = highlight.HighlightColor(color)
 				line_buf[i].highlight = color._get_core_struct()
 				if line.address is None:
@@ -146,11 +146,11 @@ class DataRenderer(object):
 					line_buf[i].instrIndex = 0xffffffffffffffff
 
 				line_buf[i].count = len(line.tokens)
-				line_buf[i].tokens = InstructionTextToken.get_instruction_lines(line.tokens)
+				line_buf[i].tokens = function.InstructionTextToken.get_instruction_lines(line.tokens)
 
 			return ctypes.cast(line_buf, ctypes.c_void_p).value
 		except:
-			log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return None
 
 	def perform_free_object(self, ctxt):

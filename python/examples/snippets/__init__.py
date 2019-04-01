@@ -16,6 +16,12 @@ from binaryninja.log import (log_info, log_warn, log_alert, log_debug)
 from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu)
 
 snippetPath = os.path.realpath(os.path.join(user_plugin_path(), "..", "snippets"))
+try:
+    if not os.path.exists(snippetPath):
+        os.mkdir(snippetPath)
+except IOError:
+    log_error("Unable to create %s" % snippetPath)
+
 
 def includeWalk(dir, includeExt):
     filePaths = []
@@ -152,7 +158,7 @@ class Snippets(QDialog):
         hlayout.addWidget(hsplitter)
 
         self.showNormal() #Fixes bug that maximized windows are "stuck"
-        self.settings = QSettings("Vector35", "Snippet Editor")
+        self.settings = QSettings("Vector 35", "Snippet Editor")
         if self.settings.contains("ui/snippeteditor/geometry"):
             self.restoreGeometry(self.settings.value("ui/snippeteditor/geometry"))
         else:

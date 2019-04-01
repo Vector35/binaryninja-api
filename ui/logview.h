@@ -65,6 +65,9 @@ public:
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 	virtual bool setData(const QModelIndex& i, const QVariant& value, int role) override;
+
+public Q_SLOTS:
+	void notifyDataChanged();
 };
 
 
@@ -91,6 +94,9 @@ public:
 
 protected:
 	bool editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index) override;
+
+Q_SIGNALS:
+	void notifyDataChanged();
 
 public Q_SLOTS:
 	void viewChanged(QWidget* frame);

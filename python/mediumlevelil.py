@@ -728,6 +728,9 @@ class MediumLevelILFunction(object):
 			raise IndexError("expected integer instruction index")
 		if isinstance(i, MediumLevelILExpr):
 			return MediumLevelILInstruction(self, i.index)
+		# for backwards compatibility
+		if isinstance(i, MediumLevelILInstruction):
+			return i
 		if (i < 0) or (i >= len(self)):
 			raise IndexError("index out of range")
 		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
@@ -864,13 +867,13 @@ class MediumLevelILFunction(object):
 		result = core.BNGetMediumLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
 			return None
-		return result
+		return self[result]
 
 	def get_ssa_memory_definition(self, version):
 		result = core.BNGetMediumLevelILSSAMemoryDefinition(self.handle, version)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
 			return None
-		return result
+		return self[result]
 
 	def get_ssa_var_uses(self, ssa_var):
 		count = ctypes.c_ulonglong()
@@ -881,7 +884,7 @@ class MediumLevelILFunction(object):
 		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -890,7 +893,7 @@ class MediumLevelILFunction(object):
 		instrs = core.BNGetMediumLevelILSSAMemoryUses(self.handle, version, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 

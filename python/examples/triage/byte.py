@@ -207,8 +207,7 @@ class ByteView(QAbstractScrollArea, View):
 		areaSize = self.viewport().size()
 		self.adjustSize(areaSize.width(), areaSize.height())
 
-	def createRenderContext(self):
-		render = RenderContext(self)
+	def getFont(self):
 		userFont = binaryninjaui.getMonospaceFont(self)
 		if sys.platform == "darwin":
 			# Some fonts aren't fixed width across all characters, use a known good one
@@ -216,7 +215,11 @@ class ByteView(QAbstractScrollArea, View):
 			font.setKerning(False)
 		else:
 			font = userFont
-		render.setFont(font)
+		return font
+
+	def createRenderContext(self):
+		render = RenderContext(self)
+		render.setFont(self.getFont())
 		return render
 
 	def adjustSize(self, width, height):
@@ -314,6 +317,7 @@ class ByteView(QAbstractScrollArea, View):
 		self.lines.insert(0, line)
 		self.topLine += 1
 		self.topAddr = prevEnd
+		return True
 
 	def cacheNextLines(self):
 		lastAddr = self.data.start

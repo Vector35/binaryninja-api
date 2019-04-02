@@ -6,6 +6,9 @@ Thumbs.db
 *.ilk
 *.exp
 *.pkl
+*.a
+*.so
+*.dylib
 libbinaryninja*
 binaryninjacore.lib
 binaryninjacore.dll

@@ -127,8 +127,7 @@ class TriageView(QScrollArea, View):
 	def navigate(self, addr):
 		if self.byteView:
 			return self.byteView.navigate(addr)
-		else:
-			return self.navigate(addr)
+		return False
 
 	def startFullAnalysis(self):
 		Settings().set_string("analysis.mode", "full", self.data)

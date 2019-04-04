@@ -104,7 +104,7 @@ class DataRenderer(object):
 			type = types.Type(handle=core.BNNewTypeReference(type))
 			pycontext = []
 			for i in range(0, ctxCount):
-				pycontext.append(Type(core.BNNewTypeReference(context[i])))
+				pycontext.append(types.Type(core.BNNewTypeReference(context[i])))
 			return self.perform_is_valid_for_data(ctxt, view, addr, type, pycontext)
 		except:
 			log.log_error(traceback.format_exc())
@@ -114,12 +114,12 @@ class DataRenderer(object):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
-			type = Type(handle=core.BNNewTypeReference(type))
+			type = types.Type(handle=core.BNNewTypeReference(type))
 
 			prefixTokens = function.InstructionTextToken.get_instruction_lines(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
-				pycontext.append(Type(core.BNNewTypeReference(typeCtx[i])))
+				pycontext.append(types.Type(core.BNNewTypeReference(typeCtx[i])))
 
 			result = self.perform_get_lines_for_data(ctxt, view, addr, type, prefixTokens, width, pycontext)
 

@@ -657,5 +657,5 @@ class BackgroundTaskThread(BackgroundTask):
 	def start(self):
 		self.thread.start()
 
-	def join(self):
-		self.thread.join()
+	def join(self, timeout=None):
+		self.thread.join(timeout)

@@ -376,6 +376,17 @@ class BinaryViewTestBuilder(Builder):
         return fixOutput(retinfo)
 
 
+    def test_dominators(self):
+        """Dominators don't match oracle"""
+        retinfo = []
+        for func in self.bv.functions:
+            for bb in func:
+                for dom in bb.dominators:
+                    retinfo.append("Dominator: %x of %x" % (dom.start, bb.start))
+                for pdom in bb.post_dominators:
+                    retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
+        return fixOutput(retinfo)
+
 class TestBuilder(Builder):
     """ The TestBuilder is for tests that need to be checked against a
         stored oracle data that isn't from a binary. These test are

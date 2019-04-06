@@ -33,7 +33,7 @@ from binaryninja import types
 from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
-	FunctionAnalysisSkipOverride)
+	FunctionAnalysisSkipOverride, MediumLevelILOperation)
 
 # 2-3 compatibility
 from binaryninja import range
@@ -1600,6 +1600,35 @@ class Function(object):
 		core.BNRequestFunctionDebugReport(self.handle, name)
 		self.view.update_analysis()
 
+	@property
+	def callees(self):
+		called = []
+		for bb in self.medium_level_il:
+			for i in bb:
+				if i.operation in (MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_CALL_UNTYPED):
+					if i.dest.value.type == RegisterValueType.ConstantPointerValue:
+						func = self.view.get_function_at(i.dest.value.value, self.platform)
+						if func is not None:
+							called.append(func)
+		return called
+
+	@property
+	def callee_addresses(self):
+		called = []
+		for bb in self.medium_level_il:
+			for i in bb:
+				if i.operation in (MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_CALL_UNTYPED):
+					if i.dest.value.type == RegisterValueType.ConstantPointerValue:
+						called.append(i.dest.value.value)
+		return called
+
+	@property
+	def callers(self):
+		functions = []
+		for ref in self.view.get_code_refs(self.start):
+			if ref.function is not None:
+				functions.append(ref.function)
+		return functions
 
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):

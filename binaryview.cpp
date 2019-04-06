@@ -1928,6 +1928,23 @@ map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 }
 
 
+vector<QualifiedName> BinaryView::GetTypeNames(const string& matching)
+{
+	size_t count;
+	BNQualifiedName* names = BNGetAnalysisTypeNames(m_object, &count, matching.c_str());
+
+	vector<QualifiedName> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(QualifiedName::FromAPIObject(&names[i]));
+	}
+
+	BNFreeTypeNameList(names, count);
+	return result;
+}
+
+
 Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();

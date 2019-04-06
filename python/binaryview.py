@@ -1197,6 +1197,17 @@ class BinaryView(object):
 		return result
 
 	@property
+	def type_names(self):
+		"""List of defined type names (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		name_list = core.BNGetAnalysisTypeNames(self.handle, count, "")
+		result = []
+		for i in range(0, count.value):
+			result.append(types.QualifiedName._from_core_struct(name_list[i]))
+		core.BNFreeTypeNameList(name_list, count.value)
+		return result
+
+	@property
 	def segments(self):
 		"""List of segments (read-only)"""
 		count = ctypes.c_ulonglong(0)

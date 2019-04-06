@@ -1432,6 +1432,7 @@ namespace BinaryNinja
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& result, std::string& errors);
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
+		std::vector<QualifiedName> GetTypeNames(const std::string& matching="");
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetTypeById(const std::string& id);
 		std::string GetTypeId(const QualifiedName& name);

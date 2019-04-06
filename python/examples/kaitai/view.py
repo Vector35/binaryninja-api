@@ -15,7 +15,7 @@ from binaryninja import _binaryninjacore as core
 from binaryninjaui import View, ViewType, ViewFrame, UIContext, HexEditor, getMonospaceFont
 
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit, QHeaderView
+from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QLineEdit, QHeaderView, QSplitter
 
 from . import menu
 
@@ -113,9 +113,7 @@ class KaitaiView(QScrollArea, View):
 		self.ioRoot = None
 		self.ioCurrent = None
 
-		container = QWidget(self)
-		self.layout = QVBoxLayout()
-
+		# top half = treeWidget + structPath
 		self.treeWidget = MyQTreeWidget()
 		self.treeWidget.setColumnCount(4)
 		self.treeWidget.setHeaderLabels(['label','value','start','end'])
@@ -124,15 +122,23 @@ class KaitaiView(QScrollArea, View):
 		self.structPath = QLineEdit("root")
 		self.structPath.setReadOnly(True)
 
+		topHalf = QWidget(self)
+		layout = QVBoxLayout()
+		layout.addWidget(self.treeWidget)
+		layout.addWidget(self.structPath)
+		topHalf.setLayout(layout)
+
+		# bottom half = hexWidget
 		self.hexWidget = HexEditor(binaryView, ViewFrame.viewFrameForWidget(self), 0)
 
-		self.layout.addWidget(self.treeWidget)
-		self.layout.addWidget(self.structPath)
-		self.layout.addWidget(self.hexWidget)
-		#self.layout.addStretch(1)
-		container.setLayout(self.layout)
+		# splitter = top half, bottom half
+		self.splitter = QSplitter(self)
+		self.splitter.setOrientation(Qt.Vertical)
+		self.splitter.addWidget(topHalf)
+		self.splitter.addWidget(self.hexWidget)
+
 		self.setWidgetResizable(True)
-		self.setWidget(container)
+		self.setWidget(self.splitter)
 
 		self.kaitaiParse()
 
@@ -292,10 +298,9 @@ class KaitaiView(QScrollArea, View):
 		# current kaitai object is on a different io? then swap HexEditor
 		if _io != self.ioCurrent:
 			# delete old view
-			layoutItem = self.layout.takeAt(2)
-			hexEditorWidget = layoutItem.widget()
-			hexEditorWidget.setParent(None)
-			hexEditorWidget.deleteLater()
+			self.hexWidget.hide()
+			self.hexWidget.setParent(None)
+			self.hexWidget.deleteLater()
 			self.hexWidget = None
 
 			# if it's the original file IO, wrap the already-open file binary view
@@ -310,7 +315,7 @@ class KaitaiView(QScrollArea, View):
 				bv = binaryview.BinaryView.new(data)
 				self.hexWidget = HexEditor(bv, ViewFrame.viewFrameForWidget(self), 0)
 
-			self.layout.addWidget(self.hexWidget)
+			self.splitter.addWidget(self.hexWidget)
 			self.ioCurrent = _io
 
 		# now position selection in whatever HexEditor is current

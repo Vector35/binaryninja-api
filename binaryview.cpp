@@ -2419,9 +2419,11 @@ bool BinaryView::ParseExpression(Ref<BinaryView> view, const string& expression,
 	char* err = nullptr;
 	if (!BNParseExpression(view ? view->GetObject() : nullptr, expression.c_str(), &offset, here, &err))
 	{
-		LogDebug("Failed to parse expression: '%s': Error: '%s'", expression.c_str(), err);
-		errorString = string(err);
-		BNFreeParseError(err);
+		if (err)
+		{
+			errorString = string(err);
+			BNFreeParseError(err);
+		}
 		return false;
 	}
 	return true;

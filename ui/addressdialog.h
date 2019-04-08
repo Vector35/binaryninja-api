@@ -50,6 +50,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview: public QDialog
     QColor m_defaultColor;
 	QFont m_defaultFont;
 	QString m_prompt;
+	bool m_initialTextSelection;
 
 	void commitHistory();
 	void customEvent(QEvent* event);
@@ -58,7 +59,8 @@ private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
 	void updateRelativeState(int state);
-	void updatePreview(QString text);
+	void updatePreview();
+	void updatePreview(QString data);
 
 public:
 	AddressDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here,

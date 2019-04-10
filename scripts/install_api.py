@@ -96,6 +96,9 @@ else:
         sys.exit(1)
 
 binaryninja_pth_path = os.path.join(install_path, 'binaryninja.pth')
-open(binaryninja_pth_path, 'wb').write(api_path.encode('charmap'))
+with open(binaryninja_pth_path, 'wb') as pth_file:
+    pth_file.write((api_path+"\n").encode('charmap'))
+    pth_file.write((api_path+"2\n").encode('charmap')) #support for python2 QT bindings
+    pth_file.write((api_path+"3\n").encode('charmap')) #support for python3 QT bindings
 
 print("Binary Ninja API installed using {}".format(binaryninja_pth_path))

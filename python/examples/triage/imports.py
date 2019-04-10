@@ -1,13 +1,168 @@
-from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget, QPushButton
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
-from binaryninja.enums import SymbolType
+from binaryninja.mediumlevelil import MediumLevelILOperation
+from binaryninja.function import RegisterValueType
+from binaryninja.enums import SymbolType, FunctionAnalysisSkipOverride
+from binaryninja.types import Symbol, Type
+from binaryninja.plugin import PluginCommand
 import binaryninjaui
-from binaryninjaui import ViewFrame, FilterTarget, FilteredView, UIContext, UIActionHandler
+from binaryninjaui import ViewFrame, ViewType, FilterTarget, FilteredView, UIContext, UIActionHandler
+import time
+
+platform_info = [
+	{
+		"prefixes": ["windows"],
+		"sym_lookups": ["GetProcAddress", "GetProcAddress@IAT"]
+	},
+	{
+		"prefixes": ["linux", "freebsd", "mac"],
+		"sym_lookups": ["_dlsym", "_dlsym@PLT", "dlsym", "dlsym@PLT"],
+	}
+]
+
+
+def get_platform_info(bv):
+	result = {
+		"sym_lookups": [],
+	}
+
+	if bv.platform is None:
+		return result
+
+	def check_prefix(platform_name, prefixes):
+		for prefix in prefixes:
+			if platform_name.startswith(prefix):
+				return True
+		return False
+
+	for p in platform_info:
+		if check_prefix(bv.platform.name, p["prefixes"]):
+			break
+	else:
+		return result
+
+	syms = map(bv.get_symbol_by_raw_name, p["sym_lookups"])
+	result["sym_lookups"] = [sym.address for sym in filter(lambda x: x is not None, syms)]
+
+	return result
+
+def propagate_var_name(func, mlil_ssa_func, ssa_var, name, ty):
+	instructions = mlil_ssa_func.get_ssa_var_uses(ssa_var)
+	seen_instructions = set()
+
+	handled_vars = set([ssa_var])
+
+	var_idx = 1
+	while len(instructions):
+		idx = instructions.pop()
+		instruction = mlil_ssa_func[idx]
+		seen_instructions.add(idx)
+
+		if instruction.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
+			if instruction.src.operation != MediumLevelILOperation.MLIL_VAR_SSA:
+				continue
+
+			if instruction.src.src not in handled_vars:
+				continue
+
+			handled_vars.add(instruction.dest)
+
+			for use in mlil_ssa_func.get_ssa_var_uses(instruction.dest):
+				if use not in seen_instructions:
+					instructions.append(use)
+
+			func.create_user_var(instruction.dest.var, ty, "%s_%d" % (name, var_idx))
+
+			var_idx += 1
+			pass
+		elif instruction.operation == MediumLevelILOperation.MLIL_VAR_PHI:
+			can_propagate = True
+			for source in instruction.src:
+				if source not in handled_vars:
+					can_propagate = False
+					break
+
+			if not can_propagate:
+				seen_instructions.remove(idx)
+				continue
+
+			handled_vars.add(instruction.dest)
+			for use in mlil_ssa_func.get_ssa_var_uses(instruction.dest):
+				if use not in seen_instructions:
+					instructions.append(use)
+
+			func.create_user_var(instruction.dest.var, ty, "%s_%d" % (name, var_idx))
+			var_idx += 1
+
+		elif instruction.operation == MediumLevelILOperation.MLIL_STORE_SSA:
+			if instruction.src.operation != MediumLevelILOperation.MLIL_VAR_SSA:
+				continue
+
+			if instruction.src.src not in handled_vars:
+				continue
+
+			store_dest = instruction.dest.value
+			if store_dest.type not in [RegisterValueType.ConstantPointerValue, RegisterValueType.ConstantValue]:
+				continue
+
+			func.view.define_user_symbol(Symbol(SymbolType.ImportAddressSymbol, store_dest.value, name))
+			func.view.define_user_data_var(store_dest.value, ty)
+
+def find_mlil_calls_to_targets(mlil_ssa_func, interesting_targets):
+	for bb in mlil_ssa_func:
+		for insn in bb:
+			if insn.operation != MediumLevelILOperation.MLIL_CALL_SSA:
+				continue
+			target = insn.dest.value
+			if target.type not in [ RegisterValueType.ConstantPointerValue, RegisterValueType.ConstantValue, RegisterValueType.ImportedAddressValue ]:
+				continue
+			if target.value not in interesting_targets:
+				continue
+			yield insn
+	return
+
+def find_dynamically_linked_funcs(bv):
+	platform_info = get_platform_info(bv)
+
+	funcs_to_check = set()
+	for lookup in platform_info["sym_lookups"]:
+		for ref in bv.get_code_refs(lookup):
+			ref.function.analysis_skip_override = FunctionAnalysisSkipOverride.NeverSkipFunctionAnalysis
+			funcs_to_check.add(ref.function)
+
+	bv.update_analysis()
+	time.sleep(1)
+
+	for f in funcs_to_check:
+		mlil_ssa = f.medium_level_il.ssa_form
+
+		for call in find_mlil_calls_to_targets(mlil_ssa, platform_info["sym_lookups"]):
+			if len(call.params) < 2 or len(call.output.vars_written) < 1:
+				continue
+
+			symbol_name_addr = call.params[1].value
+			if symbol_name_addr.type not in [RegisterValueType.ConstantPointerValue, RegisterValueType.ConstantValue]:
+				continue
+
+			output_var = call.output.vars_written[0]
+			symbol_name = bv.get_ascii_string_at(symbol_name_addr.value).value
+			#Add confidence to both the args and the return of zero
+			symbol_type = Type.pointer(bv.arch, bv.parse_type_string("void foo()")[0])
+
+			if len(symbol_name) == 0:
+				continue
+
+			bv.define_user_data_var(symbol_name_addr.value, Type.array(Type.int(1), len(symbol_name)))
+
+			output_name = symbol_name + "@DYN"
+			f.create_user_var(output_var.var, symbol_type, output_name)
+			propagate_var_name(f, mlil_ssa, output_var, output_name, symbol_type)
 
 
 class GenericImportsModel(QAbstractItemModel):
 	def __init__(self, data):
 		super(GenericImportsModel, self).__init__()
+		self.filterText = ""
 		self.allEntries = []
 		self.has_modules = False
 		self.name_col = 1
@@ -26,6 +181,10 @@ class GenericImportsModel(QAbstractItemModel):
 			self.ordinal_col = 2
 			self.total_cols = 4
 		self.entries = list(self.allEntries)
+
+	def extendEntries(self, entries):
+		self.allEntries.extend(entries)
+		self.setFilter(self.filterText)
 
 	def columnCount(self, parent):
 		return self.total_cols
@@ -50,11 +209,16 @@ class GenericImportsModel(QAbstractItemModel):
 				name = name[:-len("@PLT")]
 			elif name.endswith("@IAT"):
 				name = name[:-len("@IAT")]
+			elif name.endswith("@DYN"):
+				name = name[:-len("@DYN")]
 			return name
 		if index.column() == self.module_col:
 			return self.getNamespace(self.entries[index.row()])
 		if index.column() == self.ordinal_col:
-			return str(self.entries[index.row()].ordinal)
+			if self.entries[index.row()].ordinal == 0:
+				return "DYN"
+			else:
+				return str(self.entries[index.row()].ordinal)
 		return None
 
 	def headerData(self, section, orientation, role):
@@ -113,6 +277,7 @@ class GenericImportsModel(QAbstractItemModel):
 		self.endResetModel()
 
 	def setFilter(self, filterText):
+		self.filterText = filterText
 		self.beginResetModel()
 		self.entries = []
 		for entry in self.allEntries:
@@ -196,8 +361,14 @@ class ImportsWidget(QWidget):
 		super(ImportsWidget, self).__init__(parent)
 		layout = QVBoxLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
+		self.data = data
 		self.imports = ImportsTreeView(self, view, data)
 		self.filter = FilteredView(self, self.imports, self.imports)
 		layout.addWidget(self.filter, 1)
 		self.setLayout(layout)
 		self.setMinimumSize(UIContext.getScaledWindowSize(100, 196))
+
+	def scanDynamic(self):
+		find_dynamically_linked_funcs(self.data)
+		addedSymbols = list(filter(lambda x: x.name.endswith("@DYN"), self.data.get_symbols_of_type(SymbolType.ImportAddressSymbol)))
+		self.imports.model.extendEntries(addedSymbols)

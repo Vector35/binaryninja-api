@@ -22,6 +22,7 @@ class TriageView(QScrollArea, View):
 		self.currentOffset = 0
 		self.byteView = None
 		self.fullAnalysisButton = None
+		self.importsWidget = None
 
 		container = QWidget(self)
 		layout = QVBoxLayout()
@@ -54,7 +55,8 @@ class TriageView(QScrollArea, View):
 
 			importGroup = QGroupBox("Imports", container)
 			importLayout = QVBoxLayout()
-			importLayout.addWidget(imports.ImportsWidget(importGroup, self, self.data))
+			self.importsWidget = imports.ImportsWidget(importGroup, self, self.data)
+			importLayout.addWidget(self.importsWidget)
 			importGroup.setLayout(importLayout)
 			importExportSplitter.addWidget(importGroup)
 
@@ -87,6 +89,9 @@ class TriageView(QScrollArea, View):
 
 			buttonLayout = QHBoxLayout()
 			buttonLayout.addStretch(1)
+			self.loadDynamicButton = QPushButton("Load Dynamic Imports")
+			self.loadDynamicButton.clicked.connect(self.importsWidget.scanDynamic)
+			buttonLayout.addWidget(self.loadDynamicButton)
 			self.fullAnalysisButton = QPushButton("Start Full Analysis")
 			self.fullAnalysisButton.clicked.connect(self.startFullAnalysis)
 			buttonLayout.addWidget(self.fullAnalysisButton)

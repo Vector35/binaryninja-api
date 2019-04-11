@@ -1,7 +1,7 @@
 import os
 from PySide2.QtWidgets import QWidget, QTreeView, QFileSystemModel, QVBoxLayout, QMessageBox, QAbstractItemView
 from PySide2.QtGui import QKeySequence
-from PySide2.QtCore import QSettings
+from PySide2.QtCore import QSettings, QDir
 from binaryninjaui import UIActionHandler, UIAction, Menu, FileContext, ContextMenuManager, UIContext
 from binaryninja.settings import Settings
 
@@ -20,6 +20,7 @@ class TriageFilePicker(QWidget):
 
 		self.model = QFileSystemModel()
 		self.model.setRootPath("")
+		self.model.setFilter(QDir.AllEntries | QDir.Hidden | QDir.System)
 		self.tree = QTreeView(self)
 		self.tree.setModel(self.model)
 		self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)

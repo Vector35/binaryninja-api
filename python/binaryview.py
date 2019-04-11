@@ -3134,11 +3134,12 @@ class BinaryView(object):
 		core.BNFreeStringReferenceList(strings)
 		return result
 
-	def get_string_at(self, addr):
+	def get_string_at(self, addr, partial=False):
 		"""
 		``get_string_at`` returns the string that falls on given virtual address.
 
 		:param int addr: virtual address to get the string from
+		:param bool partial: whether to return a partial string reference or not
 		:return: returns the StringReference at the given virtual address, otherwise None.
 		:rtype: StringReference
 		:Example:
@@ -3150,7 +3151,12 @@ class BinaryView(object):
 		str_ref = core.BNStringReference()
 		if not core.BNGetStringAtAddress(self.handle, addr, str_ref):
 			return None
-		return StringReference(self, StringType(str_ref.type), str_ref.start, str_ref.length)
+		if str_ref.type != StringType.AsciiString:
+			partial = False
+			log.log_warn("Partial string not supported at 0x{}".format(hex(addr)))
+		start = addr if partial else str_ref.start
+		length = str_ref.length - (addr - str_ref.start) if partial else str_ref.length
+		return StringReference(self, StringType(str_ref.type), start, length)
 
 	def get_ascii_string_at(self, addr, min_length=4, max_length=None, require_cstring=True):
 		"""

@@ -3133,7 +3133,25 @@ class BinaryView(object):
 			result.append(StringReference(self, StringType(strings[i].type), strings[i].start, strings[i].length))
 		core.BNFreeStringReferenceList(strings)
 		return result
-	
+
+	def get_string_at(self, addr):
+		"""
+		``get_string_at`` returns the string that falls on given virtual address.
+
+		:param int addr: virtual address to get the string from
+		:return: returns the StringReference at the given virtual address, otherwise None.
+		:rtype: StringReference
+		:Example:
+
+			>>> bv.get_string_at(0x40302f)
+			<StringType.AsciiString: 0x403028, len 0x12>
+
+		"""
+		str_ref = core.BNStringReference()
+		if not core.BNGetStringAtAddress(self.handle, addr, str_ref):
+			return None
+		return StringReference(self, StringType(str_ref.type), str_ref.start, str_ref.length)
+
 	def get_ascii_string_at(self, addr, min_length=4, max_length=None, require_cstring=True):
 		"""
 		``get_ascii_string_at`` returns the string found at ``addr``

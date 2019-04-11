@@ -1403,6 +1403,7 @@ namespace BinaryNinja
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
 
+		bool GetStringAtAddress(uint64_t addr, BNStringReference& strRef);
 		std::vector<BNStringReference> GetStrings();
 		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
 

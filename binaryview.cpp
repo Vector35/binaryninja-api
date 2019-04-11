@@ -1684,6 +1684,12 @@ size_t BinaryView::GetInstructionLength(Architecture* arch, uint64_t addr)
 }
 
 
+bool BinaryView::GetStringAtAddress(uint64_t addr, BNStringReference& strRef)
+{
+	return BNGetStringAtAddress(m_object, addr, &strRef);
+}
+
+
 vector<BNStringReference> BinaryView::GetStrings()
 {
 	size_t count;

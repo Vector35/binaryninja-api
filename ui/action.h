@@ -30,6 +30,7 @@ struct BINARYNINJAUIAPI HighlightTokenState
 	bool addrValid, localVarValid, isDest;
 	uint64_t addr;
 	BinaryNinja::Variable localVar;
+	size_t tokenIndex;
 
 	HighlightTokenState();
 };

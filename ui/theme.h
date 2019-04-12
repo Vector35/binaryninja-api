@@ -55,6 +55,7 @@ enum ThemeColor
 	ImportColor,
 	InstructionHighlightColor,
 	TokenHighlightColor,
+	TokenSelectionColor,
 	AnnotationColor,
 	OpcodeColor,
 	LinearDisassemblyFunctionHeaderColor,

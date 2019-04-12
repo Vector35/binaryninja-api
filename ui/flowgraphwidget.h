@@ -59,6 +59,7 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 		uint64_t address;
 		size_t instrIndex;
 		size_t lineIndexForAddress;
+		size_t tokenIndex;
 	};
 
 	BinaryViewRef m_data;
@@ -88,10 +89,15 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 
 	bool m_scrollMode;
 	int m_scrollBaseX, m_scrollBaseY;
+	bool m_mouseSelectMode;
 
-	FlowGraphNodeRef m_selectedNode;
+	FlowGraphNodeRef m_selectedNode, m_selectedEdgeSource;
+	bool m_selectedEdgeIncoming = false;
+	std::map<FlowGraphNodeRef, FlowGraphNodeRef> m_selectedEdgeIncomingPriority, m_selectedEdgeOutgoingPriority;
+	BinaryNinja::FlowGraphEdge m_selectedEdge;
 	CursorPosition m_cursorPos, m_selectionStartPos;
 	HighlightTokenState m_highlight;
+	bool m_tokenSelection = false;
 
 	ContextMenuManager m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
@@ -138,6 +144,8 @@ protected:
 
 	bool getNodeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& node);
 	bool getLineForMouseEvent(QMouseEvent* event, CursorPosition& pos);
+	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source,
+		BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 	HighlightTokenState getTokenForMouseEvent(QMouseEvent* event);
 
 	void showContextMenu();
@@ -146,6 +154,21 @@ protected:
 	void navigateToAddress(uint64_t addr);
 
 	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify);
+
+	void up(bool selecting, size_t count = 1);
+	void down(bool selecting, size_t count = 1);
+	void left(bool selecting);
+	void right(bool selecting);
+	void leftToSymbol(bool selecting);
+	void rightToSymbol(bool selecting);
+	void pageUp(bool selecting);
+	void pageDown(bool selecting);
+	void moveToStartOfLine(bool selecting);
+	void moveToEndOfLine(bool selecting);
+	void moveToStartOfView();
+	void selectAll();
+	void selectNone();
+	void navigateToHighlightedToken();
 
 public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
@@ -214,6 +237,7 @@ public:
 	void showTopNode();
 	void showNode(FlowGraphNodeRef node);
 	void showLineInNode(FlowGraphNodeRef node, size_t lineIndex);
+	void ensureCursorVisible();
 
 	void viewInTypesView(std::string typeName);
 

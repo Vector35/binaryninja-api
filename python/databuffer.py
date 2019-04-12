@@ -37,6 +37,8 @@ class DataBuffer(object):
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
 		else:
+			if bytes != str and isinstance(contents, str):
+				contents = contents.encode('charmap')
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):

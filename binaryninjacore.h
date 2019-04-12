@@ -2933,7 +2933,8 @@ extern "C"
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFlowGraphNodeLines(BNFlowGraphNode* node, size_t* count);
 	BINARYNINJACOREAPI void BNSetFlowGraphNodeLines(BNFlowGraphNode* node, BNDisassemblyTextLine* lines, size_t count);
 	BINARYNINJACOREAPI BNFlowGraphEdge* BNGetFlowGraphNodeOutgoingEdges(BNFlowGraphNode* node, size_t* count);
-	BINARYNINJACOREAPI void BNFreeFlowGraphNodeOutgoingEdgeList(BNFlowGraphEdge* edges, size_t count);
+	BINARYNINJACOREAPI BNFlowGraphEdge* BNGetFlowGraphNodeIncomingEdges(BNFlowGraphNode* node, size_t* count);
+	BINARYNINJACOREAPI void BNFreeFlowGraphNodeEdgeList(BNFlowGraphEdge* edges, size_t count);
 	BINARYNINJACOREAPI void BNAddFlowGraphNodeOutgoingEdge(BNFlowGraphNode* node, BNBranchType type, BNFlowGraphNode* target);
 
 	BINARYNINJACOREAPI BNHighlightColor BNGetFlowGraphNodeHighlight(BNFlowGraphNode* node);

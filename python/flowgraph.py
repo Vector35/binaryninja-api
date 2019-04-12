@@ -193,7 +193,25 @@ class FlowGraphNode(object):
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
 			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge))
-		core.BNFreeFlowGraphNodeOutgoingEdgeList(edges, count.value)
+		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
+		return result
+
+	@property
+	def incoming_edges(self):
+		"""Flow graph block list of incoming edges (read-only)"""
+		count = ctypes.c_ulonglong()
+		edges = core.BNGetFlowGraphNodeIncomingEdges(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			branch_type = BranchType(edges[i].type)
+			target = edges[i].target
+			if target:
+				target = FlowGraphNode(self.graph, core.BNNewFlowGraphNodeReference(target))
+			points = []
+			for j in range(0, edges[i].pointCount):
+				points.append((edges[i].points[j].x, edges[i].points[j].y))
+			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge))
+		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
 		return result
 
 	@property

@@ -2718,8 +2718,8 @@ namespace BinaryNinja
 		BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
 	{
 		std::vector<DisassemblyTextLine> m_cachedLines;
-		std::vector<FlowGraphEdge> m_cachedEdges;
-		bool m_cachedLinesValid, m_cachedEdgesValid;
+		std::vector<FlowGraphEdge> m_cachedEdges, m_cachedIncomingEdges;
+		bool m_cachedLinesValid, m_cachedEdgesValid, m_cachedIncomingEdgesValid;
 
 	public:
 		FlowGraphNode(FlowGraph* graph);
@@ -2736,6 +2736,7 @@ namespace BinaryNinja
 		const std::vector<DisassemblyTextLine>& GetLines();
 		void SetLines(const std::vector<DisassemblyTextLine>& lines);
 		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
+		const std::vector<FlowGraphEdge>& GetIncomingEdges();
 		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target);
 
 		BNHighlightColor GetHighlight() const;

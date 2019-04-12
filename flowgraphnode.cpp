@@ -29,6 +29,7 @@ FlowGraphNode::FlowGraphNode(FlowGraph* graph)
 	m_object = BNCreateFlowGraphNode(graph->GetObject());
 	m_cachedLinesValid = false;
 	m_cachedEdgesValid = false;
+	m_cachedIncomingEdgesValid = false;
 }
 
 
@@ -37,6 +38,7 @@ FlowGraphNode::FlowGraphNode(BNFlowGraphNode* node)
 	m_object = node;
 	m_cachedLinesValid = false;
 	m_cachedEdgesValid = false;
+	m_cachedIncomingEdgesValid = false;
 }
 
 
@@ -154,10 +156,37 @@ const vector<FlowGraphEdge>& FlowGraphNode::GetOutgoingEdges()
 		result.push_back(edge);
 	}
 
-	BNFreeFlowGraphNodeOutgoingEdgeList(edges, count);
+	BNFreeFlowGraphNodeEdgeList(edges, count);
 	m_cachedEdges = result;
 	m_cachedEdgesValid = true;
 	return m_cachedEdges;
+}
+
+
+const vector<FlowGraphEdge>& FlowGraphNode::GetIncomingEdges()
+{
+	if (m_cachedIncomingEdgesValid)
+		return m_cachedIncomingEdges;
+
+	size_t count;
+	BNFlowGraphEdge* edges = BNGetFlowGraphNodeIncomingEdges(m_object, &count);
+
+	vector<FlowGraphEdge> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		FlowGraphEdge edge;
+		edge.type = edges[i].type;
+		edge.target = edges[i].target ? new FlowGraphNode(BNNewFlowGraphNodeReference(edges[i].target)) : nullptr;
+		edge.points.insert(edge.points.begin(), &edges[i].points[0], &edges[i].points[edges[i].pointCount]);
+		edge.backEdge = edges[i].backEdge;
+		result.push_back(edge);
+	}
+
+	BNFreeFlowGraphNodeEdgeList(edges, count);
+	m_cachedIncomingEdges = result;
+	m_cachedIncomingEdgesValid = true;
+	return m_cachedIncomingEdges;
 }
 
 

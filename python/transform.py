@@ -224,6 +224,8 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return None
 
 	def decode(self, input_buf, params = {}):
+		if isinstance(input_buf, int) or isinstance(input_buf, long):
+			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
 		keys = list(params.keys())
@@ -237,6 +239,8 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return str(output_buf)
 
 	def encode(self, input_buf, params = {}):
+		if isinstance(input_buf, int) or isinstance(input_buf, long):
+			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
 		keys = list(params.keys())

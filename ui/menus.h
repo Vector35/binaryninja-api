@@ -19,6 +19,7 @@ class BINARYNINJAUIAPI ContextMenuManager
 	MenuInstance* m_instance;
 
 public:
+	ContextMenuManager(): m_parent(nullptr), m_menu(nullptr), m_instance(nullptr) { }
 	ContextMenuManager(QWidget* parent);
 	~ContextMenuManager();
 	QMenu* create();
@@ -42,6 +43,7 @@ protected:
 	QTimer* m_timer;
 
 public:
+	MenuHelper() { }
 	MenuHelper(QWidget* parent);
 
 	void setBackgroundColorRole(QPalette::ColorRole role = QPalette::Highlight);

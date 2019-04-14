@@ -47,6 +47,7 @@ public:
 	virtual StatusBarWidget* getStatusBarWidget() override;
 
 	void setGraphType(BNFunctionGraphType type);
+	BNFunctionGraphType getGraphType() { return m_graphType; };
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);
 
@@ -94,6 +95,20 @@ private Q_SLOTS:
 };
 
 
+class GraphTypeLabel: public MenuHelper
+{
+	Q_OBJECT
+
+	DisassemblyContainer* m_container;
+
+public:
+	GraphTypeLabel(QWidget* parent, DisassemblyContainer* container);
+
+protected:
+	virtual void showMenu();
+};
+
+
 class BINARYNINJAUIAPI DisassemblyFunctionHeader: public QWidget
 {
 	Q_OBJECT
@@ -105,6 +120,7 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader: public QWidget
 
 	QProgressIndicator* m_updateIndicator;
 	QTimer* m_updateTimer;
+	GraphTypeLabel* m_graphType;
 
 	RenderContext m_render;
 	std::vector<BinaryNinja::DisassemblyTextLine> m_lines;
@@ -128,6 +144,7 @@ public:
 
 	void updateFonts();
 	void setCurrentFunction(FunctionRef func);
+	void setGraphType(BNFunctionGraphType graphType);
 	void setHighlightToken(const HighlightTokenState& state);
 
 	virtual QSize sizeHint() const override;
@@ -155,6 +172,7 @@ public:
 	void updateFonts();
 	void refreshHeader(FunctionRef func);
 	void setCurrentFunction(FunctionRef func);
+	void setGraphType(BNFunctionGraphType graphType);
 	void setHeaderHighlightToken(const HighlightTokenState& state);
 
 protected:

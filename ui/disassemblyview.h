@@ -58,20 +58,17 @@ public:
 	static void registerActions();
 
 private:
-	class DisassemblyViewOptionsWidget: public QLabel
+	class DisassemblyViewOptionsWidget: public MenuHelper
 	{
 	public:
 		DisassemblyViewOptionsWidget(DisassemblyView* parent);
 
 	protected:
 		virtual void mousePressEvent(QMouseEvent* event);
-		virtual void enterEvent(QEvent* event);
-		virtual void leaveEvent(QEvent* event);
+		virtual void showMenu();
 
 	private:
 		DisassemblyView* m_view;
-		Menu m_menu;
-		ContextMenuManager m_contextMenuManager;
 	};
 
 	class DisassemblyViewStatusBarWidget: public StatusBarWidget

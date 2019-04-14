@@ -36,20 +36,16 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 {
 	Q_OBJECT
 
-	class LinearViewOptionsWidget: public QLabel
+	class LinearViewOptionsWidget: public MenuHelper
 	{
 	public:
 		LinearViewOptionsWidget(LinearView* parent);
 
 	protected:
-		virtual void mousePressEvent(QMouseEvent* event);
-		virtual void enterEvent(QEvent* event);
-		virtual void leaveEvent(QEvent* event);
+		virtual void showMenu();
 
 	private:
 		LinearView* m_view;
-		Menu m_menu;
-		ContextMenuManager m_contextMenuManager;
 	};
 
 	class LinearViewStatusBarWidget: public StatusBarWidget

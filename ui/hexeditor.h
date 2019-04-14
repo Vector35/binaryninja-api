@@ -54,20 +54,16 @@ public:
 	static void registerActions();
 
 private:
-	class HexEditorHighlightWidget: public QLabel
+	class HexEditorHighlightWidget: public MenuHelper
 	{
 	public:
 		HexEditorHighlightWidget(HexEditor* parent);
 
 	protected:
-		virtual void mousePressEvent(QMouseEvent* event);
-		virtual void enterEvent(QEvent* event);
-		virtual void leaveEvent(QEvent* event);
+		virtual void showMenu();
 
 	private:
 		HexEditor* m_editor;
-		Menu m_menu;
-		ContextMenuManager m_contextMenuManager;
 	};
 
 	class HexEditorStatusBarWidget: public StatusBarWidget

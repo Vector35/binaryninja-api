@@ -30,6 +30,7 @@ from binaryninja import _binaryninjacore as core
 from binaryninja.enums import TransformType
 
 # 2-3 compatibility
+from binaryninja import long
 from binaryninja import range
 from binaryninja import with_metaclass
 

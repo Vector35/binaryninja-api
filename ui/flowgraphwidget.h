@@ -166,6 +166,7 @@ protected:
 	void moveToStartOfLine(bool selecting);
 	void moveToEndOfLine(bool selecting);
 	void moveToStartOfView();
+	void moveToEndOfView();
 	void selectAll();
 	void selectNone();
 	void navigateToHighlightedToken();

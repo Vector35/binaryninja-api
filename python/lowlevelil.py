@@ -873,6 +873,9 @@ class LowLevelILFunction(object):
 			raise IndexError("expected integer instruction index")
 		if isinstance(i, LowLevelILExpr):
 			return LowLevelILInstruction(self, i.index)
+		# for backwards compatibility
+		if isinstance(i, LowLevelILInstruction):
+			return i
 		if (i < 0) or (i >= len(self)):
 			raise IndexError("index out of range")
 		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
@@ -2308,20 +2311,20 @@ class LowLevelILFunction(object):
 		result = core.BNGetLowLevelILSSARegisterDefinition(self.handle, reg, reg_ssa.version)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
-		return result
+		return self[result]
 
 	def get_ssa_flag_definition(self, flag_ssa):
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		result = core.BNGetLowLevelILSSAFlagDefinition(self.handle, flag, flag_ssa.version)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
-		return result
+		return self[result]
 
 	def get_ssa_memory_definition(self, index):
 		result = core.BNGetLowLevelILSSAMemoryDefinition(self.handle, index)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
-		return result
+		return self[result]
 
 	def get_ssa_reg_uses(self, reg_ssa):
 		reg = self.arch.get_reg_index(reg_ssa.reg)
@@ -2329,7 +2332,7 @@ class LowLevelILFunction(object):
 		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, reg_ssa.version, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -2339,7 +2342,7 @@ class LowLevelILFunction(object):
 		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, flag_ssa.version, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -2348,7 +2351,7 @@ class LowLevelILFunction(object):
 		instrs = core.BNGetLowLevelILSSAMemoryUses(self.handle, index, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 

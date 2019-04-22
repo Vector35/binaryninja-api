@@ -1416,12 +1416,12 @@ namespace BinaryNinja
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
 		uint64_t GetNextDataAfterAddress(uint64_t addr);
-		uint64_t GetNextDataVariableAfterAddress(uint64_t addr);
+		uint64_t GetNextDataVariableStartAfterAddress(uint64_t addr);
 		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousBasicBlockStartBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
-		uint64_t GetPreviousDataVariableBeforeAddress(uint64_t addr);
+		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
 
 		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
 		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,

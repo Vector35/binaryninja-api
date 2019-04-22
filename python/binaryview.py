@@ -1143,10 +1143,10 @@ class BinaryView(object):
 
 	@property
 	def analysis_info(self):
-		"""Provides instantaneous analysis state information and a list of current functions under analysis (read-only). 
-		All times are given in units of milliseconds (ms). Per function `analysis_time` is the aggregation of time spent 
-		performing incremental updates and is reset on a full function update. Per function `update_count` tracks the 
-		current number of incremental updates and is reset on a full function update. Per function `submit_count` tracks the 
+		"""Provides instantaneous analysis state information and a list of current functions under analysis (read-only).
+		All times are given in units of milliseconds (ms). Per function `analysis_time` is the aggregation of time spent
+		performing incremental updates and is reset on a full function update. Per function `update_count` tracks the
+		current number of incremental updates and is reset on a full function update. Per function `submit_count` tracks the
 		current number of full updates that have completed. Note that the `submit_count` is currently not reset across analysis updates."""
 		info_ref = core.BNGetAnalysisInfo(self.handle)
 		info = info_ref[0]
@@ -1964,7 +1964,7 @@ class BinaryView(object):
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
 		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
-		:rtype: python2 - str; python3 - bytes 
+		:rtype: python2 - str; python3 - bytes
 		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary
@@ -3275,20 +3275,41 @@ class BinaryView(object):
 
 	def get_next_data_var_after(self, addr):
 		"""
-		``get_next_data_var_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
+		``get_next_data_var_after`` retrieves the next :py:Class:`DataVariable`, or None.
+
+		:param int addr: the virtual address to start looking from.
+		:return: the next :py:Class:`DataVariable`
+		:rtype: DataVariable
+		:Example:
+
+			>>> hex(bv.get_next_data_var_after(0x10000000))
+			<var 0x1000003c: int32_t>
+			>>>
+		"""
+		next_data_var_start = core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
+		if next_data_var_start == self.end:
+			return None
+		var = core.BNDataVariable()
+		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):
+			return None
+		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+
+	def get_next_data_var_start_after(self, addr):
+		"""
+		``get_next_data_var_start_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
 
 		:param int addr: the virtual address to start looking from.
 		:return: the virtual address of the next :py:Class:`DataVariable`
 		:rtype: int
 		:Example:
 
-			>>> hex(bv.get_next_data_var_after(0x10000000))
+			>>> hex(bv.get_next_data_var_start_after(0x10000000))
 			'0x1000003cL'
 			>>> bv.get_data_var_at(0x1000003c)
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
-		return core.BNGetNextDataVariableAfterAddress(self.handle, addr)
+		return core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
 
 	def get_previous_function_start_before(self, addr):
 		"""
@@ -3364,20 +3385,41 @@ class BinaryView(object):
 
 	def get_previous_data_var_before(self, addr):
 		"""
-		``get_previous_data_var_before``
+		``get_previous_data_var_before`` retrieves the previous :py:Class:`DataVariable`, or None.
+
+		:param int addr: the virtual address to start looking from.
+		:return: the previous :py:Class:`DataVariable`
+		:rtype: DataVariable
+		:Example:
+
+			>>> hex(bv.get_previous_data_var_before(0x1000003c))
+			<var 0x10000000: int16_t>
+			>>>
+		"""
+		prev_data_var_start = core.BNGetPreviousDataVariableStartBeforeAddress(self.handle, addr)
+		if prev_data_var_start == addr:
+			return None
+		var = core.BNDataVariable()
+		if not core.BNGetDataVariableAtAddress(self.handle, prev_data_var_start, var):
+			return None
+		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+
+	def get_previous_data_var_start_before(self, addr):
+		"""
+		``get_previous_data_var_start_before``
 
 		:param int addr: the virtual address to start looking from.
 		:return: the virtual address of the previous :py:Class:`DataVariable`
 		:rtype: int
 		:Example:
 
-			>>> hex(bv.get_previous_data_var_before(0x1000003c))
+			>>> hex(bv.get_previous_data_var_start_before(0x1000003c))
 			'0x10000000L'
 			>>> bv.get_data_var_at(0x10000000)
 			<var 0x10000000: int16_t>
 			>>>
 		"""
-		return core.BNGetPreviousDataVariableBeforeAddress(self.handle, addr)
+		return core.BNGetPreviousDataVariableStartBeforeAddress(self.handle, addr)
 
 	def get_linear_disassembly_position_at(self, addr, settings):
 		"""
@@ -3995,9 +4037,9 @@ class BinaryView(object):
 
 	def store_metadata(self, key, md):
 		"""
-		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using 
+		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using
 		`store_metadata` can be retrieved when the database is reopened. Objects stored are not arbitrary python
-		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata` 
+		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata`
 		for more information. Python objects could obviously be serialized using pickle but this intentionally
 		a task left to the user since there is the potential security issues.
 

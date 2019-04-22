@@ -1751,9 +1751,9 @@ uint64_t BinaryView::GetNextDataAfterAddress(uint64_t addr)
 	return BNGetNextDataAfterAddress(m_object, addr);
 }
 
-uint64_t BinaryView::GetNextDataVariableAfterAddress(uint64_t addr)
+uint64_t BinaryView::GetNextDataVariableStartAfterAddress(uint64_t addr)
 {
-	return BNGetNextDataVariableAfterAddress(m_object, addr);
+	return BNGetNextDataVariableStartAfterAddress(m_object, addr);
 }
 
 uint64_t BinaryView::GetPreviousFunctionStartBeforeAddress(uint64_t addr)
@@ -1779,9 +1779,9 @@ uint64_t BinaryView::GetPreviousDataBeforeAddress(uint64_t addr)
 	return BNGetPreviousDataBeforeAddress(m_object, addr);
 }
 
-uint64_t BinaryView::GetPreviousDataVariableBeforeAddress(uint64_t addr)
+uint64_t BinaryView::GetPreviousDataVariableStartBeforeAddress(uint64_t addr)
 {
-	return BNGetPreviousDataVariableBeforeAddress(m_object, addr);
+	return BNGetPreviousDataVariableStartBeforeAddress(m_object, addr);
 }
 
 

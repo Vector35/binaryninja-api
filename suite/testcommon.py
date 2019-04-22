@@ -196,12 +196,12 @@ class BinaryViewTestBuilder(Builder):
             func = func.low_level_il
             for reg_name in self.bv.arch.regs:
                 reg = binja.SSARegister(reg_name, 1)
-                retinfo.append("Reg {} SSA definition: ".format(reg_name) + str(func.get_ssa_reg_definition(reg)))
-                retinfo.append("Reg {} SSA uses: ".format(reg_name) + str(func.get_ssa_reg_uses(reg)))
+                retinfo.append("Reg {} SSA definition: ".format(reg_name) + str(getattr(func.get_ssa_reg_definition(reg), 'instr_index', None)))
+                retinfo.append("Reg {} SSA uses: ".format(reg_name) + str(list(map(lambda instr: instr.instr_index, func.get_ssa_reg_uses(reg)))))
                 retinfo.append("Reg {} SSA value: ".format(reg_name) + str(func.get_ssa_reg_value(reg)))
             for flag_name in self.bv.arch.flags:
                 flag = binja.SSAFlag(flag_name, 1)
-                retinfo.append("Flag {} SSA uses: ".format(flag_name) + str(func.get_ssa_flag_uses(flag)))
+                retinfo.append("Flag {} SSA uses: ".format(flag_name) + str(list(map(lambda instr: instr.instr_index, func.get_ssa_flag_uses(flag)))))
                 retinfo.append("Flag {} SSA value: ".format(flag_name) + str(func.get_ssa_flag_value(flag)))
             for bb in func.basic_blocks:
                 for ins in bb:
@@ -257,8 +257,8 @@ class BinaryViewTestBuilder(Builder):
                     instruction = instruction.ssa_form
                     for var in (instruction.vars_read + instruction.vars_written):
                         if hasattr(var, "var"):
-                            varlist.append("SSA var definition: " + str(func.get_ssa_var_definition(var)))
-                            varlist.append("SSA var uses: " + str(func.get_ssa_var_uses(var)))
+                            varlist.append("SSA var definition: " + str(getattr(func.get_ssa_var_definition(var), 'instr_index', None)))
+                            varlist.append("SSA var uses: " + str(list(map(lambda instr: instr.instr_index, func.get_ssa_var_uses(var)))))
                             varlist.append("SSA var value: " + str(func.get_ssa_var_value(var)))
                             varlist.append("SSA var possible values: " + fixSet(str(instruction.get_ssa_var_possible_values(var))))
                             varlist.append("SSA var version: " + str(instruction.get_ssa_var_version))

@@ -47,7 +47,7 @@ def get_platform_info(bv):
 	return result
 
 def propagate_var_name(func, mlil_ssa_func, ssa_var, name, ty):
-	instructions = mlil_ssa_func.get_ssa_var_uses(ssa_var)
+	instructions = list(map(lambda instr: instr.instr_index, mlil_ssa_func.get_ssa_var_uses(ssa_var)))
 	seen_instructions = set()
 
 	handled_vars = set([ssa_var])
@@ -67,7 +67,7 @@ def propagate_var_name(func, mlil_ssa_func, ssa_var, name, ty):
 
 			handled_vars.add(instruction.dest)
 
-			for use in mlil_ssa_func.get_ssa_var_uses(instruction.dest):
+			for use in list(map(lambda instr: instr.instr_index, mlil_ssa_func.get_ssa_var_uses(instruction.dest))):
 				if use not in seen_instructions:
 					instructions.append(use)
 
@@ -87,7 +87,7 @@ def propagate_var_name(func, mlil_ssa_func, ssa_var, name, ty):
 				continue
 
 			handled_vars.add(instruction.dest)
-			for use in mlil_ssa_func.get_ssa_var_uses(instruction.dest):
+			for use in list(map(lambda instr: instr.instr_index, mlil_ssa_func.get_ssa_var_uses(instruction.dest))):
 				if use not in seen_instructions:
 					instructions.append(use)
 

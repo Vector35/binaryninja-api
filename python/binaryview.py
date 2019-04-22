@@ -3282,7 +3282,7 @@ class BinaryView(object):
 		:rtype: DataVariable
 		:Example:
 
-			>>> hex(bv.get_next_data_var_after(0x10000000))
+			>>> bv.get_next_data_var_after(0x10000000)
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
@@ -3392,7 +3392,7 @@ class BinaryView(object):
 		:rtype: DataVariable
 		:Example:
 
-			>>> hex(bv.get_previous_data_var_before(0x1000003c))
+			>>> bv.get_previous_data_var_before(0x1000003c)
 			<var 0x10000000: int16_t>
 			>>>
 		"""

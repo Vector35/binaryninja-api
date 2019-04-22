@@ -880,16 +880,26 @@ class Structure(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
+	def __getitem__(self, name):
+		try:
+			member = core.BNGetStructureMemberByName(self.handle, name)
+			return StructureMember(Type(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
+					member.contents.name, member.contents.offset)
+		finally:
+			core.BNFreeStructureMember(member)
+
 	@property
 	def members(self):
 		"""Structure member list (read-only)"""
 		count = ctypes.c_ulonglong()
 		members = core.BNGetStructureMembers(self.handle, count)
-		result = []
-		for i in range(0, count.value):
-			result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type), confidence = members[i].typeConfidence),
-				members[i].name, members[i].offset))
-		core.BNFreeStructureMemberList(members, count.value)
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(StructureMember(Type(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence),
+					members[i].name, members[i].offset))
+		finally:
+			core.BNFreeStructureMemberList(members, count.value)
 		return result
 
 	@property

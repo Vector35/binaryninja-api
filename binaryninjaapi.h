@@ -2333,6 +2333,7 @@ namespace BinaryNinja
 		Structure(BNStructureType type, bool packed = false);
 
 		std::vector<StructureMember> GetMembers() const;
+		bool GetMemberByName(const std::string& name, StructureMember& result) const;
 		uint64_t GetWidth() const;
 		void SetWidth(size_t width);
 		size_t GetAlignment() const;

@@ -1092,6 +1092,21 @@ vector<StructureMember> Structure::GetMembers() const
 }
 
 
+bool Structure::GetMemberByName(const string& name, StructureMember& result) const
+{
+	BNStructureMember* member = BNGetStructureMemberByName(m_object, name.c_str());
+	if (member)
+	{
+		result.type = new Type(BNNewTypeReference(member->type));
+		result.name = member->name;
+		result.offset = member->offset;
+		BNFreeStructureMember(member);
+		return true;
+	}
+	return false;
+}
+
+
 uint64_t Structure::GetWidth() const
 {
 	return BNGetStructureWidth(m_object);

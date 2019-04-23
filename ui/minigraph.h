@@ -9,7 +9,7 @@
 #include "uitypes.h"
 
 class ContextMenuManager;
-class DisassemblyView;
+class FlowGraphWidget;
 class Menu;
 class ViewFrame;
 
@@ -17,7 +17,7 @@ class BINARYNINJAUIAPI MiniGraph: public QWidget, public DockContextHandler
 {
 	Q_OBJECT
 
-	DisassemblyView* m_disassemblyView = nullptr;
+	FlowGraphWidget* m_flowGraphWidget = nullptr;
 
 public:
 	MiniGraph(QWidget* parent);

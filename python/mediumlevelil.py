@@ -317,6 +317,9 @@ class MediumLevelILInstruction(object):
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
+	def __eq__(self, value):
+		return self.function == value.function and self.expr_index == value.expr_index
+
 	@property
 	def tokens(self):
 		"""MLIL tokens (read-only)"""

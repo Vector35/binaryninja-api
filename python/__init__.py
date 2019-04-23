@@ -225,11 +225,12 @@ _plugin_init = False
 def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
-		_plugin_init = True
 		core.BNInitCorePlugins()
 		core.BNInitUserPlugins()
 		core.BNInitRepoPlugins()
-	if not core.BNIsLicenseValidated():
+	if core.BNIsLicenseValidated():
+		_plugin_init = True
+	else:
 		raise RuntimeError("License is not valid. Please supply a valid license.")
 
 
@@ -299,3 +300,8 @@ def core_license_count():
 def core_ui_enabled():
 	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
 	return core.BNIsUIEnabled()
+
+
+def core_set_license(licenseData):
+	'''Set the Binary Ninja license data, an alternative to storing a ``license.dat`` file'''
+	core.BNSetLicense(licenseData)

@@ -939,6 +939,19 @@ class LowLevelILFunction(object):
 			flags = 0
 		return LowLevelILExpr(core.BNLowLevelILAddExpr(self.handle, operation, size, flags, a, b, c, d))
 
+	def replace_expr(self, original, new):
+		if isinstance(original, LowLevelILInstruction):
+			original = original.expr_index
+		elif isinstance(original, LowLevelILExpr):
+			original = original.index
+
+		if isinstance(new, LowLevelILInstruction):
+			new = new.expr_index
+		elif isinstance(new, LowLevelILExpr):
+			new = new.index
+
+		core.BNReplaceLowLevelILExpr(self.handle, original, new)
+
 	def append(self, expr):
 		"""
 		``append`` adds the LowLevelILExpr ``expr`` to the current LowLevelILFunction.

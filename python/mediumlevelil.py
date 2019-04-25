@@ -43,6 +43,8 @@ class SSAVariable(object):
 		return "<ssa %s version %d>" % (repr(self.var), self.version)
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return isinstance(other, SSAVariable) and (
 			(self.var, self.version) ==
 			(other.var, other.version)
@@ -318,6 +320,8 @@ class MediumLevelILInstruction(object):
 		return "<il: %s>" % str(self)
 
 	def __eq__(self, value):
+		if not isinstance(value, type(self)):
+			return False
 		return self.function == value.function and self.expr_index == value.expr_index
 
 	@property

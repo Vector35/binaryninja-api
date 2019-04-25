@@ -61,6 +61,8 @@ class ILRegister(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return self.info == other.info
 
 
@@ -81,6 +83,8 @@ class ILRegisterStack(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return self.info == other.info
 
 
@@ -114,6 +118,8 @@ class ILSemanticFlagClass(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return self.index == other.index
 
 
@@ -130,6 +136,8 @@ class ILSemanticFlagGroup(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return self.index == other.index
 
 
@@ -149,6 +157,8 @@ class ILIntrinsic(object):
 		return self.name
 
 	def __eq__(self, other):
+		if not isinstance(other, type(self)):
+			return False
 		return self.index == other.index
 
 
@@ -512,6 +522,8 @@ class LowLevelILInstruction(object):
 		return "<il: %s>" % str(self)
 
 	def __eq__(self, value):
+		if not isinstance(value, type(self)):
+			return False
 		return self.function == value.function and self.expr_index == value.expr_index
 
 	@property
@@ -763,7 +775,7 @@ class LowLevelILFunction(object):
 			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __eq__(self, value):
-		if not isinstance(value, LowLevelILFunction):
+		if not isinstance(value, type(self)):
 			return False
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
 

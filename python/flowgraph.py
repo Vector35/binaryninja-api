@@ -268,7 +268,12 @@ class FlowGraphNode(object):
 		:param BranchType edge_type: Type of edge to add
 		:param FlowGraphNode target: Target node object
 		"""
+		if not target.is_valid_for_graph(self.graph):
+			raise ValueError("Target of edge has not been added to the owning graph")
 		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle)
+
+	def is_valid_for_graph(self, graph):
+		return core.BNIsNodeValidForFlowGraph(graph.handle, self.handle)
 
 
 class FlowGraphLayoutRequest(object):

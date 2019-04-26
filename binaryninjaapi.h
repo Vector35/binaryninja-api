@@ -2742,6 +2742,8 @@ namespace BinaryNinja
 
 		BNHighlightColor GetHighlight() const;
 		void SetHighlight(const BNHighlightColor& color);
+
+		bool IsValidForGraph(FlowGraph* graph) const;
 	};
 
 	class FlowGraphLayoutRequest: public RefCountObject

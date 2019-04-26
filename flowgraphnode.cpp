@@ -208,3 +208,9 @@ void FlowGraphNode::SetHighlight(const BNHighlightColor& color)
 {
 	BNSetFlowGraphNodeHighlight(m_object, color);
 }
+
+
+bool FlowGraphNode::IsValidForGraph(FlowGraph* graph) const
+{
+	return BNIsNodeValidForFlowGraph(graph->GetObject(), m_object);
+}

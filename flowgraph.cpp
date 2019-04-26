@@ -144,7 +144,7 @@ Ref<Function> FlowGraph::GetFunction() const
 	BNFunction* func = BNGetFunctionForFlowGraph(m_object);
 	if (!func)
 		return nullptr;
-	return new Function(BNNewFunctionReference(func));
+	return new Function(func);
 }
 
 

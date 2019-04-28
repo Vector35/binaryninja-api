@@ -43,6 +43,8 @@
 #define NOEXCEPT noexcept
 #endif
 
+//#define BN_REF_COUNT_DEBUG  // Mac OS X only, prints stack trace of leaked references
+
 
 namespace BinaryNinja
 {
@@ -199,6 +201,9 @@ namespace BinaryNinja
 	class Ref
 	{
 		T* m_obj;
+#ifdef BN_REF_COUNT_DEBUG
+		void* m_assignmentTrace = nullptr;
+#endif
 
 	public:
 		Ref<T>(): m_obj(NULL)
@@ -208,23 +213,44 @@ namespace BinaryNinja
 		Ref<T>(T* obj): m_obj(obj)
 		{
 			if (m_obj)
+			{
 				m_obj->AddRef();
+#ifdef BN_REF_COUNT_DEBUG
+				m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+			}
 		}
 
 		Ref<T>(const Ref<T>& obj): m_obj(obj.m_obj)
 		{
 			if (m_obj)
+			{
 				m_obj->AddRef();
+#ifdef BN_REF_COUNT_DEBUG
+				m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+			}
 		}
 
 		~Ref<T>()
 		{
 			if (m_obj)
+			{
 				m_obj->Release();
+#ifdef BN_REF_COUNT_DEBUG
+				BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+#endif
+			}
 		}
 
 		Ref<T>& operator=(const Ref<T>& obj)
 		{
+#ifdef BN_REF_COUNT_DEBUG
+			if (m_obj)
+				BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+			if (obj.m_obj)
+				m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
 			T* oldObj = m_obj;
 			m_obj = obj.m_obj;
 			if (m_obj)
@@ -236,6 +262,12 @@ namespace BinaryNinja
 
 		Ref<T>& operator=(T* obj)
 		{
+#ifdef BN_REF_COUNT_DEBUG
+			if (m_obj)
+				BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+			if (obj)
+				m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
 			T* oldObj = m_obj;
 			m_obj = obj;
 			if (m_obj)

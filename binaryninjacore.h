@@ -3921,6 +3921,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNParseExpression(BNBinaryView* view, const char* expression, uint64_t* offset, uint64_t here, char** errorString);
 	BINARYNINJACOREAPI void BNFreeParseError(char* errorString);
 
+	BINARYNINJACOREAPI void* BNRegisterObjectRefDebugTrace(const char* typeName);
+	BINARYNINJACOREAPI void BNUnregisterObjectRefDebugTrace(const char* typeName, void* trace);
+
 #ifdef __cplusplus
 }
 #endif

@@ -81,6 +81,11 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 	bool m_shouldResizeDocks = false;
 	std::map<Qt::DockWidgetArea, bool> m_enableHiddenGroupSave;
 
+	// TODO
+	friend class DockContextHandler;
+	std::map<QString, DockContextHandler*> m_dockContexts;
+	DockContextHandler* getDockContextHandler(const QString&, QWidget* widget);
+
 public:
 	explicit DockHandler(QObject* parent, int windowIndex);
 

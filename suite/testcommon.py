@@ -862,3 +862,47 @@ class VerifyBuilder(Builder):
             return [str(functions == bndb_functions and comments == bndb_comments)]
         finally:
             self.delete_package("helloworld")
+
+    def test_memory_leaks(self):
+        """Detected memory leaks during analysis"""
+        # This test will attempt to detect object leaks during headless analysis
+        file_name = self.unpackage_file("helloworld")
+        try:
+            # Open the binary once and let any persistent structures be created (typically types)
+            bv = binja.BinaryViewType['ELF'].open(file_name)
+            bv.update_analysis_and_wait()
+            # Hold on to a graph reference while tearing down the binary view. This will keep a reference
+            # in the core. If we directly free the view, the teardown will happen in a worker thread and
+            # we will not be able to get a reliable object count. By keeping a reference in a different
+            # object in the core, the teardown will occur immediately upon freeing the other object.
+            graph = bv.functions[0].create_graph()
+            bv.file.close()
+            del bv
+            import gc
+            gc.collect()
+            del graph
+            gc.collect()
+
+            initial_object_counts = binja.get_memory_usage_info()
+
+            # Analyze the binary again
+            bv = binja.BinaryViewType['ELF'].open(file_name)
+            bv.update_analysis_and_wait()
+            graph = bv.functions[0].create_graph()
+            bv.file.close()
+            del bv
+            gc.collect()
+            del graph
+            gc.collect()
+
+            # Capture final object count
+            final_object_counts = binja.get_memory_usage_info()
+
+            # Check for leaks
+            ok = True
+            for i in initial_object_counts.keys():
+                if final_object_counts[i] > initial_object_counts[i]:
+                    ok = False
+            return ok
+        finally:
+            self.delete_package("helloworld")

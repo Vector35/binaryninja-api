@@ -1913,6 +1913,12 @@ extern "C"
 		double seconds;
 	};
 
+	struct BNMemoryUsageInfo
+	{
+		char* name;
+		uint64_t value;
+	};
+
 	enum BNMetadataType
 	{
 		InvalidDataType,
@@ -3923,6 +3929,8 @@ extern "C"
 
 	BINARYNINJACOREAPI void* BNRegisterObjectRefDebugTrace(const char* typeName);
 	BINARYNINJACOREAPI void BNUnregisterObjectRefDebugTrace(const char* typeName, void* trace);
+	BINARYNINJACOREAPI BNMemoryUsageInfo* BNGetMemoryUsageInfo(size_t* count);
+	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
 
 #ifdef __cplusplus
 }

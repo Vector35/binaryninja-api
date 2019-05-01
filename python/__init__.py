@@ -305,3 +305,13 @@ def core_ui_enabled():
 def core_set_license(licenseData):
 	'''Set the Binary Ninja license data, an alternative to storing a ``license.dat`` file'''
 	core.BNSetLicense(licenseData)
+
+
+def get_memory_usage_info():
+	count = ctypes.c_ulonglong()
+	info = core.BNGetMemoryUsageInfo(count)
+	result = {}
+	for i in range(0, count.value):
+		result[info[i].name] = info[i].value
+	core.BNFreeMemoryUsageInfo(info, count.value)
+	return result

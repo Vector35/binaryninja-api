@@ -355,3 +355,16 @@ string BinaryNinja::GetUniqueIdentifierString()
 	BNFreeString(str);
 	return result;
 }
+
+
+map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
+{
+	size_t count;
+	BNMemoryUsageInfo* info = BNGetMemoryUsageInfo(&count);
+
+	map<string, uint64_t> result;
+	for (size_t i = 0; i < count; i++)
+		result[info[i].name] = info[i].value;
+	BNFreeMemoryUsageInfo(info, count);
+	return result;
+}

@@ -697,6 +697,8 @@ namespace BinaryNinja
 
 	std::string GetUniqueIdentifierString();
 
+	std::map<std::string, uint64_t> GetMemoryUsageInfo();
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

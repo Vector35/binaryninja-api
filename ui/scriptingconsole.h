@@ -102,6 +102,7 @@ public:
 	QString getInstanceName() const { return m_instanceName; }
 	ScriptingInstanceRef getInstance() { return m_instance; }
 
+	void clearConsole();
 	void hideConsole();
 
 	void addInput(const std::string& text);

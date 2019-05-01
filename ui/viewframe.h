@@ -259,7 +259,7 @@ private Q_SLOTS:
 
 Q_SIGNALS:
 	void notifyCloseFeatureMap();
-	void nofifyViewChanged(ViewFrame* frame);
+	void notifyViewChanged(ViewFrame* frame);
 };
 
 Q_DECLARE_METATYPE(View*)

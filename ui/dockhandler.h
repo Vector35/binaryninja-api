@@ -61,11 +61,12 @@ public:
 
 	QWidget* getParentWindow() { return m_parentWindow; }
 
-	virtual void focusInput() { };
+	virtual void notifyFontChanged() { };
+	virtual void notifyOffsetChanged(uint64_t /*offset*/) { };
+	virtual void notifyThemeChanged() { };
 	virtual void notifyViewChanged(ViewFrame* /*frame*/) { };
+	virtual void notifyVisibilityChanged(bool /*visible*/) { };
 	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; };
-	virtual void updateFonts() { };
-	virtual void updateTheme() { };
 };
 
 class BINARYNINJAUIAPI DockHandler: public QObject
@@ -84,7 +85,7 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 	// TODO
 	friend class DockContextHandler;
 	std::map<QString, DockContextHandler*> m_dockContexts;
-	DockContextHandler* getDockContextHandler(const QString&, QWidget* widget);
+	DockContextHandler* getDockContextHandler(const QString&, QWidget* widget, bool viewSensitive = false);
 
 public:
 	explicit DockHandler(QObject* parent, int windowIndex);
@@ -107,6 +108,8 @@ public:
 
 	bool shouldResizeDocks();
 	void updateFonts();
+	void updateOffset(uint64_t offset);
+	void updateTheme();
 	void addActionOnShow(const QString& name, const std::function<void()>& action);
 
 	static DockHandler* getActiveDockHandler();

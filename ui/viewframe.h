@@ -227,6 +227,7 @@ public:
 	void closing();
 
 	void updateFonts();
+	void updateOffset(uint64_t offset);
 	void updateTheme();
 	void addHistoryEntry();
 	void back();
@@ -238,7 +239,6 @@ public:
 		uint64_t currentAddress, const QString& title = "Go to Address", const QString& msg = "Address:");
 
 	void setCurrentFunction(FunctionRef func);
-	void updateFeatureMapLocation(View* view);
 	void updateCrossReferences();
 	void showCrossReferences();
 	void nextCrossReference();

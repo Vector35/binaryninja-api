@@ -91,8 +91,8 @@ private Q_SLOTS:
 
 protected:
 	void customEvent(QEvent* event) override;
-	void focusInput() override;
-	void updateFonts() override;
+	void notifyFontChanged() override;
+	void notifyVisibilityChanged(bool visible) override;
 
 public:
 	ScriptingConsole(QWidget* parent, const QString& providerName, const QString& instanceName, ScriptingInstanceRef instance);

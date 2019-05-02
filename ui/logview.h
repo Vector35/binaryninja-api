@@ -127,9 +127,10 @@ public:
 
 protected:
 	void contextMenuEvent(QContextMenuEvent* event) override;
-	void focusInput() override;
+	void notifyFontChanged() override;
+	void notifyThemeChanged() override;
 	void notifyViewChanged(ViewFrame* frame) override;
-	void updateFonts() override;
+	void notifyVisibilityChanged(bool visible) override;
 
 Q_SIGNALS:
 	void notifyUiStatus();

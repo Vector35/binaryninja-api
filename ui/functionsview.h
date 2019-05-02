@@ -33,8 +33,8 @@ public:
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
+	virtual void notifyFontChanged() override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
-	virtual void updateFonts() override;
 
 private Q_SLOTS:
 	void updateTimerEvent();

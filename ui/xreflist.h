@@ -71,8 +71,8 @@ protected:
 	virtual void keyPressEvent(QKeyEvent* e) override;
 	virtual void mouseMoveEvent(QMouseEvent* e) override;
 	virtual void mousePressEvent(QMouseEvent* e) override;
+	virtual void notifyFontChanged() override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
-	virtual void updateFonts() override;
 	virtual void wheelEvent(QWheelEvent* e) override;
 	void goToReference(const QModelIndex& idx);
 

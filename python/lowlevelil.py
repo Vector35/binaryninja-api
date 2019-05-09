@@ -940,6 +940,14 @@ class LowLevelILFunction(object):
 		return LowLevelILExpr(core.BNLowLevelILAddExpr(self.handle, operation, size, flags, a, b, c, d))
 
 	def replace_expr(self, original, new):
+		"""
+		``replace_expr`` allows modification of LowLevelILExpressions but ONLY during lifting.
+
+		.. warning:: This function should ONLY be called as a part of a lifter. It will otherwise not do anything useful as there's no way to trigger re-analysis of IL levels at this time.
+		:param LowLevelILExpr original: the LowLevelILExpr to replace (may also be an expression index)
+		:param LowLevelILExpr new: the LowLevelILExpr to add to the current LowLevelILFunction (may also be an expression index)
+		:rtype: None
+		"""
 		if isinstance(original, LowLevelILInstruction):
 			original = original.expr_index
 		elif isinstance(original, LowLevelILExpr):

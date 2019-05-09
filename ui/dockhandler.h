@@ -114,7 +114,11 @@ public:
 
 	static DockHandler* getActiveDockHandler();
 
+Q_SIGNALS:
+	void notifyVisibilityChanged();
+
 public Q_SLOTS:
 	void viewChanged(ViewFrame* frame);
+	void visibilityChanged(bool visible);
 	void topLevelChanged(bool topLevel);
 };

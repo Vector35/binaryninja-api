@@ -22,6 +22,7 @@ if '-s' in sys.argv[1:]:
 
 try:
     import binaryninja
+    import binaryninjaui #To better detect if migrating from a version without UI plugin support
     print("Binary Ninja API already Installed")
     sys.exit(1)
 except ImportError:

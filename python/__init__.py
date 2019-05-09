@@ -52,7 +52,7 @@ def valid_import(mod_name):
 		except ImportError:
 			found = False
 	elif PY34:
-		import importlib
+		import importlib.util
 		mod_spec = importlib.util.find_spec(mod_name)
 		found = mod_spec is not None
 	elif PY3:
@@ -341,6 +341,6 @@ def get_memory_usage_info():
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
 
-if not valid_import("binaryninjaui") and not core_ui_enabled():
-	#Use print because we're headless and log_functions won't work yet
-	print("BINARYNINJAUI module not available.\nPlease re-run the install_api.py python script (with the appropriate version of python you plan to use) to properly set up your Binary Ninja python paths.")
+#if not valid_import("binaryninjaui") and not core_ui_enabled():
+#	#Use print because we're headless and log_functions won't work yet
+#	print("BINARYNINJAUI module not available.\nPlease re-run the install_api.py python script (with the appropriate version of python you plan to use) to properly set up your Binary Ninja python paths.")

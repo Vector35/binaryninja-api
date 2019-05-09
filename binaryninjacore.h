@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
@@ -106,88 +105,88 @@
 extern "C"
 {
 #endif
-	typedef enum BNPluginLoadOrder
+	enum BNPluginLoadOrder
 	{
 		EarlyPluginLoadOrder,
 		NormalPluginLoadOrder,
 		LatePluginLoadOrder
-	} BNPluginLoadOrder;
+	};
 
 	typedef bool (*BNCorePluginInitFunction)(void);
 	typedef void (*BNCorePluginDependencyFunction)(void);
 
-	typedef struct BNDataBuffer BNDataBuffer;
-	typedef struct BNBinaryView BNBinaryView;
-	typedef struct BNBinaryViewType BNBinaryViewType;
-	typedef struct BNBinaryReader BNBinaryReader;
-	typedef struct BNBinaryWriter BNBinaryWriter;
-	typedef struct BNFileMetadata BNFileMetadata;
-	typedef struct BNTransform BNTransform;
-	typedef struct BNArchitecture BNArchitecture;
-	typedef struct BNFunction BNFunction;
-	typedef struct BNBasicBlock BNBasicBlock;
-	typedef struct BNDownloadProvider BNDownloadProvider;
-	typedef struct BNDownloadInstance BNDownloadInstance;
-	typedef struct BNFlowGraph BNFlowGraph;
-	typedef struct BNFlowGraphNode BNFlowGraphNode;
-	typedef struct BNFlowGraphLayoutRequest BNFlowGraphLayoutRequest;
-	typedef struct BNSymbol BNSymbol;
-	typedef struct BNTemporaryFile BNTemporaryFile;
-	typedef struct BNLowLevelILFunction BNLowLevelILFunction;
-	typedef struct BNMediumLevelILFunction BNMediumLevelILFunction;
-	typedef struct BNType BNType;
-	typedef struct BNStructure BNStructure;
-	typedef struct BNNamedTypeReference BNNamedTypeReference;
-	typedef struct BNEnumeration BNEnumeration;
-	typedef struct BNCallingConvention BNCallingConvention;
-	typedef struct BNPlatform BNPlatform;
-	typedef struct BNAnalysisCompletionEvent BNAnalysisCompletionEvent;
-	typedef struct BNDisassemblySettings BNDisassemblySettings;
-	typedef struct BNScriptingProvider BNScriptingProvider;
-	typedef struct BNScriptingInstance BNScriptingInstance;
-	typedef struct BNMainThreadAction BNMainThreadAction;
-	typedef struct BNBackgroundTask BNBackgroundTask;
-	typedef struct BNRepository BNRepository;
-	typedef struct BNRepoPlugin BNRepoPlugin;
-	typedef struct BNRepositoryManager BNRepositoryManager;
-	typedef struct BNMetadata BNMetadata;
-	typedef struct BNReportCollection BNReportCollection;
-	typedef struct BNRelocation BNRelocation;
-	typedef struct BNSegment BNSegment;
-	typedef struct BNSection BNSection;
-	typedef struct BNRelocationInfo BNRelocationInfo;
-	typedef struct BNRelocationHandler BNRelocationHandler;
-	typedef struct BNDataBuffer BNDataBuffer;
-	typedef struct BNDataRenderer BNDataRenderer;
-	typedef struct BNDataRendererContainer BNDataRendererContainer;
-	typedef struct BNDisassemblyTextRenderer BNDisassemblyTextRenderer;
+	struct BNDataBuffer;
+	struct BNBinaryView;
+	struct BNBinaryViewType;
+	struct BNBinaryReader;
+	struct BNBinaryWriter;
+	struct BNFileMetadata;
+	struct BNTransform;
+	struct BNArchitecture;
+	struct BNFunction;
+	struct BNBasicBlock;
+	struct BNDownloadProvider;
+	struct BNDownloadInstance;
+	struct BNFlowGraph;
+	struct BNFlowGraphNode;
+	struct BNFlowGraphLayoutRequest;
+	struct BNSymbol;
+	struct BNTemporaryFile;
+	struct BNLowLevelILFunction;
+	struct BNMediumLevelILFunction;
+	struct BNType;
+	struct BNStructure;
+	struct BNNamedTypeReference;
+	struct BNEnumeration;
+	struct BNCallingConvention;
+	struct BNPlatform;
+	struct BNAnalysisCompletionEvent;
+	struct BNDisassemblySettings;
+	struct BNScriptingProvider;
+	struct BNScriptingInstance;
+	struct BNMainThreadAction;
+	struct BNBackgroundTask;
+	struct BNRepository;
+	struct BNRepoPlugin;
+	struct BNRepositoryManager;
+	struct BNMetadata;
+	struct BNReportCollection;
+	struct BNRelocation;
+	struct BNSegment;
+	struct BNSection;
+	struct BNRelocationInfo;
+	struct BNRelocationHandler;
+	struct BNDataBuffer;
+	struct BNDataRenderer;
+	struct BNDataRendererContainer;
+	struct BNDisassemblyTextRenderer;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, void* ctx);
 
 	//! Console log levels
-	typedef enum BNLogLevel
+	enum BNLogLevel
 	{
 		DebugLog = 0,   //! Debug logging level, most verbose logging level
 		InfoLog = 1,    //! Information logging level, default logging level
 		WarningLog = 2, //! Warning logging level, messages show with warning icon in the UI
 		ErrorLog = 3,   //! Error logging level, messages show with error icon in the UI
 		AlertLog = 4    //! Alert logging level, messages are displayed with popup message box in the UI
-	} BNLogLevel;
+	};
 
-	typedef enum BNEndianness
+	enum BNEndianness
 	{
 		LittleEndian = 0,
 		BigEndian = 1
-	} BNEndianness;
+	};
 
-	typedef enum BNModificationStatus
+	enum BNModificationStatus
 	{
 		Original = 0,
 		Changed = 1,
 		Inserted = 2
-	} BNModificationStatus;
+	};
 
-	typedef enum BNTransformType
+	enum BNTransformType
 	{
 		BinaryCodecTransform = 0, // Two-way transform of data, binary input/output
 		TextCodecTransform = 1, // Two-way transform of data, encoder output is text
@@ -198,9 +197,9 @@ extern "C"
 		EncryptTransform = 6, // Two-way encryption
 		InvertingTransform = 7, // Transform that can be undone by performing twice
 		HashTransform = 8 // Hash function
-	} BNTransformType;
+	};
 
-	typedef enum BNBranchType
+	enum BNBranchType
 	{
 		UnconditionalBranch = 0,
 		FalseBranch = 1,
@@ -211,9 +210,9 @@ extern "C"
 		IndirectBranch = 6,
 		ExceptionBranch = 7,
 		UnresolvedBranch = 127
-	} BNBranchType;
+	};
 
-	typedef enum BNInstructionTextTokenType
+	enum BNInstructionTextTokenType
 	{
 		TextToken = 0,
 		InstructionToken = 1,
@@ -248,17 +247,17 @@ extern "C"
 		AddressDisplayToken = 68,
 		IndirectImportToken = 69,
 		ExternalSymbolToken = 70
-	} BNInstructionTextTokenType;
+	};
 
-	typedef enum BNInstructionTextTokenContext
+	enum BNInstructionTextTokenContext
 	{
 		NoTokenContext = 0,
 		LocalVariableTokenContext = 1,
 		DataVariableTokenContext = 2,
 		FunctionReturnTokenContext = 3
-	} BNInstructionTextTokenContext;
+	};
 
-	typedef enum BNLinearDisassemblyLineType
+	enum BNLinearDisassemblyLineType
 	{
 		BlankLineType,
 		BasicLineType,
@@ -279,9 +278,9 @@ extern "C"
 		SectionEndLineType,
 		SectionSeparatorLineType,
 		NonContiguousSeparatorLineType
-	} BNLinearDisassemblyLineType;
+	};
 
-	typedef enum BNSymbolType
+	enum BNSymbolType
 	{
 		FunctionSymbol = 0,
 		ImportAddressSymbol = 1,
@@ -289,25 +288,25 @@ extern "C"
 		DataSymbol = 3,
 		ImportedDataSymbol = 4,
 		ExternalSymbol = 5
-	} BNSymbolType;
+	};
 
-	typedef enum BNSymbolBinding
+	enum BNSymbolBinding
 	{
 		NoBinding,
 		LocalBinding,
 		GlobalBinding,
 		WeakBinding
-	} BNSymbolBinding;
+	};
 
-	typedef enum BNActionType
+	enum BNActionType
 	{
 		TemporaryAction = 0,
 		DataModificationAction = 1,
 		AnalysisAction = 2,
 		DataModificationAndAnalysisAction = 3
-	} BNActionType;
+	};
 
-	typedef enum BNLowLevelILOperation
+	enum BNLowLevelILOperation
 	{
 		LLIL_NOP,
 		LLIL_SET_REG, // Not valid in SSA form (see LLIL_SET_REG_SSA)
@@ -448,9 +447,9 @@ extern "C"
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
 		LLIL_MEM_PHI
-	} BNLowLevelILOperation;
+	};
 
-	typedef enum BNLowLevelILFlagCondition
+	enum BNLowLevelILFlagCondition
 	{
 		LLFC_E,
 		LLFC_NE,
@@ -474,9 +473,9 @@ extern "C"
 		LLFC_FGT,
 		LLFC_FO,
 		LLFC_FUO
-	} BNLowLevelILFlagCondition;
+	};
 
-	typedef enum BNFlagRole
+	enum BNFlagRole
 	{
 		SpecialFlagRole = 0,
 		ZeroFlagRole = 1,
@@ -489,9 +488,9 @@ extern "C"
 		OddParityFlagRole = 8,
 		OrderedFlagRole = 9,
 		UnorderedFlagRole = 10
-	} BNFlagRole;
+	};
 
-	typedef enum BNFunctionGraphType
+	enum BNFunctionGraphType
 	{
 		NormalFunctionGraph = 0,
 		LowLevelILFunctionGraph = 1,
@@ -501,9 +500,9 @@ extern "C"
 		MediumLevelILSSAFormFunctionGraph = 5,
 		MappedMediumLevelILFunctionGraph = 6,
 		MappedMediumLevelILSSAFormFunctionGraph = 7
-	} BNFunctionGraphType;
+	};
 
-	typedef enum BNDisassemblyOption
+	enum BNDisassemblyOption
 	{
 		ShowAddress = 0,
 		ShowOpcode = 1,
@@ -519,9 +518,9 @@ extern "C"
 
 		// Debugging options
 		ShowFlagUsage = 128
-	} BNDisassemblyOption;
+	};
 
-	typedef enum BNTypeClass
+	enum BNTypeClass
 	{
 		VoidTypeClass = 0,
 		BoolTypeClass = 1,
@@ -536,9 +535,9 @@ extern "C"
 		ValueTypeClass = 10,
 		NamedTypeReferenceClass = 11,
 		WideCharTypeClass = 12
-	} BNTypeClass;
+	};
 
-	typedef enum BNNamedTypeReferenceClass
+	enum BNNamedTypeReferenceClass
 	{
 		UnknownNamedTypeClass = 0,
 		TypedefNamedTypeClass = 1,
@@ -546,49 +545,49 @@ extern "C"
 		StructNamedTypeClass = 3,
 		UnionNamedTypeClass = 4,
 		EnumNamedTypeClass = 5
-	} BNNamedTypeReferenceClass;
+	};
 
-	typedef enum BNStructureType
+	enum BNStructureType
 	{
 		ClassStructureType = 0,
 		StructStructureType = 1,
 		UnionStructureType = 2
-	} BNStructureType;
+	};
 
-	typedef enum BNMemberScope {
+	enum BNMemberScope {
 		NoScope,
 		StaticScope,
 		VirtualScope,
 		ThunkScope,
 		FriendScope
-	} BNMemberScope;
+	};
 
-	typedef enum BNMemberAccess
+	enum BNMemberAccess
 	{
 		NoAccess,
 		PrivateAccess,
 		ProtectedAccess,
 		PublicAccess
-	} BNMemberAccess;
+	};
 
-	typedef enum BNReferenceType
+	enum BNReferenceType
 	{
 		PointerReferenceType = 0,
 		ReferenceReferenceType = 1,
 		RValueReferenceType = 2,
 		NoReference = 3
-	} BNReferenceType;
+	};
 
-	typedef enum BNPointerSuffix
+	enum BNPointerSuffix
 	{
 		Ptr64Suffix,
 		UnalignedSuffix,
 		RestrictSuffix,
 		ReferenceSuffix,
 		LvalueSuffix
-	} BNPointerSuffix;
+	};
 
-	typedef enum BNNameType
+	enum BNNameType
 	{
 		NoNameType,
 		ConstructorNameType,
@@ -668,9 +667,9 @@ extern "C"
 		OperatorUnaryPlusNameType,
 		OperatorUnaryBitAndNameType,
 		OperatorUnaryStarNameType
-	} BNNameType;
+	};
 
-	typedef enum BNCallingConventionName
+	enum BNCallingConventionName
 	{
 		NoCallingConvention,
 		CdeclCallingConvention,
@@ -681,17 +680,17 @@ extern "C"
 		CLRCallCallingConvention,
 		EabiCallCallingConvention,
 		VectorCallCallingConvention
-	} BNCallingConventionName;
+	};
 
-	typedef enum BNStringType
+	enum BNStringType
 	{
 		AsciiString = 0,
 		Utf16String = 1,
 		Utf32String = 2,
 		Utf8String = 3
-	} BNStringType;
+	};
 
-	typedef enum BNIntegerDisplayType
+	enum BNIntegerDisplayType
 	{
 		DefaultIntegerDisplayType,
 		BinaryDisplayType,
@@ -703,9 +702,9 @@ extern "C"
 		UnsignedHexadecimalDisplayType,
 		CharacterConstantDisplayType,
 		PointerDisplayType
-	} BNIntegerDisplayType;
+	};
 
-	typedef enum BNFlowGraphOption
+	enum BNFlowGraphOption
 	{
 		FlowGraphUsesBlockHighlights,
 		FlowGraphUsesInstructionHighlights,
@@ -713,9 +712,9 @@ extern "C"
 		FlowGraphAllowsPatching,
 		FlowGraphAllowsInlineInstructionEditing,
 		FlowGraphShowsSecondaryRegisterHighlighting
-	} BNFlowGraphOption;
+	};
 
-	typedef struct BNLowLevelILInstruction
+	struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
 		size_t size;
@@ -723,38 +722,38 @@ extern "C"
 		uint32_t sourceOperand;
 		uint64_t operands[4];
 		uint64_t address;
-	} BNLowLevelILInstruction;
+	};
 
-	typedef struct BNLowLevelILLabel
+	struct BNLowLevelILLabel
 	{
 		bool resolved;
 		size_t ref;
 		size_t operand;
-	} BNLowLevelILLabel;
+	};
 
-	typedef enum BNImplicitRegisterExtend
+	enum BNImplicitRegisterExtend
 	{
 		NoExtend,
 		ZeroExtendToFullWidth,
 		SignExtendToFullWidth
-	} BNImplicitRegisterExtend;
+	};
 
-	typedef struct BNRegisterInfo
+	struct BNRegisterInfo
 	{
 		uint32_t fullWidthRegister;
 		size_t offset;
 		size_t size;
 		BNImplicitRegisterExtend extend;
-	} BNRegisterInfo;
+	};
 
-	typedef struct BNRegisterStackInfo
+	struct BNRegisterStackInfo
 	{
 		uint32_t firstStorageReg, firstTopRelativeReg;
 		uint32_t storageCount, topRelativeCount;
 		uint32_t stackTopReg;
-	} BNRegisterStackInfo;
+	};
 
-	typedef enum BNRegisterValueType
+	enum BNRegisterValueType
 	{
 		UndeterminedValue,
 		EntryValue,
@@ -771,55 +770,55 @@ extern "C"
 		LookupTableValue,
 		InSetOfValues,
 		NotInSetOfValues
-	} BNRegisterValueType;
+	};
 
-	typedef enum BNPluginOrigin
+	enum BNPluginOrigin
 	{
 		OfficialPluginOrigin,
 		CommunityPluginOrigin,
 		OtherPluginOrigin
-	} BNPluginOrigin;
+	};
 
-	typedef enum BNPluginUpdateStatus
+	enum BNPluginUpdateStatus
 	{
 		UpToDatePluginStatus,
 		UpdatesAvailablePluginStatus
-	} BNPluginUpdateStatus;
+	};
 
-	typedef enum BNPluginType
+	enum BNPluginType
 	{
 		CorePluginType,
 		UiPluginType,
 		ArchitecturePluginType,
 		BinaryViewPluginType
-	} BNPluginType;
+	};
 
-	typedef struct BNLookupTableEntry
+	struct BNLookupTableEntry
 	{
 		int64_t* fromValues;
 		size_t fromCount;
 		int64_t toValue;
-	} BNLookupTableEntry;
+	};
 
-	typedef struct BNRegisterValue
+	struct BNRegisterValue
 	{
 		BNRegisterValueType state;
 		int64_t value;
 		int64_t offset;
-	} BNRegisterValue;
+	};
 
-	typedef struct BNRegisterValueWithConfidence
+	struct BNRegisterValueWithConfidence
 	{
 		BNRegisterValue value;
 		uint8_t confidence;
-	} BNRegisterValueWithConfidence;
+	};
 
-	typedef struct BNValueRange
+	struct BNValueRange
 	{
 		uint64_t start, end, step;
-	} BNValueRange;
+	};
 
-	typedef struct BNPossibleValueSet
+	struct BNPossibleValueSet
 	{
 		BNRegisterValueType state;
 		int64_t value;
@@ -828,24 +827,24 @@ extern "C"
 		int64_t* valueSet;
 		BNLookupTableEntry* table;
 		size_t count;
-	} BNPossibleValueSet;
+	};
 
-	typedef struct BNRegisterOrConstant
+	struct BNRegisterOrConstant
 	{
 		bool constant;
 		uint32_t reg;
 		uint64_t value;
-	} BNRegisterOrConstant;
+	};
 
-	typedef struct BNDataVariable
+	struct BNDataVariable
 	{
 		uint64_t address;
 		BNType* type;
 		bool autoDiscovered;
 		uint8_t typeConfidence;
-	} BNDataVariable;
+	};
 
-	typedef enum BNMediumLevelILOperation
+	enum BNMediumLevelILOperation
 	{
 		MLIL_NOP,
 		MLIL_SET_VAR, // Not valid in SSA form (see MLIL_SET_VAR_SSA)
@@ -982,77 +981,77 @@ extern "C"
 		MLIL_FREE_VAR_SLOT_SSA,
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI
-	} BNMediumLevelILOperation;
+	};
 
-	typedef struct BNMediumLevelILInstruction
+	struct BNMediumLevelILInstruction
 	{
 		BNMediumLevelILOperation operation;
 		uint32_t sourceOperand;
 		size_t size;
 		uint64_t operands[5];
 		uint64_t address;
-	} BNMediumLevelILInstruction;
+	};
 
-	typedef struct BNMediumLevelILLabel
+	struct BNMediumLevelILLabel
 	{
 		bool resolved;
 		size_t ref;
 		size_t operand;
-	} BNMediumLevelILLabel;
+	};
 
-	typedef enum BNVariableSourceType
+	enum BNVariableSourceType
 	{
 		StackVariableSourceType,
 		RegisterVariableSourceType,
 		FlagVariableSourceType
-	} BNVariableSourceType;
+	};
 
-	typedef struct BNVariable
+	struct BNVariable
 	{
 		BNVariableSourceType type;
 		uint32_t index;
 		int64_t storage;
-	} BNVariable;
+	};
 
 	// Callbacks
-	typedef struct BNLogListener
+	struct BNLogListener
 	{
 		void* context;
 		void (*log)(void* ctxt, BNLogLevel level, const char* msg);
 		void (*close)(void* ctxt);
 		BNLogLevel (*getLogLevel)(void* ctxt);
-	} BNLogListener;
+	};
 
-	typedef struct BNNavigationHandler
+	struct BNNavigationHandler
 	{
 		void* context;
 		char* (*getCurrentView)(void* ctxt);
 		uint64_t (*getCurrentOffset)(void* ctxt);
 		bool (*navigate)(void* ctxt, const char* view, uint64_t offset);
-	} BNNavigationHandler;
+	};
 
-	typedef struct BNNameList
+	struct BNNameList
 	{
 		char** name;
 		char* join;
 		size_t nameCount;
-	} BNNameList;
+	};
 
-	typedef struct BNNameSpace
+	struct BNNameSpace
 	{
 		char** name;
 		char* join;
 		size_t nameCount;
-	} BNNameSpace;
+	};
 
-	typedef struct BNQualifiedName
+	struct BNQualifiedName
 	{
 		char** name;
 		char* join;
 		size_t nameCount;
-	} BNQualifiedName;
+	};
 
-	typedef struct BNBinaryDataNotification
+	struct BNBinaryDataNotification
 	{
 		void* context;
 		void (*dataWritten)(void* ctxt, BNBinaryView* view, uint64_t offset, size_t len);
@@ -1069,17 +1068,17 @@ extern "C"
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*typeDefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
 		void (*typeUndefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
-	} BNBinaryDataNotification;
+	};
 
-	typedef struct BNFileAccessor
+	struct BNFileAccessor
 	{
 		void* context;
 		uint64_t (*getLength)(void* ctxt);
 		size_t (*read)(void* ctxt, void* dest, uint64_t offset, size_t len);
 		size_t (*write)(void* ctxt, uint64_t offset, const void* src, size_t len);
-	} BNFileAccessor;
+	};
 
-	typedef struct BNCustomBinaryView
+	struct BNCustomBinaryView
 	{
 		void* context;
 		bool (*init)(void* ctxt);
@@ -1103,38 +1102,38 @@ extern "C"
 		bool (*isRelocatable)(void* ctxt);
 		size_t (*getAddressSize)(void* ctxt);
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
-	} BNCustomBinaryView;
+	};
 
-	typedef struct BNCustomBinaryViewType
+	struct BNCustomBinaryViewType
 	{
 		void* context;
 		BNBinaryView* (*create)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
-	} BNCustomBinaryViewType;
+	};
 
-	typedef struct BNTransformParameterInfo
+	struct BNTransformParameterInfo
 	{
 		char* name;
 		char* longName;
 		size_t fixedLength; // Variable length if zero
-	} BNTransformParameterInfo;
+	};
 
-	typedef struct BNTransformParameter
+	struct BNTransformParameter
 	{
 		const char* name;
 		BNDataBuffer* value;
-	} BNTransformParameter;
+	};
 
-	typedef struct BNCustomTransform
+	struct BNCustomTransform
 	{
 		void* context;
 		BNTransformParameterInfo* (*getParameters)(void* ctxt, size_t* count);
 		void (*freeParameters)(BNTransformParameterInfo* params, size_t count);
 		bool (*decode)(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
 		bool (*encode)(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
-	} BNCustomTransform;
+	};
 
-	typedef struct BNInstructionInfo
+	struct BNInstructionInfo
 	{
 		size_t length;
 		size_t branchCount;
@@ -1143,9 +1142,9 @@ extern "C"
 		BNBranchType branchType[BN_MAX_INSTRUCTION_BRANCHES];
 		uint64_t branchTarget[BN_MAX_INSTRUCTION_BRANCHES];
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES]; // If null, same architecture as instruction
-	} BNInstructionInfo;
+	};
 
-	typedef enum BNRelocationType
+	enum BNRelocationType
 	{
 		ELFGlobalRelocationType,
 		ELFCopyRelocationType,
@@ -1153,9 +1152,9 @@ extern "C"
 		StandardRelocationType,
 		IgnoredRelocation,
 		UnhandledRelocation
-	} BNRelocationType;
+	};
 	#define MAX_RELOCATION_SIZE 8
-	typedef struct BNRelocationInfo
+	struct BNRelocationInfo
 	{
 		BNRelocationType type; // BinaryNinja Relocation Type
 		bool pcRelative;       // PC Relative or Absolute (subtract address from relocation)
@@ -1176,9 +1175,9 @@ extern "C"
 		uint8_t relocationDataCache[MAX_RELOCATION_SIZE];
 		struct BNRelocationInfo* prev; // Link to relocation another related relocation
 		struct BNRelocationInfo* next; // Link to relocation another related relocation
-	} BNRelocationInfo;
+	};
 
-	typedef struct BNInstructionTextToken
+	struct BNInstructionTextToken
 	{
 		BNInstructionTextTokenType type;
 		char* text;
@@ -1189,34 +1188,34 @@ extern "C"
 		uint64_t address;
 		char** typeNames;
 		size_t namesCount;
-	} BNInstructionTextToken;
+	};
 
-	typedef struct BNInstructionTextLine
+	struct BNInstructionTextLine
 	{
 		BNInstructionTextToken* tokens;
 		size_t count;
-	} BNInstructionTextLine;
+	};
 
-	typedef struct BNFlagConditionForSemanticClass
+	struct BNFlagConditionForSemanticClass
 	{
 		uint32_t semanticClass;
 		BNLowLevelILFlagCondition condition;
-	} BNFlagConditionForSemanticClass;
+	};
 
-	typedef struct BNNameAndType
+	struct BNNameAndType
 	{
 		char* name;
 		BNType* type;
 		uint8_t typeConfidence;
-	} BNNameAndType;
+	};
 
-	typedef struct BNTypeWithConfidence
+	struct BNTypeWithConfidence
 	{
 		BNType* type;
 		uint8_t confidence;
-	} BNTypeWithConfidence;
+	};
 
-	typedef struct BNCustomArchitecture
+	struct BNCustomArchitecture
 	{
 		void* context;
 		void (*init)(void* context, BNArchitecture* obj);
@@ -1285,39 +1284,39 @@ extern "C"
 		bool (*alwaysBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*invertBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*skipAndReturnValue)(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
-	} BNCustomArchitecture;
+	};
 
-	typedef struct BNBasicBlockEdge
+	struct BNBasicBlockEdge
 	{
 		BNBranchType type;
 		BNBasicBlock* target;
 		bool backEdge;
 		bool fallThrough;
-	} BNBasicBlockEdge;
+	};
 
-	typedef struct BNPoint
+	struct BNPoint
 	{
 		float x;
 		float y;
-	} BNPoint;
+	};
 
-	typedef struct BNFlowGraphEdge
+	struct BNFlowGraphEdge
 	{
 		BNBranchType type;
 		BNFlowGraphNode* target;
 		BNPoint* points;
 		size_t pointCount;
 		bool backEdge;
-	} BNFlowGraphEdge;
+	};
 
-	typedef enum BNHighlightColorStyle
+	enum BNHighlightColorStyle
 	{
 		StandardHighlightColor = 0,
 		MixedHighlightColor = 1,
 		CustomHighlightColor = 2
-	} BNHighlightColorStyle;
+	};
 
-	typedef enum BNHighlightStandardColor
+	enum BNHighlightStandardColor
 	{
 		NoHighlightColor = 0,
 		BlueHighlightColor = 1,
@@ -1329,49 +1328,49 @@ extern "C"
 		OrangeHighlightColor = 7,
 		WhiteHighlightColor = 8,
 		BlackHighlightColor = 9
-	} BNHighlightStandardColor;
+	};
 
-	typedef struct BNHighlightColor
+	struct BNHighlightColor
 	{
 		BNHighlightColorStyle style;
 		BNHighlightStandardColor color;
 		BNHighlightStandardColor mixColor;
 		uint8_t mix, r, g, b, alpha;
-	} BNHighlightColor;
+	};
 
-	typedef struct BNDisassemblyTextLine
+	struct BNDisassemblyTextLine
 	{
 		uint64_t addr;
 		size_t instrIndex;
 		BNInstructionTextToken* tokens;
 		size_t count;
 		BNHighlightColor highlight;
-	} BNDisassemblyTextLine;
+	};
 
-	typedef struct BNLinearDisassemblyLine
+	struct BNLinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
 		BNFunction* function;
 		BNBasicBlock* block;
 		size_t lineOffset;
 		BNDisassemblyTextLine contents;
-	} BNLinearDisassemblyLine;
+	};
 
-	typedef struct BNLinearDisassemblyPosition
+	struct BNLinearDisassemblyPosition
 	{
 		BNFunction* function;
 		BNBasicBlock* block;
 		uint64_t address;
-	} BNLinearDisassemblyPosition;
+	};
 
-	typedef struct BNReferenceSource
+	struct BNReferenceSource
 	{
 		BNFunction* func;
 		BNArchitecture* arch;
 		uint64_t addr;
-	} BNReferenceSource;
+	};
 
-	typedef struct BNUndoAction
+	struct BNUndoAction
 	{
 		BNActionType type;
 		void* context;
@@ -1379,96 +1378,96 @@ extern "C"
 		void (*undo)(void* ctxt, BNBinaryView* data);
 		void (*redo)(void* ctxt, BNBinaryView* data);
 		char* (*serialize)(void* ctxt);
-	} BNUndoAction;
+	};
 
-	typedef struct BNCallingConventionWithConfidence
+	struct BNCallingConventionWithConfidence
 	{
 		BNCallingConvention* convention;
 		uint8_t confidence;
-	} BNCallingConventionWithConfidence;
+	};
 
-	typedef struct BNBoolWithConfidence
+	struct BNBoolWithConfidence
 	{
 		bool value;
 		uint8_t confidence;
-	} BNBoolWithConfidence;
+	};
 
-	typedef struct BNSizeWithConfidence
+	struct BNSizeWithConfidence
 	{
 		size_t value;
 		uint8_t confidence;
-	} BNSizeWithConfidence;
+	};
 
-	typedef struct BNOffsetWithConfidence
+	struct BNOffsetWithConfidence
 	{
 		int64_t value;
 		uint8_t confidence;
-	} BNOffsetWithConfidence;
+	};
 
-	typedef struct BNMemberScopeWithConfidence
+	struct BNMemberScopeWithConfidence
 	{
 		BNMemberScope value;
 		uint8_t confidence;
-	} BNMemberScopeWithConfidence;
+	};
 
-	typedef struct BNMemberAccessWithConfidence
+	struct BNMemberAccessWithConfidence
 	{
 		BNMemberAccess value;
 		uint8_t confidence;
-	} BNMemberAccessWithConfidence;
+	};
 
-	typedef struct BNParameterVariablesWithConfidence
+	struct BNParameterVariablesWithConfidence
 	{
 		BNVariable* vars;
 		size_t count;
 		uint8_t confidence;
-	} BNParameterVariablesWithConfidence;
+	};
 
-	typedef struct BNRegisterSetWithConfidence
+	struct BNRegisterSetWithConfidence
 	{
 		uint32_t* regs;
 		size_t count;
 		uint8_t confidence;
-	} BNRegisterSetWithConfidence;
+	};
 
-	typedef struct BNFunctionParameter
+	struct BNFunctionParameter
 	{
 		char* name;
 		BNType* type;
 		uint8_t typeConfidence;
 		bool defaultLocation;
 		BNVariable location;
-	} BNFunctionParameter;
+	};
 
-	typedef struct BNQualifiedNameAndType
+	struct BNQualifiedNameAndType
 	{
 		BNQualifiedName name;
 		BNType* type;
-	} BNQualifiedNameAndType;
+	};
 
-	typedef struct BNStructureMember
+	struct BNStructureMember
 	{
 		BNType* type;
 		char* name;
 		uint64_t offset;
 		uint8_t typeConfidence;
-	} BNStructureMember;
+	};
 
-	typedef struct BNEnumerationMember
+	struct BNEnumerationMember
 	{
 		char* name;
 		uint64_t value;
 		bool isDefault;
-	} BNEnumerationMember;
+	};
 
-	typedef struct BNFunctionRecognizer
+	struct BNFunctionRecognizer
 	{
 		void* context;
 		bool (*recognizeLowLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
 		bool (*recognizeMediumLevelIL)(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
-	} BNFunctionRecognizer;
+	};
 
-	typedef struct BNCustomRelocationHandler
+	struct BNCustomRelocationHandler
 	{
 		void* context;
 		void (*freeObject)(void* ctxt);
@@ -1479,46 +1478,46 @@ extern "C"
 			size_t len);
 		size_t (*getOperandForExternalRelocation)(void* ctxt, const uint8_t* data, uint64_t addr, size_t length,
 			BNLowLevelILFunction* il, BNRelocation* relocation);
-	} BNCustomRelocationHandler;
+	};
 
-	typedef struct BNTypeParserResult
+	struct BNTypeParserResult
 	{
 		BNQualifiedNameAndType* types;
 		BNQualifiedNameAndType* variables;
 		BNQualifiedNameAndType* functions;
 		size_t typeCount, variableCount, functionCount;
-	} BNTypeParserResult;
+	};
 
-	typedef enum BNUpdateResult
+	enum BNUpdateResult
 	{
 		UpdateFailed = 0,
 		UpdateSuccess = 1,
 		AlreadyUpToDate = 2,
 		UpdateAvailable = 3
-	} BNUpdateResult;
+	};
 
-	typedef struct BNUpdateChannel
+	struct BNUpdateChannel
 	{
 		char* name;
 		char* description;
 		char* latestVersion;
-	} BNUpdateChannel;
+	};
 
-	typedef struct BNUpdateVersion
+	struct BNUpdateVersion
 	{
 		char* version;
 		char* notes;
 		uint64_t time;
-	} BNUpdateVersion;
+	};
 
-	typedef struct BNStringReference
+	struct BNStringReference
 	{
 		BNStringType type;
 		uint64_t start;
 		size_t length;
-	} BNStringReference;
+	};
 
-	typedef enum BNPluginCommandType
+	enum BNPluginCommandType
 	{
 		DefaultPluginCommand,
 		AddressPluginCommand,
@@ -1528,9 +1527,9 @@ extern "C"
 		LowLevelILInstructionPluginCommand,
 		MediumLevelILFunctionPluginCommand,
 		MediumLevelILInstructionPluginCommand
-	} BNPluginCommandType;
+	};
 
-	typedef struct BNPluginCommand
+	struct BNPluginCommand
 	{
 		char* name;
 		char* description;
@@ -1554,9 +1553,9 @@ extern "C"
 		bool (*lowLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
 		bool (*mediumLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
 		bool (*mediumLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
-	} BNPluginCommand;
+	};
 
-	typedef struct BNCustomCallingConvention
+	struct BNCustomCallingConvention
 	{
 		void* context;
 
@@ -1585,18 +1584,18 @@ extern "C"
 			BNFunction* func, BNVariable* result);
 		void (*getParameterVariableForIncomingVariable)(void* ctxt, const BNVariable* var,
 			BNFunction* func, BNVariable* result);
-	} BNCustomCallingConvention;
+	};
 
-	typedef struct BNVariableNameAndType
+	struct BNVariableNameAndType
 	{
 		BNVariable var;
 		BNType* type;
 		char* name;
 		bool autoDefined;
 		uint8_t typeConfidence;
-	} BNVariableNameAndType;
+	};
 
-	typedef struct BNStackVariableReference
+	struct BNStackVariableReference
 	{
 		uint32_t sourceOperand;
 		uint8_t typeConfidence;
@@ -1605,61 +1604,61 @@ extern "C"
 		uint64_t varIdentifier;
 		int64_t referencedOffset;
 		size_t size;
-	} BNStackVariableReference;
+	};
 
-	typedef struct BNIndirectBranchInfo
+	struct BNIndirectBranchInfo
 	{
 		BNArchitecture* sourceArch;
 		uint64_t sourceAddr;
 		BNArchitecture* destArch;
 		uint64_t destAddr;
 		bool autoDefined;
-	} BNIndirectBranchInfo;
+	};
 
-	typedef struct BNArchitectureAndAddress
+	struct BNArchitectureAndAddress
 	{
 		BNArchitecture* arch;
 		uint64_t address;
-	} BNArchitectureAndAddress;
+	};
 
-	typedef enum BNAnalysisState
+	enum BNAnalysisState
 	{
 		IdleState,
 		DisassembleState,
 		AnalyzeState,
 		ExtendedAnalyzeState
-	} BNAnalysisState;
+	};
 
-	typedef struct BNActiveAnalysisInfo
+	struct BNActiveAnalysisInfo
 	{
 		BNFunction* func;
 		uint64_t analysisTime;
 		size_t updateCount;
 		size_t submitCount;
-	} BNActiveAnalysisInfo;
+	};
 
-	typedef struct BNAnalysisInfo
+	struct BNAnalysisInfo
 	{
 		BNAnalysisState state;
 		uint64_t analysisTime;
 		BNActiveAnalysisInfo* activeInfo;
 		size_t count;
-	} BNAnalysisInfo;
+	};
 
-	typedef struct BNAnalysisProgress
+	struct BNAnalysisProgress
 	{
 		BNAnalysisState state;
 		size_t count, total;
-	} BNAnalysisProgress;
+	};
 
-	typedef enum BNAnalysisMode
+	enum BNAnalysisMode
 	{
 		FullAnalysisMode,
 		BasicAnalysisMode,
 		ControlFlowAnalysisMode
-	} BNAnalysisMode;
+	};
 
-	typedef struct BNAnalysisParameters
+	struct BNAnalysisParameters
 	{
 		uint64_t maxAnalysisTime;
 		uint64_t maxFunctionSize;
@@ -1669,52 +1668,52 @@ extern "C"
 		bool suppressNewAutoFunctionAnalysis;
 		BNAnalysisMode mode;
 		bool alwaysAnalyzeIndirectBranches;
-	} BNAnalysisParameters;
+	};
 
-	typedef struct BNDownloadInstanceOutputCallbacks
+	struct BNDownloadInstanceOutputCallbacks
 	{
 		uint64_t (*writeCallback)(uint8_t* data, uint64_t len, void* ctxt);
 		void* writeContext;
 		bool (*progressCallback)(void* ctxt, uint64_t progress, uint64_t total);
 		void* progressContext;
-	} BNDownloadInstanceOutputCallbacks;
+	};
 
-	typedef struct BNDownloadInstanceCallbacks
+	struct BNDownloadInstanceCallbacks
 	{
 		void* context;
 		void (*destroyInstance)(void* ctxt);
 		int (*performRequest)(void* ctxt, const char* url);
-	} BNDownloadInstanceCallbacks;
+	};
 
-	typedef struct BNDownloadProviderCallbacks
+	struct BNDownloadProviderCallbacks
 	{
 		void* context;
 		BNDownloadInstance* (*createInstance)(void* ctxt);
-	} BNDownloadProviderCallbacks;
+	};
 
-	typedef enum BNFindFlag
+	enum BNFindFlag
 	{
 		FindCaseSensitive = 0,
 		FindCaseInsensitive = 1
-	} BNFindFlag;
+	};
 
-	typedef enum BNScriptingProviderInputReadyState
+	enum BNScriptingProviderInputReadyState
 	{
 		NotReadyForInput,
 		ReadyForScriptExecution,
 		ReadyForScriptProgramInput
-	} BNScriptingProviderInputReadyState;
+	};
 
-	typedef enum BNScriptingProviderExecuteResult
+	enum BNScriptingProviderExecuteResult
 	{
 		InvalidScriptInput,
 		IncompleteScriptInput,
 		SuccessfulScriptExecution,
 		ScriptExecutionCancelled
-	} BNScriptingProviderExecuteResult;
+	};
 
 
-	typedef struct BNScriptingInstanceCallbacks
+	struct BNScriptingInstanceCallbacks
 	{
 		void* context;
 		void (*destroyInstance)(void* ctxt);
@@ -1725,67 +1724,67 @@ extern "C"
 		void (*setCurrentBasicBlock)(void* ctxt, BNBasicBlock* block);
 		void (*setCurrentAddress)(void* ctxt, uint64_t addr);
 		void (*setCurrentSelection)(void* ctxt, uint64_t begin, uint64_t end);
-	} BNScriptingInstanceCallbacks;
+	};
 
-	typedef struct BNScriptingProviderCallbacks
+	struct BNScriptingProviderCallbacks
 	{
 		void* context;
 		BNScriptingInstance* (*createInstance)(void* ctxt);
 
-	} BNScriptingProviderCallbacks;
+	};
 
-	typedef struct BNScriptingOutputListener
+	struct BNScriptingOutputListener
 	{
 		void* context;
 		void (*output)(void* ctxt, const char* text);
 		void (*error)(void* ctxt, const char* text);
 		void (*inputReadyStateChanged)(void* ctxt, BNScriptingProviderInputReadyState state);
-	} BNScriptingOutputListener;
+	};
 
-	typedef struct BNMainThreadCallbacks
+	struct BNMainThreadCallbacks
 	{
 		void* context;
 		void (*addAction)(void* ctxt, BNMainThreadAction* action);
-	} BNMainThreadCallbacks;
+	};
 
-	typedef struct BNConstantReference
+	struct BNConstantReference
 	{
 		int64_t value;
 		size_t size;
 		bool pointer, intermediate;
-	} BNConstantReference;
+	};
 
-	typedef struct BNMetadataValueStore
+	struct BNMetadataValueStore
 	{
 		size_t size;
 		char** keys;
 		BNMetadata** values;
-	} BNMetadataValueStore;
+	};
 
-	typedef enum BNMessageBoxIcon
+	enum BNMessageBoxIcon
 	{
 		InformationIcon,
 		QuestionIcon,
 		WarningIcon,
 		ErrorIcon
-	} BNMessageBoxIcon;
+	};
 
-	typedef enum BNMessageBoxButtonSet
+	enum BNMessageBoxButtonSet
 	{
 		OKButtonSet,
 		YesNoButtonSet,
 		YesNoCancelButtonSet
-	} BNMessageBoxButtonSet;
+	};
 
-	typedef enum BNMessageBoxButtonResult
+	enum BNMessageBoxButtonResult
 	{
 		NoButton = 0,
 		YesButton = 1,
 		OKButton = 2,
 		CancelButton = 3
-	} BNMessageBoxButtonResult;
+	};
 
-	typedef enum BNFormInputFieldType
+	enum BNFormInputFieldType
 	{
 		LabelFormField,
 		SeparatorFormField,
@@ -1797,9 +1796,9 @@ extern "C"
 		OpenFileNameFormField,
 		SaveFileNameFormField,
 		DirectoryNameFormField
-	} BNFormInputFieldType;
+	};
 
-	typedef struct BNFormInputField
+	struct BNFormInputField
 	{
 		BNFormInputFieldType type;
 		const char* prompt;
@@ -1813,9 +1812,9 @@ extern "C"
 		uint64_t addressResult;
 		char* stringResult;
 		size_t indexResult;
-	} BNFormInputField;
+	};
 
-	typedef struct BNInteractionHandlerCallbacks
+	struct BNInteractionHandlerCallbacks
 	{
 		void* context;
 		void (*showPlainTextReport)(void* ctxt, BNBinaryView* view, const char* title, const char* contents);
@@ -1838,9 +1837,9 @@ extern "C"
 		bool (*getFormInput)(void* ctxt, BNFormInputField* fields, size_t count, const char* title);
 		BNMessageBoxButtonResult (*showMessageBox)(void* ctxt, const char* title, const char* text,
 			BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
-	} BNInteractionHandlerCallbacks;
+	};
 
-	typedef struct BNObjectDestructionCallbacks
+	struct BNObjectDestructionCallbacks
 	{
 		void* context;
 		// The provided pointers have a reference count of zero. Do not add additional references, doing so
@@ -1849,9 +1848,9 @@ extern "C"
 		void (*destructBinaryView)(void* ctxt, BNBinaryView* view);
 		void (*destructFileMetadata)(void* ctxt, BNFileMetadata* file);
 		void (*destructFunction)(void* ctxt, BNFunction* func);
-	} BNObjectDestructionCallbacks;
+	};
 
-	typedef struct BNCustomDataRenderer
+	struct BNCustomDataRenderer
 	{
 		void* context;
 		void (*freeObject)(void* ctxt);
@@ -1860,9 +1859,9 @@ extern "C"
 		BNDisassemblyTextLine* (*getLinesForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
 			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCtx,
 			size_t ctxCount);
-	} BNCustomDataRenderer;
+	};
 
-	typedef enum BNSegmentFlag
+	enum BNSegmentFlag
 	{
 		SegmentExecutable = 1,
 		SegmentWritable = 2,
@@ -1871,56 +1870,56 @@ extern "C"
 		SegmentContainsCode = 0x10,
 		SegmentDenyWrite = 0x20,
 		SegmentDenyExecute = 0x40
-	} BNSegmentFlag;
+	};
 
-	typedef enum BNSectionSemantics
+	enum BNSectionSemantics
 	{
 		DefaultSectionSemantics,
 		ReadOnlyCodeSectionSemantics,
 		ReadOnlyDataSectionSemantics,
 		ReadWriteDataSectionSemantics,
 		ExternalSectionSemantics
-	} BNSectionSemantics;
+	};
 
-	typedef struct BNAddressRange
+	struct BNAddressRange
 	{
 		uint64_t start;
 		uint64_t end;
-	} BNAddressRange;
+	};
 
-	typedef struct BNSystemCallInfo
+	struct BNSystemCallInfo
 	{
 		uint32_t number;
 		BNQualifiedName name;
 		BNType* type;
-	} BNSystemCallInfo;
+	};
 
-	typedef enum BNILBranchDependence
+	enum BNILBranchDependence
 	{
 		NotBranchDependent,
 		TrueBranchDependent,
 		FalseBranchDependent
-	} BNILBranchDependence;
+	};
 
-	typedef struct BNILBranchInstructionAndDependence
+	struct BNILBranchInstructionAndDependence
 	{
 		size_t branch;
 		BNILBranchDependence dependence;
-	} BNILBranchInstructionAndDependence;
+	};
 
-	typedef struct BNPerformanceInfo
+	struct BNPerformanceInfo
 	{
 		char* name;
 		double seconds;
-	} BNPerformanceInfo;
+	};
 
-	typedef struct BNMemoryUsageInfo
+	struct BNMemoryUsageInfo
 	{
 		char* name;
 		uint64_t value;
-	} BNMemoryUsageInfo;
+	};
 
-	typedef enum BNMetadataType
+	enum BNMetadataType
 	{
 		InvalidDataType,
 		BooleanDataType,
@@ -1931,46 +1930,46 @@ extern "C"
 		RawDataType,
 		KeyValueDataType,
 		ArrayDataType
-	} BNMetadataType;
+	};
 
-	typedef struct BNRegisterStackAdjustment
+	struct BNRegisterStackAdjustment
 	{
 		uint32_t regStack;
 		int32_t adjustment;
 		uint8_t confidence;
-	} BNRegisterStackAdjustment;
+	};
 
-	typedef enum BNFunctionAnalysisSkipOverride
+	enum BNFunctionAnalysisSkipOverride
 	{
 		DefaultFunctionAnalysisSkip,
 		NeverSkipFunctionAnalysis,
 		AlwaysSkipFunctionAnalysis
-	} BNFunctionAnalysisSkipOverride;
+	};
 
-	typedef enum BNReportType
+	enum BNReportType
 	{
 		PlainTextReportType,
 		MarkdownReportType,
 		HTMLReportType,
 		FlowGraphReportType
-	} BNReportType;
+	};
 
-	typedef struct BNCustomFlowGraph
+	struct BNCustomFlowGraph
 	{
 		void* context;
 		void (*prepareForLayout)(void* ctxt);
 		void (*populateNodes)(void* ctxt);
 		void (*completeLayout)(void* ctxt);
 		BNFlowGraph* (*update)(void* ctxt);
-	} BNCustomFlowGraph;
+	};
 
-	typedef struct BNRange
+	struct BNRange
 	{
 		uint64_t start;
 		uint64_t end;
-	} BNRange;
+	};
 
-	typedef enum BNAnalysisSkipReason
+	enum BNAnalysisSkipReason
 	{
 		NoSkipReason,
 		AlwaysSkipReason,
@@ -1979,9 +1978,9 @@ extern "C"
 		ExceedFunctionUpdateCountSkipReason,
 		NewAutoFunctionAnalysisSuppressedReason,
 		BasicAnalysisSkipReason
-	} BNAnalysisSkipReason;
+	};
 
-	typedef enum BNSettingsScope
+	enum BNSettingsScope
 	{
 		SettingsInvalidScope = 0,
 		SettingsAutoScope = 1,
@@ -1989,7 +1988,7 @@ extern "C"
 		SettingsUserScope = 3,
 		SettingsWorkspaceScope = 4,
 		SettingsContextScope = 5
-	} BNSettingsScope;
+	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);

@@ -108,10 +108,6 @@ Repository::Repository(BNRepository* r)
 	m_object = r;
 }
 
-Repository::~Repository()
-{
-	BNFreeRepository(m_object);
-}
 string Repository::GetUrl() const
 {
 	RETURN_STRING(BNRepositoryGetUrl(m_object));
@@ -158,27 +154,18 @@ string Repository::GetFullPath() const
 }
 
 RepositoryManager::RepositoryManager(const string& enabledPluginsPath)
-	:m_core(false)
 {
 	m_object = BNCreateRepositoryManager(enabledPluginsPath.c_str());
 }
 
 RepositoryManager::RepositoryManager(BNRepositoryManager* mgr)
-	:m_core(false)
 {
 	m_object = mgr;
 }
 
 RepositoryManager::RepositoryManager()
-	:m_core(true)
 {
 	m_object = BNGetRepositoryManager();
-}
-
-RepositoryManager::~RepositoryManager()
-{
-	if (!m_core)
-		BNFreeRepositoryManager(m_object);
 }
 
 bool RepositoryManager::CheckForUpdates()

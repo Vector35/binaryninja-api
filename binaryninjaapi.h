@@ -3981,7 +3981,6 @@ namespace BinaryNinja
 	protected:
 		DownloadInstance(DownloadProvider* provider);
 		DownloadInstance(BNDownloadInstance* instance);
-		virtual ~DownloadInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static int PerformRequestCallback(void* ctxt, const char* url);
@@ -4058,7 +4057,6 @@ namespace BinaryNinja
 	protected:
 		ScriptingInstance(ScriptingProvider* provider);
 		ScriptingInstance(BNScriptingInstance* instance);
-		virtual ~ScriptingInstance();
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
@@ -4275,7 +4273,6 @@ namespace BinaryNinja
 	{
 	public:
 		Repository(BNRepository* repository);
-		~Repository();
 		std::string GetUrl() const;
 		std::string GetRepoPath() const;
 		std::string GetLocalReference() const;
@@ -4289,12 +4286,10 @@ namespace BinaryNinja
 
 	class RepositoryManager: public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
 	{
-		bool m_core;
 	public:
 		RepositoryManager(const std::string& enabledPluginsPath);
 		RepositoryManager(BNRepositoryManager* repoManager);
 		RepositoryManager();
-		~RepositoryManager();
 		bool CheckForUpdates();
 		std::vector<Ref<Repository>> GetRepositories();
 		Ref<Repository> GetRepositoryByPath(const std::string& repoName);

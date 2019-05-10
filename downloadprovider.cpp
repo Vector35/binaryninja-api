@@ -21,12 +21,6 @@ DownloadInstance::DownloadInstance(BNDownloadInstance* instance)
 }
 
 
-DownloadInstance::~DownloadInstance()
-{
-	BNFreeDownloadInstance(m_object);
-}
-
-
 void DownloadInstance::DestroyInstanceCallback(void* ctxt)
 {
 	DownloadInstance* instance = (DownloadInstance*)ctxt;
@@ -76,6 +70,7 @@ int DownloadInstance::PerformRequest(const string& url, BNDownloadInstanceOutput
 
 void DownloadInstance::DestroyInstance()
 {
+	ReleaseForRegistration();
 }
 
 

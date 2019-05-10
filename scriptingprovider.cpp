@@ -72,12 +72,6 @@ ScriptingInstance::ScriptingInstance(BNScriptingInstance* instance)
 }
 
 
-ScriptingInstance::~ScriptingInstance()
-{
-	BNFreeScriptingInstance(m_object);
-}
-
-
 void ScriptingInstance::DestroyInstanceCallback(void* ctxt)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
@@ -136,6 +130,7 @@ void ScriptingInstance::SetCurrentSelectionCallback(void* ctxt, uint64_t begin, 
 
 void ScriptingInstance::DestroyInstance()
 {
+	ReleaseForRegistration();
 }
 
 

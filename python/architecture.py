@@ -1057,8 +1057,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _assemble(self, ctxt, code, addr, result, errors):
 		try:
-			data, error_str = self.assemble(code, addr)
-			errors[0] = core.BNAllocString(str(error_str))
+			data = self.assemble(code, addr)
 			if data is None:
 				return False
 			buf = ctypes.create_string_buffer(len(data))
@@ -1272,7 +1271,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:return: the bytes for the assembled instructions or error string
 		:rtype: (a tuple of instructions and empty string) or (or None and error string)
 		"""
-		return None, "Architecture does not implement an assembler.\n"
+		raise NotImplementedError("Architecture does not implement an assembler.\n")
 
 	@abc.abstractmethod
 	def perform_is_never_branch_patch_available(self, data, addr):

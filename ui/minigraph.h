@@ -16,6 +16,7 @@ class ViewFrame;
 class BINARYNINJAUIAPI MiniGraph: public QWidget, public DockContextHandler
 {
 	Q_OBJECT
+	Q_INTERFACES(DockContextHandler)
 
 	FlowGraphWidget* m_flowGraphWidget = nullptr;
 

@@ -61,13 +61,14 @@ public:
 
 	QWidget* getParentWindow() { return m_parentWindow; }
 
-	virtual void notifyFontChanged() { };
-	virtual void notifyOffsetChanged(uint64_t /*offset*/) { };
-	virtual void notifyThemeChanged() { };
-	virtual void notifyViewChanged(ViewFrame* /*frame*/) { };
-	virtual void notifyVisibilityChanged(bool /*visible*/) { };
-	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; };
+	virtual void notifyFontChanged() { }
+	virtual void notifyOffsetChanged(uint64_t /*offset*/) { }
+	virtual void notifyThemeChanged() { }
+	virtual void notifyViewChanged(ViewFrame* /*frame*/) { }
+	virtual void notifyVisibilityChanged(bool /*visible*/) { }
+	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; }
 };
+Q_DECLARE_INTERFACE(DockContextHandler, "binary.ninja.dockcontexthandler/1.0");
 
 class BINARYNINJAUIAPI DockHandler: public QObject
 {

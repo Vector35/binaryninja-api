@@ -53,6 +53,7 @@ public:
 class BINARYNINJAUIAPI CrossReferenceList: public QListView, public DockContextHandler
 {
 	Q_OBJECT
+	Q_INTERFACES(DockContextHandler)
 
 	ViewFrame* m_view;
 	CrossReferenceListModel* m_list;

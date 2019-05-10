@@ -25,6 +25,7 @@ class ViewFrame;
 class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDataNotification, public DockContextHandler
 {
 	Q_OBJECT
+	Q_INTERFACES(DockContextHandler)
 
 	QImage* m_image = nullptr;
 	QImage* m_staticImage = nullptr;

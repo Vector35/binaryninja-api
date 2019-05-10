@@ -11,6 +11,7 @@ class FunctionList;
 class BINARYNINJAUIAPI FunctionsView: public QWidget, public DockContextHandler, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
+	Q_INTERFACES(DockContextHandler)
 
 	BinaryViewRef m_data;
 

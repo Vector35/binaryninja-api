@@ -56,6 +56,7 @@ class ScriptingConsoleWidget;
 class BINARYNINJAUIAPI ScriptingConsole: public QWidget, public DockContextHandler, BinaryNinja::ScriptingOutputListener
 {
 	Q_OBJECT
+	Q_INTERFACES(DockContextHandler)
 
 	struct ScriptOutput
 	{

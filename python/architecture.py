@@ -2412,7 +2412,7 @@ class CoreArchitecture(Architecture):
 		if not core.BNAssemble(self.handle, code, addr, result.handle, errors):
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-			raise ValueError("Could not assemble: %s" % errors.value)
+			raise ValueError("Could not assemble: %s" % error_str)
 		if isinstance(str(result), bytes):
 			return str(result)
 		else:

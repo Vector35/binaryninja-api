@@ -95,15 +95,22 @@ namespace BinaryNinja
 		{
 #ifdef WIN32
 			if (InterlockedDecrement((LONG*)&m_refs) == 0)
-				delete this;
+			{
+				if (!m_registeredRef)
+					delete this;
+			}
 #else
 			if (__sync_fetch_and_add(&m_refs, -1) == 1)
-				delete this;
+			{
+				if (!m_registeredRef)
+					delete this;
+			}
 #endif
 		}
 
 	public:
 		int m_refs;
+		bool m_registeredRef = false;
 		T* m_object;
 		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~CoreRefCountObject() {}
@@ -133,13 +140,15 @@ namespace BinaryNinja
 
 		void AddRefForRegistration()
 		{
-			AddRefInternal();
+			m_registeredRef = true;
 		}
 
 		void ReleaseForRegistration()
 		{
 			m_object = nullptr;
-			ReleaseInternal();
+			m_registeredRef = false;
+			if (m_refs == 0)
+				delete this;
 		}
 	};
 
@@ -2806,6 +2815,7 @@ namespace BinaryNinja
 		static void PopulateNodesCallback(void* ctxt);
 		static void CompleteLayoutCallback(void* ctxt);
 		static BNFlowGraph* UpdateCallback(void* ctxt);
+		static void FreeObjectCallback(void* ctxt);
 
 	protected:
 		FlowGraph(BNFlowGraph* graph);

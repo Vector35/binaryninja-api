@@ -76,6 +76,11 @@ FlowGraph::FlowGraph()
 	callbacks.prepareForLayout = PrepareForLayoutCallback;
 	callbacks.populateNodes = PopulateNodesCallback;
 	callbacks.completeLayout = CompleteLayoutCallback;
+	callbacks.update = UpdateCallback;
+	callbacks.freeObject = FreeObjectCallback;
+	callbacks.externalRefTaken = nullptr;
+	callbacks.externalRefReleased = nullptr;
+	AddRefForRegistration();
 	m_object = BNCreateCustomFlowGraph(&callbacks);
 }
 
@@ -114,6 +119,13 @@ BNFlowGraph* FlowGraph::UpdateCallback(void* ctxt)
 	if (!result)
 		return nullptr;
 	return BNNewFlowGraphReference(result->GetObject());
+}
+
+
+void FlowGraph::FreeObjectCallback(void* ctxt)
+{
+	FlowGraph* graph = (FlowGraph*)ctxt;
+	graph->ReleaseForRegistration();
 }
 
 

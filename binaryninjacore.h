@@ -1083,6 +1083,8 @@ extern "C"
 		void* context;
 		bool (*init)(void* ctxt);
 		void (*freeObject)(void* ctxt);
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
 		size_t (*read)(void* ctxt, void* dest, uint64_t offset, size_t len);
 		size_t (*write)(void* ctxt, uint64_t offset, const void* src, size_t len);
 		size_t (*insert)(void* ctxt, uint64_t offset, const void* src, size_t len);
@@ -1961,6 +1963,9 @@ extern "C"
 		void (*populateNodes)(void* ctxt);
 		void (*completeLayout)(void* ctxt);
 		BNFlowGraph* (*update)(void* ctxt);
+		void (*freeObject)(void* ctxt);
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
 	};
 
 	struct BNRange

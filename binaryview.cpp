@@ -479,6 +479,8 @@ BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryVi
 	view.context = this;
 	view.init = InitCallback;
 	view.freeObject = FreeCallback;
+	view.externalRefTaken = nullptr;
+	view.externalRefReleased = nullptr;
 	view.read = ReadCallback;
 	view.write = WriteCallback;
 	view.insert = InsertCallback;

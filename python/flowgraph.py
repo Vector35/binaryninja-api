@@ -338,6 +338,8 @@ class FlowGraph(object):
 	from incoming edges, or graphs that have disjoint subgraphs will not render correctly. This will be fixed \
 	in a future version.
 	"""
+	_registered_instances = []
+
 	def __init__(self, handle = None):
 		if handle is None:
 			self._ext_cb = core.BNCustomFlowGraph()
@@ -346,6 +348,8 @@ class FlowGraph(object):
 			self._ext_cb.populateNodes = self._ext_cb.populateNodes.__class__(self._populate_nodes)
 			self._ext_cb.completeLayout = self._ext_cb.completeLayout.__class__(self._complete_layout)
 			self._ext_cb.update = self._ext_cb.update.__class__(self._update)
+			self._ext_cb.externalRefTaken = self._ext_cb.externalRefTaken.__class__(self._external_ref_taken)
+			self._ext_cb.externalRefReleased = self._ext_cb.externalRefReleased.__class__(self._external_ref_released)
 			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
 		self.handle = handle
 
@@ -389,6 +393,18 @@ class FlowGraph(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return None
+
+	def _external_ref_taken(self, ctxt):
+		try:
+			self.__class__._registered_instances.append(self)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _external_ref_released(self, ctxt):
+		try:
+			self.__class__._registered_instances.remove(self)
+		except:
+			log.log_error(traceback.format_exc())
 
 	def finish_prepare_for_layout(self):
 		"""

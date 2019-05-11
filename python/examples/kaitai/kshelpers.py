@@ -4,10 +4,13 @@ import traceback
 
 import io
 import os
+import re
 import sys
-import struct
 import types
+import struct
+import binascii
 import importlib
+import collections
 
 from binaryninja import log
 
@@ -147,6 +150,286 @@ def parseIo(ioObj, ksModuleName=None):
 		parsed = None
 
 	return parsed
+
+#------------------------------------------------------------------------------
+# misc
+#------------------------------------------------------------------------------
+
+def objToStr(obj):
+	objType = type(obj)
+
+	# blacklist: functions, types, callables
+	#
+	if isinstance(obj, type):
+		#print('reject %s because its a type' % fieldName)
+		return '(type)'
+	elif hasattr(obj, '__call__'):
+		#print('reject %s because its a callable' % fieldName)
+		return '(callable)'
+
+	result = None
+
+	# whitelist: strings, unicodes, bytes, ints, bools, enums
+	#
+	if obj == None:
+		return 'None'
+	elif isinstance(obj, str):
+		if len(obj) > 8:
+			result = '%s...%s (0x%X==%d chars total)' % \
+				(repr(obj[0:8]), repr(obj[-1]), len(obj), len(obj))
+		else:
+			result = repr(obj)
+	elif isinstance(obj, bytes):
+		if len(obj) > 8:
+			result = binascii.hexlify(obj[0:8]).decode('utf-8') + '...' + \
+				('%02X' % obj[-1]) + ' (0x%X==%d bytes total)' % (len(obj), len(obj))
+		else:
+			result = binascii.hexlify(obj).decode('utf-8')
+	# note: bool needs to appear before int (else int determination will dominate)
+	elif isinstance(obj, bool):
+		result = '%s' % (obj)
+	elif isinstance(obj, int):
+		result = '0x%X (%d)' % (obj, obj)
+	elif str(objType).startswith('<enum '):
+		result = '%s' % (obj)
+	elif isinstance(obj, list):
+		result = repr(obj)
+	elif isinstance(obj, kaitaistruct.KaitaiStruct):
+		return re.match(r'^.*\.(\w+) object at ', repr(obj)).group(1)
+	elif isinstance(obj, kaitaistruct.KaitaiStream):
+		return re.match(r'^.*\.(\w+) object at ', repr(obj)).group(1)
+	elif isinstance(obj, collections.defaultdict):
+		# probably _debug
+		result = repr(obj)
+	else:
+		result = '(unknown type %s)' % (str(objType))
+
+	return result
+
+# access all fields that may be properties, which could compute internal results
+# (often '_m_XXX' fields)
+def exercise(ksobj):
+	for candidate in dir(ksobj):
+		#if candidate.startswith('_') and (not candidate.startswith('_m_')):
+		#	continue
+		try:
+			foo = getattr(ksobj, candidate, False)
+		except Exception:
+			pass
+
+# get the [start,end) data for a given field within a ks object
+#
+# abstracts away:
+# * the debug['arr'] stuff, you just give it 'foo' or 'foo[3]'
+# * the 'foo' vs. '_m_foo' complication, you just give it 'foo'
+#
+def getFieldRange(ksobj, fieldName:str, restrictedToRoot=False):
+	if restrictedToRoot:
+		if ksobj._io != ksobj._root._io:
+			return None
+
+	# does given kaitai object even have ._debug?
+	debug = None
+	try:
+		debug = getattr(ksobj, '_debug')
+	except Exception:
+		return None
+
+	# divide up if request field is list, like "foo[3]"
+	tmp = None
+	if fieldName.endswith(']'):
+		m = re.match(r'^(.*)\[(\d+)\]$', fieldName)
+		fieldName = m.group(1)
+		index = int(m.group(2))
+
+		tmp = None
+		if not fieldName.startswith('_m_'):
+			if '_m_'+fieldName in debug:
+				tmp = debug['_m_'+fieldName]['arr'][index]
+		if not tmp:
+			tmp = debug[fieldName]['arr'][index]
+	else:
+		tmp = None
+		if not fieldName.startswith('_m_'):
+			if '_m_'+fieldName in debug:
+				tmp = debug['_m_'+fieldName]
+		if not tmp:
+			tmp = debug[fieldName]
+
+	if not tmp:
+		return None
+
+	return (tmp['start'], tmp['end'])
+
+#------------------------------------------------------------------------------
+# kaitai object field control
+#------------------------------------------------------------------------------
+
+# certain fields in the kaitai python object we:
+# - should not DESCEND into (eg: ._parent, ._root)
+# - should not PRINT (eg: ._io)
+
+fieldDescendExceptions = ['_parent', '_root']
+fieldDescendExceptionsPatterns = []
+
+fieldPrintExceptions = []
+fieldPrintExceptionsPatterns = []
+
+def isFieldExceptionDescend(fieldName):
+	global fieldDescendExceptions, fieldDescendExceptionsPatterns
+
+	if fieldName in fieldDescendExceptions:
+		return True
+
+	for fep in fieldDescendExceptionsPatterns:
+		if re.match(fep, fieldName):
+			return True
+
+	return False
+
+def isFieldExceptionPrint(fieldName):
+	global fieldExceptions, fieldExceptionsPatterns
+
+	if fieldName in fieldPrintExceptions:
+		return True
+
+	for fep in fieldPrintExceptionsPatterns:
+		if re.match(fep, fieldName):
+			return True
+
+	return False
+
+def setFieldExceptionLevel0():
+	global fieldDescendExceptions, fieldDescendExceptionsPatterns
+	global fieldPrintExceptions, fieldPrintExceptionsPatterns
+	fieldDescendExceptions = ['_parent', '_root']
+	fieldDescendExceptionsPatterns = []
+	fieldPrintExceptions = []
+	fieldPrintExceptionsPatterns = []
+
+def setFieldExceptionLevel1():
+	global fieldDescendExceptions, fieldDescendExceptionsPatterns
+	global fieldPrintExceptions, fieldPrintExceptionsPatterns
+
+	setFieldExceptionLevel0()
+
+	fieldPrintExceptionsPatterns += [r'_raw__.*$']
+	fieldPrintExceptions += ['_is_le', '_root', '_parent', '_debug']
+	fieldPrintExceptions += ['_read', '_read_be', '_read_le']
+	fieldPrintExceptions += ['from_bytes', 'from_file', 'from_io']
+	fieldPrintExceptions += ['SEQ_FIELDS']
+
+def setFieldExceptionLevel2():
+	global fieldDescendExceptions, fieldDescendExceptionsPatterns
+	global fieldPrintExceptions, fieldPrintExceptionsPatterns
+
+	setFieldExceptionLevel1()
+
+	#fieldPrintExceptions += ['_io']
+	fieldPrintExceptionsPatterns += [r'^_m_.*$', r'^__.*$']
+	fieldDescendExceptionsPatterns += [r'^_m_.*$']
+
+#------------------------------------------------------------------------------
+# kaitai object exploring stuff
+#------------------------------------------------------------------------------
+
+# return all field names qualified for printing
+#
+def getFieldNamesPrint(ksobj):
+	result = []
+
+	for fieldName in dir(ksobj):
+		if isFieldExceptionPrint(fieldName):
+			continue
+
+		try:
+			subobj = getattr(ksobj, fieldName, False)
+
+			# do not return kaitai objects (are for descending, not printing)
+			if isinstance(subobj, kaitaistruct.KaitaiStruct):
+				continue
+			elif isinstance(subobj, list):
+				if len(subobj)<=0 or isinstance(subobj[0], kaitaistruct.KaitaiStruct):
+					continue
+
+			#print('%s is ok' % fieldName)
+			#print('%s is instance? %s' % (fieldName, isinstance(subobj, kaitaistruct.KaitaiStruct)))
+			result.append(fieldName)
+		except Exception:
+			pass
+
+	return result
+
+# return all field names required for descending
+#
+# IN:	kaitai object
+# OUT:	field names that are either:
+#		- kaitai objects
+#		- lists of kaitai objects
+#
+def getFieldNamesDescend(ksobj):
+	result = []
+
+	for fieldName in dir(ksobj):
+		if isFieldExceptionDescend(fieldName):
+			continue
+
+		try:
+			subobj = getattr(ksobj, fieldName, False)
+
+			if isinstance(subobj, kaitaistruct.KaitaiStruct):
+				result += [fieldName]
+			elif isinstance(subobj, list):
+				if len(subobj)>0 and isinstance(subobj[0], kaitaistruct.KaitaiStruct):
+					result += [fieldName]
+		except Exception:
+			pass
+
+	return result
+
+# compute all kaitai objects linked to from the given object
+#
+# IN:	kaitai object
+# OUT:	[obj0, obj1, obj2, ...]
+#
+def getLinkedKaitaiObjects(ksobj):
+	result = set()
+
+	for fieldName in getFieldNamesDescend(ksobj):
+		subobj = getattr(ksobj, fieldName, False)
+		if isinstance(subobj, list):
+			for tmp in subobj:
+				result.add(tmp)
+		else:
+			result.add(subobj)
+
+	return result
+
+# compute all kaitai objects linked to from the given object, and from its
+# descendents, and so on...
+def getLinkedKaitaiObjectsAll(ksobj, depth=0):
+	#if depth > 2:
+	#	return []
+
+	exercise(ksobj)
+
+	result = set([ksobj])
+
+	linkedObjects = getLinkedKaitaiObjects(ksobj)
+	for subobj in linkedObjects:
+		subResult = getLinkedKaitaiObjectsAll(subobj, depth+1)
+		result = result.union(subResult)
+
+	return result
+
+def getDepth(ksobj, depth=0):
+	result = depth
+
+	exercise(ksobj)
+	for subObj in getLinkedKaitaiObjects(ksobj):
+		result = max(result, getDepth(subObj, depth+1))
+
+	return result
 
 #------------------------------------------------------------------------------
 # Kaitai IO Wrapper
@@ -314,8 +597,8 @@ def buildQtree(ksobj):
 		if candidate in exceptions:
 			continue
 		try:
-			if getattr(ksobj, candidate, False):
-				fieldNames.add(candidate)
+			getattr(ksobj, candidate)
+			fieldNames.add(candidate)
 		except Exception:
 			pass
 

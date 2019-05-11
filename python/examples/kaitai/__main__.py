@@ -9,7 +9,6 @@ import sys
 import types
 import importlib
 
-
 if sys.version_info[0] == 2:
 	import kaitaistruct
 	import kshelpers
@@ -37,70 +36,62 @@ LCYAN = '\033[1;36m'
 LGRAY = '\033[1;37m'
 
 def dump(obj, depth=0):
-	dump_exceptions = ['_root', '_parent', '_io', 'SEQ_FIELDS']
-
 	indent = '    '*depth
 
-	if isinstance(obj, kaitaistruct.KaitaiStruct):
-		fieldNames = []
-		for candidate in dir(obj):
-			if candidate != '_debug' and candidate.startswith('_'):
-				continue
-			if candidate in dump_exceptions:
-				continue
-			try:
-				if getattr(obj, candidate, False):
-					fieldNames.append(candidate)
-			except Exception:
-				pass
+	print(('%s'+PURPLE+'%s'+NORMAL) % (indent, repr(obj)))
 
-		for fieldName in fieldNames:
+	kshelpers.exercise(obj)
+	for fieldName in kshelpers.getFieldNamesPrint(obj):
+		subObj = None
+		try:
 			subObj = getattr(obj, fieldName)
+		except Exception:
+			continue
+		if subObj == None:
+			continue
 
-			if type(subObj) == types.MethodType:
-				pass
-			#elif type(subObj) == types.TypeType:
-			elif isinstance(subObj, type):
-				pass
-			elif fieldName == '_debug':
-				print(('%s._debug:'+RED+' %s'+NORMAL) % (indent, repr(subObj)))
-			#elif type(subObj) == types.ListType:
-			elif isinstance(subObj, list):
-				if len(subObj)>0 and isinstance(subObj[0], kaitaistruct.KaitaiStruct):
-					for i in range(len(subObj)):
-						print('%s.%s[%d]:' % (indent, fieldName, i))
-						dump(subObj[i], depth+1)
-				else:
-					print('%s.%s: %s' % (indent, fieldName, str(subObj)))
-			#elif type(subObj) == types.DictionaryType:
-			elif isinstance(subObj, dict):
-				print('%s.%s: %s' % (indent, fieldName, subObj))
+		subObjStr = kshelpers.objToStr(subObj)
 
-			#elif type(subObj) == types.StringType:
-			elif isinstance(subObj, str):
-				if len(subObj) <= 16:
-					print(('%s.%s: '+CYAN+'%s'+NORMAL) % (indent, fieldName, repr(subObj)))
-				else:
-					print(('%s.%s: '+CYAN+'%s...'+NORMAL+' 0x%X (%d) bytes total') % \
-						(indent, fieldName, repr(subObj[0:16]), len(subObj), len(subObj))
-					)
+		color = ''
 
-			elif type(subObj) == int:
-				print(('%s.%s: '+YELLOW+'0x%X '+NORMAL+'('+YELLOW+'%d'+NORMAL+')') % (indent, fieldName, subObj, subObj))
+		if type(subObj) == types.MethodType:
+			pass
+		elif isinstance(subObj, type):
+			pass
+		elif fieldName == '_debug':
+			color = RED
+		elif isinstance(subObj, list):
+			pass
+		elif isinstance(subObj, dict):
+			pass
+		elif isinstance(subObj, str):
+			color = CYAN
+		elif isinstance(subObj, bytes):
+			color = CYAN
+		elif type(subObj) == int:
+			color = YELLOW
+		elif str(type(subObj)).startswith('<enum '):
+			color = GREEN
+			pass
 
-			elif str(type(subObj)).startswith('<enum '):
-				print(('%s.%s: '+'%s') % (indent, fieldName, repr(subObj)))
+		if color:
+			print('%s.%s: %s%s%s' % (indent, fieldName, color, subObjStr, NORMAL))
+		else:
+			print('%s.%s: %s' % (indent, fieldName, subObjStr))
 
-			elif isinstance(subObj, kaitaistruct.KaitaiStruct):
-				print('%s.%s:' % (indent, fieldName))
-				dump(subObj, depth+1)
+	for fieldName in kshelpers.getFieldNamesDescend(obj):
+		subObj = getattr(obj, fieldName)
 
-			else:
-				print('%s.%s: %s' % (indent, fieldName, type(subObj)))
-	else:
-		print((PURPLE+'%s%s'+NORMAL) % (indent, repr(obj)))
-		#else:
-		#	print('%s%s: %s' % (indent, fieldName, repr(subObj)))
+		#print('recurring on: %s' % repr(subObj))
+
+		if isinstance(subObj, list):
+			for (i, tmp) in enumerate(subObj):
+				print('%s.%s[%d]:' % (indent, fieldName, i))
+				dump(subObj[i], depth+1)
+		else:
+			print('%s.%s:' % (indent, fieldName))
+			#print(dir(subObj))
+			dump(subObj, depth+1)
 
 if __name__ == '__main__':
 	if not sys.argv[1:]:
@@ -108,10 +99,17 @@ if __name__ == '__main__':
 
 	cmd = sys.argv[1]
 
-	if cmd == 'dump':
-		fpath = sys.argv[2]
-		parsed = kshelpers.parseFpath(fpath)
-		dump(parsed)
+	if cmd in ['dump0']:
+		kshelpers.setFieldExceptionLevel0()
+		dump(kshelpers.parseFpath(sys.argv[2]))
+
+	if cmd in ['dump1']:
+		kshelpers.setFieldExceptionLevel1()
+		dump(kshelpers.parseFpath(sys.argv[2]))
+
+	if cmd in ['dump', 'dump2']:
+		kshelpers.setFieldExceptionLevel2()
+		dump(kshelpers.parseFpath(sys.argv[2]))
 
 	if cmd == 'import':
 		print('importing every format...')
@@ -175,4 +173,11 @@ if __name__ == '__main__':
 		kaitaiIo = KaitaiBinaryViewIO(binaryView)
 		parsed = parse_io(kaitaiIo)
 		print(parsed.header.program_headers)
+
+	if cmd == 'pdb':
+		ksobj = kshelpers.parseFpath(sys.argv[2])
+		print('parsed object is in ksobj')
+		import pdb
+		pdb.set_trace()
+
 

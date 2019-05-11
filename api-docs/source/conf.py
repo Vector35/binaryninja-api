@@ -32,19 +32,18 @@ binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return filter(lambda x: x[0] not in ("abc", "binaryninja", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading", "startup", "associateddatastore"), modules)
-
+	return sorted(set(x for x in modules if x[0] not in ("abc", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading", "startup", "associateddatastore")))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
 	if module.__name__ != "binaryninja.enums":
-		members = filter(lambda x: type(x[1]) != binaryninja.enum.EnumMeta, members)
+		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta)
 	members.extend(inspect.getmembers(module, inspect.isfunction))
-	return map(lambda x: x[0], filter(lambda x: not x[0].startswith("_"), members))
+	return (x for x in members if not x[0].startswith("_"))
 
 def setup(app):
-    app.add_stylesheet('css/other.css')
-    app.is_parallel_allowed('write')
+	app.add_stylesheet('css/other.css')
+	app.is_parallel_allowed('write')
 
 def generaterst():
 	pythonrst = open("index.rst", "w")
@@ -68,7 +67,7 @@ def generaterst():
 
 '''.format(module=modulename))
 
-		for classname in classlist(module):
+		for (classname, classref) in classlist(module):
 			modulefile.write("   binaryninja.{module}.{classname}\n".format(module=modulename, classname=classname))
 
 		modulefile.write('''\n.. toctree::
@@ -143,8 +142,8 @@ author = u'Vector 35 Inc'
 # built documents.
 #
 # The short X.Y version.
-version = u'.'.join(unicode(binaryninja.core_version()).split('.')[0:2])
-release = unicode(binaryninja.core_version())
+version = u'.'.join(str(binaryninja.core_version()).split('.')[0:2])
+release = str(binaryninja.core_version())
 
 language = 'en'
 
@@ -159,7 +158,7 @@ add_module_names = False
 
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'trac'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -177,13 +176,17 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
+html_theme_path = [os.path.join(os.path.abspath("."), "..", "..", "sphinx_rtd_theme")]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+	'display_version': True,
+	'style_external_links': True,
+	'titles_only': True
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -391,4 +394,5 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/2': None}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+

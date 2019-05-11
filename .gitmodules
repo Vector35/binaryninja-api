@@ -4,3 +4,6 @@
 [submodule "suite/binaries"]
 	path = suite/binaries
 	url = https://github.com/Vector35/BinaryTestCases.git
+[submodule "sphinx_rtd_theme"]
+	path = sphinx_rtd_theme
+	url = git@github.com:Vector35/sphinx_rtd_theme.git

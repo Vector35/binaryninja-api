@@ -223,7 +223,7 @@ def exercise(ksobj):
 # * the debug['arr'] stuff, you just give it 'foo' or 'foo[3]'
 # * the 'foo' vs. '_m_foo' complication, you just give it 'foo'
 #
-def getFieldRange(ksobj, fieldName:str, restrictedToRoot=False):
+def getFieldRange(ksobj, fieldName, restrictedToRoot=False):
 	if restrictedToRoot:
 		if ksobj._io != ksobj._root._io:
 			return None

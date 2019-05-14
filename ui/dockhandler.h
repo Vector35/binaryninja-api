@@ -15,6 +15,7 @@ class Menu;
 class View;
 class ViewFrame;
 
+
 struct BINARYNINJAUIAPI DockProperties
 {
 	DockProperties() { };
@@ -37,6 +38,7 @@ struct BINARYNINJAUIAPI DockProperties
 	std::function<void()> actionOnShow;
 };
 
+
 struct DockSizePrefs
 {
 	DockSizePrefs() { }
@@ -45,6 +47,7 @@ struct DockSizePrefs
 	QList<int> vDockSizes;
 	bool nonUniformVisibility = false;
 };
+
 
 class BINARYNINJAUIAPI DockContextHandler
 {
@@ -59,6 +62,7 @@ public:
 	DockContextHandler(QWidget* widget, const QString& name);
 	virtual ~DockContextHandler();
 
+	QString getName() { return m_name; }
 	QWidget* getParentWindow() { return m_parentWindow; }
 
 	virtual void notifyFontChanged() { }
@@ -69,6 +73,7 @@ public:
 	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; }
 };
 Q_DECLARE_INTERFACE(DockContextHandler, "binary.ninja.dockcontexthandler/1.0");
+
 
 class BINARYNINJAUIAPI DockHandler: public QObject
 {
@@ -83,10 +88,13 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 	bool m_shouldResizeDocks = false;
 	std::map<Qt::DockWidgetArea, bool> m_enableHiddenGroupSave;
 
-	// TODO
+	uint64_t m_currentOffset = 0;
+
 	friend class DockContextHandler;
-	std::map<QString, DockContextHandler*> m_dockContexts;
-	DockContextHandler* getDockContextHandler(const QString&, QWidget* widget, bool viewSensitive = false);
+	std::map<QWidget*, DockContextHandler*> m_contexts;
+	std::map<QString, std::function<QWidget*(const QString&, ViewFrame*, BinaryViewRef)>> m_widgetFactories;
+	DockContextHandler* getDockContextHandler(QWidget* widget);
+	bool addDockWidget(const QString& name, QWidget* widget, Qt::DockWidgetArea area, Qt::Orientation orientation, bool defaultVisibility);
 
 public:
 	explicit DockHandler(QObject* parent, int windowIndex);
@@ -96,7 +104,9 @@ public:
 	void reset(bool initial = false);
 	void reset(const QString& name);
 	void resizeDocksOnShow(bool resizeDocks) { m_resizeDocksRequest = resizeDocks; }
-	bool addDockWidget(const QString& name, QWidget* primaryWidget, Qt::DockWidgetArea area = Qt::BottomDockWidgetArea, Qt::Orientation orientation = Qt::Horizontal, bool defaultVisibility = false);
+	bool addDockWidget(QWidget* widget, Qt::DockWidgetArea area = Qt::BottomDockWidgetArea, Qt::Orientation orientation = Qt::Horizontal, bool defaultVisibility = false);
+	bool addDockWidget(const QString& name, const std::function<QWidget*(const QString&, ViewFrame*, BinaryViewRef)>& createWidget, Qt::DockWidgetArea area = Qt::BottomDockWidgetArea, Qt::Orientation orientation = Qt::Horizontal, bool defaultVisibility = false);
+	void createDynamicWidgets(ViewFrame* frame, BinaryViewRef data, std::map<QString, QPointer<QWidget>>& store, std::vector<QString> filter, bool isExcludeFilter = true);
 	QDockWidget* getDockWidget(const QString& name);
 	ViewFrame* getViewFrame() { return m_viewFrame; }
 	bool isVisible(const QString& name);
@@ -122,4 +132,5 @@ public Q_SLOTS:
 	void viewChanged(ViewFrame* frame);
 	void visibilityChanged(bool visible);
 	void topLevelChanged(bool topLevel);
+	void removeWidget(QObject* object);
 };

@@ -10,6 +10,7 @@
 #include <stack>
 #include <utility>
 #include <vector>
+#include "dockhandler.h"
 #include "filecontext.h"
 #include "viewtype.h"
 #include "action.h"
@@ -79,8 +80,9 @@ public:
 	void setBinaryDataNavigable(bool navigable) { m_binaryDataNavigable = navigable; }
 
 	virtual bool closeRequest() { return true; }
-	virtual void closing() {}
-	virtual void updateFonts() {}
+	virtual void closing() { }
+	virtual void updateFonts() { }
+	virtual void updateTheme() { }
 
 	virtual void undo();
 	virtual void redo();
@@ -161,11 +163,12 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	Q_OBJECT
 
 private:
-	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createExtendedViews = true);
+	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createDynamicWidgets = true);
 	HistoryEntry* getHistoryEntry();
 
 	FileContext* m_context;
 	BinaryViewRef m_data;
+	DockHandler* m_docks;
 	QWidget* m_view;
 	QWidget* m_viewContainer;
 	QVBoxLayout* m_viewLayout;
@@ -187,7 +190,7 @@ protected:
 	void setView(QWidget* view);
 
 public:
-	explicit ViewFrame(QWidget* parent, FileContext* file, const QString& type, bool createExtendedViews = false);
+	explicit ViewFrame(QWidget* parent, FileContext* file, const QString& type, bool createDynamicWidgets = false);
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
@@ -227,7 +230,6 @@ public:
 	void closing();
 
 	void updateFonts();
-	void updateOffset(uint64_t offset);
 	void updateTheme();
 	void addHistoryEntry();
 	void back();

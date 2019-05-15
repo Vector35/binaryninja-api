@@ -707,6 +707,7 @@ namespace BinaryNinja
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
+	std::vector<std::string> GetRegisteredPluginLoaders();
 
 	class DataBuffer
 	{
@@ -4263,30 +4264,51 @@ namespace BinaryNinja
 	};
 
 	typedef BNPluginOrigin PluginOrigin;
-	typedef BNPluginUpdateStatus PluginUpdateStatus;
+	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
 
 	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
 	{
 	public:
 		RepoPlugin(BNRepoPlugin* plugin);
+		PluginStatus GetPluginStatus() const;
+		std::vector<std::string> GetApis() const;
+		std::vector<std::string> GetInstallPlatforms() const;
 		std::string GetPath() const;
-		bool IsInstalled() const;
 		std::string GetPluginDirectory() const;
-		void SetEnabled(bool enabled);
-		bool IsEnabled() const;
-		PluginUpdateStatus GetPluginUpdateStatus() const;
-		std::string GetApi() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
 		std::string GetLicense() const;
 		std::string GetLicenseText() const;
 		std::string GetLongdescription() const;
-		std::string GetMinimimVersions() const;
 		std::string GetName() const;
 		std::vector<PluginType> GetPluginTypes() const;
-		std::string GetUrl() const;
+		std::string GetPackageUrl() const;
+		std::string GetProjectUrl() const;
+		std::string GetAuthorUrl() const;
 		std::string GetVersion() const;
+		std::string GetCommit() const;
+		std::string GetRepository() const;
+		std::string GetProjectData();
+		std::string GetInstallInstructions(const std::string& platform) const;
+		uint64_t GetMinimimVersion() const;
+		uint64_t GetLastUpdate();
+		bool IsBeingDeleted() const;
+		bool IsBeingUpdated() const;
+		bool IsInstalled() const;
+		bool IsEnabled() const;
+		bool IsRunning() const;
+		bool IsUpdatePending() const;
+		bool IsDisablePending() const;
+		bool IsDeletePending() const;
+		bool IsUpdateAvailable() const;
+
+		bool Uninstall();
+		bool Install();
+		// `force` ignores optional checks for platform/api compliance
+		bool Enable(bool force);
+		bool Disable();
+		bool Update();
 	};
 
 	class Repository: public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
@@ -4298,7 +4320,6 @@ namespace BinaryNinja
 		std::string GetLocalReference() const;
 		std::string GetRemoteReference() const;
 		std::vector<Ref<RepoPlugin>> GetPlugins() const;
-		bool IsInitialized() const;
 		std::string GetPluginDirectory() const;
 		Ref<RepoPlugin> GetPluginByPath(const std::string& pluginPath);
 		std::string GetFullPath() const;
@@ -4313,14 +4334,8 @@ namespace BinaryNinja
 		bool CheckForUpdates();
 		std::vector<Ref<Repository>> GetRepositories();
 		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
-		bool AddRepository(const std::string& url,
-			const std::string& repoPath, // Relative path within the repositories directory
-			const std::string& localReference="master",
-			const std::string& remoteReference="origin");
-		bool EnablePlugin(const std::string& repoName, const std::string& pluginPath);
-		bool DisablePlugin(const std::string& repoName, const std::string& pluginPath);
-		bool InstallPlugin(const std::string& repoName, const std::string& pluginPath);
-		bool UninstallPlugin(const std::string& repoName, const std::string& pluginPath);
+		bool AddRepository(const std::string& url, // URL to raw plugins.json file
+			const std::string& repoPath); // Relative path within the repositories directory
 		Ref<Repository> GetDefaultRepository();
 	};
 

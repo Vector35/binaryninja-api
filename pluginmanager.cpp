@@ -25,24 +25,27 @@ bool RepoPlugin::IsInstalled() const
 	return BNPluginIsInstalled(m_object);
 }
 
-void RepoPlugin::SetEnabled(bool enabled)
-{
-	return BNPluginSetEnabled(m_object, enabled);
-}
-
 bool RepoPlugin::IsEnabled() const
 {
 	return BNPluginIsEnabled(m_object);
 }
 
-PluginUpdateStatus RepoPlugin::GetPluginUpdateStatus() const
+PluginStatus RepoPlugin::GetPluginStatus() const
 {
-	return BNPluginGetPluginUpdateStatus(m_object);
+	return BNPluginGetPluginStatus(m_object);
 }
 
-string RepoPlugin::GetApi() const
+vector<string> RepoPlugin::GetApis() const
 {
-	RETURN_STRING(BNPluginGetApi(m_object));
+	vector<string> result;
+	size_t count = 0;
+	char** apis = BNPluginGetApis(m_object, &count);
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(apis[i]);
+
+	BNFreeStringList(apis, count);
+	return result;
 }
 
 string RepoPlugin::GetAuthor() const
@@ -70,9 +73,9 @@ string RepoPlugin::GetLongdescription() const
 	RETURN_STRING(BNPluginGetLongdescription(m_object));
 }
 
-string RepoPlugin::GetMinimimVersions() const
+uint64_t RepoPlugin::GetMinimimVersion() const
 {
-	RETURN_STRING(BNPluginGetMinimimVersions(m_object));
+	return BNPluginGetMinimimVersion(m_object);
 }
 
 string RepoPlugin::GetName() const
@@ -93,15 +96,141 @@ vector<PluginType> RepoPlugin::GetPluginTypes() const
 	return pluginTypes;
 }
 
-string RepoPlugin::GetUrl() const
+
+string RepoPlugin::GetProjectUrl() const
 {
-	RETURN_STRING(BNPluginGetUrl(m_object));
+	RETURN_STRING(BNPluginGetProjectUrl(m_object));
 }
+
+
+string RepoPlugin::GetPackageUrl() const
+{
+	RETURN_STRING(BNPluginGetPackageUrl(m_object));
+}
+
+
+string RepoPlugin::GetAuthorUrl() const
+{
+	RETURN_STRING(BNPluginGetAuthorUrl(m_object));
+}
+
 
 string RepoPlugin::GetVersion() const
 {
 	RETURN_STRING(BNPluginGetVersion(m_object));
 }
+
+
+string RepoPlugin::GetCommit() const
+{
+	RETURN_STRING(BNPluginGetCommit(m_object));
+}
+
+
+string RepoPlugin::GetRepository() const
+{
+	RETURN_STRING(BNPluginGetRepository(m_object));
+}
+
+
+vector<string> RepoPlugin::GetInstallPlatforms() const
+{
+	vector<string> result;
+	size_t count = 0;
+	char** platforms = BNPluginGetPlatforms(m_object, &count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(platforms[i]);
+	BNFreeStringList(platforms, count);
+	return result;
+}
+
+
+std::string RepoPlugin::GetInstallInstructions(const std::string& platform) const
+{
+	RETURN_STRING(BNPluginGetInstallInstructions(m_object, platform.c_str()));
+}
+
+
+bool RepoPlugin::IsBeingDeleted() const
+{
+	return BNPluginIsBeingDeleted(m_object);
+}
+
+bool RepoPlugin::IsBeingUpdated() const
+{
+	return BNPluginIsBeingUpdated(m_object);
+}
+
+bool RepoPlugin::IsRunning() const
+{
+	return BNPluginIsRunning(m_object);
+}
+
+
+bool RepoPlugin::IsUpdatePending() const
+{
+	return BNPluginIsUpdatePending(m_object);
+}
+
+
+bool RepoPlugin::IsDisablePending() const
+{
+	return BNPluginIsDisablePending(m_object);
+}
+
+
+bool RepoPlugin::IsDeletePending() const
+{
+	return BNPluginIsDeletePending(m_object);
+}
+
+
+bool RepoPlugin::IsUpdateAvailable() const
+{
+	return BNPluginIsUpdateAvailable(m_object);
+}
+
+
+uint64_t RepoPlugin::GetLastUpdate()
+{
+	return BNPluginGetLastUpdate(m_object);
+}
+
+string RepoPlugin::GetProjectData()
+{
+	RETURN_STRING(BNPluginGetProjectData(m_object));
+}
+
+
+bool RepoPlugin::Uninstall()
+{
+	return BNPluginUninstall(m_object);
+}
+
+
+bool RepoPlugin::Install()
+{
+	return BNPluginInstall(m_object);
+}
+
+
+bool RepoPlugin::Enable(bool force)
+{
+	return BNPluginEnable(m_object, force);
+}
+
+
+bool RepoPlugin::Update()
+{
+	return BNPluginUpdate(m_object);
+}
+
+
+bool RepoPlugin::Disable()
+{
+	return BNPluginDisable(m_object);
+}
+
 
 Repository::Repository(BNRepository* r)
 {
@@ -112,36 +241,26 @@ string Repository::GetUrl() const
 {
 	RETURN_STRING(BNRepositoryGetUrl(m_object));
 }
+
+
 string Repository::GetRepoPath() const
 {
 	RETURN_STRING(BNRepositoryGetRepoPath(m_object));
 }
 
-string Repository::GetLocalReference() const
-{
-	RETURN_STRING(BNRepositoryGetLocalReference(m_object));
-}
-
-string Repository::GetRemoteReference() const
-{
-	RETURN_STRING(BNRepositoryGetRemoteReference(m_object));
-}
 
 vector<Ref<RepoPlugin>> Repository::GetPlugins() const
 {
 	vector<Ref<RepoPlugin>> plugins;
 	size_t count = 0;
 	BNRepoPlugin** pluginsPtr = BNRepositoryGetPlugins(m_object, &count);
+	plugins.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		plugins.push_back(new RepoPlugin(BNNewPluginReference(pluginsPtr[i])));
 	BNFreeRepositoryPluginList(pluginsPtr);
 	return plugins;
 }
 
-bool Repository::IsInitialized() const
-{
-	return BNRepositoryIsInitialized(m_object);
-}
 
 Ref<RepoPlugin> Repository::GetPluginByPath(const string& pluginPath)
 {
@@ -185,15 +304,9 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 }
 
 bool RepositoryManager::AddRepository(const std::string& url,
-	const std::string& repoPath, // Relative path within the repositories directory
-	const std::string& localReference,
-	const std::string& remoteReference)
+	const std::string& repoPath) // Relative path within the repositories directory
 {
-	return BNRepositoryManagerAddRepository(m_object,
-		url.c_str(),
-		repoPath.c_str(),
-		localReference.c_str(),
-		remoteReference.c_str());
+	return BNRepositoryManagerAddRepository(m_object, url.c_str(), repoPath.c_str());
 }
 
 Ref<Repository> RepositoryManager::GetRepositoryByPath(const std::string& repoPath)

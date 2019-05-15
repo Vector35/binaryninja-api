@@ -645,7 +645,8 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		:rtype: BinaryView or None
 		"""
 		sqlite = b"SQLite format 3"
-		if filename.endswith(".bndb"):
+		isDatabase = filename.endswith(".bndb")
+		if isDatabase:
 			f = open(filename, 'rb')
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
@@ -658,18 +659,21 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			return None
 		for available in view.available_view_types:
 			if available.name != "Raw":
-				if filename.endswith(".bndb"):
+				if isDatabase:
 					bv = view.get_view_of_type(available.name)
 				else:
 					bv = cls[available.name].open(filename)
+				break
+		else:
+			if isDatabase:
+				bv = view.get_view_of_type("Raw")
+			else:
+				bv = cls["Raw"].open(filename)
 
-				if bv is None:
-					raise Exception("Unknown Architecture/Architecture Not Found (check plugins folder)")
+		if bv is not None and update_analysis:
+			bv.update_analysis_and_wait()
+		return bv
 
-				if update_analysis:
-					bv.update_analysis_and_wait()
-				return bv
-		return None
 
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)

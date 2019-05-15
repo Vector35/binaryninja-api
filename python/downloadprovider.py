@@ -79,9 +79,6 @@ class DownloadInstance(object):
 	def perform_request(self, ctxt, url):
 		raise NotImplementedError
 
-	def perform_request(self, url, callbacks):
-		return core.BNPerformDownloadRequest(self.handle, url, callbacks)
-
 
 class _DownloadProviderMetaclass(type):
 	@property
@@ -165,11 +162,9 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 		def __init__(self, provider):
 			super(PythonDownloadInstance, self).__init__(provider)
 
-		@abc.abstractmethod
 		def perform_destroy_instance(self):
 			pass
 
-		@abc.abstractmethod
 		def perform_request(self, url):
 			try:
 				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
@@ -223,11 +218,9 @@ else:
 			def __init__(self, provider):
 				super(PythonDownloadInstance, self).__init__(provider)
 
-			@abc.abstractmethod
 			def perform_destroy_instance(self):
 				pass
 
-			@abc.abstractmethod
 			def perform_request(self, url):
 				try:
 					proxy_setting = Settings().get_string('downloadClient.httpsProxy')

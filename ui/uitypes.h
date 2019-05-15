@@ -58,3 +58,6 @@ typedef BinaryNinja::Ref<BinaryNinja::Symbol> SymbolRef;
 typedef BinaryNinja::Ref<BinaryNinja::TemporaryFile> TemporaryFileRef;
 typedef BinaryNinja::Ref<BinaryNinja::Transform> TransformRef;
 typedef BinaryNinja::Ref<BinaryNinja::Type> TypeRef;
+typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
+typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
+typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;

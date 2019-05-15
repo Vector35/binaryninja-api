@@ -19,10 +19,13 @@
 # IN THE SOFTWARE.
 
 import ctypes
+import json
+from datetime import datetime
 
 # Binary Ninja components
+import binaryninja
 from binaryninja import _binaryninjacore as core
-
+from binaryninja.enums import PluginType, PluginStatus
 # 2-3 compatibility
 from binaryninja import range
 
@@ -32,9 +35,7 @@ class RepoPlugin(object):
 	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
-	from binaryninja.enums import PluginType, PluginUpdateStatus
 	def __init__(self, handle):
-		raise Exception("RepoPlugin temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
 
 	def __del__(self):
@@ -68,14 +69,29 @@ class RepoPlugin(object):
 	@enabled.setter
 	def enabled(self, state):
 		if state:
-			return core.BNPluginEnable(self.handle)
+			return core.BNPluginEnable(self.handle, False)
 		else:
 			return core.BNPluginDisable(self.handle)
+
+	def enable(self, force=False):
+		"""
+		Enable this plugin, optionally trying to force it.
+		Force loading a plugin with ignore platform and api constraints.
+		 (e.g. The plugin author says the plugin will only work on Linux-python3 but you'd like to
+		 attempt to load it on Macos-python2)
+		"""
+		return core.BNPluginEnable(self.handle, force)
 
 	@property
 	def api(self):
 		"""string indicating the API used by the plugin"""
-		return core.BNPluginGetApi(self.handle)
+		result = []
+		count = ctypes.c_ulonglong(0)
+		platforms = core.BNPluginGetApis(self.handle, count)
+		for i in range(count.value):
+			result.append(platforms[i])
+		core.BNFreePluginPlatforms(platforms, count)
+		return result
 
 	@property
 	def description(self):
@@ -100,7 +116,7 @@ class RepoPlugin(object):
 	@property
 	def minimum_version(self):
 		"""String minimum version the plugin was tested on"""
-		return core.BNPluginGetMinimimVersions(self.handle)
+		return core.BNPluginGetMinimimVersion(self.handle)
 
 	@property
 	def name(self):
@@ -119,34 +135,109 @@ class RepoPlugin(object):
 		return result
 
 	@property
-	def url(self):
+	def project_url(self):
 		"""String URL of the plugin's git repository"""
-		return core.BNPluginGetUrl(self.handle)
+		return core.BNPluginGetProjectUrl(self.handle)
+
+	@property
+	def package_url(self):
+		"""String URL of the plugin's zip file"""
+		return core.BNPluginGetPackageUrl(self.handle)
+
+	@property
+	def author_url(self):
+		"""String URL of the plugin author's url"""
+		return core.BNPluginGetAuthorUrl(self.handle)
+
+	@property
+	def author(self):
+		"""String of the plugin author"""
+		return core.BNPluginGetAuthor(self.handle)
 
 	@property
 	def version(self):
 		"""String version of the plugin"""
 		return core.BNPluginGetVersion(self.handle)
 
-	@property
-	def update_status(self):
-		"""PluginUpdateStatus enumeration indicating if the plugin is up to date or not"""
-		return PluginUpdateStatus(core.BNPluginGetPluginUpdateStatus(self.handle))
 
+	def install_instructions(self, platform):
+		"""
+		Installation instructions for the given platform
+
+		:param str platform: One of the valid platforms "Windows", "Linux", "Darwin"
+		:return: String of the installation instructions for the provided platform
+		:rtype: str
+		"""
+		return core.BNPluginGetInstallInstructions(self.handle, platform)
+
+	@property
+	def install_platforms(self):
+		"""List of platforms this plugin can execute on"""
+		result = []
+		count = ctypes.c_ulonglong(0)
+		platforms = core.BNPluginGetPlatforms(self.handle, count)
+		for i in range(count.value):
+			result.append(platforms[i])
+		core.BNFreePluginPlatforms(platforms, count)
+		return result
+
+	@property
+	def being_deleted(self):
+		"""Boolean status indicating that the plugin is being deleted"""
+		return core.BNPluginIsBeingDeleted(self.handle)
+
+	@property
+	def being_updated(self):
+		"""Boolean status indicating that the plugin is being updated"""
+		return core.BNPluginIsBeingUpdated(self.handle)
+
+	@property
+	def running(self):
+		"""Boolean status indicating that the plugin is currently running"""
+		return core.BNPluginIsRunning(self.handle)
+
+	@property
+	def update_pending(self):
+		"""Boolean status indicating that the plugin has updates will be installed after the next restart"""
+		return core.BNPluginIsUpdatePending(self.handle)
+
+	@property
+	def disable_pending(self):
+		"""Boolean status indicating that the plugin will be disabled after the next restart"""
+		return core.BNPluginIsDisablePending(self.handle)
+
+	@property
+	def delete_pending(self):
+		"""Boolean status indicating that the plugin will be deleted after the next restart"""
+		return core.BNPluginIsDeletePending(self.handle)
+
+	@property
+	def update_available(self):
+		"""Boolean status indicating that the plugin has updates available"""
+		return core.BNPluginIsUpdateAvailable(self.handle)
+
+	@property
+	def project_data(self):
+		"""Gets a json object of the project data field"""
+		return json.loads(core.BNPluginGetProjectData(self.handle))
+
+	@property
+	def last_update(self):
+		"""Returns a datetime object representing the plugins last update"""
+		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))
 
 class Repository(object):
 	"""
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
 	"""
 	def __init__(self, handle):
-		raise Exception("Repository temporarily disabled!")
 		self.handle = core.handle_of_type(handle, core.BNRepository)
 
 	def __del__(self):
 		core.BNFreeRepository(self.handle)
 
 	def __repr__(self):
-		return "<{} - {}/{}>".format(self.path, self.remote_reference, self.local_reference)
+		return "<{}>".format(self.path)
 
 	def __getitem__(self, plugin_path):
 		for plugin in self.plugins:
@@ -170,31 +261,16 @@ class Repository(object):
 		return core.BNRepositoryGetPluginsPath(self.handle)
 
 	@property
-	def local_reference(self):
-		"""String for the local git reference (ie 'master')"""
-		return core.BNRepositoryGetLocalReference(self.handle)
-
-	@property
-	def remote_reference(self):
-		"""String for the remote git reference (ie 'origin')"""
-		return core.BNRepositoryGetRemoteReference(self.handle)
-
-	@property
 	def plugins(self):
 		"""List of RepoPlugin objects contained within this repository"""
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
 		for i in range(count.value):
-			pluginlist.append(RepoPlugin(handle=result[i]))
+			pluginlist.append(RepoPlugin(core.BNNewPluginReference(result[i])))
 		core.BNFreeRepositoryPluginList(result, count.value)
 		del result
 		return pluginlist
-
-	@property
-	def initialized(self):
-		"""Boolean True when the repository has been initialized"""
-		return core.BNRepositoryIsInitialized(self.handle)
 
 
 class RepositoryManager(object):
@@ -203,7 +279,6 @@ class RepositoryManager(object):
 	the plugins that are installed/uninstalled enabled/disabled
 	"""
 	def __init__(self, handle=None):
-		raise Exception("RepositoryManager temporarily disabled!")
 		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path):
@@ -223,7 +298,7 @@ class RepositoryManager(object):
 		count = ctypes.c_ulonglong(0)
 		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
 		for i in range(count.value):
-			result.append(Repository(handle=repos[i]))
+			result.append(Repository(core.BNNewRepositoryReference(repos[i])))
 		core.BNFreeRepositoryManagerRepositoriesList(repos)
 		return result
 
@@ -239,160 +314,25 @@ class RepositoryManager(object):
 	def default_repository(self):
 		"""Gets the default Repository"""
 		binaryninja._init_plugins()
-		return Repository(handle=core.BNRepositoryManagerGetDefaultRepository(self.handle))
+		return Repository(core.BNNewRepositoryReference(core.BNRepositoryManagerGetDefaultRepository(self.handle)))
 
-	def enable_plugin(self, plugin, install=True, repo=None):
-		"""
-		``enable_plugin`` Enables the installed plugin 'plugin', optionally installing the plugin if `install` is set to
-		True (default), and optionally using the non-default repository.
 
-		:param str name: Name of the plugin to enable
-		:param Boolean install: Optionally install the repo, defaults to True.
-		:param str repo: Optional, specify a repository other than the default repository.
-		:return: Boolean value True if the plugin was successfully enabled, False otherwise
-		:rtype: Boolean
-		:Example:
-
-			>>> mgr = RepositoryManager()
-			>>> mgr.enable_plugin('binaryninja-bookmarks')
-			True
-			>>>
-		"""
-		if install:
-			if not self.install_plugin(plugin, repo):
-				return False
-
-		if repo is None:
-			repo = self.default_repository
-		repopath = repo
-		pluginpath = plugin
-		if not isinstance(repo, str):
-			repopath = repo.path
-		if not isinstance(plugin, str):
-			pluginpath = plugin.path
-		return core.BNRepositoryManagerEnablePlugin(self.handle, repopath, pluginpath)
-
-	def disable_plugin(self, plugin, repo=None):
-		"""
-		``disable_plugin`` Disable the specified plugin, pluginpath
-
-		:param Repository or str repo: Repository containing the plugin to disable
-		:param RepoPlugin or str plugin: RepoPlugin to disable
-		:return: Boolean value True if the plugin was successfully disabled, False otherwise
-		:rtype: Boolean
-		:Example:
-
-			>>> mgr = RepositoryManager()
-			>>> mgr.disable_plugin('binaryninja-bookmarks')
-			True
-			>>>
-		"""
-		if repo is None:
-			repo = self.default_repository
-		repopath = repo
-		pluginpath = plugin
-		if not isinstance(repo, str):
-			repopath = repo.path
-		if not isinstance(plugin, str):
-			pluginpath = plugin.path
-		return core.BNRepositoryManagerDisablePlugin(self.handle, repopath, pluginpath)
-
-	def install_plugin(self, plugin, repo=None):
-		"""
-		``install_plugin`` install the specified plugin, pluginpath
-
-		:param Repository or str repo: Repository containing the plugin to install
-		:param RepoPlugin or str plugin: RepoPlugin to install
-		:return: Boolean value True if the plugin was successfully installed, False otherwise
-		:rtype: Boolean
-		:Example:
-
-			>>> mgr = RepositoryManager()
-			>>> mgr.install_plugin('binaryninja-bookmarks')
-			True
-			>>>
-		"""
-		if repo is None:
-			repo = self.default_repository
-		repopath = repo
-		pluginpath = plugin
-		if not isinstance(repo, str):
-			repopath = repo.path
-		if not isinstance(plugin, str):
-			pluginpath = plugin.path
-		return core.BNRepositoryManagerInstallPlugin(self.handle, repopath, pluginpath)
-
-	def uninstall_plugin(self, plugin, repo=None):
-		"""
-		``uninstall_plugin`` uninstall the specified plugin, pluginpath
-
-		:param Repository or str repo: Repository containing the plugin to uninstall
-		:param RepoPlugin or str plugin: RepoPlugin to uninstall
-		:return: Boolean value True if the plugin was successfully uninstalled, False otherwise
-		:rtype: Boolean
-		:Example:
-
-			>>> mgr = RepositoryManager()
-			>>> mgr.uninstall_plugin('binaryninja-bookmarks')
-			True
-			>>>
-		"""
-		if repo is None:
-			repo = self.default_repository
-		repopath = repo
-		pluginpath = plugin
-		if not isinstance(repo, str):
-			repopath = repo.path
-		if not isinstance(plugin, str):
-			pluginpath = plugin.path
-		return core.BNRepositoryManagerUninstallPlugin(self.handle, repopath, pluginpath)
-
-	def update_plugin(self, plugin, repo=None):
-		"""
-		``update_plugin`` update the specified plugin, pluginpath
-
-		:param Repository or str repo: Repository containing the plugin to update
-		:param RepoPlugin or str plugin: RepoPlugin to update
-		:return: Boolean value True if the plugin was successfully updated, False otherwise
-		:rtype: Boolean
-		:Example:
-
-			>>> mgr = RepositoryManager()
-			>>> mgr.update_plugin('binaryninja-bookmarks')
-			True
-			>>>
-		"""
-		if repo is None:
-			repo = self.default_repository
-		repopath = repo
-		pluginpath = plugin
-		if not isinstance(repo, str):
-			repopath = repo.path
-		if not isinstance(plugin, str):
-			pluginpath = plugin.path
-		return core.BNRepositoryManagerUpdatePlugin(self.handle, repopath, pluginpath)
-
-	def add_repository(self, url=None, repopath=None, localreference="master", remotereference="origin"):
+	def add_repository(self, url=None, repopath=None):
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
-		:param str url: URL to the git repository where the plugins are stored.
+		:param str url: URL to the plugins.json containing the records for this repository
 		:param str repopath: path to where the repository will be stored on disk locally
-		:param str localreference: Optional reference to the local tracking branch typically "master"
-		:param str remotereference: Optional reference to the remote tracking branch typically "origin"
 		:return: Boolean value True if the repository was successfully added, False otherwise.
 		:rtype: Boolean
 		:Example:
 
 			>>> mgr = RepositoryManager()
-			>>> mgr.add_repository(url="https://github.com/vector35/community-plugins.git",
-			                       repopath="myrepo",
-			                       localreference="master", remotereference="origin")
+			>>> mgr.add_repository("https://raw.githubusercontent.com/Vector35/community-plugins/master/plugins.json", "community")
 			True
 			>>>
 		"""
-		if not (isinstance(url, str) and isinstance(repopath, str) and
-			isinstance(localreference, str) and isinstance(remotereference, str)):
+		if not isinstance(url, str) or not isinstance(repopath, str):
 			raise ValueError("Parameter is incorrect type")
 
-		return core.BNRepositoryManagerAddRepository(self.handle, url, repopath, localreference, remotereference)
+		return core.BNRepositoryManagerAddRepository(self.handle, url, repopath)

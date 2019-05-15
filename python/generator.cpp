@@ -188,13 +188,14 @@ int main(int argc, char* argv[])
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
 	fprintf(out, "_base_path = None\n");
-	fprintf(out, "if platform.system() == \"Darwin\":\n");
+	fprintf(out, "core_platform = platform.system()\n");
+	fprintf(out, "if core_platform == \"Darwin\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
-	fprintf(out, "elif platform.system() == \"Linux\":\n");
+	fprintf(out, "elif core_platform == \"Linux\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
-	fprintf(out, "elif platform.system() == \"Windows\":\n");
+	fprintf(out, "elif core_platform == \"Windows\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");

@@ -96,10 +96,10 @@ class BinaryDataNotification(object):
 
 class StringReference(object):
 	def __init__(self, bv, string_type, start, length):
-		self.type = string_type
-		self.start = start
-		self.length = length
-		self.view = bv
+		self._type = string_type
+		self._start = start
+		self._length = length
+		self._view = bv
 
 	@property
 	def value(self):
@@ -107,6 +107,42 @@ class StringReference(object):
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def start(self):
+		""" """
+		return self._start
+
+	@start.setter
+	def start(self, value):
+		self._start = value
+
+	@property
+	def length(self):
+		""" """
+		return self._length
+
+	@length.setter
+	def length(self, value):
+		self._length = value
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
 
 
 _pending_analysis_completion_events = {}
@@ -125,8 +161,8 @@ class AnalysisCompletionEvent(object):
 		>>>
 	"""
 	def __init__(self, view, callback):
-		self.view = view
-		self.callback = callback
+		self._view = view
+		self._callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
 		global _pending_analysis_completion_events
@@ -152,42 +188,122 @@ class AnalysisCompletionEvent(object):
 
 	def cancel(self):
 		"""
-		.. warning: This method should only be used when the system is being
-		shut down and no further analysis should be done afterward.
+		.. warning: This method should only be used when the system is being shut down and no further analysis should be done afterward.
 		"""
-		self.callback = self._empty_callback
+		self._callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 		global _pending_analysis_completion_events
 		if id(self) in _pending_analysis_completion_events:
 			del _pending_analysis_completion_events[id(self)]
 
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def callback(self):
+		""" """
+		return self._callback
+
+	@callback.setter
+	def callback(self, value):
+		self._callback = value
+
 
 class ActiveAnalysisInfo(object):
 	def __init__(self, func, analysis_time, update_count, submit_count):
-		self.func = func
-		self.analysis_time = analysis_time
-		self.update_count = update_count
-		self.submit_count = submit_count
+		self._func = func
+		self._analysis_time = analysis_time
+		self._update_count = update_count
+		self._submit_count = submit_count
 
 	def __repr__(self):
 		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self.func, self.analysis_time, self.update_count, self.submit_count)
 
+	@property
+	def func(self):
+		""" """
+		return self._func
+
+	@func.setter
+	def func(self, value):
+		self._func = value
+
+	@property
+	def analysis_time(self):
+		""" """
+		return self._analysis_time
+
+	@analysis_time.setter
+	def analysis_time(self, value):
+		self._analysis_time = value
+
+	@property
+	def update_count(self):
+		""" """
+		return self._update_count
+
+	@update_count.setter
+	def update_count(self, value):
+		self._update_count = value
+
+	@property
+	def submit_count(self):
+		""" """
+		return self._submit_count
+
+	@submit_count.setter
+	def submit_count(self, value):
+		self._submit_count = value
+
 
 class AnalysisInfo(object):
 	def __init__(self, state, analysis_time, active_info):
-		self.state = AnalysisState(state)
-		self.analysis_time = analysis_time
-		self.active_info = active_info
+		self._state = AnalysisState(state)
+		self._analysis_time = analysis_time
+		self._active_info = active_info
 
 	def __repr__(self):
 		return "<AnalysisInfo %s, analysis_time %d, active_info %s>" % (self.state, self.analysis_time, self.active_info)
 
+	@property
+	def state(self):
+		""" """
+		return self._state
+
+	@state.setter
+	def state(self, value):
+		self._state = value
+
+	@property
+	def analysis_time(self):
+		""" """
+		return self._analysis_time
+
+	@analysis_time.setter
+	def analysis_time(self, value):
+		self._analysis_time = value
+
+	@property
+	def analysis_info(self):
+		""" """
+		return self._analysis_info
+
+	@analysis_info.setter
+	def analysis_info(self, value):
+		self._analysis_info = value
+
 
 class AnalysisProgress(object):
 	def __init__(self, state, count, total):
-		self.state = state
-		self.count = count
-		self.total = total
+		self._state = state
+		self._count = count
+		self._total = total
 
 	def __str__(self):
 		if self.state == AnalysisState.DisassembleState:
@@ -201,13 +317,40 @@ class AnalysisProgress(object):
 	def __repr__(self):
 		return "<progress: %s>" % str(self)
 
+	@property
+	def state(self):
+		""" """
+		return self._state
+
+	@state.setter
+	def state(self, value):
+		self._state = value
+
+	@property
+	def count(self):
+		""" """
+		return self._count
+
+	@count.setter
+	def count(self, value):
+		self._count = value
+
+	@property
+	def total(self):
+		""" """
+		return self._total
+
+	@total.setter
+	def total(self, value):
+		self._total = value
+
 
 class DataVariable(object):
 	def __init__(self, addr, var_type, auto_discovered, view=None):
-		self.address = addr
-		self.type = var_type
-		self.auto_discovered = auto_discovered
-		self.view = view
+		self._address = addr
+		self._type = var_type
+		self._auto_discovered = auto_discovered
+		self._view = view
 
 	@property
 	def data_refs_from(self):
@@ -230,11 +373,47 @@ class DataVariable(object):
 	def __repr__(self):
 		return "<var 0x%x: %s>" % (self.address, str(self.type))
 
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def auto_discovered(self):
+		""" """
+		return self._auto_discovered
+
+	@auto_discovered.setter
+	def auto_discovered(self, value):
+		self._auto_discovered = value
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
 
 class BinaryDataNotificationCallbacks(object):
 	def __init__(self, view, notify):
-		self.view = view
-		self.notify = notify
+		self._view = view
+		self._notify = notify
 		self._cb = core.BNBinaryDataNotification()
 		self._cb.context = 0
 		self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
@@ -352,6 +531,24 @@ class BinaryDataNotificationCallbacks(object):
 			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
 		except:
 			log.log_error(traceback.format_exc())
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def notify(self):
+		""" """
+		return self._notify
+
+	@notify.setter
+	def notify(self, value):
+		self._notify = value
 
 
 class _BinaryViewTypeMetaclass(type):
@@ -660,8 +857,8 @@ class Section(object):
 
 class AddressRange(object):
 	def __init__(self, start, end):
-		self.start = start
-		self.end = end
+		self._start = start
+		self._end = end
 
 	@property
 	def length(self):
@@ -672,6 +869,24 @@ class AddressRange(object):
 
 	def __repr__(self):
 		return "<%#x-%#x>" % (self.start, self.end)
+
+	@property
+	def start(self):
+		""" """
+		return self._start
+
+	@start.setter
+	def start(self, value):
+		self._start = value
+
+	@property
+	def end(self):
+		""" """
+		return self._end
+
+	@end.setter
+	def end(self, value):
+		self._end = value
 
 
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -738,15 +953,15 @@ class BinaryView(object):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNBinaryView)
 			if file_metadata is None:
-				self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
+				self._file = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
 			else:
-				self.file = file_metadata
+				self._file = file_metadata
 		elif self.__class__ is BinaryView:
 			binaryninja._init_plugins()
 			if file_metadata is None:
 				file_metadata = binaryninja.filemetadata.FileMetadata()
 			self.handle = core.BNCreateBinaryDataView(file_metadata.handle)
-			self.file = binaryninja.filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
+			self._file = binaryninja.filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
 		else:
 			binaryninja._init_plugins()
 			if not self.__class__._registered:
@@ -774,12 +989,12 @@ class BinaryView(object):
 			self._cb.isRelocatable = self._cb.isRelocatable.__class__(self._is_relocatable)
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.save = self._cb.save.__class__(self._save)
-			self.file = file_metadata
+			self._file = file_metadata
 			if parent_view is not None:
 				parent_view = parent_view.handle
 			self.handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, parent_view, self._cb)
-		self.notifications = {}
-		self.next_address = None  # Do NOT try to access view before init() is called, use placeholder
+		self._notifications = {}
+		self._next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
 	def __eq__(self, value):
 		if not isinstance(value, BinaryView):
@@ -945,37 +1160,64 @@ class BinaryView(object):
 	@property
 	def modified(self):
 		"""boolean modification state of the BinaryView (read/write)"""
-		return self.file.modified
+		return self._file.modified
 
 	@modified.setter
 	def modified(self, value):
-		self.file.modified = value
+		self._file.modified = value
 
 	@property
 	def analysis_changed(self):
 		"""boolean analysis state changed of the currently running analysis (read-only)"""
-		return self.file.analysis_changed
+		return self._file.analysis_changed
 
 	@property
 	def has_database(self):
 		"""boolean has a database been written to disk (read-only)"""
-		return self.file.has_database
+		return self._file.has_database
 
 	@property
 	def view(self):
-		return self.file.view
+		return self._file.view
 
 	@view.setter
 	def view(self, value):
-		self.file.view = value
+		self._file.view = value
 
 	@property
 	def offset(self):
-		return self.file.offset
+		return self._file.offset
 
 	@offset.setter
 	def offset(self, value):
-		self.file.offset = value
+		self._file.offset = value
+
+	@property
+	def file(self):
+		""":class:`.FileMetadata` backing the BinaryView """
+		return self._file
+
+	@file.setter
+	def file(self, value):
+		self._file = value
+
+	@property
+	def notifications(self):
+		""":class:`.FileMetadata` backing the BinaryView """
+		return self._notifications
+
+	@notifications.setter
+	def notifications(self, value):
+		self._notifications = value
+
+	@property
+	def next_address(self):
+		""":class:`.FileMetadata` backing the BinaryView """
+		return self._next_address
+
+	@next_address.setter
+	def next_address(self, value):
+		self._next_address = value
 
 	@property
 	def start(self):
@@ -994,7 +1236,7 @@ class BinaryView(object):
 
 	@property
 	def arch(self):
-		"""The architecture associated with the current BinaryView (read/write)"""
+		"""The architecture associated with the current :class:`.BinaryView` (read/write)"""
 		arch = core.BNGetDefaultArchitecture(self.handle)
 		if arch is None:
 			return None
@@ -1132,11 +1374,11 @@ class BinaryView(object):
 	@property
 	def saved(self):
 		"""boolean state of whether or not the file has been saved (read/write)"""
-		return self.file.saved
+		return self._file.saved
 
 	@saved.setter
 	def saved(self, value):
-		self.file.saved = value
+		self._file.saved = value
 
 	@property
 	def analysis_info(self):
@@ -1373,7 +1615,7 @@ class BinaryView(object):
 			size = "start %#x, len %#x" % (start, length)
 		else:
 			size = "len %#x" % length
-		filename = self.file.filename
+		filename = self._file.filename
 		if len(filename) > 0:
 			return "<BinaryView: '%s', %s>" % (filename, size)
 		return "<BinaryView: %s>" % (size)
@@ -1833,7 +2075,7 @@ class BinaryView(object):
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
-		return self.file.create_database(filename, progress_func)
+		return self._file.create_database(filename, progress_func)
 
 	def save_auto_snapshot(self, progress_func=None):
 		"""
@@ -1845,7 +2087,7 @@ class BinaryView(object):
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
-		return self.file.save_auto_snapshot(progress_func)
+		return self._file.save_auto_snapshot(progress_func)
 
 	def get_view_of_type(self, name):
 		"""
@@ -1855,7 +2097,7 @@ class BinaryView(object):
 		:return: BinaryView object associated with the provided name or None on failure
 		:rtype: BinaryView or None
 		"""
-		return self.file.get_view_of_type(name)
+		return self._file.get_view_of_type(name)
 
 	def begin_undo_actions(self):
 		"""
@@ -1877,7 +2119,7 @@ class BinaryView(object):
 			'xor     eax, eax'
 			>>>
 		"""
-		self.file.begin_undo_actions()
+		self._file.begin_undo_actions()
 
 	def add_undo_action(self, action):
 		core.BNAddUndoAction(self.handle, action.__class__.name, action._cb)
@@ -1902,7 +2144,7 @@ class BinaryView(object):
 			'xor     eax, eax'
 			>>>
 		"""
-		self.file.commit_undo_actions()
+		self._file.commit_undo_actions()
 
 	def undo(self):
 		"""
@@ -1927,7 +2169,7 @@ class BinaryView(object):
 			'nop'
 			>>>
 		"""
-		self.file.undo()
+		self._file.undo()
 
 	def redo(self):
 		"""
@@ -1952,10 +2194,10 @@ class BinaryView(object):
 			'nop'
 			>>>
 		"""
-		self.file.redo()
+		self._file.redo()
 
 	def navigate(self, view, offset):
-		return self.file.navigate(view, offset)
+		return self._file.navigate(view, offset)
 
 	def read(self, addr, length):
 		"""
@@ -2880,6 +3122,7 @@ class BinaryView(object):
 			>>> bv.is_invert_branch_patch_available(0x100012ef)
 			True
 			>>>
+
 		"""
 		if arch is None:
 			arch = self.arch
@@ -3560,8 +3803,8 @@ class BinaryView(object):
 		"""
 		class LinearDisassemblyIterator(object):
 			def __init__(self, view, settings):
-				self.view = view
-				self.settings = settings
+				self._view = view
+				self._settings = settings
 
 			def __iter__(self):
 				pos = self.view.get_linear_disassembly_position_at(self.view.start, self.settings)
@@ -3571,6 +3814,25 @@ class BinaryView(object):
 						break
 					for line in lines:
 						yield line
+
+			@property
+			def view(self):
+				""" """
+				return self._view
+
+			@view.setter
+			def view(self, value):
+				self._view = value
+
+			@property
+			def settings(self):
+				""" """
+				return self._settings
+
+			@settings.setter
+			def settings(self, value):
+				self._settings = value
+
 
 		return iter(LinearDisassemblyIterator(self, settings))
 
@@ -3942,7 +4204,7 @@ class BinaryView(object):
 
 	def get_address_input(self, prompt, title, current_address = None):
 		if current_address is None:
-			current_address = self.file.offset
+			current_address = self._file.offset
 		value = ctypes.c_ulonglong()
 		if not core.BNGetAddressInput(value, prompt, title, self.handle, current_address):
 			return None

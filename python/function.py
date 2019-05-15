@@ -41,34 +41,54 @@ from binaryninja import range
 
 class LookupTableEntry(object):
 	def __init__(self, from_values, to_value):
-		self.from_values = from_values
-		self.to_value = to_value
+		self._from_values = from_values
+		self._to_value = to_value
 
 	def __repr__(self):
 		return "[%s] -> %#x" % (', '.join(["%#x" % i for i in self.from_values]), self.to_value)
 
+	@property
+	def from_values(self):
+		""" """
+		return self._from_values
+
+	@from_values.setter
+	def from_values(self, value):
+		""" """
+		self._from_values = value
+
+	@property
+	def to_values(self):
+		""" """
+		return self._to_values
+
+	@to_values.setter
+	def to_values(self, value):
+		""" """
+		self._to_values = value
+
 
 class RegisterValue(object):
 	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
-		self.is_constant = False
+		self._is_constant = False
 		if value is None:
-			self.type = RegisterValueType.UndeterminedValue
+			self._type = RegisterValueType.UndeterminedValue
 		else:
-			self.type = RegisterValueType(value.state)
+			self._type = RegisterValueType(value.state)
 			if value.state == RegisterValueType.EntryValue:
-				self.arch = arch
+				self._arch = arch
 				if arch is not None:
-					self.reg = arch.get_reg_name(value.value)
+					self._reg = arch.get_reg_name(value.value)
 				else:
-					self.reg = value.value
+					self._reg = value.value
 			elif (value.state == RegisterValueType.ConstantValue) or (value.state == RegisterValueType.ConstantPointerValue):
-				self.value = value.value
-				self.is_constant = True
+				self._value = value.value
+				self._is_constant = True
 			elif value.state == RegisterValueType.StackFrameOffset:
-				self.offset = value.value
+				self._offset = value.value
 			elif value.state == RegisterValueType.ImportedAddressValue:
-				self.value = value.value
-		self.confidence = confidence
+				self._value = value.value
+		self._confidence = confidence
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
@@ -150,33 +170,143 @@ class RegisterValue(object):
 		result.type = RegisterValueType.ReturnAddressValue
 		return result
 
+	@property
+	def is_constant(self):
+		""" """
+		return self._is_constant
+
+	@is_constant.setter
+	def is_constant(self, value):
+		""" """
+		self._is_constant = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		""" """
+		self._type = value
+
+	@property
+	def state(self):
+		""" """
+		return self._state
+
+	@state.setter
+	def state(self, value):
+		""" """
+		self._state = value
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		""" """
+		self._arch = value
+
+	@property
+	def reg(self):
+		""" """
+		return self._reg
+
+	@reg.setter
+	def reg(self, value):
+		""" """
+		self._reg = value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		""" """
+		self._value = value
+
+	@property
+	def offset(self):
+		""" """
+		return self._offset
+
+	@offset.setter
+	def offset(self, value):
+		""" """
+		self._offset = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		""" """
+		self._confidence = value
+
 
 class ValueRange(object):
 	def __init__(self, start, end, step):
-		self.start = start
-		self.end = end
-		self.step = step
+		self._start = start
+		self._end = end
+		self._step = step
 
 	def __repr__(self):
 		if self.step == 1:
 			return "<range: %#x to %#x>" % (self.start, self.end)
 		return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
 
+	@property
+	def start(self):
+		""" """
+		return self._start
+
+	@start.setter
+	def start(self, value):
+		""" """
+		self._start = value
+
+	@property
+	def end(self):
+		""" """
+		return self._end
+
+	@end.setter
+	def end(self, value):
+		""" """
+		self._end = value
+
+	@property
+	def step(self):
+		""" """
+		return self._step
+
+	@step.setter
+	def step(self, value):
+		""" """
+		self._step = value
+
 
 class PossibleValueSet(object):
 	def __init__(self, arch, value):
-		self.type = RegisterValueType(value.state)
+		self._type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self.reg = arch.get_reg_name(value.value)
+			self._reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
-			self.value = value.value
+			self._value = value.value
 		elif value.state == RegisterValueType.ConstantPointerValue:
-			self.value = value.value
+			self._value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
-			self.offset = value.value
+			self._offset = value.value
 		elif value.state == RegisterValueType.SignedRangeValue:
-			self.offset = value.value
-			self.ranges = []
+			self._offset = value.value
+			self._ranges = []
 			for i in range(0, value.count):
 				start = value.ranges[i].start
 				end = value.ranges[i].end
@@ -185,28 +315,28 @@ class PossibleValueSet(object):
 					start |= ~((1 << 63) - 1)
 				if end & (1 << 63):
 					end |= ~((1 << 63) - 1)
-				self.ranges.append(ValueRange(start, end, step))
+				self._ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.UnsignedRangeValue:
-			self.offset = value.value
-			self.ranges = []
+			self._offset = value.value
+			self._ranges = []
 			for i in range(0, value.count):
 				start = value.ranges[i].start
 				end = value.ranges[i].end
 				step = value.ranges[i].step
-				self.ranges.append(ValueRange(start, end, step))
+				self._ranges.append(ValueRange(start, end, step))
 		elif value.state == RegisterValueType.LookupTableValue:
-			self.table = []
-			self.mapping = {}
+			self._table = []
+			self._mapping = {}
 			for i in range(0, value.count):
 				from_list = []
 				for j in range(0, value.table[i].fromCount):
 					from_list.append(value.table[i].fromValues[j])
-					self.mapping[value.table[i].fromValues[j]] = value.table[i].toValue
-				self.table.append(LookupTableEntry(from_list, value.table[i].toValue))
+					self._mapping[value.table[i].fromValues[j]] = value.table[i].toValue
+				self._table.append(LookupTableEntry(from_list, value.table[i].toValue))
 		elif (value.state == RegisterValueType.InSetOfValues) or (value.state == RegisterValueType.NotInSetOfValues):
-			self.values = set()
+			self._values = set()
 			for i in range(0, value.count):
-				self.values.add(value.valueSet[i])
+				self._values.add(value.valueSet[i])
 
 	def __repr__(self):
 		if self.type == RegisterValueType.EntryValue:
@@ -231,40 +361,184 @@ class PossibleValueSet(object):
 			return "<return address>"
 		return "<undetermined>"
 
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		""" """
+		self._type = value
+
+	@property
+	def reg(self):
+		""" """
+		return self._reg
+
+	@reg.setter
+	def reg(self, value):
+		""" """
+		self._reg = value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		""" """
+		self._value = value
+
+	@property
+	def offset(self):
+		""" """
+		return self._offset
+
+	@offset.setter
+	def offset(self, value):
+		""" """
+		self._offset = value
+
+	@property
+	def ranges(self):
+		""" """
+		return self._ranges
+
+	@ranges.setter
+	def ranges(self, value):
+		""" """
+		self._ranges = value
+
+	@property
+	def table(self):
+		""" """
+		return self._table
+
+	@table.setter
+	def table(self, value):
+		""" """
+		self._table = value
+
+	@property
+	def table(self):
+		""" """
+		return self._table
+
+	@table.setter
+	def table(self, value):
+		""" """
+		self._table = value
+
+	@property
+	def mapping(self):
+		""" """
+		return self._mapping
+
+	@mapping.setter
+	def mapping(self, value):
+		""" """
+		self._mapping = value
+
+	@property
+	def values(self):
+		""" """
+		return self._values
+
+	@values.setter
+	def values(self, value):
+		""" """
+		self._values = value
+
 
 class StackVariableReference(object):
 	def __init__(self, src_operand, t, name, var, ref_ofs, size):
-		self.source_operand = src_operand
-		self.type = t
-		self.name = name
-		self.var = var
-		self.referenced_offset = ref_ofs
-		self.size = size
-		if self.source_operand == 0xffffffff:
-			self.source_operand = None
+		self._source_operand = src_operand
+		self._type = t
+		self._name = name
+		self._var = var
+		self._referenced_offset = ref_ofs
+		self._size = size
+		if self._source_operand == 0xffffffff:
+			self._source_operand = None
 
 	def __repr__(self):
-		if self.source_operand is None:
-			if self.referenced_offset != self.var.storage:
-				return "<ref to %s%+#x>" % (self.name, self.referenced_offset - self.var.storage)
-			return "<ref to %s>" % self.name
-		if self.referenced_offset != self.var.storage:
-			return "<operand %d ref to %s%+#x>" % (self.source_operand, self.name, self.var.storage)
-		return "<operand %d ref to %s>" % (self.source_operand, self.name)
+		if self._source_operand is None:
+			if self._referenced_offset != self._var.storage:
+				return "<ref to %s%+#x>" % (self._name, self._referenced_offset - self._var.storage)
+			return "<ref to %s>" % self._name
+		if self._referenced_offset != self._var.storage:
+			return "<operand %d ref to %s%+#x>" % (self._source_operand, self._name, self._var.storage)
+		return "<operand %d ref to %s>" % (self._source_operand, self._name)
+
+	@property
+	def source_operand(self):
+		""" """
+		return self._source_operand
+
+	@source_operand.setter
+	def source_operand(self, value):
+		self._source_operand = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def var(self):
+		""" """
+		return self._var
+
+	@var.setter
+	def var(self, value):
+		self._var = value
+
+	@property
+	def referenced_offset(self):
+		""" """
+		return self._referenced_offset
+
+	@referenced_offset.setter
+	def referenced_offset(self, value):
+		self._referenced_offset = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
 
 
 class Variable(object):
 	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
-		self.function = func
-		self.source_type = VariableSourceType(source_type)
-		self.index = index
-		self.storage = storage
+		self._function = func
+		self._source_type = VariableSourceType(source_type)
+		self._index = index
+		self._storage = storage
 
 		var = core.BNVariable()
 		var.type = source_type
 		var.index = index
 		var.storage = storage
-		self.identifier = core.BNToVariableIdentifier(var)
+		self._identifier = core.BNToVariableIdentifier(var)
 
 		if func is not None:
 			if name is None:
@@ -276,8 +550,71 @@ class Variable(object):
 				else:
 					var_type = None
 
-		self.name = name
-		self.type = var_type
+		self._name = name
+		self._type = var_type
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def source_type(self):
+		""" """
+		return self._source_type
+
+	@source_type.setter
+	def source_type(self, value):
+		self._source_type = value
+
+	@property
+	def index(self):
+		""" """
+		return self._index
+
+	@index.setter
+	def index(self, value):
+		self._index = value
+
+	@property
+	def storage(self):
+		""" """
+		return self._storage
+
+	@storage.setter
+	def storage(self, value):
+		self._storage = value
+
+	@property
+	def identifier(self):
+		""" """
+		return self._identifier
+
+	@identifier.setter
+	def identifier(self, value):
+		self._identifier = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
 
 	@classmethod
 	def from_identifier(self, func, identifier, name = None, var_type = None):
@@ -303,10 +640,10 @@ class Variable(object):
 
 class ConstantReference(object):
 	def __init__(self, val, size, ptr, intermediate):
-		self.value = val
-		self.size = size
-		self.pointer = ptr
-		self.intermediate = intermediate
+		self._value = val
+		self._size = size
+		self._pointer = ptr
+		self._intermediate = intermediate
 
 	def __repr__(self):
 		if self.pointer:
@@ -314,6 +651,43 @@ class ConstantReference(object):
 		if self.size == 0:
 			return "<constant %#x>" % self.value
 		return "<constant %#x size %d>" % (self.value, self.size)
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
+
+	@property
+	def pointer(self):
+		""" """
+		return self._pointer
+
+	@pointer.setter
+	def pointer(self, value):
+		self._pointer = value
+
+	@property
+	def intermediate(self):
+		""" """
+		return self._intermediate
+
+	@intermediate.setter
+	def intermediate(self, value):
+		self._intermediate = value
+
 
 
 class IndirectBranchInfo(object):

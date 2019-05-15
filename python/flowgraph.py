@@ -58,9 +58,10 @@ class FlowGraphNode(object):
 				raise ValueError("flow graph node must be associated with a graph")
 			handle = core.BNCreateFlowGraphNode(graph.handle)
 		self.handle = handle
+		self._graph = graph
 		self.graph = graph
-		if self.graph is None:
-			self.graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
+		if self._graph is None:
+			self._graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
 
 	def __del__(self):
 		if self.handle is not None:
@@ -75,6 +76,15 @@ class FlowGraphNode(object):
 		if not isinstance(value, FlowGraphNode):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	@property
+	def graph(self):
+		""" """
+		return self._graph
+
+	@graph.setter
+	def graph(self, value):
+		self._graph = value
 
 	@property
 	def basic_block(self):

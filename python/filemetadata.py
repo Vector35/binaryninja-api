@@ -86,7 +86,17 @@ class FileMetadata(object):
 			self.handle = core.BNCreateFileMetadata()
 			if filename is not None:
 				core.BNSetFilename(self.handle, str(filename))
-		self.nav = None
+		self._nav = None
+
+	@property
+	def nav(self):
+		"""
+		"""
+		return self._nav
+
+	@nav.setter
+	def nav(self, value):
+		self._nav = value
 
 	def __del__(self):
 		if self.navigation is not None:
@@ -192,12 +202,13 @@ class FileMetadata(object):
 
 	@property
 	def navigation(self):
-		return self.nav
+		"""Alias for nav"""
+		return self._nav
 
 	@navigation.setter
 	def navigation(self, value):
 		value._register(self.handle)
-		self.nav = value
+		self._nav = value
 
 	@property
 	def session_data(self):

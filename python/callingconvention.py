@@ -53,7 +53,7 @@ class CallingConvention(object):
 			if arch is None or name is None:
 				self.handle = None
 				raise ValueError("Must specify either handle or architecture and name")
-			self.arch = arch
+			self._arch = arch
 			self._pending_reg_lists = {}
 			self._cb = core.BNCustomCallingConvention()
 			self._cb.context = 0
@@ -443,3 +443,12 @@ class CallingConvention(object):
 			func_obj = func.handle
 		out_var = core.BNGetParameterVariableForIncomingVariable(self.handle, in_buf, func_obj)
 		return binaryninja.function.Variable(func, out_var.type, out_var.index, out_var.storage)
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value

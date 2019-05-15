@@ -2648,7 +2648,7 @@ class CoreArchitecture(Architecture):
 
 class ArchitectureHook(CoreArchitecture):
 	def __init__(self, base_arch):
-		self.base_arch = base_arch
+		self._base_arch = base_arch
 		super(ArchitectureHook, self).__init__(base_arch.handle)
 
 		# To improve performance of simpler hooks, use null callback for functions that are not being overridden
@@ -2677,17 +2677,53 @@ class ArchitectureHook(CoreArchitecture):
 
 	def register(self):
 		self.__class__._registered_cb = self._cb
-		self.handle = core.BNRegisterArchitectureHook(self.base_arch.handle, self._cb)
+		self.handle = core.BNRegisterArchitectureHook(self._base_arch.handle, self._cb)
+
+	@property
+	def base_arch(self):
+		""" """
+		return self._base_arch
+
+	@base_arch.setter
+	def base_arch(self, value):
+		self._base_arch = value
 
 
 class ReferenceSource(object):
 	def __init__(self, func, arch, addr):
-		self.function = func
-		self.arch = arch
-		self.address = addr
+		self._function = func
+		self._arch = arch
+		self._address = addr
 
 	def __repr__(self):
-		if self.arch:
-			return "<ref: %s@%#x>" % (self.arch.name, self.address)
+		if self._arch:
+			return "<ref: %s@%#x>" % (self._arch.name, self._address)
 		else:
-			return "<ref: %#x>" % self.address
+			return "<ref: %#x>" % self._address
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value

@@ -27,25 +27,97 @@ from binaryninja.enums import HighlightColorStyle, HighlightStandardColor
 class HighlightColor(object):
 	def __init__(self, color = None, mix_color = None, mix = None, red = None, green = None, blue = None, alpha = 255):
 		if (red is not None) and (green is not None) and (blue is not None):
-			self.style = HighlightColorStyle.CustomHighlightColor
-			self.red = red
-			self.green = green
-			self.blue = blue
+			self._style = HighlightColorStyle.CustomHighlightColor
+			self._red = red
+			self._green = green
+			self._blue = blue
 		elif (mix_color is not None) and (mix is not None):
-			self.style = HighlightColorStyle.MixedHighlightColor
+			self._style = HighlightColorStyle.MixedHighlightColor
 			if color is None:
-				self.color = HighlightStandardColor.NoHighlightColor
+				self._color = HighlightStandardColor.NoHighlightColor
 			else:
-				self.color = color
-			self.mix_color = mix_color
-			self.mix = mix
+				self._color = color
+			self._mix_color = mix_color
+			self._mix = mix
 		else:
 			self.style = HighlightColorStyle.StandardHighlightColor
 			if color is None:
-				self.color = HighlightStandardColor.NoHighlightColor
+				self._color = HighlightStandardColor.NoHighlightColor
 			else:
-				self.color = color
-		self.alpha = alpha
+				self._color = color
+		self._alpha = alpha
+
+	@property
+	def alpha(self):
+		""" """
+		return self._alpha
+
+	@alpha.setter
+	def alpha(self, value):
+		self._alpha = value
+
+	@property
+	def mix(self):
+		""" """
+		return self._mix
+
+	@mix.setter
+	def mix(self, value):
+		self._mix = value
+
+	@property
+	def mix_color(self):
+		""" """
+		return self._mix_color
+
+	@mix_color.setter
+	def mix_color(self, value):
+		self._mix_color = value
+
+	@property
+	def color(self):
+		""" """
+		return self._color
+
+	@color.setter
+	def color(self, value):
+		self._color = value
+
+	@property
+	def style(self):
+		""" """
+		return self._style
+
+	@style.setter
+	def style(self, value):
+		self._style = value
+
+	@property
+	def green(self):
+		""" """
+		return self._green
+
+	@green.setter
+	def green(self, value):
+		self._green = value
+
+	@property
+	def red(self):
+		""" """
+		return self._red
+
+	@red.setter
+	def red(self, value):
+		self._red = value
+
+	@property
+	def blue(self):
+		""" """
+		return self._blue
+
+	@blue.setter
+	def blue(self, value):
+		self._blue = value
 
 	def _standard_color_to_str(self, color):
 		if color == HighlightStandardColor.NoHighlightColor:

@@ -33,27 +33,73 @@ from binaryninja import range
 
 class BasicBlockEdge(object):
 	def __init__(self, branch_type, source, target, back_edge, fall_through):
-		self.type = branch_type
-		self.source = source
-		self.target = target
-		self.back_edge = back_edge
-		self.fall_through = fall_through
+		self._type = branch_type
+		self._source = source
+		self._target = target
+		self._back_edge = back_edge
+		self._fall_through = fall_through
 
 	def __eq__(self, value):
 		if not isinstance(value, BasicBlockEdge):
 			return False
-		return (self.type, self.source, self.target, self.back_edge, self.fall_through) == (value.type, value.source, value.target, value.back_edge, value.fall_through)
+		return (self._type, self._source, self._target, self._back_edge, self._fall_through) == (value.type, value.source, value.target, value.back_edge, value.fall_through)
 
 	def __hash__(self):
-		return hash((self.type, self.source, self.target, self.back_edge, self.fall_through))
+		return hash((self._type, self._source, self._target, self.back_edge, self.fall_through))
 
 	def __repr__(self):
-		if self.type == BranchType.UnresolvedBranch:
-			return "<%s>" % BranchType(self.type).name
-		elif self.target.arch:
-			return "<%s: %s@%#x>" % (BranchType(self.type).name, self.target.arch.name, self.target.start)
+		if self._type == BranchType.UnresolvedBranch:
+			return "<%s>" % BranchType(self._type).name
+		elif self._target.arch:
+			return "<%s: %s@%#x>" % (BranchType(self._type).name, self._target.arch.name, self._target.start)
 		else:
-			return "<%s: %#x>" % (BranchType(self.type).name, self.target.start)
+			return "<%s: %#x>" % (BranchType(self._type).name, self._target.start)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def source(self):
+		""" """
+		return self._source
+
+	@source.setter
+	def source(self, value):
+		self._source = value
+
+	@property
+	def target(self):
+		""" """
+		return self._target
+
+	@target.setter
+	def target(self, value):
+		self._target = value
+
+	@property
+	def back_edge(self):
+		""" """
+		return self._back_edge
+
+	@back_edge.setter
+	def back_edge(self, value):
+		self._back_edge = value
+
+	@property
+	def fall_through(self):
+		""" """
+		return self._fall_through
+
+	@fall_through.setter
+	def fall_through(self, value):
+		self._fall_through = value
+
 
 
 class BasicBlock(object):
@@ -88,7 +134,7 @@ class BasicBlock(object):
 		return int(core.BNGetBasicBlockLength(self.handle))
 
 	def __repr__(self):
-		arch = self.arch
+		arch = self._arch
 		if arch:
 			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
@@ -99,7 +145,7 @@ class BasicBlock(object):
 			# don't and instruction start cache the object is likely ephemeral
 			idx = self.start
 			while idx < self.end:
-				data = self.view.read(idx, min(self.arch.max_instr_length, self.end - idx))
+				data = self._view.read(idx, min(self._arch.max_instr_length, self.end - idx))
 				inst_text = self.arch.get_instruction_text(data, idx)
 				if inst_text[1] == 0:
 					break
@@ -107,7 +153,7 @@ class BasicBlock(object):
 				idx += inst_text[1]
 		else:
 			for start, length in zip(self._instStarts, self._instLengths):
-				inst_text = self.arch.get_instruction_text(self.view.read(start, length), start)
+				inst_text = self.arch.get_instruction_text(self._view.read(start, length), start)
 				if inst_text[1] == 0:
 					break
 				yield inst_text
@@ -116,7 +162,7 @@ class BasicBlock(object):
 		self._buildStartCache()
 		start = self._instStarts[i]
 		length = self._instLengths[i]
-		data = self.view.read(start, length)
+		data = self._view.read(start, length)
 		return self.arch.get_instruction_text(data, start)
 
 	def __hash__(self):
@@ -156,7 +202,7 @@ class BasicBlock(object):
 
 	@property
 	def view(self):
-		"""Binary view that contains the basic block (read-ony)"""
+		"""Binary view that contains the basic block (read-only)"""
 		if self._view is not None:
 			return self._view
 		self._view = self.function.view
@@ -228,7 +274,7 @@ class BasicBlock(object):
 		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), self.view)
+				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), G)
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
@@ -341,7 +387,7 @@ class BasicBlock(object):
 	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
-		return self.function.get_block_annotations(self.start, self.arch)
+		return self.function.get_block_annotations(self.start, self._arch)
 
 	@property
 	def disassembly_text(self):
@@ -461,3 +507,12 @@ class BasicBlock(object):
 		if isinstance(color, HighlightStandardColor):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value

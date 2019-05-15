@@ -114,6 +114,9 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	QPointF m_previewPos;
 	QTimer* m_hoverTimer;
 
+	FlowGraphRef m_recenterWithGraph;
+	int m_recenterXofs, m_recenterYofs;
+
 	static int m_layoutCompleteEventType;
 	static int m_updateCompleteEventType;
 
@@ -153,7 +156,8 @@ protected:
 
 	void navigateToAddress(uint64_t addr);
 
-	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify);
+	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify,
+		bool recenterWithPreviousGraph);
 
 	void up(bool selecting, size_t count = 1);
 	void down(bool selecting, size_t count = 1);
@@ -184,6 +188,7 @@ public:
 	void setGraph(FlowGraphRef graph);
 	void setGraph(FlowGraphRef graph, uint64_t addr);
 	void setGraph(FlowGraphRef graph, FlowGraphHistoryEntry* entry);
+	void setRelatedGraph(FlowGraphRef graph);
 	void updateToGraph(FlowGraphRef graph);
 	virtual void updateFonts() override;
 

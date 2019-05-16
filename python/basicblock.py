@@ -134,7 +134,7 @@ class BasicBlock(object):
 		return int(core.BNGetBasicBlockLength(self.handle))
 
 	def __repr__(self):
-		arch = self._arch
+		arch = self.arch
 		if arch:
 			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
@@ -145,7 +145,7 @@ class BasicBlock(object):
 			# don't and instruction start cache the object is likely ephemeral
 			idx = self.start
 			while idx < self.end:
-				data = self._view.read(idx, min(self._arch.max_instr_length, self.end - idx))
+				data = self._view.read(idx, min(self.arch.max_instr_length, self.end - idx))
 				inst_text = self.arch.get_instruction_text(data, idx)
 				if inst_text[1] == 0:
 					break
@@ -387,7 +387,7 @@ class BasicBlock(object):
 	@property
 	def annotations(self):
 		"""List of automatic annotations for the start of this block (read-only)"""
-		return self.function.get_block_annotations(self.start, self._arch)
+		return self.function.get_block_annotations(self.start, self.arch)
 
 	@property
 	def disassembly_text(self):

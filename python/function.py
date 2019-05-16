@@ -58,14 +58,14 @@ class LookupTableEntry(object):
 		self._from_values = value
 
 	@property
-	def to_values(self):
+	def to_value(self):
 		""" """
-		return self._to_values
+		return self._to_value
 
-	@to_values.setter
-	def to_values(self, value):
+	@to_value.setter
+	def to_value(self, value):
 		""" """
-		self._to_values = value
+		self._to_value = value
 
 
 class RegisterValue(object):

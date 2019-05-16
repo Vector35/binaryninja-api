@@ -34,8 +34,6 @@ class DataBuffer(object):
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
 		elif isinstance(contents, int) or isinstance(contents, long):
 			self.handle = core.BNCreateDataBuffer(None, contents)
-		elif isinstance(contents, str):
-			self.handle = core.BNCreateDataBuffer(contents.encode(), len(contents.encode()))
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
 		else:

@@ -135,7 +135,7 @@ class BinaryViewTestBuilder(Builder):
         bblist = []
         for func in self.bv.functions:
             for bb in func.basic_blocks:
-                bblist.append("basic block {} start: ".format(str(bb)) + hex(bb.start) + ' end: ' + hex(bb.end) + ' undetermined outgoing edges: ' + str(bb.has_undetermined_outgoing_edges))
+                bblist.append("basic block {} start: ".format(str(bb)) + hex(bb.start) + ' end: ' + hex(bb.end) + ' undetermined outgoing edges: ' + str(bb.has_undetermined_outgoing_edges) + ' incoming edges: ' + str(bb.incoming_edges) + ' outgoing edges: ' + str(bb.outgoing_edges))
                 for anno in func.get_block_annotations(bb.start):
                     bblist.append("basic block {} function annotation: ".format(str(bb)) + str(anno))
                 bblist.append("basic block {} test get self: ".format(str(bb)) + str(func.get_basic_block_at(bb.start)))

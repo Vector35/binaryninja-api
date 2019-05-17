@@ -20,6 +20,7 @@
 # IN THE SOFTWARE.
 
 import sys
+import os
 
 import binaryninja.log as log
 from binaryninja.binaryview import BinaryViewType
@@ -44,7 +45,7 @@ def get_bininfo(bv):
 		bv = BinaryViewType.get_view_of_file(filename)
 		log.log_to_stdout(True)
 
-	contents = "## %s ##\n" % bv.file.filename
+	contents = "## %s ##\n" % os.path.basename(bv.file.filename)
 	contents += "- START: 0x%x\n\n" % bv.start
 	contents += "- ENTRY: 0x%x\n\n" % bv.entry_point
 	contents += "- ARCH: %s\n\n" % bv.arch.name

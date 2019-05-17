@@ -17,7 +17,7 @@ import zipfile
 import difflib
 from collections import Counter
 
-api_suite_path = os.path.join(os.path.dirname(__file__), {4})
+api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), {4})
 sys.path.append(api_suite_path)
 import testcommon
 import api_test
@@ -80,7 +80,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.builder = testcommon.TestBuilder("{3}")
-        pickle_path = os.path.join(os.path.dirname(__file__), "oracle.pkl")
+        pickle_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "oracle.pkl")
         try:
             # Python 2 does not have the encodings option
             self.oracle_test_data = pickle.load(open(pickle_path, "rb"), encoding='charmap')
@@ -94,7 +94,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             testname = zf.namelist()[0]
             zf.extractall(path=api_suite_path)
 
-        pickle_path = os.path.join(os.path.dirname(__file__), testname + ".pkl")
+        pickle_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), testname + ".pkl")
         self.assertTrue(pickle_path, "Test pickle doesn't exist")
         try:
             # Python 2 does not have the encodings option
@@ -173,7 +173,7 @@ class UnitTestFile:
         self.binary_tests = ""
 
     def close(self):
-        api_path = os.path.relpath(os.path.dirname(__file__), start=self.outdir)
+        api_path = os.path.relpath(os.path.dirname(os.path.realpath(__file__)), start=self.outdir)
         api_path = os.path.normpath(api_path)
         api_path = map(lambda x: '"{0}"'.format(x), api_path.split(os.sep))
         api_path = '{0}'.format(', '.join(api_path))
@@ -294,13 +294,14 @@ def generate(test_store, outdir, exclude_binaries):
 def main():
     usage = "usage: %prog [-q] [-x] [-o <dir>] [-i <dir>]"
     parser = OptionParser(usage=usage)
+    default_output = os.path.relpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "suite"))
     parser.add_option("-q", "--quiet",
                       dest="quiet", action="store_true",
                       default=False, help="Don't print anything")
     parser.add_option("-x", "--exclude",
                       dest="exclude_binary", action="store_true",
                       default=False, help="Exclude regeneration of binaries")
-    parser.add_option("-o", "--outputdir", default="suite",
+    parser.add_option("-o", "--outputdir", default=default_output,
                       dest="outputdir", action="store", type="string",
                       help="output directory where the unit.py and oracle.py files will be stored (relative to cwd)")
     parser.add_option("-i", "--inputdir", default=os.path.join("binaries", "test_corpus"),
@@ -308,6 +309,7 @@ def main():
                       help="input directory containing the binaries you which to generate unit tests from (relative to this file)")
 
     options, args = parser.parse_args()
+    print("OUTPUT: %s" % options.outputdir)
 
     myprint("[+] INFO: Using test store: %s" % options.test_store)
     if len(testcommon.get_file_list(options.test_store)) == 0:

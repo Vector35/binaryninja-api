@@ -274,7 +274,7 @@ class BasicBlock(object):
 		for i in range(0, count.value):
 			branch_type = BranchType(edges[i].type)
 			if edges[i].target:
-				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), G)
+				target = self._create_instance(core.BNNewBasicBlockReference(edges[i].target), self.view)
 			else:
 				target = None
 			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))

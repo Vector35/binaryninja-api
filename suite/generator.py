@@ -177,7 +177,8 @@ class UnitTestFile:
         api_path = os.path.normpath(api_path)
         api_path = map(lambda x: '"{0}"'.format(x), api_path.split(os.sep))
         api_path = '{0}'.format(', '.join(api_path))
-        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, self.test_store, api_path).encode('charmap'))
+        test_store = self.test_store.replace(os.sep, '/') if os.name == 'nt' else test_store
+        self.f.write(self.template.format(self.outdir, self.tests, self.binary_tests, test_store, api_path).encode('charmap'))
         self.f.close()
 
     def add_verify(self, test_name):
@@ -188,6 +189,8 @@ class UnitTestFile:
 
     def add_binary_test(self, test_store, binary):
         name = binary[len(test_store):].replace(os.path.sep, "_").replace(".", "_")
+        if os.name == 'nt':
+            binary = binary.replace(os.sep, '/')
         self.binary_tests += binary_test_string.format(name, binary + ".zip")
 
 

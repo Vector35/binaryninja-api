@@ -82,11 +82,11 @@ void TriageFilePicker::openSelectedFiles()
 		f->createBinaryViews();
 		for (auto data: f->getAllDataViews())
 		{
-			BinaryNinja::Settings().Set("analysis.mode", BinaryNinja::Settings().Get<std::string>("triage.analysis_mode"), data);
-			BinaryNinja::Settings().Set("triage.always_prefer", true, data);
+			BinaryNinja::Settings().Set("analysis.mode", BinaryNinja::Settings().Get<std::string>("triage.analysisMode"), data);
+			BinaryNinja::Settings().Set("triage.preferSummaryView", true, data);
 			if (data->GetTypeName() != "Raw")
 			{
-				std::string linearSweepMode = BinaryNinja::Settings().Get<std::string>("triage.linear_sweep");
+				std::string linearSweepMode = BinaryNinja::Settings().Get<std::string>("triage.linearSweep");
 				if (linearSweepMode == "none")
 				{
 					BinaryNinja::Settings().Set("analysis.linearSweep.autorun", false, data);

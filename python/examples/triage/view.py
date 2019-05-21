@@ -204,7 +204,7 @@ Settings().register_setting("triage.preferSummaryViewForRaw", """
 	{
 		"title" : "Prefer Triage Summary View for Raw Files",
 		"type" : "boolean",
-		"default" : true,
+		"default" : false,
 		"description" : "Prefer Triage Summary View when opening a binary that is Raw file type."
 	}
 	""")

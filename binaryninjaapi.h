@@ -2588,6 +2588,8 @@ namespace BinaryNinja
 		void SetComment(const std::string& comment);
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
+		void SetUserXref(uint64_t addr, uint64_t target);
+
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);

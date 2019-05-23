@@ -1296,6 +1296,9 @@ class Function(object):
 	def set_user_xref(self, addr, target):
 		core.BNSetUserXref(self.handle, addr, target)
 
+	def remove_user_xref(self, addr, target):
+		core.BNRemoveUserXref(self.handle, addr, target)
+
 	def get_low_level_il_at(self, addr, arch=None):
 		"""
 		``get_low_level_il_at`` gets the LowLevelILInstruction corresponding to the given virtual address

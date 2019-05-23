@@ -245,9 +245,16 @@ void Function::SetCommentForAddress(uint64_t addr, const string& comment)
 	BNSetCommentForAddress(m_object, addr, comment.c_str());
 }
 
+
 void Function::SetUserXref(uint64_t addr, uint64_t target)
 {
 	BNSetUserXref(m_object, addr, target);
+}
+
+
+void Function::RemoveUserXref(uint64_t addr, uint64_t target)
+{
+	BNRemoveUserXref(m_object, addr, target);
 }
 
 

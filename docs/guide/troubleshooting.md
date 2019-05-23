@@ -44,6 +44,8 @@ Next, if running a python plugin, make sure the python requirements are met by y
 
 ## OS X
 
+### Older Versions
+
 While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
 
 ```
@@ -51,6 +53,20 @@ DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/MacOS" /Applications/
 ```
 
 Or second, modify the binary itself using the [install_name_tool](https://blogs.oracle.com/dipol/dynamic-libraries,-rpath,-and-mac-os).
+
+### Non-brew installed Python 3
+
+One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an erorr while attempting to download updates using the python provider. One of the following may fix this: 
+
+```
+pip install --upgrade certifi
+```
+
+or:
+
+```
+open /Applications/Python\ 3.6/Install\ Certificates.command
+```
 
 ## Linux
 

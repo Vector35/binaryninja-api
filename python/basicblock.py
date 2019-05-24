@@ -469,7 +469,7 @@ class BasicBlock(object):
 		for i in range(0, count.value):
 			addr = lines[i].addr
 			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
-				il_instr = self.il_function[lines[i].instrIndex]
+				il_instr = self.il_function[lines[i].instrIndex]  # pylint: disable=no-member
 			else:
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
@@ -507,12 +507,3 @@ class BasicBlock(object):
 		if isinstance(color, HighlightStandardColor):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
-
-	@property
-	def view(self):
-		""" """
-		return self._view
-
-	@view.setter
-	def view(self, value):
-		self._view = value

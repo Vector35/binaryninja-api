@@ -162,7 +162,7 @@ class AnalysisCompletionEvent(object):
 	"""
 	def __init__(self, view, callback):
 		self._view = view
-		self._callback = callback
+		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
 		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
 		global _pending_analysis_completion_events
@@ -190,7 +190,7 @@ class AnalysisCompletionEvent(object):
 		"""
 		.. warning: This method should only be used when the system is being shut down and no further analysis should be done afterward.
 		"""
-		self._callback = self._empty_callback
+		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
 		global _pending_analysis_completion_events
 		if id(self) in _pending_analysis_completion_events:
@@ -204,15 +204,6 @@ class AnalysisCompletionEvent(object):
 	@view.setter
 	def view(self, value):
 		self._view = value
-
-	@property
-	def callback(self):
-		""" """
-		return self._callback
-
-	@callback.setter
-	def callback(self, value):
-		self._callback = value
 
 
 class ActiveAnalysisInfo(object):
@@ -290,13 +281,13 @@ class AnalysisInfo(object):
 		self._analysis_time = value
 
 	@property
-	def analysis_info(self):
+	def active_info(self):
 		""" """
-		return self._analysis_info
+		return self._active_info
 
-	@analysis_info.setter
-	def analysis_info(self, value):
-		self._analysis_info = value
+	@active_info.setter
+	def active_info(self, value):
+		self._active_info = value
 
 
 class AnalysisProgress(object):
@@ -716,10 +707,6 @@ class Segment(object):
 		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentReadable) != 0
 
 	@property
-	def end(self):
-		return core.BNSegmentGetEnd(self.handle)
-
-	@property
 	def data_length(self):
 		return core.BNSegmentGetDataLength(self.handle)
 
@@ -945,7 +932,7 @@ class BinaryView(object):
 	_registered = False
 	_registered_cb = None
 	registered_view_type = None
-	next_address = 0
+	_next_address = 0
 	_associated_data = {}
 	_registered_instances = []
 
@@ -1347,7 +1334,7 @@ class BinaryView(object):
 		result = []
 		for i in range(count.value):
 			result.append(types.NameSpace._from_core_struct(nameSpaceList[i]))
-		core.BNFreeNameSpaceList(nameSpaceList, count.value);
+		core.BNFreeNameSpaceList(nameSpaceList, count.value)
 		return result
 
 	@property
@@ -3003,7 +2990,7 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		if plat is None:
-			plat = self.plat
+			plat = self.platform
 		if plat is not None:
 			plat = plat.handle
 		if sym_type is not None:
@@ -4351,7 +4338,7 @@ class BinaryView(object):
 		Evaluates an string expression to an integer value.
 
 		The parser uses the following rules:
-			- symbols are defined by the lexer as `[A-Za-z0-9_:<>][A-Za-z0-9_:$\-<>]+` or anything enclosed in either single or
+			- symbols are defined by the lexer as `[A-Za-z0-9_:<>][A-Za-z0-9_:$\\-<>]+` or anything enclosed in either single or
 		      double quotes
 			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
@@ -5055,7 +5042,7 @@ class StructuredDataView(object):
 	def __getitem__(self, key):
 		m = self._members.get(key, None)
 		if m is None:
-			return super(StructuredDataView, self).__getitem__(key)
+			return m
 
 		ty = m.type
 		offset = m.offset

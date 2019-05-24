@@ -23,6 +23,7 @@ import ctypes
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
+from binaryninja import log
 
 import binaryninja
 from binaryninja.enums import UpdateResult

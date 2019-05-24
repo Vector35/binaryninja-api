@@ -422,16 +422,6 @@ class PossibleValueSet(object):
 		self._table = value
 
 	@property
-	def table(self):
-		""" """
-		return self._table
-
-	@table.setter
-	def table(self, value):
-		""" """
-		self._table = value
-
-	@property
 	def mapping(self):
 		""" """
 		return self._mapping

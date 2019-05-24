@@ -1294,9 +1294,40 @@ class Function(object):
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def set_user_xref(self, addr, target):
+		"""
+		``set_user_xref`` places a user-defined cross-reference from the given address to
+		the specified target address.
+		If the given address is not contained within this function, no action is performed.
+		If there are multiple basic blocks (i.e. of different architectures) which contain
+		the specified source address, then the cross-reference is added for all matching
+		matching basic blocks. To remove the xref, use ``remove_user_xref``.
+
+		:param addr int: virtual address within the current function of the xref's source.
+		:param target int: virtual address of the xref's destination.
+		:rtype: None
+		:Example:
+
+			>>> current_function.set_user_xref(here, 0x400000)
+
+		"""
 		core.BNSetUserXref(self.handle, addr, target)
 
 	def remove_user_xref(self, addr, target):
+		"""
+		``remove_user_xref`` reomves a user-defined cross-reference.
+		If the given address is not contained within this function, or if there is no
+		user-defined cross-reference from the specified source address, no action is performed.
+		If there are multiple user-defined xrefs in the function which match the source and
+		target address, all matching xrefs are removed.
+
+		:param addr int: virtual address within the current function of the xref's source.
+		:param target int: virtual address of the xref's destination.
+		:rtype: None
+		:Example:
+
+			>>> current_function.remove_user_xref(here, 0x400000)
+
+		"""
 		core.BNRemoveUserXref(self.handle, addr, target)
 
 	def get_low_level_il_at(self, addr, arch=None):

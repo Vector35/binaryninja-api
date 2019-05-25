@@ -9,20 +9,18 @@
 class EntropyThread
 {
 	BinaryViewRef m_data;
-	QImage m_image;
+	QImage* m_image;
 	size_t m_blockSize;
 	bool m_updated, m_running;
 	std::thread m_thread;
 
 public:
-	EntropyThread(BinaryViewRef data, int width, size_t blockSize);
+	EntropyThread(BinaryViewRef data, size_t blockSize, QImage* image);
 	~EntropyThread();
 
 	void Run();
 	bool IsUpdated() { return m_updated; }
 	void ResetUpdated() { m_updated = false; }
-
-	const QImage& GetImage() { return m_image; }
 };
 
 
@@ -34,6 +32,7 @@ class EntropyWidget: public QWidget
 	BinaryViewRef m_data, m_rawData;
 	size_t m_blockSize;
 	int m_width;
+	QImage m_image;
 	EntropyThread* m_thread;
 
 public:

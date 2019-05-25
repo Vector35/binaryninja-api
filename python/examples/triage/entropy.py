@@ -37,7 +37,9 @@ class EntropyWidget(QWidget):
 		self.data = data
 		self.raw_data = data.file.raw
 
-		self.block_size = 1024
+		self.block_size = (len(self.raw_data) / 4096) + 1
+		if self.block_size < 1024:
+			self.block_size = 1024
 		self.width = int(len(self.raw_data) / self.block_size)
 		self.image = QImage(self.width, 1, QImage.Format_ARGB32)
 		self.image.fill(QColor(0, 0, 0, 0))

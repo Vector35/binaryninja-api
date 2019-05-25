@@ -161,7 +161,6 @@ private:
 	bool m_cursorAscii;
 	bool m_caretVisible, m_caretBlink;
 	bool m_insertMode;
-	bool m_leftButtonDown;
 	QString m_status;
 	QTimer* m_cursorTimer;
 	QTimer* m_updateTimer;
@@ -181,7 +180,6 @@ protected:
 	virtual void keyReleaseEvent(QKeyEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	virtual bool event(QEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
 

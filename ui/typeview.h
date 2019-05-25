@@ -100,7 +100,6 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	size_t m_selectionStartTypeIndex;
 	size_t m_selectionStartLine;
 	size_t m_selectionStartOffset;
-	bool m_leftButtonDown;
 
 	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> m_typeLines;
 	std::vector<TypeLineIndex> m_types;
@@ -201,7 +200,6 @@ protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 	virtual void scrollContentsBy(int dx, int dy) override;
 

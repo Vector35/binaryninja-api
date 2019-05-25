@@ -44,7 +44,6 @@ ByteView::ByteView(QWidget* parent, BinaryViewRef data): QAbstractScrollArea(par
 	m_selectionVisible = false;
 	m_caretVisible = false;
 	m_caretBlink = true;
-	m_leftButtonDown = false;
 	m_cols = 128;
 	m_updatesRequired = false;
 	m_visibleRows = 1;
@@ -783,7 +782,6 @@ void ByteView::focusInEvent(QFocusEvent*)
 void ByteView::focusOutEvent(QFocusEvent*)
 {
 	m_caretVisible = false;
-	m_leftButtonDown = false;
 	updateCaret();
 }
 
@@ -1069,13 +1067,12 @@ void ByteView::mousePressEvent(QMouseEvent* event)
 	repositionCaret();
 	if ((event->modifiers() & Qt::ShiftModifier) != 0)
 		viewport()->update();
-	m_leftButtonDown = true;
 }
 
 
 void ByteView::mouseMoveEvent(QMouseEvent* event)
 {
-	if (!m_leftButtonDown)
+	if (event->buttons() != Qt::LeftButton)
 		return;
 	int x = (event->x() - 2) / m_render.getFontWidth() - ((int)m_addrWidth + 2);
 	int y = (event->y() - 2) / m_render.getFontHeight();
@@ -1086,14 +1083,6 @@ void ByteView::mouseMoveEvent(QMouseEvent* event)
 	m_cursorAddr = addressFromLocation(x, y);
 	repositionCaret();
 	viewport()->update();
-}
-
-
-void ByteView::mouseReleaseEvent(QMouseEvent* event)
-{
-	if (event->button() != Qt::LeftButton)
-		return;
-	m_leftButtonDown = false;
 }
 
 

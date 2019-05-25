@@ -32,7 +32,6 @@ class ByteView: public QAbstractScrollArea, public View
 	std::vector<BNAddressRange> m_ranges;
 	uint64_t m_allocatedLength, m_scrollBarMultiplier;
 
-	bool m_leftButtonDown;
 	int m_lastMouseX, m_lastMouseY;
 	int m_wheelDelta;
 	bool m_updatingScrollBar;
@@ -101,7 +100,6 @@ protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
 private Q_SLOTS:
 	void scrollBarMoved(int value);

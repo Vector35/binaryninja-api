@@ -89,7 +89,7 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 
 	bool m_scrollMode;
 	int m_scrollBaseX, m_scrollBaseY;
-	bool m_mouseSelectMode;
+	bool m_mouseSelectMode = false;
 
 	FlowGraphNodeRef m_selectedNode, m_selectedEdgeSource;
 	bool m_selectedEdgeIncoming = false;

@@ -3784,6 +3784,7 @@ extern "C"
 	// Settings APIs
 	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(const char* registry, const char* group, const char* title);
 	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(const char* registry, const char* id, const char* properties);
+	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(const char* registry, const char* id, const char* property, size_t* inoutSize);
 	BINARYNINJACOREAPI bool BNSettingsUpdateProperty(const char* registry, const char* id, const char* property);
 	BINARYNINJACOREAPI bool BNSettingsUpdateBoolProperty(const char* registry, const char* id, const char* property, bool value);
 	BINARYNINJACOREAPI bool BNSettingsUpdateDoubleProperty(const char* registry, const char* id, const char* property, double value);

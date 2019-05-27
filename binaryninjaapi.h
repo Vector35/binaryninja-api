@@ -4314,6 +4314,8 @@ namespace BinaryNinja
 		bool RegisterGroup(const std::string& group, const std::string& title);
 		bool RegisterSetting(const std::string& id, const std::string& properties);
 
+		template<typename T> T QueryProperty(const std::string& id, const std::string& property);
+
 		bool UpdateProperty(const std::string& id, const std::string& property);
 		bool UpdateProperty(const std::string& id, const std::string& property, bool value);
 		bool UpdateProperty(const std::string& id, const std::string& property, double value);
@@ -4345,6 +4347,7 @@ namespace BinaryNinja
 	};
 
 	// explicit specializations
+	template<> std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(const std::string& id, const std::string& property);
 	template<> bool Settings::Get<bool>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
 	template<> double Settings::Get<double>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
 	template<> int64_t Settings::Get<int64_t>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);

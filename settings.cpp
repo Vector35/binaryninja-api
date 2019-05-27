@@ -18,6 +18,21 @@ bool Settings::RegisterSetting(const string& id, const string& properties)
 }
 
 
+template<> vector<string> Settings::QueryProperty<vector<string>>(const string& id, const string& property)
+{
+	size_t size = 0;
+	char** outBuffer = (char**)BNSettingsQueryPropertyStringList(m_registry.c_str(), id.c_str(), property.c_str(), &size);
+
+	vector<string> result;
+	result.reserve(size);
+	for (size_t i = 0; i < size; i++)
+		result.emplace_back(outBuffer[i]);
+
+	BNFreeStringList(outBuffer, size);
+	return result;
+}
+
+
 bool Settings::UpdateProperty(const std::string& id, const std::string& property)
 {
 	return BNSettingsUpdateProperty(m_registry.c_str(), id.c_str(), property.c_str());

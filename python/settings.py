@@ -66,6 +66,15 @@ class Settings(object):
 		"""
 		return core.BNSettingsRegisterSetting(self.registry_id, id, properties)
 
+	def query_property_string_list(self, id, property_name):
+		length = ctypes.c_ulonglong()
+		result = core.BNSettingsQueryPropertyStringList(self.registry_id, id, property_name, ctypes.byref(length))
+		out_list = []
+		for i in range(length.value):
+			out_list.append(pyNativeStr(result[i]))
+		core.BNFreeStringList(result, length)
+		return out_list
+
 	def update_property(self, id, setting_property):
 		return core.BNSettingsUpdateProperty(self.registry_id, tr(), id, setting_property)
 

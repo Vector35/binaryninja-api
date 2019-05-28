@@ -246,6 +246,11 @@ public:
 	void nextCrossReference();
 	void prevCrossReference();
 
+	void showTags();
+	void editTag(TagRef tag);
+	void nextTag();
+	void prevTag();
+
 	virtual UIActionContext actionContext();
 	void bindActions();
 	static void registerActions();

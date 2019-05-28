@@ -142,6 +142,11 @@ private Q_SLOTS:
 	void comment();
 	void commentAccepted();
 	void addUserXref();
+	void bookmarkAddress();
+	void unbookmarkAddress();
+	void tagAddress();
+	void tagAddressAccepted(TagTypeRef tt);
+	void manageAddressTags();
 
 	void convertToNop();
 	void alwaysBranch();

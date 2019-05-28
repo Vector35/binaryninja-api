@@ -881,6 +881,7 @@ namespace BinaryNinja
 	class Function;
 	struct DataVariable;
 	class Symbol;
+	class Tag;
 
 	class BinaryDataNotification
 	{
@@ -1090,9 +1091,15 @@ namespace BinaryNinja
 
 	struct InstructionTextToken
 	{
+		enum
+		{
+			WidthIsByteCount = 0
+		};
+
 		BNInstructionTextTokenType type;
 		std::string text;
 		uint64_t value;
+		uint64_t width;
 		size_t size, operand;
 		BNInstructionTextTokenContext context;
 		uint8_t confidence;
@@ -1103,10 +1110,10 @@ namespace BinaryNinja
 		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-			const std::vector<std::string>& typeName={});
+			const std::vector<std::string>& typeName={}, uint64_t width = WidthIsByteCount);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
 			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
-			size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE, const std::vector<std::string>& typeName={});
+			size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE, const std::vector<std::string>& typeName={}, uint64_t width = WidthIsByteCount);
 		InstructionTextToken(const BNInstructionTextToken& token);
 
 		InstructionTextToken WithConfidence(uint8_t conf);
@@ -1116,12 +1123,14 @@ namespace BinaryNinja
 	};
 
 
+	class Tag;
 	struct DisassemblyTextLine
 	{
 		uint64_t addr;
 		size_t instrIndex;
 		std::vector<InstructionTextToken> tokens;
 		BNHighlightColor highlight;
+		std::vector<Ref<Tag>> tags;
 
 		DisassemblyTextLine();
 	};
@@ -1185,6 +1194,67 @@ namespace BinaryNinja
 		uint64_t address;
 		Confidence<Ref<Type>> type;
 		bool autoDiscovered;
+	};
+
+	class TagType: public CoreRefCountObject<BNTagType, BNNewTagTypeReference, BNFreeTagType>
+	{
+	public:
+		typedef BNTagTypeType Type;
+
+		TagType(BNTagType* tagType);
+		TagType(BinaryView* view);
+		TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible = true, Type type = UserTagType);
+
+		BinaryView* GetView() const;
+		std::string GetName() const;
+		void SetName(const std::string& name);
+		std::string GetIcon() const;
+		void SetIcon(const std::string& icon);
+		bool GetVisible() const;
+		void SetVisible(bool visible);
+		Type GetType() const;
+		void SetType(Type type);
+	};
+
+	class Tag: public CoreRefCountObject<BNTag, BNNewTagReference, BNFreeTag>
+	{
+	public:
+		Tag(BNTag* tag);
+		Tag(Ref<TagType> type, const std::string& data = "");
+
+		Ref<TagType> GetType() const;
+		std::string GetData() const;
+		void SetData(const std::string& data);
+
+		static BNTag** CreateTagList(const std::vector<Ref<Tag>>& tags, size_t* count);
+		static std::vector<Ref<Tag>> ConvertTagList(BNTag** tags, size_t count);
+		static std::vector<Ref<Tag>> ConvertAndFreeTagList(BNTag** tags, size_t count);
+	};
+
+	class Architecture;
+	class Function;
+	struct TagReference
+	{
+		typedef BNTagReferenceType RefType;
+
+		RefType refType;
+		bool autoDefined;
+		Ref<Tag> tag;
+		Ref<Architecture> arch;
+		Ref<Function> func;
+		uint64_t addr;
+
+		TagReference();
+		TagReference(const BNTagReference& ref);
+
+		bool operator==(const TagReference& other) const;
+		bool operator!=(const TagReference& other) const;
+
+		operator BNTagReference() const;
+
+		static BNTagReference* CreateTagReferenceList(const std::vector<TagReference>& tags, size_t* count);
+		static std::vector<TagReference> ConvertTagReferenceList(BNTagReference* tags, size_t count);
+		static std::vector<TagReference> ConvertAndFreeTagReferenceList(BNTagReference* tags, size_t count);
 	};
 
 	class Relocation;
@@ -1455,6 +1525,38 @@ namespace BinaryNinja
 		void UndefineUserSymbol(Ref<Symbol> sym);
 
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
+
+		void AddTagType(Ref<TagType> tagType);
+		void RemoveTagType(Ref<TagType> tagType);
+		Ref<TagType> GetTagType(const std::string& name);
+		Ref<TagType> GetTagType(const std::string& name, TagType::Type type);
+		std::vector<Ref<TagType>> GetTagTypes();
+
+		void AddTag(Ref<Tag> tag);
+		void RemoveTag(Ref<Tag> tag);
+		Ref<Tag> GetTag(uint64_t tagId);
+
+		std::vector<TagReference> GetAllTagReferences();
+		std::vector<TagReference> GetAllAddressTagReferences();
+		std::vector<TagReference> GetAllFunctionTagReferences();
+		std::vector<TagReference> GetAllTagReferencesOfType(Ref<TagType> tagType);
+		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+
+		std::vector<TagReference> GetDataTagReferences();
+		std::vector<Ref<Tag>> GetDataTags(uint64_t addr);
+		std::vector<Ref<Tag>> GetDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetDataTagsInRange(uint64_t start, uint64_t end);
+		void AddAutoDataTag(uint64_t addr, Ref<Tag> tag);
+		void RemoveAutoDataTag(uint64_t addr, Ref<Tag> tag);
+		void AddUserDataTag(uint64_t addr, Ref<Tag> tag);
+		void RemoveUserDataTag(uint64_t addr, Ref<Tag> tag);
+		void RemoveTagReference(const TagReference& ref);
+
+		Ref<Tag> CreateAutoDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+
+		Ref<Tag> CreateAutoDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -2747,6 +2849,35 @@ namespace BinaryNinja
 			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
 		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
 			uint8_t alpha = 255);
+
+		std::vector<TagReference> GetAllTagReferences();
+		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+
+		std::vector<TagReference> GetAddressTagReferences();
+		std::vector<Ref<Tag>> GetAddressTags(Architecture* arch, uint64_t addr);
+		std::vector<Ref<Tag>> GetAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
+		void AddAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+		void RemoveAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+		void AddUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+		void RemoveUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+
+		std::vector<TagReference> GetFunctionTagReferences();
+		std::vector<Ref<Tag>> GetFunctionTags();
+		std::vector<Ref<Tag>> GetFunctionTagsOfType(Ref<TagType> tagType);
+		void AddAutoFunctionTag(Ref<Tag> tag);
+		void RemoveAutoFunctionTag(Ref<Tag> tag);
+		void AddUserFunctionTag(Ref<Tag> tag);
+		void RemoveUserFunctionTag(Ref<Tag> tag);
+
+		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateAutoFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique = false);
+
+		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateAutoFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 
 		void Reanalyze();
 

@@ -81,6 +81,7 @@ struct BINARYNINJAUIAPI UIAction
 	static void registerPluginCommandActions();
 	static void registerPluginCommandActions(const QString& prefix);
 	static void registerHighlightColorActions(const QString& prefix);
+	static void registerBookmarkActions(const QString& prefix);
 
 	static void setActionDisplayName(const QString& registeredName, const QString& displayName);
 	static void setActionDisplayName(const QString& registeredName, const std::function<QString()>& displayNameFunc);
@@ -137,6 +138,14 @@ struct BINARYNINJAUIAPI UIHighlightColorAction
 	UIHighlightColorAction(const std::function<void(BNHighlightColor color)>& activate,
 		const std::function<bool()>& isValid);
 	UIHighlightColorAction(const UIHighlightColorAction& other);
+};
+
+struct BINARYNINJAUIAPI UIBookmarkAction
+{
+	std::function<void (const UIActionContext& context, int index)> activate;
+	std::function<bool (const UIActionContext& context, int index)> isValid;
+
+	UIBookmarkAction(const std::function<void (const UIActionContext& context, int index)>& activate, const std::function<bool (const UIActionContext& context, int index)>& isValid);
 };
 
 enum ActionPriority
@@ -202,6 +211,9 @@ public:
 
 	void bindHighlightColorActions(const QString& prefix, const UIHighlightColorAction& action);
 	void unbindHighlightColorActions(const QString& prefix);
+
+	void bindBookmarkActions(const QString& prefix, const UIBookmarkAction& action);
+	void unbindBookmarkActions(const QString& prefix);
 
 	void setActionDisplayName(const QString& registeredName, const QString& displayName);
 	void setActionDisplayName(const QString& registeredName, const std::function<QString()>& displayNameFunc);

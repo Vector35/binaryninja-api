@@ -342,6 +342,230 @@ void AnalysisCompletionEvent::Cancel()
 }
 
 
+TagType::TagType(BNTagType* tagType)
+{
+	m_object = tagType;
+}
+
+
+TagType::TagType(BinaryView* view)
+{
+	m_object = BNCreateTagType(view->GetObject());
+}
+
+
+TagType::TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible, TagType::Type type)
+{
+	m_object = BNCreateTagType(view->GetObject());
+	SetName(name);
+	SetIcon(icon);
+	SetVisible(visible);
+	SetType(type);
+}
+
+
+BinaryView* TagType::GetView() const
+{
+	return new BinaryView(BNTagTypeGetView(m_object));
+}
+
+
+std::string TagType::GetName() const
+{
+	return BNTagTypeGetName(m_object);
+}
+
+
+void TagType::SetName(const std::string& name)
+{
+	BNTagTypeSetName(m_object, name.c_str());
+}
+
+
+std::string TagType::GetIcon() const
+{
+	return BNTagTypeGetIcon(m_object);
+}
+
+
+void TagType::SetIcon(const std::string& icon)
+{
+	BNTagTypeSetIcon(m_object, icon.c_str());
+}
+
+
+bool TagType::GetVisible() const
+{
+	return BNTagTypeGetVisible(m_object);
+}
+
+
+void TagType::SetVisible(bool visible)
+{
+	BNTagTypeSetVisible(m_object, visible);
+}
+
+
+TagType::Type TagType::GetType() const
+{
+	return BNTagTypeGetType(m_object);
+}
+
+
+void TagType::SetType(TagType::Type type)
+{
+	BNTagTypeSetType(m_object, type);
+}
+
+
+Tag::Tag(BNTag* tag)
+{
+	m_object = tag;
+}
+
+
+Tag::Tag(Ref<TagType> type, const std::string& data)
+{
+	m_object = BNCreateTag(type->GetObject(), data.c_str());
+}
+
+
+Ref<TagType> Tag::GetType() const
+{
+	return new TagType(BNTagGetType(m_object));
+}
+
+
+std::string Tag::GetData() const
+{
+	return BNTagGetData(m_object);
+}
+
+
+void Tag::SetData(const std::string& data)
+{
+	BNTagSetData(m_object, data.c_str());
+}
+
+
+BNTag** Tag::CreateTagList(const std::vector<Ref<Tag>>& tags, size_t* count)
+{
+	*count = tags.size();
+	BNTag** result = new BNTag*[tags.size()];
+	for (size_t i = 0; i < tags.size(); i++)
+		result[i] = tags[i]->GetObject();
+	return result;
+}
+
+
+std::vector<Ref<Tag>> Tag::ConvertTagList(BNTag** tags, size_t count)
+{
+	std::vector<Ref<Tag>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(new Tag(BNNewTagReference(tags[i])));
+	return result;
+}
+
+
+std::vector<Ref<Tag>> Tag::ConvertAndFreeTagList(BNTag** tags, size_t count)
+{
+	auto result = ConvertTagList(tags, count);
+	BNFreeTagList(tags, count);
+	return result;
+}
+
+
+TagReference::TagReference()
+{
+}
+
+
+TagReference::TagReference(const BNTagReference& ref)
+{
+	refType = ref.refType;
+	autoDefined = ref.autoDefined;
+	tag = ref.tag ? new Tag(BNNewTagReference(ref.tag)) : nullptr;
+	arch = ref.arch ? new CoreArchitecture(ref.arch) : nullptr;
+	func = ref.func ? new Function(BNNewFunctionReference(ref.func)) : nullptr;
+	addr = ref.addr;
+}
+
+
+bool TagReference::operator==(const TagReference& other) const
+{
+	if (refType != other.refType)
+		return false;
+	if (autoDefined != other.autoDefined)
+		return false;
+	if (tag != other.tag)
+		return false;
+	switch (refType)
+	{
+		case AddressTagReference:
+			return func == other.func && arch == other.arch && addr == other.addr;
+		case FunctionTagReference:
+			return func == other.func;
+		case DataTagReference:
+			return addr == other.addr;
+	}
+}
+
+
+bool TagReference::operator!=(const TagReference& other) const
+{
+	return !((*this) == other);
+}
+
+
+TagReference::operator BNTagReference() const
+{
+	BNTagReference ret;
+	ret.refType = refType;
+	ret.autoDefined = autoDefined;
+	ret.tag = tag->GetObject();
+	ret.arch = arch ? arch->GetObject() : nullptr;
+	ret.func = func ? func->GetObject() : nullptr;
+	ret.addr = addr;
+	return ret;
+}
+
+
+BNTagReference* TagReference::CreateTagReferenceList(const std::vector<TagReference>& tags, size_t* count)
+{
+	*count = tags.size();
+
+	BNTagReference* refs = new BNTagReference[*count];
+
+	for (size_t i = 0; i < *count; i ++)
+	{
+		refs[i] = tags[i];
+	}
+
+	return refs;
+}
+
+
+std::vector<TagReference> TagReference::ConvertTagReferenceList(BNTagReference* tags, size_t count)
+{
+	std::vector<TagReference> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i ++)
+	{
+		result.emplace_back(tags[i]);
+	}
+	return result;
+}
+
+
+std::vector<TagReference> TagReference::ConvertAndFreeTagReferenceList(BNTagReference* tags, size_t count)
+{
+	auto result = ConvertTagReferenceList(tags, count);
+	BNFreeTagReferences(tags, count);
+	return result;
+}
+
+
 Segment::Segment(BNSegment* seg)
 {
 	m_object = seg;
@@ -1757,6 +1981,239 @@ void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Functi
 }
 
 
+void BinaryView::AddTagType(Ref<TagType> tagType)
+{
+	BNAddTagType(m_object, tagType->GetObject());
+}
+
+
+void BinaryView::RemoveTagType(Ref<TagType> tagType)
+{
+	BNRemoveTagType(m_object, tagType->GetObject());
+}
+
+
+Ref<TagType> BinaryView::GetTagType(const std::string& name)
+{
+	BNTagType* tagType = BNGetTagType(m_object, name.c_str());
+	if (!tagType)
+		return nullptr;
+
+	return Ref<TagType>(new TagType(tagType));
+}
+
+
+Ref<TagType> BinaryView::GetTagType(const std::string& name, TagType::Type type)
+{
+	BNTagType* tagType = BNGetTagTypeWithType(m_object, name.c_str(), type);
+	if (!tagType)
+		return nullptr;
+
+	return Ref<TagType>(new TagType(tagType));
+}
+
+
+std::vector<Ref<TagType>> BinaryView::GetTagTypes()
+{
+	size_t count;
+	BNTagType** tagTypes = BNGetTagTypes(m_object, &count);
+
+	std::vector<Ref<TagType>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i ++)
+	{
+		result.push_back(new TagType(BNNewTagTypeReference(tagTypes[i])));
+	}
+	BNFreeTagTypeList(tagTypes, count);
+
+	return result;
+}
+
+
+void BinaryView::AddTag(Ref<Tag> tag)
+{
+	BNAddTag(m_object, tag->GetObject());
+}
+
+
+void BinaryView::RemoveTag(Ref<Tag> tag)
+{
+	BNRemoveTag(m_object, tag->GetObject());
+}
+
+
+Ref<Tag> BinaryView::GetTag(uint64_t tagId)
+{
+	BNTag* tag = BNGetTag(m_object, tagId);
+	if (!tag)
+		return nullptr;
+
+	return Ref<Tag>(new Tag(tag));
+}
+
+
+std::vector<TagReference> BinaryView::GetAllTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAllTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetAllAddressTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAllAddressTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetAllFunctionTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAllFunctionTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetAllTagReferencesOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTagReference* refs = BNGetAllTagReferencesOfType(m_object, tagType->GetObject(), &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetTagReferencesOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTagReference* refs = BNGetTagReferencesOfType(m_object, tagType->GetObject(), &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetDataTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetDataTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetDataTags(uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetDataTags(m_object, addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetDataTagsOfType(uint64_t addr, Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetDataTagsOfType(m_object, addr, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetDataTagsInRange(uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTag** tags = BNGetDataTagsInRange(m_object, start, end, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+void BinaryView::AddAutoDataTag(uint64_t addr, Ref<Tag> tag)
+{
+	BNAddAutoDataTag(m_object, addr, tag->GetObject());
+}
+
+
+void BinaryView::RemoveAutoDataTag(uint64_t addr, Ref<Tag> tag)
+{
+	BNRemoveAutoDataTag(m_object, addr, tag->GetObject());
+}
+
+
+void BinaryView::AddUserDataTag(uint64_t addr, Ref<Tag> tag)
+{
+	BNAddUserDataTag(m_object, addr, tag->GetObject());
+}
+
+
+void BinaryView::RemoveUserDataTag(uint64_t addr, Ref<Tag> tag)
+{
+	BNRemoveUserDataTag(m_object, addr, tag->GetObject());
+}
+
+
+void BinaryView::RemoveTagReference(const TagReference& ref)
+{
+	BNRemoveTagReference(m_object, (BNTagReference)ref);
+}
+
+
+Ref<Tag> BinaryView::CreateAutoDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateAutoDataTag(addr, tagType, data, unique);
+}
+
+
+Ref<Tag> BinaryView::CreateUserDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateUserDataTag(addr, tagType, data, unique);
+}
+
+
+Ref<Tag> BinaryView::CreateAutoDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetDataTags(addr);
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+
+	Ref<Tag> tag = new Tag(tagType, data);
+	AddTag(tag);
+
+	AddAutoDataTag(addr, tag);
+	return tag;
+}
+
+
+Ref<Tag> BinaryView::CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetDataTags(addr);
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+
+	Ref<Tag> tag = new Tag(tagType, data);
+	AddTag(tag);
+
+	AddUserDataTag(addr, tag);
+	return tag;
+}
+
+
 bool BinaryView::IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {
 	return BNIsNeverBranchPatchAvailable(m_object, arch->GetObject(), addr);
@@ -1957,6 +2414,7 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.highlight = lines[i].contents.highlight;
 		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
+		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
 		result.push_back(line);
 	}
 
@@ -1994,6 +2452,7 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.highlight = lines[i].contents.highlight;
 		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
+		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
 		result.push_back(line);
 	}
 

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) 2015-2019 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -898,6 +899,98 @@ class AddressRange(object):
 	@end.setter
 	def end(self, value):
 		self._end = value
+
+
+class TagType(object):
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNTagType)
+
+	@property
+	def name(self):
+		return core.BNTagTypeGetName(self.handle)
+
+	@name.setter
+	def name(self, value):
+		core.BNTagTypeSetName(self.handle, value)
+
+	@property
+	def icon(self):
+		return core.BNTagTypeGetIcon(self.handle)
+
+	@icon.setter
+	def icon(self, value):
+		core.BNTagTypeSetIcon(self.handle, value)
+
+	@property
+	def visible(self):
+		return core.BNTagTypeGetVisible(self.handle)
+
+	@visible.setter
+	def visible(self, value):
+		core.BNTagTypeSetVisible(self.handle, value)
+
+	@property
+	def type(self):
+		return core.BNTagTypeGetType(self.handle)
+
+	@type.setter
+	def type(self, value):
+		core.BNTagTypeSetType(self.handle, value)
+
+	def __del__(self):
+		core.BNFreeTagType(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, TagType):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, TagType):
+			return False
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
+
+	def __hash__(self):
+		return hash(self.handle.contents)
+
+	def __repr__(self):
+		return "<tag type %s: %s>" % (self.name, self.icon)
+
+
+class Tag(object):
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNTag)
+
+	@property
+	def type(self):
+		return TagType(core.BNTagGetType(self.handle))
+
+	@property
+	def data(self):
+		return core.BNTagGetData(self.handle)
+
+	@data.setter
+	def data(self, value):
+		core.BNTagSetData(self.handle, value)
+
+	def __del__(self):
+		core.BNFreeTag(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, Tag):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, Tag):
+			return False
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
+
+	def __hash__(self):
+		return hash(self.handle.contents)
+
+	def __repr__(self):
+		return "<tag %s %s: %s>" % (self.type.icon, self.type.name, self.data)
 
 
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -3222,6 +3315,210 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
+
+	def create_tag_type(self, name, icon):
+		"""
+		``create_tag_type`` creates a new Tag Type and adds it to the view
+
+		:param str name: The name for the tag
+		:param str icon: The icon (recommended 1 emoji or 2 chars) for the tag
+		:return The created tag type
+		:rtype TagType
+		:Example:
+
+			>>> tt = bv.create_tag_type("Crabby Functions", "🦀")
+			>>> current_function.create_user_address_tag(here, tt, "Get Crabbed")
+			>>>
+		"""
+		tag_type = TagType(core.BNCreateTagType(self.handle, name, icon))
+		tag_type.name = name
+		tag_type.icon = icon
+		core.BNAddTagType(self.handle, tag_type.handle)
+		return tag_type
+
+	def remove_tag_type(self, tag_type):
+		"""
+		``remove_tag_type`` removes a new Tag Type and all tags that use it
+
+		:param TagType tag_type: The Tag Type to remove
+		:rtype None
+		"""
+		core.BNRemoveTagType(self.handle, tag_type.handle)
+
+	@property
+	def tag_types(self):
+		"""
+		``tag_types`` gets a dictionary of all Tag Types present for the view,
+		structured as {Tag Type Name => Tag Type}.
+
+		:type {str => TagType}
+		"""
+		count = ctypes.c_ulonglong(0)
+		types = core.BNGetTagTypes(self.handle, count)
+		result = {}
+		for i in range(0, count.value):
+			tag = TagType(core.BNNewTagTypeReference(types[i]))
+			if tag.name in result:
+				result[tag.name] = [result[tag.name], tag]
+			else:
+				result[tag.name] = tag
+		core.BNFreeTagTypeList(types, count.value)
+		return result
+
+	def create_tag(self, type, data):
+		"""
+		``create_tag`` creates a new Tag object but does not add it anywhere
+
+		:param TagType type: The Tag Type for this Tag
+		:param str data: Additional data for the Tag
+		:return The created Tag
+		:rtype Tag
+		:Example:
+
+			>>> tt = bv.tag_types["Crabby Functions"]
+			>>> tag = bv.create_tag(tt, "Get Crabbed")
+			>>> bv.add_user_data_tag(here, tag)
+			>>>
+		"""
+		tag = Tag(core.BNCreateTag(type.handle, data))
+		core.BNAddTag(self.handle, tag.handle)
+		return tag
+
+	@property
+	def data_tags(self):
+		"""
+		``data_tags`` gets a list of all data Tags in the view.
+		Tags are returned as a list of (address, Tag) pairs.
+
+		:type [(int, Tag)]
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetDataTagReferences(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(tags[i].tag))
+			result.append((tags[i].addr, tag))
+		core.BNFreeTagReferences(tags, count.value)
+		return result
+
+	def get_data_tags_at(self, addr):
+		"""
+		``get_data_tags_at`` gets a list of all Tags for a data address.
+
+		:param int addr: Address to get tags at
+		:return A list of data Tags
+		:rtype [Tag]
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetDataTags(self.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_data_tags_in_range(self, range):
+		"""
+		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange range: Address range from which to get tags
+		:return A list of data Tags
+		:rtype [Tag]
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetDataTagsInRange(self.handle, range.start, range.end, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def add_user_data_tag(self, addr, tag):
+		"""
+		``add_user_data_tag`` adds an already-created Tag object at a data address.
+		Since this adds a user tag, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tag
+		:param Tag tag: Tag object to be added
+		:rtype None
+		"""
+		core.BNAddUserDataTag(self.handle, addr, tag.handle)
+
+	def create_user_data_tag(self, addr, type, data, unique=False):
+		"""
+		``create_user_data_tag`` creates and adds a Tag object at a data address.
+		Since this adds a user tag, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tag
+		:param TagType type: Tag Type for the Tag that is created
+		:param str data: Additional data for the Tag
+		:param bool unique: If a tag already exists at this location with this data, don't add another
+		:return The created Tag
+		:rtype Tag
+		"""
+		if unique:
+			tags = self.get_data_tags_at(addr)
+			for tag in tags:
+				if tag.type == type and tag.data == data:
+					return
+
+		tag = self.create_tag(type, data)
+		core.BNAddUserDataTag(self.handle, addr, tag.handle)
+		return tag
+
+	def remove_user_data_tag(self, addr, tag):
+		"""
+		``remove_user_data_tag`` removes a Tag object at a data address.
+		Since this removes a user tag, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tag
+		:param Tag tag: Tag object to be added
+		:rtype None
+		"""
+		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
+
+	def add_auto_data_tag(self, addr, tag):
+		"""
+		``add_auto_data_tag`` adds an already-created Tag object at a data address.
+
+		:param int addr: Address at which to add the tag
+		:param Tag tag: Tag object to be added
+		:rtype None
+		"""
+		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
+
+	def create_auto_data_tag(self, addr, type, data, unique=False):
+		"""
+		``create_auto_data_tag`` creates and adds a Tag object at a data address.
+
+		:param int addr: Address at which to add the tag
+		:param TagType type: Tag Type for the Tag that is created
+		:param str data: Additional data for the Tag
+		:param bool unique: If a tag already exists at this location with this data, don't add another
+		:return The created Tag
+		:rtype Tag
+		"""
+		if unique:
+			tags = self.get_data_tags_at(addr)
+			for tag in tags:
+				if tag.type == type and tag.data == data:
+					return
+
+		tag = self.create_tag(type, data)
+		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
+		return tag
+
+	def remove_auto_data_tag(self, addr, tag):
+		"""
+		``remove_auto_data_tag`` removes a Tag object at a data address.
+		Since this removes a user tag, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tag
+		:param Tag tag: Tag object to be added
+		:rtype None
+		"""
+		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
 	def is_never_branch_patch_available(self, addr, arch=None):
 		"""

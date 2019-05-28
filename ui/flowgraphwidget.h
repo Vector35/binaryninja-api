@@ -288,6 +288,11 @@ private Q_SLOTS:
 	void functionComment();
 	void commentAccepted();
 	void functionCommentAccepted();
+	void bookmarkAddress();
+	void unbookmarkAddress();
+	void tagAddress();
+	void tagAddressAccepted(TagTypeRef tt);
+	void manageAddressTags();
 
 	void convertToNop();
 	void alwaysBranch();

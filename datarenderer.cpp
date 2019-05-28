@@ -76,6 +76,7 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 		buf[i].highlight = line.highlight;
 		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
 		buf[i].count = line.tokens.size();
+		buf[i].tags = Tag::CreateTagList(line.tags, &(buf[i].tagCount));
 	}
 	return buf;
 }
@@ -130,6 +131,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
 		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
 	return result;

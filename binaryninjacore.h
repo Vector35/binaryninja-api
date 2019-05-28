@@ -136,6 +136,8 @@ extern "C"
 	struct BNMediumLevelILFunction;
 	struct BNType;
 	struct BNStructure;
+	struct BNTagType;
+	struct BNTag;
 	struct BNNamedTypeReference;
 	struct BNEnumeration;
 	struct BNCallingConvention;
@@ -238,6 +240,7 @@ extern "C"
 		FieldNameToken = 21,
 		NameSpaceToken = 22,
 		NameSpaceSeparatorToken = 23,
+		TagToken = 24,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -1198,6 +1201,7 @@ extern "C"
 		BNInstructionTextTokenType type;
 		char* text;
 		uint64_t value;
+		uint64_t width;
 		size_t size, operand;
 		BNInstructionTextTokenContext context;
 		uint8_t confidence;
@@ -1361,6 +1365,8 @@ extern "C"
 		BNInstructionTextToken* tokens;
 		size_t count;
 		BNHighlightColor highlight;
+		BNTag** tags;
+		size_t tagCount;
 	};
 
 	struct BNLinearDisassemblyLine
@@ -1383,6 +1389,30 @@ extern "C"
 	{
 		BNFunction* func;
 		BNArchitecture* arch;
+		uint64_t addr;
+	};
+
+	enum BNTagTypeType
+	{
+		UserTagType,
+		NotificationTagType,
+		BookmarksTagType
+	};
+
+	enum BNTagReferenceType
+	{
+		AddressTagReference,
+		FunctionTagReference,
+		DataTagReference
+	};
+
+	struct BNTagReference
+	{
+		BNTagReferenceType refType;
+		bool autoDefined;
+		BNTag* tag;
+		BNArchitecture* arch;
+		BNFunction* func;
 		uint64_t addr;
 	};
 
@@ -2901,6 +2931,73 @@ extern "C"
 	BINARYNINJACOREAPI BNHighlightColor BNGetBasicBlockHighlight(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNSetAutoBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
 	BINARYNINJACOREAPI void BNSetUserBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+
+	BINARYNINJACOREAPI BNTagType* BNCreateTagType(BNBinaryView* view);
+	BINARYNINJACOREAPI BNTagType* BNNewTagTypeReference(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNFreeTagType(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNFreeTagTypeList(BNTagType** tagTypes, size_t count);
+	BINARYNINJACOREAPI BNBinaryView* BNTagTypeGetView(BNTagType* tagType);
+	BINARYNINJACOREAPI char* BNTagTypeGetName(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNTagTypeSetName(BNTagType* tagType, const char* name);
+	BINARYNINJACOREAPI char* BNTagTypeGetIcon(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNTagTypeSetIcon(BNTagType* tagType, const char* icon);
+	BINARYNINJACOREAPI bool BNTagTypeGetVisible(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNTagTypeSetVisible(BNTagType* tagType, bool visible);
+	BINARYNINJACOREAPI BNTagTypeType BNTagTypeGetType(BNTagType* tagType);
+	BINARYNINJACOREAPI void BNTagTypeSetType(BNTagType* tagType, BNTagTypeType type);
+
+	BINARYNINJACOREAPI BNTag* BNCreateTag(BNTagType* type, const char* data);
+	BINARYNINJACOREAPI BNTag* BNNewTagReference(BNTag* tag);
+	BINARYNINJACOREAPI void BNFreeTag(BNTag* tag);
+	BINARYNINJACOREAPI void BNFreeTagList(BNTag** tags, size_t count);
+	BINARYNINJACOREAPI BNTagType* BNTagGetType(BNTag* tag);
+	BINARYNINJACOREAPI char* BNTagGetData(BNTag* tag);
+	BINARYNINJACOREAPI void BNTagSetData(BNTag* tag, const char* data);
+
+	BINARYNINJACOREAPI void BNAddTagType(BNBinaryView* view, BNTagType* tagType);
+	BINARYNINJACOREAPI void BNRemoveTagType(BNBinaryView* view, BNTagType* tagType);
+	BINARYNINJACOREAPI BNTagType* BNGetTagType(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNTagType* BNGetTagTypeWithType(BNBinaryView* view, const char* name, BNTagTypeType type);
+	BINARYNINJACOREAPI BNTagType** BNGetTagTypes(BNBinaryView* view, size_t* count);
+
+	BINARYNINJACOREAPI void BNAddTag(BNBinaryView* view, BNTag* tag);
+	BINARYNINJACOREAPI BNTag* BNGetTag(BNBinaryView* view, uint64_t tagId);
+	BINARYNINJACOREAPI void BNRemoveTag(BNBinaryView* view, BNTag* tag);
+
+	BINARYNINJACOREAPI BNTagReference* BNGetAllTagReferences(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetAllAddressTagReferences(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetAllFunctionTagReferences(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetAllTagReferencesOfType(BNBinaryView* view, BNTagType* tagType, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetTagReferencesOfType(BNBinaryView* view, BNTagType* tagType, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetDataTagReferences(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTagReferences(BNTagReference* refs, size_t count);
+	BINARYNINJACOREAPI BNTag** BNGetDataTags(BNBinaryView* view, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetDataTagsOfType(BNBinaryView* view, uint64_t addr, BNTagType* tagType, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetDataTagsInRange(BNBinaryView* view, uint64_t start, uint64_t end, size_t* count);
+	BINARYNINJACOREAPI void BNAddAutoDataTag(BNBinaryView* view, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveAutoDataTag(BNBinaryView* view, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNAddUserDataTag(BNBinaryView* view, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveUserDataTag(BNBinaryView* view, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveTagReference(BNBinaryView* view, BNTagReference ref);
+
+	BINARYNINJACOREAPI BNTagReference* BNGetFunctionAllTagReferences(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNTagReference* BNGetFunctionTagReferencesOfType(BNFunction* func, BNTagType* tagType, size_t* count);
+
+	BINARYNINJACOREAPI BNTagReference* BNGetAddressTagReferences(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetAddressTags(BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetAddressTagsOfType(BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTagType* tagType, size_t* count);
+	BINARYNINJACOREAPI void BNAddAutoAddressTag(BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveAutoAddressTag(BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNAddUserAddressTag(BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveUserAddressTag(BNFunction* func, BNArchitecture* arch, uint64_t addr, BNTag* tag);
+
+	BINARYNINJACOREAPI BNTagReference* BNGetFunctionTagReferences(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetFunctionTags(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNTag** BNGetFunctionTagsOfType(BNFunction* func, BNTagType* tagType, size_t* count);
+	BINARYNINJACOREAPI void BNAddAutoFunctionTag(BNFunction* func, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveAutoFunctionTag(BNFunction* func, BNTag* tag);
+	BINARYNINJACOREAPI void BNAddUserFunctionTag(BNFunction* func, BNTag* tag);
+	BINARYNINJACOREAPI void BNRemoveUserFunctionTag(BNFunction* func, BNTag* tag);
 
 	BINARYNINJACOREAPI BNPerformanceInfo* BNGetFunctionAnalysisPerformanceInfo(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeAnalysisPerformanceInfo(BNPerformanceInfo* info, size_t count);

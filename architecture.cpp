@@ -49,38 +49,54 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture
 }
 
 
-InstructionTextToken::InstructionTextToken(): type(TextToken), value(0), confidence(BN_FULL_CONFIDENCE)
+InstructionTextToken::InstructionTextToken(): type(TextToken), value(0), width(WidthIsByteCount), confidence(BN_FULL_CONFIDENCE)
 {
+	if (width == WidthIsByteCount)
+	{
+		width = text.size();
+	}
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, const std::string& txt, uint64_t val,
-	size_t s, size_t o, uint8_t c, const vector<string>& n) : type(t), text(txt), value(val), size(s), operand(o), context(NoTokenContext),
-	confidence(c), address(0), typeNames(n)
+	size_t s, size_t o, uint8_t c, const vector<string>& n, uint64_t w) : type(t), text(txt), value(val), width(w), size(s), operand(o),
+	context(NoTokenContext), confidence(c), address(0), typeNames(n)
 {
+	if (width == WidthIsByteCount)
+	{
+		width = text.size();
+	}
 }
 
 
 InstructionTextToken::InstructionTextToken(BNInstructionTextTokenType t, BNInstructionTextTokenContext ctxt,
-	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c, const vector<string>& n):
-	type(t), text(txt), value(val), size(s), operand(o), context(ctxt), confidence(c), address(a), typeNames(n)
+	const string& txt, uint64_t a, uint64_t val, size_t s, size_t o, uint8_t c, const vector<string>& n, uint64_t w):
+	type(t), text(txt), value(val), width(w), size(s), operand(o), context(ctxt), confidence(c), address(a), typeNames(n)
 {
+	if (width == WidthIsByteCount)
+	{
+		width = text.size();
+	}
 }
 
 
 InstructionTextToken::InstructionTextToken(const BNInstructionTextToken& token):
-	type(token.type), text(token.text), value(token.value), size(token.size), operand(token.operand),
-	context(token.context), confidence(token.confidence), address(token.address)
+	type(token.type), text(token.text), value(token.value), width(token.width), size(token.size),
+	operand(token.operand), context(token.context), confidence(token.confidence), address(token.address)
 {
 	typeNames.reserve(token.namesCount);
 	for (size_t j = 0; j < token.namesCount; j++)
 		typeNames.push_back(token.typeNames[j]);
+	if (width == WidthIsByteCount)
+	{
+		width = text.size();
+	}
 }
 
 
 InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
 {
-	return InstructionTextToken(type, context, text, address, value, size, operand, conf, typeNames);
+	return InstructionTextToken(type, context, text, address, value, size, operand, conf, typeNames, width);
 }
 
 
@@ -89,6 +105,7 @@ static void ConvertInstructionTextToken(const InstructionTextToken& token, BNIns
 	result->type = token.type;
 	result->text = BNAllocString(token.text.c_str());
 	result->value = token.value;
+	result->width = token.width;
 	result->size = token.size;
 	result->operand = token.operand;
 	result->context = token.context;
@@ -2322,6 +2339,7 @@ bool DisassemblyTextRenderer::GetDisassemblyText(uint64_t addr, size_t& len, vec
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
 		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 
@@ -2405,6 +2423,7 @@ void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<Disa
 	inLine.highlight = line.highlight;
 	inLine.count = line.tokens.size();
 	inLine.tokens = InstructionTextToken::CreateInstructionTextTokenList(line.tokens);
+	inLine.tags = Tag::CreateTagList(line.tags, &inLine.tagCount);
 
 	size_t count = 0;
 	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(m_object, &inLine, &count,
@@ -2417,16 +2436,10 @@ void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<Disa
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
 		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 
 	BNFreeDisassemblyTextLines(result, count);
-	for (size_t i = 0; i < inLine.count; i++)
-	{
-		BNFreeString(inLine.tokens[i].text);
-		for (size_t j = 0; j < inLine.tokens[j].namesCount; j++)
-			BNFreeString(inLine.tokens[i].typeNames[j]);
-		delete[] inLine.tokens[i].typeNames;
-	}
-	delete[] inLine.tokens;
+	BNFreeInstructionText(inLine.tokens, inLine.count);
 }

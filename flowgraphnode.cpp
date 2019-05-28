@@ -107,6 +107,7 @@ const vector<DisassemblyTextLine>& FlowGraphNode::GetLines()
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
 		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
 
@@ -126,6 +127,7 @@ void FlowGraphNode::SetLines(const vector<DisassemblyTextLine>& lines)
 		buf[i].highlight = lines[i].highlight;
 		buf[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
 		buf[i].count = lines[i].tokens.size();
+		buf[i].tags = Tag::CreateTagList(lines[i].tags, &(buf[i].tagCount));
 	}
 
 	BNSetFlowGraphNodeLines(m_object, buf, lines.size());

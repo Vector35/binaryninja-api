@@ -1300,6 +1300,237 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, ui
 }
 
 
+std::vector<TagReference> Function::GetAllTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetFunctionAllTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetTagReferencesOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTagReference* refs = BNGetFunctionTagReferencesOfType(m_object, tagType->GetObject(), &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetAddressTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAddressTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetAddressTags(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetAddressTags(m_object, arch->GetObject(), addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+void Function::AddAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag)
+{
+	BNAddAutoAddressTag(m_object, arch->GetObject(), addr, tag->GetObject());
+}
+
+
+void Function::RemoveAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag)
+{
+	BNRemoveAutoAddressTag(m_object, arch->GetObject(), addr, tag->GetObject());
+}
+
+
+void Function::AddUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag)
+{
+	BNAddUserAddressTag(m_object, arch->GetObject(), addr, tag->GetObject());
+}
+
+
+void Function::RemoveUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag)
+{
+	BNRemoveUserAddressTag(m_object, arch->GetObject(), addr, tag->GetObject());
+}
+
+
+std::vector<TagReference> Function::GetFunctionTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetFunctionTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetFunctionTags()
+{
+	size_t count;
+	BNTag** tags = BNGetFunctionTags(m_object, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetFunctionTagsOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetFunctionTagsOfType(m_object, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+void Function::AddAutoFunctionTag(Ref<Tag> tag)
+{
+	BNAddAutoFunctionTag(m_object, tag->GetObject());
+}
+
+
+void Function::RemoveAutoFunctionTag(Ref<Tag> tag)
+{
+	BNRemoveAutoFunctionTag(m_object, tag->GetObject());
+}
+
+
+void Function::AddUserFunctionTag(Ref<Tag> tag)
+{
+	BNAddUserFunctionTag(m_object, tag->GetObject());
+}
+
+
+void Function::RemoveUserFunctionTag(Ref<Tag> tag)
+{
+	BNRemoveUserFunctionTag(m_object, tag->GetObject());
+}
+
+
+Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateAutoAddressTag(arch, addr, tagType, data, unique);
+}
+
+
+Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetAddressTags(arch, addr);
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+
+	Ref<Tag> tag = new Tag(tagType, data);
+	GetView()->AddTag(tag);
+
+	AddAutoAddressTag(arch, addr, tag);
+	return tag;
+}
+
+
+Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateUserAddressTag(arch, addr, tagType, data, unique);
+}
+
+
+Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetAddressTags(arch, addr);
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+	Ref<Tag> tag = new Tag(tagType, data);
+	GetView()->AddTag(tag);
+
+	AddUserAddressTag(arch, addr, tag);
+	return tag;
+}
+
+
+Ref<Tag> Function::CreateAutoFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateAutoFunctionTag(tagType, data, unique);
+}
+
+
+Ref<Tag> Function::CreateAutoFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetFunctionTags();
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+
+	Ref<Tag> tag = new Tag(tagType, data);
+	GetView()->AddTag(tag);
+
+	AddAutoFunctionTag(tag);
+	return tag;
+}
+
+
+Ref<Tag> Function::CreateUserFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
+{
+	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	if (!tagType)
+		return nullptr;
+
+	return CreateUserFunctionTag(tagType, data, unique);
+}
+
+
+Ref<Tag> Function::CreateUserFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique)
+{
+	if (unique)
+	{
+		auto tags = GetFunctionTags();
+		for (const auto& tag : tags)
+		{
+			if (tag->GetType() == tagType && tag->GetData() == data)
+				return nullptr;
+		}
+	}
+
+	Ref<Tag> tag = new Tag(tagType, data);
+	GetView()->AddTag(tag);
+
+	AddUserFunctionTag(tag);
+	return tag;
+}
+
+
 Confidence<RegisterValue> Function::GetGlobalPointerValue() const
 {
 	BNRegisterValueWithConfidence value = BNGetFunctionGlobalPointerValue(m_object);
@@ -1370,6 +1601,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
 		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
 

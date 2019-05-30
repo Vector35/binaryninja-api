@@ -1056,15 +1056,23 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			log.log_error(traceback.format_exc())
 
 	def _assemble(self, ctxt, code, addr, result, errors):
+		"""
+		This function calls the `assemble` command for the actual architecture plugin.
+		If the plugin does not provide an `assemble(self, code, addr)`-style function,
+		it uses the default function provided in CoreArchitecture.
+		"""
 		try:
-			data, error_str = self.assemble(code, addr)
-			errors[0] = core.BNAllocString(str(error_str))
+			data = self.assemble(code, addr)
 			if data is None:
 				return False
 			buf = ctypes.create_string_buffer(len(data))
 			ctypes.memmove(buf, data, len(data))
 			core.BNSetDataBufferContents(result, buf, len(data))
 			return True
+		except ValueError as e:  # Overriden `assemble` functions should raise a ValueError if the input was invalid (with a reasonable error message)
+			log.log_error(traceback.format_exc())
+			errors[0] = core.BNAllocString(str(e))
+			return False
 		except:
 			log.log_error(traceback.format_exc())
 			errors[0] = core.BNAllocString("Unhandled exception during assembly.\n")
@@ -1272,7 +1280,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:return: the bytes for the assembled instructions or error string
 		:rtype: (a tuple of instructions and empty string) or (or None and error string)
 		"""
-		return None, "Architecture does not implement an assembler.\n"
+		raise NotImplementedError("Architecture does not implement an assembler.\n")
 
 	@abc.abstractmethod
 	def perform_is_never_branch_patch_available(self, data, addr):
@@ -1769,6 +1777,8 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		.. note :: It is important that the assembler used accepts a syntax identical to the one emitted by the \
 		disassembler. This will prevent confusing the user.
+
+		If there is an error in the input assembly, this function should raise a ValueError (with a reasonable error message).
 
 		:param str code: string representation of the instructions to be assembled
 		:param int addr: virtual address that the instructions will be loaded at

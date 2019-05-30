@@ -2745,6 +2745,8 @@ class BinaryView(object):
 	def get_code_refs(self, addr, length=None):
 		"""
 		``get_code_refs`` returns a list of ReferenceSource objects (xrefs or cross-references) that point to the provided virtual address.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. 
+		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
 
 		:param int addr: virtual address to query for references
 		:return: List of References for the given virtual address
@@ -2780,6 +2782,8 @@ class BinaryView(object):
 		"""
 		``get_data_refs`` returns a list of virtual addresses of data which references ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs`` returns the data which references in the range ``addr``-``addr``+``length``.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
+		reference, see :func:`add_user_data_ref`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -2807,6 +2811,8 @@ class BinaryView(object):
 		"""
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
+		reference, see :func:`add_user_data_ref`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -2829,6 +2835,31 @@ class BinaryView(object):
 			result.append(refs[i])
 		core.BNFreeDataReferences(refs, count.value)
 		return result
+
+
+	def add_user_data_ref(self, from_addr, to_addr):
+		"""
+		``add_user_data_ref`` adds a user-specified data cross-reference (xref) from the address ``from_addr`` to the address ``to_addr``.
+		If the reference already exists, no action is performed. To remove the reference, use :func:`remove_user_data_ref`.
+
+		:param int from_addr: the reference's source virtual address.
+		:param int to_addr: the reference's destination virtual address.
+		:rtype: None
+		"""
+		core.BNAddUserDataReference(self.handle, from_addr, to_addr)
+
+
+	def remove_user_data_ref(self, from_addr, to_addr):
+		"""
+		``remove_user_data_ref`` removes a user-specified data cross-reference (xref) from the address ``from_addr`` to the address ``to_addr``.
+		This function will only remove user-specified references, not ones generated during autoanalysis.
+		If the reference does not exist, no action is performed.
+
+		:param int from_addr: the reference's source virtual address.
+		:param int to_addr: the reference's destination virtual address.
+		:rtype: None
+		"""
+		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
 
 
 	def get_symbol_at(self, addr, namespace=None):

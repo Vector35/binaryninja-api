@@ -246,15 +246,15 @@ void Function::SetCommentForAddress(uint64_t addr, const string& comment)
 }
 
 
-void Function::SetUserXref(uint64_t addr, uint64_t target)
+void Function::AddUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
 {
-	BNSetUserXref(m_object, addr, target);
+	BNAddUserCodeRef(m_object, fromArch->GetObject(), fromAddr, toAddr);
 }
 
 
-void Function::RemoveUserXref(uint64_t addr, uint64_t target)
+void Function::RemoveUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
 {
-	BNRemoveUserXref(m_object, addr, target);
+	BNRemoveUserCodeRef(m_object, fromArch->GetObject(), fromAddr, toAddr);
 }
 
 

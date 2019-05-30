@@ -1482,6 +1482,18 @@ vector<uint64_t> BinaryView::GetDataReferencesFrom(uint64_t addr, uint64_t len)
 }
 
 
+void BinaryView::AddUserDataReference(uint64_t fromAddr, uint64_t toAddr)
+{
+	BNAddUserDataReference(m_object, fromAddr, toAddr);
+}
+
+
+void BinaryView::RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr)
+{
+	BNRemoveUserDataReference(m_object, fromAddr, toAddr);
+}
+
+
 Ref<Symbol> BinaryView::GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace)
 {
 	BNNameSpace ns = nameSpace.GetAPIObject();

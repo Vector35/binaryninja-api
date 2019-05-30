@@ -1413,10 +1413,13 @@ namespace BinaryNinja
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
+
 		std::vector<uint64_t> GetDataReferences(uint64_t addr);
 		std::vector<uint64_t> GetDataReferences(uint64_t addr, uint64_t len);
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr);
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr, uint64_t len);
+		void AddUserDataReference(uint64_t fromAddr, uint64_t toAddr);
+		void RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace=NameSpace());
 		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace=NameSpace());
@@ -2588,8 +2591,8 @@ namespace BinaryNinja
 		void SetComment(const std::string& comment);
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
-		void SetUserXref(uint64_t addr, uint64_t target);
-		void RemoveUserXref(uint64_t addr, uint64_t target);
+		void AddUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+		void RemoveUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);

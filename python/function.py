@@ -1293,42 +1293,48 @@ class Function(object):
 		"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
-	def set_user_xref(self, addr, target):
+	def add_user_code_ref(self, from_addr, to_addr, from_arch=None):
 		"""
-		``set_user_xref`` places a user-defined cross-reference from the given address to
-		the specified target address.
-		If the given address is not contained within this function, no action is performed.
-		If there are multiple basic blocks (i.e. of different architectures) which contain
-		the specified source address, then the cross-reference is added for all matching
-		matching basic blocks. To remove the xref, use ``remove_user_xref``.
+		``add_user_code_ref`` places a user-defined cross-reference from the instruction at
+		the given address and architecture to the specified target address. If the specified
+		source instruction is not contained within this function, no action is performed.
+		To remove the reference, use :func:`remove_user_code_ref`.
 
-		:param addr int: virtual address within the current function of the xref's source.
-		:param target int: virtual address of the xref's destination.
+		:param from_addr int: virtual address of the source instruction
+		:param to_addr int: virtual address of the xref's destination.
+		:param from_arch Architecture: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 
-			>>> current_function.set_user_xref(here, 0x400000)
+			>>> current_function.add_user_code_ref(here, 0x400000)
 
 		"""
-		core.BNSetUserXref(self.handle, addr, target)
 
-	def remove_user_xref(self, addr, target):
+		if from_arch is None:
+			from_arch = self.arch
+
+		core.BNAddUserCodeRef(self.handle, from_arch.handle, from_addr, to_addr)
+
+	def remove_user_code_ref(self, from_addr, to_addr, from_arch=None):
 		"""
-		``remove_user_xref`` reomves a user-defined cross-reference.
+		``remove_user_code_ref`` reomves a user-defined cross-reference.
 		If the given address is not contained within this function, or if there is no
-		user-defined cross-reference from the specified source address, no action is performed.
-		If there are multiple user-defined xrefs in the function which match the source and
-		target address, all matching xrefs are removed.
+		such user-defined cross-reference, no action is performed.
 
-		:param addr int: virtual address within the current function of the xref's source.
-		:param target int: virtual address of the xref's destination.
+		:param from_addr int: virtual address of the source instruction
+		:param to_addr int: virtual address of the xref's destination.
+		:param from_arch Architecture: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 
-			>>> current_function.remove_user_xref(here, 0x400000)
+			>>> current_function.remove_user_code_ref(here, 0x400000)
 
 		"""
-		core.BNRemoveUserXref(self.handle, addr, target)
+
+		if from_arch is None:
+			from_arch = self.arch
+
+		core.BNRemoveUserCodeRef(self.handle, from_arch.handle, from_addr, to_addr)
 
 	def get_low_level_il_at(self, addr, arch=None):
 		"""

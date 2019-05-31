@@ -38,7 +38,8 @@ from binaryninja import callingconvention
 # 2-3 compatibility
 from binaryninja import range
 from binaryninja import with_metaclass
-from binaryninja import long
+import numbers
+
 
 class _ArchitectureMetaClass(type):
 
@@ -1575,7 +1576,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:return: the name of the semantic flag class
 		:rtype: str
 		"""
-		if not isinstance(class_index, (int, long)):
+		if not isinstance(class_index, numbers.Integral):
 			raise ValueError("argument 'class_index' must be an integer")
 		try:
 			return self._semantic_flag_classes_by_index[class_index]
@@ -1597,7 +1598,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:return: the name of the semantic flag group
 		:rtype: str
 		"""
-		if not isinstance(group_index, (int, long)):
+		if not isinstance(group_index, numbers.Integral):
 			raise ValueError("argument 'group_index' must be an integer")
 		try:
 			return self._semantic_flag_groups_by_index[group_index]

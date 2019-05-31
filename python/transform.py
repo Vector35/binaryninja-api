@@ -30,7 +30,7 @@ from binaryninja import _binaryninjacore as core
 from binaryninja.enums import TransformType
 
 # 2-3 compatibility
-from binaryninja import long
+import numbers
 from binaryninja import range
 from binaryninja import with_metaclass
 
@@ -225,7 +225,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return None
 
 	def decode(self, input_buf, params = {}):
-		if isinstance(input_buf, int) or isinstance(input_buf, long):
+		if isinstance(input_buf, int) or isinstance(input_buf, numbers.Integral):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
@@ -240,7 +240,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return str(output_buf)
 
 	def encode(self, input_buf, params = {}):
-		if isinstance(input_buf, int) or isinstance(input_buf, long):
+		if isinstance(input_buf, int) or isinstance(input_buf, numbers.Integral):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()

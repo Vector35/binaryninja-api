@@ -21,7 +21,6 @@
 
 from __future__ import absolute_import
 import ctypes
-import numbers
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
@@ -30,6 +29,7 @@ from binaryninja.enums import MetadataType
 # 2-3 compatibility
 from binaryninja import range
 from binaryninja import pyNativeStr
+import numbers
 
 
 class Metadata(object):

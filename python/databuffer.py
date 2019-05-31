@@ -25,14 +25,14 @@ from binaryninja import _binaryninjacore as core
 
 # 2-3 compatibility
 from binaryninja import pyNativeStr
-from binaryninja import long
+import numbers
 
 
 class DataBuffer(object):
 	def __init__(self, contents="", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
-		elif isinstance(contents, int) or isinstance(contents, long):
+		elif isinstance(contents, int) or isinstance(contents, numbers.Integral):
 			self.handle = core.BNCreateDataBuffer(None, contents)
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)

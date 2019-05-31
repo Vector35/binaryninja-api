@@ -1413,6 +1413,8 @@ namespace BinaryNinja
 
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
+		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src);
+		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src, uint64_t len);
 
 		std::vector<uint64_t> GetDataReferences(uint64_t addr);
 		std::vector<uint64_t> GetDataReferences(uint64_t addr, uint64_t len);

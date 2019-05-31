@@ -2797,6 +2797,35 @@ class BinaryView(object):
 		core.BNFreeCodeReferences(refs, count.value)
 		return result
 
+	def get_code_refs_from(self, addr, func=None, arch=None, length=None):
+		"""
+		``get_code_refs_from`` returns a list of virtual addresses referenced by code in the function ``func``,
+		of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
+		all functions and containing the address will be returned. If no architecture is specified, the
+		architecture of the function will be used. 
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. 
+		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
+
+		todo: docs and make it not so difficult to call
+		"""
+
+		result = []
+		funcs = self.get_functions_containing(addr) if func is None else [func]
+		if not funcs:
+			return []
+		for src_func in funcs:
+			src_arch = src_func.arch if arch is None else arch
+			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
+			count = ctypes.c_ulonglong(0)
+			if length is None:
+				refs = core.BNGetCodeReferencesFrom(self.handle, ref_src, count)
+			else:
+				refs = core.BNGetCodeReferencesFromInRange(self.handle, ref_src, length, count)
+			for i in range(0, count.value):
+				result.append(refs[i])
+			core.BNFreeCodeReferencesFrom(refs, count.value)
+		return result
+
 	def get_data_refs(self, addr, length=None):
 		"""
 		``get_data_refs`` returns a list of virtual addresses of data which references ``addr``. Optionally specifying

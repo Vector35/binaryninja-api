@@ -419,7 +419,7 @@ class FlowGraph(object):
 	def finish_prepare_for_layout(self):
 		"""
 		``finish_prepare_for_layout`` signals that preparations for rendering a graph are complete.
-		This method should only be called by a ``prepare_for_layout`` reimplementation.
+		This method should only be called by a :func:`prepare_for_layout` reimplementation.
 		"""
 		core.BNFinishPrepareForLayout(self.handle)
 
@@ -427,7 +427,7 @@ class FlowGraph(object):
 		"""
 		``prepare_for_layout`` can be overridden by subclasses to handling preparations that must take
 		place before a flow graph is rendered, such as waiting for a function to finish analysis. If
-		this function is overridden, the ``finish_prepare_for_layout`` method must be called once
+		this function is overridden, the :func:`finish_prepare_for_layout` method must be called once
 		preparations are completed.
 		"""
 		self.finish_prepare_for_layout()
@@ -663,7 +663,7 @@ class FlowGraph(object):
 		display. After this function returns, each node will contain coordinates and extents that can be
 		used to render a graph with minimum additional computation.
 
-		Do not use this API on the UI thread (use ``layout`` with a callback instead).
+		Do not use this API on the UI thread (use :func:`layout` with a callback instead).
 		"""
 		self._wait_cond = threading.Lock()
 		
@@ -710,10 +710,10 @@ class FlowGraph(object):
 	def update(self):
 		"""
 		``update`` can be overridden by subclasses to allow a graph to be updated after it has been
-		presented in the UI. This will automatically occur if the function referenced by the ``function``
+		presented in the UI. This will automatically occur if the function referenced by the :attr:`function`
 		property has been updated.
 
-		Return a new ``FlowGraph`` object with the new information if updates are desired. If the graph
+		Return a new :class:`FlowGraph` object with the new information if updates are desired. If the graph
 		does not need updating, ``None`` can be returned to leave the graph in its current state.
 
 		:return: Updated graph, or ``None``

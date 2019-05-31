@@ -908,14 +908,14 @@ class BinaryView(object):
 
 	`By convention in the rest of this document we will use bv to mean an open BinaryView of an executable file.`
 	When a BinaryView is open on an executable view, analysis does not automatically run, this can be done by running
-	the ``update_analysis_and_wait()`` method which disassembles the executable and returns when all disassembly is
+	the :func:`update_analysis_and_wait` method which disassembles the executable and returns when all disassembly is
 	finished::
 
 		>>> bv.update_analysis_and_wait()
 		>>>
 
 	Since BinaryNinja's analysis is multi-threaded (depending on version) this can also be done in the background by
-	using the ``update_analysis()`` method instead.
+	using the :func:`update_analysis` method instead.
 
 	By standard python convention methods which start with '_' should be considered private and should not be called
 	externally. Additionally, methods which begin with ``perform_`` should not be called either and are
@@ -924,7 +924,7 @@ class BinaryView(object):
 	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
 	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \
 	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the \
-	database (e.g. ``remove_user_function()`` rather than ``remove_function()``). Thus use ``_user_`` methods if saving \
+	database (e.g. :func:`remove_user_function` rather than :func:`remove_function`). Thus use ``_user_`` methods if saving \
 	to the database is desired.
 	"""
 	name = None
@@ -1790,10 +1790,10 @@ class BinaryView(object):
 	def get_next_disassembly(self, arch=None):
 		"""
 		``get_next_disassembly`` simple helper function for printing disassembly of the next instruction.
-		The internal state of the instruction to be printed is stored in the ``next_address`` attribute
+		The internal state of the instruction to be printed is stored in the :attr:`next_address` attribute
 
 		:param Architecture arch: optional Architecture, ``self.arch`` is used if this parameter is None
-		:return: a str representation of the instruction at virtual address ``self.next_address``
+		:return: a str representation of the instruction at virtual address :attr:`next_address`
 		:rtype: str or None
 		:Example:
 
@@ -1831,7 +1831,7 @@ class BinaryView(object):
 		``perform_get_length`` implements a query for the size of the virtual address range used by
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1845,7 +1845,7 @@ class BinaryView(object):
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
 		``length`` bytes from the rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1861,7 +1861,7 @@ class BinaryView(object):
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1906,7 +1906,7 @@ class BinaryView(object):
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1920,7 +1920,7 @@ class BinaryView(object):
 		"""
 		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1935,7 +1935,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1949,7 +1949,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1963,7 +1963,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_executable`` implements a check if a virtual address ``addr`` is executable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1978,7 +1978,7 @@ class BinaryView(object):
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -1995,7 +1995,7 @@ class BinaryView(object):
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use ``add_auto_segment`` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
 		.. warning:: This method **must not** be called directly.
 
@@ -2035,7 +2035,7 @@ class BinaryView(object):
 		.. note:: This method **may** be implemented for custom BinaryViews that are not LittleEndian.
 		.. warning:: This method **must not** be called directly.
 
-		:return: either ``Endianness.LittleEndian`` or ``Endianness.BigEndian``
+		:return: either :const:`Endianness.LittleEndian <binaryninja.enums.Endianness.LittleEndian>` or :const:`Endianness.BigEndian <binaryninja.enums.Endianness.BigEndian>`
 		:rtype: Endianness
 		"""
 		return Endianness.LittleEndian
@@ -2511,7 +2511,7 @@ class BinaryView(object):
 	def add_analysis_option(self, name):
 		"""
 		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
-		start analysis by calling either ``update_analysis()`` or ``update_analysis_and_wait()``.
+		start analysis by calling either :func:`update_analysis` or :func:`update_analysis_and_wait`.
 
 		:param str name: name of the analysis option. Available options:
 				"linearsweep" : apply linearsweep analysis during the next analysis update (run-once semantics)
@@ -2527,8 +2527,8 @@ class BinaryView(object):
 	def update_analysis(self):
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
-		does not occur automatically, the user must start analysis by calling either ``update_analysis()`` or
-		``update_analysis_and_wait()``. An analysis update **must** be run after changes are made which could change
+		does not occur automatically, the user must start analysis by calling either :func:`update_analysis` or
+		:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are made which could change
 		analysis results such as adding functions.
 
 		:rtype: None
@@ -2539,7 +2539,7 @@ class BinaryView(object):
 		"""
 		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
 		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
-		``update_analysis()`` or ``update_analysis_and_wait()``. An analysis update **must** be run after changes are
+		:func:`update_analysis` or :func:`update_analysis_and_wait`. An analysis update **must** be run after changes are
 		made which could change analysis results such as adding functions.
 
 		:rtype: None
@@ -3432,7 +3432,7 @@ class BinaryView(object):
 	def add_analysis_completion_event(self, callback):
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
-		This is helpful when using ``update_analysis`` which does not wait for analysis completion before returning.
+		This is helpful when using :func:`update_analysis` which does not wait for analysis completion before returning.
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 

@@ -619,7 +619,7 @@ class MediumLevelILExpr(object):
 class MediumLevelILFunction(object):
 	"""
 	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a binaryninja.function. MediumLevelILExpr
-	objects can be added to the MediumLevelILFunction by calling ``append`` and passing the result of the various class
+	objects can be added to the MediumLevelILFunction by calling :func:`append` and passing the result of the various class
 	methods which return MediumLevelILExpr objects.
 	"""
 	def __init__(self, arch = None, handle = None, source_func = None):

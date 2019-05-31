@@ -720,11 +720,11 @@ class LowLevelILExpr(object):
 class LowLevelILFunction(object):
 	"""
 	``class LowLevelILFunction`` contains the list of LowLevelILExpr objects that make up a binaryninja.function. LowLevelILExpr
-	objects can be added to the LowLevelILFunction by calling ``append`` and passing the result of the various class
+	objects can be added to the LowLevelILFunction by calling :func:`append` and passing the result of the various class
 	methods which return LowLevelILExpr objects.
 
 
-	LowLevelILFlagCondition values used as parameters in the ``flag_condition`` method.
+	LowLevelILFlagCondition values used as parameters in the :func:`flag_condition` method.
 
 		======================= ========== ===============================
 		LowLevelILFlagCondition Operator   Description

@@ -381,9 +381,9 @@ class BinaryViewTestBuilder(Builder):
         retinfo = []
         for func in self.bv.functions:
             for bb in func:
-                for dom in bb.dominators:
+                for dom in sorted(bb.dominators, key=lambda x: x.start):
                     retinfo.append("Dominator: %x of %x" % (dom.start, bb.start))
-                for pdom in bb.post_dominators:
+                for pdom in sorted(bb.post_dominators, key=lambda x: x.start):
                     retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
         return fixOutput(retinfo)
 

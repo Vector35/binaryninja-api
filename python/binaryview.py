@@ -188,7 +188,10 @@ class AnalysisCompletionEvent(object):
 
 	def cancel(self):
 		"""
+		The ``cancel`` method will cancel analysis for an :class:`AnalysisCompletionEvent`. 
+
 		.. warning: This method should only be used when the system is being shut down and no further analysis should be done afterward.
+
 		"""
 		self.callback = self._empty_callback
 		core.BNCancelAnalysisCompletionEvent(self.handle)
@@ -1833,6 +1836,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: returns the size of the virtual address range used by the BinaryView.
@@ -1847,6 +1851,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to attempt to read from
@@ -1863,6 +1868,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1878,6 +1884,7 @@ class BinaryView(object):
 		the bytes ``data`` to rebased address ``addr``.
 
 		.. note:: This method **may** be overridden by custom BinaryViews. If not overridden, inserting is disallowed
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1893,6 +1900,7 @@ class BinaryView(object):
 		``length`` bytes from the rebased address ``addr``.
 
 		.. note:: This method **may** be overridden by custom BinaryViews. If not overridden, removing data is disallowed
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
@@ -1908,6 +1916,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1922,6 +1931,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1937,6 +1947,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int offset: a virtual address to be checked
@@ -1951,6 +1962,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1965,6 +1977,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
@@ -1980,6 +1993,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to start checking from.
@@ -1997,6 +2011,7 @@ class BinaryView(object):
 
 		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
 		data without overriding this method.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: returns the first virtual address in the BinaryView.
@@ -2009,6 +2024,7 @@ class BinaryView(object):
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
 
 		.. note:: This method **should** be implemented for custom BinaryViews that are executable.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: the virtual address of the entry point
@@ -2021,6 +2037,7 @@ class BinaryView(object):
 		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
 
 		.. note:: This method **must** be implemented for custom BinaryViews that are executable.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: true if the current BinaryView is executable, false if it is not executable or on error
@@ -2033,6 +2050,7 @@ class BinaryView(object):
 		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
 
 		.. note:: This method **may** be implemented for custom BinaryViews that are not LittleEndian.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: either :const:`Endianness.LittleEndian <binaryninja.enums.Endianness.LittleEndian>` or :const:`Endianness.BigEndian <binaryninja.enums.Endianness.BigEndian>`
@@ -2046,6 +2064,7 @@ class BinaryView(object):
 		True.
 
 		.. note:: This method **may** be implemented for custom BinaryViews that are relocatable.
+
 		.. warning:: This method **must not** be called directly.
 
 		:return: True if the BinaryView is relocatable, False otherwise

@@ -99,7 +99,7 @@ class MetaddataAPI(unittest.TestCase):
 		assert md.is_string
 		assert str(md) == "asdf"
 		assert len(md) == 4
-		assert md.value.decode("charmap") == "asdf"
+		assert md.value == "asdf"
 
 		md = Metadata("\x00\x00\x41\x00", raw=True)
 		assert md.is_raw

@@ -49,3 +49,6 @@ python/types/
 suite/binaryninja/
 types/
 .vscode
+python/generator.log
+python/generator.tlog
+python/generator.*.log

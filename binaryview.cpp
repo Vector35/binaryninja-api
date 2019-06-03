@@ -1447,12 +1447,7 @@ vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src)
 	size_t count;
 	BNReferenceSource _src{ src.func->m_object, src.arch->m_object, src.addr };
 	uint64_t* refs = BNGetCodeReferencesFrom(m_object, &_src, &count);
-
-	vector<uint64_t> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result[i] = refs[i];
-
+	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeCodeReferencesFrom(refs);
 	return result;
 }
@@ -1463,12 +1458,7 @@ vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src, uint64_t
 	size_t count;
 	BNReferenceSource _src{ src.func->m_object, src.arch->m_object, src.addr };
 	uint64_t* refs = BNGetCodeReferencesFromInRange(m_object, &_src, len, &count);
-
-	vector<uint64_t> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result[i] = refs[i];
-
+	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeCodeReferencesFrom(refs);
 	return result;
 }

@@ -9,13 +9,24 @@
 #include "viewframe.h"
 
 
+struct XrefItem
+{
+	BinaryNinja::ReferenceSource ref;
+	enum XrefDirection
+	{
+		Forward, // Xref from this address
+		Backward // Xref to this address
+	} direction;
+};
+
+
 class BINARYNINJAUIAPI CrossReferenceListModel: public QAbstractItemModel
 {
 	Q_OBJECT
 
 	QWidget* m_owner;
 	BinaryViewRef m_data;
-	std::vector<BinaryNinja::ReferenceSource> m_refs;
+	std::vector<XrefItem> m_refs;
 
 public:
 	CrossReferenceListModel(QWidget* parent, BinaryViewRef data);
@@ -27,7 +38,7 @@ public:
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 
-	bool setModelData(const std::vector<BinaryNinja::ReferenceSource>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
+	bool setModelData(const std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
 };
 
 

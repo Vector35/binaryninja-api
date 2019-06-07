@@ -141,6 +141,7 @@ private Q_SLOTS:
 	void reanalyze();
 	void comment();
 	void commentAccepted();
+	void addUserXref();
 
 	void convertToNop();
 	void alwaysBranch();

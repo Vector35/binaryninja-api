@@ -282,6 +282,7 @@ private Q_SLOTS:
 	void createFunc();
 	void changeType();
 	void comment();
+	void addUserXref();
 	void functionComment();
 	void commentAccepted();
 	void functionCommentAccepted();

@@ -188,7 +188,7 @@ class AnalysisCompletionEvent(object):
 
 	def cancel(self):
 		"""
-		The ``cancel`` method will cancel analysis for an :class:`AnalysisCompletionEvent`. 
+		The ``cancel`` method will cancel analysis for an :class:`AnalysisCompletionEvent`.
 
 		.. warning: This method should only be used when the system is being shut down and no further analysis should be done afterward.
 
@@ -2764,7 +2764,7 @@ class BinaryView(object):
 	def get_code_refs(self, addr, length=None):
 		"""
 		``get_code_refs`` returns a list of ReferenceSource objects (xrefs or cross-references) that point to the provided virtual address.
-		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. 
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
 
 		:param int addr: virtual address to query for references
@@ -3493,6 +3493,11 @@ class BinaryView(object):
 			>>> s2.value
 			'WAVAUATUSH'
 		"""
+		if not isinstance(addr, numbers.Integral):
+			raise AttributeError("Input address (" + str(addr) + ") is not a number.")
+		if addr < self.start or addr >= self.end:
+			return None
+
 		br = BinaryReader(self)
 		br.seek(addr)
 		length = 0

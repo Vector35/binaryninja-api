@@ -2593,8 +2593,8 @@ namespace BinaryNinja
 		void SetComment(const std::string& comment);
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
-		void AddUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
-		void RemoveUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);

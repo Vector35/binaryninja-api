@@ -246,15 +246,15 @@ void Function::SetCommentForAddress(uint64_t addr, const string& comment)
 }
 
 
-void Function::AddUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
+void Function::AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
 {
-	BNAddUserCodeRef(m_object, fromArch->GetObject(), fromAddr, toAddr);
+	BNAddUserCodeReference(m_object, fromArch->GetObject(), fromAddr, toAddr);
 }
 
 
-void Function::RemoveUserCodeRef(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
+void Function::RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr)
 {
-	BNRemoveUserCodeRef(m_object, fromArch->GetObject(), fromAddr, toAddr);
+	BNRemoveUserCodeReference(m_object, fromArch->GetObject(), fromAddr, toAddr);
 }
 
 

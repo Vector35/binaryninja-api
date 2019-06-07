@@ -2528,8 +2528,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetFunctionComment(BNFunction* func, const char* comment);
 	BINARYNINJACOREAPI void BNSetCommentForAddress(BNFunction* func, uint64_t addr, const char* comment);
 
-	BINARYNINJACOREAPI void BNAddUserCodeRef(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
-	BINARYNINJACOREAPI void BNRemoveUserCodeRef(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+	BINARYNINJACOREAPI void BNAddUserCodeReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+	BINARYNINJACOREAPI void BNRemoveUserCodeReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 	BINARYNINJACOREAPI BNBasicBlock* BNNewBasicBlockReference(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);

@@ -1540,7 +1540,7 @@ class BinaryView(object):
 
 	def __getitem__(self, i):
 		if isinstance(i, tuple):
-			result = ""
+			result = bytes()
 			for s in i:
 				result += self.__getitem__(s)
 			return result
@@ -1552,16 +1552,16 @@ class BinaryView(object):
 			stop = i[1]
 			if stop <= start:
 				return ""
-			return str(self.read(start, stop - start))
+			return self.read(start, stop - start)
 		elif i < 0:
 			if i >= -len(self):
-				value = str(self.read(int(len(self) + i), 1))
+				value = self.read(int(len(self) + i), 1)
 				if len(value) == 0:
 					return IndexError("index not readable")
 				return value
 			raise IndexError("index out of range")
 		elif (i >= self.start) and (i < self.end):
-			value = str(self.read(int(i), 1))
+			value = self.read(int(i), 1)
 			if len(value) == 0:
 				return IndexError("index not readable")
 			return value
@@ -2802,8 +2802,8 @@ class BinaryView(object):
 		``get_code_refs_from`` returns a list of virtual addresses referenced by code in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
 		all functions and containing the address will be returned. If no architecture is specified, the
-		architecture of the function will be used. 
-		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. 
+		architecture of the function will be used.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
 
 		todo: docs and make it not so difficult to call

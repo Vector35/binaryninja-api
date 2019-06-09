@@ -149,7 +149,7 @@ language = 'en'
 
 exclude_patterns = []
 
-# add_function_parentheses = True
+add_function_parentheses = False
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).

@@ -105,12 +105,12 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			if arch is None:
 				self.handle = None
 				raise ValueError("platform must have an associated architecture")
-			self.arch = arch
+			self._arch = arch
 			self.handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
 		else:
 			self.handle = handle
 			self.__dict__["name"] = core.BNGetPlatformName(self.handle)
-			self.arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(self.handle))
+			self._arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(self.handle))
 
 	def __del__(self):
 		if self.handle is not None:
@@ -464,3 +464,12 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value

@@ -37,17 +37,26 @@ class LabelField(object):
 	``LabelField`` adds a text label to the display.
 	"""
 	def __init__(self, text):
-		self.text = text
+		self._text = text
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.LabelFormField
-		value.prompt = self.text
+		value.prompt = self._text
 
 	def _fill_core_result(self, value):
 		pass
 
 	def _get_result(self, value):
 		pass
+
+	@property
+	def text(self):
+		""" """
+		return self._text
+
+	@text.setter
+	def text(self, value):
+		self._text = value
 
 
 class SeparatorField(object):
@@ -69,18 +78,36 @@ class TextLineField(object):
 	``TextLineField`` Adds prompt for text string input. Result is stored in self.result as a string on completion.
 	"""
 	def __init__(self, prompt):
-		self.prompt = prompt
-		self.result = None
+		self._prompt = prompt
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.TextLineFormField
-		value.prompt = self.prompt
+		value.prompt = self._prompt
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self.result))
+		value.stringResult = core.BNAllocString(str(self._result))
 
 	def _get_result(self, value):
-		self.result = value.stringResult
+		self._result = value.stringResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class MultilineTextField(object):
@@ -89,18 +116,36 @@ class MultilineTextField(object):
 	as a string. This option is not supported on the command-line.
 	"""
 	def __init__(self, prompt):
-		self.prompt = prompt
-		self.result = None
+		self._prompt = prompt
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.MultilineTextFormField
-		value.prompt = self.prompt
+		value.prompt = self._prompt
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self.result))
+		value.stringResult = core.BNAllocString(str(self._result))
 
 	def _get_result(self, value):
-		self.result = value.stringResult
+		self._result = value.stringResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class IntegerField(object):
@@ -108,18 +153,36 @@ class IntegerField(object):
 	``IntegerField`` add prompt for integer. Result is stored in self.result as an int.
 	"""
 	def __init__(self, prompt):
-		self.prompt = prompt
-		self.result = None
+		self._prompt = prompt
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.IntegerFormField
-		value.prompt = self.prompt
+		value.prompt = self._prompt
 
 	def _fill_core_result(self, value):
-		value.intResult = self.result
+		value.intResult = self._result
 
 	def _get_result(self, value):
-		self.result = value.intResult
+		self._result = value.intResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class AddressField(object):
@@ -132,24 +195,60 @@ class AddressField(object):
 	      specified.
 	"""
 	def __init__(self, prompt, view=None, current_address=0):
-		self.prompt = prompt
-		self.view = view
-		self.current_address = current_address
-		self.result = None
+		self._prompt = prompt
+		self._view = view
+		self._current_address = current_address
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.AddressFormField
-		value.prompt = self.prompt
+		value.prompt = self._prompt
 		value.view = None
-		if self.view is not None:
-			value.view = self.view.handle
-		value.currentAddress = self.current_address
+		if self._view is not None:
+			value.view = self._view.handle
+		value.currentAddress = self._current_address
 
 	def _fill_core_result(self, value):
-		value.addressResult = self.result
+		value.addressResult = self._result
 
 	def _get_result(self, value):
-		self.result = value.addressResult
+		self._result = value.addressResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def current_address(self):
+		""" """
+		return self._current_address
+
+	@current_address.setter
+	def current_address(self, value):
+		self._current_address = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class ChoiceField(object):
@@ -162,24 +261,51 @@ class ChoiceField(object):
 
 	"""
 	def __init__(self, prompt, choices):
-		self.prompt = prompt
-		self.choices = choices
-		self.result = None
+		self._prompt = prompt
+		self._choices = choices
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.ChoiceFormField
-		value.prompt = self.prompt
-		choice_buf = (ctypes.c_char_p * len(self.choices))()
-		for i in range(0, len(self.choices)):
-			choice_buf[i] = self.choices[i].encode('charmap')
+		value.prompt = self._prompt
+		choice_buf = (ctypes.c_char_p * len(self._choices))()
+		for i in range(0, len(self._choices)):
+			choice_buf[i] = self._choices[i].encode('charmap')
 		value.choices = choice_buf
-		value.count = len(self.choices)
+		value.count = len(self._choices)
 
 	def _fill_core_result(self, value):
-		value.indexResult = self.result
+		value.indexResult = self._result
 
 	def _get_result(self, value):
-		self.result = value.indexResult
+		self._result = value.indexResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def choices(self):
+		""" """
+		return self._choices
+
+	@choices.setter
+	def choices(self, value):
+		self._choices = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class OpenFileNameField(object):
@@ -187,20 +313,47 @@ class OpenFileNameField(object):
 	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
 	"""
 	def __init__(self, prompt, ext=""):
-		self.prompt = prompt
-		self.ext = ext
-		self.result = None
+		self._prompt = prompt
+		self._ext = ext
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.OpenFileNameFormField
-		value.prompt = self.prompt
-		value.ext = self.ext
+		value.prompt = self._prompt
+		value.ext = self._ext
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self.result))
 
 	def _get_result(self, value):
-		self.result = value.stringResult
+		self._result = value.stringResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def ext(self):
+		""" """
+		return self._ext
+
+	@ext.setter
+	def ext(self, value):
+		self._ext = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class SaveFileNameField(object):
@@ -208,22 +361,58 @@ class SaveFileNameField(object):
 	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a string.
 	"""
 	def __init__(self, prompt, ext="", default_name=""):
-		self.prompt = prompt
-		self.ext = ext
-		self.default_name = default_name
-		self.result = None
+		self._prompt = prompt
+		self._ext = ext
+		self._default_name = default_name
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.SaveFileNameFormField
-		value.prompt = self.prompt
-		value.ext = self.ext
-		value.defaultName = self.default_name
+		value.prompt = self._prompt
+		value.ext = self._ext
+		value.defaultName = self._default_name
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self.result))
+		value.stringResult = core.BNAllocString(str(self._result))
 
 	def _get_result(self, value):
-		self.result = value.stringResult
+		self._result = value.stringResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def ext(self):
+		""" """
+		return self._ext
+
+	@ext.setter
+	def ext(self, value):
+		self._ext = value
+
+	@property
+	def default_name(self):
+		""" """
+		return self._default_name
+
+	@default_name.setter
+	def default_name(self, value):
+		self._default_name = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class DirectoryNameField(object):
@@ -232,20 +421,47 @@ class DirectoryNameField(object):
 	a string.
 	"""
 	def __init__(self, prompt, default_name=""):
-		self.prompt = prompt
-		self.default_name = default_name
-		self.result = None
+		self._prompt = prompt
+		self._default_name = default_name
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.DirectoryNameFormField
-		value.prompt = self.prompt
-		value.defaultName = self.default_name
+		value.prompt = self._prompt
+		value.defaultName = self._default_name
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self.result))
+		value.stringResult = core.BNAllocString(str(self._result))
 
 	def _get_result(self, value):
-		self.result = value.stringResult
+		self._result = value.stringResult
+
+	@property
+	def prompt(self):
+		""" """
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def default_name(self):
+		""" """
+		return self._default_name
+
+	@default_name.setter
+	def default_name(self, value):
+		self._default_name = value
+
+	@property
+	def result(self):
+		""" """
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
 
 
 class InteractionHandler(object):
@@ -495,53 +711,179 @@ class InteractionHandler(object):
 
 class PlainTextReport(object):
 	def __init__(self, title, contents, view = None):
-		self.view = view
-		self.title = title
-		self.contents = contents
+		self._view = view
+		self._title = title
+		self._contents = contents
 
 	def __repr__(self):
-		return "<plaintext report: %s>" % self.title
+		return "<plaintext report: %s>" % self._title
 
 	def __str__(self):
-		return self.contents
+		return self._contents
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def title(self):
+		""" """
+		return self._title
+
+	@title.setter
+	def title(self, value):
+		self._title = value
+
+	@property
+	def contents(self):
+		""" """
+		return self._contents
+
+	@contents.setter
+	def contents(self, value):
+		self._contents = value
 
 
 class MarkdownReport(object):
 	def __init__(self, title, contents, plaintext = "", view = None):
-		self.view = view
-		self.title = title
-		self.contents = contents
-		self.plaintext = plaintext
+		self._view = view
+		self._title = title
+		self._contents = contents
+		self._plaintext = plaintext
 
 	def __repr__(self):
-		return "<markdown report: %s>" % self.title
+		return "<markdown report: %s>" % self._title
 
 	def __str__(self):
-		return self.contents
+		return self._contents
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def title(self):
+		""" """
+		return self._title
+
+	@title.setter
+	def title(self, value):
+		self._title = value
+
+	@property
+	def contents(self):
+		""" """
+		return self._contents
+
+	@contents.setter
+	def contents(self, value):
+		self._contents = value
+
+	@property
+	def plaintext(self):
+		""" """
+		return self._plaintext
+
+	@plaintext.setter
+	def plaintext(self, value):
+		self._plaintext = value
 
 
 class HTMLReport(object):
 	def __init__(self, title, contents, plaintext = "", view = None):
-		self.view = view
-		self.title = title
-		self.contents = contents
-		self.plaintext = plaintext
+		self._view = view
+		self._title = title
+		self._contents = contents
+		self._plaintext = plaintext
 
 	def __repr__(self):
-		return "<html report: %s>" % self.title
+		return "<html report: %s>" % self._title
 
 	def __str__(self):
-		return self.contents
+		return self._contents
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def title(self):
+		""" """
+		return self._title
+
+	@title.setter
+	def title(self, value):
+		self._title = value
+
+	@property
+	def contents(self):
+		""" """
+		return self._contents
+
+	@contents.setter
+	def contents(self, value):
+		self._contents = value
+
+	@property
+	def plaintext(self):
+		""" """
+		return self._plaintext
+
+	@plaintext.setter
+	def plaintext(self, value):
+		self._plaintext = value
 
 
 class FlowGraphReport(object):
 	def __init__(self, title, graph, view = None):
-		self.view = view
-		self.title = title
-		self.graph = graph
+		self._view = view
+		self._title = title
+		self._graph = graph
 
 	def __repr__(self):
-		return "<graph report: %s>" % self.title
+		return "<graph report: %s>" % self._title
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def title(self):
+		""" """
+		return self._title
+
+	@title.setter
+	def title(self, value):
+		self._title = value
+
+	@property
+	def graph(self):
+		""" """
+		return self._graph
+
+	@graph.setter
+	def graph(self, value):
+		self._graph = value
 
 
 class ReportCollection(object):
@@ -612,9 +954,9 @@ class ReportCollection(object):
 
 def markdown_to_html(contents):
 	"""
-	``markdown_to_html`` converts the provided markdown to HTML.
+	``markdown_to_html`` converts the provided markdown to HTML
 
-	:param string contents: Markdown contents to convert to HTML.
+	:param string contents: Markdown contents to convert to HTML
 	:rtype: string
 	:Example:
 		>>> markdown_to_html("##Yay")
@@ -625,12 +967,12 @@ def markdown_to_html(contents):
 
 def show_plain_text_report(title, contents):
 	"""
-	``show_plain_text_report`` displays contents to the user in the UI or on the command-line.
+	``show_plain_text_report`` displays contents to the user in the UI or on the command-line
 
-	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
+	Note: This API functions differently on the command-line vs the UI. In the UI, a pop-up is used. On the command-line,
 	      a simple text prompt is used.
 
-	:param str title: title to display in the UI pop-up.
+	:param str title: title to display in the UI pop-up
 	:param str contents: plaintext contents to display
 	:rtype: None
 	:Example:
@@ -680,7 +1022,7 @@ def show_html_report(title, contents, plaintext=""):
 
 def show_graph_report(title, graph):
 	"""
-	``show_graph_report`` displays a flow graph in UI applications.
+	``show_graph_report`` displays a flow graph in UI applications
 
 	Note: This API function will have no effect outside the UI.
 
@@ -696,7 +1038,7 @@ def show_graph_report(title, graph):
 
 def show_report_collection(title, reports):
 	"""
-	``show_report_collection`` displays multiple reports in UI applications.
+	``show_report_collection`` displays multiple reports in UI applications
 
 	Note: This API function will have no effect outside the UI.
 
@@ -708,7 +1050,7 @@ def show_report_collection(title, reports):
 
 def get_text_line_input(prompt, title):
 	"""
-	``get_text_line_input`` prompts the user to input a string with the given prompt and title.
+	``get_text_line_input`` prompts the user to input a string with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used.
@@ -731,7 +1073,7 @@ def get_text_line_input(prompt, title):
 
 def get_int_input(prompt, title):
 	"""
-	``get_int_input`` prompts the user to input a integer with the given prompt and title.
+	``get_int_input`` prompts the user to input a integer with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used.
@@ -752,7 +1094,7 @@ def get_int_input(prompt, title):
 
 def get_address_input(prompt, title):
 	"""
-	``get_address_input`` prompts the user for an address with the given prompt and title.
+	``get_address_input`` prompts the user for an address with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used.
@@ -773,7 +1115,7 @@ def get_address_input(prompt, title):
 
 def get_choice_input(prompt, title, choices):
 	"""
-	``get_choice_input`` prompts the user to select the one of the provided choices.
+	``get_choice_input`` prompts the user to select the one of the provided choices
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used. The UI uses a combo box.
@@ -802,7 +1144,7 @@ def get_choice_input(prompt, title, choices):
 
 def get_open_filename_input(prompt, ext=""):
 	"""
-	``get_open_filename_input`` prompts the user for a file name to open.
+	``get_open_filename_input`` prompts the user for a file name to open
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
@@ -825,7 +1167,7 @@ def get_open_filename_input(prompt, ext=""):
 def get_save_filename_input(prompt, ext="", default_name=""):
 	"""
 	``get_save_filename_input`` prompts the user for a file name to save as, optionally providing a file extension and
-	default_name.
+	default_name
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
@@ -848,7 +1190,7 @@ def get_save_filename_input(prompt, ext="", default_name=""):
 
 def get_directory_name_input(prompt, default_name=""):
 	"""
-	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name.
+	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line a simple text prompt is used. The UI uses the native window pop-up for file selection.
 

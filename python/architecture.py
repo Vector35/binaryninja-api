@@ -1289,6 +1289,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		Deprecated method provided for compatibility. Architecture plugins should override :func:`is_never_branch_patch_available`.
 
 		.. note:: Architecture subclasses should implement this method.
+
 		.. warning:: This method should never be called directly.
 
 		:param str data: bytes to be checked
@@ -1420,7 +1421,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		.. note:: Architecture subclasses should implement this method.
 
-		.. note :: The instruction info object should always set the InstructionInfo.length to the instruction length, \
+		.. note:: The instruction info object should always set the InstructionInfo.length to the instruction length, \
 		and the branches of the proper types should be added if the instruction is a branch.
 
 		If the instruction is a branch instruction architecture plugins should add a branch of the proper type:
@@ -1776,7 +1777,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		Architecture plugins can override this method to provide assembler functionality. This can be done by
 		simply shelling out to an assembler like yasm or llvm-mc, since this method isn't performance sensitive.
 
-		.. note :: It is important that the assembler used accepts a syntax identical to the one emitted by the \
+		.. note:: It is important that the assembler used accepts a syntax identical to the one emitted by the \
 		disassembler. This will prevent confusing the user.
 
 		If there is an error in the input assembly, this function should raise a ValueError (with a reasonable error message).
@@ -2284,7 +2285,7 @@ class CoreArchitecture(Architecture):
 		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address
 		``addr`` with data ``data``.
 
-		.. note :: The instruction info object should always set the InstructionInfo.length to the instruction length, \
+		.. note:: The instruction info object should always set the InstructionInfo.length to the instruction length, \
 		and the branches of the proper types should be added if the instruction is a branch.
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``

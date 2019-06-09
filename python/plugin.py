@@ -37,11 +37,56 @@ from binaryninja import with_metaclass
 
 class PluginCommandContext(object):
 	def __init__(self, view):
-		self.view = view
-		self.address = 0
-		self.length = 0
-		self.function = None
-		self.instruction = None
+		self._view = view
+		self._address = 0
+		self._length = 0
+		self._function = None
+		self._instruction = None
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def length(self):
+		""" """
+		return self._length
+
+	@length.setter
+	def length(self, value):
+		self._length = value
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def instruction(self):
+		""" """
+		return self._instruction
+
+	@instruction.setter
+	def instruction(self, value):
+		self._instruction = value
 
 
 class _PluginCommandMetaClass(type):
@@ -77,11 +122,11 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	_registered_commands = []
 
 	def __init__(self, cmd):
-		self.command = core.BNPluginCommand()
-		ctypes.memmove(ctypes.byref(self.command), ctypes.byref(cmd), ctypes.sizeof(core.BNPluginCommand))
-		self.name = str(cmd.name)
-		self.description = str(cmd.description)
-		self.type = PluginCommandType(cmd.type)
+		self._command = core.BNPluginCommand()
+		ctypes.memmove(ctypes.byref(self._command), ctypes.byref(cmd), ctypes.sizeof(core.BNPluginCommand))
+		self._name = str(cmd.name)
+		self._description = str(cmd.description)
+		self._type = PluginCommandType(cmd.type)
 
 	@property
 	def list(self):
@@ -279,7 +324,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		"""
 		``register`` Register a plugin
 
-		:param str name: name of the plugin
+		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
 		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` as an argument
 		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
@@ -439,82 +484,118 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	def is_valid(self, context):
 		if context.view is None:
 			return False
-		if self.command.type == PluginCommandType.DefaultPluginCommand:
-			if not self.command.defaultIsValid:
+		if self._command.type == PluginCommandType.DefaultPluginCommand:
+			if not self._command.defaultIsValid:
 				return True
-			return self.command.defaultIsValid(self.command.context, context.view.handle)
-		elif self.command.type == PluginCommandType.AddressPluginCommand:
-			if not self.command.addressIsValid:
+			return self._command.defaultIsValid(self._command.context, context.view.handle)
+		elif self._command.type == PluginCommandType.AddressPluginCommand:
+			if not self._command.addressIsValid:
 				return True
-			return self.command.addressIsValid(self.command.context, context.view.handle, context.address)
-		elif self.command.type == PluginCommandType.RangePluginCommand:
+			return self._command.addressIsValid(self._command.context, context.view.handle, context.address)
+		elif self._command.type == PluginCommandType.RangePluginCommand:
 			if context.length == 0:
 				return False
-			if not self.command.rangeIsValid:
+			if not self._command.rangeIsValid:
 				return True
-			return self.command.rangeIsValid(self.command.context, context.view.handle, context.address, context.length)
-		elif self.command.type == PluginCommandType.FunctionPluginCommand:
+			return self._command.rangeIsValid(self._command.context, context.view.handle, context.address, context.length)
+		elif self._command.type == PluginCommandType.FunctionPluginCommand:
 			if context.function is None:
 				return False
-			if not self.command.functionIsValid:
+			if not self._command.functionIsValid:
 				return True
-			return self.command.functionIsValid(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
+			return self._command.functionIsValid(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
 			if context.function is None:
 				return False
-			if not self.command.lowLevelILFunctionIsValid:
+			if not self._command.lowLevelILFunctionIsValid:
 				return True
-			return self.command.lowLevelILFunctionIsValid(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
+			return self._command.lowLevelILFunctionIsValid(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
 			if not isinstance(context.instruction, binaryninja.lowlevelil.LowLevelILInstruction):
 				return False
-			if not self.command.lowLevelILInstructionIsValid:
+			if not self._command.lowLevelILInstructionIsValid:
 				return True
-			return self.command.lowLevelILInstructionIsValid(self.command.context, context.view.handle,
+			return self._command.lowLevelILInstructionIsValid(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
-		elif self.command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
+		elif self._command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
 			if context.function is None:
 				return False
-			if not self.command.mediumLevelILFunctionIsValid:
+			if not self._command.mediumLevelILFunctionIsValid:
 				return True
-			return self.command.mediumLevelILFunctionIsValid(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
+			return self._command.mediumLevelILFunctionIsValid(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
 			if not isinstance(context.instruction, binaryninja.mediumlevelil.MediumLevelILInstruction):
 				return False
-			if not self.command.mediumLevelILInstructionIsValid:
+			if not self._command.mediumLevelILInstructionIsValid:
 				return True
-			return self.command.mediumLevelILInstructionIsValid(self.command.context, context.view.handle,
+			return self._command.mediumLevelILInstructionIsValid(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
 		return False
 
 	def execute(self, context):
 		if not self.is_valid(context):
 			return
-		if self.command.type == PluginCommandType.DefaultPluginCommand:
-			self.command.defaultCommand(self.command.context, context.view.handle)
-		elif self.command.type == PluginCommandType.AddressPluginCommand:
-			self.command.addressCommand(self.command.context, context.view.handle, context.address)
-		elif self.command.type == PluginCommandType.RangePluginCommand:
-			self.command.rangeCommand(self.command.context, context.view.handle, context.address, context.length)
-		elif self.command.type == PluginCommandType.FunctionPluginCommand:
-			self.command.functionCommand(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
-			self.command.lowLevelILFunctionCommand(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
-			self.command.lowLevelILInstructionCommand(self.command.context, context.view.handle,
+		if self._command.type == PluginCommandType.DefaultPluginCommand:
+			self._command.defaultCommand(self._command.context, context.view.handle)
+		elif self._command.type == PluginCommandType.AddressPluginCommand:
+			self._command.addressCommand(self._command.context, context.view.handle, context.address)
+		elif self._command.type == PluginCommandType.RangePluginCommand:
+			self._command.rangeCommand(self._command.context, context.view.handle, context.address, context.length)
+		elif self._command.type == PluginCommandType.FunctionPluginCommand:
+			self._command.functionCommand(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.LowLevelILFunctionPluginCommand:
+			self._command.lowLevelILFunctionCommand(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
+			self._command.lowLevelILInstructionCommand(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
-		elif self.command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
-			self.command.mediumLevelILFunctionCommand(self.command.context, context.view.handle, context.function.handle)
-		elif self.command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
-			self.command.mediumLevelILInstructionCommand(self.command.context, context.view.handle,
+		elif self._command.type == PluginCommandType.MediumLevelILFunctionPluginCommand:
+			self._command.mediumLevelILFunctionCommand(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
+			self._command.mediumLevelILInstructionCommand(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
 
 	def __repr__(self):
-		return "<PluginCommand: %s>" % self.name
+		return "<PluginCommand: %s>" % self._name
+
+	@property
+	def command(self):
+		""" """
+		return self._command
+
+	@command.setter
+	def command(self, value):
+		self._command = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def description(self):
+		""" """
+		return self._description
+
+	@description.setter
+	def description(self, value):
+		self._description = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
 
 
 class MainThreadAction(object):

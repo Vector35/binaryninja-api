@@ -36,23 +36,23 @@ from binaryninja import pyNativeStr
 class QualifiedName(object):
 	def __init__(self, name = []):
 		if isinstance(name, str):
-			self.name = [name]
-			self.byte_name = [name.encode('charmap')]
+			self._name = [name]
+			self._byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
-			self.name = name.name
-			self.byte_name = [n.encode('charmap') for n in name.name]
+			self._name = name.name
+			self._byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = [pyNativeStr(i) for i in name]
-			self.byte_name = name
+			self._name = [pyNativeStr(i) for i in name]
+			self._byte_name = name
 
 	def __str__(self):
-		return "::".join(self.name)
+		return "::".join(self._name)
 
 	def __repr__(self):
 		return repr(str(self))
 
 	def __len__(self):
-		return len(self.name)
+		return len(self._name)
 
 	def __hash__(self):
 		return hash(str(self))
@@ -61,9 +61,9 @@ class QualifiedName(object):
 		if isinstance(other, str):
 			return str(self) == other
 		elif isinstance(other, list):
-			return self.name == other
+			return self._name == other
 		elif isinstance(other, QualifiedName):
-			return self.name == other.name
+			return self._name == other.name
 		return False
 
 	def __ne__(self, other):
@@ -71,22 +71,22 @@ class QualifiedName(object):
 
 	def __lt__(self, other):
 		if isinstance(other, QualifiedName):
-			return self.name < other.name
+			return self._name < other.name
 		return False
 
 	def __le__(self, other):
 		if isinstance(other, QualifiedName):
-			return self.name <= other.name
+			return self._name <= other.name
 		return False
 
 	def __gt__(self, other):
 		if isinstance(other, QualifiedName):
-			return self.name > other.name
+			return self._name > other.name
 		return False
 
 	def __ge__(self, other):
 		if isinstance(other, QualifiedName):
-			return self.name >= other.name
+			return self._name >= other.name
 		return False
 
 	def __cmp__(self, other):
@@ -97,18 +97,18 @@ class QualifiedName(object):
 		return 1
 
 	def __getitem__(self, key):
-		return self.name[key]
+		return self._name[key]
 
 	def __iter__(self):
-		return iter(self.name)
+		return iter(self._name)
 
 	def _get_core_struct(self):
 		result = core.BNQualifiedName()
-		name_list = (ctypes.c_char_p * len(self.name))()
-		for i in range(0, len(self.name)):
-			name_list[i] = self.name[i].encode('charmap')
+		name_list = (ctypes.c_char_p * len(self._name))()
+		for i in range(0, len(self._name)):
+			name_list[i] = self._name[i].encode('charmap')
 		result.name = name_list
-		result.nameCount = len(self.name)
+		result.nameCount = len(self._name)
 		return result
 
 	@classmethod
@@ -117,6 +117,24 @@ class QualifiedName(object):
 		for i in range(0, name.nameCount):
 			result.append(name.name[i])
 		return QualifiedName(result)
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def byte_name(self):
+		""" """
+		return self._byte_name
+
+	@byte_name.setter
+	def byte_name(self, value):
+		self._byte_name = value
 
 
 class NameSpace(QualifiedName):
@@ -249,21 +267,48 @@ class Symbol(object):
 
 class FunctionParameter(object):
 	def __init__(self, param_type, name = "", location = None):
-		self.type = param_type
-		self.name = name
-		self.location = location
+		self._type = param_type
+		self._name = name
+		self._location = location
 
 	def __repr__(self):
-		if (self.location is not None) and (self.location.name != self.name):
-			return "%s %s%s @ %s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name(), self.location.name)
-		return "%s %s%s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+		if (self._location is not None) and (self._location.name != self._name):
+			return "%s %s%s @ %s" % (self._type.get_string_before_name(), self._name, self._type.get_string_after_name(), self._location.name)
+		return "%s %s%s" % (self._type.get_string_before_name(), self._name, self._type.get_string_after_name())
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def location(self):
+		""" """
+		return self._location
+
+	@location.setter
+	def location(self, value):
+		self._location = value
 
 
 class Type(object):
 	def __init__(self, handle, platform = None, confidence = max_confidence):
 		self.handle = handle
-		self.confidence = confidence
-		self.platform = platform
+		self._confidence = confidence
+		self._platform = platform
 
 	def __del__(self):
 		core.BNFreeType(self.handle)
@@ -326,7 +371,7 @@ class Type(object):
 		result = core.BNGetChildType(self.handle)
 		if not result.type:
 			return None
-		return Type(result.type, platform = self.platform, confidence = result.confidence)
+		return Type(result.type, platform = self._platform, confidence = result.confidence)
 
 	@property
 	def element_type(self):
@@ -334,7 +379,7 @@ class Type(object):
 		result = core.BNGetChildType(self.handle)
 		if not result.type:
 			return None
-		return Type(result.type, platform = self.platform, confidence = result.confidence)
+		return Type(result.type, platform = self._platform, confidence = result.confidence)
 
 	@property
 	def return_value(self):
@@ -342,7 +387,7 @@ class Type(object):
 		result = core.BNGetChildType(self.handle)
 		if not result.type:
 			return None
-		return Type(result.type, platform = self.platform, confidence = result.confidence)
+		return Type(result.type, platform = self._platform, confidence = result.confidence)
 
 	@property
 	def calling_convention(self):
@@ -359,13 +404,13 @@ class Type(object):
 		params = core.BNGetTypeParameters(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			param_type = Type(core.BNNewTypeReference(params[i].type), platform = self.platform, confidence = params[i].typeConfidence)
+			param_type = Type(core.BNNewTypeReference(params[i].type), platform = self._platform, confidence = params[i].typeConfidence)
 			if params[i].defaultLocation:
 				param_location = None
 			else:
 				name = params[i].name
-				if (params[i].location.type == VariableSourceType.RegisterVariableSourceType) and (self.platform is not None):
-					name = self.platform.arch.get_reg_name(params[i].location.storage)
+				if (params[i].location.type == VariableSourceType.RegisterVariableSourceType) and (self._platform is not None):
+					name = self._platform.arch.get_reg_name(params[i].location.storage)
 				elif params[i].location.type == VariableSourceType.StackVariableSourceType:
 					name = "arg_%x" % params[i].location.storage
 				param_location = binaryninja.function.Variable(None, params[i].location.type, params[i].location.index,
@@ -431,25 +476,25 @@ class Type(object):
 
 	def __str__(self):
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		return core.BNGetTypeString(self.handle, platform)
 
 	def __repr__(self):
-		if self.confidence < max_confidence:
-			return "<type: %s, %d%% confidence>" % (str(self), (self.confidence * 100) // max_confidence)
+		if self._confidence < max_confidence:
+			return "<type: %s, %d%% confidence>" % (str(self), (self._confidence * 100) // max_confidence)
 		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		return core.BNGetTypeStringBeforeName(self.handle, platform)
 
 	def get_string_after_name(self):
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		return core.BNGetTypeStringAfterName(self.handle, platform)
 
 	@property
@@ -460,8 +505,8 @@ class Type(object):
 	def get_tokens(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		tokens = core.BNGetTypeTokens(self.handle, platform, base_confidence, count)
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
@@ -470,8 +515,8 @@ class Type(object):
 	def get_tokens_before_name(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		tokens = core.BNGetTypeTokensBeforeName(self.handle, platform, base_confidence, count)
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
@@ -480,8 +525,8 @@ class Type(object):
 	def get_tokens_after_name(self, base_confidence = max_confidence):
 		count = ctypes.c_ulonglong()
 		platform = None
-		if self.platform is not None:
-			platform = self.platform.handle
+		if self._platform is not None:
+			platform = self._platform.handle
 		tokens = core.BNGetTypeTokensAfterName(self.handle, platform, base_confidence, count)
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
@@ -680,7 +725,7 @@ class Type(object):
 		return core.BNGetAutoDemangledTypeIdSource()
 
 	def with_confidence(self, confidence):
-		return Type(handle = core.BNNewTypeReference(self.handle), platform = self.platform, confidence = confidence)
+		return Type(handle = core.BNNewTypeReference(self.handle), platform = self._platform, confidence = confidence)
 
 	def __setattr__(self, name, value):
 		try:
@@ -688,87 +733,195 @@ class Type(object):
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
 
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
+
+	@property
+	def platform(self):
+		""" """
+		return self._platform
+
+	@platform.setter
+	def platform(self, value):
+		self._platform = value
+
 
 class BoolWithConfidence(object):
 	def __init__(self, value, confidence = max_confidence):
-		self.value = value
-		self.confidence = confidence
+		self._value = value
+		self._confidence = confidence
 
 	def __str__(self):
-		return str(self.value)
+		return str(self._value)
 
 	def __repr__(self):
-		return repr(self.value)
+		return repr(self._value)
 
 	def __bool__(self):
-		return self.value
+		return self._value
 
 	def __nonzero__(self):
-		return self.value
+		return self._value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class SizeWithConfidence(object):
 	def __init__(self, value, confidence = max_confidence):
-		self.value = value
-		self.confidence = confidence
+		self._value = value
+		self._confidence = confidence
 
 	def __str__(self):
-		return str(self.value)
+		return str(self._value)
 
 	def __repr__(self):
-		return repr(self.value)
+		return repr(self._value)
 
 	def __int__(self):
-		return self.value
+		return self._value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class RegisterStackAdjustmentWithConfidence(object):
 	def __init__(self, value, confidence = max_confidence):
-		self.value = value
-		self.confidence = confidence
+		self._value = value
+		self._confidence = confidence
 
 	def __str__(self):
-		return str(self.value)
+		return str(self._value)
 
 	def __repr__(self):
-		return repr(self.value)
+		return repr(self._value)
 
 	def __int__(self):
-		return self.value
+		return self._value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class RegisterSet(object):
 	def __init__(self, reg_list, confidence = max_confidence):
-		self.regs = reg_list
-		self.confidence = confidence
+		self._regs = reg_list
+		self._confidence = confidence
 
 	def __repr__(self):
-		return repr(self.regs)
+		return repr(self._regs)
 
 	def __iter__(self):
-		for reg in self.regs:
+		for reg in self._regs:
 			yield reg
 
 	def __getitem__(self, idx):
-		return self.regs[idx]
+		return self._regs[idx]
 
 	def __len__(self):
-		return len(self.regs)
+		return len(self._regs)
 
 	def with_confidence(self, confidence):
-		return RegisterSet(list(self.regs), confidence = confidence)
+		return RegisterSet(list(self._regs), confidence = confidence)
+
+	@property
+	def regs(self):
+		""" """
+		return self._regs
+
+	@regs.setter
+	def regs(self, value):
+		self._regs = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class ReferenceTypeWithConfidence(object):
 	def __init__(self, value, confidence = max_confidence):
-		self.value = value
-		self.confidence = confidence
+		self._value = value
+		self._confidence = confidence
 
 	def __str__(self):
-		return str(self.value)
+		return str(self._value)
 
 	def __repr__(self):
-		return repr(self.value)
+		return repr(self._value)
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class NamedTypeReference(object):
@@ -849,15 +1002,42 @@ class NamedTypeReference(object):
 
 class StructureMember(object):
 	def __init__(self, t, name, offset):
-		self.type = t
-		self.name = name
-		self.offset = offset
+		self._type = t
+		self._name = name
+		self._offset = offset
 
 	def __repr__(self):
-		if len(self.name) == 0:
-			return "<member: %s, offset %#x>" % (str(self.type), self.offset)
-		return "<%s %s%s, offset %#x>" % (self.type.get_string_before_name(), self.name,
-							 self.type.get_string_after_name(), self.offset)
+		if len(self._name) == 0:
+			return "<member: %s, offset %#x>" % (str(self._type), self._offset)
+		return "<%s %s%s, offset %#x>" % (self._type.get_string_before_name(), self._name,
+							 self._type.get_string_after_name(), self._offset)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def offset(self):
+		""" """
+		return self._offset
+
+	@offset.setter
+	def offset(self, value):
+		self._offset = value
 
 
 class Structure(object):
@@ -980,6 +1160,33 @@ class EnumerationMember(object):
 	def __repr__(self):
 		return "<%s = %#x>" % (self.name, self.value)
 
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def default(self):
+		""" """
+		return self._default
+
+	@default.setter
+	def default(self, value):
+		self._default = value
+
 
 class Enumeration(object):
 	def __init__(self, handle=None):
@@ -1036,12 +1243,39 @@ class Enumeration(object):
 
 class TypeParserResult(object):
 	def __init__(self, types, variables, functions):
-		self.types = types
-		self.variables = variables
-		self.functions = functions
+		self._types = types
+		self._variables = variables
+		self._functions = functions
 
 	def __repr__(self):
-		return "<types: %s, variables: %s, functions: %s>" % (self.types, self.variables, self.functions)
+		return "<types: %s, variables: %s, functions: %s>" % (self._types, self._variables, self._functions)
+
+	@property
+	def types(self):
+		""" """
+		return self._types
+
+	@types.setter
+	def types(self, value):
+		self._types = value
+
+	@property
+	def variables(self):
+		""" """
+		return self._variables
+
+	@variables.setter
+	def variables(self, value):
+		self._variables = value
+
+	@property
+	def functions(self):
+		""" """
+		return self._functions
+
+	@functions.setter
+	def functions(self, value):
+		self._functions = value
 
 
 def preprocess_source(source, filename=None, include_dirs=[]):

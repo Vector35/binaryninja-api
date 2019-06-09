@@ -47,7 +47,7 @@ class UndoAction(object):
 		self._cb.undo = self._cb.undo.__class__(self._undo)
 		self._cb.redo = self._cb.redo.__class__(self._redo)
 		self._cb.serialize = self._cb.serialize.__class__(self._serialize)
-		self.view = view
+		self._view = view
 
 	@classmethod
 	def register(cls):
@@ -96,3 +96,12 @@ class UndoAction(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return "null"
+
+	@property
+	def view(self):
+		""" """
+		return self._view
+
+	@view.setter
+	def view(self, value):
+		self._view = value

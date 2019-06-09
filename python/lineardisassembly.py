@@ -21,27 +21,99 @@
 
 class LinearDisassemblyPosition(object):
 	"""
-	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly.
+	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly
 
 	.. note:: This object should not be instantiated directly. Rather call \
 	:py:meth:`get_linear_disassembly_position_at` which instantiates this object.
 	"""
 	def __init__(self, func, block, addr):
-		self.function = func
-		self.block = block
-		self.address = addr
+		self._function = func
+		self._block = block
+		self._address = addr
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def block(self):
+		""" """
+		return self._block
+
+	@block.setter
+	def block(self, value):
+		self._block = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
 
 
 class LinearDisassemblyLine(object):
 	def __init__(self, line_type, func, block, line_offset, contents):
-		self.type = line_type
-		self.function = func
-		self.block = block
-		self.line_offset = line_offset
-		self.contents = contents
+		self._type = line_type
+		self._function = func
+		self._block = block
+		self._line_offset = line_offset
+		self._contents = contents
 
 	def __str__(self):
-		return str(self.contents)
+		return str(self._contents)
 
 	def __repr__(self):
-		return repr(self.contents)
+		return repr(self._contents)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def block(self):
+		""" """
+		return self._block
+
+	@block.setter
+	def block(self, value):
+		self._block = value
+
+	@property
+	def line_offset(self):
+		""" """
+		return self._line_offset
+
+	@line_offset.setter
+	def line_offset(self, value):
+		self._line_offset = value
+
+	@property
+	def contents(self):
+		""" """
+		return self.contents
+
+	@contents.setter
+	def contents(self, value):
+		self.contents = value

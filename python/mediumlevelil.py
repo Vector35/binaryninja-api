@@ -36,22 +36,40 @@ from binaryninja import range
 
 class SSAVariable(object):
 	def __init__(self, var, version):
-		self.var = var
-		self.version = version
+		self._var = var
+		self._version = version
 
 	def __repr__(self):
-		return "<ssa %s version %d>" % (repr(self.var), self.version)
+		return "<ssa %s version %d>" % (repr(self._var), self._version)
 
 	def __eq__(self, other):
 		if not isinstance(other, type(self)):
 			return False
 		return isinstance(other, SSAVariable) and (
-			(self.var, self.version) ==
+			(self._var, self._version) ==
 			(other.var, other.version)
 		)
 
 	def __hash__(self):
-		return hash((self.var, self.version))
+		return hash((self._var, self._version))
+
+	@property
+	def var(self):
+		""" """
+		return self._var
+
+	@var.setter
+	def var(self, value):
+		self._var = value
+
+	@property
+	def version(self):
+		""" """
+		return self._version
+
+	@version.setter
+	def version(self, value):
+		self._version = value
 
 
 class MediumLevelILLabel(object):
@@ -65,21 +83,39 @@ class MediumLevelILLabel(object):
 
 class MediumLevelILOperationAndSize(object):
 	def __init__(self, operation, size):
-		self.operation = operation
-		self.size = size
+		self._operation = operation
+		self._size = size
 
 	def __repr__(self):
-		if self.size == 0:
-			return "<%s>" % self.operation.name
-		return "<%s %d>" % (self.operation.name, self.size)
+		if self._size == 0:
+			return "<%s>" % self._operation.name
+		return "<%s %d>" % (self._operation.name, self._size)
 
 	def __eq__(self, other):
 		if isinstance(other, MediumLevelILOperation):
-			return other == self.operation
+			return other == self._operation
 		if isinstance(other, MediumLevelILOperationAndSize):
-			return other.size == self.size and other.operation == self.operation
+			return other.size == self._size and other.operation == self._operation
 		else:
 			return False
+
+	@property
+	def operation(self):
+		""" """
+		return self._operation
+
+	@operation.setter
+	def operation(self, value):
+		self._operation = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
 
 
 class MediumLevelILInstruction(object):
@@ -225,18 +261,18 @@ class MediumLevelILInstruction(object):
 
 	def __init__(self, func, expr_index, instr_index=None):
 		instr = core.BNGetMediumLevelILByIndex(func.handle, expr_index)
-		self.function = func
-		self.expr_index = expr_index
+		self._function = func
+		self._expr_index = expr_index
 		if instr_index is None:
-			self.instr_index = core.BNGetMediumLevelILInstructionForExpr(func.handle, expr_index)
+			self._instr_index = core.BNGetMediumLevelILInstructionForExpr(func.handle, expr_index)
 		else:
-			self.instr_index = instr_index
-		self.operation = MediumLevelILOperation(instr.operation)
-		self.size = instr.size
-		self.address = instr.address
-		self.source_operand = instr.sourceOperand
+			self._instr_index = instr_index
+		self._operation = MediumLevelILOperation(instr.operation)
+		self._size = instr.size
+		self._address = instr.address
+		self._source_operand = instr.sourceOperand
 		operands = MediumLevelILInstruction.ILOperations[instr.operation]
-		self.operands = []
+		self._operands = []
 		i = 0
 		for operand in operands:
 			name, operand_type = operand
@@ -255,55 +291,55 @@ class MediumLevelILInstruction(object):
 			elif operand_type == "intrinsic":
 				value = lowlevelil.ILIntrinsic(func.arch, instr.operands[i])
 			elif operand_type == "var":
-				value = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				value = function.Variable.from_identifier(self._function.source_function, instr.operands[i])
 			elif operand_type == "var_ssa":
-				var = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				var = function.Variable.from_identifier(self._function.source_function, instr.operands[i])
 				version = instr.operands[i + 1]
 				i += 1
 				value = SSAVariable(var, version)
 			elif operand_type == "var_ssa_dest_and_src":
-				var = function.Variable.from_identifier(self.function.source_function, instr.operands[i])
+				var = function.Variable.from_identifier(self._function.source_function, instr.operands[i])
 				dest_version = instr.operands[i + 1]
 				src_version = instr.operands[i + 2]
 				i += 2
-				self.operands.append(SSAVariable(var, dest_version))
-				self.dest = SSAVariable(var, dest_version)
+				self._operands.append(SSAVariable(var, dest_version))
+				self._dest = SSAVariable(var, dest_version)
 				value = SSAVariable(var, src_version)
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
-				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
 				value = []
 				for j in range(count.value):
 					value.append(operand_list[j])
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_list":
 				count = ctypes.c_ulonglong()
-				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
 				i += 1
 				value = []
 				for j in range(count.value):
-					value.append(function.Variable.from_identifier(self.function.source_function, operand_list[j]))
+					value.append(function.Variable.from_identifier(self._function.source_function, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "var_ssa_list":
 				count = ctypes.c_ulonglong()
-				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
 				i += 1
 				value = []
 				for j in range(count.value // 2):
 					var_id = operand_list[j * 2]
 					var_version = operand_list[(j * 2) + 1]
-					value.append(SSAVariable(function.Variable.from_identifier(self.function.source_function,
+					value.append(SSAVariable(function.Variable.from_identifier(self._function.source_function,
 						var_id), var_version))
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			elif operand_type == "expr_list":
 				count = ctypes.c_ulonglong()
-				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
 				i += 1
 				value = []
 				for j in range(count.value):
 					value.append(MediumLevelILInstruction(func, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
-			self.operands.append(value)
+			self._operands.append(value)
 			self.__dict__[name] = value
 			i += 1
 
@@ -322,21 +358,21 @@ class MediumLevelILInstruction(object):
 	def __eq__(self, value):
 		if not isinstance(value, type(self)):
 			return False
-		return self.function == value.function and self.expr_index == value.expr_index
+		return self._function == value.function and self._expr_index == value.expr_index
 
 	@property
 	def tokens(self):
 		"""MLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if ((self.instr_index is not None) and (self.function.source_function is not None) and
-			(self.expr_index == core.BNGetMediumLevelILIndexForInstruction(self.function.handle, self.instr_index))):
-			if not core.BNGetMediumLevelILInstructionText(self.function.handle, self.function.source_function.handle,
-				self.function.arch.handle, self.instr_index, tokens, count):
+		if ((self._instr_index is not None) and (self._function.source_function is not None) and
+			(self._expr_index == core.BNGetMediumLevelILIndexForInstruction(self._function.handle, self._instr_index))):
+			if not core.BNGetMediumLevelILInstructionText(self._function.handle, self._function.source_function.handle,
+				self._function.arch.handle, self._instr_index, tokens, count):
 				return None
 		else:
-			if not core.BNGetMediumLevelILExprText(self.function.handle, self.function.arch.handle,
-				self.expr_index, tokens, count):
+			if not core.BNGetMediumLevelILExprText(self._function.handle, self._function.arch.handle,
+				self._expr_index, tokens, count):
 				return None
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
@@ -345,32 +381,32 @@ class MediumLevelILInstruction(object):
 	@property
 	def il_basic_block(self):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
-		return MediumLevelILBasicBlock(self.function.source_function.view, core.BNGetMediumLevelILBasicBlockForInstruction(self.function.handle, self.instr_index), self.function)
+		return MediumLevelILBasicBlock(self._function.source_function.view, core.BNGetMediumLevelILBasicBlockForInstruction(self._function.handle, self._instr_index), self._function)
 
 	@property
 	def ssa_form(self):
 		"""SSA form of expression (read-only)"""
-		return MediumLevelILInstruction(self.function.ssa_form,
-			core.BNGetMediumLevelILSSAExprIndex(self.function.handle, self.expr_index))
+		return MediumLevelILInstruction(self._function.ssa_form,
+			core.BNGetMediumLevelILSSAExprIndex(self._function.handle, self._expr_index))
 
 	@property
 	def non_ssa_form(self):
 		"""Non-SSA form of expression (read-only)"""
-		return MediumLevelILInstruction(self.function.non_ssa_form,
-			core.BNGetMediumLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
+		return MediumLevelILInstruction(self._function.non_ssa_form,
+			core.BNGetMediumLevelILNonSSAExprIndex(self._function.handle, self._expr_index))
 
 	@property
 	def value(self):
 		"""Value of expression if constant or a known value (read-only)"""
-		value = core.BNGetMediumLevelILExprValue(self.function.handle, self.expr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		value = core.BNGetMediumLevelILExprValue(self._function.handle, self._expr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
@@ -378,7 +414,7 @@ class MediumLevelILInstruction(object):
 	def branch_dependence(self):
 		"""Set of branching instructions that must take the true or false path to reach this instruction"""
 		count = ctypes.c_ulonglong()
-		deps = core.BNGetAllMediumLevelILBranchDependence(self.function.handle, self.instr_index, count)
+		deps = core.BNGetAllMediumLevelILBranchDependence(self._function.handle, self._instr_index, count)
 		result = {}
 		for i in range(0, count.value):
 			result[deps[i].branch] = ILBranchDependence(deps[i].dependence)
@@ -388,10 +424,10 @@ class MediumLevelILInstruction(object):
 	@property
 	def low_level_il(self):
 		"""Low level IL form of this expression"""
-		expr = self.function.get_low_level_il_expr_index(self.expr_index)
+		expr = self._function.get_low_level_il_expr_index(self._expr_index)
 		if expr is None:
 			return None
-		return lowlevelil.LowLevelILInstruction(self.function.low_level_il.ssa_form, expr)
+		return lowlevelil.LowLevelILInstruction(self._function.low_level_il.ssa_form, expr)
 
 	@property
 	def llil(self):
@@ -401,13 +437,13 @@ class MediumLevelILInstruction(object):
 	@property
 	def ssa_memory_version(self):
 		"""Version of active memory contents in SSA form for this instruction"""
-		return core.BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.instr_index)
+		return core.BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self._function.handle, self._instr_index)
 
 	@property
 	def prefix_operands(self):
 		"""All operands in the expression tree in prefix order"""
-		result = [MediumLevelILOperationAndSize(self.operation, self.size)]
-		for operand in self.operands:
+		result = [MediumLevelILOperationAndSize(self._operation, self._size)]
+		for operand in self._operands:
 			if isinstance(operand, MediumLevelILInstruction):
 				result += operand.prefix_operands
 			else:
@@ -418,61 +454,61 @@ class MediumLevelILInstruction(object):
 	def postfix_operands(self):
 		"""All operands in the expression tree in postfix order"""
 		result = []
-		for operand in self.operands:
+		for operand in self._operands:
 			if isinstance(operand, MediumLevelILInstruction):
 				result += operand.postfix_operands
 			else:
 				result.append(operand)
-		result.append(MediumLevelILOperationAndSize(self.operation, self.size))
+		result.append(MediumLevelILOperationAndSize(self._operation, self._size))
 		return result
 
 	@property
 	def vars_written(self):
 		"""List of variables written by instruction"""
-		if self.operation in [MediumLevelILOperation.MLIL_SET_VAR, MediumLevelILOperation.MLIL_SET_VAR_FIELD,
+		if self._operation in [MediumLevelILOperation.MLIL_SET_VAR, MediumLevelILOperation.MLIL_SET_VAR_FIELD,
 			MediumLevelILOperation.MLIL_SET_VAR_SSA, MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD,
 			MediumLevelILOperation.MLIL_SET_VAR_ALIASED, MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD,
 			MediumLevelILOperation.MLIL_VAR_PHI]:
-			return [self.dest]
-		elif self.operation in [MediumLevelILOperation.MLIL_SET_VAR_SPLIT, MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA]:
+			return [self._dest]
+		elif self._operation in [MediumLevelILOperation.MLIL_SET_VAR_SPLIT, MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA]:
 			return [self.high, self.low]
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_SYSCALL, MediumLevelILOperation.MLIL_TAILCALL]:
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_SYSCALL, MediumLevelILOperation.MLIL_TAILCALL]:
 			return self.output
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL_UNTYPED, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL_UNTYPED, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
 			MediumLevelILOperation.MLIL_CALL_SSA, MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA,
 			MediumLevelILOperation.MLIL_SYSCALL_SSA, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA,
 			MediumLevelILOperation.MLIL_TAILCALL_SSA, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA]:
 			return self.output.vars_written
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL_OUTPUT, MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA]:
-			return self.dest
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL_OUTPUT, MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA]:
+			return self._dest
 		return []
 
 	@property
 	def vars_read(self):
 		"""List of variables read by instruction"""
-		if self.operation in [MediumLevelILOperation.MLIL_SET_VAR, MediumLevelILOperation.MLIL_SET_VAR_FIELD,
+		if self._operation in [MediumLevelILOperation.MLIL_SET_VAR, MediumLevelILOperation.MLIL_SET_VAR_FIELD,
 			MediumLevelILOperation.MLIL_SET_VAR_SPLIT, MediumLevelILOperation.MLIL_SET_VAR_SSA,
 			MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA, MediumLevelILOperation.MLIL_SET_VAR_ALIASED]:
 			return self.src.vars_read
-		elif self.operation in [MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD,
+		elif self._operation in [MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD,
 			MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD]:
 			return [self.prev] + self.src.vars_read
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_SYSCALL, MediumLevelILOperation.MLIL_TAILCALL,
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_SYSCALL, MediumLevelILOperation.MLIL_TAILCALL,
 			MediumLevelILOperation.MLIL_CALL_SSA, MediumLevelILOperation.MLIL_SYSCALL_SSA, MediumLevelILOperation.MLIL_TAILCALL_SSA]:
 			result = []
 			for param in self.params:
 				result += param.vars_read
 			return result
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL_UNTYPED, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL_UNTYPED, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
 			MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA, MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA]:
 			return self.params.vars_read
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL_PARAM, MediumLevelILOperation.MLIL_CALL_PARAM_SSA,
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL_PARAM, MediumLevelILOperation.MLIL_CALL_PARAM_SSA,
 			MediumLevelILOperation.MLIL_VAR_PHI]:
 			return self.src
-		elif self.operation in [MediumLevelILOperation.MLIL_CALL_OUTPUT, MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA]:
+		elif self._operation in [MediumLevelILOperation.MLIL_CALL_OUTPUT, MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA]:
 			return []
 		result = []
-		for operand in self.operands:
+		for operand in self._operands:
 			if (isinstance(operand, function.Variable)) or (isinstance(operand, SSAVariable)):
 				result.append(operand)
 			elif isinstance(operand, MediumLevelILInstruction):
@@ -482,11 +518,11 @@ class MediumLevelILInstruction(object):
 	@property
 	def expr_type(self):
 		"""Type of expression"""
-		result = core.BNGetMediumLevelILExprType(self.function.handle, self.expr_index)
+		result = core.BNGetMediumLevelILExprType(self._function.handle, self._expr_index)
 		if result.type:
 			platform = None
-			if self.function.source_function:
-				platform = self.function.source_function.platform
+			if self._function.source_function:
+				platform = self._function.source_function.platform
 			return types.Type(result.type, platform = platform, confidence = result.confidence)
 		return None
 
@@ -495,8 +531,8 @@ class MediumLevelILInstruction(object):
 		var_data.type = ssa_var.var.source_type
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
-		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, ssa_var.version, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		value = core.BNGetMediumLevelILPossibleSSAVarValues(self._function.handle, var_data, ssa_var.version, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
@@ -505,104 +541,185 @@ class MediumLevelILInstruction(object):
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		return core.BNGetMediumLevelILSSAVarVersionAtILInstruction(self.function.handle, var_data, self.instr_index)
+		return core.BNGetMediumLevelILSSAVarVersionAtILInstruction(self._function.handle, var_data, self._instr_index)
 
 	def get_var_for_reg(self, reg):
-		reg = self.function.arch.get_reg_index(reg)
-		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		reg = self._function.arch.get_reg_index(reg)
+		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self._function.handle, reg, self._instr_index)
+		return function.Variable(self._function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_flag(self, flag):
-		flag = self.function.arch.get_flag_index(flag)
-		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		flag = self._function.arch.get_flag_index(flag)
+		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self._function.handle, flag, self._instr_index)
+		return function.Variable(self._function.source_function, result.type, result.index, result.storage)
 
 	def get_var_for_stack_location(self, offset):
-		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self.function.handle, offset, self.instr_index)
-		return function.Variable(self.function.source_function, result.type, result.index, result.storage)
+		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self._function.handle, offset, self._instr_index)
+		return function.Variable(self._function.source_function, result.type, result.index, result.storage)
 
 	def get_reg_value(self, reg):
-		reg = self.function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		reg = self._function.arch.get_reg_index(reg)
+		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self._function.handle, reg, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_reg_value_after(self, reg):
-		reg = self.function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		reg = self._function.arch.get_reg_index(reg)
+		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self._function.handle, reg, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_possible_reg_values(self, reg):
-		reg = self.function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		reg = self._function.arch.get_reg_index(reg)
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_reg_values_after(self, reg):
-		reg = self.function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		reg = self._function.arch.get_reg_index(reg)
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_flag_value(self, flag):
-		flag = self.function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILFlagValueAtInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		flag = self._function.arch.get_flag_index(flag)
+		value = core.BNGetMediumLevelILFlagValueAtInstruction(self._function.handle, flag, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_flag_value_after(self, flag):
-		flag = self.function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self.function.handle, flag, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		flag = self._function.arch.get_flag_index(flag)
+		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self._function.handle, flag, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_possible_flag_values(self, flag):
-		flag = self.function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		flag = self._function.arch.get_flag_index(flag)
+		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_flag_values_after(self, flag):
-		flag = self.function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		flag = self._function.arch.get_flag_index(flag)
+		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_stack_contents(self, offset, size):
-		value = core.BNGetMediumLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		value = core.BNGetMediumLevelILStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_stack_contents_after(self, offset, size):
-		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.RegisterValue(self.function.arch, value)
+		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+		result = function.RegisterValue(self._function.arch, value)
 		return result
 
 	def get_possible_stack_contents(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_stack_contents_after(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
-		result = function.PossibleValueSet(self.function.arch, value)
+		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_branch_dependence(self, branch_instr):
-		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self.function.handle, self.instr_index, branch_instr))
+		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self._function.handle, self._instr_index, branch_instr))
 
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def expr_index(self):
+		""" """
+		return self._expr_index
+
+	@expr_index.setter
+	def expr_index(self, value):
+		self._expr_index = value
+
+	@property
+	def instr_index(self):
+		""" """
+		return self._instr_index
+
+	@instr_index.setter
+	def instr_index(self, value):
+		self._instr_index = value
+
+	@property
+	def operation(self):
+		""" """
+		return self._operation
+
+	@operation.setter
+	def operation(self, value):
+		self._operation = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def source_operand(self):
+		""" """
+		return self._source_operand
+
+	@source_operand.setter
+	def source_operand(self, value):
+		self._source_operand = value
+
+	@property
+	def operands(self):
+		""" """
+		return self._operands
+
+	@operands.setter
+	def operands(self, value):
+		self._operands = value
+
+	@property
+	def dest(self):
+		""" """
+		return self._dest
+
+	@dest.setter
+	def dest(self, value):
+		self._dest = value
 
 
 class MediumLevelILExpr(object):
@@ -613,7 +730,16 @@ class MediumLevelILExpr(object):
 	used instead.
 	"""
 	def __init__(self, index):
-		self.index = index
+		self._index = index
+
+	@property
+	def index(self):
+		""" """
+		return self._index
+
+	@index.setter
+	def index(self, value):
+		self._index = value
 
 
 class MediumLevelILFunction(object):
@@ -623,25 +749,25 @@ class MediumLevelILFunction(object):
 	methods which return MediumLevelILExpr objects.
 	"""
 	def __init__(self, arch = None, handle = None, source_func = None):
-		self.arch = arch
-		self.source_function = source_func
+		self._arch = arch
+		self._source_function = source_func
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNMediumLevelILFunction)
-			if self.source_function is None:
-				self.source_function = binaryninja.function.Function(handle = core.BNGetMediumLevelILOwnerFunction(self.handle))
-			if self.arch is None:
-				self.arch = self.source_function.arch
+			if self._source_function is None:
+				self._source_function = binaryninja.function.Function(handle = core.BNGetMediumLevelILOwnerFunction(self.handle))
+			if self._arch is None:
+				self._arch = self._source_function.arch
 		else:
-			if self.source_function is None:
+			if self._source_function is None:
 				self.handle = None
 				raise ValueError("IL functions must be created with an associated function")
-			if self.arch is None:
-				self.arch = self.source_function.arch
-			func_handle = self.source_function.handle
+			if self._arch is None:
+				self._arch = self._source_function.arch
+			func_handle = self._source_function.handle
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
 	def __hash__(self):
-		return hash(('MLIL', self.source_function))
+		return hash(('MLIL', self._source_function))
 
 	def __del__(self):
 		if self.handle is not None:
@@ -664,11 +790,11 @@ class MediumLevelILFunction(object):
 
 	@current_address.setter
 	def current_address(self, value):
-		core.BNMediumLevelILSetCurrentAddress(self.handle, self.arch.handle, value)
+		core.BNMediumLevelILSetCurrentAddress(self.handle, self._arch.handle, value)
 
 	def set_current_address(self, value, arch = None):
 		if arch is None:
-			arch = self.arch
+			arch = self._arch
 		core.BNMediumLevelILSetCurrentAddress(self.handle, arch.handle, value)
 
 	@property
@@ -678,8 +804,8 @@ class MediumLevelILFunction(object):
 		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
 		result = []
 		view = None
-		if self.source_function is not None:
-			view = self.source_function.view
+		if self._source_function is not None:
+			view = self._source_function.view
 		for i in range(0, count.value):
 			result.append(MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self))
 		core.BNFreeBasicBlockList(blocks, count.value)
@@ -698,7 +824,7 @@ class MediumLevelILFunction(object):
 		result = core.BNGetMediumLevelILSSAForm(self.handle)
 		if not result:
 			return None
-		return MediumLevelILFunction(self.arch, result, self.source_function)
+		return MediumLevelILFunction(self._arch, result, self._source_function)
 
 	@property
 	def non_ssa_form(self):
@@ -706,7 +832,7 @@ class MediumLevelILFunction(object):
 		result = core.BNGetMediumLevelILNonSSAForm(self.handle)
 		if not result:
 			return None
-		return MediumLevelILFunction(self.arch, result, self.source_function)
+		return MediumLevelILFunction(self._arch, result, self._source_function)
 
 	@property
 	def low_level_il(self):
@@ -714,7 +840,7 @@ class MediumLevelILFunction(object):
 		result = core.BNGetLowLevelILForMediumLevelIL(self.handle)
 		if not result:
 			return None
-		return lowlevelil.LowLevelILFunction(self.arch, result, self.source_function)
+		return lowlevelil.LowLevelILFunction(self._arch, result, self._source_function)
 
 	@property
 	def llil(self):
@@ -749,8 +875,8 @@ class MediumLevelILFunction(object):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
 		view = None
-		if self.source_function is not None:
-			view = self.source_function.view
+		if self._source_function is not None:
+			view = self._source_function.view
 		try:
 			for i in range(0, count.value):
 				yield MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
@@ -759,7 +885,7 @@ class MediumLevelILFunction(object):
 
 	def get_instruction_start(self, addr, arch = None):
 		if arch is None:
-			arch = self.arch
+			arch = self._arch
 		result = core.BNMediumLevelILGetInstructionStart(self.handle, arch.handle, addr)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
 			return None
@@ -950,7 +1076,7 @@ class MediumLevelILFunction(object):
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, ssa_var.version)
-		result = function.RegisterValue(self.arch, value)
+		result = function.RegisterValue(self._arch, value)
 		return result
 
 	def get_low_level_il_instruction_index(self, instr):
@@ -1009,3 +1135,21 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
+
+	@property
+	def source_function(self):
+		""" """
+		return self._source_function
+
+	@source_function.setter
+	def source_function(self, value):
+		self._source_function = value

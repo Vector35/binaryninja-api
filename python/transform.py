@@ -87,17 +87,32 @@ class _TransformMetaClass(type):
 
 class TransformParameter(object):
 	def __init__(self, name, long_name = None, fixed_length = 0):
-		self.name = name
+		self._name = name
 		if long_name is None:
-			self.long_name = name
+			self._long_name = name
 		else:
-			self.long_name = long_name
-		self.fixed_length = fixed_length
+			self._long_name = long_name
+		self._fixed_length = fixed_length
 
 	def __repr__(self):
 		return "<TransformParameter: {} fixed length: {}>".format(
-			self.long_name, self.fixed_length
+			self._long_name, self._fixed_length
 		)
+
+	@property
+	def name(self):
+		"""(read-only)"""
+		return self._name
+
+	@property
+	def long_name(self):
+		"""(read-only)"""
+		return self._long_name
+
+	@property
+	def fixed_length(self):
+		"""(read-only)"""
+		return self._fixed_length
 
 
 class Transform(with_metaclass(_TransformMetaClass, object)):

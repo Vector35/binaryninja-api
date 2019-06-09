@@ -34,25 +34,26 @@ from binaryninja import pyNativeStr
 
 
 class QualifiedName(object):
+	#TODO: Resolve documentation on name, byte_name
 	def __init__(self, name = []):
 		if isinstance(name, str):
-			self._name = [name]
-			self._byte_name = [name.encode('charmap')]
+			self.name = [name]
+			self.byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
-			self._name = name.name
-			self._byte_name = [n.encode('charmap') for n in name.name]
+			self.name = name.name
+			self.byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self._name = [pyNativeStr(i) for i in name]
-			self._byte_name = name
+			self.name = [pyNativeStr(i) for i in name]
+			self.byte_name = name
 
 	def __str__(self):
-		return "::".join(self._name)
+		return "::".join(self.name)
 
 	def __repr__(self):
 		return repr(str(self))
 
 	def __len__(self):
-		return len(self._name)
+		return len(self.name)
 
 	def __hash__(self):
 		return hash(str(self))
@@ -61,9 +62,9 @@ class QualifiedName(object):
 		if isinstance(other, str):
 			return str(self) == other
 		elif isinstance(other, list):
-			return self._name == other
+			return self.name == other
 		elif isinstance(other, QualifiedName):
-			return self._name == other.name
+			return self.name == other.name
 		return False
 
 	def __ne__(self, other):
@@ -71,22 +72,22 @@ class QualifiedName(object):
 
 	def __lt__(self, other):
 		if isinstance(other, QualifiedName):
-			return self._name < other.name
+			return self.name < other.name
 		return False
 
 	def __le__(self, other):
 		if isinstance(other, QualifiedName):
-			return self._name <= other.name
+			return self.name <= other.name
 		return False
 
 	def __gt__(self, other):
 		if isinstance(other, QualifiedName):
-			return self._name > other.name
+			return self.name > other.name
 		return False
 
 	def __ge__(self, other):
 		if isinstance(other, QualifiedName):
-			return self._name >= other.name
+			return self.name >= other.name
 		return False
 
 	def __cmp__(self, other):
@@ -97,18 +98,18 @@ class QualifiedName(object):
 		return 1
 
 	def __getitem__(self, key):
-		return self._name[key]
+		return self.name[key]
 
 	def __iter__(self):
-		return iter(self._name)
+		return iter(self.name)
 
 	def _get_core_struct(self):
 		result = core.BNQualifiedName()
-		name_list = (ctypes.c_char_p * len(self._name))()
-		for i in range(0, len(self._name)):
-			name_list[i] = self._name[i].encode('charmap')
+		name_list = (ctypes.c_char_p * len(self.name))()
+		for i in range(0, len(self.name)):
+			name_list[i] = self.name[i].encode('charmap')
 		result.name = name_list
-		result.nameCount = len(self._name)
+		result.nameCount = len(self.name)
 		return result
 
 	@classmethod
@@ -118,26 +119,9 @@ class QualifiedName(object):
 			result.append(name.name[i])
 		return QualifiedName(result)
 
-	@property
-	def name(self):
-		""" """
-		return self._name
-
-	@name.setter
-	def name(self, value):
-		self._name = value
-
-	@property
-	def byte_name(self):
-		""" """
-		return self._byte_name
-
-	@byte_name.setter
-	def byte_name(self, value):
-		self._byte_name = value
-
 
 class NameSpace(QualifiedName):
+	#TODO: Resolve documentation on name and inheritence from QualifiedName
 	def __str__(self):
 		return ":".join(self.name)
 
@@ -156,6 +140,7 @@ class NameSpace(QualifiedName):
 		for i in range(0, name.nameCount):
 			result.append(name.name[i])
 		return NameSpace(result)
+
 
 class Symbol(object):
 	"""

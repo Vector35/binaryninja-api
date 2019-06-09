@@ -303,7 +303,8 @@ class MediumLevelILInstruction(object):
 				src_version = instr.operands[i + 2]
 				i += 2
 				self._operands.append(SSAVariable(var, dest_version))
-				self._dest = SSAVariable(var, dest_version)
+				#TODO: documentation for dest
+				self.dest = SSAVariable(var, dest_version)
 				value = SSAVariable(var, src_version)
 			elif operand_type == "int_list":
 				count = ctypes.c_ulonglong()
@@ -469,7 +470,7 @@ class MediumLevelILInstruction(object):
 			MediumLevelILOperation.MLIL_SET_VAR_SSA, MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD,
 			MediumLevelILOperation.MLIL_SET_VAR_ALIASED, MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD,
 			MediumLevelILOperation.MLIL_VAR_PHI]:
-			return [self._dest]
+			return [self.dest]
 		elif self._operation in [MediumLevelILOperation.MLIL_SET_VAR_SPLIT, MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA]:
 			return [self.high, self.low]
 		elif self._operation in [MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_SYSCALL, MediumLevelILOperation.MLIL_TAILCALL]:
@@ -480,7 +481,7 @@ class MediumLevelILInstruction(object):
 			MediumLevelILOperation.MLIL_TAILCALL_SSA, MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA]:
 			return self.output.vars_written
 		elif self._operation in [MediumLevelILOperation.MLIL_CALL_OUTPUT, MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA]:
-			return self._dest
+			return self.dest
 		return []
 
 	@property
@@ -711,15 +712,6 @@ class MediumLevelILInstruction(object):
 	@operands.setter
 	def operands(self, value):
 		self._operands = value
-
-	@property
-	def dest(self):
-		""" """
-		return self._dest
-
-	@dest.setter
-	def dest(self, value):
-		self._dest = value
 
 
 class MediumLevelILExpr(object):
@@ -1110,6 +1102,25 @@ class MediumLevelILFunction(object):
 			settings_obj = None
 		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateMediumLevelILFunctionGraph(self.handle, settings_obj))
 
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
+
+	@property
+	def source_function(self):
+		""" """
+		return self._source_function
+
+	@source_function.setter
+	def source_function(self, value):
+		self._source_function = value
+
+
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):
@@ -1137,19 +1148,10 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		return hash((self.start, self.end, self.il_function))
 
 	@property
-	def arch(self):
+	def il_function(self):
 		""" """
-		return self._arch
+		return self._il_function
 
-	@arch.setter
-	def arch(self, value):
-		self._arch = value
-
-	@property
-	def source_function(self):
-		""" """
-		return self._source_function
-
-	@source_function.setter
-	def source_function(self, value):
-		self._source_function = value
+	@il_function.setter
+	def il_function(self, value):
+		self._il_function = value

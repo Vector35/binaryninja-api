@@ -34,17 +34,16 @@ from binaryninja import pyNativeStr
 
 
 class QualifiedName(object):
-	#TODO: Resolve documentation on name, byte_name
 	def __init__(self, name = []):
 		if isinstance(name, str):
-			self.name = [name]
-			self.byte_name = [name.encode('charmap')]
+			self._name = [name]
+			self._byte_name = [name.encode('charmap')]
 		elif isinstance(name, QualifiedName):
-			self.name = name.name
-			self.byte_name = [n.encode('charmap') for n in name.name]
+			self._name = name.name
+			self._byte_name = [n.encode('charmap') for n in name.name]
 		else:
-			self.name = [pyNativeStr(i) for i in name]
-			self.byte_name = name
+			self._name = [pyNativeStr(i) for i in name]
+			self._byte_name = name
 
 	def __str__(self):
 		return "::".join(self.name)
@@ -119,9 +118,26 @@ class QualifiedName(object):
 			result.append(name.name[i])
 		return QualifiedName(result)
 
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def byte_name(self):
+		""" """
+		return self._byte_name
+
+	@byte_name.setter
+	def byte_name(self, value):
+		self._byte_name = value
+
 
 class NameSpace(QualifiedName):
-	#TODO: Resolve documentation on name and inheritence from QualifiedName
 	def __str__(self):
 		return ":".join(self.name)
 
@@ -140,7 +156,6 @@ class NameSpace(QualifiedName):
 		for i in range(0, name.nameCount):
 			result.append(name.name[i])
 		return NameSpace(result)
-
 
 class Symbol(object):
 	"""

@@ -2333,6 +2333,32 @@ vector<string> BinaryView::GetUniqueSectionNames(const vector<string>& names)
 }
 
 
+string BinaryView::GetCommentForAddress(uint64_t addr) const
+{
+	char* comment = BNGetGlobalCommentForAddress(m_object, addr);
+	string result = comment;
+	BNFreeString(comment);
+	return result;
+}
+
+
+vector<uint64_t> BinaryView::GetCommentedAddresses() const
+{
+	size_t count;
+	uint64_t* addrs = BNGetGlobalCommentedAddresses(m_object, &count);
+	vector<uint64_t> result;
+	result.insert(result.end(), addrs, &addrs[count]);
+	BNFreeAddressList(addrs);
+	return result;
+}
+
+
+void BinaryView::SetCommentForAddress(uint64_t addr, const string& comment)
+{
+	BNSetGlobalCommentForAddress(m_object, addr, comment.c_str());
+}
+
+
 vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 {
 	size_t count;

@@ -1541,6 +1541,10 @@ namespace BinaryNinja
 
 		std::vector<std::string> GetUniqueSectionNames(const std::vector<std::string>& names);
 
+		std::string GetCommentForAddress(uint64_t addr) const;
+		std::vector<uint64_t> GetCommentedAddresses() const;
+		void SetCommentForAddress(uint64_t addr, const std::string& comment);
+
 		std::vector<BNAddressRange> GetAllocatedRanges();
 
 		void StoreMetadata(const std::string& key, Ref<Metadata> value);

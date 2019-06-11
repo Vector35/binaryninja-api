@@ -4373,6 +4373,51 @@ class BinaryView(object):
 		core.BNFreeStringList(outgoing_names, len(name_list))
 		return result
 
+	@property
+	def address_comments(self):
+		"""
+		Returns a read-only dict of the address comments attached to this BinaryView
+
+		Note that these are different from function-level comments which are specific to each function.
+		For annotating code, it is recommended to use comments attached to functions rather than address
+		comments attached to the BinaryView. On the other hand, BinaryView comments can be attached to data
+		whereas function comments cannot.
+		To create a function-level comment, use :func:`~binaryninja.function.Function.add_user_code_ref`.
+		"""
+		count = ctypes.c_ulonglong()
+		addrs = core.BNGetGlobalCommentedAddresses(self.handle, count)
+		result = {}
+		for i in range(0, count.value):
+			result[addrs[i]] = self.get_comment_at(addrs[i])
+		core.BNFreeAddressList(addrs)
+		return result
+
+	def get_comment_at(self, addr):
+		"""
+		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
+		Note that address-based comments are different from function-level comments which are specific to each function.
+		For more information, see :func:`address_comments`.
+	
+		"""
+		return core.BNGetGlobalCommentForAddress(self.handle, addr)
+
+	def set_comment_at(self, addr, comment):
+		"""
+		``set_comment_at`` sets a comment for the BinaryView at the address specified
+		
+		Note that these are different from function-level comments which are specific to each function.
+		For more information, see :func:`address_comments`.
+
+		:param addr int: virtual address within the current BinaryView to apply the comment to
+		:param comment str: string comment to apply
+		:rtype: None
+		:Example:
+
+			>>> bv.set_comment_at(here, "hi")
+
+		"""
+		core.BNSetGlobalCommentForAddress(self.handle, addr, comment)
+
 	def query_metadata(self, key):
 		"""
 		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.

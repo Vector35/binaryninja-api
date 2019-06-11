@@ -694,7 +694,7 @@ class LowLevelILInstruction(object):
 				value = SSARegisterStack(reg_stack, instr.operands[i])
 				i += 1
 				self._operands.append(value)
-				self._dest = value
+				self.dest = value
 				value = SSARegisterStack(reg_stack, instr.operands[i])
 			elif operand_type == "flag":
 				value = ILFlag(func.arch, instr.operands[i])
@@ -1073,15 +1073,6 @@ class LowLevelILInstruction(object):
 	@operands.setter
 	def operands(self, value):
 		self._operands = value
-
-	@property
-	def dest(self):
-		""" """
-		return self._dest
-
-	@dest.setter
-	def dest(self, value):
-		self._dest = value
 
 
 class LowLevelILExpr(object):

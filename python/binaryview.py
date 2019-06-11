@@ -103,10 +103,10 @@ class StringReference(object):
 
 	@property
 	def value(self):
-		return binaryninja.pyNativeStr(self.view.read(self.start, self.length))
+		return binaryninja.pyNativeStr(self._view.read(self._start, self._length))
 
 	def __repr__(self):
-		return "<%s: %#x, len %#x>" % (self.type, self.start, self.length)
+		return "<%s: %#x, len %#x>" % (self._type, self._start, self._length)
 
 	@property
 	def type(self):
@@ -155,7 +155,7 @@ class AnalysisCompletionEvent(object):
 
 	:Example:
 		>>> def on_complete(self):
-		...     print("Analysis Complete", self.view)
+		...     print("Analysis Complete", self._view)
 		...
 		>>> evt = AnalysisCompletionEvent(bv, on_complete)
 		>>>
@@ -164,7 +164,7 @@ class AnalysisCompletionEvent(object):
 		self._view = view
 		self.callback = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._notify)
-		self.handle = core.BNAddAnalysisCompletionEvent(self.view.handle, None, self._cb)
+		self.handle = core.BNAddAnalysisCompletionEvent(self._view.handle, None, self._cb)
 		global _pending_analysis_completion_events
 		_pending_analysis_completion_events[id(self)] = self
 
@@ -217,7 +217,7 @@ class ActiveAnalysisInfo(object):
 		self._submit_count = submit_count
 
 	def __repr__(self):
-		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self.func, self.analysis_time, self.update_count, self.submit_count)
+		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self._func, self._analysis_time, self._update_count, self._submit_count)
 
 	@property
 	def func(self):
@@ -263,7 +263,7 @@ class AnalysisInfo(object):
 		self._active_info = active_info
 
 	def __repr__(self):
-		return "<AnalysisInfo %s, analysis_time %d, active_info %s>" % (self.state, self.analysis_time, self.active_info)
+		return "<AnalysisInfo %s, analysis_time %d, active_info %s>" % (self._state, self._analysis_time, self._active_info)
 
 	@property
 	def state(self):
@@ -300,11 +300,11 @@ class AnalysisProgress(object):
 		self._total = total
 
 	def __str__(self):
-		if self.state == AnalysisState.DisassembleState:
-			return "Disassembling (%d/%d)" % (self.count, self.total)
-		if self.state == AnalysisState.AnalyzeState:
-			return "Analyzing (%d/%d)" % (self.count, self.total)
-		if self.state == AnalysisState.ExtendedAnalyzeState:
+		if self._state == AnalysisState.DisassembleState:
+			return "Disassembling (%d/%d)" % (self._count, self._total)
+		if self._state == AnalysisState.AnalyzeState:
+			return "Analyzing (%d/%d)" % (self._count, self._total)
+		if self._state == AnalysisState.ExtendedAnalyzeState:
 			return "Extended Analysis"
 		return "Idle"
 
@@ -349,23 +349,23 @@ class DataVariable(object):
 	@property
 	def data_refs_from(self):
 		"""data cross references from this data variable (read-only)"""
-		return self.view.get_data_refs_from(self.address, max(1, len(self)))
+		return self._view.get_data_refs_from(self._address, max(1, len(self)))
 
 	@property
 	def data_refs(self):
 		"""data cross references to this data variable (read-only)"""
-		return self.view.get_data_refs(self.address, max(1, len(self)))
+		return self._view.get_data_refs(self._address, max(1, len(self)))
 
 	@property
 	def code_refs(self):
 		"""code references to this data variable (read-only)"""
-		return self.view.get_code_refs(self.address, max(1, len(self)))
+		return self._view.get_code_refs(self._address, max(1, len(self)))
 
 	def __len__(self):
-		return len(self.type)
+		return len(self._type)
 
 	def __repr__(self):
-		return "<var 0x%x: %s>" % (self.address, str(self.type))
+		return "<var 0x%x: %s>" % (self._address, str(self._type))
 
 	@property
 	def address(self):
@@ -426,103 +426,103 @@ class BinaryDataNotificationCallbacks(object):
 		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
 
 	def _register(self):
-		core.BNRegisterDataNotification(self.view.handle, self._cb)
+		core.BNRegisterDataNotification(self._view.handle, self._cb)
 
 	def _unregister(self):
-		core.BNUnregisterDataNotification(self.view.handle, self._cb)
+		core.BNUnregisterDataNotification(self._view.handle, self._cb)
 
 	def _data_written(self, ctxt, view, offset, length):
 		try:
-			self.notify.data_written(self.view, offset, length)
+			self._notify.data_written(self._view, offset, length)
 		except OSError:
 			log.log_error(traceback.format_exc())
 
 	def _data_inserted(self, ctxt, view, offset, length):
 		try:
-			self.notify.data_inserted(self.view, offset, length)
+			self._notify.data_inserted(self._view, offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _data_removed(self, ctxt, view, offset, length):
 		try:
-			self.notify.data_removed(self.view, offset, length)
+			self._notify.data_removed(self._view, offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_added(self, ctxt, view, func):
 		try:
-			self.notify.function_added(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
+			self._notify.function_added(self._view, binaryninja.function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_removed(self, ctxt, view, func):
 		try:
-			self.notify.function_removed(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
+			self._notify.function_removed(self._view, binaryninja.function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_updated(self, ctxt, view, func):
 		try:
-			self.notify.function_updated(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
+			self._notify.function_updated(self._view, binaryninja.function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _function_update_requested(self, ctxt, view, func):
 		try:
-			self.notify.function_update_requested(self.view, binaryninja.function.Function(self.view, core.BNNewFunctionReference(func)))
+			self._notify.function_update_requested(self._view, binaryninja.function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _data_var_added(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self.notify.data_var_added(self.view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_added(self._view, DataVariable(address, var_type, auto_discovered, view))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _data_var_removed(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self.notify.data_var_removed(self.view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_removed(self._view, DataVariable(address, var_type, auto_discovered, view))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _data_var_updated(self, ctxt, view, var):
 		try:
 			address = var[0].address
-			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self.view.platform, confidence = var[0].typeConfidence)
+			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self.notify.data_var_updated(self.view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_updated(self._view, DataVariable(address, var_type, auto_discovered, view))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _string_found(self, ctxt, view, string_type, offset, length):
 		try:
-			self.notify.string_found(self.view, StringType(string_type), offset, length)
+			self._notify.string_found(self._view, StringType(string_type), offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _string_removed(self, ctxt, view, string_type, offset, length):
 		try:
-			self.notify.string_removed(self.view, StringType(string_type), offset, length)
+			self._notify.string_removed(self._view, StringType(string_type), offset, length)
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_defined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
+			self._notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self.notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self.view.platform))
+			self._notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -608,7 +608,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
-		return "<view type: '%s'>" % self.name
+		return "<view type: '%s'>" % self._name
 
 	def create(self, data):
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
@@ -768,7 +768,7 @@ class Segment(object):
 		return core.BNSegmentGetLength(self.handle)
 
 	def __repr__(self):
-		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
+		return "<segment: %#x-%#x, %s%s%s>" % (self._start, self._end,
 			"r" if self.readable else "-",
 			"w" if self.writable else "-",
 			"x" if self.executable else "-")
@@ -820,7 +820,7 @@ class Section(object):
 
 	@property
 	def end(self):
-		return self.start + len(self)
+		return self._start + len(self)
 
 	def __del__(self):
 		core.BNFreeSection(self.handle)
@@ -842,7 +842,7 @@ class Section(object):
 		return core.BNSectionGetLength(self.handle)
 
 	def __repr__(self):
-		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
+		return "<section %s: %#x-%#x>" % (self._name, self._start, self._end)
 
 
 class AddressRange(object):
@@ -852,13 +852,13 @@ class AddressRange(object):
 
 	@property
 	def length(self):
-		return self.end - self.start
+		return self._end - self._start
 
 	def __len__(self):
-		return self.end - self.start
+		return self._end - self._start
 
 	def __repr__(self):
-		return "<%#x-%#x>" % (self.start, self.end)
+		return "<%#x-%#x>" % (self._start, self._end)
 
 	@property
 	def start(self):
@@ -1547,7 +1547,7 @@ class BinaryView(object):
 		elif isinstance(i, slice):
 			if i.step is not None:
 				raise IndexError("step not implemented")
-			i = i.indices(self.end)
+			i = i.indices(self._end)
 			start = i[0]
 			stop = i[1]
 			if stop <= start:
@@ -1560,7 +1560,7 @@ class BinaryView(object):
 					return IndexError("index not readable")
 				return value
 			raise IndexError("index out of range")
-		elif (i >= self.start) and (i < self.end):
+		elif (i >= self._start) and (i < self._end):
 			value = self.read(int(i), 1)
 			if len(value) == 0:
 				return IndexError("index not readable")
@@ -1572,7 +1572,7 @@ class BinaryView(object):
 		if isinstance(i, slice):
 			if i.step is not None:
 				raise IndexError("step not supported on assignment")
-			i = i.indices(self.end)
+			i = i.indices(self._end)
 			start = i[0]
 			stop = i[1]
 			if stop < start:
@@ -1590,7 +1590,7 @@ class BinaryView(object):
 					raise IndexError("index not writable")
 			else:
 				raise IndexError("index out of range")
-		elif (i >= self.start) and (i < self.end):
+		elif (i >= self._start) and (i < self._end):
 			if len(value) != 1:
 				raise ValueError("expected single byte for assignment")
 			if self.write(int(i), value) != 1:
@@ -1599,7 +1599,7 @@ class BinaryView(object):
 			raise IndexError("index out of range")
 
 	def __repr__(self):
-		start = self.start
+		start = self._start
 		length = len(self)
 		if start != 0:
 			size = "start %#x, len %#x" % (start, length)
@@ -3438,7 +3438,7 @@ class BinaryView(object):
 			strings = core.BNGetStrings(self.handle, count)
 		else:
 			if length is None:
-				length = self.end - start
+				length = self._end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in range(0, count.value):
@@ -3495,7 +3495,7 @@ class BinaryView(object):
 		"""
 		if not isinstance(addr, numbers.Integral):
 			raise AttributeError("Input address (" + str(addr) + ") is not a number.")
-		if addr < self.start or addr >= self.end:
+		if addr < self._start or addr >= self._end:
 			return None
 
 		br = BinaryReader(self)
@@ -3604,7 +3604,7 @@ class BinaryView(object):
 			>>>
 		"""
 		next_data_var_start = core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
-		if next_data_var_start == self.end:
+		if next_data_var_start == self._end:
 			return None
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):
@@ -3878,9 +3878,9 @@ class BinaryView(object):
 				self._settings = settings
 
 			def __iter__(self):
-				pos = self.view.get_linear_disassembly_position_at(self.view.start, self.settings)
+				pos = self._view.get_linear_disassembly_position_at(self._view.start, self.settings)
 				while True:
-					lines = self.view.get_next_linear_disassembly_lines(pos, self.settings)
+					lines = self._view.get_next_linear_disassembly_lines(pos, self.settings)
 					if len(lines) == 0:
 						break
 					for line in lines:

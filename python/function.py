@@ -91,34 +91,34 @@ class RegisterValue(object):
 		self._confidence = confidence
 
 	def __repr__(self):
-		if self.type == RegisterValueType.EntryValue:
+		if self._type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == RegisterValueType.ConstantValue:
+		if self._type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
-		if self.type == RegisterValueType.ConstantPointerValue:
+		if self._type == RegisterValueType.ConstantPointerValue:
 			return "<const ptr %#x>" % self.value
-		if self.type == RegisterValueType.StackFrameOffset:
+		if self._type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if self.type == RegisterValueType.ReturnAddressValue:
+		if self._type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
-		if self.type == RegisterValueType.ImportedAddressValue:
+		if self._type == RegisterValueType.ImportedAddressValue:
 			return "<imported address from entry %#x>" % self.value
 		return "<undetermined>"
 
 	def _to_api_object(self):
 		result = core.BNRegisterValue()
-		result.state = self.type
+		result.state = self._type
 		result.value = 0
-		if self.type == RegisterValueType.EntryValue:
+		if self._type == RegisterValueType.EntryValue:
 			if self.arch is not None:
 				result.value = self.arch.get_reg_index(self.reg)
 			else:
 				result.value = self.reg
-		elif (self.type == RegisterValueType.ConstantValue) or (self.type == RegisterValueType.ConstantPointerValue):
+		elif (self._type == RegisterValueType.ConstantValue) or (self._type == RegisterValueType.ConstantPointerValue):
 			result.value = self.value
-		elif self.type == RegisterValueType.StackFrameOffset:
+		elif self._type == RegisterValueType.StackFrameOffset:
 			result.value = self.offset
-		elif self.type == RegisterValueType.ImportedAddressValue:
+		elif self._type == RegisterValueType.ImportedAddressValue:
 			result.value = self.value
 		return result
 
@@ -339,25 +339,25 @@ class PossibleValueSet(object):
 				self._values.add(value.valueSet[i])
 
 	def __repr__(self):
-		if self.type == RegisterValueType.EntryValue:
+		if self._type == RegisterValueType.EntryValue:
 			return "<entry %s>" % self.reg
-		if self.type == RegisterValueType.ConstantValue:
+		if self._type == RegisterValueType.ConstantValue:
 			return "<const %#x>" % self.value
-		if self.type == RegisterValueType.ConstantPointerValue:
+		if self._type == RegisterValueType.ConstantPointerValue:
 			return "<const ptr %#x>" % self.value
-		if self.type == RegisterValueType.StackFrameOffset:
+		if self._type == RegisterValueType.StackFrameOffset:
 			return "<stack frame offset %#x>" % self.offset
-		if self.type == RegisterValueType.SignedRangeValue:
+		if self._type == RegisterValueType.SignedRangeValue:
 			return "<signed ranges: %s>" % repr(self.ranges)
-		if self.type == RegisterValueType.UnsignedRangeValue:
+		if self._type == RegisterValueType.UnsignedRangeValue:
 			return "<unsigned ranges: %s>" % repr(self.ranges)
-		if self.type == RegisterValueType.LookupTableValue:
+		if self._type == RegisterValueType.LookupTableValue:
 			return "<table: %s>" % ', '.join([repr(i) for i in self.table])
-		if self.type == RegisterValueType.InSetOfValues:
+		if self._type == RegisterValueType.InSetOfValues:
 			return "<in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in sorted(self.values)))
-		if self.type == RegisterValueType.NotInSetOfValues:
+		if self._type == RegisterValueType.NotInSetOfValues:
 			return "<not in set(%s)>" % '[{}]'.format(', '.join(hex(i) for i in sorted(self.values)))
-		if self.type == RegisterValueType.ReturnAddressValue:
+		if self._type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"
 
@@ -612,9 +612,9 @@ class Variable(object):
 		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
 
 	def __repr__(self):
-		if self.type is None:
+		if self._type is None:
 			return "<var %s>" % self.name
-		return "<var %s %s%s>" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
+		return "<var %s %s%s>" % (self._type.get_string_before_name(), self.name, self._type.get_string_after_name())
 
 	def __str__(self):
 		return self.name
@@ -2160,12 +2160,12 @@ class RegisterStackInfo(object):
 class IntrinsicInput(object):
 	def __init__(self, type_obj, name=""):
 		self.name = name
-		self.type = type_obj
+		self._type = type_obj
 
 	def __repr__(self):
 		if len(self.name) == 0:
-			return "<input: %s>" % str(self.type)
-		return "<input: %s %s>" % (str(self.type), self.name)
+			return "<input: %s>" % str(self._type)
+		return "<input: %s %s>" % (str(self._type), self.name)
 
 
 class IntrinsicInfo(object):
@@ -2180,12 +2180,12 @@ class IntrinsicInfo(object):
 
 class InstructionBranch(object):
 	def __init__(self, branch_type, target = 0, arch = None):
-		self.type = branch_type
+		self._type = branch_type
 		self.target = target
 		self.arch = arch
 
 	def __repr__(self):
-		branch_type = self.type
+		branch_type = self._type
 		if self.arch is not None:
 			return "<%s: %s@%#x>" % (branch_type.name, self.arch.name, self.target)
 		return "<%s: %#x>" % (branch_type, self.target)
@@ -2249,15 +2249,15 @@ class InstructionTextToken(object):
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
 		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeNames=[]):
-		self.type = InstructionTextTokenType(token_type)
-		self.text = text
-		self.value = value
-		self.size = size
-		self.operand = operand
-		self.context = InstructionTextTokenContext(context)
-		self.confidence = confidence
-		self.address = address
-		self.typeNames = typeNames
+		self._type = InstructionTextTokenType(token_type)
+		self._text = text
+		self._value = value
+		self._size = size
+		self._operand = operand
+		self._context = InstructionTextTokenContext(context)
+		self._confidence = confidence
+		self._address = address
+		self._typeNames = typeNames
 
 	@classmethod
 	def get_instruction_lines(cls, tokens, count=0):
@@ -2301,10 +2301,91 @@ class InstructionTextToken(object):
 		return result
 
 	def __str__(self):
-		return self.text
+		return self._text
 
 	def __repr__(self):
-		return repr(self.text)
+		return repr(self._text)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def text(self):
+		""" """
+		return self._text
+
+	@text.setter
+	def text(self, value):
+		self._text = value
+
+	@property
+	def value(self):
+		""" """
+		return self._value
+
+	@value.setter
+	def value(self, value):
+		self._value = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
+
+	@property
+	def operand(self):
+		""" """
+		return self._operand
+
+	@operand.setter
+	def operand(self, value):
+		self._operand = value
+
+	@property
+	def context(self):
+		""" """
+		return self._context
+
+	@context.setter
+	def context(self, value):
+		self._context = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def typeNames(self):
+		""" """
+		return self._typeNames
+
+	@typeNames.setter
+	def typeNames(self, value):
+		self._typeNames = value
 
 
 class DisassemblyTextRenderer(object):

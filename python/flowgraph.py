@@ -59,7 +59,6 @@ class FlowGraphNode(object):
 			handle = core.BNCreateFlowGraphNode(graph.handle)
 		self.handle = handle
 		self._graph = graph
-		self.graph = graph
 		if self._graph is None:
 			self._graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
 
@@ -198,7 +197,7 @@ class FlowGraphNode(object):
 			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
 			if target:
-				target = FlowGraphNode(self.graph, core.BNNewFlowGraphNodeReference(target))
+				target = FlowGraphNode(self._graph, core.BNNewFlowGraphNodeReference(target))
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
@@ -216,7 +215,7 @@ class FlowGraphNode(object):
 			branch_type = BranchType(edges[i].type)
 			target = edges[i].target
 			if target:
-				target = FlowGraphNode(self.graph, core.BNNewFlowGraphNodeReference(target))
+				target = FlowGraphNode(self._graph, core.BNNewFlowGraphNodeReference(target))
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
@@ -278,7 +277,7 @@ class FlowGraphNode(object):
 		:param BranchType edge_type: Type of edge to add
 		:param FlowGraphNode target: Target node object
 		"""
-		if not target.is_valid_for_graph(self.graph):
+		if not target.is_valid_for_graph(self._graph):
 			raise ValueError("Target of edge has not been added to the owning graph")
 		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle)
 

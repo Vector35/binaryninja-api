@@ -768,7 +768,7 @@ class Segment(object):
 		return core.BNSegmentGetLength(self.handle)
 
 	def __repr__(self):
-		return "<segment: %#x-%#x, %s%s%s>" % (self._start, self._end,
+		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
 			"r" if self.readable else "-",
 			"w" if self.writable else "-",
 			"x" if self.executable else "-")
@@ -820,7 +820,7 @@ class Section(object):
 
 	@property
 	def end(self):
-		return self._start + len(self)
+		return self.start + len(self)
 
 	def __del__(self):
 		core.BNFreeSection(self.handle)
@@ -842,7 +842,7 @@ class Section(object):
 		return core.BNSectionGetLength(self.handle)
 
 	def __repr__(self):
-		return "<section %s: %#x-%#x>" % (self._name, self._start, self._end)
+		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
 
 
 class AddressRange(object):

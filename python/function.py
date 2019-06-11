@@ -1313,7 +1313,7 @@ class Function(object):
 		if from_arch is None:
 			from_arch = self.arch
 
-		core.BNAddUserCodeRef(self.handle, from_arch.handle, from_addr, to_addr)
+		core.BNAddUserCodeReference(self.handle, from_arch.handle, from_addr, to_addr)
 
 	def remove_user_code_ref(self, from_addr, to_addr, from_arch=None):
 		"""
@@ -1334,7 +1334,7 @@ class Function(object):
 		if from_arch is None:
 			from_arch = self.arch
 
-		core.BNRemoveUserCodeRef(self.handle, from_arch.handle, from_addr, to_addr)
+		core.BNRemoveUserCodeReference(self.handle, from_arch.handle, from_addr, to_addr)
 
 	def get_low_level_il_at(self, addr, arch=None):
 		"""

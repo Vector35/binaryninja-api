@@ -5092,12 +5092,12 @@ class StructuredDataView(object):
 	_structure_name = None
 	_address = 0
 	_bv = None
-	_members = OrderedDict()
 
 	def __init__(self, bv, structure_name, address):
 		self._bv = bv
 		self._structure_name = structure_name
 		self._address = address
+		self._members = OrderedDict()
 
 		self._lookup_structure()
 		self._define_members()

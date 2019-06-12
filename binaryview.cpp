@@ -114,6 +114,14 @@ void BinaryDataNotification::DataVariableUpdatedCallback(void* ctxt, BNBinaryVie
 }
 
 
+void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnDataMetadataUpdated(view, offset);
+}
+
+
 void BinaryDataNotification::StringFoundCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -161,6 +169,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableAdded = DataVariableAddedCallback;
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
+	m_callbacks.dataMetadataUpdated = DataMetadataUpdatedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
 	m_callbacks.typeDefined = TypeDefinedCallback;

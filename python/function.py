@@ -694,24 +694,42 @@ class IndirectBranchInfo(object):
 
 class ParameterVariables(object):
 	def __init__(self, var_list, confidence = types.max_confidence):
-		self.vars = var_list
-		self.confidence = confidence
+		self._vars = var_list
+		self._confidence = confidence
 
 	def __repr__(self):
-		return repr(self.vars)
+		return repr(self._vars)
 
 	def __iter__(self):
-		for var in self.vars:
+		for var in self._vars:
 			yield var
 
 	def __getitem__(self, idx):
-		return self.vars[idx]
+		return self._vars[idx]
 
 	def __len__(self):
-		return len(self.vars)
+		return len(self._vars)
 
 	def with_confidence(self, confidence):
-		return ParameterVariables(list(self.vars), confidence = confidence)
+		return ParameterVariables(list(self._vars), confidence = confidence)
+
+	@property
+	def vars(self):
+		""" """
+		return self._vars
+
+	@vars.setter
+	def vars(self, value):
+		self._vars = value
+
+	@property
+	def confidence(self):
+		""" """
+		return self._confidence
+
+	@confidence.setter
+	def confidence(self, value):
+		self._confidence = value
 
 
 class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -2037,6 +2055,7 @@ class Function(object):
 				functions.append(ref.function)
 		return functions
 
+
 class AdvancedFunctionAnalysisDataRequestor(object):
 	def __init__(self, func = None):
 		self._function = func
@@ -2067,17 +2086,17 @@ class AdvancedFunctionAnalysisDataRequestor(object):
 
 class DisassemblyTextLine(object):
 	def __init__(self, tokens, address = None, il_instr = None, color = None):
-		self.address = address
-		self.tokens = tokens
-		self.il_instruction = il_instr
+		self._address = address
+		self._tokens = tokens
+		self._il_instruction = il_instr
 		if color is None:
-			self.highlight = highlight.HighlightColor()
+			self._highlight = highlight.HighlightColor()
 		else:
 			if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 				raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 			if isinstance(color, HighlightStandardColor):
 				color = highlight.HighlightColor(color)
-			self.highlight = color
+			self._highlight = color
 
 	def __str__(self):
 		result = ""
@@ -2089,6 +2108,42 @@ class DisassemblyTextLine(object):
 		if self.address is None:
 			return str(self)
 		return "<%#x: %s>" % (self.address, str(self))
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def tokens(self):
+		""" """
+		return self._tokens
+
+	@tokens.setter
+	def tokens(self, value):
+		self._tokens = value
+
+	@property
+	def il_instruction(self):
+		""" """
+		return self._il_instruction
+
+	@il_instruction.setter
+	def il_instruction(self, value):
+		self._il_instruction = value
+
+	@property
+	def highlight(self):
+		""" """
+		return self._highlight
+
+	@highlight.setter
+	def highlight(self, value):
+		self._highlight = value
 
 
 class DisassemblySettings(object):
@@ -2130,65 +2185,218 @@ class DisassemblySettings(object):
 
 class RegisterInfo(object):
 	def __init__(self, full_width_reg, size, offset=0, extend=ImplicitRegisterExtend.NoExtend, index=None):
-		self.full_width_reg = full_width_reg
-		self.offset = offset
-		self.size = size
-		self.extend = extend
-		self.index = index
+		self._full_width_reg = full_width_reg
+		self._offset = offset
+		self._size = size
+		self._extend = extend
+		self._index = index
 
 	def __repr__(self):
-		if self.extend == ImplicitRegisterExtend.ZeroExtendToFullWidth:
+		if self._extend == ImplicitRegisterExtend.ZeroExtendToFullWidth:
 			extend = ", zero extend"
-		elif self.extend == ImplicitRegisterExtend.SignExtendToFullWidth:
+		elif self._extend == ImplicitRegisterExtend.SignExtendToFullWidth:
 			extend = ", sign extend"
 		else:
 			extend = ""
-		return "<reg: size %d, offset %d in %s%s>" % (self.size, self.offset, self.full_width_reg, extend)
+		return "<reg: size %d, offset %d in %s%s>" % (self._size, self._offset, self._full_width_reg, extend)
+
+	@property
+	def full_width_reg(self):
+		""" """
+		return self._full_width_reg
+
+	@full_width_reg.setter
+	def full_width_reg(self, value):
+		self._full_width_reg = value
+
+	@property
+	def offset(self):
+		""" """
+		return self._offset
+
+	@offset.setter
+	def offset(self, value):
+		self._offset = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def size(self, value):
+		self._size = value
+
+	@property
+	def extend(self):
+		""" """
+		return self._extend
+
+	@extend.setter
+	def extend(self, value):
+		self._extend = value
+
+	@property
+	def index(self):
+		""" """
+		return self._index
+
+	@index.setter
+	def index(self, value):
+		self._index = value
 
 
 class RegisterStackInfo(object):
 	def __init__(self, storage_regs, top_relative_regs, stack_top_reg, index=None):
-		self.storage_regs = storage_regs
-		self.top_relative_regs = top_relative_regs
-		self.stack_top_reg = stack_top_reg
-		self.index = index
+		self._storage_regs = storage_regs
+		self._top_relative_regs = top_relative_regs
+		self._stack_top_reg = stack_top_reg
+		self._index = index
 
 	def __repr__(self):
-		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)
+		return "<reg stack: %d regs, stack top in %s>" % (len(self._jstorage_regs), self._stack_top_reg)
+
+	@property
+	def storage_regs(self):
+		""" """
+		return self._storage_regs
+
+	@storage_regs.setter
+	def storage_regs(self, value):
+		self._storage_regs = value
+
+	@property
+	def top_relative_regs(self):
+		""" """
+		return self._top_relative_regs
+
+	@top_relative_regs.setter
+	def top_relative_regs(self, value):
+		self._top_relative_regs = value
+
+	@property
+	def stack_top_reg(self):
+		""" """
+		return self._stack_top_reg
+
+	@stack_top_reg.setter
+	def stack_top_reg(self, value):
+		self._stack_top_reg = value
+
+	@property
+	def index(self):
+		""" """
+		return self._index
+
+	@index.setter
+	def index(self, value):
+		self._index = value
 
 
 class IntrinsicInput(object):
 	def __init__(self, type_obj, name=""):
-		self.name = name
+		self._name = name
 		self._type = type_obj
 
 	def __repr__(self):
-		if len(self.name) == 0:
+		if len(self._name) == 0:
 			return "<input: %s>" % str(self._type)
-		return "<input: %s %s>" % (str(self._type), self.name)
+		return "<input: %s %s>" % (str(self._type), self._name)
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@name.setter
+	def name(self, value):
+		self._name = value
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
 
 
 class IntrinsicInfo(object):
 	def __init__(self, inputs, outputs, index=None):
-		self.inputs = inputs
-		self.outputs = outputs
-		self.index = index
+		self._inputs = inputs
+		self._outputs = outputs
+		self._index = index
 
 	def __repr__(self):
-		return "<intrinsic: %s -> %s>" % (repr(self.inputs), repr(self.outputs))
+		return "<intrinsic: %s -> %s>" % (repr(self._inputs), repr(self._outputs))
+
+	@property
+	def inputs(self):
+		""" """
+		return self._inputs
+
+	@inputs.setter
+	def inputs(self, value):
+		self._inputs = value
+
+	@property
+	def outputs(self):
+		""" """
+		return self._outputs
+
+	@outputs.setter
+	def outputs(self, value):
+		self._outputs = value
+
+	@property
+	def index(self):
+		""" """
+		return self._index
+
+	@index.setter
+	def index(self, value):
+		self._index = value
 
 
 class InstructionBranch(object):
 	def __init__(self, branch_type, target = 0, arch = None):
 		self._type = branch_type
-		self.target = target
-		self.arch = arch
+		self._target = target
+		self._arch = arch
 
 	def __repr__(self):
 		branch_type = self._type
-		if self.arch is not None:
-			return "<%s: %s@%#x>" % (branch_type.name, self.arch.name, self.target)
-		return "<%s: %#x>" % (branch_type, self.target)
+		if self._arch is not None:
+			return "<%s: %s@%#x>" % (branch_type.name, self._arch.name, self._target)
+		return "<%s: %#x>" % (branch_type, self._target)
+
+	@property
+	def type(self):
+		""" """
+		return self._type
+
+	@type.setter
+	def type(self, value):
+		self._type = value
+
+	@property
+	def target(self):
+		""" """
+		return self._target
+
+	@target.setter
+	def target(self, value):
+		self._target = value
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
 
 
 class InstructionInfo(object):
@@ -2199,13 +2407,49 @@ class InstructionInfo(object):
 		self.branches = []
 
 	def add_branch(self, branch_type, target = 0, arch = None):
-		self.branches.append(InstructionBranch(branch_type, target, arch))
+		self._branches.append(InstructionBranch(branch_type, target, arch))
 
 	def __repr__(self):
 		branch_delay = ""
-		if self.branch_delay:
+		if self._branch_delay:
 			branch_delay = ", delay slot"
-		return "<instr: %d bytes%s, %s>" % (self.length, branch_delay, repr(self.branches))
+		return "<instr: %d bytes%s, %s>" % (self._length, branch_delay, repr(self._branches))
+
+	@property
+	def length(self):
+		""" """
+		return self._length
+
+	@length.setter
+	def length(self, value):
+		self._length = value
+
+	@property
+	def arch_transition_by_target_addr(self):
+		""" """
+		return self._arch_transition_by_target_addr
+
+	@arch_transition_by_target_addr.setter
+	def arch_transition_by_target_addr(self, value):
+		self._arch_transition_by_target_addr = value
+
+	@property
+	def branch_delay(self):
+		""" """
+		return self._branch_delay
+
+	@branch_delay.setter
+	def branch_delay(self, value):
+		self._branch_delay = value
+
+	@property
+	def branches(self):
+		""" """
+		return self._branches
+
+	@branches.setter
+	def branches(self, value):
+		self._branches = value
 
 
 class InstructionTextToken(object):

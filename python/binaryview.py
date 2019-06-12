@@ -608,7 +608,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return core.BNGetBinaryViewTypeLongName(self.handle)
 
 	def __repr__(self):
-		return "<view type: '%s'>" % self._name
+		return "<view type: '%s'>" % self.name
 
 	def create(self, data):
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
@@ -1547,7 +1547,7 @@ class BinaryView(object):
 		elif isinstance(i, slice):
 			if i.step is not None:
 				raise IndexError("step not implemented")
-			i = i.indices(self._end)
+			i = i.indices(self.end)
 			start = i[0]
 			stop = i[1]
 			if stop <= start:
@@ -1560,7 +1560,7 @@ class BinaryView(object):
 					return IndexError("index not readable")
 				return value
 			raise IndexError("index out of range")
-		elif (i >= self._start) and (i < self._end):
+		elif (i >= self.start) and (i < self.end):
 			value = self.read(int(i), 1)
 			if len(value) == 0:
 				return IndexError("index not readable")
@@ -1572,7 +1572,7 @@ class BinaryView(object):
 		if isinstance(i, slice):
 			if i.step is not None:
 				raise IndexError("step not supported on assignment")
-			i = i.indices(self._end)
+			i = i.indices(self.end)
 			start = i[0]
 			stop = i[1]
 			if stop < start:
@@ -1590,7 +1590,7 @@ class BinaryView(object):
 					raise IndexError("index not writable")
 			else:
 				raise IndexError("index out of range")
-		elif (i >= self._start) and (i < self._end):
+		elif (i >= self.start) and (i < self.end):
 			if len(value) != 1:
 				raise ValueError("expected single byte for assignment")
 			if self.write(int(i), value) != 1:
@@ -1599,7 +1599,7 @@ class BinaryView(object):
 			raise IndexError("index out of range")
 
 	def __repr__(self):
-		start = self._start
+		start = self.start
 		length = len(self)
 		if start != 0:
 			size = "start %#x, len %#x" % (start, length)
@@ -3438,7 +3438,7 @@ class BinaryView(object):
 			strings = core.BNGetStrings(self.handle, count)
 		else:
 			if length is None:
-				length = self._end - start
+				length = self.end - start
 			strings = core.BNGetStringsInRange(self.handle, start, length, count)
 		result = []
 		for i in range(0, count.value):
@@ -3495,7 +3495,7 @@ class BinaryView(object):
 		"""
 		if not isinstance(addr, numbers.Integral):
 			raise AttributeError("Input address (" + str(addr) + ") is not a number.")
-		if addr < self._start or addr >= self._end:
+		if addr < self.start or addr >= self.end:
 			return None
 
 		br = BinaryReader(self)
@@ -3604,7 +3604,7 @@ class BinaryView(object):
 			>>>
 		"""
 		next_data_var_start = core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
-		if next_data_var_start == self._end:
+		if next_data_var_start == self.end:
 			return None
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):

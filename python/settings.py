@@ -81,10 +81,13 @@ class Settings(object):
 		return out_list
 
 	def update_property(self, id, setting_property):
-		return core.BNSettingsUpdateProperty(self._registry_id, tr(), id, setting_property)
+		return core.BNSettingsUpdateProperty(self.registry_id, id, setting_property)
 
-	def get_schema(self):
-		return core.BNSettingsGetSchema(self._registry_id)
+	def deserialize_schema(self, schema):
+		return core.BNSettingsDeserializeSchema(self.registry_id, schema)
+
+	def serialize_schema(self):
+		return core.BNSettingsSerializeSchema(self.registry_id)
 
 	def copy_value(self, dest_registry_id, id):
 		return core.BNSettingsCopyValue(self._registry_id, dest_registry_id, id)

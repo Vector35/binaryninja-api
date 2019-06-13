@@ -2352,6 +2352,7 @@ void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue)
 	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
 }
 
+
 Ref<Metadata> BinaryView::QueryMetadata(const std::string& key)
 {
 	BNMetadata* value = BNBinaryViewQueryMetadata(m_object, key.c_str());
@@ -2360,10 +2361,12 @@ Ref<Metadata> BinaryView::QueryMetadata(const std::string& key)
 	return new Metadata(value);
 }
 
+
 void BinaryView::RemoveMetadata(const std::string& key)
 {
 	BNBinaryViewRemoveMetadata(m_object, key.c_str());
 }
+
 
 string BinaryView::GetStringMetadata(const string& key)
 {
@@ -2373,6 +2376,7 @@ string BinaryView::GetStringMetadata(const string& key)
 	return data->GetString();
 }
 
+
 vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
 {
 	auto data = QueryMetadata(key);
@@ -2381,12 +2385,28 @@ vector<uint8_t> BinaryView::GetRawMetadata(const string& key)
 	return data->GetRaw();
 }
 
+
 uint64_t BinaryView::GetUIntMetadata(const string& key)
 {
 	auto data = QueryMetadata(key);
 	if (!data || !data->IsUnsignedInteger())
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
+}
+
+
+string BinaryView::GetLoadSettings(string typeName)
+{
+	char* name = BNBinaryViewGetLoadSettings(m_object, typeName.c_str());
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+void BinaryView::SetLoadSettings(string typeName, string loadSettings)
+{
+	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), loadSettings.c_str());
 }
 
 

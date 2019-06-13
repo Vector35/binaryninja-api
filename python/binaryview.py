@@ -663,6 +663,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
+	def get_default_load_settings_for_data(self, data):
+		return core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, data.handle)
+
+	def get_load_settings_for_data(self, data):
+		return core.BNGetBinaryViewLoadSettingsForData(self.handle, data.handle)
+
 	def register_arch(self, ident, endian, arch):
 		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
 
@@ -1007,6 +1013,7 @@ class BinaryView(object):
 		cls._registered_cb.context = 0
 		cls._registered_cb.create = cls._registered_cb.create.__class__(cls._create)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
+		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(cls._get_load_settings_for_data)
 		cls.registered_view_type = BinaryViewType(core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb))
 		cls._registered = True
 
@@ -1029,6 +1036,14 @@ class BinaryView(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+	@classmethod
+	def _get_load_settings_for_data(cls, ctxt, data):
+		try:
+			return cls.get_load_settings_for_data(BinaryView(handle=core.BNNewViewReference(data)))
+		except:
+			log.log_error(traceback.format_exc())
+			return None
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
@@ -2060,8 +2075,7 @@ class BinaryView(object):
 
 	def perform_is_relocatable(self):
 		"""
-		``perform_is_relocatable`` implements a check which returns true if the BinaryView is relocatable. Defaults to
-		True.
+		``perform_is_relocatable`` implements a check which returns true if the BinaryView is relocatable. Defaults to False
 
 		.. note:: This method **may** be implemented for custom BinaryViews that are relocatable.
 
@@ -2070,7 +2084,7 @@ class BinaryView(object):
 		:return: True if the BinaryView is relocatable, False otherwise
 		:rtype: boolean
 		"""
-		return True
+		return False
 
 	def create_database(self, filename, progress_func=None):
 		"""
@@ -4410,6 +4424,15 @@ class BinaryView(object):
 			>>> bv.remove_metadata("integer")
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
+
+	def get_load_settings(self, type_name):
+		settings_id = core.BNBinaryViewGetLoadSettings(self.handle, type_name)
+		if settings_id == "":
+			return None
+		return settings_id
+
+	def set_load_settings(self, type_name, load_settings):
+		core.BNBinaryViewSetLoadSettings(self.handle, type_name, load_settings)
 
 	def __setattr__(self, name, value):
 		try:

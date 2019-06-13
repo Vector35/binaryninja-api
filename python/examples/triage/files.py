@@ -70,7 +70,6 @@ class TriageFilePicker(QWidget):
 					failedToOpen.append(filename)
 					continue
 
-				f.createBinaryViews()
 				for data in f.getAllDataViews():
 					Settings().set_string("analysis.mode", Settings().get_string("triage.analysisMode"), data)
 					Settings().set_bool("triage.preferSummaryView", True, data)

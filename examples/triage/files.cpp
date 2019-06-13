@@ -79,7 +79,6 @@ void TriageFilePicker::openSelectedFiles()
 			continue;
 		}
 
-		f->createBinaryViews();
 		for (auto data: f->getAllDataViews())
 		{
 			BinaryNinja::Settings().Set("analysis.mode", BinaryNinja::Settings().Get<std::string>("triage.analysisMode"), data);

@@ -29,18 +29,17 @@ class BINARYNINJAUIAPI FileContext: public FileContextBase, public BinaryNinja::
 	std::map<QString, BinaryViewRef> m_dataViews;
 
 	ViewFrame* m_currentViewFrame;
-	std::set<ViewFrame*> m_viewFrames;
+	std::set<QObject*> m_refs;
 
 	static std::set<FileContext*> m_openFiles;
 
-	friend class ViewFrame;
-	void registerViewFrame(ViewFrame* frame);
-	void unregisterViewFrame(ViewFrame* frame);
+	void createBinaryViews();
 
 public:
-	FileContext(FileMetadataRef file, BinaryViewRef rawData,
-		const QString& filename = QString(), bool isValidSaveName = false);
+	FileContext(FileMetadataRef file, BinaryViewRef rawData, const QString& filename = QString(), bool isValidSaveName = false, bool createViews = true);
 	virtual ~FileContext();
+
+	void registerReference(QWidget* widget);
 
 	void close();
 	static void closeAllOpenFiles();
@@ -54,6 +53,7 @@ public:
 
 	bool isModified();
 
+	BinaryViewRef createDataView(const QString& type);
 	BinaryViewRef getDataView(const QString& type, bool createView = false);
 	std::vector<BinaryViewRef> getAllDataViews();
 
@@ -63,7 +63,6 @@ public:
 	virtual uint64_t GetCurrentOffset() override;
 	virtual bool Navigate(const std::string& view, uint64_t offset) override;
 
-	void createBinaryViews();
 	QString getBestType();
 	std::vector<QString> getAvailableTypes();
 	bool isTypeAvailable(const QString& type);

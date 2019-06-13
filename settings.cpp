@@ -96,9 +96,15 @@ bool Settings::UpdateProperty(const std::string& id, const std::string& property
 }
 
 
-string Settings::GetSchema()
+bool Settings::DeserializeSchema(const string& schema)
 {
-	char* schemaStr = BNSettingsGetSchema(m_registry.c_str());
+	return BNSettingsDeserializeSchema(m_registry.c_str(), schema.c_str());
+}
+
+
+string Settings::SerializeSchema()
+{
+	char* schemaStr = BNSettingsSerializeSchema(m_registry.c_str());
 	string schema(schemaStr);
 	BNFreeString(schemaStr);
 	return schema;

@@ -93,6 +93,13 @@ class BinaryDataNotification(object):
 	def type_undefined(self, view, name, type):
 		pass
 
+_decodings = {
+	StringType.AsciiString: "ascii",
+	StringType.Utf8String: "utf-8",
+	StringType.Utf16String: "utf-16",
+	StringType.Utf32String: "utf-32",
+}
+
 
 class StringReference(object):
 	def __init__(self, bv, string_type, start, length):
@@ -103,7 +110,11 @@ class StringReference(object):
 
 	@property
 	def value(self):
-		return binaryninja.pyNativeStr(self._view.read(self._start, self._length))
+		return self._view.read(self._start, self._length).decode(_decodings[self._type])
+
+	@property
+	def raw(self):
+		return self._view.read(self._start, self._length)
 
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self._type, self._start, self._length)

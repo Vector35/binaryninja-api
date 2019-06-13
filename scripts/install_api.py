@@ -23,26 +23,19 @@ if '-s' in sys.argv[1:]:
 try:
     import binaryninja
     import binaryninjaui #To better detect if migrating from a version without UI plugin support
-    print("Binary Ninja API already Installed")
+    print("Binary Ninja API already in the path")
     sys.exit(1)
 except ImportError:
     pass
 
-if sys.platform.startswith("linux"):
-    userpath = os.path.expanduser("~/.binaryninja")
-    lastrun = os.path.join(userpath, "lastrun")
-    if os.path.isfile(lastrun):
-        lastrunpath = open(lastrun).read().strip()
-        api_path = os.path.join(lastrunpath, "python")
-        print("Found install folder of {}".format(api_path))
-    else:
-        print("Running on linux, but ~/.binaryninja/lastrun does not exist")
-        sys.exit(0)
-elif sys.platform == "darwin":
-    api_path = "/Applications/Binary Ninja.app/Contents/Resources/python"
+dir_name = os.path.dirname(os.path.abspath(__file__))
+api_path = os.path.abspath(os.path.join(dir_name, "..", "python"))
+
+if (os.path.isdir(api_path)):
+    print("Found install folder of {}".format(api_path))
 else:
-    # Windows
-    api_path = "r'C:\Program Files\Vector35\BinaryNinja\python'"
+    print("Failed to find installed python expected at {}".format(api_path))
+    sys.exit(1)
 
 
 def validate_path(path):

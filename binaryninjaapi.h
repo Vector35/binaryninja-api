@@ -1550,6 +1550,9 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
+		std::string GetLoadSettings(std::string typeName);
+		void SetLoadSettings(std::string typeName, std::string loadSettings);
+
 		BNAnalysisParameters GetParametersForAnalysis();
 		void SetParametersForAnalysis(BNAnalysisParameters params);
 		uint64_t GetMaxFunctionSizeForAnalysis();
@@ -1596,6 +1599,7 @@ namespace BinaryNinja
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
+		static char* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
 		BinaryViewType(BNBinaryViewType* type);
 
@@ -1623,6 +1627,7 @@ namespace BinaryNinja
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
+		virtual std::string GetLoadSettingsForData(BinaryView* data) = 0;
 	};
 
 	class CoreBinaryViewType: public BinaryViewType
@@ -1631,6 +1636,7 @@ namespace BinaryNinja
 		CoreBinaryViewType(BNBinaryViewType* type);
 		virtual BinaryView* Create(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
+		virtual std::string GetLoadSettingsForData(BinaryView* data) override;
 	};
 
 	class ReadException: public std::exception
@@ -4334,7 +4340,8 @@ namespace BinaryNinja
 		bool UpdateProperty(const std::string& id, const std::string& property, const std::string& value);
 		bool UpdateProperty(const std::string& id, const std::string& property, const std::vector<std::string>& value);
 
-		std::string GetSchema();
+		bool DeserializeSchema(const std::string& schema);
+		std::string SerializeSchema();
 		bool DeserializeSettings(const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 

@@ -1111,6 +1111,7 @@ extern "C"
 		void* context;
 		BNBinaryView* (*create)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
+		char* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
 	};
 
 	struct BNTransformParameterInfo
@@ -2276,8 +2277,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFile(BNFileMetadata* file, BNFileAccessor* accessor);
 
 	// Creation of new types of binary views
-	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(const char* name, BNFileMetadata* file,
-		BNBinaryView* parent, BNCustomBinaryView* view);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(const char* name, BNFileMetadata* file, BNBinaryView* parent, BNCustomBinaryView* view);
 
 	BINARYNINJACOREAPI BNBinaryViewType* BNGetBinaryViewTypeByName(const char* name);
 	BINARYNINJACOREAPI BNBinaryViewType** BNGetBinaryViewTypes(size_t* count);
@@ -2287,6 +2287,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeLongName(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI char* BNGetBinaryViewDefaultLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI char* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
 
 	BINARYNINJACOREAPI BNBinaryViewType* BNRegisterBinaryViewType(const char* name, const char* longName,
 	                                                              BNCustomBinaryViewType* type);
@@ -3802,7 +3804,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSettingsUpdateStringProperty(const char* registry, const char* id, const char* property, const char* value);
 	BINARYNINJACOREAPI bool BNSettingsUpdateStringListProperty(const char* registry, const char* id, const char* property, const char** value, size_t size);
 
-	BINARYNINJACOREAPI char* BNSettingsGetSchema(const char* registry);
+	BINARYNINJACOREAPI bool BNSettingsDeserializeSchema(const char* registry, const char* schema);
+	BINARYNINJACOREAPI char* BNSettingsSerializeSchema(const char* registry);
 	BINARYNINJACOREAPI bool BNDeserializeSettings(const char* registry, const char* contents, BNBinaryView* view, BNSettingsScope scope);
 	BINARYNINJACOREAPI char* BNSerializeSettings(const char* registry, BNBinaryView* view, BNSettingsScope scope);
 
@@ -3878,6 +3881,8 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 
+	BINARYNINJACOREAPI char* BNBinaryViewGetLoadSettings(BNBinaryView* view, const char* typeName);
+	BINARYNINJACOREAPI void BNBinaryViewSetLoadSettings(BNBinaryView* view, const char* typeName, const char* loadSettings);
 
 	// Relocation object methods
 	BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);

@@ -668,7 +668,7 @@ class Type(object):
 					param_buf[i].defaultLocation = True
 				else:
 					param_buf[i].defaultLocation = False
-					param_buf[i].location.type = params[i].location.type
+					param_buf[i].location.type = params[i].location.source_type
 					param_buf[i].location.index = params[i].location.index
 					param_buf[i].location.storage = params[i].location.storage
 			else:

@@ -1054,7 +1054,7 @@ class BinaryView(object):
 			return cls.get_load_settings_for_data(BinaryView(handle=core.BNNewViewReference(data)))
 		except:
 			log.log_error(traceback.format_exc())
-			return None
+			return core.BNAllocString("")
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
@@ -4397,14 +4397,14 @@ class BinaryView(object):
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
 		Note that address-based comments are different from function-level comments which are specific to each function.
 		For more information, see :func:`address_comments`.
-	
+
 		"""
 		return core.BNGetGlobalCommentForAddress(self.handle, addr)
 
 	def set_comment_at(self, addr, comment):
 		"""
 		``set_comment_at`` sets a comment for the BinaryView at the address specified
-		
+
 		Note that these are different from function-level comments which are specific to each function.
 		For more information, see :func:`address_comments`.
 

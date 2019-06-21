@@ -196,11 +196,11 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			param_map = {}
 			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
-				param_map[params[i].name] = str(data)
-			result = self.perform_decode(str(input_obj), param_map)
+				param_map[params[i].name] = bytes(data)
+			result = self.perform_decode(bytes(input_obj), param_map)
 			if result is None:
 				return False
-			result = str(result)
+			result = bytes(result)
 			core.BNSetDataBufferContents(output_buf, result, len(result))
 			return True
 		except:
@@ -213,11 +213,11 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			param_map = {}
 			for i in range(0, count):
 				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
-				param_map[params[i].name] = str(data)
-			result = self.perform_encode(str(input_obj), param_map)
+				param_map[params[i].name] = bytes(data)
+			result = self.perform_encode(bytes(input_obj), param_map)
 			if result is None:
 				return False
-			result = str(result)
+			result = bytes(result)
 			core.BNSetDataBufferContents(output_buf, result, len(result))
 			return True
 		except:

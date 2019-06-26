@@ -255,6 +255,7 @@ public:
 
 	void setHighlightToken(const HighlightTokenState& state, bool notify = true);
 
+	virtual void notifyUpdateInProgress(FunctionRef func);
 	virtual void onFunctionSelected(FunctionRef func);
 	virtual void onHighlightChanged(const HighlightTokenState& highlight);
 

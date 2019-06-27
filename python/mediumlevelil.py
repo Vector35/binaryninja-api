@@ -361,6 +361,26 @@ class MediumLevelILInstruction(object):
 			return False
 		return self._function == value.function and self._expr_index == value.expr_index
 
+	def __lt__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index < value.expr_index
+
+	def __le__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index <= value.expr_index
+
+	def __gt__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index > value.expr_index
+
+	def __ge__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index >= value.expr_index
+
 	@property
 	def tokens(self):
 		"""MLIL tokens (read-only)"""

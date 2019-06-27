@@ -814,6 +814,26 @@ class LowLevelILInstruction(object):
 			return False
 		return self._function == value.function and self.expr_index == value.expr_index
 
+	def __lt__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index < value.expr_index
+
+	def __le__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index <= value.expr_index
+
+	def __gt__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index > value.expr_index
+
+	def __ge__(self, value):
+		if not isinstance(value, type(self)):
+			return False
+		return self._function == value.function and self.expr_index >= value.expr_index
+
 	@property
 	def tokens(self):
 		"""LLIL tokens (read-only)"""

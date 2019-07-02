@@ -176,6 +176,8 @@ class BasicBlock(object):
 			start = self.start
 			while start < self.end:
 				length = self.view.get_instruction_length(start)
+				if length == 0: # invalid instruction. avoid infinite loop
+					break
 				self._instLengths.append(length)
 				self._instStarts.append(start)
 				start += length

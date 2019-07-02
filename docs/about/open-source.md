@@ -32,7 +32,7 @@ The previous tools are used in the generation of our documentation, but are not 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
     - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
-    - [capstone] ([capstone license] - 3-clause BSD) used in the PPC architecture module as an example of how to wrap an external disassembler
+    - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -81,6 +81,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [mkdocs]: http://www.mkdocs.org/
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
+[PPC architecture module]: https://github.com/Vector35/ppc-capstone
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.md

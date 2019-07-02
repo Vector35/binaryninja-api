@@ -53,7 +53,6 @@ public:
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 
 	QString getActionForItem(int row);
-	QString getShortcutForItem(int row);
 	void setFilterText(const QString& text);
 };
 

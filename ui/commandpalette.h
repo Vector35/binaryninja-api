@@ -5,6 +5,7 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QFrame>
 #include <QtCore/QPointer>
+#include <QtWidgets/QStyledItemDelegate>
 #include <vector>
 #include "action.h"
 
@@ -17,6 +18,19 @@ struct BINARYNINJAUIAPI CommandListItem
 
 class CommandPalette;
 class CommandListFilter;
+
+
+class BINARYNINJAUIAPI CommandListDelegate: public QStyledItemDelegate
+{
+	Q_OBJECT
+	QFont m_font;
+	int m_height;
+
+public:
+	CommandListDelegate(QWidget* parent);
+	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
+	virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+};
 
 class BINARYNINJAUIAPI CommandListModel: public QAbstractItemModel
 {
@@ -39,6 +53,7 @@ public:
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 
 	QString getActionForItem(int row);
+	QString getShortcutForItem(int row);
 	void setFilterText(const QString& text);
 };
 

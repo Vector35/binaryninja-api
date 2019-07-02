@@ -1167,6 +1167,14 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
 
+	def __contains__(self, instruction):
+		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:
+			return False
+		if instruction.instr_index >= self.start and instruction.instr_index <= self.end:
+			return True
+		else:
+			return False
+
 	@property
 	def il_function(self):
 		""" """

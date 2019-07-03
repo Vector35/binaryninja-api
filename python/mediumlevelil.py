@@ -1065,7 +1065,7 @@ class MediumLevelILFunction(object):
 		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -1078,7 +1078,7 @@ class MediumLevelILFunction(object):
 		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
 		result = []
 		for i in range(0, count.value):
-			result.append(instrs[i])
+			result.append(self[instrs[i]])
 		core.BNFreeILInstructionList(instrs)
 		return result
 

@@ -3490,7 +3490,7 @@ class BinaryView(object):
 			return None
 		if str_ref.type != StringType.AsciiString:
 			partial = False
-			log.log_warn("Partial string not supported at 0x{}".format(hex(addr)))
+			log.log_warn("Partial string not supported at {}".format(hex(addr)))
 		start = addr if partial else str_ref.start
 		length = str_ref.length - (addr - str_ref.start) if partial else str_ref.length
 		return StringReference(self, StringType(str_ref.type), start, length)

@@ -47,7 +47,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview: public QDialog
 	QStringList m_historyEntries;
 	int m_historySize;
 	GetSymbolsListThread* m_updateThread;
-    QColor m_defaultColor;
+	QColor m_defaultColor;
 	QFont m_defaultFont;
 	QString m_prompt;
 	bool m_initialTextSelection;

@@ -1321,6 +1321,16 @@ class BinaryView(object):
 		return core.BNHasFunctions(self.handle)
 
 	@property
+	def has_symbols(self):
+		"""Boolean whether the binary has symbols (read-only)"""
+		return core.BNHasSymbols(self.handle)
+
+	@property
+	def has_data_variables(self):
+		"""Boolean whether the binary has functions (read-only)"""
+		return core.BNHasDataVariables(self.handle)
+
+	@property
 	def entry_function(self):
 		"""Entry function (read-only)"""
 		func = core.BNGetAnalysisEntryPoint(self.handle)

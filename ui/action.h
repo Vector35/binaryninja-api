@@ -35,6 +35,7 @@ struct BINARYNINJAUIAPI HighlightTokenState
 	HighlightTokenState();
 };
 
+
 struct BINARYNINJAUIAPI UIActionContext
 {
 	UIContext* context;

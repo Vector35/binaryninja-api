@@ -156,7 +156,7 @@ public:
 	virtual View* getView() = 0;
 };
 
-class FunctionsView;
+class SymbolsView;
 
 class BINARYNINJAUIAPI ViewFrame : public QWidget
 {

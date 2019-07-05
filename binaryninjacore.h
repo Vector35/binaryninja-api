@@ -2518,6 +2518,8 @@ extern "C"
 	BINARYNINJACOREAPI BNFunction** BNGetAnalysisFunctionList(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFunctionList(BNFunction** funcs, size_t count);
 	BINARYNINJACOREAPI bool BNHasFunctions(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNHasSymbols(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNHasDataVariables(BNBinaryView* view);
 	BINARYNINJACOREAPI BNFunction* BNGetAnalysisFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI BNFunction* BNGetRecentAnalysisFunctionForAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNFunction** BNGetAnalysisFunctionsForAddress(BNBinaryView* view, uint64_t addr, size_t* count);

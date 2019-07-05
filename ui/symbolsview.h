@@ -4,28 +4,29 @@
 #include "binaryninjaapi.h"
 #include "dockhandler.h"
 #include "filter.h"
+#include "symbollist.h"
 
 class ViewFrame;
-class FunctionList;
+class SymbolList;
 
-class BINARYNINJAUIAPI FunctionsView: public QWidget, public DockContextHandler, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SymbolsView: public QWidget, public DockContextHandler, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 	Q_INTERFACES(DockContextHandler)
 
 	BinaryViewRef m_data;
 
-	FunctionList* m_funcList;
+	SymbolList* m_funcList;
 	FilteredView* m_funcFilter;
 
 	bool m_updatesPending;
 	QTimer* m_updateTimer;
 
 public:
-	FunctionsView(ViewFrame* frame, BinaryViewRef data);
-	virtual ~FunctionsView();
+	SymbolsView(ViewFrame* frame, BinaryViewRef data);
+	virtual ~SymbolsView();
 
-	FunctionList* getFunctionList() { return m_funcList; }
+	SymbolList* getSymbolList() { return m_funcList; }
 	FilteredView* getFunctionFilter() { return m_funcFilter; }
 
 	virtual void OnBinaryDataWritten(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;

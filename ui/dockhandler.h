@@ -62,8 +62,8 @@ public:
 	DockContextHandler(QWidget* widget, const QString& name);
 	virtual ~DockContextHandler();
 
-	QString getName() { return m_name; }
-	QWidget* getParentWindow() { return m_parentWindow; }
+	QString getName() const { return m_name; }
+	QWidget* getParentWindow() const { return m_parentWindow; }
 
 	virtual void notifyFontChanged() { }
 	virtual void notifyOffsetChanged(uint64_t /*offset*/) { }

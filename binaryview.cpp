@@ -1328,6 +1328,18 @@ bool BinaryView::HasFunctions() const
 }
 
 
+bool BinaryView::HasSymbols() const
+{
+	return BNHasSymbols(m_object);
+}
+
+
+bool BinaryView::HasDataVariables() const
+{
+	return BNHasDataVariables(m_object);
+}
+
+
 Ref<Function> BinaryView::GetAnalysisFunction(Platform* platform, uint64_t addr)
 {
 	BNFunction* func = BNGetAnalysisFunction(m_object, platform->GetObject(), addr);

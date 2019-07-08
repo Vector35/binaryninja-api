@@ -2830,8 +2830,6 @@ class BinaryView(object):
 		architecture of the function will be used.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
-
-		todo: docs and make it not so difficult to call
 		"""
 
 		result = []

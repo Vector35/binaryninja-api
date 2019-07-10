@@ -1131,7 +1131,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			result = self.convert_to_nop(buf.raw, addr)
 			if result is None:
 				return False
-			result = str(result)
 			if len(result) > length:
 				result = result[0:length]
 			ctypes.memmove(data, result, len(result))
@@ -1147,7 +1146,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			result = self.always_branch(buf.raw, addr)
 			if result is None:
 				return False
-			result = str(result)
 			if len(result) > length:
 				result = result[0:length]
 			ctypes.memmove(data, result, len(result))
@@ -1163,7 +1161,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			result = self.invert_branch(buf.raw, addr)
 			if result is None:
 				return False
-			result = str(result)
 			if len(result) > length:
 				result = result[0:length]
 			ctypes.memmove(data, result, len(result))
@@ -1179,7 +1176,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			result = self.skip_and_return_value(buf.raw, addr, value)
 			if result is None:
 				return False
-			result = str(result)
 			if len(result) > length:
 				result = result[0:length]
 			ctypes.memmove(data, result, len(result))

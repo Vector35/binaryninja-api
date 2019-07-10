@@ -55,7 +55,7 @@ You can load files in many ways:
 2. Use the `File/Open` menu or `Open` button on the start screen
 3. Clicking an item in the recent files list
 4. Running Binary Ninja with an optional command-line parameter
-5. Opening a file from a URL via the `⌘-l` or `⌃-l` hotkey
+5. Opening a file from a URL via the `CMD-l` or `CTRL-l` hotkey
 6. Opening a file using the binaryninja: url handler. For security reasons, the url handler requires you to confirm a warning before opening a file via the url handler. The url handler can open remote URLs like: `binaryninja:https://captf2.captf.com/2015/plaidctf/pwnable/datastore_7e64104f876f0aa3f8330a409d9b9924.elf`, or even local files like `binarynina://bin/ls` in cases where you wish to script up Binary Ninja from a local webapp.
 
 ![recent files](img/recent.png "Recent Files")
@@ -79,9 +79,30 @@ Navigating code in Binary Ninja is usually a case of just double-clicking where 
 
 ![graph view](img/view-choices.png "Different Views")
 
-Switching views happens multiple ways. In some instances, it's automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
+Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
 
-### Hotkeys
+### Command-Palette
+
+![command palette](img/command-palette.png "Command Palette")
+
+One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html), and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitve action system that all actions, plugins, and hotekys in the system are routed through.
+
+To trigger it, simply use the `CMD-p` or `CTRL-p` hotkey. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine whether the action should be available.
+
+### Custom Hotkeys
+
+![keybindings](img/keybindings.png "Keybindings")
+
+Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `CMD-SHIFT-p` or `CTRL-SHIFT-p` hotkey, via the `Edit / Keybindings...` menu, or the `Keybindings` [command palette](#commnad-palette) entry.
+
+Note
+!!! Tip "Note"
+    On Mac OS X, `Ctrl` refers to the Command key, while `Meta` refers to the Control key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
+
+!!! Tip "Tip"
+    To search in the keybindings list, just click to make sure it's focused and start typing!
+
+### Default Hotkeys
 
  - `h` : Switch to hex view
  - `p` : Create a function
@@ -161,9 +182,9 @@ Current options include:
     - Show address
     - Show opcode bytes
 
-### Hex View
-
 ![hex >](img/hex.png "hex view")
+
+### Hex View
 
 The hexadecimal view is useful for view raw binary files that may or may not even be executable binaries. The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that `Transform` menu options will transform the data in-place, and that these options will only work when the Hex View is in the `Raw` mode as opposed to any of the binary views (such as "ELF", "Mach-O", or "PE").
 
@@ -171,7 +192,7 @@ Note that any changes made in the Hex view will take effect immediately in any o
 
 ### Xrefs View
 
-![xrefs >](img/xrefs.png "xrefs")
+![xrefs <](img/xrefs.png "xrefs")
 
 The xrefs view in the lower-left shows all cross-references to a given location or reference. Note that the cross-references pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected.
 
@@ -185,7 +206,6 @@ Linear view is a hybrid view between a graph-based disassembly window and the ra
 
 Linear view is most commonly used for identifying and adding type information for unknown data. To this end,
 
-
 ### Function List
 
 ![function list >](img/functionlist.png "Function List")
@@ -197,9 +217,9 @@ The function list also highlights imports, and functions identified with symbols
 !!! Tip "Tip"
     To search in the function list, just click to make sure it's focused and start typing!
 
-### Script (Python) Console
-
 ![console >](img/console.png "Console")
+
+### Script (Python) Console
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
@@ -246,80 +266,24 @@ Binary Ninja supports loading PDB files through the built in PDB plugin. When se
 3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
 4. Prompt the user for the pdb.
 
-## Preferences/Updates
-
 ![preferences >](img/preferences.png "Preferences")
+
+## Preferences/Updates
 
 Binary Ninja automatically updates itself by default. This functionality can be disabled in the preferences by turning off the `Update to latest version automatically` option. Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 
 On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version. On OS X and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
-## Settings
+Note that if you have any trouble with the self-updater, you can always [request](https://binary.ninja/recover/) a fresh set of download links as long as you are under active support.
 
-Settings are stored in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin.  As of build 860 the following settings are available:
+![settings >](img/settings.png "Advanced Settings")
 
-|Plugin           | Setting                  | Type         | Default                                            | Description                                                                                         |
-|----------------:|-------------------------:|-------------:|---------------------------------------------------:|:----------------------------------------------------------------------------------------------------|
-| analysis        | autorunLinearSweep       | boolean      | True                                               | Automatically run linear sweep when opening a binary for analysis                                   |
-| analysis        | enableUTF8               | boolean      | True                                               | Whether or not to consider UTF-8 code points when searching for strings                             |
-| analysis        | enableUTF16              | boolean      | True                                               | Whether or not to consider UTF-16 code points when searching for strings                            |
-| analysis        | enableUTF32              | boolean      | True                                               | Whether or not to consider UTF-32 code points when searching for strings                            |
-| analysis        | enabledUnicodeBlocks     | list(string) | []                                                 | Defines which Unicode blocks to consider when searching for strings                                 |
-| analysis        | max-function-size        | integer      | 65536                                              | Any functions over this size will not be automatically analyzed and require manual override         |
-| arch            | x86.disassemblyFlavor    | string       | "BN_INTEL"                                         | "BN_INTEL", "INTEL", or "AT&T"                                                                      |
-| arch            | x86.disassemblyLowercase | bool         | True                                               | Lowercase opcodes, operands, and registers (False for uppercase)                                    |
-| arch            | x86.disassemblySeperator | string       | ", "                                               | What to put between operands in disassembly tokens                                                  |
-| core            | linux\_ca\_bundle        | string       | ""                                                 | Certificate authority (.pem or .crt) file to be used for secure downloads                           |
-| core            | linux\_ca\_dir           | string       | ""                                                 | Certificate authority directory (for distributions without a CA bundle)                             |
-| download-client | https-proxy              | string       | ""                                                 | urllib proxyhandler (probably not what you want--by default urllib follows system proxy settings)   |
-| pdb             | auto-download-pdb        | boolean      | True                                               | Automatically download pdb files from specified symbol servers                                      |
-| pdb             | local-store-absolute     | string       | ""                                                 | Absolute path specifying where the pdb symbol store exists on this machine, overrides relative path |
-| pdb             | local-store-relative     | string       | "symbols"                                          | Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store                |
-| pdb             | symbol-server-list       | list(string) | ["http://msdl.microsoft.com/download/symbols"]     | List of servers to query for pdb symbols.                                                           |
-| python          | interpreter              | string       | "{/path/,C:\\\\Path\\\\}python27.{dylib,dll,so.1}" | Python interpreter to load if one is not already present when plugins are loaded                    |
-| ui              | activeContent            | boolean      | True                                               | Allow Binary Ninja to connect to the web to check for updates                                       |
-| ui              | colorblind               | boolean      | True                                               | Choose colors that are visible to those with red/green colorblind                                   |
-| ui              | debug                    | boolean      | False                                              | Enable developer debugging features (Additional views: Lifted IL, and SSA forms)                    |
-| ui              | recent-file-limit        | integer      | 10                                                 | Specify limit for number of recent files                                                            |
-| ui              | scriptingProvider        | string       | "Python"                                           | Specify the registered ScriptingProvider that controls the 'Console' in the UI                      |
+## Advanced Settings
 
-Below is an example `settings.json` setting various options:
-```
-{
-    "ui" :
-    {
-        "activeContent" : false,
-        "colorblind" : false,
-        "debug" : true,
-        "recent-file-limit" : 10
-    }
-    "pdb" :
-    {
-        "local-store-absolute" : "C:\\Symbols",
-        "local-store-relative" : "",
-        "symbol-server-list" : ["http://mysymbolserver.company.lan"]
-    },
-	"python":
-	{
-		"interpreter": "C:\\Users\\Binja\\AppData\\Local\\Programs\\Python\\Python37\\python37.dll"
-	}
-}
-```
+Advanced settings are available via the `CMD-.` or `CTRL-.` hotkey and allow setting a number of advanced behaviors and non-default behavior. All settings are saved in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin or logical group.  
 
-## Custom Keybindings
+Enabling the `identifiers` checkbox will show the raw identifiers used to set settings in the json file and may be useful for debugging but should not be required.
 
-Custom keybindings can be stored in the [_user_ directory](#user-folder) in the file `keybindings.json`. Actions can be referenced for keybindings using the name that appears in the menu. If the desired action is in a submenu, use the full path to the item separated by `\\` (for example, `"New\\Binary Data"`). Below is an example keybindings file:
-
-```
-{
-    "Reanalyze" : "Ctrl+Shift+R",
-    "Log" : "Ctrl+L"
-}
-```
-
-Note
-!!! Tip "Note"
-    On Mac OS X, `Ctrl` refers to the Command key, while `Meta` refers to the Control key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
 
 ## Unicode Support
 

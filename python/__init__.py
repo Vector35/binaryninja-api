@@ -26,68 +26,8 @@ import ctypes
 from time import gmtime
 import os
 
-# 2-3 compatibility
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
-PY34 = sys.version_info[0:2] >= (3, 4)
 
-try:
-	import builtins  # __builtins__ for python2
-except ImportError:
-	pass
-
-def range(*args):
-	""" A Python2 and Python3 Compatible Range Generator """
-	try:
-		return xrange(*args)
-	except NameError:
-		return builtins.range(*args)
-
-def valid_import(mod_name):
-	if PY2:
-		import imp
-		try:
-			imp.find_module(mod_name)
-			found = True
-		except ImportError:
-			found = False
-	elif PY34:
-		import importlib.util
-		mod_spec = importlib.util.find_spec(mod_name)
-		found = mod_spec is not None
-	elif PY3:
-		import importlib
-		mod_loader = importlib.find_loader(mod_name)
-		found = mod_loader is not None
-	else:
-		return False
-	return found
-
-
-def with_metaclass(meta, *bases):
-	"""Create a base class with a metaclass."""
-	class metaclass(type):
-		def __new__(cls, name, this_bases, d):
-			return meta(name, bases, d)
-
-		@classmethod
-		def __prepare__(cls, name, this_bases):
-			return meta.__prepare__(name, bases)
-	return type.__new__(metaclass, 'temporary_class', (), {})
-
-
-def cstr(arg):
-	if isinstance(arg, bytes) or arg is None:
-		return arg
-	else:
-		return arg.encode('charmap')
-
-
-def pyNativeStr(arg):
-	if isinstance(arg, str):
-		return arg
-	else:
-		return arg.decode('charmap')
+from binaryninja.compatibility import *
 
 
 # Binary Ninja components

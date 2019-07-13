@@ -23,6 +23,7 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	struct SymbolCache
 	{
 		std::vector<QList<QVariant>> columns;
+		std::vector<uint64_t> width;
 	};
 
 	QWidget* m_symbolsList;
@@ -63,6 +64,7 @@ public:
 	SymbolRef getSymbolAt(const QModelIndex& i) const;
 	QModelIndex findSymbol(uint64_t address) const;
 	QModelIndex findSymbol(const SymbolRef& ref) const;
+	uint64_t getWidthAt(const QModelIndex& i) const;
 
 	void updateSymbols();
 

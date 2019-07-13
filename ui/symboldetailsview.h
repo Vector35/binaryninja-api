@@ -9,7 +9,7 @@
 
 #define SYMBOLS_LIST_UPDATE_INTERVAL 250
 
-class BINARYNINJAUIAPI SymbolsListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -34,8 +34,8 @@ class BINARYNINJAUIAPI SymbolsListModel: public QAbstractItemModel, public Binar
 	std::vector<SymbolUpdateEvent> getQueuedSymbolUpdates();
 
 public:
-	SymbolsListModel(QWidget* parent, BinaryViewRef data);
-	virtual ~SymbolsListModel();
+	SymbolDetailsListModel(QWidget* parent, BinaryViewRef data);
+	virtual ~SymbolDetailsListModel();
 
 	virtual QModelIndex index(int row, int col, const QModelIndex& parent) const override;
 	virtual QModelIndex parent(const QModelIndex& i) const override;
@@ -73,24 +73,24 @@ public:
 	QFont getFont() const { return m_font; }
 };
 
-class SymbolsContainer;
+class SymbolDetailsContainer;
 
-class BINARYNINJAUIAPI SymbolsView: public QTableView, public View, public FilterTarget
+class BINARYNINJAUIAPI SymbolDetailsView: public QTableView, public View, public FilterTarget
 {
 	Q_OBJECT
 
 	BinaryViewRef m_data;
 	ViewFrame* m_view;
-	SymbolsContainer* m_container;
+	SymbolDetailsContainer* m_container;
 
-	SymbolsListModel* m_list;
+	SymbolDetailsListModel* m_list;
 	SymbolItemDelegate* m_itemDelegate;
 	QTimer* m_updateTimer;
 
 	uint64_t m_selectionBegin;
 
 public:
-	SymbolsView(BinaryViewRef data, ViewFrame* view, SymbolsContainer* container);
+	SymbolDetailsView(BinaryViewRef data, ViewFrame* view, SymbolDetailsContainer* container);
 
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
@@ -117,31 +117,31 @@ private Q_SLOTS:
 	void updateTimerEvent();
 };
 
-class BINARYNINJAUIAPI SymbolsContainer: public QWidget, public ViewContainer
+class BINARYNINJAUIAPI SymbolDetailsContainer: public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
 	ViewFrame* m_view;
-	SymbolsView* m_symbols;
+	SymbolDetailsView* m_symbols;
 	FilteredView* m_filter;
 
 public:
-	SymbolsContainer(BinaryViewRef data, ViewFrame* view);
+	SymbolDetailsContainer(BinaryViewRef data, ViewFrame* view);
 	virtual View* getView() override { return m_symbols; }
 
-	SymbolsView* getSymbolsView() { return m_symbols; }
+	SymbolDetailsView* getSymbolDetailsView() { return m_symbols; }
 	FilteredView* getFilter() { return m_filter; }
 
 protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
 };
 
-class SymbolsViewType: public ViewType
+class SymbolDetailsViewType: public ViewType
 {
-	static SymbolsViewType* m_instance;
+	static SymbolDetailsViewType* m_instance;
 
 public:
-	SymbolsViewType();
+	SymbolDetailsViewType();
 	virtual int getPriority(BinaryViewRef data, const QString& filename);
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* viewFrame);
 	static void init();

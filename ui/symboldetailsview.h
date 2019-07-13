@@ -106,11 +106,13 @@ class BINARYNINJAUIAPI SymbolDetailsView: public QTableView, public View, public
 	QTimer* m_updateTimer;
 
 	uint64_t m_selectionBegin;
+	int m_charWidth, m_charHeight;
 
 public:
 	SymbolDetailsView(BinaryViewRef data, ViewFrame* view, SymbolDetailsContainer* container);
 
 	virtual BinaryViewRef getData() override { return m_data; }
+	virtual int sizeHintForRow(int row) const override;
 	virtual uint64_t getCurrentOffset() override;
 	virtual void getSelectionOffsets(uint64_t& begin, uint64_t& end) override;
 	virtual bool navigate(uint64_t offset) override;

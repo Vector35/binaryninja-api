@@ -3,6 +3,7 @@
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QStyledItemDelegate>
 #include <mutex>
+#include <map>
 #include "viewframe.h"
 #include "filter.h"
 #include "uicontext.h"
@@ -19,19 +20,26 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 		bool added;
 	};
 
+	struct SymbolCache
+	{
+		std::vector<QList<QVariant>> columns;
+	};
+
 	QWidget* m_symbolsList;
 	BinaryViewRef m_data;
 	std::vector<SymbolRef> m_allSymbols;
 	std::vector<SymbolRef> m_symbols;
+	std::map<SymbolRef, SymbolCache> m_cache;
 	std::string m_filter;
 
 	std::mutex m_updateMutex;
 	std::vector<SymbolUpdateEvent> m_updates;
 
 	static bool symbolComparison(const SymbolRef& a, const SymbolRef& b);
-	bool matchSymbol(const SymbolRef& symbol);
+	bool matchSymbol(const SymbolRef& ref);
 
 	std::vector<SymbolUpdateEvent> getQueuedSymbolUpdates();
+	void generateCache(const SymbolRef& symbol);
 
 public:
 	SymbolDetailsListModel(QWidget* parent, BinaryViewRef data);

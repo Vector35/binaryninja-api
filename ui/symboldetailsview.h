@@ -36,6 +36,7 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	std::vector<SymbolUpdateEvent> m_updates;
 
 	static bool symbolComparison(const SymbolRef& a, const SymbolRef& b);
+	static bool symbolEqual(const SymbolRef& a, const SymbolRef& b);
 	bool matchSymbol(const SymbolRef& ref);
 
 	std::vector<SymbolUpdateEvent> getQueuedSymbolUpdates();
@@ -53,8 +54,10 @@ public:
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 	virtual void OnAnalysisFunctionAdded(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
+	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 	virtual void OnDataVariableAdded(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
+	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 
 	SymbolRef getSymbolAt(const QModelIndex& i) const;

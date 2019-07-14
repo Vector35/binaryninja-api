@@ -17,11 +17,13 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	struct SymbolUpdateEvent
 	{
 		SymbolRef ref;
+		FunctionRef func;
 		bool added;
 	};
 
 	struct SymbolCache
 	{
+		FunctionRef func;
 		std::vector<QList<QVariant>> columns;
 		std::vector<uint64_t> width;
 	};
@@ -41,7 +43,7 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	bool matchSymbol(const SymbolRef& ref);
 
 	std::vector<SymbolUpdateEvent> getQueuedSymbolUpdates();
-	void generateCache(const SymbolRef& symbol);
+	void generateCache(const SymbolRef& symbol, const FunctionRef& func);
 
 public:
 	SymbolDetailsListModel(QWidget* parent, BinaryViewRef data);

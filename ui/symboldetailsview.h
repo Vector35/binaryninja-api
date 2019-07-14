@@ -18,14 +18,16 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	{
 		SymbolRef ref;
 		FunctionRef func;
+		BinaryNinja::DataVariable dvar;
 		bool added;
 	};
 
 	struct SymbolCache
 	{
 		FunctionRef func;
-		std::vector<QList<QVariant>> columns;
-		std::vector<uint64_t> width;
+		BinaryNinja::DataVariable dvar;
+		std::unordered_map<int, QList<QVariant>> columns;
+		std::unordered_map<int, uint64_t> width;
 	};
 
 	QWidget* m_symbolsList;
@@ -43,7 +45,7 @@ class BINARYNINJAUIAPI SymbolDetailsListModel: public QAbstractItemModel, public
 	bool matchSymbol(const SymbolRef& ref);
 
 	std::vector<SymbolUpdateEvent> getQueuedSymbolUpdates();
-	void generateCache(const SymbolRef& symbol, const FunctionRef& func);
+	void generateCache(const SymbolUpdateEvent& event);
 
 public:
 	SymbolDetailsListModel(QWidget* parent, BinaryViewRef data);

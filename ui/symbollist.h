@@ -257,7 +257,7 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	std::string m_filter;
 	SymbolListModel::SortType m_sortType;
 	SymbolListModel::NamedObject m_index;
-	int m_scrollPosition;
+	SymbolListModel::NamedObject m_topIndex;
 	bool m_doubleClick;
 
 public:

@@ -33,6 +33,16 @@ public:
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataRemoved(BinaryNinja::BinaryView* data, uint64_t offset, uint64_t len) override;
 
+	bool getShowExports() const { return m_funcList->getShowExports(); }
+	bool getShowImports() const { return m_funcList->getShowImports(); }
+	bool getShowFunctions() const { return m_funcList->getShowFunctions(); }
+	bool getShowDataVars() const { return m_funcList->getShowDataVars(); }
+
+	void toggleExports() { m_funcList->toggleExports(); }
+	void toggleImports() { m_funcList->toggleImports(); }
+	void toggleFunctions() { m_funcList->toggleFunctions(); }
+	void toggleDataVars() { m_funcList->toggleDataVars(); }
+
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void notifyFontChanged() override;

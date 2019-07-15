@@ -279,6 +279,16 @@ public:
 	virtual bool canCopy();
 	void find();
 
+	bool getShowExports() const { return m_list->getShowExports(); }
+	bool getShowImports() const { return m_list->getShowImports(); }
+	bool getShowFunctions() const { return m_list->getShowFunctions(); }
+	bool getShowDataVars() const { return m_list->getShowDataVars(); }
+
+	void toggleExports() { m_list->toggleExports(); }
+	void toggleImports() { m_list->toggleImports(); }
+	void toggleFunctions() { m_list->toggleFunctions(); }
+	void toggleDataVars() { m_list->toggleDataVars(); }
+
 protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;

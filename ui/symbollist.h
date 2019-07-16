@@ -34,25 +34,43 @@ public:
 	{
 		SymbolRef sym;
 		std::string archName;
-		NamedObject() : sym(nullptr), archName(emptyArch) {}
-		NamedObject(SymbolRef s, std::string& a=emptyArch) : sym(s), archName(a) {}
+		mutable std::string name;
+		mutable bool named;
+		NamedObject() : sym(nullptr), archName(emptyArch), named(false) {}
+		NamedObject(SymbolRef s, std::string& a=emptyArch) : sym(s), archName(a), named(false) {}
 		NamedObject(const NamedObject& n)
 		{
 			sym = n.sym;
 			archName = n.archName;
+			named = n.named;
+			name = n.name;
 		}
 
-		// NamedObject(const NamedObject&& n)
-		// {
-		// 	sym = std::move(n.sym);
-		// 	archName = std::move(n.archName);
-		// }
+		NamedObject(const NamedObject&& n)
+		{
+			sym = std::move(n.sym);
+			archName = std::move(n.archName);
+			name = std::move(n.name);
+			named = n.named;
+		}
 
-		// NamedObject& operation=(const NamedObject&& n)
-		// {
-		// 	sym = std::move(n.sym);
-		// 	archName = std::move(n.archName);
-		// }
+		NamedObject& operator=(const NamedObject&& n)
+		{
+			sym = std::move(n.sym);
+			archName = std::move(n.archName);
+			name = std::move(n.name);
+			named = n.named;
+			return *this;
+		}
+
+		NamedObject& operator=(const NamedObject& n)
+		{
+			sym = n.sym;
+			archName = n.archName;
+			name = n.name;
+			named = n.named;
+			return *this;
+		}
 
 		bool operator<(const NamedObject& other) const
 		{
@@ -80,7 +98,13 @@ public:
 
 		bool isFunc() const { return sym->GetType() == FunctionSymbol; }
 		uint64_t getStart() const { return sym->GetAddress(); }
-		std::string getName() const { return sym->GetFullName(); }
+		std::string getName() const {
+			if (named)
+				return name;
+			name = sym->GetFullName();
+			named = true;
+			return name;
+		}
 		BNSymbolType getType() const { return sym->GetType(); }
 	};
 

@@ -58,6 +58,7 @@ public:
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
+	virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 	virtual void OnAnalysisFunctionAdded(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;

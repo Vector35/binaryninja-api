@@ -255,6 +255,20 @@ class Symbol(object):
 	def auto(self):
 		return core.BNIsSymbolAutoDefined(self.handle)
 
+	@property
+	def aliases(self):
+		"""
+		List of aliases tied to this symbol.
+		Aliases are the names of any other symbols that also happen to be at the same address.
+		"""
+		result = []
+		count = ctypes.c_ulonglong(0)
+		aliases = core.BNGetSymbolAliases(self.handle, count)
+		for i in range(count.value):
+			result.append(aliases[i])
+		core.BNFreeStringList(aliases, count)
+		return result
+
 	def __repr__(self):
 		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
 

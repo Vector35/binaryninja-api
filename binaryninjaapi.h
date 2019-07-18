@@ -1067,6 +1067,7 @@ namespace BinaryNinja
 		uint64_t GetOrdinal() const;
 		bool IsAutoDefined() const;
 		NameSpace GetNameSpace() const;
+		std::vector<std::string> GetAliases() const;
 
 		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};

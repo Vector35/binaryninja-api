@@ -1681,6 +1681,7 @@ extern "C"
 		bool suppressNewAutoFunctionAnalysis;
 		BNAnalysisMode mode;
 		bool alwaysAnalyzeIndirectBranches;
+		size_t advancedAnalysisCacheSize;
 	};
 
 	struct BNDownloadInstanceOutputCallbacks

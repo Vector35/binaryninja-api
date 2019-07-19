@@ -878,6 +878,7 @@ namespace BinaryNinja
 
 	class Function;
 	struct DataVariable;
+	class Symbol;
 
 	class BinaryDataNotification
 	{
@@ -894,6 +895,9 @@ namespace BinaryNinja
 		static void DataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
+		static void SymbolAddedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		static void SymbolUpdatedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		static void SymbolRemovedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
@@ -917,6 +921,9 @@ namespace BinaryNinja
 		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataMetadataUpdated(BinaryView* view, uint64_t offset) { (void)view; (void)offset; }
+		virtual void OnSymbolAdded(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
+		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
+		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
 		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }

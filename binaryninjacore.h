@@ -1074,6 +1074,9 @@ extern "C"
 		void (*dataVariableRemoved)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataVariableUpdated)(void* ctxt, BNBinaryView* view, BNDataVariable* var);
 		void (*dataMetadataUpdated)(void* ctxt, BNBinaryView* view, uint64_t offset);
+		void (*symbolAdded)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		void (*symbolUpdated)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		void (*symbolRemoved)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*typeDefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);

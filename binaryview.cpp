@@ -122,6 +122,33 @@ void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryVie
 }
 
 
+void BinaryDataNotification::SymbolAddedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
+	notify->OnSymbolAdded(view, sym);
+}
+
+
+void BinaryDataNotification::SymbolUpdatedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
+	notify->OnSymbolUpdated(view, sym);
+}
+
+
+void BinaryDataNotification::SymbolRemovedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<Symbol> sym = new Symbol(BNNewSymbolReference(symobj));
+	notify->OnSymbolRemoved(view, sym);
+}
+
+
 void BinaryDataNotification::StringFoundCallback(void* ctxt, BNBinaryView* object, BNStringType type, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -170,6 +197,9 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.dataMetadataUpdated = DataMetadataUpdatedCallback;
+	m_callbacks.symbolAdded = SymbolAddedCallback;
+	m_callbacks.symbolUpdated = SymbolUpdatedCallback;
+	m_callbacks.symbolRemoved = SymbolRemovedCallback;
 	m_callbacks.stringFound = StringFoundCallback;
 	m_callbacks.stringRemoved = StringRemovedCallback;
 	m_callbacks.typeDefined = TypeDefinedCallback;

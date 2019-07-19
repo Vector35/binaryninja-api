@@ -72,15 +72,22 @@ public:
 			return *this;
 		}
 
+		bool operator==(const NamedObject& other) const
+		{
+			return (getStart() == other.getStart()) && (getType() == other.getType());
+		}
+
+		bool operator!=(const NamedObject& other) const
+		{
+			return !((*this) == other);
+		}
+
 		bool operator<(const NamedObject& other) const
 		{
 			if (getStart() < other.getStart())
 				return true;
-			if (getStart() == other.getStart() &&
-				(sym->GetType() == FunctionSymbol && other.sym->GetType() == FunctionSymbol))
-			{
-				return archName < other.archName;
-			}
+			if ((*this) == other)
+				return getType() < other.getType();
 			return false;
 		}
 
@@ -88,15 +95,12 @@ public:
 		{
 			if (getStart() > other.getStart())
 				return true;
-			if (getStart() == other.getStart() &&
-				(sym->GetType() == FunctionSymbol && other.sym->GetType() == FunctionSymbol))
-			{
-				return archName > other.archName;
-			}
+			if ((*this) == other)
+				return getType() > other.getType();
 			return false;
 		}
 
-		bool isFunc() const { return sym->GetType() == FunctionSymbol; }
+		bool isFunc() const { return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol); }
 		uint64_t getStart() const { return sym->GetAddress(); }
 		std::string getName() const {
 			if (named)
@@ -111,9 +115,13 @@ public:
 private:
 	enum SymbolListUpdateType
 	{
-		AddedToSymbolList,
-		RemovedFromSymbolList,
-		UpdatedInSymbolList
+		UnnamedFunctionAddedToSymbolList,
+		UnnamedFunctionRemovedFromSymbolList,
+		UnnamedDataAddedToSymbolList,
+		UnnamedDataRemovedFromSymbolList,
+		SymbolAddedToSymbolList,
+		SymbolUpdatedInSymbolList,
+		SymbolRemovedFromSymbolList
 	};
 
 	struct SymbolListUpdateEvent
@@ -158,9 +166,10 @@ private:
 	std::vector<NamedObject> m_backgroundUpdateFuncs;
 
 	bool m_showImports;
-	bool m_showExports;
-	bool m_showFunctions;
-	bool m_showDataVars;
+	bool m_showExportedDataVars;
+	bool m_showExportedFunctions;
+	bool m_showLocalFunctions;
+	bool m_showLocalDataVars;
 	SortType m_sortType;
 
 	// static bool allSymbolComparison(const NamedObject& a, const NamedObject& b);
@@ -196,10 +205,12 @@ public:
 
 	virtual void OnAnalysisFunctionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
-	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnDataVariableAdded(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
-	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
+
+	virtual void OnSymbolAdded(BinaryNinja::BinaryView* data, BinaryNinja::Symbol* sym) override;
+	virtual void OnSymbolUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Symbol* sym) override;
+	virtual void OnSymbolRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Symbol* sym) override;
 
 	void updateFonts();
 	bool isValidType(const NamedObject& rec);
@@ -214,40 +225,23 @@ public:
 	bool hasSymbols() const;
 
 	void setFilter(const std::string& filter);
-	void showExports(bool show) { m_showExports = show; }
+	void showExportedDataVars(bool show) { m_showExportedDataVars = show; }
+	void showExportedFunctions(bool show) { m_showExportedFunctions = show; }
+	void showLocalFunctions(bool show) { m_showLocalFunctions = show; }
+	void showLocalDataVars(bool show) { m_showLocalDataVars = show; }
 	void showImports(bool show) { m_showImports = show; }
-	void showFunctions(bool show) { m_showFunctions = show; }
-	void showDataVars(bool show) { m_showDataVars = show; }
 
-	void toggleExports() {
-		m_showExports = !m_showExports;
-		if (m_showExports)
-		{
-			m_showImports = false;
-			m_showFunctions = true;
-			m_showDataVars = true;
-		}
-	}
-	void toggleImports() {
-		m_showImports = !m_showImports;
-		if (m_showImports && m_showExports)
-			m_showExports = false;
-	}
-	void toggleFunctions() {
-		m_showFunctions = !m_showFunctions;
-		if (m_showFunctions && m_showExports)
-			m_showExports = false;
-	}
-	void toggleDataVars() {
-		m_showDataVars = !m_showDataVars;
-		if (m_showDataVars && m_showExports)
-			m_showExports = false;
-	}
+	void toggleExportedDataVars() { m_showExportedDataVars = !m_showExportedDataVars; }
+	void toggleExportedFunctions() { m_showExportedFunctions = !m_showExportedFunctions; }
+	void toggleLocalFunctions() { m_showLocalFunctions = !m_showLocalFunctions; }
+	void toggleLocalDataVars() { m_showLocalDataVars = !m_showLocalDataVars; }
+	void toggleImports() { m_showImports = !m_showImports; }
 
-	bool getShowExports() const  { return m_showExports; }
+	bool getShowExportedFunctions() const  { return m_showExportedFunctions; }
+	bool getShowExportedDataVars() const  { return m_showExportedDataVars; }
+	bool getShowLocalFunctions() const  { return m_showLocalFunctions; }
+	bool getShowLocalDataVars() const  { return m_showLocalDataVars; }
 	bool getShowImports() const  { return m_showImports; }
-	bool getShowFunctions() const  { return m_showFunctions; }
-	bool getShowDataVars() const  { return m_showDataVars; }
 
 	void sortSymbols(SortType type);
 	void setSortType(SortType type) { m_sortType = type; }
@@ -274,10 +268,11 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	Menu m_menu;
 	ContextMenuManager m_contextMenuManager;
 
-	bool m_showExports;
+	bool m_showExportedFunctions;
+	bool m_showExportedDataVars;
+	bool m_showLocalFunctions;
+	bool m_showLocalDataVars;
 	bool m_showImports;
-	bool m_showFunctions;
-	bool m_showDataVars;
 	std::string m_filter;
 	SymbolListModel::SortType m_sortType;
 	SymbolListModel::NamedObject m_index;
@@ -303,15 +298,17 @@ public:
 	virtual bool canCopy();
 	void find();
 
-	bool getShowExports() const { return m_list->getShowExports(); }
+	bool getShowExportedFunctions() const { return m_list->getShowExportedFunctions(); }
+	bool getShowExportedDataVars() const { return m_list->getShowExportedDataVars(); }
+	bool getShowLocalFunctions() const { return m_list->getShowLocalFunctions(); }
+	bool getShowLocalDataVars() const { return m_list->getShowLocalDataVars(); }
 	bool getShowImports() const { return m_list->getShowImports(); }
-	bool getShowFunctions() const { return m_list->getShowFunctions(); }
-	bool getShowDataVars() const { return m_list->getShowDataVars(); }
 
-	void toggleExports() { m_list->toggleExports(); }
+	void toggleExportedFunctions() { m_list->toggleExportedFunctions(); }
+	void toggleExportedDataVars() { m_list->toggleExportedDataVars(); }
+	void toggleLocalFunctions() { m_list->toggleLocalFunctions(); }
+	void toggleLocalDataVars() { m_list->toggleLocalDataVars(); }
 	void toggleImports() { m_list->toggleImports(); }
-	void toggleFunctions() { m_list->toggleFunctions(); }
-	void toggleDataVars() { m_list->toggleDataVars(); }
 
 protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;

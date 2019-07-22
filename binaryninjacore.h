@@ -2037,6 +2037,8 @@ extern "C"
 
 	// Plugin initialization
 	BINARYNINJACOREAPI void BNInitCorePlugins(void);
+	BINARYNINJACOREAPI void BNDisablePlugins(void);
+	BINARYNINJACOREAPI bool BNIsPluginsEnabled(void);
 	BINARYNINJACOREAPI void BNInitUserPlugins(void);
 	BINARYNINJACOREAPI void BNInitRepoPlugins(void);
 

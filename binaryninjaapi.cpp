@@ -30,6 +30,18 @@ struct WorkerThreadActionContext
 };
 
 
+void BinaryNinja::DisablePlugins()
+{
+	BNDisablePlugins();
+}
+
+
+bool BinaryNinja::IsPluginsEnabled()
+{
+	return BNIsPluginsEnabled();
+}
+
+
 void BinaryNinja::InitCorePlugins()
 {
 	BNInitCorePlugins();

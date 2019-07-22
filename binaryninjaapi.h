@@ -614,6 +614,8 @@ namespace BinaryNinja
 	                      std::string& output, std::string& errors,
 	                      const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
+	void DisablePlugins();
+	bool IsPluginsEnabled();
 	void InitCorePlugins();
 	void InitUserPlugins();
 	void InitRepoPlugins();

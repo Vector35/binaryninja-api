@@ -22,6 +22,10 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
 
+## Disabling Plugins
+
+Disabling plugins can be a quick way to diagnose whether some unexpected behavior is casued by Binary Ninja itself or a plugin. Simply launch the process with the extra command-lien option `-p` to disable all user plugins at load time.
+
 ## Plugin Troubleshooting
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.

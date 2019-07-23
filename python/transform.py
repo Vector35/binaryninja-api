@@ -246,10 +246,11 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		output_buf = databuffer.DataBuffer()
 		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
+		data = []
 		for i in range(0, len(keys)):
-			data = databuffer.DataBuffer(params[keys[i]])
+			data.append(databuffer.DataBuffer(params[keys[i]]))
 			param_buf[i].name = keys[i]
-			param_buf[i].value = data.handle
+			param_buf[i].value = data[i].handle
 		if not core.BNDecode(self.handle, input_buf.handle, output_buf.handle, param_buf, len(keys)):
 			return None
 		return str(output_buf)
@@ -261,10 +262,11 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		output_buf = databuffer.DataBuffer()
 		keys = list(params.keys())
 		param_buf = (core.BNTransformParameter * len(keys))()
+		data = []
 		for i in range(0, len(keys)):
-			data = databuffer.DataBuffer(params[keys[i]])
+			data.append(databuffer.DataBuffer(params[keys[i]]))
 			param_buf[i].name = keys[i]
-			param_buf[i].value = data.handle
+			param_buf[i].value = data[i].handle
 		if not core.BNEncode(self.handle, input_buf.handle, output_buf.handle, param_buf, len(keys)):
 			return None
 		return str(output_buf)

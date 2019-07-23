@@ -294,6 +294,11 @@ class BasicBlock(object):
 		return core.BNBasicBlockCanExit(self.handle)
 
 	@property
+	def has_invalid_instructions(self):
+		"""Whether basic block has any invalid instructions (read-only)"""
+		return core.BNBasicBlockHasInvalidInstructions(self.handle)
+
+	@property
 	def dominators(self):
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()

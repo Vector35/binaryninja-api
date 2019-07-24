@@ -1741,6 +1741,7 @@ extern "C"
 		void (*setCurrentBasicBlock)(void* ctxt, BNBasicBlock* block);
 		void (*setCurrentAddress)(void* ctxt, uint64_t addr);
 		void (*setCurrentSelection)(void* ctxt, uint64_t begin, uint64_t end);
+		char* (*completeInput)(void* ctxt, const char* text, uint64_t state);
 	};
 
 	struct BNScriptingProviderCallbacks
@@ -3640,6 +3641,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNUnregisterScriptingInstanceOutputListener(BNScriptingInstance* instance,
 		BNScriptingOutputListener* callbacks);
 
+	BINARYNINJACOREAPI const char* BNGetScriptingInstanceDelimiters(BNScriptingInstance* instance);
+	BINARYNINJACOREAPI void BNSetScriptingInstanceDelimiters(BNScriptingInstance* instance, const char* delimiters);
+
 	BINARYNINJACOREAPI BNScriptingProviderInputReadyState BNGetScriptingInstanceInputReadyState(
 		BNScriptingInstance* instance);
 	BINARYNINJACOREAPI BNScriptingProviderExecuteResult BNExecuteScriptInput(BNScriptingInstance* instance,
@@ -3651,6 +3655,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentAddress(BNScriptingInstance* instance, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentSelection(BNScriptingInstance* instance,
 		uint64_t begin, uint64_t end);
+	BINARYNINJACOREAPI char* BNScriptingInstanceCompleteInput(BNScriptingInstance* instance, const char* text, uint64_t state);
 
 	// Main thread actions
 	BINARYNINJACOREAPI void BNRegisterMainThread(BNMainThreadCallbacks* callbacks);

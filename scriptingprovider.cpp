@@ -61,6 +61,7 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	cb.setCurrentBasicBlock = SetCurrentBasicBlockCallback;
 	cb.setCurrentAddress = SetCurrentAddressCallback;
 	cb.setCurrentSelection = SetCurrentSelectionCallback;
+	cb.completeInput = CompleteInputCallback;
 	AddRefForRegistration();
 	m_object = BNInitScriptingInstance(provider->GetObject(), &cb);
 }
@@ -128,6 +129,13 @@ void ScriptingInstance::SetCurrentSelectionCallback(void* ctxt, uint64_t begin, 
 }
 
 
+char* ScriptingInstance::CompleteInputCallback(void* ctxt, const char* text, uint64_t state)
+{
+	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	return BNAllocString(instance->CompleteInput(text, state).c_str());
+}
+
+
 void ScriptingInstance::DestroyInstance()
 {
 	ReleaseForRegistration();
@@ -160,6 +168,12 @@ void ScriptingInstance::SetCurrentAddress(uint64_t)
 
 void ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)
 {
+}
+
+
+std::string ScriptingInstance::CompleteInput(const std::string&, uint64_t)
+{
+	return "";
 }
 
 
@@ -196,6 +210,18 @@ void ScriptingInstance::RegisterOutputListener(ScriptingOutputListener* listener
 void ScriptingInstance::UnregisterOutputListener(ScriptingOutputListener* listener)
 {
 	BNUnregisterScriptingInstanceOutputListener(m_object, &listener->GetCallbacks());
+}
+
+
+std::string ScriptingInstance::GetDelimiters()
+{
+	return BNGetScriptingInstanceDelimiters(m_object);
+}
+
+
+void ScriptingInstance::SetDelimiters(const std::string& delimiters)
+{
+	BNSetScriptingInstanceDelimiters(m_object, delimiters.c_str());
 }
 
 
@@ -243,6 +269,15 @@ void CoreScriptingInstance::SetCurrentAddress(uint64_t addr)
 void CoreScriptingInstance::SetCurrentSelection(uint64_t begin, uint64_t end)
 {
 	BNSetScriptingInstanceCurrentSelection(m_object, begin, end);
+}
+
+
+std::string CoreScriptingInstance::CompleteInput(const std::string& text, uint64_t state)
+{
+	char* result = BNScriptingInstanceCompleteInput(m_object, text.c_str(), state);
+	std::string ret = result;
+	BNFreeString(result);
+	return ret;
 }
 
 

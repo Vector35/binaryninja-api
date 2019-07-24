@@ -4099,6 +4099,7 @@ namespace BinaryNinja
 		static void SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block);
 		static void SetCurrentAddressCallback(void* ctxt, uint64_t addr);
 		static void SetCurrentSelectionCallback(void* ctxt, uint64_t begin, uint64_t end);
+		static char* CompleteInputCallback(void* ctxt, const char* text, uint64_t state);
 
 		virtual void DestroyInstance();
 
@@ -4110,6 +4111,7 @@ namespace BinaryNinja
 		virtual void SetCurrentBasicBlock(BasicBlock* block);
 		virtual void SetCurrentAddress(uint64_t addr);
 		virtual void SetCurrentSelection(uint64_t begin, uint64_t end);
+		virtual std::string CompleteInput(const std::string& text, uint64_t state);
 
 		void Output(const std::string& text);
 		void Error(const std::string& text);
@@ -4118,6 +4120,9 @@ namespace BinaryNinja
 
 		void RegisterOutputListener(ScriptingOutputListener* listener);
 		void UnregisterOutputListener(ScriptingOutputListener* listener);
+
+		std::string GetDelimiters();
+		void SetDelimiters(const std::string& delimiters);
 	};
 
 	class CoreScriptingInstance: public ScriptingInstance
@@ -4133,6 +4138,7 @@ namespace BinaryNinja
 		virtual void SetCurrentBasicBlock(BasicBlock* block) override;
 		virtual void SetCurrentAddress(uint64_t addr) override;
 		virtual void SetCurrentSelection(uint64_t begin, uint64_t end) override;
+		virtual std::string CompleteInput(const std::string& text, uint64_t state) override;
 	};
 
 	class ScriptingProvider: public StaticCoreRefCountObject<BNScriptingProvider>

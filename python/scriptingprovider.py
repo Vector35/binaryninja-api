@@ -25,6 +25,8 @@ import ctypes
 import threading
 import abc
 import sys
+import rlcompleter
+import re
 
 # Binary Ninja components
 import binaryninja
@@ -113,7 +115,10 @@ class ScriptingInstance(object):
 			self._cb.setCurrentBasicBlock = self._cb.setCurrentBasicBlock.__class__(self._set_current_basic_block)
 			self._cb.setCurrentAddress = self._cb.setCurrentAddress.__class__(self._set_current_address)
 			self._cb.setCurrentSelection = self._cb.setCurrentSelection.__class__(self._set_current_selection)
+			self._cb.completeInput = self._cb.completeInput.__class__(self._complete_input)
+			self._cb.completeInput.restype = ctypes.c_void_p
 			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
+			self.delimiters = ' \t\n`~!@#$%^&*()-=+[{]}\\|;:\'",<>/?'
 		else:
 			self.handle = core.handle_of_type(handle, core.BNScriptingInstance)
 		self.listeners = []
@@ -189,6 +194,15 @@ class ScriptingInstance(object):
 		except:
 			log.log_error(traceback.format_exc())
 
+	def _complete_input(self, ctxt, text, state):
+		try:
+			if not isinstance(text, str):
+				text = text.decode("charmap")
+			return ctypes.cast(binaryninja.cstr(self.perform_complete_input(text, state)), ctypes.c_void_p).value
+		except:
+			log.log_error(traceback.format_exc())
+			return ctypes.cast(binaryninja.cstr(""), ctypes.c_void_p).value
+
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
 		raise NotImplementedError
@@ -219,6 +233,10 @@ class ScriptingInstance(object):
 
 	@abc.abstractmethod
 	def perform_set_current_selection(self, begin, end):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def perform_complete_input(self, text, state):
 		raise NotImplementedError
 
 	@property
@@ -262,6 +280,9 @@ class ScriptingInstance(object):
 	def set_current_selection(self, begin, end):
 		core.BNSetScriptingInstanceCurrentSelection(self.handle, begin, end)
 
+	def complete_input(self, text, state):
+		return core.BNScriptingInstanceCompleteInput(self.handlue, text, state)
+
 	def register_output_listener(self, listener):
 		listener._register(self.handle)
 		self.listeners.append(listener)
@@ -270,6 +291,14 @@ class ScriptingInstance(object):
 		if listener in self.listeners:
 			listener._unregister(self.handle)
 			self.listeners.remove(listener)
+	
+	@property
+	def delimiters(self):
+		return core.BNGetScriptingInstanceDelimiters(self.handle)
+
+	@delimiters.setter
+	def delimiters(self, value):
+		core.BNSetScriptingInstanceDelimiters(self.handle, value)
 
 
 class _ScriptingProviderMetaclass(type):
@@ -507,6 +536,8 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.code = None
 			self.input = ""
 
+			self.completer = rlcompleter.Completer(namespace = self.locals)
+
 			self.interpreter.push("from binaryninja import *")
 
 		def execute(self, code):
@@ -549,26 +580,7 @@ class PythonScriptingInstance(ScriptingInstance):
 
 					PythonScriptingInstance._interpreter.value = self
 					try:
-						self.active_view = self.current_view
-						self.active_func = self.current_func
-						self.active_block = self.current_block
-						self.active_addr = self.current_addr
-						self.active_selection_begin = self.current_selection_begin
-						self.active_selection_end = self.current_selection_end
-
-						self.locals["current_view"] = self.active_view
-						self.locals["bv"] = self.active_view
-						self.locals["current_function"] = self.active_func
-						self.locals["current_basic_block"] = self.active_block
-						self.locals["current_address"] = self.active_addr
-						self.locals["here"] = self.active_addr
-						self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
-						if self.active_func is None:
-							self.locals["current_llil"] = None
-							self.locals["current_mlil"] = None
-						else:
-							self.locals["current_llil"] = self.active_func.llil
-							self.locals["current_mlil"] = self.active_func.mlil
+						self.update_locals()
 
 						for line in code.split(b'\n'):
 							self.interpreter.push(line.decode('charmap'))
@@ -594,6 +606,29 @@ class PythonScriptingInstance(ScriptingInstance):
 					finally:
 						PythonScriptingInstance._interpreter.value = None
 						self.instance.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
+
+		def update_locals(self):
+			self.active_view = self.current_view
+			self.active_func = self.current_func
+			self.active_block = self.current_block
+			self.active_addr = self.current_addr
+			self.active_selection_begin = self.current_selection_begin
+			self.active_selection_end = self.current_selection_end
+
+			self.locals["current_view"] = self.active_view
+			self.locals["bv"] = self.active_view
+			self.locals["current_function"] = self.active_func
+			self.locals["current_basic_block"] = self.active_block
+			self.locals["current_address"] = self.active_addr
+			self.locals["here"] = self.active_addr
+			self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
+			if self.active_func is None:
+				self.locals["current_llil"] = None
+				self.locals["current_mlil"] = None
+			else:
+				self.locals["current_llil"] = self.active_func.llil
+				self.locals["current_mlil"] = self.active_func.mlil
+
 
 		def get_selected_data(self):
 			if self.active_view is None:
@@ -680,6 +715,13 @@ class PythonScriptingInstance(ScriptingInstance):
 		self.interpreter.current_selection_begin = begin
 		self.interpreter.current_selection_end = end
 
+	@abc.abstractmethod
+	def perform_complete_input(self, text, state):
+		self.interpreter.update_locals()
+		result = self.interpreter.completer.complete(text, state)
+		if result is None:
+			return ""
+		return result
 
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"

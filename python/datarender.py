@@ -54,18 +54,17 @@ class DataRenderer(object):
 		class BarDataRenderer(DataRenderer):
 			def __init__(self):
 				DataRenderer.__init__(self)
-		
 			def perform_is_valid_for_data(self, ctxt, view, addr, type, context):
 				return DataRenderer.is_type_of_struct_name(type, "BAR", context)
-		
 			def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context):
 				prefix.append(InstructionTextToken(InstructionTextTokenType.TextToken, "I'm in ur BAR"))
 				return [DisassemblyTextLine(prefix, addr)]
-
 			def __del__(self):
 				pass
 		
 		BarDataRenderer().register_type_specific()
+
+	Note that the formatting is sub-optimal to work around an issue with Sphinx and reStructured text
 	"""
 	_registered_renderers = []
 

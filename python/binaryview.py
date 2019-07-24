@@ -2739,10 +2739,14 @@ class BinaryView(object):
 
 	def get_functions_at(self, addr):
 		"""
-		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid plat) at the given
-		virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be multiple
-		functions defined from different architectures at the same location. This API allows you to query all of valid
-		platforms.
+
+		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid platform) that start at the
+                given virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be
+                multiple functions defined from different architectures at the same location. This API allows you to query all
+                of valid platforms.
+
+                You may also be interested in :func:`get_functions_containing` which is useful for requesting all function
+                that contain a given address
 
 		:param int addr: virtual address of the desired Function object list.
 		:return: a list of binaryninja.Function objects defined at the provided virtual address

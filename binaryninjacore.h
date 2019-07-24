@@ -2698,9 +2698,11 @@ extern "C"
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererInstructionAnnotations(
 		BNDisassemblyTextRenderer* renderer, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererInstructionText(BNDisassemblyTextRenderer* renderer,
-		uint64_t addr, size_t* len, BNInstructionTextToken** result, size_t* count, uint64_t* displayAddr);
+		uint64_t addr, size_t* len, BNDisassemblyTextLine** result, size_t* count);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererLines(BNDisassemblyTextRenderer* renderer,
 		uint64_t addr, size_t* len, BNDisassemblyTextLine** result, size_t* count);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNPostProcessDisassemblyTextRendererLines(BNDisassemblyTextRenderer* renderer,
+		uint64_t addr, size_t len, BNDisassemblyTextLine* inLines, size_t inCount, size_t* outCount);
 	BINARYNINJACOREAPI void BNResetDisassemblyTextRendererDeduplicatedComments(BNDisassemblyTextRenderer* renderer);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererSymbolTokens(BNDisassemblyTextRenderer* renderer, uint64_t addr,
 		size_t size, size_t operand, BNInstructionTextToken** result, size_t* count);

@@ -4520,8 +4520,9 @@ namespace BinaryNinja
 		virtual bool HasDataFlow() const;
 
 		virtual void GetInstructionAnnotations(std::vector<InstructionTextToken>& tokens, uint64_t addr);
-		virtual bool GetInstructionText(uint64_t addr, size_t& len,
-			std::vector<InstructionTextToken>& tokens, uint64_t& displayAddr);
+		virtual bool GetInstructionText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
+		std::vector<DisassemblyTextLine> PostProcessInstructionTextLines(uint64_t addr,
+			size_t len, const std::vector<DisassemblyTextLine>& lines);
 
 		virtual bool GetDisassemblyText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		void ResetDeduplicatedComments();

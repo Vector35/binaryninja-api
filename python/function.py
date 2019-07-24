@@ -2718,13 +2718,22 @@ class DisassemblyTextRenderer(object):
 	def get_instruction_text(self, addr):
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
-		display_addr = ctypes.c_ulonglong()
-		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if not core.BNGetDisassemblyTextRendererInstructionText(self.handle, addr, length, tokens, count, display_addr):
-			return None, 0, 0
-		result = InstructionTextToken.get_instruction_lines(tokens, count.value)
-		core.BNFreeInstructionText(tokens, count.value)
-		return result, length.value, display_addr.value
+		lines = ctypes.POINTER(core.BNDisassemblyTextLine)()
+		if not core.BNGetDisassemblyTextRendererInstructionText(self.handle, addr, length, lines, count):
+			return None, 0
+		il_function = self.il_function
+		result = []
+		for i in range(0, count.value):
+			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and (il_function is not None):
+				il_instr = il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
+			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
+			tokens = InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
+			result.append(DisassemblyTextLine(tokens, addr, il_instr, color))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
+		return (result, length.value)
 
 	def get_disassembly_text(self, addr):
 		count = ctypes.c_ulonglong()
@@ -2747,6 +2756,52 @@ class DisassemblyTextRenderer(object):
 			result.append(DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return (result, length.value)
+
+	def post_process_lines(self, addr, length, in_lines):
+		if isinstance(in_lines, str):
+			in_lines = in_lines.split('\n')
+		line_buf = (core.BNDisassemblyTextLine * len(in_lines))()
+		for i in range(0, len(in_lines)):
+			line = in_lines[i]
+			if isinstance(line, str):
+				line = DisassemblyTextLine([InstructionTextToken(InstructionTextTokenType.TextToken, line)])
+			if not isinstance(line, DisassemblyTextLine):
+				line = DisassemblyTextLine(line)
+			if line.address is None:
+				if len(line.tokens) > 0:
+					line_buf[i].addr = line.tokens[0].address
+				else:
+					line_buf[i].addr = 0
+			else:
+				line_buf[i].addr = line.address
+			if line.il_instruction is not None:
+				line_buf[i].instrIndex = line.il_instruction.instr_index
+			else:
+				line_buf[i].instrIndex = 0xffffffffffffffff
+			color = line.highlight
+			if not isinstance(color, HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+				raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
+			if isinstance(color, HighlightStandardColor):
+				color = highlight.HighlightColor(color)
+			line_buf[i].highlight = color._get_core_struct()
+			line_buf[i].count = len(line.tokens)
+			line_buf[i].tokens = InstructionTextToken.get_instruction_lines(line.tokens)
+		count = ctypes.c_ulonglong()
+		lines = ctypes.POINTER(core.BNDisassemblyTextLine)()
+		lines = core.BNPostProcessDisassemblyTextRendererLines(self.handle, addr, length, line_buf, len(in_lines), count)
+		il_function = self.il_function
+		result = []
+		for i in range(0, count.value):
+			addr = lines[i].addr
+			if (lines[i].instrIndex != 0xffffffffffffffff) and (il_function is not None):
+				il_instr = il_function[lines[i].instrIndex]
+			else:
+				il_instr = None
+			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
+			tokens = InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
+			result.append(DisassemblyTextLine(tokens, addr, il_instr, color))
+		core.BNFreeDisassemblyTextLines(lines, count.value)
+		return result
 
 	def reset_deduplicated_comments(self):
 		core.BNResetDisassemblyTextRendererDeduplicatedComments(self.handle)

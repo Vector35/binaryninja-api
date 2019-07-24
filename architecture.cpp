@@ -2252,14 +2252,59 @@ void DisassemblyTextRenderer::GetInstructionAnnotations(vector<InstructionTextTo
 
 
 bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
-	vector<InstructionTextToken>& tokens, uint64_t& displayAddr)
+	vector<DisassemblyTextLine>& lines)
 {
-	BNInstructionTextToken* outTokens = nullptr;
+	BNDisassemblyTextLine* result = nullptr;
 	size_t count = 0;
-	if (!BNGetDisassemblyTextRendererInstructionText(m_object, addr, &len, &outTokens, &count, &displayAddr))
+	if (!BNGetDisassemblyTextRendererInstructionText(m_object, addr, &len, &result, &count))
 		return false;
-	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(outTokens, count);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = result[i].addr;
+		line.instrIndex = result[i].instrIndex;
+		line.highlight = result[i].highlight;
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		lines.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(result, count);
 	return true;
+}
+
+
+vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextLines(uint64_t addr,
+	size_t len, const vector<DisassemblyTextLine>& lines)
+{
+	BNDisassemblyTextLine* inLines = new BNDisassemblyTextLine[lines.size()];
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		inLines[i].addr = lines[i].addr;
+		inLines[i].instrIndex = lines[i].instrIndex;
+		inLines[i].highlight = lines[i].highlight;
+		inLines[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
+		inLines[i].count = lines[i].tokens.size();
+	}
+
+	BNDisassemblyTextLine* result = nullptr;
+	size_t count = 0;
+	result = BNPostProcessDisassemblyTextRendererLines(m_object, addr, len, inLines, lines.size(), &count);
+	BNFreeDisassemblyTextLines(inLines, lines.size());
+
+	vector<DisassemblyTextLine> outLines;
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = result[i].addr;
+		line.instrIndex = result[i].instrIndex;
+		line.highlight = result[i].highlight;
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		outLines.push_back(line);
+	}
+
+	BNFreeDisassemblyTextLines(result, count);
+	return outLines;
 }
 
 

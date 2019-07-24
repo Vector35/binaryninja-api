@@ -114,7 +114,7 @@ SectionsWidget::SectionsWidget(QWidget* parent, BinaryViewRef data): QWidget(par
 		if (section->GetSemantics() == ReadOnlyCodeSectionSemantics)
 			semantics = "Code";
 		else if (section->GetSemantics() == ReadOnlyDataSectionSemantics)
-			semantics = "Ready-only Data";
+			semantics = "Read-only Data";
 		else if (section->GetSemantics() == ReadWriteDataSectionSemantics)
 			semantics = "Writable Data";
 

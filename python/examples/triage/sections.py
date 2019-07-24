@@ -112,7 +112,7 @@ class SectionsWidget(QWidget):
 			if section.semantics == SectionSemantics.ReadOnlyCodeSectionSemantics:
 				semantics = "Code"
 			elif section.semantics == SectionSemantics.ReadOnlyDataSectionSemantics:
-				semantics = "Ready-only Data"
+				semantics = "Read-only Data"
 			elif section.semantics == SectionSemantics.ReadWriteDataSectionSemantics:
 				semantics = "Writable Data"
 

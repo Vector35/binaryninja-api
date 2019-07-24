@@ -625,9 +625,11 @@ class PythonScriptingInstance(ScriptingInstance):
 			if self.active_func is None:
 				self.locals["current_llil"] = None
 				self.locals["current_mlil"] = None
+				self.locals["current_hlil"] = None
 			else:
 				self.locals["current_llil"] = self.active_func.llil
 				self.locals["current_mlil"] = self.active_func.mlil
+				self.locals["current_hlil"] = self.active_func.hlil
 
 
 		def get_selected_data(self):

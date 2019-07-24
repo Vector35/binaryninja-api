@@ -2228,6 +2228,15 @@ Ref<MediumLevelILFunction> DisassemblyTextRenderer::GetMediumLevelILFunction() c
 }
 
 
+Ref<HighLevelILFunction> DisassemblyTextRenderer::GetHighLevelILFunction() const
+{
+	BNHighLevelILFunction* result = BNGetDisassemblyTextRendererHighLevelILFunction(m_object);
+	if (result)
+		return new HighLevelILFunction(result);
+	return nullptr;
+}
+
+
 void DisassemblyTextRenderer::SetBasicBlock(BasicBlock* block)
 {
 	BNSetDisassemblyTextRendererBasicBlock(m_object, block ? block->GetObject() : nullptr);

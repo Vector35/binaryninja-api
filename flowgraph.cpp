@@ -329,6 +329,12 @@ bool FlowGraph::IsMediumLevelILGraph() const
 }
 
 
+bool FlowGraph::IsHighLevelILGraph() const
+{
+	return BNIsHighLevelILFlowGraph(m_object);
+}
+
+
 Ref<LowLevelILFunction> FlowGraph::GetLowLevelILFunction() const
 {
 	BNLowLevelILFunction* func = BNGetFlowGraphLowLevelILFunction(m_object);
@@ -347,6 +353,15 @@ Ref<MediumLevelILFunction> FlowGraph::GetMediumLevelILFunction() const
 }
 
 
+Ref<HighLevelILFunction> FlowGraph::GetHighLevelILFunction() const
+{
+	BNHighLevelILFunction* func = BNGetFlowGraphHighLevelILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
 void FlowGraph::SetLowLevelILFunction(LowLevelILFunction* func)
 {
 	BNSetFlowGraphLowLevelILFunction(m_object, func ? func->GetObject() : nullptr);
@@ -356,6 +371,12 @@ void FlowGraph::SetLowLevelILFunction(LowLevelILFunction* func)
 void FlowGraph::SetMediumLevelILFunction(MediumLevelILFunction* func)
 {
 	BNSetFlowGraphMediumLevelILFunction(m_object, func ? func->GetObject() : nullptr);
+}
+
+
+void FlowGraph::SetHighLevelILFunction(HighLevelILFunction* func)
+{
+	BNSetFlowGraphHighLevelILFunction(m_object, func ? func->GetObject() : nullptr);
 }
 
 

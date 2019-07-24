@@ -2927,6 +2927,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class FlowGraph;
 	class MediumLevelILFunction;
+	class HighLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
@@ -2986,6 +2987,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
+		Ref<HighLevelILFunction> GetHighLevelIL() const;
+		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
@@ -3261,10 +3264,13 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsILGraph() const;
 		bool IsLowLevelILGraph() const;
 		bool IsMediumLevelILGraph() const;
+		bool IsHighLevelILGraph() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 		void SetLowLevelILFunction(LowLevelILFunction* func);
 		void SetMediumLevelILFunction(MediumLevelILFunction* func);
+		void SetHighLevelILFunction(HighLevelILFunction* func);
 
 		void Show(const std::string& title);
 
@@ -3306,6 +3312,11 @@ __attribute__ ((format (printf, 1, 2)))
 		}
 
 		ILSourceLocation(const BNMediumLevelILInstruction& instr):
+			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
+		{
+		}
+
+		ILSourceLocation(const BNHighLevelILInstruction& instr):
 			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
 		{
 		}
@@ -4006,6 +4017,213 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
 
 		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
+	};
+
+	struct HighLevelILInstruction;
+
+	class HighLevelILFunction: public CoreRefCountObject<BNHighLevelILFunction,
+		BNNewHighLevelILFunctionReference, BNFreeHighLevelILFunction>
+	{
+	public:
+		HighLevelILFunction(Architecture* arch, Function* func = nullptr);
+		HighLevelILFunction(BNHighLevelILFunction* func);
+
+		Ref<Function> GetFunction() const;
+		Ref<Architecture> GetArchitecture() const;
+
+		uint64_t GetCurrentAddress() const;
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+
+		HighLevelILInstruction GetRootExpr();
+		void SetRootExpr(ExprId expr);
+		void SetRootExpr(const HighLevelILInstruction& expr);
+
+		ExprId AddExpr(BNHighLevelILOperation operation, size_t size,
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
+			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, const ILSourceLocation& loc,
+			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+
+		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Block(const std::vector<ExprId>& exprs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId If(ExprId condition, ExprId trueExpr, ExprId falseExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId While(ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Case(ExprId condition, ExprId expr, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Break(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Goto(size_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Label(size_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpack(const std::vector<ExprId>& output, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StructField(size_t size, ExprId src, uint64_t offset,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefField(size_t size, ExprId src, uint64_t offset,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Sub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SubWithBorrow(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId And(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Or(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Xor(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ShiftLeft(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LogicalShiftRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArithShiftRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeft(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Call(ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareNotEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TestBit(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddOverflow(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(uint32_t intrinsic, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Floor(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Ceil(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddOperandList(const std::vector<ExprId> operands);
+		ExprId AddSSAVariableList(const std::vector<SSAVariable>& vars);
+
+		BNHighLevelILInstruction GetRawExpr(size_t i) const;
+		HighLevelILInstruction operator[](size_t i);
+		HighLevelILInstruction GetInstruction(size_t i);
+		HighLevelILInstruction GetExpr(size_t i);
+		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionForExpr(size_t expr) const;
+		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
+
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		size_t GetMediumLevelILExprIndex(size_t expr) const;
+
+		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
+		void ReplaceExpr(size_t expr, size_t newExpr);
+
+		void Finalize();
+
+		std::vector<DisassemblyTextLine> GetExprText(ExprId expr, bool asFullAst = true);
+		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr, bool asFullAst = true);
+
+		void VisitAllExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func);
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
@@ -4919,6 +5137,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Function> GetFunction() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 
 		Ref<BasicBlock> GetBasicBlock() const;
 		Ref<Architecture> GetArchitecture() const;
@@ -5000,6 +5219,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<LinearViewObject> CreateMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

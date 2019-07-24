@@ -45,6 +45,7 @@ from binaryninja.function import *
 from binaryninja.log import *
 from binaryninja.lowlevelil import *
 from binaryninja.mediumlevelil import *
+from binaryninja.highlevelil import *
 from binaryninja.types import *
 from binaryninja.typelibrary import *
 from binaryninja.functionrecognizer import *

@@ -253,3 +253,10 @@ Ref<LinearViewObject> LinearViewObject::CreateMappedMediumLevelILSSAForm(BinaryV
 	return new LinearViewObject(BNCreateLinearViewMappedMediumLevelILSSAForm(view->GetObject(),
 		settings ? settings->GetObject() : nullptr));
 }
+
+
+Ref<LinearViewObject> LinearViewObject::CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewHighLevelIL(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}

@@ -545,6 +545,18 @@ Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
 }
 
 
+Ref<HighLevelILFunction> Function::GetHighLevelIL() const
+{
+	return new HighLevelILFunction(BNGetFunctionHighLevelIL(m_object));
+}
+
+
+Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
+{
+	return new HighLevelILFunction(BNGetFunctionHighLevelILIfAvailable(m_object));
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_object));

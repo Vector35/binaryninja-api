@@ -1217,7 +1217,10 @@ class Function(object):
 	@property
 	def llil_if_available(self):
 		"""returns LowLevelILFunction used to represent Function low level IL, or None if not loaded (read-only)"""
-		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelILIfAvailable(self.handle), self)
+		result = core.BNGetFunctionLowLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, result, self)
 
 	@property
 	def lifted_il(self):
@@ -1227,7 +1230,10 @@ class Function(object):
 	@property
 	def lifted_il_if_available(self):
 		"""returns LowLevelILFunction used to represent lifted IL, or None if not loaded (read-only)"""
-		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedILIfAvailable(self.handle), self)
+		result = core.BNGetFunctionLiftedILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, result, self)
 
 	@property
 	def medium_level_il(self):
@@ -1242,7 +1248,28 @@ class Function(object):
 	@property
 	def mlil_if_available(self):
 		"""Function medium level IL, or None if not loaded (read-only)"""
-		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelILIfAvailable(self.handle), self)
+		result = core.BNGetFunctionMediumLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, result, self)
+
+	@property
+	def high_level_il(self):
+		"""Deprecated property provided for compatibility. Use hlil instead."""
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, core.BNGetFunctionHighLevelIL(self.handle), self)
+
+	@property
+	def hlil(self):
+		"""Function high level IL (read-only)"""
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, core.BNGetFunctionHighLevelIL(self.handle), self)
+
+	@property
+	def hlil_if_available(self):
+		"""Function high level IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionHighLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, result, self)
 
 	@property
 	def function_type(self):
@@ -3004,6 +3031,8 @@ class DisassemblyTextRenderer(object):
 				self.handle = core.BNCreateLowLevelILDisassemblyTextRenderer(func.handle, settings_obj)
 			elif isinstance(func, binaryninja.mediumlevelil.MediumLevelILFunction):
 				self.handle = core.BNCreateMediumLevelILDisassemblyTextRenderer(func.handle, settings_obj)
+			elif isinstance(func, binaryninja.highlevelil.HighLevelILFunction):
+				self.handle = core.BNCreateHighLevelILDisassemblyTextRenderer(func.handle, settings_obj)
 			else:
 				raise TypeError("invalid function object")
 		else:
@@ -3024,6 +3053,9 @@ class DisassemblyTextRenderer(object):
 		mlil = core.BNGetDisassemblyTextRendererMediumLevelILFunction(self.handle)
 		if mlil:
 			return binaryninja.mediumlevelil.MediumLevelILFunction(handle = mlil)
+		hlil = core.BNGetDisassemblyTextRendererHighLevelILFunction(self.handle)
+		if hlil:
+			return binaryninja.highlevelil.HighLevelILFunction(handle = hlil)
 		return None
 
 	@property

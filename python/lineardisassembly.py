@@ -300,6 +300,12 @@ class LinearViewObject(object):
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, settings))
 
+	@classmethod
+	def hlil(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewHighLevelIL(view.handle, settings))
+
 
 class LinearViewCursor(object):
 	def __init__(self, root_object, handle = None):

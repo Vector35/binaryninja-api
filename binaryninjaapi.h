@@ -1517,6 +1517,7 @@ namespace BinaryNinja
 		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace=NameSpace());
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
+		std::vector<Ref<Symbol>> GetVisibleSymbols(const NameSpace& nameSpace=NameSpace());
 
 		void DefineAutoSymbol(Ref<Symbol> sym);
 		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);

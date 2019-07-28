@@ -33,15 +33,13 @@ public:
 	struct NamedObject
 	{
 		SymbolRef sym;
-		std::string archName;
 		mutable std::string name;
 		mutable bool named;
-		NamedObject() : sym(nullptr), archName(emptyArch), named(false) {}
-		NamedObject(SymbolRef s, std::string& a=emptyArch) : sym(s), archName(a), named(false) {}
+		NamedObject() : sym(nullptr), named(false) {}
+		NamedObject(SymbolRef s) : sym(s), named(false) {}
 		NamedObject(const NamedObject& n)
 		{
 			sym = n.sym;
-			archName = n.archName;
 			named = n.named;
 			name = n.name;
 		}
@@ -49,7 +47,6 @@ public:
 		NamedObject(const NamedObject&& n)
 		{
 			sym = std::move(n.sym);
-			archName = std::move(n.archName);
 			name = std::move(n.name);
 			named = n.named;
 		}
@@ -57,7 +54,6 @@ public:
 		NamedObject& operator=(const NamedObject&& n)
 		{
 			sym = std::move(n.sym);
-			archName = std::move(n.archName);
 			name = std::move(n.name);
 			named = n.named;
 			return *this;
@@ -66,7 +62,6 @@ public:
 		NamedObject& operator=(const NamedObject& n)
 		{
 			sym = n.sym;
-			archName = n.archName;
 			name = n.name;
 			named = n.named;
 			return *this;
@@ -116,9 +111,7 @@ private:
 	enum SymbolListUpdateType
 	{
 		UnnamedFunctionAddedToSymbolList,
-		UnnamedFunctionRemovedFromSymbolList,
 		UnnamedDataAddedToSymbolList,
-		UnnamedDataRemovedFromSymbolList,
 		SymbolAddedToSymbolList,
 		SymbolUpdatedInSymbolList,
 		SymbolRemovedFromSymbolList
@@ -153,7 +146,8 @@ private:
 	BinaryViewRef m_data;
 	std::set<std::string> m_archNames;
 	std::vector<NamedObject> m_allSyms;
-	std::vector<NamedObject> m_curSyms;
+	std::vector<NamedObject> m_curSymsBySortOrder;
+	std::vector<NamedObject> m_curSymsByAddress;
 	NamedObject m_currentSym;
 	std::string m_filter;
 
@@ -247,6 +241,8 @@ public:
 	void setSortType(SortType type) { m_sortType = type; }
 	SortType getSortType() const { return m_sortType; }
 	NamedObject getCurrentSym() const { return m_currentSym; }
+
+	bool checkTriggerFullUpdate();
 
 Q_SIGNALS:
 	void afterListReset();

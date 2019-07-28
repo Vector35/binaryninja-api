@@ -1944,6 +1944,23 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsOfType(BNSymbolType type, uint64_t sta
 }
 
 
+std::vector<Ref<Symbol>> BinaryView::GetVisibleSymbols(const NameSpace& nameSpace)
+{
+	size_t count;
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetVisibleSymbols(m_object, &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
+
+	vector<Ref<Symbol>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
 void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 {
 	BNDefineAutoSymbol(m_object, sym->GetObject());

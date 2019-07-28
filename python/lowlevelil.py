@@ -863,13 +863,13 @@ class LowLevelILInstruction(object):
 	def ssa_form(self):
 		"""SSA form of expression (read-only)"""
 		return LowLevelILInstruction(self._function.ssa_form,
-			core.BNGetLowLevelILSSAExprIndex(self._function.handle, self.expr_index))
+			core.BNGetLowLevelILSSAExprIndex(self._function.handle, self.expr_index), self._instr_index)
 
 	@property
 	def non_ssa_form(self):
 		"""Non-SSA form of expression (read-only)"""
 		return LowLevelILInstruction(self._function.non_ssa_form,
-			core.BNGetLowLevelILNonSSAExprIndex(self._function.handle, self.expr_index))
+			core.BNGetLowLevelILNonSSAExprIndex(self._function.handle, self.expr_index), self._instr_index)
 
 	@property
 	def medium_level_il(self):

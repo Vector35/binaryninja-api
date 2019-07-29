@@ -22,6 +22,7 @@ from __future__ import absolute_import
 import threading
 import traceback
 import ctypes
+import numbers
 
 # Binary Ninja components
 import binaryninja
@@ -73,6 +74,11 @@ class RegisterValue(object):
 		self._is_constant = False
 		if value is None:
 			self._type = RegisterValueType.UndeterminedValue
+			self._value = None
+			self._arch = None
+			self._reg = None
+			self._is_constant = False
+			self._offset = None
 		else:
 			self._type = RegisterValueType(value.state)
 			if value.state == RegisterValueType.EntryValue:
@@ -92,34 +98,48 @@ class RegisterValue(object):
 
 	def __repr__(self):
 		if self._type == RegisterValueType.EntryValue:
-			return "<entry %s>" % self.reg
+			return "<entry %s>" % self._reg
 		if self._type == RegisterValueType.ConstantValue:
-			return "<const %#x>" % self.value
+			return "<const %#x>" % self._value
 		if self._type == RegisterValueType.ConstantPointerValue:
-			return "<const ptr %#x>" % self.value
+			return "<const ptr %#x>" % self._value
 		if self._type == RegisterValueType.StackFrameOffset:
-			return "<stack frame offset %#x>" % self.offset
+			return "<stack frame offset %#x>" % self._offset
 		if self._type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		if self._type == RegisterValueType.ImportedAddressValue:
-			return "<imported address from entry %#x>" % self.value
+			return "<imported address from entry %#x>" % self._value
 		return "<undetermined>"
+
+	def __eq__(self, other):
+			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, ImportedAddressValue, ReturnAddressValue] and isinstance(other, numbers.Integral):
+				return self._value == other
+			elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, ImportedAddressValue, ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
+				return self._value == other.value
+			elif self._type == RegisterValueType.EntryValue and hasattr(other, "type") and other.type == self._type:
+				return self._reg == other.reg
+			elif self._type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self._type:
+				return self._offset == other.offset
+			elif self._type == RegisterValueType.StackFrameOffset and isinstance(other, numbers.Integral):
+				return self._offset == other
+			else:
+				raise TypeError("'%s' is not valid for comparison to '%s'" % (other, self))
 
 	def _to_api_object(self):
 		result = core.BNRegisterValue()
-		result.state = self._type
-		result.value = 0
+		result.type = self._type
+		result._value = 0
 		if self._type == RegisterValueType.EntryValue:
-			if self.arch is not None:
-				result.value = self.arch.get_reg_index(self.reg)
+			if self._arch is not None:
+				result._value = self._arch.get_reg_index(self._reg)
 			else:
-				result.value = self.reg
+				result._value = self._reg
 		elif (self._type == RegisterValueType.ConstantValue) or (self._type == RegisterValueType.ConstantPointerValue):
-			result.value = self.value
+			result._value = self._value
 		elif self._type == RegisterValueType.StackFrameOffset:
-			result.value = self.offset
+			result._value = self._offset
 		elif self._type == RegisterValueType.ImportedAddressValue:
-			result.value = self.value
+			result._value = self._value
 		return result
 
 	@classmethod
@@ -129,126 +149,81 @@ class RegisterValue(object):
 	@classmethod
 	def entry_value(self, arch, reg):
 		result = RegisterValue()
-		result.type = RegisterValueType.EntryValue
-		result.arch = arch
-		result.reg = reg
+		result._type = RegisterValueType.EntryValue
+		result._arch = arch
+		result._reg = reg
 		return result
 
 	@classmethod
 	def constant(self, value):
 		result = RegisterValue()
-		result.type = RegisterValueType.ConstantValue
-		result.value = value
-		result.is_constant = True
+		result._type = RegisterValueType.ConstantValue
+		result._value = value
+		result._is_constant = True
 		return result
 
 	@classmethod
 	def constant_ptr(self, value):
 		result = RegisterValue()
-		result.type = RegisterValueType.ConstantPointerValue
-		result.value = value
-		result.is_constant = True
+		result._type = RegisterValueType.ConstantPointerValue
+		result._value = value
+		result._is_constant = True
 		return result
 
 	@classmethod
 	def stack_frame_offset(self, offset):
 		result = RegisterValue()
-		result.type = RegisterValueType.StackFrameOffset
-		result.offset = offset
+		result._type = RegisterValueType.StackFrameOffset
+		result._offset = offset
 		return result
 
 	@classmethod
 	def imported_address(self, value):
 		result = RegisterValue()
-		result.type = RegisterValueType.ImportedAddressValue
-		result.value = value
+		result._type = RegisterValueType.ImportedAddressValue
+		result._value = value
 		return result
 
 	@classmethod
 	def return_address(self):
 		result = RegisterValue()
-		result.type = RegisterValueType.ReturnAddressValue
+		result._type = RegisterValueType.ReturnAddressValue
 		return result
 
 	@property
 	def is_constant(self):
-		""" """
+		"""Boolean for whether the RegisterValue is known to be constant (read-only)"""
 		return self._is_constant
-
-	@is_constant.setter
-	def is_constant(self, value):
-		""" """
-		self._is_constant = value
 
 	@property
 	def type(self):
-		""" """
+		""":class:`~enums.RegisterValueType` (read-only)"""
 		return self._type
-
-	@type.setter
-	def type(self, value):
-		""" """
-		self._type = value
-
-	@property
-	def state(self):
-		""" """
-		return self._state
-
-	@state.setter
-	def state(self, value):
-		""" """
-		self._state = value
 
 	@property
 	def arch(self):
-		""" """
+		"""Architecture where it exists, None otherwise (read-only)"""
 		return self._arch
-
-	@arch.setter
-	def arch(self, value):
-		""" """
-		self._arch = value
 
 	@property
 	def reg(self):
-		""" """
+		"""Register where the Architecture exists, None otherwise (read-only)"""
 		return self._reg
-
-	@reg.setter
-	def reg(self, value):
-		""" """
-		self._reg = value
 
 	@property
 	def value(self):
-		""" """
+		"""Value where it exists, None otherwise (read-only)"""
 		return self._value
-
-	@value.setter
-	def value(self, value):
-		""" """
-		self._value = value
 
 	@property
 	def offset(self):
-		""" """
+		"""Offset where it exists, None otherwise (read-only)"""
 		return self._offset
-
-	@offset.setter
-	def offset(self, value):
-		""" """
-		self._offset = value
 
 	@property
 	def confidence(self):
-		""" """
+		"""Confidence where it exists, None otherwise (read-only)"""
 		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value):
-		""" """
-		self._confidence = value
 
 
 class ValueRange(object):
@@ -440,6 +415,14 @@ class PossibleValueSet(object):
 	def values(self, value):
 		""" """
 		self._values = value
+
+	def __eq__(self, other):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and isinstance(other, numbers.Integral):
+			return self.value == other
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and hasattr(other, 'type') and other.type == self.type:
+			return self.value == other.value
+		else:
+			return self == other
 
 
 class StackVariableReference(object):

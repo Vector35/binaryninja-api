@@ -69,6 +69,8 @@ Troubleshooting many Binary Ninja problems is helped by enabling debug logs and 
 
 And check `/tmp/bnlog.txt` when you're done. 
 
+Additionally, running a python plugin with an environment variable of `BN_DISABLE_USER_PLUGINS` will prevent the API from initializing user-plugins which is helpful for root cause analysis.
+
 ## Writing Plugins
 
 First, take a look at some of the [example] plugins, or some of the [community] plugins to get a feel for different APIs you might be interested in. Of course, the full [API] docs are online and available offline via the `Help`/`Open API Reference...`.

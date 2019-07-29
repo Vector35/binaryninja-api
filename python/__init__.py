@@ -163,7 +163,8 @@ def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
 		core.BNInitCorePlugins()
-		core.BNInitUserPlugins()
+		if not os.environ.get('BN_DISABLE_USER_PLUGINS'):
+			core.BNInitUserPlugins()
 		core.BNInitRepoPlugins()
 	if core.BNIsLicenseValidated():
 		_plugin_init = True
@@ -252,7 +253,3 @@ def get_memory_usage_info():
 		result[info[i].name] = info[i].value
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
-
-#if not valid_import("binaryninjaui") and not core_ui_enabled():
-#	#Use print because we're headless and log_functions won't work yet
-#	print("BINARYNINJAUI module not available.\nPlease re-run the install_api.py python script (with the appropriate version of python you plan to use) to properly set up your Binary Ninja python paths.")

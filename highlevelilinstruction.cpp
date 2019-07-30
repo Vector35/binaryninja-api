@@ -71,6 +71,7 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
 	HighLevelILInstructionBase::operationOperandUsage = {
 		{HLIL_NOP, {}},
 		{HLIL_BREAK, {}},
+		{HLIL_CONTINUE, {}},
 		{HLIL_NORET, {}},
 		{HLIL_BP, {}},
 		{HLIL_UNDEF, {}},
@@ -974,6 +975,8 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 			subExprHandler(GetTrueExpr<HLIL_CASE>()), *this);
 	case HLIL_BREAK:
 		return dest->Break(*this);
+	case HLIL_CONTINUE:
+		return dest->Continue(*this);
 	case HLIL_ASSIGN:
 		return dest->Assign(size, subExprHandler(GetDestExpr<HLIL_ASSIGN>()),
 			subExprHandler(GetSourceExpr<HLIL_ASSIGN>()), *this);
@@ -1454,6 +1457,12 @@ ExprId HighLevelILFunction::Case(ExprId condition, ExprId expr, const ILSourceLo
 ExprId HighLevelILFunction::Break(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_BREAK, loc, 0);
+}
+
+
+ExprId HighLevelILFunction::Continue(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CONTINUE, loc, 0);
 }
 
 

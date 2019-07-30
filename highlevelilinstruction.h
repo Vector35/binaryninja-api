@@ -630,6 +630,7 @@ namespace BinaryNinja
 
 	template <> struct HighLevelILInstructionAccessor<HLIL_NOP>: public HighLevelILInstructionBase {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_BREAK>: public HighLevelILInstructionBase {};
+	template <> struct HighLevelILInstructionAccessor<HLIL_CONTINUE>: public HighLevelILInstructionBase {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_NORET>: public HighLevelILInstructionBase {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_BP>: public HighLevelILInstructionBase {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_UNDEF>: public HighLevelILInstructionBase {};

@@ -4059,6 +4059,7 @@ __attribute__ ((format (printf, 1, 2)))
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Case(ExprId condition, ExprId expr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Break(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Continue(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());

@@ -87,6 +87,7 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
 		HighLevelILOperation.HLIL_CASE: [("condition", "expr"), ("body", "expr")],
 		HighLevelILOperation.HLIL_BREAK: [],
+		HighLevelILOperation.HLIL_CONTINUE: [],
 		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
 		HighLevelILOperation.HLIL_RET: [("src", "expr_list")],
 		HighLevelILOperation.HLIL_NORET: [],

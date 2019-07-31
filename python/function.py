@@ -2009,26 +2009,47 @@ class Function(object):
 		self.view.update_analysis()
 
 	@property
+	def call_sites(self):
+		"""
+		``call_sites`` returns a list of possible call sites.
+		This includes ordinary calls, tail calls, and indirect jumps. Not all of the returned call sites
+		may be true call sites; some may simply be unresolved indirect jumps.
+
+		:return: List of References that represent the sources of possible calls in this function
+		:rtype: list(ReferenceSource)
+		"""
+		count = ctypes.c_ulonglong(0)
+		refs = core.BNGetFunctionCallSites(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			if refs[i].func:
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(refs[i].func))
+			else:
+				func = None
+			if refs[i].arch:
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(refs[i].arch)
+			else:
+				arch = None
+			addr = refs[i].addr
+			result.append(binaryninja.architecture.ReferenceSource(func, arch, addr))
+		core.BNFreeCodeReferences(refs, count.value)
+		return result
+
+	@property
 	def callees(self):
 		called = []
-		for bb in self.medium_level_il:
-			for i in bb:
-				if i.operation in (MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_CALL_UNTYPED):
-					if i.dest.value.type == RegisterValueType.ConstantPointerValue:
-						func = self.view.get_function_at(i.dest.value.value, self.platform)
-						if func is not None:
-							called.append(func)
+		for callee_addr in self.callee_addresses:
+			func = self.view.get_function_at(callee_addr, self.platform)
+			if func is not None:
+				called.append(func)
 		return called
 
 	@property
 	def callee_addresses(self):
-		called = []
-		for bb in self.medium_level_il:
-			for i in bb:
-				if i.operation in (MediumLevelILOperation.MLIL_CALL, MediumLevelILOperation.MLIL_CALL_UNTYPED):
-					if i.dest.value.type == RegisterValueType.ConstantPointerValue:
-						called.append(i.dest.value.value)
-		return called
+		result = []
+		for ref in self.call_sites:
+			result.extend(self.view.get_callees(ref.address, ref.function, ref.arch))
+		return result
 
 	@property
 	def callers(self):

@@ -1513,7 +1513,7 @@ vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src)
 	BNReferenceSource _src{ src.func->m_object, src.arch->m_object, src.addr };
 	uint64_t* refs = BNGetCodeReferencesFrom(m_object, &_src, &count);
 	vector<uint64_t> result(refs, &refs[count]);
-	BNFreeCodeReferencesFrom(refs);
+	BNFreeAddressList(refs);
 	return result;
 }
 
@@ -1524,7 +1524,7 @@ vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src, uint64_t
 	BNReferenceSource _src{ src.func->m_object, src.arch->m_object, src.addr };
 	uint64_t* refs = BNGetCodeReferencesFromInRange(m_object, &_src, len, &count);
 	vector<uint64_t> result(refs, &refs[count]);
-	BNFreeCodeReferencesFrom(refs);
+	BNFreeAddressList(refs);
 	return result;
 }
 
@@ -1578,6 +1578,38 @@ void BinaryView::AddUserDataReference(uint64_t fromAddr, uint64_t toAddr)
 void BinaryView::RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr)
 {
 	BNRemoveUserDataReference(m_object, fromAddr, toAddr);
+}
+
+
+vector<uint64_t> BinaryView::GetCallees(ReferenceSource callSite)
+{
+	size_t count;
+	BNReferenceSource src { callSite.func->m_object, callSite.arch->m_object, callSite.addr };
+	uint64_t* refs = BNGetCallees(m_object, &src, &count);
+	vector<uint64_t> result(refs, &refs[count]);
+	BNFreeAddressList(refs);
+	return result;
+}
+
+
+vector<ReferenceSource> BinaryView::GetCallers(uint64_t addr)
+{
+	size_t count;
+	BNReferenceSource* refs = BNGetCallers(m_object, addr, &count);
+
+	vector<ReferenceSource> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		ReferenceSource src;
+		src.func = new Function(BNNewFunctionReference(refs[i].func));
+		src.arch = new CoreArchitecture(refs[i].arch);
+		src.addr = refs[i].addr;
+		result.push_back(src);
+	}
+
+	BNFreeCodeReferences(refs, count);
+	return result;
 }
 
 

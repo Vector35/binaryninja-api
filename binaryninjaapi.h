@@ -1436,6 +1436,9 @@ namespace BinaryNinja
 		void AddUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 		void RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 
+		std::vector<uint64_t> GetCallees(ReferenceSource addr);
+		std::vector<ReferenceSource> GetCallers(uint64_t addr);
+
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace=NameSpace());
 		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace=NameSpace());
 		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace=NameSpace());
@@ -2617,6 +2620,8 @@ namespace BinaryNinja
 		std::vector<uint64_t> GetCommentedAddresses() const;
 		void SetComment(const std::string& comment);
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
+
+		std::vector<ReferenceSource> GetCallSites() const;
 
 		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);

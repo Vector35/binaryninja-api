@@ -2811,6 +2811,7 @@ class BinaryView(object):
 		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
 
 		:param int addr: virtual address to query for references
+		:param int length: optional length of query
 		:return: List of References for the given virtual address
 		:rtype: list(ReferenceSource)
 		:Example:
@@ -2848,6 +2849,11 @@ class BinaryView(object):
 		architecture of the function will be used.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~binaryninja.function.Function.add_user_code_ref`.
+
+		:param int addr: virtual address to query for references
+		:param int length: optional length of query
+		:return: list of integers
+		:rtype: list(integer)
 		"""
 
 		result = []
@@ -2864,7 +2870,7 @@ class BinaryView(object):
 				refs = core.BNGetCodeReferencesFromInRange(self.handle, ref_src, length, count)
 			for i in range(0, count.value):
 				result.append(refs[i])
-			core.BNFreeCodeReferencesFrom(refs, count.value)
+			core.BNFreeAddressList(refs)
 		return result
 
 	def get_data_refs(self, addr, length=None):
@@ -2949,6 +2955,67 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
+
+
+	def get_callers(self, addr):
+		"""
+		``get_callers`` returns a list of ReferenceSource objects (xrefs or cross-references) that call the provided virtual address.
+		In this case, tail calls, jumps, and ordinary calls are considered.
+
+		:param int addr: virtual address of callee to query for callers
+		:return: List of References that call the given virtual address
+		:rtype: list(ReferenceSource)
+		:Example:
+
+			>>> bv.get_callers(here)
+			[<ref: x86@0x4165ff>]
+			>>>
+
+		"""
+		count = ctypes.c_ulonglong(0)
+		refs = core.BNGetCallers(self.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			if refs[i].func:
+				func = binaryninja.function.Function(self, core.BNNewFunctionReference(refs[i].func))
+			else:
+				func = None
+			if refs[i].arch:
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(refs[i].arch)
+			else:
+				arch = None
+			addr = refs[i].addr
+			result.append(binaryninja.architecture.ReferenceSource(func, arch, addr))
+		core.BNFreeCodeReferences(refs, count.value)
+		return result
+
+	def get_callees(self, addr, func=None, arch=None):
+		"""
+		``get_callees`` returns a list of virtual addresses called by the call site in the function ``func``,
+		of the architecture ``arch``, and at the address ``addr``. If no function is specified, call sites from
+		all functions and containing the address will be considered. If no architecture is specified, the
+		architecture of the function will be used.
+
+		:param int addr: virtual address of the call site to query for callees
+		:param Function func: (optional) the function that the call site belongs to
+		:param Architecture func: (optional) the architecture of the call site
+		:return: list of integers
+		:rtype: list(integer)
+		"""
+
+		result = []
+		funcs = self.get_functions_containing(addr) if func is None else [func]
+		if not funcs:
+			return []
+		for src_func in funcs:
+			src_arch = src_func.arch if arch is None else arch
+			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
+			count = ctypes.c_ulonglong(0)
+			refs = core.BNGetCallees(self.handle, ref_src, count)
+			for i in range(0, count.value):
+				result.append(refs[i])
+			core.BNFreeAddressList(refs)
+		return result
 
 
 	def get_symbol_at(self, addr, namespace=None):

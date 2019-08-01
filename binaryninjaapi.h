@@ -4068,16 +4068,28 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignUnpack(const std::vector<ExprId>& output, ExprId src,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignMemSSA(size_t size, ExprId dest, size_t destMemVersion, ExprId src, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
+			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemPhi(size_t dest, const std::vector<size_t>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId StructField(size_t size, ExprId src, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DerefField(size_t size, ExprId src, uint64_t offset,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefSSA(size_t size, ExprId src, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
@@ -4141,6 +4153,10 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(ExprId dest, const std::vector<ExprId>& params,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareEqual(size_t size, ExprId left, ExprId right,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareNotEqual(size_t size, ExprId left, ExprId right,
@@ -4170,6 +4186,8 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Intrinsic(uint32_t intrinsic, const std::vector<ExprId>& params,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(uint32_t intrinsic, const std::vector<ExprId>& params, size_t destMemVersion,
+			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
@@ -4198,7 +4216,8 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
-		ExprId AddOperandList(const std::vector<ExprId> operands);
+		ExprId AddOperandList(const std::vector<ExprId>& operands);
+		ExprId AddIndexList(const std::vector<size_t>& operands);
 		ExprId AddSSAVariableList(const std::vector<SSAVariable>& vars);
 
 		BNHighLevelILInstruction GetRawExpr(size_t i) const;

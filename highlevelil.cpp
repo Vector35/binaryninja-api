@@ -124,7 +124,18 @@ vector<uint64_t> HighLevelILFunction::GetOperandList(ExprId expr, size_t listOpe
 }
 
 
-ExprId HighLevelILFunction::AddOperandList(const vector<ExprId> operands)
+ExprId HighLevelILFunction::AddOperandList(const vector<ExprId>& operands)
+{
+	uint64_t* operandList = new uint64_t[operands.size()];
+	for (size_t i = 0; i < operands.size(); i++)
+		operandList[i] = operands[i];
+	ExprId result = (ExprId)BNHighLevelILAddOperandList(m_object, operandList, operands.size());
+	delete[] operandList;
+	return result;
+}
+
+
+ExprId HighLevelILFunction::AddIndexList(const vector<size_t>& operands)
 {
 	uint64_t* operandList = new uint64_t[operands.size()];
 	for (size_t i = 0; i < operands.size(); i++)

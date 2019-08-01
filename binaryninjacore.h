@@ -1157,8 +1157,17 @@ extern "C"
 		HLIL_FCMP_UO,
 
 		// The following instructions are only used in SSA form
+		HLIL_ASSIGN_MEM_SSA,
+		HLIL_ASSIGN_UNPACK_MEM_SSA,
 		HLIL_VAR_SSA,
-		HLIL_VAR_PHI
+		HLIL_ARRAY_INDEX_SSA,
+		HLIL_DEREF_SSA,
+		HLIL_DEREF_FIELD_SSA,
+		HLIL_CALL_SSA,
+		HLIL_SYSCALL_SSA,
+		HLIL_INTRINSIC_SSA,
+		HLIL_VAR_PHI,
+		HLIL_MEM_PHI
 	};
 
 	struct BNHighLevelILInstruction

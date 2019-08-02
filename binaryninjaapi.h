@@ -241,6 +241,14 @@ namespace BinaryNinja
 			}
 		}
 
+		Ref<T>(Ref<T>&& other) : m_obj(other.m_obj)
+		{
+			other.m_obj = 0;
+#ifdef BN_REF_COUNT_DEBUG
+			m_assignmentTrace = other.m_assignmentTrace;
+#endif
+		}
+
 		~Ref<T>()
 		{
 			if (m_obj)
@@ -266,6 +274,22 @@ namespace BinaryNinja
 				m_obj->AddRef();
 			if (oldObj)
 				oldObj->Release();
+			return *this;
+		}
+
+		Ref<T>& operator=(Ref<T>&& other)
+		{
+			if (this != &other)
+			{
+				if (!m_obj)
+					m_obj = other.m_obj;
+				else if (m_obj != other.m_obj)
+				{
+					m_obj->Release();
+					m_obj = other.m_obj;
+				}
+				other.m_obj = 0;
+			}
 			return *this;
 		}
 

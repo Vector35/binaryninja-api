@@ -5,6 +5,7 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QLineEdit>
 #include <vector>
+#include <deque>
 #include <set>
 #include <mutex>
 #include "binaryninjaapi.h"
@@ -33,37 +34,41 @@ public:
 	struct NamedObject
 	{
 		SymbolRef sym;
-		mutable std::string name;
-		mutable bool named;
-		NamedObject() : sym(nullptr), named(false) {}
-		NamedObject(SymbolRef s) : sym(s), named(false) {}
+		std::string name;
+		std::string rawName;
+		NamedObject() : sym(nullptr) {}
+		NamedObject(SymbolRef s) : sym(s)
+		{
+			name = sym->GetFullName();
+			rawName = sym->GetRawName();
+		}
 		NamedObject(const NamedObject& n)
 		{
 			sym = n.sym;
-			named = n.named;
 			name = n.name;
-		}
-
-		NamedObject(const NamedObject&& n)
-		{
-			sym = std::move(n.sym);
-			name = std::move(n.name);
-			named = n.named;
-		}
-
-		NamedObject& operator=(const NamedObject&& n)
-		{
-			sym = std::move(n.sym);
-			name = std::move(n.name);
-			named = n.named;
-			return *this;
+			rawName = n.rawName;
 		}
 
 		NamedObject& operator=(const NamedObject& n)
 		{
 			sym = n.sym;
 			name = n.name;
-			named = n.named;
+			rawName = n.rawName;
+			return *this;
+		}
+
+		NamedObject(NamedObject&& n)
+		{
+			sym = std::move(n.sym);
+			name = std::move(n.name);
+			rawName = std::move(n.rawName);
+		}
+
+		NamedObject& operator=(NamedObject&& n)
+		{
+			sym = std::move(n.sym);
+			name = std::move(n.name);
+			rawName = std::move(n.rawName);
 			return *this;
 		}
 
@@ -97,12 +102,21 @@ public:
 
 		bool isFunc() const { return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol); }
 		uint64_t getStart() const { return sym->GetAddress(); }
-		std::string getName() const {
-			if (named)
-				return name;
-			name = sym->GetFullName();
-			named = true;
-			return name;
+		std::string getName() const { return name; }
+		std::string getRawName() const { return rawName; }
+
+		bool lessThanAlpha(const NamedObject& other) const
+		{
+			if (name < other.name)
+				return true;
+			else if (name == other.name)
+			{
+				if (rawName < other.rawName)
+					return true;
+				if (rawName == other.rawName)
+					return getStart() < other.getStart();
+			}
+			return false;
 		}
 		BNSymbolType getType() const { return sym->GetType(); }
 	};
@@ -145,9 +159,8 @@ private:
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	std::set<std::string> m_archNames;
-	std::vector<NamedObject> m_allSyms;
-	std::vector<NamedObject> m_curSymsBySortOrder;
-	std::vector<NamedObject> m_curSymsByAddress;
+	std::deque<NamedObject> m_allSyms;
+	std::deque<NamedObject> m_curSyms;
 	NamedObject m_currentSym;
 	std::string m_filter;
 
@@ -157,7 +170,7 @@ private:
 
 	BinaryNinja::Ref<SymbolListUpdate> m_backgroundUpdate;
 	volatile bool m_backgroundUpdateComplete;
-	std::vector<NamedObject> m_backgroundUpdateFuncs;
+	std::deque<NamedObject> m_backgroundUpdateFuncs;
 
 	bool m_showImports;
 	bool m_showExportedDataVars;
@@ -166,25 +179,10 @@ private:
 	bool m_showLocalDataVars;
 	SortType m_sortType;
 
-	// static bool allSymbolComparison(const NamedObject& a, const NamedObject& b);
-	static bool allSymbolComparisonLT(const NamedObject& a, const NamedObject& b);
-	static bool allSymbolComparisonGE(const NamedObject& a, const NamedObject& b);
-	static bool allSymbolComparisonNameLT(const NamedObject& a, const NamedObject& b);
-	static bool allSymbolComparisonNameGE(const NamedObject& a, const NamedObject& b);
-	typedef bool (*comparitor)(const NamedObject& a, const NamedObject& b);
-	static comparitor getComparitor(SortType type)
-	{
-		switch (type)
-		{
-		case SortAcendingAddresses: return allSymbolComparisonLT;
-		case SortDecendingAddresses: return allSymbolComparisonGE;
-		case SortAlphabeticallyAcending: return allSymbolComparisonNameLT;
-		case SortAlphabeticallyDecending:
-		default:
-			return allSymbolComparisonNameGE;
-		}
-	}
-	void getValidObject(std::vector<NamedObject>& result);
+	static bool symbolLessThan(const NamedObject& a, const NamedObject& b);
+	static bool symbolNameLessThan(const NamedObject& a, const NamedObject& b);
+
+	void getValidObject(std::deque<NamedObject>& result);
 
 public:
 	SymbolListModel(QWidget* parent, ViewFrame* view, BinaryViewRef data);
@@ -210,9 +208,10 @@ public:
 	bool isValidType(const NamedObject& rec);
 	bool setCurrentObject(const NamedObject& rec);
 	bool setCurrentFunction(FunctionRef func);
-	QModelIndex findSymbol(const NamedObject& rec);
-	QModelIndex findCurrentSymbol();
-	NamedObject getNamedObjectForIndex(int i);
+	QModelIndex findSymbol(const NamedObject& rec) const;
+	QModelIndex getSymbolIndex(const std::deque<NamedObject>::const_iterator rec) const;
+	QModelIndex findCurrentSymbol() const;
+	NamedObject getNamedObjectForIndex(int i) const;
 
 	void updateFunctions();
 	void backgroundUpdate();

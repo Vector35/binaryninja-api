@@ -36,22 +36,28 @@ class BINARYNINJAUIAPI TypeDialog: public QDialog
 
 	QComboBox* m_combo;
 	QStringListModel* m_model;
-	QLabel* m_previewText;
+	QLabel* m_prompt;
+	QString m_promptText;
 	BinaryViewRef m_view;
 	bool m_resultValid;
 	QStringList m_historyEntries;
 	int m_historySize;
 	GetTypesListThread* m_updateThread;
 	QFont m_defaultFont;
-	QString m_prompt;
 	bool m_initialTextSelection;
 	BinaryNinja::QualifiedNameAndType m_type;
+	QPushButton* m_acceptButton;
+	QTimer* m_updateTimer;
+	QPalette m_defaultPalette;
+	QString m_parseError;
 
 	void commitHistory();
 	void customEvent(QEvent* event);
 
 private Q_SLOTS:
 	void accepted();
+	void checkParse(QString text);
+	void updateTimerEvent();
 
 public:
 	TypeDialog(QWidget* parent, BinaryViewRef view, const QString& title = "Specify Type",

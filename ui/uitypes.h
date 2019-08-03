@@ -53,6 +53,7 @@ typedef BinaryNinja::Ref<BinaryNinja::ScriptingInstance> ScriptingInstanceRef;
 typedef BinaryNinja::Ref<BinaryNinja::ScriptingProvider> ScriptingProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Section> SectionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Segment> SegmentRef;
+typedef BinaryNinja::Ref<BinaryNinja::Settings> SettingsRef;
 typedef BinaryNinja::Ref<BinaryNinja::Structure> StructureRef;
 typedef BinaryNinja::Ref<BinaryNinja::Symbol> SymbolRef;
 typedef BinaryNinja::Ref<BinaryNinja::Tag> TagRef;

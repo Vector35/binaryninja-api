@@ -151,6 +151,7 @@ extern "C"
 	struct BNRepository;
 	struct BNRepoPlugin;
 	struct BNRepositoryManager;
+	struct BNSettings;
 	struct BNMetadata;
 	struct BNReportCollection;
 	struct BNRelocation;
@@ -1127,7 +1128,7 @@ extern "C"
 		void* context;
 		BNBinaryView* (*create)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
-		char* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
+		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
 	};
 
 	struct BNTransformParameterInfo
@@ -2334,8 +2335,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeLongName(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);
-	BINARYNINJACOREAPI char* BNGetBinaryViewDefaultLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
-	BINARYNINJACOREAPI char* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewDefaultLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
 
 	BINARYNINJACOREAPI BNBinaryViewType* BNRegisterBinaryViewType(const char* name, const char* longName,
 	                                                              BNCustomBinaryViewType* type);
@@ -3934,39 +3935,43 @@ extern "C"
 	BINARYNINJACOREAPI bool BNRenameFile(const char* source, const char* dest);
 
 	// Settings APIs
-	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(const char* registry, const char* group, const char* title);
-	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(const char* registry, const char* id, const char* properties);
-	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(const char* registry, const char* id, const char* property, size_t* inoutSize);
-	BINARYNINJACOREAPI bool BNSettingsUpdateProperty(const char* registry, const char* id, const char* property);
-	BINARYNINJACOREAPI bool BNSettingsUpdateBoolProperty(const char* registry, const char* id, const char* property, bool value);
-	BINARYNINJACOREAPI bool BNSettingsUpdateDoubleProperty(const char* registry, const char* id, const char* property, double value);
-	BINARYNINJACOREAPI bool BNSettingsUpdateInt64Property(const char* registry, const char* id, const char* property, int64_t value);
-	BINARYNINJACOREAPI bool BNSettingsUpdateUInt64Property(const char* registry, const char* id, const char* property, uint64_t value);
-	BINARYNINJACOREAPI bool BNSettingsUpdateStringProperty(const char* registry, const char* id, const char* property, const char* value);
-	BINARYNINJACOREAPI bool BNSettingsUpdateStringListProperty(const char* registry, const char* id, const char* property, const char** value, size_t size);
+	BINARYNINJACOREAPI BNSettings* BNCreateSettings(const char* schemaId);
+	BINARYNINJACOREAPI BNSettings* BNNewSettingsReference(BNSettings* settings);
+	BINARYNINJACOREAPI void BNFreeSettings(BNSettings* settings);
+	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(BNSettings* settings, const char* group, const char* title);
+	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(BNSettings* settings, const char* key, const char* properties);
+	BINARYNINJACOREAPI bool BNSettingsContains(BNSettings* settings, const char* key);
+	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(BNSettings* settings, const char* key, const char* property, size_t* inoutSize);
+	BINARYNINJACOREAPI bool BNSettingsUpdateProperty(BNSettings* settings, const char* key, const char* property);
+	BINARYNINJACOREAPI bool BNSettingsUpdateBoolProperty(BNSettings* settings, const char* key, const char* property, bool value);
+	BINARYNINJACOREAPI bool BNSettingsUpdateDoubleProperty(BNSettings* settings, const char* key, const char* property, double value);
+	BINARYNINJACOREAPI bool BNSettingsUpdateInt64Property(BNSettings* settings, const char* key, const char* property, int64_t value);
+	BINARYNINJACOREAPI bool BNSettingsUpdateUInt64Property(BNSettings* settings, const char* key, const char* property, uint64_t value);
+	BINARYNINJACOREAPI bool BNSettingsUpdateStringProperty(BNSettings* settings, const char* key, const char* property, const char* value);
+	BINARYNINJACOREAPI bool BNSettingsUpdateStringListProperty(BNSettings* settings, const char* key, const char* property, const char** value, size_t size);
 
-	BINARYNINJACOREAPI bool BNSettingsDeserializeSchema(const char* registry, const char* schema);
-	BINARYNINJACOREAPI char* BNSettingsSerializeSchema(const char* registry);
-	BINARYNINJACOREAPI bool BNDeserializeSettings(const char* registry, const char* contents, BNBinaryView* view, BNSettingsScope scope);
-	BINARYNINJACOREAPI char* BNSerializeSettings(const char* registry, BNBinaryView* view, BNSettingsScope scope);
+	BINARYNINJACOREAPI bool BNSettingsDeserializeSchema(BNSettings* settings, const char* schema);
+	BINARYNINJACOREAPI char* BNSettingsSerializeSchema(BNSettings* settings);
+	BINARYNINJACOREAPI bool BNDeserializeSettings(BNSettings* settings, const char* contents, BNBinaryView* view, BNSettingsScope scope);
+	BINARYNINJACOREAPI char* BNSerializeSettings(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope);
 
-	BINARYNINJACOREAPI bool BNSettingsCopyValue(const char* registry, const char* destRegistry, const char* id);
-	BINARYNINJACOREAPI bool BNSettingsReset(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope scope);
-	BINARYNINJACOREAPI bool BNSettingsResetAll(const char* registry, BNBinaryView* view, BNSettingsScope scope);
+	BINARYNINJACOREAPI bool BNSettingsCopyValuesFrom(BNSettings* settings, BNSettings* source, BNSettingsScope scope);
+	BINARYNINJACOREAPI bool BNSettingsReset(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope scope);
+	BINARYNINJACOREAPI bool BNSettingsResetAll(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope);
 
-	BINARYNINJACOREAPI bool BNSettingsGetBool(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope);
-	BINARYNINJACOREAPI double BNSettingsGetDouble(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope);
-	BINARYNINJACOREAPI int64_t BNSettingsGetInt64(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope);
-	BINARYNINJACOREAPI uint64_t BNSettingsGetUInt64(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope);
-	BINARYNINJACOREAPI char* BNSettingsGetString(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope);
-	BINARYNINJACOREAPI const char** BNSettingsGetStringList(const char* registry, const char* id, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
+	BINARYNINJACOREAPI bool BNSettingsGetBool(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI double BNSettingsGetDouble(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI int64_t BNSettingsGetInt64(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI uint64_t BNSettingsGetUInt64(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI char* BNSettingsGetString(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI const char** BNSettingsGetStringList(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
 
-	BINARYNINJACOREAPI bool BNSettingsSetBool(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, bool value);
-	BINARYNINJACOREAPI bool BNSettingsSetDouble(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, double value);
-	BINARYNINJACOREAPI bool BNSettingsSetInt64(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, int64_t value);
-	BINARYNINJACOREAPI bool BNSettingsSetUInt64(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, uint64_t value);
-	BINARYNINJACOREAPI bool BNSettingsSetString(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, const char* value);
-	BINARYNINJACOREAPI bool BNSettingsSetStringList(const char* registry, BNBinaryView* view, BNSettingsScope scope, const char* id, const char** value, size_t size);
+	BINARYNINJACOREAPI bool BNSettingsSetBool(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, bool value);
+	BINARYNINJACOREAPI bool BNSettingsSetDouble(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, double value);
+	BINARYNINJACOREAPI bool BNSettingsSetInt64(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, int64_t value);
+	BINARYNINJACOREAPI bool BNSettingsSetUInt64(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, uint64_t value);
+	BINARYNINJACOREAPI bool BNSettingsSetString(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
+	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char** value, size_t size);
 
 	//Metadata APIs
 
@@ -4022,8 +4027,8 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 
-	BINARYNINJACOREAPI char* BNBinaryViewGetLoadSettings(BNBinaryView* view, const char* typeName);
-	BINARYNINJACOREAPI void BNBinaryViewSetLoadSettings(BNBinaryView* view, const char* typeName, const char* loadSettings);
+	BINARYNINJACOREAPI BNSettings* BNBinaryViewGetLoadSettings(BNBinaryView* view, const char* typeName);
+	BINARYNINJACOREAPI void BNBinaryViewSetLoadSettings(BNBinaryView* view, const char* typeName, BNSettings* settings);
 
 	// Relocation object methods
 	BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);

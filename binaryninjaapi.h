@@ -544,6 +544,7 @@ namespace BinaryNinja
 	class Architecture;
 	class BackgroundTask;
 	class Platform;
+	class Settings;
 	class Type;
 	class DataBuffer;
 	class MainThreadAction;
@@ -1672,8 +1673,8 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
-		std::string GetLoadSettings(std::string typeName);
-		void SetLoadSettings(std::string typeName, std::string loadSettings);
+		Ref<Settings> GetLoadSettings(std::string typeName);
+		void SetLoadSettings(std::string typeName, Ref<Settings> settings);
 
 		BNAnalysisParameters GetParametersForAnalysis();
 		void SetParametersForAnalysis(BNAnalysisParameters params);
@@ -1723,7 +1724,7 @@ namespace BinaryNinja
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
-		static char* GetSettingsCallback(void* ctxt, BNBinaryView* data);
+		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
 		BinaryViewType(BNBinaryViewType* type);
 
@@ -1751,7 +1752,7 @@ namespace BinaryNinja
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
-		virtual std::string GetLoadSettingsForData(BinaryView* data) = 0;
+		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
 	};
 
 	class CoreBinaryViewType: public BinaryViewType
@@ -1760,7 +1761,7 @@ namespace BinaryNinja
 		CoreBinaryViewType(BNBinaryViewType* type);
 		virtual BinaryView* Create(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
-		virtual std::string GetLoadSettingsForData(BinaryView* data) override;
+		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 
 	class ReadException: public std::exception
@@ -4493,57 +4494,63 @@ namespace BinaryNinja
 		Ref<Repository> GetDefaultRepository();
 	};
 
-	class Settings
+	class Settings: public CoreRefCountObject<BNSettings, BNNewSettingsReference, BNFreeSettings>
 	{
-		std::string m_registry;
+		std::string m_instanceId;
+
+		Settings() = delete;
+		Settings(const std::string& m_instanceId);
 
 	public:
-		Settings(const std::string& registry = "default") : m_registry(registry) { }
+		Settings(BNSettings* settings);
+		static Ref<Settings> Instance(const std::string& schemaId = "");
+		virtual ~Settings() {}
 
 		bool RegisterGroup(const std::string& group, const std::string& title);
-		bool RegisterSetting(const std::string& id, const std::string& properties);
+		bool RegisterSetting(const std::string& key, const std::string& properties);
+		bool Contains(const std::string& key);
 
-		template<typename T> T QueryProperty(const std::string& id, const std::string& property);
+		template<typename T> T QueryProperty(const std::string& key, const std::string& property);
 
-		bool UpdateProperty(const std::string& id, const std::string& property);
-		bool UpdateProperty(const std::string& id, const std::string& property, bool value);
-		bool UpdateProperty(const std::string& id, const std::string& property, double value);
-		bool UpdateProperty(const std::string& id, const std::string& property, int value);
-		bool UpdateProperty(const std::string& id, const std::string& property, int64_t value);
-		bool UpdateProperty(const std::string& id, const std::string& property, uint64_t value);
-		bool UpdateProperty(const std::string& id, const std::string& property, const char* value);
-		bool UpdateProperty(const std::string& id, const std::string& property, const std::string& value);
-		bool UpdateProperty(const std::string& id, const std::string& property, const std::vector<std::string>& value);
+		bool UpdateProperty(const std::string& key, const std::string& property);
+		bool UpdateProperty(const std::string& key, const std::string& property, bool value);
+		bool UpdateProperty(const std::string& key, const std::string& property, double value);
+		bool UpdateProperty(const std::string& key, const std::string& property, int value);
+		bool UpdateProperty(const std::string& key, const std::string& property, int64_t value);
+		bool UpdateProperty(const std::string& key, const std::string& property, uint64_t value);
+		bool UpdateProperty(const std::string& key, const std::string& property, const char* value);
+		bool UpdateProperty(const std::string& key, const std::string& property, const std::string& value);
+		bool UpdateProperty(const std::string& key, const std::string& property, const std::vector<std::string>& value);
 
 		bool DeserializeSchema(const std::string& schema);
 		std::string SerializeSchema();
 		bool DeserializeSettings(const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
-		bool CopyValue(const std::string& destRegistry, const std::string& id);
-		bool Reset(const std::string& id, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool CopyValuesFrom(Ref<Settings> source, BNSettingsScope scope = SettingsAutoScope);
+		bool Reset(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool ResetAll(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
-		template<typename T> T Get(const std::string& id, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
+		template<typename T> T Get(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
 
-		bool Set(const std::string& id, bool value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, double value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, int value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, int64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, uint64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& id, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, bool value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, double value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, uint64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
-	template<> std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(const std::string& id, const std::string& property);
-	template<> bool Settings::Get<bool>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> double Settings::Get<double>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> int64_t Settings::Get<int64_t>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> uint64_t Settings::Get<uint64_t>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> std::string Settings::Get<std::string>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& id, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(const std::string& key, const std::string& property);
+	template<> bool Settings::Get<bool>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> double Settings::Get<double>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> int64_t Settings::Get<int64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> std::string Settings::Get<std::string>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template<> std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 

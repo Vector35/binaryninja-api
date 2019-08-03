@@ -2977,18 +2977,18 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 }
 
 
-string BinaryView::GetLoadSettings(string typeName)
+Ref<Settings> BinaryView::GetLoadSettings(string typeName)
 {
-	char* name = BNBinaryViewGetLoadSettings(m_object, typeName.c_str());
-	string result = name;
-	BNFreeString(name);
-	return result;
+	BNSettings* settings = BNBinaryViewGetLoadSettings(m_object, typeName.c_str());
+	if (!settings)
+		return nullptr;
+	return new Settings(settings);
 }
 
 
-void BinaryView::SetLoadSettings(string typeName, string loadSettings)
+void BinaryView::SetLoadSettings(string typeName, Ref<Settings> settings)
 {
-	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), loadSettings.c_str());
+	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), settings->GetObject());
 }
 
 

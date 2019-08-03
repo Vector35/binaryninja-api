@@ -1,7 +1,8 @@
 import unittest
 import platform
 import os
-from binaryninja.settings import Settings
+from binaryninja.binaryview import BinaryView, BinaryViewType
+from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, get_qualified_name
 from binaryninja.architecture import Architecture
@@ -14,66 +15,130 @@ class SettingsAPI(unittest.TestCase):
 
 	@classmethod
 	def tearDownClass(cls):
-		setting = Settings()
-		# setting.remove_setting_group("test")
+		pass
 
-	def test_bool_settings(self):
-		setting = Settings()
-		# setting.set("bool_test_true", True)
-		# setting.set("bool_test_false", False)
-		# assert not setting.get_bool("bool_test_false"), "bool_test_false failed"
-		# assert setting.get_bool("bool_test_true"), "bool_test_true failed"
-		# assert setting.get_bool("bool_test_default_True", True), "bool_test_default_True failed"
-		# assert not setting.get_bool("bool_test_default_False", False), "bool_test_default_False failed"
+	def test_settings_create(self):
+		s1 = Settings()
+		s2 = Settings(None)
+		s3 = Settings("default")
+		s4 = Settings("test")
+		assert s1 == s2, "test_settings_create failed"
+		assert s1 == s3, "test_settings_create failed"
+		assert s1 != s4, "test_settings_create failed"
 
-	def test_int_settings(self):
-		setting = Settings()
-		# setting.set("int_test1", 0x100)
-		# setting.set("int_test2", 0)
-		# setting.set("int_test3", -1)
-		# assert setting.get_integer("int_test1") == 0x100, "int_test1 failed"
-		# assert setting.get_integer("int_test2") == 0, "int_test2 failed"
-		# assert setting.get_integer("int_test3") == -1, "int_test3 failed"
-		# assert setting.get_integer("int_test_default_1", 1) == 1, "int_test_default_1 failed"
+	def test_settings_defaults(self):
+		settings = Settings()
+		assert settings.contains("analysis.linearSweep.autorun"), "test_settings_defaults failed"
+		assert settings.contains("analysis.unicode.blocks"), "test_settings_defaults failed"
+		assert settings.contains("downloadClient.providerName"), "test_settings_defaults failed"
+		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[0], "test_settings_defaults failed"
+		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[1] == SettingsScope.SettingsDefaultScope, "test_settings_defaults failed"
 
-	def test_float_settings(self):
-		setting = Settings()
-		# setting.set("float_test1", 10.5)
-		# setting.set("float_test2", -0.5)
-		# assert setting.get_double("float_test1") == 10.5, "float_test1 failed"
-		# assert setting.get_double("float_test2") == -0.5, "float_test1 failed"
-		# assert setting.get_double("float_test_default", -5.5), "float_test_default failed"
+	def test_settings_registration(self):
+		settings = Settings("test")
+		assert not settings.contains("testGroup.testSetting"), "test_settings_registration failed"
+		assert settings.register_group("testGroup", "Title"), "test_settings_registration failed"
+		assert settings.register_setting("testGroup.testSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "testSetting"}'), "test_settings_registration failed"
+		assert settings.contains("testGroup.testSetting"), "test_settings_registration failed"
 
-	def test_str_settings(self):
-		setting = Settings()
-		# setting.set("str_test1", "hi")
-		# setting.set("str_test2", "")
-		# setting.set("str_test3", "A" * 1000)
-		# assert setting.get_string("str_test1") == "hi", "str_test1 failed"
-		# assert setting.get_string("str_test2") == "", "str_test2 failed"
-		# assert setting.get_string("str_test3") == "A" * 1000, "str_test3 failed"
-		# assert setting.get_string("str_test_default", "hi") == "hi", "str_test_default failed"
+	def test_settings_usage(self):
+		settings = Settings("test")
+		assert not settings.contains("testGroup.testSetting"), "test_settings_types failed"
+		assert settings.register_group("testGroup", "Title"), "test_settings_types failed"
+		assert not settings.register_setting("testGroup.boolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "boolean", "id" : "boolSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.boolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting"}'), "test_settings_types failed"
+		assert not settings.register_setting("testGroup.doubleSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "number", "id" : "doubleSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.doubleSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "doubleSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.integerSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "integerSetting"}'), "test_settings_types failed"
+		assert not settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : "value", "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
+		assert not settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : ["value1", "value2"], "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
 
-	def test_int_list_settings(self):
-		setting = Settings()
-		# setting.set("int_list_test1", [0x100])
-		# setting.set("int_list_test2", [1, 2])
-		# setting.set("int_list_test3", [])
-		# assert setting.get_integer_list("int_list_test1") == [0x100], "int_list_test1 failed"
-		# assert setting.get_integer_list("int_list_test2") == [1, 2], "int_list_test2 failed"
-		# assert setting.get_integer_list("int_list_test3") == [], "int_list_test3 failed"
-		# assert setting.get_integer_list("int_list_test_default", [2, 3]), "int_list_test_default failed"
+		assert settings.contains("testGroup.boolSetting"), "test_settings_types failed"
+		assert settings.contains("testGroup.doubleSetting"), "test_settings_types failed"
+		assert settings.contains("testGroup.integerSetting"), "test_settings_types failed"
+		assert settings.contains("testGroup.stringSetting"), "test_settings_types failed"
+		assert settings.contains("testGroup.stringListSetting"), "test_settings_types failed"
 
-	def test_str_list_settings(self):
-		setting = Settings()
-		# setting.set("str_list_test1", ["hi"])
-		# setting.set("str_list_test2", ["hello", "world"])
-		# setting.set("str_list_test3", [])
-		# assert setting.get_string_list("str_list_test1") == ["hi"], "str_list_test1 failed"
-		# assert setting.get_string_list("str_list_test2") == ["hello", "world"], "str_list_test2 failed"
-		# assert setting.get_string_list("str_list_test3") == [], "str_list_test3 failed"
-		# assert setting.get_string_list("str_list_test_default", ["hi", "there"]), "str_list_test_default failed"
+		assert settings.get_bool("testGroup.boolSetting") == True, "test_settings_types failed"
+		assert settings.get_double("testGroup.doubleSetting") == 500, "test_settings_types failed"
+		assert settings.get_integer("testGroup.integerSetting") == 500, "test_settings_types failed"
+		assert settings.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
+		assert settings.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
+		assert settings.set_bool("testGroup.boolSetting", False), "test_settings_types failed"
+		assert settings.set_double("testGroup.doubleSetting", 700), "test_settings_types failed"
+		assert settings.set_integer("testGroup.integerSetting", 700), "test_settings_types failed"
+		assert settings.set_string("testGroup.stringSetting", "value_user"), "test_settings_types failed"
+		assert settings.set_string_list("testGroup.stringListSetting", ["value3", "value4"]), "test_settings_types failed"
+
+		assert settings.get_bool("testGroup.boolSetting") == False, "test_settings_types failed"
+		assert settings.get_double("testGroup.doubleSetting") == 700, "test_settings_types failed"
+		assert settings.get_integer("testGroup.integerSetting") == 700, "test_settings_types failed"
+		assert settings.get_string("testGroup.stringSetting") == "value_user", "test_settings_types failed"
+		assert settings.get_string_list("testGroup.stringListSetting") == ["value3", "value4"], "test_settings_types failed"
+
+		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsDefaultScope)[0] == True, "test_settings_types failed"
+		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsDefaultScope)[0] == 500, "test_settings_types failed"
+		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsDefaultScope)[0] == 500, "test_settings_types failed"
+		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsDefaultScope)[0] == "value", "test_settings_types failed"
+		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsDefaultScope)[0] == ["value1", "value2"], "test_settings_types failed"
+
+		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsUserScope)[0] == False, "test_settings_types failed"
+		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsUserScope)[0] == 700, "test_settings_types failed"
+		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsUserScope)[0] == 700, "test_settings_types failed"
+		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsUserScope)[0] == "value_user", "test_settings_types failed"
+		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsUserScope)[0] == ["value3", "value4"], "test_settings_types failed"
+
+		s2 = Settings("test2")
+		assert s2.serialize_schema() is "", "test_settings_types failed"
+		test_schema = settings.serialize_schema()
+		assert test_schema != "", "test_settings_types failed"
+		assert s2.deserialize_schema(test_schema), "test_settings_types failed"
+
+		assert s2.get_bool("testGroup.boolSetting") == True, "test_settings_types failed"
+		assert s2.get_double("testGroup.doubleSetting") == 500, "test_settings_types failed"
+		assert s2.get_integer("testGroup.integerSetting") == 500, "test_settings_types failed"
+		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
+		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
+
+		assert s2.copy_values_from(settings), "test_settings_types failed"
+		assert s2.get_bool("testGroup.boolSetting") == False, "test_settings_types failed"
+		assert s2.get_double("testGroup.doubleSetting") == 700, "test_settings_types failed"
+		assert s2.get_integer("testGroup.integerSetting") == 700, "test_settings_types failed"
+		assert s2.get_string("testGroup.stringSetting") == "value_user", "test_settings_types failed"
+		assert s2.get_string_list("testGroup.stringListSetting") == ["value3", "value4"], "test_settings_types failed"
+
+		assert s2.reset_all(), "test_settings_types failed"
+		assert s2.get_bool("testGroup.boolSetting") == True, "test_settings_types failed"
+		assert s2.get_double("testGroup.doubleSetting") == 500, "test_settings_types failed"
+		assert s2.get_integer("testGroup.integerSetting") == 500, "test_settings_types failed"
+		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
+		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
+
+	def test_load_settings(self):
+		bvt_name = "Mapped (Python)" if "Mapped (Python)" in map(lambda bvt: bvt.name, list(BinaryViewType)) else "Mapped"
+		raw_view = BinaryView.new(b'0x55')
+		assert raw_view.view_type == "Raw", "test_load_settings failed"
+		mapped_view = BinaryViewType[bvt_name].create(raw_view)
+		assert mapped_view.view_type == bvt_name, "test_load_settings failed"
+		assert mapped_view.segments[0].start == 0, "test_load_settings failed"
+		assert len(mapped_view) == 4, "test_load_settings failed"
+		load_settings = BinaryViewType[bvt_name].get_load_settings_for_data(raw_view)
+		assert load_settings is not None, "test_load_settings failed"
+		assert load_settings.contains("abstractLoader.architecture"), "test_load_settings failed"
+		assert load_settings.contains("abstractLoader.platform"), "test_load_settings failed"
+		assert load_settings.contains("abstractLoader.imageBase"), "test_load_settings failed"
+		assert load_settings.contains("abstractLoader.entryPoint"), "test_load_settings failed"
+		load_settings.set_string("abstractLoader.architecture", 'x86_64')
+		load_settings.set_integer("abstractLoader.imageBase", 0x500000)
+		load_settings.set_integer("abstractLoader.entryPoint", 0x500000)
+		raw_view.set_load_settings(bvt_name, load_settings)
+		mapped_view = BinaryViewType[bvt_name].create(raw_view)
+		assert mapped_view.view_type == bvt_name, "test_load_settings failed"
+		assert mapped_view.segments[0].start == 0x500000, "test_load_settings failed"
+		assert len(mapped_view) == 4, "test_load_settings failed"
 
 class MetaddataAPI(unittest.TestCase):
 	def test_metadata_basic_types(self):

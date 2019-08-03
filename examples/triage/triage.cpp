@@ -12,8 +12,9 @@ extern "C"
 	BINARYNINJAPLUGIN bool UIPluginInit()
 #endif
 	{
-		BinaryNinja::Settings().RegisterGroup("triage", "Triage");
-		BinaryNinja::Settings().RegisterSetting("triage.preferSummaryView",
+		SettingsRef settings = BinaryNinja::Settings::Instance();
+		settings->RegisterGroup("triage", "Triage");
+		settings->RegisterSetting("triage.preferSummaryView",
 			R"({
 				"title" : "Always Prefer Triage Summary View",
 				"type" : "boolean",
@@ -21,7 +22,7 @@ extern "C"
 				"description" : "Always prefer opening binaries in Triage Summary view, even when performing full analysis."
 			})");
 
-		BinaryNinja::Settings().RegisterSetting("triage.preferSummaryViewForRaw",
+		settings->RegisterSetting("triage.preferSummaryViewForRaw",
 			R"({
 				"title" : "Prefer Triage Summary View for Raw Files",
 				"type" : "boolean",
@@ -31,7 +32,7 @@ extern "C"
 
 		ViewType::registerViewType(new TriageViewType());
 
-		BinaryNinja::Settings().RegisterSetting("triage.analysisMode",
+		settings->RegisterSetting("triage.analysisMode",
 			R"({
 				"title" : "Triage Analysis Mode",
 				"type" : "string",
@@ -44,7 +45,7 @@ extern "C"
 					"Perform full analysis of the binary." ]
 			})");
 
-		BinaryNinja::Settings().RegisterSetting("triage.linearSweep",
+		settings->RegisterSetting("triage.linearSweep",
 			R"({
 				"title" : "Triage Linear Sweep Mode",
 				"type" : "string",

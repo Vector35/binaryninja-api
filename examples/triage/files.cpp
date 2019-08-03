@@ -63,6 +63,7 @@ void TriageFilePicker::openSelectedFiles()
 {
 	std::vector<QString> failedToOpen;
 	std::set<QString> files;
+	SettingsRef settings = BinaryNinja::Settings::Instance();
 
 	for (auto& index: m_tree->selectionModel()->selectedIndexes())
 		if (m_model->fileInfo(index).isFile())
@@ -81,24 +82,24 @@ void TriageFilePicker::openSelectedFiles()
 
 		for (auto data: f->getAllDataViews())
 		{
-			BinaryNinja::Settings().Set("analysis.mode", BinaryNinja::Settings().Get<std::string>("triage.analysisMode"), data);
-			BinaryNinja::Settings().Set("triage.preferSummaryView", true, data);
+			settings->Set("analysis.mode", settings->Get<std::string>("triage.analysisMode"), data);
+			settings->Set("triage.preferSummaryView", true, data);
 			if (data->GetTypeName() != "Raw")
 			{
-				std::string linearSweepMode = BinaryNinja::Settings().Get<std::string>("triage.linearSweep");
+				std::string linearSweepMode = settings->Get<std::string>("triage.linearSweep");
 				if (linearSweepMode == "none")
 				{
-					BinaryNinja::Settings().Set("analysis.linearSweep.autorun", false, data);
+					settings->Set("analysis.linearSweep.autorun", false, data);
 				}
 				else if (linearSweepMode == "partial")
 				{
-					BinaryNinja::Settings().Set("analysis.linearSweep.autorun", true, data);
-					BinaryNinja::Settings().Set("analysis.linearSweep.controlFlowGraph", false, data);
+					settings->Set("analysis.linearSweep.autorun", true, data);
+					settings->Set("analysis.linearSweep.controlFlowGraph", false, data);
 				}
 				else if (linearSweepMode == "full")
 				{
-					BinaryNinja::Settings().Set("analysis.linearSweep.autorun", true, data);
-					BinaryNinja::Settings().Set("analysis.linearSweep.controlFlowGraph", true, data);
+					settings->Set("analysis.linearSweep.autorun", true, data);
+					settings->Set("analysis.linearSweep.controlFlowGraph", true, data);
 				}
 			}
 		}

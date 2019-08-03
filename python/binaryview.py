@@ -42,6 +42,7 @@ from binaryninja import lineardisassembly
 from binaryninja import metadata
 from binaryninja import highlight
 from binaryninja import function
+from binaryninja import settings
 
 # 2-3 compatibility
 from binaryninja import range
@@ -680,10 +681,16 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
 	def get_default_load_settings_for_data(self, data):
-		return core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, data.handle)
+		load_settings = core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, data.handle)
+		if load_settings is None:
+			return None
+		return settings.Settings(handle=load_settings)
 
 	def get_load_settings_for_data(self, data):
-		return core.BNGetBinaryViewLoadSettingsForData(self.handle, data.handle)
+		load_settings = core.BNGetBinaryViewLoadSettingsForData(self.handle, data.handle)
+		if load_settings is None:
+			return None
+		return settings.Settings(handle=load_settings)
 
 	def register_arch(self, ident, endian, arch):
 		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
@@ -1148,10 +1155,15 @@ class BinaryView(object):
 	@classmethod
 	def _get_load_settings_for_data(cls, ctxt, data):
 		try:
-			return cls.get_load_settings_for_data(BinaryView(handle=core.BNNewViewReference(data)))
+			attr = getattr(cls, "get_load_settings_for_data", None)
+			if callable(attr):
+				result = cls.get_load_settings_for_data(BinaryView(handle=core.BNNewViewReference(data)))
+				return ctypes.cast(core.BNNewSettingsReference(result.handle), ctypes.c_void_p).value
+			else:
+				return None
 		except:
 			log.log_error(traceback.format_exc())
-			return core.BNAllocString("")
+			return None
 
 	@classmethod
 	def open(cls, src, file_metadata=None):
@@ -4862,13 +4874,13 @@ class BinaryView(object):
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
 	def get_load_settings(self, type_name):
-		settings_id = core.BNBinaryViewGetLoadSettings(self.handle, type_name)
-		if settings_id == "":
+		settings_handle = core.BNBinaryViewGetLoadSettings(self.handle, type_name)
+		if settings_handle is None:
 			return None
-		return settings_id
+		return settings.Settings(handle=settings_handle)
 
-	def set_load_settings(self, type_name, load_settings):
-		core.BNBinaryViewSetLoadSettings(self.handle, type_name, load_settings)
+	def set_load_settings(self, type_name, settings):
+		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings.handle)
 
 	def __setattr__(self, name, value):
 		try:

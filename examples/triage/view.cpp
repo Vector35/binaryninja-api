@@ -99,7 +99,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data): QScrollArea(parent)
 	setWidgetResizable(true);
 	setWidget(container);
 
-	if (m_fullAnalysisButton && (BinaryNinja::Settings().Get<std::string>("analysis.mode", data) == "full"))
+	if (m_fullAnalysisButton && (BinaryNinja::Settings::Instance()->Get<std::string>("analysis.mode", data) == "full"))
 		m_fullAnalysisButton->hide();
 }
 
@@ -153,7 +153,7 @@ bool TriageView::navigate(uint64_t addr)
 
 void TriageView::startFullAnalysis()
 {
-	BinaryNinja::Settings().Set("analysis.mode", "full", m_data);
+	BinaryNinja::Settings::Instance()->Set("analysis.mode", "full", m_data);
 	for (auto& f: m_data->GetAnalysisFunctionList())
 	{
 		if (f->IsAnalysisSkipped())
@@ -220,9 +220,10 @@ TriageViewType::TriageViewType(): ViewType("Triage", "Triage Summary")
 
 int TriageViewType::getPriority(BinaryViewRef data, const QString&)
 {
-	bool full = BinaryNinja::Settings().Get<std::string>("analysis.mode", data) == "full";
-	bool alwaysPrefer = BinaryNinja::Settings().Get<bool>("triage.preferSummaryView", data);
-	bool preferForRaw = BinaryNinja::Settings().Get<bool>("triage.preferSummaryViewForRaw", data);
+	BinaryNinja::Ref<BinaryNinja::Settings> settings = BinaryNinja::Settings::Instance();
+	bool full = settings->Get<std::string>("analysis.mode", data) == "full";
+	bool alwaysPrefer = settings->Get<bool>("triage.preferSummaryView", data);
+	bool preferForRaw = settings->Get<bool>("triage.preferSummaryViewForRaw", data);
 	if (data->IsExecutable() && (alwaysPrefer || !full))
 		return 100;
 	if (data->GetLength() > 0)

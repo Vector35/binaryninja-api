@@ -89,6 +89,7 @@ private:
 	BNFunctionGraphType m_graphType;
 	std::set<BNDisassemblyOption> m_options;
 	DisassemblyContainer* m_container;
+	SettingsRef m_settings;
 
 private Q_SLOTS:
 	void viewInHexEditor();

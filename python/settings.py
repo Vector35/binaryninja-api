@@ -30,17 +30,46 @@ from binaryninja.enums import SettingsScope
 
 
 class Settings(object):
-	def __init__(self, registry_id = "default"):
-		self._registry_id = registry_id
+	handle = core.BNCreateSettings("default")
+
+	def __init__(self, instance_id = "default", handle = None):
+		if handle is None:
+			if instance_id is None or instance_id is "":
+				instance_id = "default"
+			self._instance_id = instance_id
+			if instance_id == "default":
+				self.handle = Settings.handle
+			else:
+				self.handle = core.BNCreateSettings(instance_id)
+		else:
+			instance_id = core.BNGetUniqueIdentifierString()
+			self.handle = handle
+
+	def __del__(self):
+		if self.handle is not Settings.handle and self.handle is not None:
+			core.BNFreeSettings(self.handle)
+
+	def __eq__(self, value):
+		if not isinstance(value, Settings):
+			return False
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+
+	def __ne__(self, value):
+		if not isinstance(value, Settings):
+			return True
+		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def __hash__(self):
+		return hash((self.instance_id, self.handle))
 
 	@property
-	def registry_id(self):
+	def instance_id(self):
 		"""(read-only)"""
-		return self._registry_id
+		return self._instance_id
 
 	def register_group(self, group, title):
 		"""
-		``register_group`` registers a group for use with this Settings registry. Groups provide a simple way to organize settings.
+		``register_group`` registers a group for use with this Settings instance. Groups provide a simple way to organize settings.
 
 		:param str group: a unique identifier
 		:param str title: a user friendly name appropriate for UI presentation
@@ -52,13 +81,13 @@ class Settings(object):
 			True
 			>>>
 		"""
-		return core.BNSettingsRegisterGroup(self._registry_id, group, title)
+		return core.BNSettingsRegisterGroup(self.handle, group, title)
 
-	def register_setting(self, id, properties):
+	def register_setting(self, key, properties):
 		"""
-		``register_setting`` registers a new setting with this Settings registry.
+		``register_setting`` registers a new setting with this Settings instance.
 
-		:param str id: a unique setting identifier in the form <group>.<id>
+		:param str key: a unique setting identifier in the form <group>.<name>
 		:param str properties: a JSON string describes the setting schema
 		:return: True on success, False on failure.
 		:rtype: bool
@@ -66,134 +95,137 @@ class Settings(object):
 
 			>>> Settings().register_group("solver", "Solver")
 			True
-			>>> Settings().register_setting("solver.basicBlockSlicing", '{"description" : "Enable the basic block slicing in the solver.", "title" : "Basic Block Slicing", "default" : true, "type" : "boolean", "id" : "basicBlockSlicing"}')
+			>>> Settings().register_setting("solver.basicBlockSlicing", '{"description" : "Enable the basic block slicing in the solver.", "title" : "Basic Block Slicing", "default" : true, "type" : "boolean"}')
 			True
 		"""
-		return core.BNSettingsRegisterSetting(self._registry_id, id, properties)
+		return core.BNSettingsRegisterSetting(self.handle, key, properties)
 
-	def query_property_string_list(self, id, property_name):
+	def contains(self, key):
+		return core.BNSettingsContains(self.handle, key)
+
+	def query_property_string_list(self, key, property_name):
 		length = ctypes.c_ulonglong()
-		result = core.BNSettingsQueryPropertyStringList(self._registry_id, id, property_name, ctypes.byref(length))
+		result = core.BNSettingsQueryPropertyStringList(self.handle, key, property_name, ctypes.byref(length))
 		out_list = []
 		for i in range(length.value):
 			out_list.append(pyNativeStr(result[i]))
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def update_property(self, id, setting_property):
-		return core.BNSettingsUpdateProperty(self.registry_id, id, setting_property)
+	def update_property(self, key, setting_property):
+		return core.BNSettingsUpdateProperty(self.handle, key, setting_property)
 
 	def deserialize_schema(self, schema):
-		return core.BNSettingsDeserializeSchema(self.registry_id, schema)
+		return core.BNSettingsDeserializeSchema(self.handle, schema)
 
 	def serialize_schema(self):
-		return core.BNSettingsSerializeSchema(self.registry_id)
+		return core.BNSettingsSerializeSchema(self.handle)
 
-	def copy_value(self, dest_registry_id, id):
-		return core.BNSettingsCopyValue(self._registry_id, dest_registry_id, id)
+	def copy_values_from(self, source, scope = SettingsScope.SettingsAutoScope):
+		return core.BNSettingsCopyValuesFrom(self.handle, source.handle, scope)
 
-	def reset(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def reset(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsReset(self._registry_id, id, view, scope)
+		return core.BNSettingsReset(self.handle, key, view, scope)
 
 	def reset_all(self, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsResetAll(self._registry_id, view, scope)
+		return core.BNSettingsResetAll(self.handle, view, scope)
 
-	def get_bool(self, id, view = None):
+	def get_bool(self, key, view = None):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsGetBool(self._registry_id, id, view, None)
+		return core.BNSettingsGetBool(self.handle, key, view, None)
 
-	def get_double(self, id, view = None):
+	def get_double(self, key, view = None):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsGetDouble(self._registry_id, id, view, None)
+		return core.BNSettingsGetDouble(self.handle, key, view, None)
 
-	def get_integer(self, id, view = None):
+	def get_integer(self, key, view = None):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsGetUInt64(self._registry_id, id, view, None)
+		return core.BNSettingsGetUInt64(self.handle, key, view, None)
 
-	def get_string(self, id, view = None):
+	def get_string(self, key, view = None):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsGetString(self._registry_id, id, view, None)
+		return core.BNSettingsGetString(self.handle, key, view, None)
 
-	def get_string_list(self, id, view = None):
+	def get_string_list(self, key, view = None):
 		if view is not None:
 			view = view.handle
 		length = ctypes.c_ulonglong()
-		result = core.BNSettingsGetStringList(self._registry_id, id, view, None, ctypes.byref(length))
+		result = core.BNSettingsGetStringList(self.handle, key, view, None, ctypes.byref(length))
 		out_list = []
 		for i in range(length.value):
 			out_list.append(pyNativeStr(result[i]))
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def get_bool_with_scope(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_bool_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetBool(self._registry_id, id, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetBool(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_double_with_scope(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_double_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetDouble(self._registry_id, id, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetDouble(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_integer_with_scope(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_integer_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetUInt64(self._registry_id, id, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetUInt64(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_with_scope(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_string_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetString(self._registry_id, id, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetString(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_list_with_scope(self, id, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_string_list_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		length = ctypes.c_ulonglong()
-		result = core.BNSettingsGetStringList(self._registry_id, id, view, ctypes.byref(c_scope), ctypes.byref(length))
+		result = core.BNSettingsGetStringList(self.handle, key, view, ctypes.byref(c_scope), ctypes.byref(length))
 		out_list = []
 		for i in range(length.value):
 			out_list.append(pyNativeStr(result[i]))
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
 
-	def set_bool(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_bool(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsSetBool(self._registry_id, view, scope, id, value)
+		return core.BNSettingsSetBool(self.handle, view, scope, key, value)
 
-	def set_double(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_double(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsSetDouble(self._registry_id, view, scope, id, value)
+		return core.BNSettingsSetDouble(self.handle, view, scope, key, value)
 
-	def set_integer(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_integer(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsSetUInt64(self._registry_id, view, scope, id, value)
+		return core.BNSettingsSetUInt64(self.handle, view, scope, key, value)
 
-	def set_string(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_string(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsSetString(self._registry_id, view, scope, id, value)
+		return core.BNSettingsSetString(self.handle, view, scope, key, value)
 
-	def set_string_list(self, id, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_string_list(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		length = ctypes.c_ulonglong()
@@ -201,4 +233,4 @@ class Settings(object):
 		string_list = (ctypes.c_char_p * len(value))()
 		for i in range(len(value)):
 			string_list[i] = value[i].encode('charmap')
-		return core.BNSettingsSetStringList(self._registry_id, view, scope, id, string_list, length)
+		return core.BNSettingsSetStringList(self.handle, view, scope, key, string_list, length)

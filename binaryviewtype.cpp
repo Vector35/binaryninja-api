@@ -43,11 +43,14 @@ bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 }
 
 
-char* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
+BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	return BNAllocString(type->GetLoadSettingsForData(view).c_str());
+	Ref<Settings> result = type->GetLoadSettingsForData(view);
+	if (!result)
+		return nullptr;
+	return BNNewSettingsReference(result->GetObject());
 }
 
 
@@ -220,10 +223,10 @@ bool CoreBinaryViewType::IsTypeValidForData(BinaryView* data)
 }
 
 
-string CoreBinaryViewType::GetLoadSettingsForData(BinaryView* data)
+Ref<Settings> CoreBinaryViewType::GetLoadSettingsForData(BinaryView* data)
 {
-	char* settings = BNGetBinaryViewLoadSettingsForData(m_object, data->GetObject());
-	string result = settings;
-	BNFreeString(settings);
-	return result;
+	BNSettings* settings = BNGetBinaryViewLoadSettingsForData(m_object, data->GetObject());
+	if (!settings)
+		return nullptr;
+	return new Settings(settings);
 }

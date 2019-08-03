@@ -2283,6 +2283,7 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
 		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 
@@ -2302,6 +2303,7 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 		inLines[i].highlight = lines[i].highlight;
 		inLines[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
 		inLines[i].count = lines[i].tokens.size();
+		inLines[i].tags = Tag::CreateTagList(lines[i].tags, &inLines[i].tagCount);
 	}
 
 	BNDisassemblyTextLine* result = nullptr;
@@ -2317,6 +2319,7 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
 		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
 		outLines.push_back(line);
 	}
 

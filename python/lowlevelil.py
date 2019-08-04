@@ -909,7 +909,7 @@ class LowLevelILInstruction(object):
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index)
+		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index, None, 0)
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -937,6 +937,17 @@ class LowLevelILInstruction(object):
 		result.append(LowLevelILOperationAndSize(self._operation, self._size))
 		return result
 
+	def get_possible_values(self, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index, option_array, len(options))
+		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
 	def get_reg_value(self, reg):
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAtInstruction(self._function.handle, reg, self._instr_index)
@@ -949,16 +960,28 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_reg_values(self, reg):
+	def get_possible_reg_values(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg):
+	def get_possible_reg_values_after(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -975,16 +998,28 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_flag_values(self, flag):
+	def get_possible_flag_values(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag):
+	def get_possible_flag_values_after(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -999,14 +1034,26 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_stack_contents(self, offset, size):
-		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset, size):
-		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents_after(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result

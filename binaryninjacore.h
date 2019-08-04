@@ -785,6 +785,11 @@ extern "C"
 		NotInSetOfValues
 	};
 
+	enum BNDataFlowQueryOption
+	{
+		FromAddressesInLookupTableQueryOption // Use addresses instead of index in the from list within LookupTableValue results
+	};
+
 	enum BNPluginOrigin
 	{
 		OfficialPluginOrigin,
@@ -3275,32 +3280,33 @@ __attribute__ ((format (printf, 1, 2)))
 		uint32_t flag, size_t version);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILExprValue(BNLowLevelILFunction* func, size_t expr);
-	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleExprValues(BNLowLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleExprValues(BNLowLevelILFunction* func, size_t expr,
+		BNDataFlowQueryOption* options, size_t optionCount);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILRegisterValueAtInstruction(BNLowLevelILFunction* func,
 		uint32_t reg, size_t instr);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILRegisterValueAfterInstruction(BNLowLevelILFunction* func,
 		uint32_t reg, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleRegisterValuesAtInstruction(BNLowLevelILFunction* func,
-		uint32_t reg, size_t instr);
+		uint32_t reg, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleRegisterValuesAfterInstruction(BNLowLevelILFunction* func,
-		uint32_t reg, size_t instr);
+		uint32_t reg, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILFlagValueAtInstruction(BNLowLevelILFunction* func,
 		uint32_t flag, size_t instr);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILFlagValueAfterInstruction(BNLowLevelILFunction* func,
 		uint32_t flag, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleFlagValuesAtInstruction(BNLowLevelILFunction* func,
-		uint32_t flag, size_t instr);
+		uint32_t flag, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleFlagValuesAfterInstruction(BNLowLevelILFunction* func,
-		uint32_t flag, size_t instr);
+		uint32_t flag, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILStackContentsAtInstruction(BNLowLevelILFunction* func,
 		int64_t offset, size_t len, size_t instr);
 	BINARYNINJACOREAPI BNRegisterValue BNGetLowLevelILStackContentsAfterInstruction(BNLowLevelILFunction* func,
 		int64_t offset, size_t len, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleStackContentsAtInstruction(BNLowLevelILFunction* func,
-		int64_t offset, size_t len, size_t instr);
+		int64_t offset, size_t len, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleStackContentsAfterInstruction(BNLowLevelILFunction* func,
-		int64_t offset, size_t len, size_t instr);
+		int64_t offset, size_t len, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILForLowLevelIL(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMappedMediumLevelIL(BNLowLevelILFunction* func);
@@ -3399,8 +3405,9 @@ __attribute__ ((format (printf, 1, 2)))
 		const BNVariable* var, size_t version);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILExprValue(BNMediumLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleSSAVarValues(BNMediumLevelILFunction* func,
-		const BNVariable* var, size_t version, size_t instr);
-	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleExprValues(BNMediumLevelILFunction* func, size_t expr);
+		const BNVariable* var, size_t version, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
+	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleExprValues(BNMediumLevelILFunction* func, size_t expr,
+		BNDataFlowQueryOption* options, size_t optionCount);
 
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILSSAVarVersionAtILInstruction(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t instr);
@@ -3418,25 +3425,25 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILRegisterValueAfterInstruction(BNMediumLevelILFunction* func,
 		uint32_t reg, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleRegisterValuesAtInstruction(BNMediumLevelILFunction* func,
-		uint32_t reg, size_t instr);
+		uint32_t reg, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(BNMediumLevelILFunction* func,
-		uint32_t reg, size_t instr);
+		uint32_t reg, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILFlagValueAtInstruction(BNMediumLevelILFunction* func,
 		uint32_t flag, size_t instr);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILFlagValueAfterInstruction(BNMediumLevelILFunction* func,
 		uint32_t flag, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleFlagValuesAtInstruction(BNMediumLevelILFunction* func,
-		uint32_t flag, size_t instr);
+		uint32_t flag, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleFlagValuesAfterInstruction(BNMediumLevelILFunction* func,
-		uint32_t flag, size_t instr);
+		uint32_t flag, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILStackContentsAtInstruction(BNMediumLevelILFunction* func,
 		int64_t offset, size_t len, size_t instr);
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILStackContentsAfterInstruction(BNMediumLevelILFunction* func,
 		int64_t offset, size_t len, size_t instr);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleStackContentsAtInstruction(BNMediumLevelILFunction* func,
-		int64_t offset, size_t len, size_t instr);
+		int64_t offset, size_t len, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetMediumLevelILPossibleStackContentsAfterInstruction(BNMediumLevelILFunction* func,
-		int64_t offset, size_t len, size_t instr);
+		int64_t offset, size_t len, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 
 	BINARYNINJACOREAPI BNILBranchDependence BNGetMediumLevelILBranchDependence(BNMediumLevelILFunction* func,
 		size_t curInstr, size_t branchInstr);

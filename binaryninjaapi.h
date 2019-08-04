@@ -3625,21 +3625,29 @@ __attribute__ ((format (printf, 1, 2)))
 
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const LowLevelILInstruction& expr);
-		PossibleValueSet GetPossibleExprValues(size_t expr);
-		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr);
+		PossibleValueSet GetPossibleExprValues(size_t expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
@@ -3951,9 +3959,12 @@ __attribute__ ((format (printf, 1, 2)))
 		RegisterValue GetSSAVarValue(const SSAVariable& var);
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const MediumLevelILInstruction& expr);
-		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr);
-		PossibleValueSet GetPossibleExprValues(size_t expr);
-		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr);
+		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(size_t expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
 		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
@@ -3963,16 +3974,22 @@ __attribute__ ((format (printf, 1, 2)))
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
 		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;

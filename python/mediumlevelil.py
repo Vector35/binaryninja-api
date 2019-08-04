@@ -24,7 +24,7 @@ import struct
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
+from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence, DataFlowQueryOption
 from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
 from binaryninja import function
 from binaryninja import types
@@ -434,7 +434,7 @@ class MediumLevelILInstruction(object):
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index)
+		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index, None, 0)
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -555,12 +555,29 @@ class MediumLevelILInstruction(object):
 			return types.Type(result.type, platform = platform, confidence = result.confidence)
 		return None
 
-	def get_ssa_var_possible_values(self, ssa_var):
+	def get_possible_values(self, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index, option_array, len(options))
+		result = function.PossibleValueSet(self._function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_ssa_var_possible_values(self, ssa_var, options = []):
 		var_data = core.BNVariable()
 		var_data.type = ssa_var.var.source_type
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
-		value = core.BNGetMediumLevelILPossibleSSAVarValues(self._function.handle, var_data, ssa_var.version, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleSSAVarValues(self._function.handle, var_data, ssa_var.version,
+			self._instr_index, option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -598,16 +615,28 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_reg_values(self, reg):
+	def get_possible_reg_values(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg):
+	def get_possible_reg_values_after(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -624,16 +653,28 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_flag_values(self, flag):
+	def get_possible_flag_values(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag):
+	def get_possible_flag_values_after(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -648,14 +689,26 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_stack_contents(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents_after(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result

@@ -278,10 +278,16 @@ class ValueRange(object):
 
 
 class PossibleValueSet(object):
-	def __init__(self, arch, value):
+	def __init__(self, arch = None, value = None):
+		if value is None:
+			self._type = RegisterValueType.UndeterminedValue
+			return
 		self._type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self._reg = arch.get_reg_name(value.value)
+			if arch is None:
+				self._reg = value.value
+			else:
+				self._reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self._value = value.value
 		elif value.state == RegisterValueType.ConstantPointerValue:

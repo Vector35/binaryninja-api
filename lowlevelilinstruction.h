@@ -619,7 +619,8 @@ namespace BinaryNinja
 		void UpdateRawOperandAsSSARegisterOrFlagList(size_t operandIndex, const std::vector<SSARegisterOrFlag>& outputs);
 
 		RegisterValue GetValue() const;
-		PossibleValueSet GetPossibleValues() const;
+		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
+			std::set<BNDataFlowQueryOption>()) const;
 
 		RegisterValue GetRegisterValue(uint32_t reg);
 		RegisterValue GetRegisterValueAfter(uint32_t reg);

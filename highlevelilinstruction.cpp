@@ -63,6 +63,7 @@ unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
 		{DestExprsHighLevelOperandUsage, ExprListHighLevelOperand},
 		{BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand},
 		{CasesHighLevelOperandUsage, ExprListHighLevelOperand},
+		{ValueExprsHighLevelOperandUsage, ExprListHighLevelOperand},
 		{SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
 		{SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
 		{SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
@@ -88,7 +89,7 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
 			UpdateExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
 		{HLIL_SWITCH, {ConditionExprHighLevelOperandUsage, DefaultExprHighLevelOperandUsage,
 			CasesHighLevelOperandUsage}},
-		{HLIL_CASE, {ConditionExprHighLevelOperandUsage, TrueExprHighLevelOperandUsage}},
+		{HLIL_CASE, {ValueExprsHighLevelOperandUsage, TrueExprHighLevelOperandUsage}},
 		{HLIL_JUMP, {DestExprHighLevelOperandUsage}},
 		{HLIL_RET, {SourceExprsHighLevelOperandUsage}},
 		{HLIL_GOTO, {TargetHighLevelOperandUsage}},
@@ -778,6 +779,30 @@ void HighLevelILInstructionBase::UpdateRawOperandAsSSAVariableList(size_t operan
 }
 
 
+RegisterValue HighLevelILInstructionBase::GetValue() const
+{
+	if (!HasMediumLevelIL())
+		return RegisterValue();
+	return GetMediumLevelILSSAForm().GetValue();
+}
+
+
+PossibleValueSet HighLevelILInstructionBase::GetPossibleValues(const set<BNDataFlowQueryOption>& options) const
+{
+	if (!HasMediumLevelIL())
+		return PossibleValueSet();
+	return GetMediumLevelILSSAForm().GetPossibleValues(options);
+}
+
+
+Confidence<Ref<Type>> HighLevelILInstructionBase::GetType() const
+{
+	if (!HasMediumLevelIL())
+		return nullptr;
+	return GetMediumLevelILSSAForm().GetType();
+}
+
+
 size_t HighLevelILInstructionBase::GetMediumLevelILExprIndex() const
 {
 	return function->GetMediumLevelILExprIndex(exprIndex);
@@ -882,7 +907,9 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 			break;
 		case HLIL_CASE:
 			toProcess.push(cur.GetTrueExpr<HLIL_CASE>().exprIndex);
-			toProcess.push(cur.GetConditionExpr<HLIL_CASE>().exprIndex);
+			exprs = cur.GetValueExprs<HLIL_CASE>();
+			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+				toProcess.push(i->exprIndex);
 			break;
 		case HLIL_ASSIGN:
 			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN>().exprIndex);
@@ -1095,8 +1122,9 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->Switch(subExprHandler(GetConditionExpr<HLIL_SWITCH>()),
 			subExprHandler(GetDefaultExpr<HLIL_SWITCH>()), params, *this);
 	case HLIL_CASE:
-		return dest->Case(subExprHandler(GetConditionExpr<HLIL_CASE>()),
-			subExprHandler(GetTrueExpr<HLIL_CASE>()), *this);
+		for (auto& i : GetValueExprs<HLIL_CASE>())
+			params.push_back(subExprHandler(i));
+		return dest->Case(params, subExprHandler(GetTrueExpr<HLIL_CASE>()), *this);
 	case HLIL_BREAK:
 		return dest->Break(*this);
 	case HLIL_CONTINUE:
@@ -1286,6 +1314,465 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	default:
 		throw HighLevelILInstructionAccessException();
 	}
+}
+
+
+static bool CompareExprList(const HighLevelILInstructionList& a, const HighLevelILInstructionList& b)
+{
+	if (a.size() < b.size())
+		return true;
+	if (a.size() > b.size())
+		return false;
+	auto i = a.begin();
+	auto j = b.begin();
+	for (; i != a.end(); ++i, ++j)
+	{
+		if (*i < *j)
+			return true;
+		if (*j < *i)
+			return false;
+	}
+	return false;
+}
+
+
+bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) const
+{
+	if (operation < other.operation)
+		return true;
+	if (operation > other.operation)
+		return false;
+
+	switch (operation)
+	{
+	case HLIL_BLOCK:
+		return CompareExprList(GetBlockExprs<HLIL_BLOCK>(), other.GetBlockExprs<HLIL_BLOCK>());
+	case HLIL_IF:
+		if (GetConditionExpr<HLIL_IF>() < other.GetConditionExpr<HLIL_IF>())
+			return true;
+		if (other.GetConditionExpr<HLIL_IF>() < GetConditionExpr<HLIL_IF>())
+			return false;
+		if (GetTrueExpr<HLIL_IF>() < other.GetTrueExpr<HLIL_IF>())
+			return true;
+		if (other.GetTrueExpr<HLIL_IF>() < GetTrueExpr<HLIL_IF>())
+			return false;
+		return GetFalseExpr<HLIL_IF>() < other.GetFalseExpr<HLIL_IF>();
+	case HLIL_WHILE:
+		if (GetConditionExpr<HLIL_WHILE>() < other.GetConditionExpr<HLIL_WHILE>())
+			return true;
+		if (other.GetConditionExpr<HLIL_WHILE>() < GetConditionExpr<HLIL_WHILE>())
+			return false;
+		return GetLoopExpr<HLIL_WHILE>() < other.GetLoopExpr<HLIL_WHILE>();
+	case HLIL_DO_WHILE:
+		if (GetLoopExpr<HLIL_DO_WHILE>() < other.GetLoopExpr<HLIL_DO_WHILE>())
+			return true;
+		if (other.GetLoopExpr<HLIL_DO_WHILE>() < GetLoopExpr<HLIL_DO_WHILE>())
+			return false;
+		return GetConditionExpr<HLIL_DO_WHILE>() < other.GetConditionExpr<HLIL_DO_WHILE>();
+	case HLIL_FOR:
+		if (GetInitExpr<HLIL_FOR>() < other.GetInitExpr<HLIL_FOR>())
+			return true;
+		if (other.GetInitExpr<HLIL_FOR>() < GetInitExpr<HLIL_FOR>())
+			return false;
+		if (GetConditionExpr<HLIL_FOR>() < other.GetConditionExpr<HLIL_FOR>())
+			return true;
+		if (other.GetConditionExpr<HLIL_FOR>() < GetConditionExpr<HLIL_FOR>())
+			return false;
+		if (GetUpdateExpr<HLIL_FOR>() < other.GetUpdateExpr<HLIL_FOR>())
+			return true;
+		if (other.GetUpdateExpr<HLIL_FOR>() < GetUpdateExpr<HLIL_FOR>())
+			return false;
+		return GetLoopExpr<HLIL_FOR>() < other.GetLoopExpr<HLIL_FOR>();
+	case HLIL_SWITCH:
+		if (GetConditionExpr<HLIL_SWITCH>() < other.GetConditionExpr<HLIL_SWITCH>())
+			return true;
+		if (other.GetConditionExpr<HLIL_SWITCH>() < GetConditionExpr<HLIL_SWITCH>())
+			return false;
+		if (GetDefaultExpr<HLIL_SWITCH>() < other.GetDefaultExpr<HLIL_SWITCH>())
+			return true;
+		if (other.GetDefaultExpr<HLIL_SWITCH>() < GetDefaultExpr<HLIL_SWITCH>())
+			return false;
+		return CompareExprList(GetCases<HLIL_SWITCH>(), other.GetCases<HLIL_SWITCH>());
+	case HLIL_CASE:
+		if (GetTrueExpr<HLIL_CASE>() < other.GetTrueExpr<HLIL_CASE>())
+			return true;
+		if (other.GetTrueExpr<HLIL_CASE>() < GetTrueExpr<HLIL_CASE>())
+			return false;
+		return CompareExprList(GetValueExprs<HLIL_CASE>(), other.GetValueExprs<HLIL_CASE>());
+	case HLIL_JUMP:
+		return GetDestExpr<HLIL_JUMP>() < other.GetDestExpr<HLIL_JUMP>();
+	case HLIL_RET:
+		return CompareExprList(GetSourceExprs<HLIL_RET>(), other.GetSourceExprs<HLIL_RET>());
+	case HLIL_GOTO:
+		return GetTarget<HLIL_GOTO>() < other.GetTarget<HLIL_GOTO>();
+	case HLIL_LABEL:
+		return GetTarget<HLIL_LABEL>() < other.GetTarget<HLIL_LABEL>();
+	case HLIL_ASSIGN:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestExpr<HLIL_ASSIGN>() < other.GetDestExpr<HLIL_ASSIGN>())
+			return true;
+		if (other.GetDestExpr<HLIL_ASSIGN>() < GetDestExpr<HLIL_ASSIGN>())
+			return false;
+		return GetSourceExpr<HLIL_ASSIGN>() < other.GetSourceExpr<HLIL_ASSIGN>();
+	case HLIL_ASSIGN_UNPACK:
+		if (GetSourceExpr<HLIL_ASSIGN_UNPACK>() < other.GetSourceExpr<HLIL_ASSIGN_UNPACK>())
+			return true;
+		if (other.GetSourceExpr<HLIL_ASSIGN_UNPACK>() < GetSourceExpr<HLIL_ASSIGN_UNPACK>())
+			return false;
+		return CompareExprList(GetDestExprs<HLIL_ASSIGN_UNPACK>(), other.GetDestExprs<HLIL_ASSIGN_UNPACK>());
+	case HLIL_ASSIGN_MEM_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestExpr<HLIL_ASSIGN_MEM_SSA>() < other.GetDestExpr<HLIL_ASSIGN_MEM_SSA>())
+			return true;
+		if (other.GetDestExpr<HLIL_ASSIGN_MEM_SSA>() < GetDestExpr<HLIL_ASSIGN_MEM_SSA>())
+			return false;
+		if (GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>() < other.GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>() < GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>())
+			return false;
+		if (GetSourceExpr<HLIL_ASSIGN_MEM_SSA>() < other.GetSourceExpr<HLIL_ASSIGN_MEM_SSA>())
+			return true;
+		if (other.GetSourceExpr<HLIL_ASSIGN_MEM_SSA>() < GetSourceExpr<HLIL_ASSIGN_MEM_SSA>())
+			return false;
+		return GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>() < other.GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>();
+	case HLIL_ASSIGN_UNPACK_MEM_SSA:
+		if (GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return false;
+		if (GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return true;
+		if (other.GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return false;
+		if (GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return true;
+		if (other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+			return false;
+		return CompareExprList(GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>(), other.GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>());
+	case HLIL_VAR:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		return GetVariable<HLIL_VAR>() < other.GetVariable<HLIL_VAR>();
+	case HLIL_VAR_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		return GetSSAVariable<HLIL_VAR_SSA>() < other.GetSSAVariable<HLIL_VAR_SSA>();
+	case HLIL_STRUCT_FIELD:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_STRUCT_FIELD>() < other.GetSourceExpr<HLIL_STRUCT_FIELD>())
+			return true;
+		if (other.GetSourceExpr<HLIL_STRUCT_FIELD>() < GetSourceExpr<HLIL_STRUCT_FIELD>())
+			return false;
+		return GetOffset<HLIL_STRUCT_FIELD>() < other.GetOffset<HLIL_STRUCT_FIELD>();
+	case HLIL_ARRAY_INDEX:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_ARRAY_INDEX>() < other.GetSourceExpr<HLIL_ARRAY_INDEX>())
+			return true;
+		if (other.GetSourceExpr<HLIL_ARRAY_INDEX>() < GetSourceExpr<HLIL_ARRAY_INDEX>())
+			return false;
+		return GetIndexExpr<HLIL_ARRAY_INDEX>() < other.GetIndexExpr<HLIL_ARRAY_INDEX>();
+	case HLIL_ARRAY_INDEX_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_ARRAY_INDEX_SSA>() < other.GetSourceExpr<HLIL_ARRAY_INDEX_SSA>())
+			return true;
+		if (other.GetSourceExpr<HLIL_ARRAY_INDEX_SSA>() < GetSourceExpr<HLIL_ARRAY_INDEX_SSA>())
+			return false;
+		if (GetIndexExpr<HLIL_ARRAY_INDEX_SSA>() < other.GetIndexExpr<HLIL_ARRAY_INDEX_SSA>())
+			return true;
+		if (other.GetIndexExpr<HLIL_ARRAY_INDEX_SSA>() < GetIndexExpr<HLIL_ARRAY_INDEX_SSA>())
+			return false;
+		return GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>() < other.GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>();
+	case HLIL_SPLIT:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetHighExpr<HLIL_SPLIT>() < other.GetHighExpr<HLIL_SPLIT>())
+			return true;
+		if (other.GetHighExpr<HLIL_SPLIT>() < GetHighExpr<HLIL_SPLIT>())
+			return false;
+		return GetLowExpr<HLIL_SPLIT>() < other.GetLowExpr<HLIL_SPLIT>();
+	case HLIL_DEREF_FIELD:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_DEREF_FIELD>() < other.GetSourceExpr<HLIL_DEREF_FIELD>())
+			return true;
+		if (other.GetSourceExpr<HLIL_DEREF_FIELD>() < GetSourceExpr<HLIL_DEREF_FIELD>())
+			return false;
+		return GetOffset<HLIL_DEREF_FIELD>() < other.GetOffset<HLIL_DEREF_FIELD>();
+	case HLIL_DEREF_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_DEREF_SSA>() < other.GetSourceExpr<HLIL_DEREF_SSA>())
+			return true;
+		if (other.GetSourceExpr<HLIL_DEREF_SSA>() < GetSourceExpr<HLIL_DEREF_SSA>())
+			return false;
+		return GetSourceMemoryVersion<HLIL_DEREF_SSA>() < other.GetSourceMemoryVersion<HLIL_DEREF_SSA>();
+	case HLIL_DEREF_FIELD_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_DEREF_FIELD_SSA>() < other.GetSourceExpr<HLIL_DEREF_FIELD_SSA>())
+			return true;
+		if (other.GetSourceExpr<HLIL_DEREF_FIELD_SSA>() < GetSourceExpr<HLIL_DEREF_FIELD_SSA>())
+			return false;
+		if (GetOffset<HLIL_DEREF_FIELD_SSA>() < other.GetOffset<HLIL_DEREF_FIELD_SSA>())
+			return true;
+		if (other.GetOffset<HLIL_DEREF_FIELD_SSA>() < GetOffset<HLIL_DEREF_FIELD_SSA>())
+			return false;
+		return GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>() < other.GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>();
+	case HLIL_ADDRESS_OF:
+		return GetSourceExpr<HLIL_ADDRESS_OF>() < other.GetSourceExpr<HLIL_ADDRESS_OF>();
+	case HLIL_EXTERN_PTR:
+		if (GetConstant<HLIL_EXTERN_PTR>() < other.GetConstant<HLIL_EXTERN_PTR>())
+			return true;
+		if (other.GetConstant<HLIL_EXTERN_PTR>() < GetConstant<HLIL_EXTERN_PTR>())
+			return false;
+		return GetOffset<HLIL_EXTERN_PTR>() < other.GetOffset<HLIL_EXTERN_PTR>();
+	case HLIL_CALL:
+		if (GetDestExpr<HLIL_CALL>() < other.GetDestExpr<HLIL_CALL>())
+			return true;
+		if (other.GetDestExpr<HLIL_CALL>() < GetDestExpr<HLIL_CALL>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_CALL>(), other.GetParameterExprs<HLIL_CALL>());
+	case HLIL_SYSCALL:
+		return CompareExprList(GetParameterExprs<HLIL_SYSCALL>(), other.GetParameterExprs<HLIL_SYSCALL>());
+	case HLIL_TAILCALL:
+		if (GetDestExpr<HLIL_TAILCALL>() < other.GetDestExpr<HLIL_TAILCALL>())
+			return true;
+		if (other.GetDestExpr<HLIL_TAILCALL>() < GetDestExpr<HLIL_TAILCALL>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_TAILCALL>(), other.GetParameterExprs<HLIL_TAILCALL>());
+	case HLIL_INTRINSIC:
+		if (GetIntrinsic<HLIL_INTRINSIC>() < other.GetIntrinsic<HLIL_INTRINSIC>())
+			return true;
+		if (other.GetIntrinsic<HLIL_INTRINSIC>() < GetIntrinsic<HLIL_INTRINSIC>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_INTRINSIC>(), other.GetParameterExprs<HLIL_INTRINSIC>());
+	case HLIL_CALL_SSA:
+		if (GetDestExpr<HLIL_CALL_SSA>() < other.GetDestExpr<HLIL_CALL_SSA>())
+			return true;
+		if (other.GetDestExpr<HLIL_CALL_SSA>() < GetDestExpr<HLIL_CALL_SSA>())
+			return false;
+		if (GetDestMemoryVersion<HLIL_CALL_SSA>() < other.GetDestMemoryVersion<HLIL_CALL_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_CALL_SSA>() < GetDestMemoryVersion<HLIL_CALL_SSA>())
+			return false;
+		if (GetSourceMemoryVersion<HLIL_CALL_SSA>() < other.GetSourceMemoryVersion<HLIL_CALL_SSA>())
+			return true;
+		if (other.GetSourceMemoryVersion<HLIL_CALL_SSA>() < GetSourceMemoryVersion<HLIL_CALL_SSA>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_CALL_SSA>(), other.GetParameterExprs<HLIL_CALL_SSA>());
+	case HLIL_SYSCALL_SSA:
+		if (GetDestMemoryVersion<HLIL_SYSCALL_SSA>() < other.GetDestMemoryVersion<HLIL_SYSCALL_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_SYSCALL_SSA>() < GetDestMemoryVersion<HLIL_SYSCALL_SSA>())
+			return false;
+		if (GetSourceMemoryVersion<HLIL_SYSCALL_SSA>() < other.GetSourceMemoryVersion<HLIL_SYSCALL_SSA>())
+			return true;
+		if (other.GetSourceMemoryVersion<HLIL_SYSCALL_SSA>() < GetSourceMemoryVersion<HLIL_SYSCALL_SSA>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_SYSCALL_SSA>(), other.GetParameterExprs<HLIL_SYSCALL_SSA>());
+	case HLIL_INTRINSIC_SSA:
+		if (GetIntrinsic<HLIL_INTRINSIC_SSA>() < other.GetIntrinsic<HLIL_INTRINSIC_SSA>())
+			return true;
+		if (other.GetIntrinsic<HLIL_INTRINSIC_SSA>() < GetIntrinsic<HLIL_INTRINSIC_SSA>())
+			return false;
+		if (GetDestMemoryVersion<HLIL_INTRINSIC_SSA>() < other.GetDestMemoryVersion<HLIL_INTRINSIC_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_INTRINSIC_SSA>() < GetDestMemoryVersion<HLIL_INTRINSIC_SSA>())
+			return false;
+		if (GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>() < other.GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>())
+			return true;
+		if (other.GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>() < GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_INTRINSIC_SSA>(), other.GetParameterExprs<HLIL_INTRINSIC_SSA>());
+	case HLIL_TRAP:
+		return GetVector<HLIL_TRAP>() < other.GetVector<HLIL_TRAP>();
+	case HLIL_ADD:
+	case HLIL_SUB:
+	case HLIL_AND:
+	case HLIL_OR:
+	case HLIL_XOR:
+	case HLIL_LSL:
+	case HLIL_LSR:
+	case HLIL_ASR:
+	case HLIL_ROL:
+	case HLIL_ROR:
+	case HLIL_MUL:
+	case HLIL_MULU_DP:
+	case HLIL_MULS_DP:
+	case HLIL_DIVU:
+	case HLIL_DIVS:
+	case HLIL_MODU:
+	case HLIL_MODS:
+	case HLIL_DIVU_DP:
+	case HLIL_DIVS_DP:
+	case HLIL_MODU_DP:
+	case HLIL_MODS_DP:
+	case HLIL_CMP_E:
+	case HLIL_CMP_NE:
+	case HLIL_CMP_SLT:
+	case HLIL_CMP_ULT:
+	case HLIL_CMP_SLE:
+	case HLIL_CMP_ULE:
+	case HLIL_CMP_SGE:
+	case HLIL_CMP_UGE:
+	case HLIL_CMP_SGT:
+	case HLIL_CMP_UGT:
+	case HLIL_TEST_BIT:
+	case HLIL_ADD_OVERFLOW:
+	case HLIL_FADD:
+	case HLIL_FSUB:
+	case HLIL_FMUL:
+	case HLIL_FDIV:
+	case HLIL_FCMP_E:
+	case HLIL_FCMP_NE:
+	case HLIL_FCMP_LT:
+	case HLIL_FCMP_LE:
+	case HLIL_FCMP_GE:
+	case HLIL_FCMP_GT:
+	case HLIL_FCMP_O:
+	case HLIL_FCMP_UO:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (AsTwoOperand().GetLeftExpr() < other.AsTwoOperand().GetLeftExpr())
+			return true;
+		if (other.AsTwoOperand().GetLeftExpr() < AsTwoOperand().GetLeftExpr())
+			return false;
+		return AsTwoOperand().GetRightExpr() < other.AsTwoOperand().GetRightExpr();
+	case HLIL_ADC:
+	case HLIL_SBB:
+	case HLIL_RLC:
+	case HLIL_RRC:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (AsTwoOperandWithCarry().GetLeftExpr() < other.AsTwoOperandWithCarry().GetLeftExpr())
+			return true;
+		if (other.AsTwoOperandWithCarry().GetLeftExpr() < AsTwoOperandWithCarry().GetLeftExpr())
+			return false;
+		if (AsTwoOperandWithCarry().GetRightExpr() < other.AsTwoOperandWithCarry().GetRightExpr())
+			return true;
+		if (other.AsTwoOperandWithCarry().GetRightExpr() < AsTwoOperandWithCarry().GetRightExpr())
+			return false;
+		return AsTwoOperandWithCarry().GetCarryExpr() < other.AsTwoOperandWithCarry().GetCarryExpr();
+	case HLIL_CONST:
+	case HLIL_CONST_PTR:
+	case HLIL_FLOAT_CONST:
+	case HLIL_IMPORT:
+		return AsConstant().GetConstant() < other.AsConstant().GetConstant();
+	case HLIL_DEREF:
+	case HLIL_NEG:
+	case HLIL_NOT:
+	case HLIL_SX:
+	case HLIL_ZX:
+	case HLIL_LOW_PART:
+	case HLIL_BOOL_TO_INT:
+	case HLIL_UNIMPL_MEM:
+	case HLIL_FSQRT:
+	case HLIL_FNEG:
+	case HLIL_FABS:
+	case HLIL_FLOAT_TO_INT:
+	case HLIL_INT_TO_FLOAT:
+	case HLIL_FLOAT_CONV:
+	case HLIL_ROUND_TO_INT:
+	case HLIL_FLOOR:
+	case HLIL_CEIL:
+	case HLIL_FTRUNC:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		return AsOneOperand().GetSourceExpr() < other.AsOneOperand().GetSourceExpr();
+	case HLIL_VAR_PHI:
+		{
+			if (GetDestSSAVariable<HLIL_VAR_PHI>() < other.GetDestSSAVariable<HLIL_VAR_PHI>())
+				return true;
+			if (other.GetDestSSAVariable<HLIL_VAR_PHI>() < GetDestSSAVariable<HLIL_VAR_PHI>())
+				return false;
+			HighLevelILSSAVariableList list = GetSourceSSAVariables<HLIL_VAR_PHI>();
+			HighLevelILSSAVariableList otherList = other.GetSourceSSAVariables<HLIL_VAR_PHI>();
+			if (list.size() < otherList.size())
+				return true;
+			if (list.size() > otherList.size())
+				return false;
+			auto i = list.begin();
+			auto j = otherList.begin();
+			for (; i != list.end(); ++i, ++j)
+			{
+				if (*i < *j)
+					return true;
+				if (*j < *i)
+					return false;
+			}
+			return false;
+		}
+	case HLIL_MEM_PHI:
+		{
+			if (GetDestMemoryVersion<HLIL_MEM_PHI>() < other.GetDestMemoryVersion<HLIL_MEM_PHI>())
+				return true;
+			if (other.GetDestMemoryVersion<HLIL_MEM_PHI>() < GetDestMemoryVersion<HLIL_MEM_PHI>())
+				return false;
+			HighLevelILIndexList list = GetSourceMemoryVersions<HLIL_MEM_PHI>();
+			HighLevelILIndexList otherList = other.GetSourceMemoryVersions<HLIL_MEM_PHI>();
+			if (list.size() < otherList.size())
+				return true;
+			if (list.size() > otherList.size())
+				return false;
+			auto i = list.begin();
+			auto j = otherList.begin();
+			for (; i != list.end(); ++i, ++j)
+			{
+				if (*i < *j)
+					return true;
+				if (*j < *i)
+					return false;
+			}
+			return false;
+		}
+	default:
+		return false;
+	}
+}
+
+
+bool HighLevelILInstruction::operator==(const HighLevelILInstruction& other) const
+{
+	return !((*this < other) || (other < *this));
+}
+
+
+bool HighLevelILInstruction::operator!=(const HighLevelILInstruction& other) const
+{
+	return !(*this == other);
 }
 
 
@@ -1554,6 +2041,15 @@ HighLevelILInstructionList HighLevelILInstruction::GetCases() const
 }
 
 
+HighLevelILInstructionList HighLevelILInstruction::GetValueExprs() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(ValueExprsHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExprList(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 HighLevelILSSAVariableList HighLevelILInstruction::GetSourceSSAVariables() const
 {
 	size_t operandIndex;
@@ -1636,9 +2132,9 @@ ExprId HighLevelILFunction::Switch(ExprId condition, ExprId defaultExpr, const s
 }
 
 
-ExprId HighLevelILFunction::Case(ExprId condition, ExprId expr, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Case(const std::vector<ExprId>& values, ExprId expr, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_CASE, loc, 0, condition, expr);
+	return AddExprWithLocation(HLIL_CASE, loc, 0, values.size(), AddOperandList(values), expr);
 }
 
 

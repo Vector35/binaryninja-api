@@ -94,6 +94,7 @@ namespace BinaryNinja
 		DestExprsHighLevelOperandUsage,
 		BlockExprsHighLevelOperandUsage,
 		CasesHighLevelOperandUsage,
+		ValueExprsHighLevelOperandUsage,
 		SourceSSAVariablesHighLevelOperandUsage,
 		SourceMemoryVersionHighLevelOperandUsage,
 		SourceMemoryVersionsHighLevelOperandUsage,
@@ -293,6 +294,11 @@ namespace BinaryNinja
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<HighLevelILInstruction>& exprs);
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
 
+		RegisterValue GetValue() const;
+		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
+			std::set<BNDataFlowQueryOption>()) const;
+		Confidence<Ref<Type>> GetType() const;
+
 		size_t GetMediumLevelILExprIndex() const;
 		bool HasMediumLevelIL() const;
 		MediumLevelILInstruction GetMediumLevelIL() const;
@@ -360,6 +366,10 @@ namespace BinaryNinja
 		ExprId CopyTo(HighLevelILFunction* dest,
 			const std::function<ExprId(const HighLevelILInstruction& subExpr)>& subExprHandler) const;
 
+		bool operator<(const HighLevelILInstruction& other) const;
+		bool operator==(const HighLevelILInstruction& other) const;
+		bool operator!=(const HighLevelILInstruction& other) const;
+
 		// Templated accessors for instruction operands, use these for efficient access to a known instruction
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetSourceExpr() const { return As<N>().GetSourceExpr(); }
 		template <BNHighLevelILOperation N> Variable GetVariable() const { return As<N>().GetVariable(); }
@@ -389,6 +399,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetDestExprs() const { return As<N>().GetDestExprs(); }
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetBlockExprs() const { return As<N>().GetBlockExprs(); }
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetCases() const { return As<N>().GetCases(); }
+		template <BNHighLevelILOperation N> HighLevelILInstructionList GetValueExprs() const { return As<N>().GetValueExprs(); }
 		template <BNHighLevelILOperation N> HighLevelILSSAVariableList GetSourceSSAVariables() const { return As<N>().GetSourceSSAVariables(); }
 		template <BNHighLevelILOperation N> size_t GetSourceMemoryVersion() const { return As<N>().GetSourceMemoryVersion(); }
 		template <BNHighLevelILOperation N> HighLevelILIndexList GetSourceMemoryVersions() const { return As<N>().GetSourceMemoryVersions(); }
@@ -441,6 +452,7 @@ namespace BinaryNinja
 		HighLevelILInstructionList GetDestExprs() const;
 		HighLevelILInstructionList GetBlockExprs() const;
 		HighLevelILInstructionList GetCases() const;
+		HighLevelILInstructionList GetValueExprs() const;
 		HighLevelILSSAVariableList GetSourceSSAVariables() const;
 		size_t GetSourceMemoryVersion() const;
 		HighLevelILIndexList GetSourceMemoryVersions() const;
@@ -565,8 +577,8 @@ namespace BinaryNinja
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_CASE>: public HighLevelILInstructionBase
 	{
-		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(0); }
-		HighLevelILInstruction GetTrueExpr() const { return GetRawOperandAsExpr(1); }
+		HighLevelILInstructionList GetValueExprs() const { return GetRawOperandAsExprList(0); }
+		HighLevelILInstruction GetTrueExpr() const { return GetRawOperandAsExpr(2); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_GOTO>: public HighLevelILInstructionBase
 	{

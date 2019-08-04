@@ -396,7 +396,8 @@ namespace BinaryNinja
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
 
 		RegisterValue GetValue() const;
-		PossibleValueSet GetPossibleValues() const;
+		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
+			std::set<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
 		size_t GetSSAVarVersion(const Variable& var);

@@ -85,7 +85,7 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_DO_WHILE: [("body", "expr"), ("condition", "expr")],
 		HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
 		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
-		HighLevelILOperation.HLIL_CASE: [("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
 		HighLevelILOperation.HLIL_BREAK: [],
 		HighLevelILOperation.HLIL_CONTINUE: [],
 		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
@@ -447,6 +447,36 @@ class HighLevelILInstruction(object):
 	def il_basic_block(self):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
 		return HighLevelILBasicBlock(self._function.source_function.view, core.BNGetHighLevelILBasicBlockForInstruction(self._function.handle, self._instr_index), self._function)
+
+	@property
+	def value(self):
+		"""Value of expression if constant or a known value (read-only)"""
+		mlil = self.mlil
+		if mlil is None:
+			return function.RegisterValue()
+		return mlil.value
+
+	@property
+	def possible_values(self):
+		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
+		mlil = self.mlil
+		if mlil is None:
+			return function.PossibleValueSet()
+		return mlil.possible_values
+
+	@property
+	def expr_type(self):
+		"""Type of expression"""
+		mlil = self.mlil
+		if mlil is None:
+			return None
+		return mlil.expr_type
+
+	def get_possible_values(self, options = []):
+		mlil = self.mlil
+		if mlil is None:
+			return function.RegisterValue()
+		return mlil.get_possible_values(options)
 
 
 class HighLevelILExpr(object):

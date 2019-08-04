@@ -1070,9 +1070,9 @@ RegisterValue MediumLevelILInstructionBase::GetValue() const
 }
 
 
-PossibleValueSet MediumLevelILInstructionBase::GetPossibleValues() const
+PossibleValueSet MediumLevelILInstructionBase::GetPossibleValues(const set<BNDataFlowQueryOption>& options) const
 {
-	return function->GetPossibleExprValues(*(const MediumLevelILInstruction*)this);
+	return function->GetPossibleExprValues(*(const MediumLevelILInstruction*)this, options);
 }
 
 

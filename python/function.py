@@ -849,11 +849,6 @@ class Function(object):
 		return core.BNGetFunctionStart(self.handle)
 
 	@property
-	def size(self):
-		"""This property is not implemented as its implementation is not well defined. Use `.total_bytes` or `.highest_address-.lowest_address` instead"""
-		raise NotImplementedError("Intentionally unimplemented--use .total_bytes or .highest_address-.lowest_address.")
-
-	@property
 	def total_bytes(self):
 		"""Total bytes of a function calculated by summing each basic_block. Because basic blocks can overlap and have gaps between them this may or may not be equivalent to a .size property."""
 		return sum(map(len, self))

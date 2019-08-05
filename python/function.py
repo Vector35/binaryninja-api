@@ -845,8 +845,28 @@ class Function(object):
 
 	@property
 	def start(self):
-		"""Function start (read-only)"""
+		"""Function start address (read-only)"""
 		return core.BNGetFunctionStart(self.handle)
+
+	@property
+	def size(self):
+		"""This property is not implemented as its implementation is not well defined. Use `.total_bytes` or `.highest_address-.lowest_address` instead"""
+		raise NotImplementedError("Intentionally unimplemented--use .total_bytes or .highest_address-.lowest_address.")
+
+	@property
+	def total_bytes(self):
+		"""Total bytes of a function calculated by summing each basic_block. Because basic blocks can overlap and have gaps between them this may or may not be equivalent to a .size property."""
+		return sum(map(len, self))
+
+	@property
+	def highest_address(self):
+		"The highest virtual address in a function."""
+		return max(self, key=lambda block:block.end).end
+
+	@property
+	def lowest_address(self):
+		"""The lowest virtual address in a function."""
+		return min(self, key=lambda block:block.start).start
 
 	@property
 	def symbol(self):

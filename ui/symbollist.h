@@ -118,6 +118,20 @@ public:
 			}
 			return false;
 		}
+
+		bool lessThanAlphaRaw(const NamedObject& other) const
+		{
+			if (rawName < other.rawName)
+				return true;
+			else if (rawName == other.rawName)
+			{
+				if (name < other.name)
+					return true;
+				if (name == other.name)
+					return getStart() < other.getStart();
+			}
+			return false;
+		}
 		BNSymbolType getType() const { return sym->GetType(); }
 	};
 
@@ -178,9 +192,11 @@ private:
 	bool m_showLocalFunctions;
 	bool m_showLocalDataVars;
 	SortType m_sortType;
+	bool m_displayMangled;
 
 	static bool symbolLessThan(const NamedObject& a, const NamedObject& b);
 	static bool symbolNameLessThan(const NamedObject& a, const NamedObject& b);
+	static bool symbolRawNameLessThan(const NamedObject& a, const NamedObject& b);
 
 	void getValidObject(std::deque<NamedObject>& result);
 
@@ -236,6 +252,9 @@ public:
 	bool getShowLocalDataVars() const  { return m_showLocalDataVars; }
 	bool getShowImports() const  { return m_showImports; }
 
+	bool getShowMangled() const { return m_displayMangled; }
+	void setShowMangled(bool show) { m_displayMangled = show; }
+
 	void sortSymbols(SortType type);
 	void setSortType(SortType type) { m_sortType = type; }
 	SortType getSortType() const { return m_sortType; }
@@ -269,7 +288,6 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	bool m_showLocalDataVars;
 	bool m_showImports;
 	std::string m_filter;
-	SymbolListModel::SortType m_sortType;
 	SymbolListModel::NamedObject m_index;
 	SymbolListModel::NamedObject m_topIndex;
 	bool m_doubleClick;
@@ -298,6 +316,7 @@ public:
 	bool getShowLocalFunctions() const { return m_list->getShowLocalFunctions(); }
 	bool getShowLocalDataVars() const { return m_list->getShowLocalDataVars(); }
 	bool getShowImports() const { return m_list->getShowImports(); }
+	bool getShowMangled() const { return m_list->getShowMangled(); }
 
 	void toggleExportedFunctions() { m_list->toggleExportedFunctions(); }
 	void toggleExportedDataVars() { m_list->toggleExportedDataVars(); }

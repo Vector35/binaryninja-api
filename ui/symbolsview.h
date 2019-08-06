@@ -38,6 +38,7 @@ public:
 	bool getShowLocalFunctions() const { return m_funcList->getShowLocalFunctions(); }
 	bool getShowLocalDataVars() const { return m_funcList->getShowLocalDataVars(); }
 	bool getShowImports() const { return m_funcList->getShowImports(); }
+	bool getShowMangled() const { return m_funcList->getShowMangled(); }
 
 	void toggleExportedFunctions() { m_funcList->toggleExportedFunctions(); }
 	void toggleExportedDataVars() { m_funcList->toggleExportedDataVars(); }

@@ -295,8 +295,8 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 		line.addr = lines[i].addr;
 		line.instrIndex = lines[i].instrIndex;
 		line.highlight = lines[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		line.tags = Tag::ConvertTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
 

@@ -2282,8 +2282,8 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
 		line.addr = result[i].addr;
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 
@@ -2318,8 +2318,8 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 		line.addr = result[i].addr;
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
 		outLines.push_back(line);
 	}
 
@@ -2341,8 +2341,8 @@ bool DisassemblyTextRenderer::GetDisassemblyText(uint64_t addr, size_t& len, vec
 		line.addr = result[i].addr;
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 
@@ -2438,8 +2438,8 @@ void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<Disa
 		line.addr = result[i].addr;
 		line.instrIndex = result[i].instrIndex;
 		line.highlight = result[i].highlight;
-		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(result[i].tokens, result[i].count);
-		line.tags = Tag::ConvertAndFreeTagList(result[i].tags, result[i].tagCount);
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(result[i].tokens, result[i].count);
+		line.tags = Tag::ConvertTagList(result[i].tags, result[i].tagCount);
 		lines.push_back(line);
 	}
 

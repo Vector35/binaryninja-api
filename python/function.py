@@ -855,12 +855,12 @@ class Function(object):
 
 	@property
 	def highest_address(self):
-		"The highest virtual address in a function."""
-		return max(self, key=lambda block:block.end).end
+		"The highest virtual address contained in a function."""
+		return max(self, key=lambda block:block.end).end - 1
 
 	@property
 	def lowest_address(self):
-		"""The lowest virtual address in a function."""
+		"""The lowest virtual address contained in a function."""
 		return min(self, key=lambda block:block.start).start
 
 	@property

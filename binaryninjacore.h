@@ -2037,9 +2037,9 @@ extern "C"
 		SettingsInvalidScope = 0,
 		SettingsAutoScope = 1,
 		SettingsDefaultScope = 2,
-		SettingsUserScope = 3,
-		SettingsWorkspaceScope = 4,
-		SettingsContextScope = 5
+		SettingsUserScope = 4,
+		SettingsWorkspaceScope = 8,
+		SettingsContextScope = 0x10
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -3951,7 +3951,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSettingsUpdateStringProperty(BNSettings* settings, const char* key, const char* property, const char* value);
 	BINARYNINJACOREAPI bool BNSettingsUpdateStringListProperty(BNSettings* settings, const char* key, const char* property, const char** value, size_t size);
 
-	BINARYNINJACOREAPI bool BNSettingsDeserializeSchema(BNSettings* settings, const char* schema);
+	BINARYNINJACOREAPI bool BNSettingsDeserializeSchema(BNSettings* settings, const char* schema, BNSettingsScope scope, bool merge);
 	BINARYNINJACOREAPI char* BNSettingsSerializeSchema(BNSettings* settings);
 	BINARYNINJACOREAPI bool BNDeserializeSettings(BNSettings* settings, const char* contents, BNBinaryView* view, BNSettingsScope scope);
 	BINARYNINJACOREAPI char* BNSerializeSettings(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope);

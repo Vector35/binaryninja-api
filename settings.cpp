@@ -124,9 +124,9 @@ bool Settings::UpdateProperty(const std::string& key, const std::string& propert
 }
 
 
-bool Settings::DeserializeSchema(const string& schema)
+bool Settings::DeserializeSchema(const string& schema, BNSettingsScope scope, bool merge)
 {
-	return BNSettingsDeserializeSchema(m_object, schema.c_str());
+	return BNSettingsDeserializeSchema(m_object, schema.c_str(), scope, merge);
 }
 
 

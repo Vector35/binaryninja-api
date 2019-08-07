@@ -54,6 +54,9 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : "value", "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
 		assert not settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
 		assert settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : ["value1", "value2"], "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.ignoreContextBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["Context"]}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.ignoreUserBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["User"]}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.readOnlyBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["Context", "User"]}'), "test_settings_types failed"
 
 		assert settings.contains("testGroup.boolSetting"), "test_settings_types failed"
 		assert settings.contains("testGroup.doubleSetting"), "test_settings_types failed"
@@ -91,6 +94,18 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsUserScope)[0] == "value_user", "test_settings_types failed"
 		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsUserScope)[0] == ["value3", "value4"], "test_settings_types failed"
 
+		raw_view = BinaryView.new(b'0x55')
+		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsDefaultScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, raw_view, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreUserBoolSetting", False), "test_settings_types failed"
+		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view), "test_settings_types failed"
+		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
+
 		s2 = Settings("test2")
 		assert s2.serialize_schema() is "", "test_settings_types failed"
 		test_schema = settings.serialize_schema()
@@ -117,6 +132,23 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
+		s3 = Settings("test3")
+		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsContextScope)
+		assert not s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
+		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
+
+		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsUserScope, False)
+		assert s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert not s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
+		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
+
+		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsUserScope, False)
+		assert s3.deserialize_schema(s3.serialize_schema(), SettingsScope.SettingsContextScope, False)
+		assert not s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert not s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
+		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
+
 	def test_load_settings(self):
 		bvt_name = "Mapped (Python)" if "Mapped (Python)" in map(lambda bvt: bvt.name, list(BinaryViewType)) else "Mapped"
 		raw_view = BinaryView.new(b'0x55')
@@ -127,13 +159,13 @@ class SettingsAPI(unittest.TestCase):
 		assert len(mapped_view) == 4, "test_load_settings failed"
 		load_settings = BinaryViewType[bvt_name].get_load_settings_for_data(raw_view)
 		assert load_settings is not None, "test_load_settings failed"
-		assert load_settings.contains("abstractLoader.architecture"), "test_load_settings failed"
-		assert load_settings.contains("abstractLoader.platform"), "test_load_settings failed"
-		assert load_settings.contains("abstractLoader.imageBase"), "test_load_settings failed"
-		assert load_settings.contains("abstractLoader.entryPoint"), "test_load_settings failed"
-		load_settings.set_string("abstractLoader.architecture", 'x86_64')
-		load_settings.set_integer("abstractLoader.imageBase", 0x500000)
-		load_settings.set_integer("abstractLoader.entryPoint", 0x500000)
+		assert load_settings.contains("loader.architecture"), "test_load_settings failed"
+		assert load_settings.contains("loader.platform"), "test_load_settings failed"
+		assert load_settings.contains("loader.imageBase"), "test_load_settings failed"
+		assert load_settings.contains("loader.entryPoint"), "test_load_settings failed"
+		load_settings.set_string("loader.architecture", 'x86_64')
+		load_settings.set_integer("loader.imageBase", 0x500000)
+		load_settings.set_integer("loader.entryPoint", 0x500000)
 		raw_view.set_load_settings(bvt_name, load_settings)
 		mapped_view = BinaryViewType[bvt_name].create(raw_view)
 		assert mapped_view.view_type == bvt_name, "test_load_settings failed"

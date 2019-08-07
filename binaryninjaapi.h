@@ -4547,7 +4547,7 @@ namespace BinaryNinja
 		bool UpdateProperty(const std::string& key, const std::string& property, const std::string& value);
 		bool UpdateProperty(const std::string& key, const std::string& property, const std::vector<std::string>& value);
 
-		bool DeserializeSchema(const std::string& schema);
+		bool DeserializeSchema(const std::string& schema, BNSettingsScope scope = SettingsAutoScope, bool merge = true);
 		std::string SerializeSchema();
 		bool DeserializeSettings(const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);

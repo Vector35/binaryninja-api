@@ -115,8 +115,8 @@ class Settings(object):
 	def update_property(self, key, setting_property):
 		return core.BNSettingsUpdateProperty(self.handle, key, setting_property)
 
-	def deserialize_schema(self, schema):
-		return core.BNSettingsDeserializeSchema(self.handle, schema)
+	def deserialize_schema(self, schema, scope = SettingsScope.SettingsAutoScope, merge = True):
+		return core.BNSettingsDeserializeSchema(self.handle, schema, scope, merge)
 
 	def serialize_schema(self):
 		return core.BNSettingsSerializeSchema(self.handle)

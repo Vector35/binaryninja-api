@@ -24,7 +24,7 @@ setvars()
 		SUDO="sudo "       #For system
 	else
 		SHARE="${HOME}/.local/share" #For user only
-		SUDO=""                #For user only
+		SUDO=""                      #For user only
 	fi
 	DESKTOPFILE="${SHARE}/applications/${APP}.desktop"
 	MIMEFILE="${SHARE}/mime/packages/application-x-${APP}.xml"
@@ -98,7 +98,14 @@ Type=Application
 Categories=Utility;
 Comment=${APPCOMMENT}
 EOF
+	read -d '' MIMEAPPS << EOF
+[Added Associations]
+application/x-executable=${APP}.desktop
+application/x-elf=${APP}.desktop
+application/x-sharedlib=${APP}.desktop
+EOF
 	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
+	echo "${MIMEAPPS}" | $SUDO tee -a ${MIMEFILE} >/dev/null
 	$SUDO chmod +x ${DESKTOPFILE}
 	$SUDO update-desktop-database ${SHARE}/applications
 }

@@ -86,8 +86,7 @@ apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 l
 
 ### Arch Linux
 
- - Install python2 from the [official repositories][archrepo] (`sudo pacman -S python2`) and create a sym link: `sudo ln -s /usr/lib/libpython2.7.so.1.0 /usr/lib/libpython2.7.so.1`
- - Install the [libcurl-compat] library with `sudo pacman -S libcurl-compat`, and run Binary Ninja via `LD_PRELOAD=libcurl.so.3 ~/binaryninja/binaryninja`
+ - The only known issues with Arch linux are related to not being able to automatically find the appropriate libpython. Specifying your own custom path to the `libpython.so` in the [Advanced Settings](../getting-started.md#advanced-settings) dialog under the `Python Interpreter` setting should solve any issues.
 
 ### KDE
 
@@ -98,31 +97,9 @@ cd ~/binaryninja
 QT_PLUGIN_PATH=./qt ./binaryninja
 ```
 
-### Debian
-
-For Debian variants that (Kali, eg) don't match packages with Ubuntu LTS or the latest stable, the following might fix problems with libssl and libcrypto:
-
-```
-$ cd binaryninja
-$ ln -s plugins/libssl.so libssl.so.1.0.0
-$ ln -s plugins/libcrypto.so libcrypto.so.1.0.0
-```
-
-Alternatively, you might need to (as root):
-
-```
-apt-get install libssl-dev
-ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.2 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
-ln -s /usr/lib/x86_64-linux-gnu/libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0
-```
-
-### Gentoo
-
-One Gentoo user [reported][issue672] a failed SSL certificate when trying to update. The solution was to copy over `/etc/ssl/certs/ca-certificates.crt` from another Linux distribution.
-
 ### NixOS
 
-Here's a customer-provided nix derivation file for the Binary Ninja demo. Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
+Here's a customer-provided nix derivation file for the Binary Ninja demo. Note that you'll likely want to update the SHA256 field with the latest value available [here](https://binary.ninja/js/hashes.js).  Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
 
 ```
 { stdenv, autoPatchelfHook, makeWrapper, fetchurl, unzip, libGL, glib, fontconfig, xlibs, dbus, xkeyboard_config }:
@@ -149,7 +126,7 @@ stdenv.mkDerivation rec {
 
 ## API
 
- - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python. Only a 64-bit Python 2.7 is supported at this time. Additionally, the [personal][purchase] edition does not support headless operation.
+ - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 2.7, or 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
 
 [known issues]: https://github.com/Vector35/binaryninja-api/issues?q=is%3Aissue
 [libcurl-compat]: https://www.archlinux.org/packages/community/x86_64/libcurl-compat/
@@ -158,4 +135,3 @@ stdenv.mkDerivation rec {
 [support]: https://binary.ninja/support.html
 [faq]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
-[issue672]: https://github.com/Vector35/binaryninja-api/issues/672

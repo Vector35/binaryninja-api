@@ -2761,7 +2761,7 @@ class InstructionTextToken(object):
 
 	"""
 	def __init__(self, token_type, text, value = 0, size = 0, operand = 0xffffffff,
-		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeNames=[]):
+		context = InstructionTextTokenContext.NoTokenContext, address = 0, confidence = types.max_confidence, typeNames=[], width=0):
 		self._type = InstructionTextTokenType(token_type)
 		self._text = text
 		self._value = value
@@ -2771,6 +2771,9 @@ class InstructionTextToken(object):
 		self._confidence = confidence
 		self._address = address
 		self._typeNames = typeNames
+		self._width = width
+		if width == 0:
+			self._width = len(self._text)
 
 	@classmethod
 	def get_instruction_lines(cls, tokens, count=0):
@@ -2780,6 +2783,7 @@ class InstructionTextToken(object):
 			for j in range(len(tokens)):
 				result[j].type = tokens[j].type
 				result[j].text = tokens[j].text
+				result[j].width = tokens[j].width
 				result[j].value = tokens[j].value
 				result[j].size = tokens[j].size
 				result[j].operand = tokens[j].operand
@@ -2798,6 +2802,7 @@ class InstructionTextToken(object):
 			text = tokens[j].text
 			if not isinstance(text, str):
 				text = text.decode("charmap")
+			width = tokens[j].width
 			value = tokens[j].value
 			size = tokens[j].size
 			operand = tokens[j].operand
@@ -2810,7 +2815,7 @@ class InstructionTextToken(object):
 					typeNames.append(tokens[j].typeNames[i].decode("charmap"))
 				else:
 					typeNames.append(tokens[j].typeNames[i])
-			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeNames))
+			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeNames, width))
 		return result
 
 	def __str__(self):
@@ -2899,6 +2904,10 @@ class InstructionTextToken(object):
 	@typeNames.setter
 	def typeNames(self, value):
 		self._typeNames = value
+
+	@property
+	def width(self):
+		return self._width
 
 
 class DisassemblyTextRenderer(object):

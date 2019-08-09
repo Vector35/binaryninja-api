@@ -47,7 +47,7 @@ from binaryninja import settings
 # 2-3 compatibility
 from binaryninja import range
 from binaryninja import with_metaclass
-
+from binaryninja import cstr
 
 class BinaryDataNotification(object):
 	def __init__(self):
@@ -5335,7 +5335,8 @@ class BinaryWriter(object):
 			'AAAA'
 			>>>
 		"""
-		value = str(value)
+
+		value = cstr(value)
 		buf = ctypes.create_string_buffer(len(value))
 		ctypes.memmove(buf, value, len(value))
 		return core.BNWriteData(self.handle, buf, len(value))

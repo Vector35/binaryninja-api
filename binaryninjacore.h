@@ -3939,9 +3939,11 @@ extern "C"
 	BINARYNINJACOREAPI BNSettings* BNCreateSettings(const char* schemaId);
 	BINARYNINJACOREAPI BNSettings* BNNewSettingsReference(BNSettings* settings);
 	BINARYNINJACOREAPI void BNFreeSettings(BNSettings* settings);
+	BINARYNINJACOREAPI void BNSettingsSetResourceId(BNSettings* settings, const char* resourceId);
 	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(BNSettings* settings, const char* group, const char* title);
 	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(BNSettings* settings, const char* key, const char* properties);
 	BINARYNINJACOREAPI bool BNSettingsContains(BNSettings* settings, const char* key);
+	BINARYNINJACOREAPI bool BNSettingsIsEmpty(BNSettings* settings);
 	BINARYNINJACOREAPI const char** BNSettingsQueryPropertyStringList(BNSettings* settings, const char* key, const char* property, size_t* inoutSize);
 	BINARYNINJACOREAPI bool BNSettingsUpdateProperty(BNSettings* settings, const char* key, const char* property);
 	BINARYNINJACOREAPI bool BNSettingsUpdateBoolProperty(BNSettings* settings, const char* key, const char* property, bool value);

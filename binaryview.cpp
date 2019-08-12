@@ -2994,7 +2994,7 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 }
 
 
-Ref<Settings> BinaryView::GetLoadSettings(string typeName)
+Ref<Settings> BinaryView::GetLoadSettings(const string& typeName)
 {
 	BNSettings* settings = BNBinaryViewGetLoadSettings(m_object, typeName.c_str());
 	if (!settings)
@@ -3003,7 +3003,7 @@ Ref<Settings> BinaryView::GetLoadSettings(string typeName)
 }
 
 
-void BinaryView::SetLoadSettings(string typeName, Ref<Settings> settings)
+void BinaryView::SetLoadSettings(const string& typeName, Ref<Settings> settings)
 {
 	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), settings->GetObject());
 }

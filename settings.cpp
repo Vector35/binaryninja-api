@@ -28,6 +28,12 @@ Ref<Settings> Settings::Instance(const std::string& instanceId)
 }
 
 
+void Settings::SetResourceId(const string& resourceId)
+{
+	return BNSettingsSetResourceId(m_object, resourceId.c_str());
+}
+
+
 bool Settings::RegisterGroup(const string& group, const string& title)
 {
 	return BNSettingsRegisterGroup(m_object, group.c_str(), title.c_str());
@@ -43,6 +49,12 @@ bool Settings::RegisterSetting(const string& key, const string& properties)
 bool Settings::Contains(const string& key)
 {
 	return BNSettingsContains(m_object, key.c_str());
+}
+
+
+bool Settings::IsEmpty()
+{
+	return BNSettingsIsEmpty(m_object);
 }
 
 

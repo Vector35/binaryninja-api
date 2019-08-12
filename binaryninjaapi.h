@@ -1698,8 +1698,8 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
-		Ref<Settings> GetLoadSettings(std::string typeName);
-		void SetLoadSettings(std::string typeName, Ref<Settings> settings);
+		Ref<Settings> GetLoadSettings(const std::string& typeName);
+		void SetLoadSettings(const std::string& typeName, Ref<Settings> settings);
 
 		BNAnalysisParameters GetParametersForAnalysis();
 		void SetParametersForAnalysis(BNAnalysisParameters params);
@@ -4531,9 +4531,12 @@ namespace BinaryNinja
 		static Ref<Settings> Instance(const std::string& schemaId = "");
 		virtual ~Settings() {}
 
+		void SetResourceId(const std::string& resourceId = "");
+
 		bool RegisterGroup(const std::string& group, const std::string& title);
 		bool RegisterSetting(const std::string& key, const std::string& properties);
 		bool Contains(const std::string& key);
+		bool IsEmpty();
 
 		template<typename T> T QueryProperty(const std::string& key, const std::string& property);
 

@@ -67,6 +67,11 @@ class Settings(object):
 		"""(read-only)"""
 		return self._instance_id
 
+	def set_resource_id(self, resource_id = None):
+		if resource_id is None:
+			resource_id = ""
+		core.BNSettingsSetResourceId(self.handle, resource_id)
+
 	def register_group(self, group, title):
 		"""
 		``register_group`` registers a group for use with this Settings instance. Groups provide a simple way to organize settings.
@@ -102,6 +107,9 @@ class Settings(object):
 
 	def contains(self, key):
 		return core.BNSettingsContains(self.handle, key)
+
+	def is_empty(self):
+		return core.BNSettingsIsEmpty(self.handle)
 
 	def query_property_string_list(self, key, property_name):
 		length = ctypes.c_ulonglong()

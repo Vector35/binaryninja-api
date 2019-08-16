@@ -100,7 +100,7 @@ public:
 			return false;
 		}
 
-		bool isFunc() const { return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol); }
+		bool isFunc() const { return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol) || (getType() == LibraryFunctionSymbol); }
 		uint64_t getStart() const { return sym->GetAddress(); }
 		std::string getName() const { return name; }
 		std::string getRawName() const { return rawName; }

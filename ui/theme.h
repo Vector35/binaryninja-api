@@ -98,7 +98,8 @@ enum ThemeColor
 	FeatureMapUnicodeStringColor,
 	FeatureMapFunctionColor,
 	FeatureMapImportColor,
-	FeatureMapExternColor
+	FeatureMapExternColor,
+	FeatureMapLibraryColor
 };
 
 void BINARYNINJAUIAPI initThemes();

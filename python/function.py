@@ -112,10 +112,18 @@ class RegisterValue(object):
 			return "<imported address from entry %#x>" % self._value
 		return "<undetermined>"
 
+	def __hash__(self):
+			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue]:
+				return hash(self._value)
+			elif self.type == RegisterValueType.EntryValue:
+				return hash(self._reg)
+			elif self._type == RegisterValueType.StackFrameOffset:
+				return hash(self._offset)
+
 	def __eq__(self, other):
-			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, ImportedAddressValue, ReturnAddressValue] and isinstance(other, numbers.Integral):
+			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and isinstance(other, numbers.Integral):
 				return self._value == other
-			elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, ImportedAddressValue, ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
+			elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
 				return self._value == other.value
 			elif self._type == RegisterValueType.EntryValue and hasattr(other, "type") and other.type == self._type:
 				return self._reg == other.reg

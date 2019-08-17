@@ -99,6 +99,9 @@ class MediumLevelILOperationAndSize(object):
 		else:
 			return False
 
+	def __hash__(self):
+		return hash((self._size, self._operation))
+
 	@property
 	def operation(self):
 		""" """
@@ -355,6 +358,9 @@ class MediumLevelILInstruction(object):
 
 	def __repr__(self):
 		return "<il: %s>" % str(self)
+
+	def __hash__(self):
+		return hash((self._instr_index, self._function))
 
 	def __eq__(self, value):
 		if not isinstance(value, type(self)):
@@ -1139,7 +1145,6 @@ class MediumLevelILFunction(object):
 	@source_function.setter
 	def source_function(self, value):
 		self._source_function = value
-
 
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):

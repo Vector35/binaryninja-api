@@ -406,7 +406,7 @@ class M6502(Architecture):
 	def decode_instruction(self, data, addr):
 		if len(data) < 1:
 			return None, None, None, None
-		opcode = ord(data[0])
+		opcode = ord(data[0:1])
 		instr = InstructionNames[opcode]
 		if instr is None:
 			return None, None, None, None
@@ -419,9 +419,9 @@ class M6502(Architecture):
 		if OperandLengths[operand] == 0:
 			value = None
 		elif operand == REL:
-			value = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
+			value = (addr + 2 + struct.unpack("b", data[1:2])[0]) & 0xffff
 		elif OperandLengths[operand] == 1:
-			value = ord(data[1])
+			value = ord(data[1:2])
 		else:
 			value = struct.unpack("<H", data[1:3])[0]
 
@@ -444,7 +444,7 @@ class M6502(Architecture):
 		elif instr in ["rti", "rts"]:
 			result.add_branch(BranchType.FunctionReturn)
 		if instr in ["bcc", "bcs", "beq", "bmi", "bne", "bpl", "bvc", "bvs"]:
-			dest = (addr + 2 + struct.unpack("b", data[1])[0]) & 0xffff
+			dest = (addr + 2 + struct.unpack("b", data[1:2])[0]) & 0xffff
 			result.add_branch(BranchType.TrueBranch, dest)
 			result.add_branch(BranchType.FalseBranch, addr + 2)
 		return result
@@ -484,12 +484,12 @@ class M6502(Architecture):
 		return Architecture.get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il)
 
 	def is_never_branch_patch_available(self, data, addr):
-		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
+		if (data[0:1] == b"\x10") or (data[0:1] == b"\x30") or (data[0:1] == b"\x50") or (data[0:1] == b"\x70") or (data[0:1] == b"\x90") or (data[0:1] == b"\xb0") or (data[0:1] == b"\xd0") or (data[0:1] == b"\xf0"):
 			return True
 		return False
 
 	def is_invert_branch_patch_available(self, data, addr):
-		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
+		if (data[0:1] == b"\x10") or (data[0:1] == b"\x30") or (data[0:1] == b"\x50") or (data[0:1] == b"\x70") or (data[0:1] == b"\x90") or (data[0:1] == b"\xb0") or (data[0:1] == b"\xd0") or (data[0:1] == b"\xf0"):
 			return True
 		return False
 
@@ -497,28 +497,28 @@ class M6502(Architecture):
 		return False
 
 	def is_skip_and_return_zero_patch_available(self, data, addr):
-		return (data[0] == "\x20") and (len(data) == 3)
+		return (data[0:1] == b"\x20") and (len(data) == 3)
 
 	def is_skip_and_return_value_patch_available(self, data, addr):
-		return (data[0] == "\x20") and (len(data) == 3)
+		return (data[0:1] == b"\x20") and (len(data) == 3)
 
 	def convert_to_nop(self, data, addr):
-		return "\xea" * len(data)
+		return b"\xea" * len(data)
 
 	def never_branch(self, data, addr):
-		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
-			return "\xea" * len(data)
+		if (data[0:1] == b"\x10") or (data[0:1] == b"\x30") or (data[0:1] == b"\x50") or (data[0:1] == b"\x70") or (data[0:1] == b"\x90") or (data[0:1] == b"\xb0") or (data[0:1] == b"\xd0") or (data[0:1] == b"\xf0"):
+			return b"\xea" * len(data)
 		return None
 
 	def invert_branch(self, data, addr):
-		if (data[0] == "\x10") or (data[0] == "\x30") or (data[0] == "\x50") or (data[0] == "\x70") or (data[0] == "\x90") or (data[0] == "\xb0") or (data[0] == "\xd0") or (data[0] == "\xf0"):
-			return chr(ord(data[0]) ^ 0x20) + data[1:]
+		if (data[0:1] == b"\x10") or (data[0:1] == b"\x30") or (data[0:1] == b"\x50") or (data[0:1] == b"\x70") or (data[0:1] == b"\x90") or (data[0:1] == b"\xb0") or (data[0:1] == b"\xd0") or (data[0:1] == b"\xf0"):
+			return chr(ord(data[0:1]) ^ 0x20) + data[1:]
 		return None
 
 	def skip_and_return_value(self, data, addr, value):
-		if (data[0] != "\x20") or (len(data) != 3):
+		if (data[0:1] != b"\x20") or (len(data) != 3):
 			return None
-		return "\xa9" + chr(value & 0xff) + "\xea"
+		return b"\xa9" + chr(value & 0xff) + b"\xea"
 
 
 class NESView(BinaryView):
@@ -534,9 +534,9 @@ class NESView(BinaryView):
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
 			return False
-		if hdr[0:4] != "NES\x1a":
+		if hdr[0:4] != b"NES\x1a":
 			return False
-		rom_banks = struct.unpack("B", hdr[4])[0]
+		rom_banks = struct.unpack("B", hdr[4:5])[0]
 		if rom_banks < (self.bank + 1):
 			return False
 		return True
@@ -544,11 +544,11 @@ class NESView(BinaryView):
 	def init(self):
 		try:
 			hdr = self.parent_view.read(0, 16)
-			self.rom_banks = struct.unpack("B", hdr[4])[0]
-			self.vrom_banks = struct.unpack("B", hdr[5])[0]
-			self.rom_flags = struct.unpack("B", hdr[6])[0]
-			self.mapper_index = struct.unpack("B", hdr[7])[0] | (self.rom_flags >> 4)
-			self.ram_banks = struct.unpack("B", hdr[8])[0]
+			self.rom_banks = struct.unpack("B", hdr[4:5])[0]
+			self.vrom_banks = struct.unpack("B", hdr[5:6])[0]
+			self.rom_flags = struct.unpack("B", hdr[6:7])[0]
+			self.mapper_index = struct.unpack("B", hdr[7:8])[0] | (self.rom_flags >> 4)
+			self.ram_banks = struct.unpack("B", hdr[8:9])[0]
 			self.rom_offset = 16
 			if self.rom_flags & 4:
 				self.rom_offset += 512
@@ -610,9 +610,10 @@ class NESView(BinaryView):
 					self.file.filename + ".%x.nl" % (self.rom_banks - 1)]
 			for f in sym_files:
 				if os.path.exists(f):
-					sym_contents = open(f, "r").read()
-					lines = sym_contents.split('\n')
+					with open(f, "r") as f:
+						lines = f.readlines()
 					for line in lines:
+						line = line.strip()
 						sym = line.split('#')
 						if len(sym) < 3:
 							break

@@ -6,6 +6,7 @@
 #include <QtWidgets/QMenu>
 #include <QtGui/QPainter>
 #include <QtCore/QRect>
+#include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QVector>
 #include <QtWidgets/QWidget>
@@ -54,7 +55,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	{
 		std::mutex m_mutex;
 		bool m_valid;
-		FeatureMap* m_featureMap;
+		QPointer<FeatureMap> m_featureMap;
 
 	public:
 		BackgroundRefresh(FeatureMap* featureMap);
@@ -62,7 +63,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 		void abort();
 	};
 
-	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh;
+	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
 
 public:
 	FeatureMap(ViewFrame* frame, BinaryViewRef data);

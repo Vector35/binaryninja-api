@@ -211,7 +211,7 @@ public:
 	bool isGraphViewPreferred() { return m_graphViewPreferred; }
 	void setGraphViewPreferred(bool graphViewPreferred) { m_graphViewPreferred = graphViewPreferred; }
 	void focus();
-	void closeFeatureMap();
+	void closeFeatureMap(bool recreate = false);
 	QWidget* createFeatureMap();
 	void refreshFeatureMap();
 
@@ -262,10 +262,10 @@ public Q_SLOTS:
 	virtual void compile();
 
 private Q_SLOTS:
-	void deleteFeatureMap();
+	void deleteFeatureMap(bool recreate);
 
 Q_SIGNALS:
-	void notifyCloseFeatureMap();
+	void notifyCloseFeatureMap(bool recreate);
 	void notifyViewChanged(ViewFrame* frame);
 };
 

@@ -117,12 +117,17 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 {1}{2}
 
 if __name__ == "__main__":
+    api_only = False
     if len(sys.argv) > 1:
-        if sys.argv[1] == '-v' or sys.argv[1] == '-V' or sys.argv[1] == '--verbose':
-            verbose = True
+        for i in range(1, len(sys.argv)):
+            if sys.argv[i] == '-v' or sys.argv[i] == '-V' or sys.argv[i] == '--verbose':
+                verbose = True
+            elif sys.argv[i] == '--api-only':
+                api_only = True
 
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
-    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
+    if not api_only:
+        test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(test_suite)
 """

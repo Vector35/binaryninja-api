@@ -2531,7 +2531,7 @@ class RegisterStackInfo(object):
 		self._index = index
 
 	def __repr__(self):
-		return "<reg stack: %d regs, stack top in %s>" % (len(self._jstorage_regs), self._stack_top_reg)
+		return "<reg stack: %d regs, stack top in %s>" % (len(self._storage_regs), self._stack_top_reg)
 
 	@property
 	def storage_regs(self):

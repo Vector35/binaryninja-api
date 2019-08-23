@@ -1779,9 +1779,10 @@ class BinaryView(object):
 			data = self.perform_read(offset, length)
 			if data is None:
 				return 0
+			data = cstr(data)
 			if len(data) > length:
 				data = data[0:length]
-			ctypes.memmove(dest, str(data), len(data))
+			ctypes.memmove(dest, data, len(data))
 			return len(data)
 		except:
 			log.log_error(traceback.format_exc())

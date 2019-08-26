@@ -11,7 +11,8 @@ Binary Ninja uses two main locations. The first is the install path of the binar
 Binaries are installed in the following locations by default:
 
 - OS X: `/Applications/Binary Ninja.app`
-- Windows: `C:\Program Files\Vector35\BinaryNinja`
+- Windows (global install): `C:\Program Files\Vector35\BinaryNinja`
+- Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
 - Linux: Wherever you extract it! (No standard location)
 
 !!! Warning "Warning"

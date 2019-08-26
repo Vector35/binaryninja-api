@@ -43,8 +43,6 @@ def loadSnippetFromFile(snippetPath):
         qKeySequence = QKeySequence(snippetText[1].strip()[1:])
         if qKeySequence.isEmpty():
             qKeySequence = None
-        else:
-            qKeySequence = qKeySequence
         return (snippetText[0].strip()[1:], 
                 qKeySequence,
                 ''.join(snippetText[2:])
@@ -187,8 +185,10 @@ class Snippets(QDialog):
     @staticmethod
     def registerAllSnippets():
         for action in list(filter(lambda x: x.startswith("Snippets\\"), UIAction.getAllRegisteredActions())):
+            if action == "Snippets\\Snippet Editor...":
+                continue
             UIActionHandler.globalActions().unbindAction(action)
-            Menu.mainMenu("Tools").removeAction(actionText)
+            Menu.mainMenu("Tools").removeAction(action)
             UIAction.unregisterAction(action)
 
         for snippet in includeWalk(snippetPath, ".py"):
@@ -198,12 +198,13 @@ class Snippets(QDialog):
                 actionText = "Snippets\\" + snippet
             else:
                 actionText = "Snippets\\" + snippetDescription
-            if snippetKeys == None:
-                UIAction.registerAction(actionText)
-            else:
-                UIAction.registerAction(actionText, snippetKeys)
-            UIActionHandler.globalActions().bindAction(actionText, UIAction(makeSnippetFunction(snippetCode)))
-            Menu.mainMenu("Tools").addAction(actionText, actionText)
+            if snippetCode:
+                if snippetKeys == None:
+                    UIAction.registerAction(actionText)
+                else:
+                    UIAction.registerAction(actionText, snippetKeys)
+                UIActionHandler.globalActions().bindAction(actionText, UIAction(makeSnippetFunction(snippetCode)))
+                Menu.mainMenu("Tools").addAction(actionText, actionText)
 
     def clearSelection(self):
         self.keySequenceEdit.clear()
@@ -257,7 +258,7 @@ class Snippets(QDialog):
         self.currentFileLabel.setText(QFileInfo(self.currentFile).baseName())
         (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(self.currentFile)
         self.snippetDescription.setText(snippetDescription) if snippetDescription else self.snippetDescription.setText("")
-        self.keySequenceEdit.setKeySequence(snippetKeys) if len(snippetKeys) != 0 else self.keySequenceEdit.setKeySequence(QKeySequence(""))
+        self.keySequenceEdit.setKeySequence(snippetKeys) if snippetKeys else self.keySequenceEdit.setKeySequence(QKeySequence(""))
         self.edit.setPlainText(snippetCode) if snippetCode else self.edit.setPlainText("")
 
     def newFileDialog(self):
@@ -288,9 +289,9 @@ class Snippets(QDialog):
         (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(self.currentFile)
         if (not snippetCode):
             return False
-        if len(snippetKeys) == 0 and not self.keySequenceEdit.keySequence().isEmpty():
+        if snippetKeys == None and not self.keySequenceEdit.keySequence().isEmpty():
             return True
-        if len(snippetKeys) != 0 and snippetKeys != self.keySequenceEdit.keySequence().toString():
+        if snippetKeys != None and snippetKeys != self.keySequenceEdit.keySequence().toString():
             return True
         return self.edit.toPlainText() != snippetCode or \
                self.snippetDescription.text() != snippetDescription

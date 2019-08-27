@@ -242,6 +242,7 @@ extern "C"
 		NameSpaceToken = 22,
 		NameSpaceSeparatorToken = 23,
 		TagToken = 24,
+		StructOffsetToken = 25,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,

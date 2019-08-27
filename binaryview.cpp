@@ -2568,7 +2568,7 @@ Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 
 	if (!type)
 		return nullptr;
-	return new Type(type);
+	return new Type(BNNewTypeReference(type));
 }
 
 

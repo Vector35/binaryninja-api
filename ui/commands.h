@@ -18,12 +18,14 @@ bool BINARYNINJAUIAPI askForNewType(QWidget* parent, BinaryViewRef data, Functio
 	TypeRef& type, BinaryNinja::QualifiedName& name);
 bool BINARYNINJAUIAPI inputNewType(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
 	uint64_t currentAddr, HighlightTokenState& highlight);
+bool BINARYNINJAUIAPI createInferredMember(BinaryViewRef data, HighlightTokenState& highlight);
 
 bool BINARYNINJAUIAPI overwriteCode(BinaryViewRef data, ArchitectureRef arch,
 	uint64_t addr, size_t len, const BinaryNinja::DataBuffer& buffer);
 bool BINARYNINJAUIAPI overwriteCode(BinaryViewRef data, ArchitectureRef arch,
 	uint64_t addr, const BinaryNinja::DataBuffer& buffer);
 
-StructureRef BINARYNINJAUIAPI getInnerMostStructureContaining(
-	StructureRef structure, size_t& memberIndex, const std::vector<std::string>& nameList,
-	size_t nameIndex);
+StructureRef BINARYNINJAUIAPI getInnerMostStructureContaining(BinaryViewRef data, StructureRef structure,
+	size_t& memberIndex, const std::vector<std::string>& nameList, size_t nameIndex, TypeRef& type, std::string& typeName);
+StructureRef BINARYNINJAUIAPI getInnerMostStructureContainingOffset(BinaryViewRef data, StructureRef structure,
+	const std::vector<std::string>& nameList, size_t nameIndex, size_t& offset, TypeRef& type, std::string& typeName);

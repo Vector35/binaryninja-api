@@ -283,6 +283,7 @@ private Q_SLOTS:
 	void undefineFunc();
 	void createFunc();
 	void changeType();
+	void inferStructureType();
 	void comment();
 	void addUserXref();
 	void functionComment();

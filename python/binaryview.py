@@ -4894,24 +4894,30 @@ class BinaryView(object):
 		Evaluates a string expression to an integer value.
 
 		The parser uses the following rules:
-			- symbols are defined by the lexer as `[A-Za-z0-9_:<>][A-Za-z0-9_:$\\-<>]+` or anything enclosed in either single or
-			  double quotes
+
+			- Symbols are defined by the lexer as ``[A-Za-z0-9_:<>][A-Za-z0-9_:$\\-<>]+`` or anything enclosed in either single or double quotes
+			- Symbols are everything in ``bv.symbols``, unnamed DataVariables (i.e. ``data_00005000``), unnamed functions (i.e. ``sub_00005000``), or section names (i.e. ``.text``)
 			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
-			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following
-				- `0x` - Hexadecimal
-				- `0n` - Decimal
-				- `0` - Octal
-			- In the case of an ambiguous number/symbol (one with no prefix) for instance `12345` we will first attempt
+			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
+
+				- ``0x`` - Hexadecimal
+				- ``0n`` - Decimal
+				- ``0`` - Octal
+
+			- In the case of an ambiguous number/symbol (one with no prefix) for instance ``12345`` we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
 			  it to a hexadecimal number.
-			- The following operations are valid: `+, -, *, /, %, (), &, |, ^, ~`
-			- In addition to the above operators there are dereference operators similar to BNIL style IL
-				- [<expression>] - read the _current address size_ at <expression>
-				- [<expression>].b - read the byte at <expression>
-				- [<expression>].w - read the word (2 bytes) at <expression>
-				- [<expression>].d - read the dword (4 bytes) at <expression>
-				- [<expression>].q - read the quadword (8 bytes) at <expression>
-			- The `$here` keyword can be used in calculations and is defined as the `here` parameter
+			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~``
+			- In addition to the above operators there are dereference operators similar to BNIL style IL:
+
+				- ``[<expression>]`` - read the `current address size` at ``<expression>``
+				- ``[<expression>].b`` - read the byte at ``<expression>``
+				- ``[<expression>].w`` - read the word (2 bytes) at ``<expression>``
+				- ``[<expression>].d`` - read the dword (4 bytes) at ``<expression>``
+				- ``[<expression>].q`` - read the quadword (8 bytes) at ``<expression>``
+
+			- The ``$here`` keyword can be used in calculations and is defined as the ``here`` parameter
+			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
 
 		:param string expression: Arithmetic expression to be evaluated
 		:param int here: (optional) Base address for relative expressions, defaults to zero

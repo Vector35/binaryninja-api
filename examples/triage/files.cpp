@@ -11,9 +11,13 @@ TriageFilePicker::TriageFilePicker(UIContext* context): m_contextMenuManager(thi
 
 	QVBoxLayout* layout = new QVBoxLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
+	SettingsRef settings = BinaryNinja::Settings::Instance();
+	bool hiddenFiles = settings->Get<bool>("triage.hiddenFiles");
 
 	m_model = new QFileSystemModel();
 	m_model->setRootPath("");
+	if (hiddenFiles)
+		m_model->setFilter(QDir::Hidden | QDir::AllEntries | QDir::System );
 	m_tree = new QTreeView(this);
 	m_tree->setModel(m_model);
 	m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);

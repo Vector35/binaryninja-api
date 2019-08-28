@@ -58,6 +58,14 @@ extern "C"
 					"Perform full linear sweep on the binary." ]
 			})");
 
+		settings->RegisterSetting("triage.hiddenFiles",
+			R"({
+				"title" : "Triage Shows Hidden Files",
+				"type" : "boolean",
+				"default" : false,
+				"description" : "Whether the Triage file picker shows hidden files."
+			})");
+
 		UIAction::registerAction("Open for Triage...", QKeySequence("Ctrl+Alt+O"));
 		UIAction::registerAction("Open Selected Files");
 

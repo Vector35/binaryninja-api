@@ -133,6 +133,15 @@ Settings().register_setting("triage.linearSweep", """
 	}
 	""")
 
+Settings().register_setting("triage.hiddenFiles", """
+	{
+		"title" : "Triage Shows Hidden Files",
+		"type" : "boolean",
+		"default" : false,
+		"description" : "Whether the Triage file picker shows hidden files."
+	}
+	""")
+
 UIAction.registerAction("Open for Triage...", QKeySequence("Ctrl+Alt+O"))
 UIAction.registerAction("Open Selected Files")
 

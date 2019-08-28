@@ -4707,7 +4707,7 @@ class BinaryView(object):
 
 	def add_user_segment(self, start, length, data_offset, data_length, flags):
 		"""
-		``add_user_segment`` creates a user-defined segment that specifies how data form the raw file is mapped into a virtual address space.
+		``add_user_segment`` creates a user-defined segment that specifies how data from the raw file is mapped into a virtual address space.
 
 		:param int start: virtual address of the start of the segment
 		:param int length: length of the segment (may be larger than the source data)

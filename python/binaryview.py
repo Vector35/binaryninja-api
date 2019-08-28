@@ -2847,12 +2847,12 @@ class BinaryView(object):
 		"""
 
 		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid platform) that start at the
-                given virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be
-                multiple functions defined from different architectures at the same location. This API allows you to query all
-                of valid platforms.
+		given virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be
+		multiple functions defined from different architectures at the same location. This API allows you to query all
+		of valid platforms.
 
-                You may also be interested in :func:`get_functions_containing` which is useful for requesting all function
-                that contain a given address
+		You may also be interested in :func:`get_functions_containing` which is useful for requesting all function
+		that contain a given address
 
 		:param int addr: virtual address of the desired Function object list.
 		:return: a list of binaryninja.Function objects defined at the provided virtual address
@@ -4713,7 +4713,7 @@ class BinaryView(object):
 		:param int length: length of the segment (may be larger than the source data)
 		:param int data_offset: offset from the parent view
 		:param int data_length: length of the data from the parent view
-        :param enums.SegmentFlag flags: SegmentFlags
+		:param enums.SegmentFlag flags: SegmentFlags
 		:rtype: None
 		"""
 		core.BNAddUserSegment(self.handle, start, length, data_offset, data_length, flags)
@@ -4745,18 +4745,18 @@ class BinaryView(object):
 		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
 		"""
 		``add_user_section`` creates a user-defined section that can help inform analysis by clarifying what types of 
-        data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
+		data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
 
 		:param str name: name of the section
 		:param int start: virtual address of the start of the section
 		:param int length: length of the section
-        :param enums.SectionSemantics semantics: SectionSemantics of the section
-        :param str type: optional type
-        :param int align: optional byte alignment
-        :param int entry_size: optional entry size
-        :param str linked_section: optional name of a linked section
-        :param str info_section: optional name of an associated informational section
-        :param int info_data: optional info data
+		:param enums.SectionSemantics semantics: SectionSemantics of the section
+		:param str type: optional type
+		:param int align: optional byte alignment
+		:param int entry_size: optional entry size
+		:param str linked_section: optional name of a linked section
+		:param str info_section: optional name of an associated informational section
+		:param int info_data: optional info data
 		:rtype: None
 		"""
 		core.BNAddUserSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,

@@ -345,9 +345,9 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			return None
 		return types.Type(obj, platform = self)
 
-	def get_function_by_name(self, name):
+	def get_function_by_name(self, name, exactMatch=False):
 		name = types.QualifiedName(name)._get_core_struct()
-		obj = core.BNGetPlatformFunctionByName(self.handle, name)
+		obj = core.BNGetPlatformFunctionByName(self.handle, name, exactMatch)
 		if not obj:
 			return None
 		return types.Type(obj, platform = self)

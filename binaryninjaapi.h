@@ -4145,7 +4145,7 @@ namespace BinaryNinja
 		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetVariableByName(const QualifiedName& name);
-		Ref<Type> GetFunctionByName(const QualifiedName& name);
+		Ref<Type> GetFunctionByName(const QualifiedName& name, bool exactMatch = false);
 		std::string GetSystemCallName(uint32_t n);
 		Ref<Type> GetSystemCallType(uint32_t n);
 

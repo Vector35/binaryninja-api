@@ -353,10 +353,10 @@ Ref<Type> Platform::GetVariableByName(const QualifiedName& name)
 }
 
 
-Ref<Type> Platform::GetFunctionByName(const QualifiedName& name)
+Ref<Type> Platform::GetFunctionByName(const QualifiedName& name, bool exactMatch)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNType* type = BNGetPlatformFunctionByName(m_object, &nameObj);
+	BNType* type = BNGetPlatformFunctionByName(m_object, &nameObj, exactMatch);
 	QualifiedName::FreeAPIObject(&nameObj);
 	if (!type)
 		return nullptr;

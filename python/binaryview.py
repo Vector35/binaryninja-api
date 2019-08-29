@@ -2809,11 +2809,9 @@ class BinaryView(object):
 		``get_functions_containing`` returns a list of functions which contain the given address or None on failure.
 
 		:param int addr: virtual address to query.
-		:rtype: list of Function objects or None
+		:rtype: list of Function objects
 		"""
 		basic_blocks = self.get_basic_blocks_at(addr)
-		if len(basic_blocks) == 0:
-			return None
 
 		result = []
 		for block in basic_blocks:

@@ -687,7 +687,10 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return settings.Settings(handle=load_settings)
 
 	def get_load_settings_for_data(self, data):
-		load_settings = core.BNGetBinaryViewLoadSettingsForData(self.handle, data.handle)
+		view_handle = None
+		if data is not None:
+			view_handle = data.handle
+		load_settings = core.BNGetBinaryViewLoadSettingsForData(self.handle, view_handle)
 		if load_settings is None:
 			return None
 		return settings.Settings(handle=load_settings)

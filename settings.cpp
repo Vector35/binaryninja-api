@@ -58,6 +58,21 @@ bool Settings::IsEmpty()
 }
 
 
+vector<string> Settings::Keys()
+{
+	size_t size = 0;
+	char** outBuffer = (char**)BNSettingsKeysList(m_object, &size);
+
+	vector<string> result;
+	result.reserve(size);
+	for (size_t i = 0; i < size; i++)
+		result.emplace_back(outBuffer[i]);
+
+	BNFreeStringList(outBuffer, size);
+	return result;
+}
+
+
 template<> vector<string> Settings::QueryProperty<vector<string>>(const string& key, const string& property)
 {
 	size_t size = 0;
@@ -228,6 +243,15 @@ template<> vector<string> Settings::Get<vector<string>>(const string& key, Ref<B
 		result.emplace_back(outBuffer[i]);
 
 	BNFreeStringList(outBuffer, size);
+	return result;
+}
+
+
+string Settings::GetJson(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	char* tmpStr = BNSettingsGetJsonString(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	string result(tmpStr);
+	BNFreeString(tmpStr);
 	return result;
 }
 

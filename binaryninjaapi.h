@@ -4537,6 +4537,7 @@ namespace BinaryNinja
 		bool RegisterSetting(const std::string& key, const std::string& properties);
 		bool Contains(const std::string& key);
 		bool IsEmpty();
+		std::vector<std::string> Keys();
 
 		template<typename T> T QueryProperty(const std::string& key, const std::string& property);
 
@@ -4560,6 +4561,7 @@ namespace BinaryNinja
 		bool ResetAll(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
 		template<typename T> T Get(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
+		std::string GetJson(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
 
 		bool Set(const std::string& key, bool value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, double value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);

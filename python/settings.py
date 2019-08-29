@@ -111,6 +111,15 @@ class Settings(object):
 	def is_empty(self):
 		return core.BNSettingsIsEmpty(self.handle)
 
+	def keys(self):
+		length = ctypes.c_ulonglong()
+		result = core.BNSettingsKeysList(self.handle, ctypes.byref(length))
+		out_list = []
+		for i in range(length.value):
+			out_list.append(pyNativeStr(result[i]))
+		core.BNFreeStringList(result, length)
+		return out_list
+
 	def query_property_string_list(self, key, property_name):
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsQueryPropertyStringList(self.handle, key, property_name, ctypes.byref(length))
@@ -173,6 +182,11 @@ class Settings(object):
 		core.BNFreeStringList(result, length)
 		return out_list
 
+	def get_json(self, key, view = None):
+		if view is not None:
+			view = view.handle
+		return core.BNSettingsGetJsonString(self.handle, key, view, None)
+
 	def get_bool_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
@@ -212,6 +226,13 @@ class Settings(object):
 			out_list.append(pyNativeStr(result[i]))
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
+
+	def get_json_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		c_scope = core.SettingsScopeEnum(scope)
+		result = core.BNSettingsGetJsonString(self.handle, key, view, ctypes.byref(c_scope))
+		return (result, SettingsScope(c_scope.value))
 
 	def set_bool(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:

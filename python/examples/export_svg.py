@@ -179,10 +179,13 @@ def render_svg(function, origname):
         rgb = colors['none']
         try:
             bb = block.basic_block
-            color_code = bb.highlight.color
-            color_str = bb.highlight._standard_color_to_str(color_code)
-            if color_str in colors:
-                rgb = colors[color_str]
+            if hasattr(bb.highlight, 'color'):
+                color_code = bb.highlight.color
+                color_str = bb.highlight._standard_color_to_str(color_code)
+                if color_str in colors:
+                    rgb = colors[color_str]
+            else:
+                rgb = [bb.highlight.red, bb.highlight.green, bb.highlight.blue]
         except:
             pass
         output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(

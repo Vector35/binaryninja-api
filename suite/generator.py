@@ -254,6 +254,8 @@ def generate(test_store, outdir, exclude_binaries):
     allfiles = sorted(testcommon.get_file_list(test_store))
     for progress, testfile in enumerate(allfiles):
         oraclefile = None
+        if testfile.endswith(".gitignore"):
+            continue
         if testfile.endswith(".pkl"):
             continue
         elif testfile.endswith(".DS_Store"):

@@ -2604,10 +2604,12 @@ class BinaryView(object):
 			[<func: x86_64@0x1>]
 
 		"""
-		if self.platform is None:
+		if self.platform is None and plat is None:
 			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
+		if not isinstance(plat, binaryninja.platform.Platform):
+			raise AttributeError("Provided platform is not of type `binaryninja.platform.Platform`")
 		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
 
 	def add_entry_point(self, addr, plat=None):
@@ -2621,10 +2623,12 @@ class BinaryView(object):
 			>>> bv.add_entry_point(0xdeadbeef)
 			>>>
 		"""
-		if self.platform is None:
+		if self.platform is None and plat is None:
 			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
+		if not isinstance(plat, binaryninja.platform.Platform):
+			raise AttributeError("Provided platform is not of type `binaryninja.platform.Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
 
 	def remove_function(self, func):
@@ -3289,11 +3293,9 @@ class BinaryView(object):
 		"""
 		if plat is None:
 			plat = self.platform
-		if plat is not None:
-			plat = plat.handle
-		if sym_type is not None:
-			sym_type = sym_type.handle
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat, sym.handle, sym_type)
+		elif not isinstance(plat, binaryninja.platform.Platform):
+			raise AttributeError("Provided platform is not of type `binaryninja.platform.Platform`")
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type.handle)
 
 	def undefine_auto_symbol(self, sym):
 		"""
@@ -4750,7 +4752,7 @@ class BinaryView(object):
 		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
 		"""
 		``add_user_section`` creates a user-defined section that can help inform analysis by clarifying what types of
-		 data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
+		data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
 
 		:param str name: name of the section
 		:param int start: virtual address of the start of the section

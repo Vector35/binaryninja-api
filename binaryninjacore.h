@@ -70,7 +70,6 @@
 
 #define BN_INVALID_EXPR             ((size_t)-1)
 
-#define BN_DEFAULT_MIN_STRING_LENGTH 4
 #define BN_MAX_STRING_LENGTH         128
 
 #define LLVM_SVCS_CB_NOTE 0

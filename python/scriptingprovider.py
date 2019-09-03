@@ -25,7 +25,7 @@ import ctypes
 import threading
 import abc
 import sys
-import rlcompleter
+from binaryninja import bncompleter
 import re
 
 # Binary Ninja components
@@ -118,7 +118,7 @@ class ScriptingInstance(object):
 			self._cb.completeInput = self._cb.completeInput.__class__(self._complete_input)
 			self._cb.completeInput.restype = ctypes.c_void_p
 			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
-			self.delimiters = ' \t\n`~!@#$%^&*()-=+[{]}\\|;:\'",<>/?'
+			self.delimiters = ' \t\n`~!@#$%^&*()-=+{}\\|;:\'",<>/?'
 		else:
 			self.handle = core.handle_of_type(handle, core.BNScriptingInstance)
 		self.listeners = []
@@ -536,7 +536,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.code = None
 			self.input = ""
 
-			self.completer = rlcompleter.Completer(namespace = self.locals)
+			self.completer = bncompleter.Completer(namespace = self.locals)
 
 			self.interpreter.push("from binaryninja import *")
 

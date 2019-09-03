@@ -19,6 +19,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [opensans] ([opensans license] - Apache 2.0)
     - [qt] ([qt license] - LGPLv3 / note, please see our [qt build instructions below](open-source.md#building-qt))
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
+    - [rlcompleter] ([python license] - Python Software Foundation License 2)
 
 * Core
     - [discount] ([discount license] - BSD)
@@ -26,6 +27,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
+    - [python] ([python license] - Python Software Foundation License 2 -- a Python 2.7 built without GPL components is currently shipped with Windows builds only, other platforms leverage existing Python installs)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
 
@@ -82,8 +84,10 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
 [PPC architecture module]: https://github.com/Vector35/ppc-capstone
+[python license]: https://github.com/python/cpython/blob/master/LICENSE
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
+[rlcompleter]: https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.md
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE

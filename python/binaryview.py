@@ -43,6 +43,7 @@ from binaryninja import metadata
 from binaryninja import highlight
 from binaryninja import function
 from binaryninja import settings
+from binaryninja import pyNativeStr
 
 # 2-3 compatibility
 from binaryninja import range
@@ -118,6 +119,12 @@ class StringReference(object):
 	def raw(self):
 		return self._view.read(self._start, self._length)
 
+	def __str__(self):
+		return pyNativeStr(self.raw)
+
+	def __len__(self):
+		return self._length
+
 	def __repr__(self):
 		return "<%s: %#x, len %#x>" % (self._type, self._start, self._length)
 
@@ -144,18 +151,10 @@ class StringReference(object):
 		""" """
 		return self._length
 
-	@length.setter
-	def length(self, value):
-		self._length = value
-
 	@property
 	def view(self):
 		""" """
 		return self._view
-
-	@view.setter
-	def view(self, value):
-		self._view = value
 
 
 _pending_analysis_completion_events = {}
@@ -881,6 +880,9 @@ class AddressRange(object):
 	def __init__(self, start, end):
 		self._start = start
 		self._end = end
+
+	def __len__(self):
+		return self._end - self.start
 
 	@property
 	def length(self):

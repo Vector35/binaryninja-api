@@ -2686,6 +2686,9 @@ class InstructionInfo(object):
 	def add_branch(self, branch_type, target = 0, arch = None):
 		self._branches.append(InstructionBranch(branch_type, target, arch))
 
+	def __len__(self):
+		return self._length
+
 	def __repr__(self):
 		branch_delay = ""
 		if self._branch_delay:

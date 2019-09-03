@@ -43,6 +43,9 @@ class PluginCommandContext(object):
 		self._function = None
 		self._instruction = None
 
+	def __len__(self):
+		return self._length
+
 	@property
 	def view(self):
 		""" """

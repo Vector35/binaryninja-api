@@ -39,7 +39,8 @@ Notes:
 """
 
 import atexit
-import builtins
+from six.moves import builtins
+from six import class_types
 import __main__
 
 __all__ = ["Completer"]
@@ -99,7 +100,7 @@ class Completer:
 			return None
 
 	def _callable_postfix(self, val, word):
-		if callable(val):
+		if callable(val) and not isinstance(val, class_types):
 			word = word + "("
 		return word
 
@@ -144,7 +145,7 @@ class Completer:
 
 		"""
 		import re
-		m = re.match(r"([\w\[\]]+(\.[\w\[\]]+)*)\.(\w*)", text)
+		m = re.match(r"([\w\[\]]+(\.[\w\[\]]+)*)\.([\w\[\]]*)", text)
 		if not m:
 			return []
 		expr, attr = m.group(1, 3)

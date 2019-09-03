@@ -2891,6 +2891,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __hash__(self):
 		return hash((self.start, self.end, self._il_function))
 
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<llil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<llil block: %d-%d>" % (self.start, self.end)
+
 	def __contains__(self, instruction):
 		if type(instruction) != LowLevelILInstruction or instruction.il_basic_block != self:
 			return False

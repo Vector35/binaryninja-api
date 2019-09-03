@@ -1172,6 +1172,13 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
 
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<mlil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<mlil block: %d-%d>" % (self.start, self.end)
+
 	def __contains__(self, instruction):
 		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:
 			return False

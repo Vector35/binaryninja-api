@@ -81,7 +81,7 @@ class Snippets(QDialog):
     def __init__(self, parent=None):
         super(Snippets, self).__init__(parent)
         # Create widgets
-        self.setWindowModality(Qt.NonModal)
+        self.setWindowModality(Qt.ApplicationModal)
         self.title = QLabel(self.tr("Snippet Editor"))
         self.saveButton = QPushButton(self.tr("Save"))
         self.revertButton = QPushButton(self.tr("Revert"))
@@ -182,6 +182,9 @@ class Snippets(QDialog):
         self.deleteSnippetButton.clicked.connect(self.deleteSnippet)
         self.newFolderButton.clicked.connect(self.newFolder)
 
+        #Read-only until new snippet
+        self.readOnly(True)
+
     @staticmethod
     def registerAllSnippets():
         for action in list(filter(lambda x: x.startswith("Snippets\\"), UIAction.getAllRegisteredActions())):
@@ -239,6 +242,7 @@ class Snippets(QDialog):
             return
         newSelection = self.files.filePath(new.indexes()[0])
         if QFileInfo(newSelection).isDir():
+            self.readOnly(True)
             self.clearSelection()
             return
 
@@ -260,6 +264,7 @@ class Snippets(QDialog):
         self.snippetDescription.setText(snippetDescription) if snippetDescription else self.snippetDescription.setText("")
         self.keySequenceEdit.setKeySequence(snippetKeys) if snippetKeys else self.keySequenceEdit.setKeySequence(QKeySequence(""))
         self.edit.setPlainText(snippetCode) if snippetCode else self.edit.setPlainText("")
+        self.readOnly(False)
 
     def newFileDialog(self):
         (snippetName, ok) = QInputDialog.getText(self, self.tr("Snippet Name"), self.tr("Snippet Name: "))
@@ -272,7 +277,19 @@ class Snippets(QDialog):
                 open(os.path.join(selection, snippetName), "w").close()
             else:
                 open(os.path.join(snippetPath, snippetName), "w").close()
+                self.readOnly(False)
             log_debug("Snippet %s created." % snippetName)
+
+    def readOnly(self, flag):
+        self.keySequenceEdit.setEnabled(not flag)
+        self.snippetDescription.setReadOnly(flag)
+        self.edit.setReadOnly(flag)
+        if flag:
+            self.snippetDescription.setDisabled(True)
+            self.edit.setDisabled(True)
+        else:
+            self.snippetDescription.setEnabled(True)
+            self.edit.setEnabled(True)
 
     def deleteSnippet(self):
         selection = self.tree.selectedIndexes()[::self.columns][0] #treeview returns each selected element in the row
@@ -282,6 +299,7 @@ class Snippets(QDialog):
             log_debug("Deleting snippet %s." % snippetName)
             self.clearSelection()
             self.files.remove(selection)
+            self.registerAllSnippets()
 
     def snippetChanged(self):
         if (self.currentFile == "" or QFileInfo(self.currentFile).isDir()):

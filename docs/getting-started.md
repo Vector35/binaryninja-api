@@ -316,7 +316,11 @@ Here's a list of all settings currently available from the UI:
 |analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|
 |analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|
 |arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|
+<<<<<<< HEAD
 |arch|x86 Disassembly Seperator|Specify the token seperator between operands.|`string`|`, `|
+=======
+|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|
+>>>>>>> lots of documentation updates: updated preferences/settings, spelling fixes, new screenshots for open with options and settings, standardize on MacOS
 |arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|
 |bnil-graph|Show Common ILs|Show common forms (non-SSA, non-mapped) in the output.|`boolean`|`True`|
 |bnil-graph|Include MMLIL|Show the MappedMediumLevelIL form in the output.|`boolean`|`False`|
@@ -325,7 +329,11 @@ Here's a list of all settings currently available from the UI:
 |downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|
 |pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|
 |pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`||
+<<<<<<< HEAD
 |pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, sepcifying the pdb symbol store.|`string`|`symbols`|
+=======
+|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|
+>>>>>>> lots of documentation updates: updated preferences/settings, spelling fixes, new screenshots for open with options and settings, standardize on MacOS
 |pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|`['https://msdl.microsoft.com/download/symbols']`|
 |pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|
 |pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|

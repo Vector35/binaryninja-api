@@ -39,9 +39,8 @@ Notes:
 """
 
 import atexit
-from six.moves import builtins
-from six import class_types
 import __main__
+import inspect
 
 __all__ = ["Completer"]
 
@@ -100,8 +99,8 @@ class Completer:
 			return None
 
 	def _callable_postfix(self, val, word):
-		if callable(val) and not isinstance(val, class_types):
-			word = word + "("
+		if callable(val) and not inspect.isclass(val):
+			word = word + str(inspect.signature(val))
 		return word
 
 	def global_matches(self, text):
@@ -125,7 +124,7 @@ class Completer:
 								  'else'}:
 					word = word + ' '
 				matches.append(word)
-		for nspace in [self.namespace, builtins.__dict__]:
+		for nspace in [self.namespace, __builtins__.__dict__]:
 			for word, val in nspace.items():
 				if word[:n] == text and word not in seen:
 					seen.add(word)

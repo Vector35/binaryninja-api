@@ -142,7 +142,12 @@ class Completer:
 								  'else'}:
 					word = word + ' '
 				matches.append(word)
-		for nspace in [self.namespace, __builtins__.__dict__]:
+		#Not sure why in the console builtins becomes a dict but this works for now.
+		if hasattr(__builtins__, '__dict__'):
+			builtins =  __builtins__.__dict__
+		else:
+			builtins =  __builtins__
+		for nspace in [self.namespace, builtins]:
 			for word, val in nspace.items():
 				if word[:n] == text and word not in seen:
 					seen.add(word)

@@ -41,8 +41,26 @@ Notes:
 import atexit
 import __main__
 import inspect
+import sys
 
 __all__ = ["Completer"]
+
+def fnsignature(obj):
+	if sys.version_info[0:2] >= (3, 5):
+		try:
+			sig = str(inspect.signature(obj))
+		except:
+			sig = "()"
+		return sig
+	else:
+		try:
+			args = inspect.getargspec(obj).args
+			args.remove('self')
+			sig =  "(" + ','.join(args) +  ")"
+		except:
+			sig = "()"
+		return sig
+
 
 class Completer:
 	def __init__(self, namespace = None):
@@ -100,7 +118,7 @@ class Completer:
 
 	def _callable_postfix(self, val, word):
 		if callable(val) and not inspect.isclass(val):
-			word = word + str(inspect.signature(val))
+			word = word + fnsignature(val)
 		return word
 
 	def global_matches(self, text):

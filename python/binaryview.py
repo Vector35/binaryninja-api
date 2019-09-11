@@ -4749,8 +4749,8 @@ class BinaryView(object):
 	def add_user_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
 		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
 		"""
-		``add_user_section`` creates a user-defined section that can help inform analysis by clarifying what types of 
-		data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
+		``add_user_section`` creates a user-defined section that can help inform analysis by clarifying what types of
+		 data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
 
 		:param str name: name of the section
 		:param int start: virtual address of the start of the section
@@ -4904,6 +4904,15 @@ class BinaryView(object):
 			>>> bv.remove_metadata("integer")
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
+
+	def get_load_settings_type_names(self):
+		result = []
+		count = ctypes.c_ulonglong(0)
+		names = core.BNBinaryViewGetLoadSettingsTypeNames(self.handle, count)
+		for i in range(count.value):
+			result.append(names[i])
+		core.BNFreeStringList(names, count)
+		return result
 
 	def get_load_settings(self, type_name):
 		settings_handle = core.BNBinaryViewGetLoadSettings(self.handle, type_name)

@@ -2994,6 +2994,20 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 }
 
 
+vector<string> BinaryView::GetLoadSettingsTypeNames()
+{
+	size_t count = 0;
+	char** outgoingNames = BNBinaryViewGetLoadSettingsTypeNames(m_object, &count);
+	vector<string> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(outgoingNames[i]);
+
+	BNFreeStringList(outgoingNames, count);
+	return result;
+}
+
+
 Ref<Settings> BinaryView::GetLoadSettings(const string& typeName)
 {
 	BNSettings* settings = BNBinaryViewGetLoadSettings(m_object, typeName.c_str());

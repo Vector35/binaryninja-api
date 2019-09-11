@@ -306,6 +306,15 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path,
 }
 
 
+Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
+{
+	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, path.c_str());
+	if (!data)
+		return nullptr;
+	return new BinaryView(data);
+}
+
+
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data)
 {
 	return BNSaveAutoSnapshot(data->GetObject());

@@ -344,6 +344,12 @@ class FileMetadata(object):
 			return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
+	def open_database_for_configuration(self, filename):
+		view = core.BNOpenDatabaseForConfiguration(self.handle, str(filename))
+		if view is None:
+			return None
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+
 	def save_auto_snapshot(self, progress_func = None):
 		if progress_func is None:
 			return core.BNSaveAutoSnapshot(self.raw.handle)

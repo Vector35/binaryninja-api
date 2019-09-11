@@ -886,6 +886,7 @@ namespace BinaryNinja
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
+		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
 		bool SaveAutoSnapshot(BinaryView* data);
 		bool SaveAutoSnapshot(BinaryView* data,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
@@ -1698,6 +1699,7 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
+		std::vector<std::string> GetLoadSettingsTypeNames();
 		Ref<Settings> GetLoadSettings(const std::string& typeName);
 		void SetLoadSettings(const std::string& typeName, Ref<Settings> settings);
 

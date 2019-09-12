@@ -134,6 +134,8 @@ extern "C"
 	struct BNLowLevelILFunction;
 	struct BNMediumLevelILFunction;
 	struct BNType;
+	struct BNTypeLibrary;
+	struct BNTypeLibraryMapping;
 	struct BNStructure;
 	struct BNTagType;
 	struct BNTag;
@@ -3401,6 +3403,61 @@ extern "C"
 
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetMediumLevelILExprType(BNMediumLevelILFunction* func, size_t expr);
 
+	// Type Libraries
+	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibrary(BNArchitecture* arch, const char* name);
+	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibraryReference(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNTypeLibrary* BNDuplicateTypeLibrary(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNTypeLibrary* BNLoadTypeLibraryFromFile(const char* path);
+	BINARYNINJACOREAPI void BNFreeTypeLibrary(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByName(BNArchitecture* arch, const char* name);
+	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByGuid(BNArchitecture* arch, const char* guid);
+
+	BINARYNINJACOREAPI BNTypeLibrary** BNGetArchitectureTypeLibraries(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeLibraryList(BNTypeLibrary** lib, size_t count);
+
+	BINARYNINJACOREAPI void BNFinalizeTypeLibrary(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI BNArchitecture* BNGetTypeLibraryArchitecture(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI void BNSetTypeLibraryName(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetTypeLibraryName(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI void BNAddTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char** BNGetTypeLibraryAlternateNames(BNTypeLibrary* lib, size_t* count); // BNFreeStringList
+
+	BINARYNINJACOREAPI void BNSetTypeLibraryDependencyName(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetTypeLibraryDependencyName(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI void BNSetTypeLibraryGuid(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetTypeLibraryGuid(BNTypeLibrary* lib);
+
+	BINARYNINJACOREAPI void BNClearTypeLibraryPlatforms(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI void BNAddTypeLibraryPlatform(BNTypeLibrary* lib, BNPlatform* platform);
+	BINARYNINJACOREAPI char** BNGetTypeLibraryPlatforms(BNTypeLibrary* lib, size_t* count); // BNFreeStringList
+
+	BINARYNINJACOREAPI void BNTypeLibraryStoreMetadata(BNTypeLibrary* lib, const char* key, BNMetadata* value);
+	BINARYNINJACOREAPI BNMetadata* BNTypeLibraryQueryMetadata(BNTypeLibrary* lib, const char* key);
+	BINARYNINJACOREAPI void BNTypeLibraryRemoveMetadata(BNTypeLibrary* lib, const char* key);
+
+	BINARYNINJACOREAPI void BNAddTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNAddTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+
+	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name);
+
+	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedObjects(BNTypeLibrary* lib, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedTypes(BNTypeLibrary* lib, size_t* count);
+
+	BINARYNINJACOREAPI void BNWriteTypeLibraryToFile(BNTypeLibrary* lib, const char* path);
+
+	BINARYNINJACOREAPI void BNBinaryViewAddTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNTypeLibrary* BNBinaryViewGetTypeLibrary(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNTypeLibrary** BNBinaryViewGetTypeLibraries(BNBinaryView* view, size_t* count);
+
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportLibraryType(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportLibraryObject(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);
 	BINARYNINJACOREAPI bool BNTypesNotEqual(BNType* a, BNType* b);
@@ -3694,6 +3751,9 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNGetPlatformFunctionByName(BNPlatform* platform, BNQualifiedName* name, bool exactMatch);
 	BINARYNINJACOREAPI char* BNGetPlatformSystemCallName(BNPlatform* platform, uint32_t number);
 	BINARYNINJACOREAPI BNType* BNGetPlatformSystemCallType(BNPlatform* platform, uint32_t number);
+
+	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibraries(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibrariesByName(BNPlatform* platform, char* depName, size_t* count);
 
 	//Demangler
 	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch,

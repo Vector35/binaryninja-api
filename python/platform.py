@@ -286,6 +286,25 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
 
+	@property
+	def type_libraries(self):
+		count = ctypes.c_ulonglong(0)
+		libs = core.BNGetPlatformTypeLibraries(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+		core.BNFreeTypeLibraryList(libs, count.value)
+		return result
+
+	def type_libraries_by_name(self, name):
+		count = ctypes.c_ulonglong(0)
+		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+		core.BNFreeTypeLibraryList(libs, count.value)
+		return result
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)

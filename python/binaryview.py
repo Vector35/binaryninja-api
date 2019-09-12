@@ -36,6 +36,7 @@ import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
 from binaryninja import log
 from binaryninja import types
+from binaryninja import typelibrary
 from binaryninja import fileaccessor
 from binaryninja import databuffer
 from binaryninja import basicblock
@@ -1614,6 +1615,19 @@ class BinaryView(object):
 			result.append(types.QualifiedName._from_core_struct(name_list[i]))
 		core.BNFreeTypeNameList(name_list, count.value)
 		return result
+
+
+	@property
+	def type_libraries(self):
+		"""List of imported type libraries (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		libraries = core.BNBinaryViewGetTypeLibraries(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libraries[i])))
+		core.BNFreeTypeLibraryList(libraries, count.value)
+		return result
+
 
 	@property
 	def segments(self):
@@ -4477,6 +4491,32 @@ class BinaryView(object):
 		name = types.QualifiedName(name)._get_core_struct()
 		return core.BNGetAnalysisTypeId(self.handle, name)
 
+	def add_type_library(self, lib):
+		"""
+		``add_type_library`` make the contents of a type library available for type/import resolution
+
+		:param TypeLibrary lib: library to register with the view
+		:rtype: None
+		"""
+		if not isinstance(lib, typelibrary.TypeLibrary):
+			raise ValueError("must pass in a TypeLibrary object")
+		core.BNBinaryViewAddTypeLibrary(self.handle, lib.handle)
+
+	def get_type_library(self, name):
+		"""
+		``get_type_library`` returns the TypeLibrary
+
+		:param str name: Library name to lookup
+		:return: The Type Library object, if any
+		:rtype: TypeLibrary or None
+		:Example:
+
+		"""
+		handle = core.BNBinaryViewGetTypeLibrary(self.handle, name)
+		if handle is None:
+			return None
+		return typelibrary.TypeLibrary(handle)
+
 	def is_type_auto_defined(self, name):
 		"""
 		``is_type_auto_defined`` queries the user type list of name. If name is not in the *user* type list then the name
@@ -4596,6 +4636,22 @@ class BinaryView(object):
 		old_name = types.QualifiedName(old_name)._get_core_struct()
 		new_name = types.QualifiedName(new_name)._get_core_struct()
 		core.BNRenameAnalysisType(self.handle, old_name, new_name)
+
+	def import_library_type(self, name, lib = None):
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		handle = core.BNBinaryViewImportLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		if handle is None:
+			return None
+		return types.Type(handle, platform = self.platform)
+
+	def import_library_object(self, name, lib = None):
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		handle = core.BNBinaryViewImportLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		if handle is None:
+			return None
+		return types.Type(handle, platform = self.platform)
 
 	def register_platform_types(self, platform):
 		"""

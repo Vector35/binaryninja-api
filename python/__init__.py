@@ -46,6 +46,7 @@ from binaryninja.log import *
 from binaryninja.lowlevelil import *
 from binaryninja.mediumlevelil import *
 from binaryninja.types import *
+from binaryninja.typelibrary import *
 from binaryninja.functionrecognizer import *
 from binaryninja.update import *
 from binaryninja.plugin import *
@@ -253,3 +254,4 @@ def get_memory_usage_info():
 		result[info[i].name] = info[i].value
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
+

@@ -191,8 +191,8 @@ class AddressField(object):
 	offsets can be used instead of just an address. The result is stored as in int in self.result.
 
 	Note: This API currently functions differently on the command-line, as the view and current_address are
-	      disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be 
-	      specified.
+	disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be 
+	specified.
 	"""
 	def __init__(self, prompt, view=None, current_address=0):
 		self._prompt = prompt
@@ -970,7 +970,7 @@ def show_plain_text_report(title, contents):
 	``show_plain_text_report`` displays contents to the user in the UI or on the command-line
 
 	Note: This API functions differently on the command-line vs the UI. In the UI, a pop-up is used. On the command-line,
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str title: title to display in the UI pop-up
 	:param str contents: plaintext contents to display
@@ -989,7 +989,7 @@ def show_markdown_report(title, contents, plaintext=""):
 	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str contents: markdown contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
@@ -1008,7 +1008,7 @@ def show_html_report(title, contents, plaintext=""):
 	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str contents: HTML contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
@@ -1053,7 +1053,7 @@ def get_text_line_input(prompt, title):
 	``get_text_line_input`` prompts the user to input a string with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1076,7 +1076,7 @@ def get_int_input(prompt, title):
 	``get_int_input`` prompts the user to input a integer with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1097,7 +1097,7 @@ def get_address_input(prompt, title):
 	``get_address_input`` prompts the user for an address with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1118,7 +1118,7 @@ def get_choice_input(prompt, title, choices):
 	``get_choice_input`` prompts the user to select the one of the provided choices
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses a combo box.
+	a simple text prompt is used. The UI uses a combo box.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1147,7 +1147,7 @@ def get_open_filename_input(prompt, ext=""):
 	``get_open_filename_input`` prompts the user for a file name to open
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
+	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
@@ -1170,7 +1170,7 @@ def get_save_filename_input(prompt, ext="", default_name=""):
 	default_name
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
+	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension

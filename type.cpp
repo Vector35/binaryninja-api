@@ -489,12 +489,6 @@ Confidence<bool> Type::IsConst() const
 }
 
 
-bool Type::IsFloat() const
-{
-	return BNIsTypeFloatingPoint(m_object);
-}
-
-
 Confidence<BNMemberScope> Type::GetScope() const
 {
 	BNMemberScopeWithConfidence result = BNTypeGetMemberScope(m_object);
@@ -934,6 +928,12 @@ string Type::GetAutoDebugTypeIdSource()
 }
 
 
+bool Type::IsReferenceOfType(BNNamedTypeReferenceClass refType)
+{
+	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
+}
+
+
 QualifiedName Type::GetTypeName() const
 {
 	BNQualifiedName name = BNTypeGetTypeName(m_object);
@@ -1099,6 +1099,21 @@ vector<StructureMember> Structure::GetMembers() const
 bool Structure::GetMemberByName(const string& name, StructureMember& result) const
 {
 	BNStructureMember* member = BNGetStructureMemberByName(m_object, name.c_str());
+	if (member)
+	{
+		result.type = new Type(BNNewTypeReference(member->type));
+		result.name = member->name;
+		result.offset = member->offset;
+		BNFreeStructureMember(member);
+		return true;
+	}
+	return false;
+}
+
+
+bool Structure::GetMemberAtOffset(int64_t offset, StructureMember& result) const
+{
+	BNStructureMember* member = BNGetStructureMemberAtOffset(m_object, offset);
 	if (member)
 	{
 		result.type = new Type(BNNewTypeReference(member->type));

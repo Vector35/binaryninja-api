@@ -127,6 +127,18 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	bool isLineValidHighlight(const BinaryNinja::LinearDisassemblyLine& line);
 	void ensureLineVisible(size_t line);
 
+	TypeRef createStructure(BinaryNinja::QualifiedName& name, uint64_t size);
+	StructureRef defineInnerType(TypeRef type, TypeRef baseType, uint64_t offset, uint64_t size);
+	StructureRef defineInnerPointer(TypeRef type, ArchitectureRef arch, uint64_t baseAddress, uint64_t offset, uint64_t size);
+	StructureRef defineInnerStruct(TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerArray(TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerUnknownType(QWidget* parent, TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size);
+	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
+	std::string getVariableName(uint64_t addr);
+
 private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInGraph();
@@ -155,15 +167,21 @@ private Q_SLOTS:
 	void skipAndReturnZero();
 	void skipAndReturnValue();
 
+	void makeTypes(TypeRef type);
 	void makeInt8();
 	void makeInt16();
 	void makeInt32();
 	void makeInt64();
 	void toggleIntSize();
+	void toggleIntSign();
 	void makePtr();
 	void makeString();
 	void changeType();
-	void inferStructureType();
+	void createStructOrinferStructureType();
+	void createArray();
+	void createStruct();
+	void createNewTypes();
+
 	size_t getStringLength(uint64_t startAddr);
 
 	void displayAsDefault();

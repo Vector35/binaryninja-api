@@ -245,6 +245,8 @@ extern "C"
 		NameSpaceSeparatorToken = 23,
 		TagToken = 24,
 		StructOffsetToken = 25,
+		StructOffsetByteValueToken = 26,
+		StructureHexDumpTextToken = 27,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -1906,14 +1908,20 @@ extern "C"
 		void (*destructFunction)(void* ctxt, BNFunction* func);
 	};
 
+	struct BNTypeContext
+	{
+		BNType* type;
+		size_t offset;
+	};
+
 	struct BNCustomDataRenderer
 	{
 		void* context;
 		void (*freeObject)(void* ctxt);
-		bool (*isValidForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNType** typeCtx,
+		bool (*isValidForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext** typeCtx,
 			size_t ctxCount);
 		BNDisassemblyTextLine* (*getLinesForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCtx,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext** typeCtx,
 			size_t ctxCount);
 	};
 
@@ -3577,6 +3585,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
 
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMemberByName(BNStructure* s, const char* name);
+	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMemberAtOffset(BNStructure* s, int64_t offset);
 	BINARYNINJACOREAPI void BNFreeStructureMember(BNStructureMember* s);
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
@@ -3935,6 +3944,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNAddGraphReportToCollection(BNReportCollection* reports, BNBinaryView* view,
 		const char* title, BNFlowGraph* graph);
 
+	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
 	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch,
 	                                       const char* mangledName,
 	                                       BNType** outType,
@@ -4186,10 +4196,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNDataRenderer* BNCreateDataRenderer(BNCustomDataRenderer* renderer);
 	BINARYNINJACOREAPI BNDataRenderer* BNNewDataRendererReference(BNDataRenderer* renderer);
 	BINARYNINJACOREAPI bool BNIsValidForData(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-		BNType** typeCtx, size_t ctxCount);
+		BNTypeContext** typeCtx, size_t ctxCount);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLinesForData(void* ctxt, BNBinaryView* view, uint64_t addr,
 		BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
-		BNType** typeCtx, size_t ctxCount);
+		BNTypeContext** typeCtx, size_t ctxCount);
 	BINARYNINJACOREAPI void BNFreeDataRenderer(BNDataRenderer* renderer);
 	BINARYNINJACOREAPI BNDataRendererContainer* BNGetDataRendererContainer();
 	BINARYNINJACOREAPI void BNRegisterGenericDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);

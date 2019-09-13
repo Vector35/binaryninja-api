@@ -700,14 +700,13 @@ __attribute__ ((format (printf, 1, 2)))
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
 	bool DemangleMS(Architecture* arch,
-	                const std::string& mangledName,
-	                Type** outType,
-	                QualifiedName& outVarName);
-	bool DemangleGNU3(Architecture* arch,
-	                  const std::string& mangledName,
-	                  Type** outType,
-	                  QualifiedName& outVarName);
-
+		const std::string& mangledName,
+		Type** outType,
+		QualifiedName& outVarName);
+	bool DemangleGNU3(Ref<Architecture> arch,
+		const std::string& mangledName,
+		Type** outType,
+		QualifiedName& outVarName);
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
@@ -2469,7 +2468,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<bool> IsSigned() const;
 		Confidence<bool> IsConst() const;
 		Confidence<bool> IsVolatile() const;
-		bool IsFloat() const;
+
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		std::vector<FunctionParameter> GetParameters() const;
@@ -2536,6 +2535,28 @@ __attribute__ ((format (printf, 1, 2)))
 		static std::string GetAutoDebugTypeIdSource();
 
 		Confidence<Ref<Type>> WithConfidence(uint8_t conf);
+
+		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
+		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
+		bool IsEnumReference() { return IsReferenceOfType(EnumNamedTypeClass); }
+		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
+		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
+		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+
+		bool IsVoid() const { return GetClass() == VoidTypeClass; }
+		bool IsBool() const { return GetClass() == BoolTypeClass; }
+		bool IsInteger() const { return GetClass() == IntegerTypeClass; }
+		bool IsFloat() const { return GetClass() == FloatTypeClass; }
+		bool IsStructure() const { return GetClass() == StructureTypeClass; }
+		bool IsEnumeration() const { return GetClass() == EnumerationTypeClass; }
+		bool IsPointer() const { return GetClass() == PointerTypeClass; }
+		bool IsArray() const { return GetClass() == ArrayTypeClass; }
+		bool IsFunction() const { return GetClass() == FunctionTypeClass; }
+		bool IsVarArgs() const { return GetClass() == VarArgsTypeClass; }
+		bool IsValue() const { return GetClass() == ValueTypeClass; }
+		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
+		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -2576,6 +2597,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<StructureMember> GetMembers() const;
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 		uint64_t GetWidth() const;
 		void SetWidth(size_t width);
 		size_t GetAlignment() const;
@@ -4692,20 +4714,20 @@ __attribute__ ((format (printf, 1, 2)))
 	class DataRenderer: public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
 	{
 		static bool IsValidForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			BNType** typeCtx, size_t ctxCount);
+			BNTypeContext** typeCtx, size_t ctxCount);
 		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCxt,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext** typeCxt,
 			size_t ctxCount);
 		static void FreeCallback(void* ctxt);
 	public:
 		DataRenderer();
 		DataRenderer(BNDataRenderer* renderer);
-		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<Type*>& context);
+		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<std::pair<Type*, size_t>>& context);
 		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
-			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<Type*>& context);
+			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
 
-		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<Type*>& context);
-		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<Type*>& context);
+		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);
+		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);
 	};
 
 	class DataRendererContainer

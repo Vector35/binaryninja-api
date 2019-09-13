@@ -79,8 +79,8 @@ class DataRenderer(object):
 	@classmethod
 	def is_type_of_struct_name(cls, type, name, context):
 		return (type.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
-			and context[0].type_class == enums.TypeClass.NamedTypeReferenceClass and
-			context[0].named_type_reference.name == name)
+			and context[-1].type_class == enums.TypeClass.NamedTypeReferenceClass and
+			context[-1].named_type_reference.name == name)
 
 	def register_type_specific(self):
 		core.BNRegisterTypeSpecificDataRenderer(core.BNGetDataRendererContainer(), self.handle)

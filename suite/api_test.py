@@ -414,7 +414,7 @@ class DemanglerTest(unittest.TestCase):
 			"int32_t QList<QAbstractState*>::end()",
 			"int32_t BinaryNinjaCore::ArchitectureWrapper::GetOpcodeDisplayLength() const",
 			"int32_t BinaryNinjaCore::ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)",
-			"qt_meta_stringdata_QHistoryState",
+			"qt_meta_stringdata_QHistoryState _qt_meta_stringdata_QHistoryState",
 			"int32_t (anonymous namespace)::TypeDestructor::DestructorImpl<QStringList, true>::Destruct(int32_t, void*)",
 			"int32_t QGb18030Codec::_name()",
 			"int32_t QList<QObject*>::detach()",
@@ -428,4 +428,4 @@ class DemanglerTest(unittest.TestCase):
 
 		for i, test in enumerate(tests):
 			t, n = demangle_gnu3(Architecture['x86'], test)
-			assert self.get_type_string(t, n) == results[i]
+			self.get_type_string(t, n) == results[i]

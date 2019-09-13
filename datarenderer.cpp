@@ -22,38 +22,38 @@ DataRenderer::DataRenderer()
 }
 
 
-bool DataRenderer::IsStructOfTypeName(Type* type, const QualifiedName& name, vector<Type*>& context)
+bool DataRenderer::IsStructOfTypeName(Type* type, const QualifiedName& name, vector<pair<Type*, size_t>>& context)
 {
 	return (type->GetClass() == StructureTypeClass) &&
 		(context.size() > 0) &&
-		(context[0]->GetClass() == NamedTypeReferenceClass) &&
-		(context[0]->GetNamedTypeReference()->GetName() == name);
+		(context[context.size() - 1].first->GetClass() == NamedTypeReferenceClass) &&
+		(context[context.size() - 1].first->GetNamedTypeReference()->GetName() == name);
 }
 
 
-bool DataRenderer::IsStructOfTypeName(Type* type, const string& name, vector<Type*>& context)
+bool DataRenderer::IsStructOfTypeName(Type* type, const string& name, vector<pair<Type*, size_t>>& context)
 {
 	return DataRenderer::IsStructOfTypeName(type, QualifiedName(name), context);
 }
 
 
 bool DataRenderer::IsValidForDataCallback(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-	BNType** typeCtx, size_t ctxCount)
+	BNTypeContext** typeCtx, size_t ctxCount)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
-	vector<Type*> context;
+	vector<pair<Type*, size_t>> context;
 	context.reserve(ctxCount);
 	for (size_t i = 0; i < ctxCount; i++)
-		context.push_back(new Type(BNNewTypeReference(typeCtx[i])));
+		context.push_back({new Type(BNNewTypeReference(typeCtx[i]->type)), typeCtx[i]->offset});
 
 	return renderer->IsValidForData(viewObj, addr, typeObj, context);
 }
 
 
 BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-	const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCtx,
+	const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext** typeCtx,
 	size_t ctxCount)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
@@ -61,10 +61,10 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	vector<InstructionTextToken> prefixes = InstructionTextToken::ConvertInstructionTextTokenList(prefix, prefixCount);
 
-	vector<Type*> context;
+	vector<pair<Type*, size_t>> context;
 	context.reserve(ctxCount);
 	for (size_t i = 0; i < ctxCount; i++)
-		context.push_back(new Type(BNNewTypeReference(typeCtx[i])));
+		context.push_back({new Type(BNNewTypeReference(typeCtx[i]->type)), typeCtx[i]->offset});
 	auto lines = renderer->GetLinesForData(viewObj, addr, typeObj, prefixes, width, context);
 	*count = lines.size();
 	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
@@ -89,11 +89,14 @@ void DataRenderer::FreeCallback(void* ctxt)
 }
 
 
-bool DataRenderer::IsValidForData(BinaryView* data, uint64_t addr, Type* type, vector<Type*>& context)
+bool DataRenderer::IsValidForData(BinaryView* data, uint64_t addr, Type* type, vector<pair<Type*, size_t>>& context)
 {
-	BNType** typeCtx = new BNType*[context.size()];
+	BNTypeContext** typeCtx = new BNTypeContext*[context.size()];
 	for (size_t i = 0; i < context.size(); i++)
-		typeCtx[i] = context[i]->GetObject();
+	{
+		typeCtx[i]->type = context[i].first->GetObject();
+		typeCtx[i]->offset = context[i].second;
+	}
 	bool result = BNIsValidForData(m_object, data->GetObject(), addr, type->GetObject(), typeCtx, context.size());
 	delete[] typeCtx;
 	return result;
@@ -101,13 +104,15 @@ bool DataRenderer::IsValidForData(BinaryView* data, uint64_t addr, Type* type, v
 
 
 vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
-	const std::vector<InstructionTextToken>& prefix, size_t width, vector<Type*>& context)
+	const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
 {
 	BNInstructionTextToken* prefixes = InstructionTextToken::CreateInstructionTextTokenList(prefix);
-	BNType** typeCtx = new BNType*[context.size()];
+	BNTypeContext** typeCtx = new BNTypeContext*[context.size()];
 	for (size_t i = 0; i < context.size(); i++)
-		typeCtx[i] = context[i]->GetObject();
-
+	{
+		typeCtx[i]->type = context[i].first->GetObject();
+		typeCtx[i]->offset = context[i].second;
+	}
 	size_t count = 0;
 	BNDisassemblyTextLine* lines = BNGetLinesForData(m_object, data->GetObject(), addr, type->GetObject(), prefixes,
 		prefix.size(), width, &count, typeCtx, context.size());

@@ -1083,6 +1083,14 @@ class Structure(object):
 		finally:
 			core.BNFreeStructureMember(member)
 
+	def member_at_offset(self, offset):
+		try:
+			member = core.BNGetStructureMemberAtOffset(self.handle, offset)
+			return StructureMember(Type(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
+					member.contents.name, member.contents.offset)
+		finally:
+			core.BNFreeStructureMember(member)
+
 	@property
 	def members(self):
 		"""Structure member list (read-only)"""

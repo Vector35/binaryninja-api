@@ -16,7 +16,7 @@ class BINARYNINJAUIAPI CreateTypeDialog: public QDialog
 	std::map<BinaryNinja::QualifiedName, TypeRef> m_results;
 
 public:
-	CreateTypeDialog(QWidget* parent, BinaryViewRef data, const QString& definition);
+	CreateTypeDialog(QWidget* parent, BinaryViewRef data, const QString& title, const QString& definition);
 	std::map<BinaryNinja::QualifiedName, TypeRef>  getResults() { return m_results; }
 
 private Q_SLOTS:

@@ -3,14 +3,34 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QTextBrowser>
 #include <QtWidgets/QScrollArea>
+#include <QtWebEngineWidgets/QWebEngineView>
+#include <QtWebEngineWidgets/QWebEngineScript>
+#include <QtWebEngineWidgets/QWebEngineScriptCollection>
+#include <QtWebEngineWidgets/QWebEnginePage>
+#include <QtWebEngineWidgets/QWebEngineSettings>
 #include "binaryninjaapi.h"
 #include "action.h"
+#include "theme.h"
+
+class WebPage2 : public QWebEnginePage
+{
+	Q_OBJECT
+
+public:
+	WebPage2(QObject *parent = nullptr) : QWebEnginePage(parent) {}
+
+protected:
+	virtual bool acceptNavigationRequest(const QUrl &url, QWebEnginePage::NavigationType type, bool isMainFrame);
+
+Q_SIGNALS:
+	void linkClicked(const QUrl&);
+};
 
 class BINARYNINJAUIAPI ReportWidget: public QScrollArea, public UIActionHandler
 {
 	Q_OBJECT
 
-	QTextBrowser* m_contents;
+	QWebEngineView* m_contents;
 	BinaryViewRef m_view;
 	std::string m_original;
 	std::string m_title;

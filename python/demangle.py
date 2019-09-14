@@ -33,7 +33,8 @@ def get_qualified_name(names):
 	"""
 	``get_qualified_name`` gets a qualified name for the provided name list.
 
-	:param list(str) names: name list to qualify
+	:param names: name list to qualify
+	:type names: list(str)
 	:return: a qualified name
 	:rtype: str
 	:Example:

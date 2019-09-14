@@ -647,7 +647,7 @@ class FlowGraph(object):
 		This function does not wait for the graph to be ready to display, but a callback can be provided
 		to signal when the graph is ready.
 
-		:param callable() callback: Function to be called when the graph is ready to display
+		:param callback callback: Function to be called when the graph is ready to display
 		:return: Pending flow graph layout request object
 		:rtype: FlowGraphLayoutRequest
 		"""

@@ -956,8 +956,8 @@ def markdown_to_html(contents):
 	"""
 	``markdown_to_html`` converts the provided markdown to HTML
 
-	:param string contents: Markdown contents to convert to HTML
-	:rtype: string
+	:param str contents: Markdown contents to convert to HTML
+	:rtype: str
 	:Example:
 		>>> markdown_to_html("##Yay")
 		'<h2>Yay</h2>'
@@ -1057,7 +1057,7 @@ def get_text_line_input(prompt, title):
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
-	:rtype: string containing the input without trailing newline character.
+	:rtype: str containing the input without trailing newline character.
 	:Example:
 		>>> get_text_line_input("PROMPT>", "getinfo")
 		PROMPT> Input!
@@ -1122,7 +1122,8 @@ def get_choice_input(prompt, title, choices):
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
-	:param list choices: A list of strings for the user to choose from.
+	:param choices: A list of strings for the user to choose from.
+	:type choices: list(str)
 	:rtype: integer array index of the selected option
 	:Example:
 		>>> get_choice_input("PROMPT>", "choices", ["Yes", "No", "Maybe"])
@@ -1226,9 +1227,12 @@ def get_form_input(fields, title):
 		- OpenFileNameField  - Prompt for file to open
 		- SaveFileNameField  - Prompt for file to save to
 		- DirectoryNameField - Prompt for directory name
-	This API is flexible and works both in the UI via a pop-up dialog and on the command-line.
-	:params list fields: A list containing of the above specified classes, strings or None
-	:params str title: The title of the pop-up dialog.
+	This API is flexible and works both in the UI via a pop-up dialog and on the command-line. Note that more complicated APIs should consider usin the included pyside2 functionality in the `binaryninjaui` module.
+
+	:param fields: A list containing of the above specified classes, strings or None
+	:type fields: list(str) or list(None) or list(LabelField) or list(SeparatorField) or list(TextLineField) or list(MultilineTextField) or list(IntegerField) or list(AddressField) or list(ChoiceField) or list(OpenFileNameField) or list(SaveFileNameField) or list(DirectoryNameField)
+	:param str title: The title of the pop-up dialog.
+	:rtype None
 	:Example:
 
 		>>> int_f = IntegerField("Specify Integer")
@@ -1236,7 +1240,7 @@ def get_form_input(fields, title):
 		>>> choice_f = ChoiceField("Options", ["Yes", "No", "Maybe"])
 		>>> get_form_input(["Get Data", None, int_f, tex_f, choice_f], "The options")
 		Get Data
-
+		<empty>
 		Specify Integer 1337
 		Specify name Peter
 		The options

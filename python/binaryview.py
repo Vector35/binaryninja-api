@@ -641,7 +641,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 		:param str filename: Path to filename or bndb
 		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
-		:param callable() progress_func: optional function to be called with the current progress and total count.
+		:param callback progress_func: optional function to be called with the current progress and total count.
 		:return: returns a BinaryView object for the given filename.
 		:rtype: BinaryView or None
 		"""
@@ -1211,8 +1211,8 @@ class BinaryView(object):
 	def set_default_session_data(cls, name, value):
 		"""
 		``set_default_session_data`` saves a variable to the BinaryView.
-		:param name: name of the variable to be saved
-		:param value: value of the variable to be saved
+		:param str name: name of the variable to be saved
+		:param str value: value of the variable to be saved
 
 		:Example:
 			>>> BinaryView.set_default_session_data("variable_name", "value")
@@ -2227,7 +2227,7 @@ class BinaryView(object):
 		``create_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
-		:param callable() progress_func: optional function to be called with the current progress and total count.
+		:param callback progress_func: optional function to be called with the current progress and total count.
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
@@ -2239,7 +2239,7 @@ class BinaryView(object):
 
 		.. note:: :py:meth:`create_database` should have been called prior to executing this method
 
-		:param callable() progress_func: optional function to be called with the current progress and total count.
+		:param callback progress_func: optional function to be called with the current progress and total count.
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
@@ -3943,7 +3943,7 @@ class BinaryView(object):
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
-		:param callable() callback: A function to be called with no parameters when analysis has completed.
+		:param callback callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.
 		:rtype: AnalysisCompletionEvent
 		:Example:
@@ -4821,6 +4821,8 @@ class BinaryView(object):
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
 		Note that address-based comments are different from function-level comments which are specific to each function.
 		For more information, see :func:`address_comments`.
+		:param int addr: virtual address within the current BinaryView to apply the comment to
+		:rtype: str
 
 		"""
 		return core.BNGetGlobalCommentForAddress(self.handle, addr)
@@ -4832,8 +4834,8 @@ class BinaryView(object):
 		Note that these are different from function-level comments which are specific to each function.
 		For more information, see :func:`address_comments`.
 
-		:param addr int: virtual address within the current BinaryView to apply the comment to
-		:param comment str: string comment to apply
+		:param int addr: virtual address within the current BinaryView to apply the comment to
+		:param str comment: string comment to apply
 		:rtype: None
 		:Example:
 
@@ -4846,7 +4848,7 @@ class BinaryView(object):
 		"""
 		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.
 
-		:param string key: key to query
+		:param str key: key to query
 		:rtype: metadata associated with the key
 		:Example:
 
@@ -4873,7 +4875,7 @@ class BinaryView(object):
 		for more information. Python objects could obviously be serialized using pickle but this intentionally
 		a task left to the user since there is the potential security issues.
 
-		:param string key: key value to associate the Metadata object with
+		:param str key: key value to associate the Metadata object with
 		:param Varies md: object to store.
 		:rtype: None
 		:Example:
@@ -4896,7 +4898,7 @@ class BinaryView(object):
 		"""
 		`remove_metadata` removes the metadata associated with key from the current BinaryView.
 
-		:param string key: key associated with metadata to remove from the BinaryView
+		:param str key: key associated with metadata to remove from the BinaryView
 		:rtype: None
 		:Example:
 
@@ -4959,7 +4961,7 @@ class BinaryView(object):
 			- The ``$here`` keyword can be used in calculations and is defined as the ``here`` parameter
 			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
 
-		:param string expression: Arithmetic expression to be evaluated
+		:param str expression: Arithmetic expression to be evaluated
 		:param int here: (optional) Base address for relative expressions, defaults to zero
 		:rtype: int
 		"""

@@ -565,7 +565,7 @@ class Type(object):
 
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
-		:param string altname: alternate name for type
+		:param str altname: alternate name for type
 		"""
 		if sign is None:
 			sign = BoolWithConfidence(True, confidence = 0)
@@ -584,7 +584,7 @@ class Type(object):
 		``float`` class method for creating an floating point Types.
 
 		:param int width: width of the floating point number in bytes
-		:param string altname: alternate name for type
+		:param str altname: alternate name for type
 		"""
 		return Type(core.BNCreateFloatType(width, altname))
 
@@ -662,10 +662,11 @@ class Type(object):
 		"""
 		``function`` class method for creating an function Type.
 
-		:param Type ret: width of the integer in bytes
-		:param list(Type) params: list of parameter Types
-		:param CallingConvention calling_convention: optional argument for function calling convention
-		:param bool variable_arguments: optional argument for functions that have a variable number of arguments
+		:param Type ret: return Type of the function
+		:param params: list of parameter Types
+		:type params: list(Type)
+		:param CallingConvention calling_convention: optional argument for the function calling convention
+		:param bool variable_arguments: optional boolean, true if the function has a variable number of arguments
 		"""
 		param_buf = (core.BNFunctionParameter * len(params))()
 		for i in range(0, len(params)):
@@ -1298,7 +1299,8 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 
 	:param str source: source to pre-process
 	:param str filename: optional filename to pre-process
-	:param list(str) include_dirs: list of string directories to use as include directories.
+	:param include_dirs: list of string directories to use as include directories.
+	:type include_dirs: list(str)
 	:return: returns a tuple of (preprocessed_source, error_string)
 	:rtype: tuple(str,str)
 	:Example:

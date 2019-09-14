@@ -2667,7 +2667,8 @@ class LowLevelILFunction(object):
 		"""
 		``add_label_list`` returns a label list expression for the given list of LowLevelILLabel objects.
 
-		:param list(LowLevelILLabel) lables: the list of LowLevelILLabel to get a label list expression from
+		:param labels: the list of LowLevelILLabel to get a label list expression from
+		:type labels: list(LowLevelILLabel)
 		:return: the label list expression
 		:rtype: LowLevelILExpr
 		"""
@@ -2680,7 +2681,8 @@ class LowLevelILFunction(object):
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
-		:param list(int) operands: list of operand numbers
+		:param operands: list of operand numbers
+		:type operands: list(int)
 		:return: an operand list expression
 		:rtype: LowLevelILExpr
 		"""

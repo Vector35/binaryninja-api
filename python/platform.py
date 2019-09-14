@@ -379,7 +379,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
-		:param list(str) include_dirs: optional list of string filename include directories
+		:param include_dirs: optional list of string filename include directories
+		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
@@ -425,7 +426,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		the optional list of directories provided in ``include_dirs``.
 
 		:param str filename: filename of file to be parsed
-		:param list(str) include_dirs: optional list of string filename include directories
+		:param include_dirs: optional list of string filename include directories
+		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult

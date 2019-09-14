@@ -76,7 +76,7 @@ class FileMetadata(object):
 		"""
 		Instantiates a new FileMetadata class.
 
-		:param filename: The string path to the file to be opened. Defaults to None.
+		:param str filename: The string path to the file to be opened. Defaults to None.
 		:param handle: A handle to the underlying C FileMetadata object. Defaults to None.
 		"""
 		if handle is not None:

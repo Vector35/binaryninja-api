@@ -1557,8 +1557,8 @@ class Function(object):
 		"""
 		``set_comment_at`` sets a comment for the current function at the address specified
 
-		:param addr int: virtual address within the current function to apply the comment to
-		:param comment str: string comment to apply
+		:param int addr: virtual address within the current function to apply the comment to
+		:param str comment: string comment to apply
 		:rtype: None
 		:Example:
 
@@ -1574,9 +1574,9 @@ class Function(object):
 		source instruction is not contained within this function, no action is performed.
 		To remove the reference, use :func:`remove_user_code_ref`.
 
-		:param from_addr int: virtual address of the source instruction
-		:param to_addr int: virtual address of the xref's destination.
-		:param from_arch Architecture: (optional) architecture of the source instruction
+		:param int from_addr: virtual address of the source instruction
+		:param int to_addr: virtual address of the xref's destination.
+		:param Architecture from_arch: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 
@@ -1595,9 +1595,9 @@ class Function(object):
 		If the given address is not contained within this function, or if there is no
 		such user-defined cross-reference, no action is performed.
 
-		:param from_addr int: virtual address of the source instruction
-		:param to_addr int: virtual address of the xref's destination.
-		:param from_arch Architecture: (optional) architecture of the source instruction
+		:param int from_addr: virtual address of the source instruction
+		:param int to_addr: virtual address of the xref's destination.
+		:param Architecture from_arch: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 

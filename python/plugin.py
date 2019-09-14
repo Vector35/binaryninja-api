@@ -329,8 +329,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` as an argument
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` as an argument
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -348,8 +348,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and address as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and address as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_address`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -367,8 +367,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and :class:`~binaryninja.binaryview.AddressRange` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and :class:`~binaryninja.binaryview.AddressRange` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_range`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -386,8 +386,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.function.Function` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.function.Function` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -405,8 +405,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILFunction` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILFunction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -424,8 +424,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILInstruction` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILInstruction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -443,8 +443,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILFunction` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILFunction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -462,8 +462,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILInstruction` as arguments
-		:param is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILInstruction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.

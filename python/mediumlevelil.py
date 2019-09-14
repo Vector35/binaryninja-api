@@ -962,7 +962,8 @@ class MediumLevelILFunction(object):
 		"""
 		``add_label_list`` returns a label list expression for the given list of MediumLevelILLabel objects.
 
-		:param list(MediumLevelILLabel) labels: the list of MediumLevelILLabel to get a label list expression from
+		:param labels: the list of MediumLevelILLabel to get a label list expression from
+		:type labels: list(MediumLevelILLabel)
 		:return: the label list expression
 		:rtype: MediumLevelILExpr
 		"""
@@ -975,7 +976,8 @@ class MediumLevelILFunction(object):
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
-		:param list(int) operands: list of operand numbers
+		:param operands: list of operand numbers
+		:type operands: list(int)
 		:return: an operand list expression
 		:rtype: MediumLevelILExpr
 		"""

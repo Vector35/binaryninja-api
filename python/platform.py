@@ -296,7 +296,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		core.BNFreeTypeLibraryList(libs, count.value)
 		return result
 
-	def type_libraries_by_name(self, name):
+	def get_type_libraries_by_name(self, name):
 		count = ctypes.c_ulonglong(0)
 		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
 		result = []

@@ -1621,7 +1621,7 @@ class BinaryView(object):
 	def type_libraries(self):
 		"""List of imported type libraries (read-only)"""
 		count = ctypes.c_ulonglong(0)
-		libraries = core.BNBinaryViewGetTypeLibraries(self.handle, count)
+		libraries = core.BNGetBinaryViewTypeLibraries(self.handle, count)
 		result = []
 		for i in range(0, count.value):
 			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libraries[i])))
@@ -4500,7 +4500,7 @@ class BinaryView(object):
 		"""
 		if not isinstance(lib, typelibrary.TypeLibrary):
 			raise ValueError("must pass in a TypeLibrary object")
-		core.BNBinaryViewAddTypeLibrary(self.handle, lib.handle)
+		core.BNAddBinaryViewTypeLibrary(self.handle, lib.handle)
 
 	def get_type_library(self, name):
 		"""
@@ -4512,7 +4512,7 @@ class BinaryView(object):
 		:Example:
 
 		"""
-		handle = core.BNBinaryViewGetTypeLibrary(self.handle, name)
+		handle = core.BNGetBinaryViewTypeLibrary(self.handle, name)
 		if handle is None:
 			return None
 		return typelibrary.TypeLibrary(handle)
@@ -4640,7 +4640,7 @@ class BinaryView(object):
 	def import_library_type(self, name, lib = None):
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		handle = core.BNBinaryViewImportLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
 		if handle is None:
 			return None
 		return types.Type(handle, platform = self.platform)
@@ -4648,10 +4648,28 @@ class BinaryView(object):
 	def import_library_object(self, name, lib = None):
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		handle = core.BNBinaryViewImportLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
 		if handle is None:
 			return None
 		return types.Type(handle, platform = self.platform)
+
+	def export_type_to_library(self, lib, name, type_obj):
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		if not isinstance(lib, typelibrary.TypeLibrary):
+			raise ValueError("lib must be a TypeLibrary object")
+		if not isinstance(type_obj, types.Type):
+			raise ValueError("type_obj must be a Type object")
+		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, name._get_core_struct(), type_obj.handle)
+
+	def export_object_to_library(self, lib, name, type_obj):
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		if not isinstance(lib, typelibrary.TypeLibrary):
+			raise ValueError("lib must be a TypeLibrary object")
+		if not isinstance(type_obj, types.Type):
+			raise ValueError("type_obj must be a Type object")
+		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, name._get_core_struct(), type_obj.handle)
 
 	def register_platform_types(self, platform):
 		"""

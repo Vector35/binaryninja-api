@@ -31,7 +31,6 @@ import binaryninja
 from binaryninja import log
 from binaryninja import lowlevelil
 from binaryninja import types
-from binaryninja import typelibrary
 from binaryninja import databuffer
 from binaryninja import platform
 from binaryninja import callingconvention
@@ -438,7 +437,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		result = []
 		handles = core.BNGetArchitectureTypeLibraries(self.handle, count)
 		for i in range(0, count.value):
-			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(handles[i])))
+			result.append(binaryninja.typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(handles[i])))
 		core.BNFreeTypeLibraryList(handles, count.value)
 		return result
 

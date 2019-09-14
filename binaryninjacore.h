@@ -3451,12 +3451,15 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNWriteTypeLibraryToFile(BNTypeLibrary* lib, const char* path);
 
-	BINARYNINJACOREAPI void BNBinaryViewAddTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib);
-	BINARYNINJACOREAPI BNTypeLibrary* BNBinaryViewGetTypeLibrary(BNBinaryView* view, const char* name);
-	BINARYNINJACOREAPI BNTypeLibrary** BNBinaryViewGetTypeLibraries(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNAddBinaryViewTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNTypeLibrary* BNGetBinaryViewTypeLibrary(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNTypeLibrary** BNGetBinaryViewTypeLibraries(BNBinaryView* view, size_t* count);
 
-	BINARYNINJACOREAPI BNType* BNBinaryViewImportLibraryType(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNType* BNBinaryViewImportLibraryObject(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryType(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryObject(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+
+	BINARYNINJACOREAPI void BNBinaryViewExportTypeToTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNBinaryViewExportObjectToTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);

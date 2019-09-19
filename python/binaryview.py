@@ -3468,7 +3468,13 @@ class BinaryView(object):
 		core.BNFreeTagTypeList(types, count.value)
 		return result
 
-	def create_tag(self, type, data):
+	def create_user_tag(self, type, data):
+		return self.create_tag(type, data, True)
+
+	def create_auto_tag(self, type, data):
+		return self.create_tag(type, data, False)
+
+	def create_tag(self, type, data, user=True):
 		"""
 		``create_tag`` creates a new Tag object but does not add it anywhere
 
@@ -3483,7 +3489,7 @@ class BinaryView(object):
 			>>> bv.add_user_data_tag(here, tag)
 			>>>
 		"""
-		tag = Tag(core.BNCreateTag(type.handle, data))
+		tag = Tag(core.BNCreateTag(type.handle, data, user))
 		core.BNAddTag(self.handle, tag.handle)
 		return tag
 

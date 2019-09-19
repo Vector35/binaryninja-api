@@ -10,14 +10,16 @@
 #include "dockhandler.h"
 #include "viewframe.h"
 
+#define TAGS_UPDATE_CHECK_INTERVAL 200
 
-class BINARYNINJAUIAPI TagTypeListModel: public QAbstractItemModel
+class BINARYNINJAUIAPI TagTypeListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
 	QWidget* m_owner;
 	BinaryViewRef m_data;
 	std::vector<TagTypeRef> m_refs;
+	std::map<std::string, uint64_t> m_count;
 
 public:
 	TagTypeListModel(QWidget* parent, BinaryViewRef data);
@@ -36,7 +38,13 @@ public:
 	virtual void sort(int column, Qt::SortOrder order) override;
 	virtual Qt::ItemFlags flags(const QModelIndex& i) const override;
 
+	virtual void OnTagAdded(BinaryNinja::BinaryView*, const BinaryNinja::TagReference&) override;
+	virtual void OnTagRemoved(BinaryNinja::BinaryView*, const BinaryNinja::TagReference&) override;
+
 	bool setModelData(const std::vector<TagTypeRef>& refs, QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);
+
+Q_SIGNALS:
+	void needRepaint();
 };
 
 
@@ -77,11 +85,15 @@ class BINARYNINJAUIAPI TagTypeList: public QTableView, public DockContextHandler
 
 	QTimer* m_updateTimer;
 	bool m_needsUpdate;
+	bool m_needsRepaint;
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 
-	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView*, uint64_t) override;
+	virtual void showEvent(QShowEvent *event) override;
+	virtual void hideEvent(QHideEvent *event) override;
+
+	virtual void OnTagTypeUpdated(BinaryNinja::BinaryView*, const TagTypeRef) override;
 
 private:
 	void createTagType();
@@ -89,6 +101,7 @@ private:
 
 private Q_SLOTS:
 	void updateTimerEvent();
+	void needRepaint();
 
 public:
 	TagTypeList(QWidget* parent, ViewFrame* view, BinaryViewRef data, Menu* menu = nullptr);

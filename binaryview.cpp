@@ -122,6 +122,39 @@ void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryVie
 }
 
 
+void BinaryDataNotification::TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<TagType> tagTypeRef = new TagType(BNNewTagTypeReference(tagType));
+	notify->OnTagTypeUpdated(view, tagTypeRef);
+}
+
+
+void BinaryDataNotification::TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagAdded(view, TagReference(*tagRef));
+}
+
+
+void BinaryDataNotification::TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagUpdated(view, TagReference(*tagRef));
+}
+
+
+void BinaryDataNotification::TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagRemoved(view, TagReference(*tagRef));
+}
+
+
 void BinaryDataNotification::SymbolAddedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -197,6 +230,10 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.dataMetadataUpdated = DataMetadataUpdatedCallback;
+	m_callbacks.tagTypeUpdated = TagTypeUpdatedCallback;
+	m_callbacks.tagAdded = TagAddedCallback;
+	m_callbacks.tagUpdated = TagUpdatedCallback;
+	m_callbacks.tagRemoved = TagRemovedCallback;
 	m_callbacks.symbolAdded = SymbolAddedCallback;
 	m_callbacks.symbolUpdated = SymbolUpdatedCallback;
 	m_callbacks.symbolRemoved = SymbolRemovedCallback;
@@ -2047,15 +2084,15 @@ std::vector<Ref<TagType>> BinaryView::GetTagTypes()
 }
 
 
-void BinaryView::AddTag(Ref<Tag> tag)
+void BinaryView::AddTag(Ref<Tag> tag, bool user)
 {
-	BNAddTag(m_object, tag->GetObject());
+	BNAddTag(m_object, tag->GetObject(), user);
 }
 
 
-void BinaryView::RemoveTag(Ref<Tag> tag)
+void BinaryView::RemoveTag(Ref<Tag> tag, bool user)
 {
-	BNRemoveTag(m_object, tag->GetObject());
+	BNRemoveTag(m_object, tag->GetObject(), user);
 }
 
 
@@ -2106,6 +2143,18 @@ std::vector<TagReference> BinaryView::GetTagReferencesOfType(Ref<TagType> tagTyp
 	size_t count;
 	BNTagReference* refs = BNGetTagReferencesOfType(m_object, tagType->GetObject(), &count);
 	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+size_t BinaryView::GetAllTagReferencesOfTypeCount(Ref<TagType> tagType)
+{
+	return BNGetAllTagReferencesOfTypeCount(m_object, tagType->GetObject());
+}
+
+
+size_t BinaryView::GetTagReferencesOfTypeCount(Ref<TagType> tagType)
+{
+	return BNGetTagReferencesOfTypeCount(m_object, tagType->GetObject());
 }
 
 

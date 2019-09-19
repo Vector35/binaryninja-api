@@ -908,6 +908,8 @@ namespace BinaryNinja
 	struct DataVariable;
 	class Symbol;
 	class Tag;
+	class TagType;
+	struct TagReference;
 
 	class BinaryDataNotification
 	{
@@ -928,6 +930,10 @@ namespace BinaryNinja
 		static void SymbolUpdatedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void SymbolRemovedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset);
+		static void TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType);
+		static void TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+		static void TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+		static void TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
@@ -950,6 +956,10 @@ namespace BinaryNinja
 		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataMetadataUpdated(BinaryView* view, uint64_t offset) { (void)view; (void)offset; }
+		virtual void OnTagTypeUpdated(BinaryView* view, Ref<TagType> tagTypeRef) { (void)view; (void)tagTypeRef; }
+		virtual void OnTagAdded(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
+		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
+		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
 		virtual void OnSymbolAdded(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
 		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
 		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
@@ -1559,8 +1569,8 @@ namespace BinaryNinja
 		Ref<TagType> GetTagType(const std::string& name, TagType::Type type);
 		std::vector<Ref<TagType>> GetTagTypes();
 
-		void AddTag(Ref<Tag> tag);
-		void RemoveTag(Ref<Tag> tag);
+		void AddTag(Ref<Tag> tag, bool user = false);
+		void RemoveTag(Ref<Tag> tag, bool user = false);
 		Ref<Tag> GetTag(uint64_t tagId);
 
 		std::vector<TagReference> GetAllTagReferences();
@@ -1568,6 +1578,9 @@ namespace BinaryNinja
 		std::vector<TagReference> GetAllFunctionTagReferences();
 		std::vector<TagReference> GetAllTagReferencesOfType(Ref<TagType> tagType);
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+
+		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
+		size_t GetAllTagReferencesOfTypeCount(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetDataTagReferences();
 		std::vector<Ref<Tag>> GetDataTags(uint64_t addr);
@@ -2880,6 +2893,7 @@ namespace BinaryNinja
 
 		std::vector<TagReference> GetAllTagReferences();
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetAddressTagReferences();
 		std::vector<Ref<Tag>> GetAddressTags(Architecture* arch, uint64_t addr);

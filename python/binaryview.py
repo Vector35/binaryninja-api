@@ -3287,7 +3287,7 @@ class BinaryView(object):
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
-		:param SymbolType sym_type: Type of symbol being defined
+		:param SymbolType sym_type: Type of symbol being defined (can be None)
 		:param Platform plat: (optional) platform
 		:rtype: None
 		"""
@@ -3295,7 +3295,13 @@ class BinaryView(object):
 			plat = self.platform
 		elif not isinstance(plat, binaryninja.platform.Platform):
 			raise AttributeError("Provided platform is not of type `binaryninja.platform.Platform`")
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type.handle)
+
+		if isinstance(sym_type, binaryninja.SymbolType):
+			sym_type = sym_type.handle
+		elif sym_type is not None:
+			raise AttributeError("Provided sym_type is not of type `binaryninja.SymbolType`")
+
+		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
 
 	def undefine_auto_symbol(self, sym):
 		"""

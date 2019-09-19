@@ -4638,6 +4638,23 @@ class BinaryView(object):
 		core.BNRenameAnalysisType(self.handle, old_name, new_name)
 
 	def import_library_type(self, name, lib = None):
+		"""
+		``import_library_type`` recursively imports a type from the specified type library, or, if
+		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
+		that provides the name requested.
+
+		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+		when references to types provided by them are first encountered.
+
+		Note that the name actually inserted into the view may not match the name as it exists in the type library in
+		the event of a name conflict. To aid in this, the :py:Class:`Type` object returned is a `NamedTypeReference` to
+		the deconflicted name used.
+
+		:param QualifiedName name
+		:param TypeLibrary lib
+		:return: a `NamedTypeReference` to the type, taking into account any renaming performed
+		:rtype: Type
+		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
@@ -4646,6 +4663,19 @@ class BinaryView(object):
 		return types.Type(handle, platform = self.platform)
 
 	def import_library_object(self, name, lib = None):
+		"""
+		``import_library_object`` recursively imports an object from the specified type library, or, if
+		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
+		that provides the name requested.
+
+		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+		when references to types provided by them are first encountered.
+
+		:param QualifiedName name
+		:param TypeLibrary lib
+		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
+		:rtype: Type
+		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
@@ -4654,6 +4684,17 @@ class BinaryView(object):
 		return types.Type(handle, platform = self.platform)
 
 	def export_type_to_library(self, lib, name, type_obj):
+		"""
+		``export_type_to_library`` recursively exports ``type_obj`` into ``lib`` as a type with name ``name``
+
+		As other referenced types are encountered, they are either copied into the destination type library or
+		else the type library that provided the referenced type is added as a dependency for the destination library.
+
+		:param TypeLibrary lib
+		:param QualifiedName name
+		:param Type type_obj
+		:rtype: None
+		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
@@ -4663,6 +4704,17 @@ class BinaryView(object):
 		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, name._get_core_struct(), type_obj.handle)
 
 	def export_object_to_library(self, lib, name, type_obj):
+		"""
+		``export_object_to_library`` recursively exports ``type_obj`` into ``lib`` as an object with name ``name``
+
+		As other referenced types are encountered, they are either copied into the destination type library or
+		else the type library that provided the referenced type is added as a dependency for the destination library.
+
+		:param TypeLibrary lib
+		:param QualifiedName name
+		:param Type type_obj
+		:rtype: None
+		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):

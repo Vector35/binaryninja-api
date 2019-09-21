@@ -30,6 +30,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [python] ([python license] - Python Software Foundation License 2 -- a Python 2.7 built without GPL components is currently shipped with Windows builds only, other platforms leverage existing Python installs)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
+    - [rapidjson] ([rapidjson license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -87,6 +88,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [python license]: https://github.com/python/cpython/blob/master/LICENSE
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
+[rapidjson]: http://rapidjson.org/
+[rapidjson license]: https://github.com/Tencent/rapidjson/blob/master/license.txt
 [rlcompleter]: https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.md
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro

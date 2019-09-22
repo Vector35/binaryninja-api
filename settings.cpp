@@ -249,7 +249,7 @@ template<> vector<string> Settings::Get<vector<string>>(const string& key, Ref<B
 
 string Settings::GetJson(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	char* tmpStr = BNSettingsGetJsonString(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	char* tmpStr = BNSettingsGetJson(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
 	string result(tmpStr);
 	BNFreeString(tmpStr);
 	return result;
@@ -310,4 +310,10 @@ bool Settings::Set(const string& key, const vector<string>& value, Ref<BinaryVie
 	bool result = BNSettingsSetStringList(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), (const char**)buffer, value.size());
 	BNFreeStringList(buffer, value.size());
 	return result;
+}
+
+
+bool Settings::SetJson(const string& key, const string& value, Ref<BinaryView> view, BNSettingsScope scope)
+{
+	return BNSettingsSetJson(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value.c_str());
 }

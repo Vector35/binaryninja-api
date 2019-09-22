@@ -4573,6 +4573,7 @@ namespace BinaryNinja
 		bool Set(const std::string& key, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations

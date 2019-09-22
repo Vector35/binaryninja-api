@@ -3970,7 +3970,7 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNSettingsGetUInt64(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 	BINARYNINJACOREAPI char* BNSettingsGetString(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 	BINARYNINJACOREAPI const char** BNSettingsGetStringList(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
-	BINARYNINJACOREAPI char* BNSettingsGetJsonString(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
+	BINARYNINJACOREAPI char* BNSettingsGetJson(BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 
 	BINARYNINJACOREAPI bool BNSettingsSetBool(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, bool value);
 	BINARYNINJACOREAPI bool BNSettingsSetDouble(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, double value);
@@ -3978,6 +3978,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSettingsSetUInt64(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, uint64_t value);
 	BINARYNINJACOREAPI bool BNSettingsSetString(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char** value, size_t size);
+	BINARYNINJACOREAPI bool BNSettingsSetJson(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 
 	//Metadata APIs
 

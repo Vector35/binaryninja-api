@@ -185,7 +185,7 @@ class Settings(object):
 	def get_json(self, key, view = None):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsGetJsonString(self.handle, key, view, None)
+		return core.BNSettingsGetJson(self.handle, key, view, None)
 
 	def get_bool_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
@@ -231,7 +231,7 @@ class Settings(object):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
-		result = core.BNSettingsGetJsonString(self.handle, key, view, ctypes.byref(c_scope))
+		result = core.BNSettingsGetJson(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
 	def set_bool(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
@@ -263,3 +263,8 @@ class Settings(object):
 		for i in range(len(value)):
 			string_list[i] = value[i].encode('charmap')
 		return core.BNSettingsSetStringList(self.handle, view, scope, key, string_list, length)
+
+	def set_json(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		return core.BNSettingsSetJson(self.handle, view, scope, key, value)

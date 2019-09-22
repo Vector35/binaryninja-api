@@ -98,9 +98,12 @@ class BinaryViewTestBuilder(Builder):
          - Function doc string used as 'on error' message
          - Should return: list of strings
     """
-    def __init__(self, filename):
+    def __init__(self, filename, imageBase=None):
         self.filename = os.path.join(os.path.dirname(__file__), filename)
-        self.bv = BinaryViewType.get_view_of_file(self.filename)
+        if imageBase is None:
+            self.bv = BinaryViewType.get_view_of_file(self.filename)
+        else:
+            self.bv = BinaryViewType.get_view_of_file_with_options(self.filename, options={'loader.imageBase' : imageBase})
         if self.bv is None:
             print("%s is not an executable format" % filename)
             return

@@ -290,6 +290,15 @@ def generate(test_store, outdir, exclude_binaries):
         binary_oracle.close()
         print("{0:.2f}".format(time.time() - binary_start_time))
 
+        # Generate oracle data for rebasing tests
+        name = oraclefile_rel[len(test_store):].replace(os.path.sep, "_").replace(".", "_")[1:]
+        if name in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
+            test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, imageBase=0xf00000)
+            binary_oracle = OracleTestFile(oraclefile + "_rebasing")
+            for method in test_data.methods():
+                binary_oracle.add_entry(test_data, method)
+            binary_oracle.close()
+
         if not os.path.exists(oraclefile + ".zip"):
             with zipfile.ZipFile(oraclefile + ".zip", "w") as zf:
                 zf.write(oraclefile, os.path.relpath(oraclefile, start=os.path.dirname(__file__)))

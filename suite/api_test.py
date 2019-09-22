@@ -13,7 +13,7 @@ from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, get_qualified_name
 from binaryninja.architecture import Architecture
 
-api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../", "api", "suite")
+api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(api_suite_path)
 import testcommon
 

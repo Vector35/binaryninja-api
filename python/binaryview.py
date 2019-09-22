@@ -24,6 +24,7 @@ import traceback
 import ctypes
 import abc
 import numbers
+import json
 
 from collections import OrderedDict
 
@@ -663,7 +664,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 				if isDatabase:
 					bv = view.get_view_of_type(available.name)
 				else:
-					bv = cls[available.name].open(filename)
+					bv = available.open(filename)
 				break
 		else:
 			if isDatabase:
@@ -675,6 +676,34 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			bv.update_analysis_and_wait()
 		return bv
 
+	@classmethod
+	def get_view_of_file_with_options(cls, filename, update_analysis=True, options={}):
+		view = BinaryView.open(filename)
+		if view is None:
+			return None
+		bvt = None
+		for available in view.available_view_types:
+			if available.name != "Raw":
+				bvt = available
+				break
+
+		if bvt is None:
+			bvt = cls["Mapped"]
+
+		load_settings = bvt.get_load_settings_for_data(view)
+		load_settings.set_resource_id(bvt.name)
+		view.set_load_settings(bvt.name, load_settings)
+		for key, value in options.items():
+			if load_settings.contains(key):
+				load_settings.set_json(key, json.dumps(value), view)
+			else:
+				log.log_warn("Load Setting: {} not available!".format(key))
+
+		bv = bvt.create(view)
+
+		if bv is not None and update_analysis:
+			bv.update_analysis_and_wait()
+		return bv
 
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)

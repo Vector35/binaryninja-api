@@ -182,14 +182,14 @@ class BinaryViewTestBuilder(Builder):
         for func in self.bv.functions:
             for bb in func.low_level_il.basic_blocks:
                 for ins in bb:
-                    retinfo.append("MLIL: " + str(ins.medium_level_il))
-                    retinfo.append("Mapped MLIL: " + str(ins.mapped_medium_level_il))
-                    retinfo.append("Value: " + str(ins.value))
-                    retinfo.append("Possible Values: " + str(ins.possible_values))
-                    retinfo.append("Prefix operands: " + str(ins.prefix_operands))
-                    retinfo.append("Postfix operands: " + str(ins.postfix_operands))
-                    retinfo.append("SSA form: " + str(ins.ssa_form))
-                    retinfo.append("Non-SSA form: " + str(ins.non_ssa_form))
+                    retinfo.append("Function: {:x} Instruction: {:x} MLIL: {}".format(func.start, ins.address, str(ins.medium_level_il)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL: {}".format(func.start, ins.address, str(ins.mapped_medium_level_il)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Value: {}".format(func.start, ins.address, str(ins.value)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Possible Values: {}".format(func.start, ins.address, str(ins.possible_values)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands: {}".format(func.start, ins.address, str(ins.prefix_operands)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands: {}".format(func.start, ins.address, str(ins.postfix_operands)))
+                    retinfo.append("Function: {:x} Instruction: {:x} SSA form: {}".format(func.start, ins.address, str(ins.ssa_form)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
         return fixOutput(retinfo)
 
     def test_low_il_ssa(self):
@@ -199,20 +199,20 @@ class BinaryViewTestBuilder(Builder):
             func = func.low_level_il
             for reg_name in self.bv.arch.regs:
                 reg = binja.SSARegister(reg_name, 1)
-                retinfo.append("Reg {} SSA definition: ".format(reg_name) + str(getattr(func.get_ssa_reg_definition(reg), 'instr_index', None)))
-                retinfo.append("Reg {} SSA uses: ".format(reg_name) + str(list(map(lambda instr: instr.instr_index, func.get_ssa_reg_uses(reg)))))
-                retinfo.append("Reg {} SSA value: ".format(reg_name) + str(func.get_ssa_reg_value(reg)))
+                retinfo.append("Function: {:x} Reg {} SSA definition: {}".format(func.source_function.start, reg_name, str(getattr(func.get_ssa_reg_definition(reg), 'instr_index', None))))
+                retinfo.append("Function: {:x} Reg {} SSA uses: {}".format(func.source_function.start, reg_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_reg_uses(reg))))))
+                retinfo.append("Function: {:x} Reg {} SSA value: {}".format(func.source_function.start, reg_name, str(func.get_ssa_reg_value(reg))))
             for flag_name in self.bv.arch.flags:
                 flag = binja.SSAFlag(flag_name, 1)
-                retinfo.append("Flag {} SSA uses: ".format(flag_name) + str(list(map(lambda instr: instr.instr_index, func.get_ssa_flag_uses(flag)))))
-                retinfo.append("Flag {} SSA value: ".format(flag_name) + str(func.get_ssa_flag_value(flag)))
+                retinfo.append("Function: {:x} Flag {} SSA uses: {}".format(func.source_function.start, flag_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_flag_uses(flag))))))
+                retinfo.append("Function: {:x} Flag {} SSA value: {}".format(func.source_function.start, flag_name, str(func.get_ssa_flag_value(flag))))
             for bb in func.basic_blocks:
                 for ins in bb:
                     tempind = func.get_non_ssa_instruction_index(ins.instr_index)
-                    retinfo.append("Non-SSA instruction index: " + str(tempind))
-                    retinfo.append("SSA instruction index: " + str(func.get_ssa_instruction_index(tempind)))
-                    retinfo.append("MLIL instruction index: " + str(func.get_medium_level_il_instruction_index(ins.instr_index)))
-                    retinfo.append("Mapped MLIL instruction index: " + str(func.get_mapped_medium_level_il_instruction_index(ins.instr_index)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Non-SSA instruction index: {}".format(func.source_function.start, ins.address, str(tempind)))
+                    retinfo.append("Function: {:x} Instruction: {:x} SSA instruction index: {}".format(func.source_function.start, ins.address, str(func.get_ssa_instruction_index(tempind))))
+                    retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_medium_level_il_instruction_index(ins.instr_index))))
+                    retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_mapped_medium_level_il_instruction_index(ins.instr_index))))
         return fixOutput(retinfo)
 
     def test_med_il_instructions(self):
@@ -221,11 +221,11 @@ class BinaryViewTestBuilder(Builder):
         for func in self.bv.functions:
             for bb in func.mlil.basic_blocks:
                 for ins in bb:
-                    retinfo.append("Expression type: " + str(ins.expr_type))
-                    retinfo.append("LLIL: " + str(ins.low_level_il))
-                    retinfo.append("Value: " + str(ins.value))
-                    retinfo.append("Possible values: " + str(ins.possible_values))
-                    retinfo.append("Branch dependence: " + str(sorted(ins.branch_dependence.items())))
+                    retinfo.append("Function: {:x} Instruction: {:x} Expression type:  {}".format(func.start, ins.address, str(ins.expr_type)))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL:  {}".format(func.start, ins.address, str(ins.low_level_il)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Value:  {}".format(func.start, ins.address, str(ins.value)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Possible values:  {}".format(func.start, ins.address, str(ins.possible_values)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Branch dependence:  {}".format(func.start, ins.address, str(sorted(ins.branch_dependence.items()))))
 
                     prefixList = []
                     for i in ins.prefix_operands:
@@ -235,7 +235,7 @@ class BinaryViewTestBuilder(Builder):
                             prefixList.append(str(round(i, 11)))
                         else:
                             prefixList.append(str(i))
-                    retinfo.append("Prefix operands: " + str(sorted(prefixList)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands:  {}".format(func.start, ins.address, str(sorted(prefixList))))
                     postfixList = []
                     for i in ins.prefix_operands:
                         if isinstance(i, float) and 'e' in str(i):
@@ -245,9 +245,9 @@ class BinaryViewTestBuilder(Builder):
                         else:
                             postfixList.append(str(i))
 
-                    retinfo.append("Postfix operands: " + str(sorted(postfixList)))
-                    retinfo.append("SSA form: " + str(ins.ssa_form))
-                    retinfo.append("Non-SSA form" + str(ins.non_ssa_form))
+                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands:  {}".format(func.start, ins.address, str(sorted(postfixList))))
+                    retinfo.append("Function: {:x} Instruction: {:x} SSA form:  {}".format(func.start, ins.address, str(ins.ssa_form)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
         return fixOutput(retinfo)
 
     def test_med_il_vars(self):
@@ -260,11 +260,11 @@ class BinaryViewTestBuilder(Builder):
                     instruction = instruction.ssa_form
                     for var in (instruction.vars_read + instruction.vars_written):
                         if hasattr(var, "var"):
-                            varlist.append("SSA var definition: " + str(getattr(func.get_ssa_var_definition(var), 'instr_index', None)))
-                            varlist.append("SSA var uses: " + str(list(map(lambda instr: instr.instr_index, func.get_ssa_var_uses(var)))))
-                            varlist.append("SSA var value: " + str(func.get_ssa_var_value(var)))
-                            varlist.append("SSA var possible values: " + fixSet(str(instruction.get_ssa_var_possible_values(var))))
-                            varlist.append("SSA var version: " + str(instruction.get_ssa_var_version))
+                            varlist.append("Function: {:x} Instruction {:x} SSA var definition: {}".format (func.source_function.start, instruction.address, str(getattr(func.get_ssa_var_definition(var), 'instr_index', None))))
+                            varlist.append("Function: {:x} Instruction {:x} SSA var uses:  {}".format (func.source_function.start, instruction.address, str(list(map(lambda instr: instr.instr_index, func.get_ssa_var_uses(var))))))
+                            varlist.append("Function: {:x} Instruction {:x} SSA var value: {}".format (func.source_function.start, instruction.address, str(func.get_ssa_var_value(var))))
+                            varlist.append("Function: {:x} Instruction {:x} SSA var possible values: {}".format (func.source_function.start, instruction.address, fixSet(str(instruction.get_ssa_var_possible_values(var)))))
+                            varlist.append("Function: {:x} Instruction {:x} SSA var version: {}".format (func.source_function.start, instruction.address, str(instruction.get_ssa_var_version)))
         return fixOutput(varlist)
 
     def test_function_stack(self):
@@ -278,11 +278,11 @@ class BinaryViewTestBuilder(Builder):
 
             sl = func.stack_layout
             for i in range(len(sl)):
-                funcinfo.append("Stack position {}: ".format(i) + str(sl[i]))
+                funcinfo.append("Function: {:x} Stack position {}: ".format(func.start, i) + str(sl[i]))
 
-            funcinfo.append("Stack content sample: " + str(func.get_stack_contents_at(func.start + 0x10, 0, 0x10)))
-            funcinfo.append("Stack content range sample: " + str(func.get_stack_contents_after(func.start + 0x10, 0, 0x10)))
-            funcinfo.append("Sample stack var: " + str(func.get_stack_var_at_frame_offset(0, 0)))
+            funcinfo.append("Function: {:x} Stack content sample: {}".format(func.start, str(func.get_stack_contents_at(func.start + 0x10, 0, 0x10))))
+            funcinfo.append("Function: {:x} Stack content range sample: {}".format(func.start, str(func.get_stack_contents_after(func.start + 0x10, 0, 0x10))))
+            funcinfo.append("Function: {:x} Sample stack var: {}".format(func.start, str(func.get_stack_var_at_frame_offset(0, 0))))
             func.delete_user_stack_var(0)
             func.delete_auto_stack_var(0)
         return funcinfo
@@ -292,15 +292,15 @@ class BinaryViewTestBuilder(Builder):
         retinfo = []
         for func in self.bv.functions:
             for llilbb in func.llil_basic_blocks:
-                retinfo.append("LLIL basic block: " + str(llilbb))
+                retinfo.append("Function: {:x} LLIL basic block: {}".format(func.start, str(llilbb)))
             for llilins in func.llil_instructions:
-                retinfo.append("LLIL instruction: " + str(llilins))
+                retinfo.append("Function: {:x} Instruction: {:x} LLIL instruction: {}".format(func.start, llilins.address, str(llilins)))
             for mlilbb in func.mlil_basic_blocks:
-                retinfo.append("MLIL basic block: " + str(mlilbb))
+                retinfo.append("Function: {:x} MLIL basic block: {}".format(func.start, str(mlilbb)))
             for mlilins in func.mlil_instructions:
-                retinfo.append("MLIL instruction: " + str(mlilins))
+                retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction: {}".format(func.start, mlilins.address, str(mlilins)))
             for ins in func.instructions:
-                retinfo.append("Instruction: {}: ".format(hex(ins[1])) + ''.join([str(i) for i in ins[0]]))
+                retinfo.append("Function: {:x} Instruction: {}: ".format(func.start, hex(ins[1]), ''.join([str(i) for i in ins[0]])))
         return fixOutput(retinfo)
 
     def test_functions_attributes(self):

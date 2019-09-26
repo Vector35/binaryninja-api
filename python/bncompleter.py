@@ -6,7 +6,9 @@ https://github.com/python/cpython/blob/master/LICENSE
 The only changes made were to modify the regular expression in attr_matches
 and all code that relied on GNU readline (the later more for readability as
 it wasn't required).
+
 --------------
+
 Word completion for GNU readline.
 
 The completer completes keywords, built-ins and globals in a selectable

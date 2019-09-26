@@ -4832,7 +4832,7 @@ class BinaryView(object):
 		"""
 		``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
 
 		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
@@ -4850,7 +4850,7 @@ class BinaryView(object):
 		"""
 		``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line
 		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
 
 		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
@@ -5112,11 +5112,11 @@ class BinaryView(object):
 			- Symbols are everything in ``bv.symbols``, unnamed DataVariables (i.e. ``data_00005000``), unnamed functions (i.e. ``sub_00005000``), or section names (i.e. ``.text``)
 			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
-
+			
 				- ``0x`` - Hexadecimal
 				- ``0n`` - Decimal
 				- ``0`` - Octal
-
+			
 			- In the case of an ambiguous number/symbol (one with no prefix) for instance ``12345`` we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
 			  it to a hexadecimal number.
@@ -5128,7 +5128,7 @@ class BinaryView(object):
 				- ``[<expression>].w`` - read the word (2 bytes) at ``<expression>``
 				- ``[<expression>].d`` - read the dword (4 bytes) at ``<expression>``
 				- ``[<expression>].q`` - read the quadword (8 bytes) at ``<expression>``
-
+			
 			- The ``$here`` keyword can be used in calculations and is defined as the ``here`` parameter
 			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
 
@@ -5146,8 +5146,7 @@ class BinaryView(object):
 
 	def eval(self, expression, here=0):
 		"""
-		Evaluates an string expression to an integer value. This is a more concise alias for the `parse_expression` API
-		See `parse_expression` for details on usage.
+		Evaluates an string expression to an integer value. This is a more concise alias for the :py:meth:`parse_expression` API
 		"""
 		return self.parse_expression(expression, here)
 

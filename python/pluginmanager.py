@@ -32,7 +32,7 @@ from binaryninja import range
 
 class RepoPlugin(object):
 	"""
-	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
+	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
 	def __init__(self, handle):

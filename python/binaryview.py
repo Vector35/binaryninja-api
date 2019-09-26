@@ -948,6 +948,7 @@ class TagType(object):
 		self.handle = core.handle_of_type(handle, core.BNTagType)
 
 	@property
+	"""Name of the TagType"""
 	def name(self):
 		return core.BNTagTypeGetName(self.handle)
 
@@ -957,6 +958,7 @@ class TagType(object):
 
 	@property
 	def icon(self):
+	"""Unicode str containing an emoji to be used as an icon"""
 		return core.BNTagTypeGetIcon(self.handle)
 
 	@icon.setter
@@ -965,6 +967,7 @@ class TagType(object):
 
 	@property
 	def visible(self):
+	"""Boolean for whether the tags of this type are visible"""
 		return core.BNTagTypeGetVisible(self.handle)
 
 	@visible.setter
@@ -973,6 +976,7 @@ class TagType(object):
 
 	@property
 	def type(self):
+	"""Type from enums.TagTypeType"""
 		return core.BNTagTypeGetType(self.handle)
 
 	@type.setter
@@ -1553,10 +1557,14 @@ class BinaryView(object):
 	@property
 	def analysis_info(self):
 		"""Provides instantaneous analysis state information and a list of current functions under analysis (read-only).
-		All times are given in units of milliseconds (ms). Per function `analysis_time` is the aggregation of time spent
-		performing incremental updates and is reset on a full function update. Per function `update_count` tracks the
-		current number of incremental updates and is reset on a full function update. Per function `submit_count` tracks the
-		current number of full updates that have completed. Note that the `submit_count` is currently not reset across analysis updates."""
+		All times are given in units of milliseconds (ms). Per-function `analysis_time` is the aggregation of time spent
+		performing incremental updates and is reset on a full function update. Per-function `update_count` tracks the
+		current number of incremental updates and is reset on a full function update. Per-function `submit_count` tracks the
+		current number of full updates that have completed.
+		
+		.. note:: `submit_count` is currently not reset across analysis updates.
+		
+		"""
 		info_ref = core.BNGetAnalysisInfo(self.handle)
 		info = info_ref[0]
 		active_info_list = []
@@ -2028,7 +2036,7 @@ class BinaryView(object):
 		``perform_get_length`` implements a query for the size of the virtual address range used by
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2043,7 +2051,7 @@ class BinaryView(object):
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
 		``length`` bytes from the rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2060,7 +2068,7 @@ class BinaryView(object):
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2108,7 +2116,7 @@ class BinaryView(object):
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2123,7 +2131,7 @@ class BinaryView(object):
 		"""
 		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2139,7 +2147,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2154,7 +2162,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2169,7 +2177,7 @@ class BinaryView(object):
 		"""
 		``perform_is_offset_executable`` implements a check if a virtual address ``addr`` is executable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2185,7 +2193,7 @@ class BinaryView(object):
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2203,7 +2211,7 @@ class BinaryView(object):
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -2402,7 +2410,7 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
-		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will
+		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
  		still get you a str in either case.
 
 		:param int addr: virtual address to read from.
@@ -2495,7 +2503,7 @@ class BinaryView(object):
 		:param int length: total length in bytes
 		:param int block_size: optional block size
 		:return: list of entropy values for each chunk
-		:rtype: list of entropy values or an empty list
+		:rtype: list(float)
 		"""
 		result = []
 		if length == 0:
@@ -3391,8 +3399,8 @@ class BinaryView(object):
 
 		:param str name: The name for the tag
 		:param str icon: The icon (recommended 1 emoji or 2 chars) for the tag
-		:return The created tag type
-		:rtype TagType
+		:return: The created tag type
+		:rtype: TagType
 		:Example:
 
 			>>> tt = bv.create_tag_type("Crabby Functions", "🦀")
@@ -3410,7 +3418,7 @@ class BinaryView(object):
 		``remove_tag_type`` removes a new Tag Type and all tags that use it
 
 		:param TagType tag_type: The Tag Type to remove
-		:rtype None
+		:rtype: None
 		"""
 		core.BNRemoveTagType(self.handle, tag_type.handle)
 
@@ -3420,7 +3428,7 @@ class BinaryView(object):
 		``tag_types`` gets a dictionary of all Tag Types present for the view,
 		structured as {Tag Type Name => Tag Type}.
 
-		:type {str => TagType}
+		:rtype: dict of (str, TagType)
 		"""
 		count = ctypes.c_ulonglong(0)
 		types = core.BNGetTagTypes(self.handle, count)
@@ -3440,8 +3448,8 @@ class BinaryView(object):
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		:Example:
 
 			>>> tt = bv.tag_types["Crabby Functions"]
@@ -3459,7 +3467,7 @@ class BinaryView(object):
 		``data_tags`` gets a list of all data Tags in the view.
 		Tags are returned as a list of (address, Tag) pairs.
 
-		:type [(int, Tag)]
+		:type: list(int, Tag)
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetDataTagReferences(self.handle, count)
@@ -3475,8 +3483,8 @@ class BinaryView(object):
 		``get_data_tags_at`` gets a list of all Tags for a data address.
 
 		:param int addr: Address to get tags at
-		:return A list of data Tags
-		:rtype [Tag]
+		:return: A list of data Tags
+		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetDataTags(self.handle, addr, count)
@@ -3492,8 +3500,8 @@ class BinaryView(object):
 		Range is inclusive at the start, exclusive at the end.
 
 		:param AddressRange range: Address range from which to get tags
-		:return A list of data Tags
-		:rtype [Tag]
+		:return: A list of data Tags
+		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetDataTagsInRange(self.handle, range.start, range.end, count)
@@ -3510,7 +3518,7 @@ class BinaryView(object):
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
@@ -3523,8 +3531,8 @@ class BinaryView(object):
 		:param TagType type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -3543,7 +3551,7 @@ class BinaryView(object):
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
 
@@ -3553,7 +3561,7 @@ class BinaryView(object):
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 
@@ -3565,8 +3573,8 @@ class BinaryView(object):
 		:param TagType type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -3585,7 +3593,7 @@ class BinaryView(object):
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
@@ -3726,7 +3734,7 @@ class BinaryView(object):
 		"""
 		``convert_to_nop`` converts the instruction at virtual address ``addr`` to a nop of the provided architecture.
 
-		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary \
 		file must be saved in order to preserve the changes made.
 
 		:param int addr: virtual address of the instruction to convert to nops
@@ -3763,7 +3771,7 @@ class BinaryView(object):
 		``always_branch`` convert the instruction of architecture ``arch`` at the virtual address ``addr`` to an
 		unconditional branch.
 
-		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary\
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary \
 		file must be saved in order to preserve the changes made.
 
 		:param int addr: virtual address of the instruction to be modified
@@ -3815,7 +3823,7 @@ class BinaryView(object):
 		``invert_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to the
 		inverse branch.
 
-		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary
+		.. note:: This API performs a binary patch, analysis may need to be updated afterward. Additionally the binary \
 		file must be saved in order to preserve the changes made.
 
 		:param int addr: virtual address of the instruction to be modified
@@ -4826,7 +4834,7 @@ class BinaryView(object):
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
 		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
 
-		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
+		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
 
 		:param str contents: markdown contents to display
@@ -4844,7 +4852,7 @@ class BinaryView(object):
 		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
 		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the `parse_expression` API.
 
-		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
+		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
 
 		:param str contents: HTML contents to display
@@ -4994,7 +5002,7 @@ class BinaryView(object):
 		"""
 		``set_comment_at`` sets a comment for the BinaryView at the address specified
 
-		Note that these are different from function-level comments which are specific to each function.
+		Note that these are different from function-level comments which are specific to each function. \
 		For more information, see :func:`address_comments`.
 
 		:param int addr: virtual address within the current BinaryView to apply the comment to
@@ -5559,7 +5567,7 @@ class BinaryWriter(object):
 
 		:param str value: bytes to be written at current offset
 		:return: boolean
-		:rtype: int
+		:rtype: bool
 		:Example:
 
 			>>> bw.write8(0x42)

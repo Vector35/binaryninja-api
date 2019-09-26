@@ -1232,7 +1232,7 @@ def get_form_input(fields, title):
 	:param fields: A list containing of the above specified classes, strings or None
 	:type fields: list(str) or list(None) or list(LabelField) or list(SeparatorField) or list(TextLineField) or list(MultilineTextField) or list(IntegerField) or list(AddressField) or list(ChoiceField) or list(OpenFileNameField) or list(SaveFileNameField) or list(DirectoryNameField)
 	:param str title: The title of the pop-up dialog.
-	:rtype None
+	:rtype: None
 	:Example:
 
 		>>> int_f = IntegerField("Specify Integer")

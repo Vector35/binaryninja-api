@@ -14,6 +14,27 @@ Plugins are loaded from the user's plugin folder:
 
 Note that plugins installed via the [PluginManager API] are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually touch anything in that folder, but should access them via the API instead. 
 
+### Plugin Manager
+
+![Plugin Manager >](../img/plugin-manager.png "Plugin Manager")
+
+Plugins can now be installed directly via the GUI from Binary Ninja. You can launch the plugin manager via any of the following methods:
+
+ - (Linux/Windows) `[CTRL-SHIFT-M]`
+ - (MacOS) `[CMD-SHIFT-M]`
+
+ Or:
+
+ - (Linux/Windows) `Edit` / `Preferences` / `Manage Plugins`
+ - (MacOS) `Binary Ninja` / `Preferences` / `Manage Plugins`
+
+ Or:
+
+ - (Linux/Windows) `[CTRL-P]` / `Plugin Manager` / `[ENTER]`
+ - (MacOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
+
+Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible. 
+
 ### Manual installation
 
 You can manually install a plugin either by adding a folder which contains it (the plugin folder must contain an `__init__.py` at the top of the folder, or a python file can be included directly in the plugin folder though this is not recommended).

@@ -293,71 +293,72 @@ Note
 
 Here's a list of all settings currently available from the UI:
 
-|Category|Setting|Description|Type|Default|
-|---|---|---|---|---|
-|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting is experimental and may be useful for malformed binaries.|`boolean`|`False`|
-|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|
-|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values are may result in very high memory utilization.|`number`|`64`|
-|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. Default value of 0 disables this feature. Time is specified in milliseconds.|`number`|`0`|
-|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65535`|
-|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|
-|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|
-|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`11`|
-|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|
-|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|
-|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|
-|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|
-|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|
-|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|
-|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|
-|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|
-|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|`[]`|
-|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|
-|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|
-|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|
-|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|
-|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|
-|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|
-|bnil-graph|Show Common ILs|Show common forms (non-SSA, non-mapped) in the output.|`boolean`|`True`|
-|bnil-graph|Include MMLIL|Show the MappedMediumLevelIL form in the output.|`boolean`|`False`|
-|bnil-graph|Include SSA|Include SSA forms in the output.|`boolean`|`True`|
-|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`||
-|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|
-|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|
-|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`||
-|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|
-|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|`['https://msdl.microsoft.com/download/symbols']`|
-|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|
-|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|
-|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`|`libpython2.7.dylib`|
-|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|
-|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|
-|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|
-|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|
-|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|
-|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|
-|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|
-|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|
-|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|
-|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|
-|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|
-|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|
-|ui|Font Size|Font point size selection.|`number`|`12`|
-|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|
-|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL']`|
-|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|
-|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|
-|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|
-|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|
-|ui|Recent File Limit|Specify a limit for the recent file history.|`number`|`10`|
-|ui|Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI|`string`|`Python`|
-|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|
-|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|
-|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|
-|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|
-|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|
-|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|
-
+|Category|Setting|Description|Type|Default|Key|
+|---|---|---|---|---|---|
+|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting is experimental and may be useful for malformed binaries.|`boolean`|`False`|<a name='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
+|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|<a name='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
+|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values are may result in very high memory utilization.|`number`|`64`|<a name='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
+|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. Default value of 0 disables this feature. Time is specified in milliseconds.|`number`|`0`|<a name='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
+|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65535`|<a name='analysis.limits.maxFunctionSize'>analysis.limits.maxFunctionSize</a>|
+|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|<a name='analysis.limits.maxFunctionUpdateCount'>analysis.limits.maxFunctionUpdateCount</a>|
+|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|<a name='analysis.limits.minStringLength'>analysis.limits.minStringLength</a>|
+|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`11`|<a name='analysis.limits.workerThreadCount'>analysis.limits.workerThreadCount</a>|
+|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|<a name='analysis.linearSweep.autorun'>analysis.linearSweep.autorun</a>|
+|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|<a name='analysis.linearSweep.controlFlowGraph'>analysis.linearSweep.controlFlowGraph</a>|
+|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|<a name='analysis.linearSweep.detailedLogInfo'>analysis.linearSweep.detailedLogInfo</a>|
+|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|<a name='analysis.linearSweep.entropyHeuristics'>analysis.linearSweep.entropyHeuristics</a>|
+|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|<a name='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
+|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|<a name='analysis.mode'>analysis.mode</a>|
+|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|<a name='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
+|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|<a name='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
+|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|`[]`|<a name='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
+|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
+|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
+|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
+|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|<a name='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
+|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|<a name='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
+|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|<a name='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
+|bnil-graph|Show Common ILs|Show common forms (non-SSA, non-mapped) in the output.|`boolean`|`True`|<a name='bnil-graph.showCommon'>bnil-graph.showCommon</a>|
+|bnil-graph|Include MMLIL|Show the MappedMediumLevelIL form in the output.|`boolean`|`False`|<a name='bnil-graph.showMapped'>bnil-graph.showMapped</a>|
+|bnil-graph|Include SSA|Include SSA forms in the output.|`boolean`|`True`|<a name='bnil-graph.showSSA'>bnil-graph.showSSA</a>|
+|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`||<a name='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
+|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|<a name='downloadClient.providerName'>downloadClient.providerName</a>|
+|format_string_finder|Should Enable Tests Plugin|Enable the tests plugin. Only for development.|`boolean`|`False`|<a name='format_string_finder.should_enable_tests_plugin'>format_string_finder.should_enable_tests_plugin</a>|
+|format_string_finder|Should Highlight Variable Trace|Highlight instructions that are used in the trace of the format parameter origin.|`boolean`|`False`|<a name='format_string_finder.should_highlight_variable_trace'>format_string_finder.should_highlight_variable_trace</a>|
+|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|<a name='pdb.autoDownload'>pdb.autoDownload</a>|
+|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`||<a name='pdb.localStoreAbsolute'>pdb.localStoreAbsolute</a>|
+|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|<a name='pdb.localStoreRelative'>pdb.localStoreRelative</a>|
+|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|`['https://msdl.microsoft.com/download/symbols']`|<a name='pdb.symbolServerList'>pdb.symbolServerList</a>|
+|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|<a name='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
+|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|<a name='pluginManager.officialUpdateChannel'>pluginManager.officialUpdateChannel</a>|
+|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`|`libpython2.7.dylib`|<a name='python.interpreter'>python.interpreter</a>|
+|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|<a name='triage.analysisMode'>triage.analysisMode</a>|
+|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|<a name='triage.hiddenFiles'>triage.hiddenFiles</a>|
+|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|<a name='triage.linearSweep'>triage.linearSweep</a>|
+|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|<a name='triage.preferSummaryView'>triage.preferSummaryView</a>|
+|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|<a name='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
+|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|<a name='ui.colorBlind'>ui.colorBlind</a>|
+|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|<a name='ui.debugMode'>ui.debugMode</a>|
+|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|<a name='ui.featureMap.enable'>ui.featureMap.enable</a>|
+|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|<a name='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
+|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|<a name='ui.font.antialiasing'>ui.font.antialiasing</a>|
+|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|<a name='ui.font.bold'>ui.font.bold</a>|
+|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|<a name='ui.font.name'>ui.font.name</a>|
+|ui|Font Size|Font point size selection.|`number`|`12`|<a name='ui.font.size'>ui.font.size</a>|
+|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|<a name='ui.font.spacing'>ui.font.spacing</a>|
+|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL']`|<a name='ui.graph.carousel'>ui.graph.carousel</a>|
+|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a name='ui.graph.default'>ui.graph.default</a>|
+|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a name='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
+|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a name='ui.log.minLevel'>ui.log.minLevel</a>|
+|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|<a name='ui.manualTooltip'>ui.manualTooltip</a>|
+|ui|Recent File Limit|Specify a limit for the recent file history.|`number`|`10`|<a name='ui.recentFileLimit'>ui.recentFileLimit</a>|
+|ui|Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI|`string`|`Python`|<a name='ui.scriptingProvider'>ui.scriptingProvider</a>|
+|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|<a name='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
+|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a name='ui.theme'>ui.theme</a>|
+|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a name='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
+|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a name='updates.activeContent'>updates.activeContent</a>|
+|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|<a name='updates.channelPreferences'>updates.channelPreferences</a>|
+|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|<a name='updates.showAllVersions'>updates.showAllVersions</a>|
 
 ## Updates
 

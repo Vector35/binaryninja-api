@@ -73,13 +73,13 @@ class LookupTableEntry(object):
 class RegisterValue(object):
 	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
 		self._is_constant = False
+		self._value = None
+		self._arch = None
+		self._reg = None
+		self._is_constant = False
+		self._offset = None
 		if value is None:
 			self._type = RegisterValueType.UndeterminedValue
-			self._value = None
-			self._arch = None
-			self._reg = None
-			self._is_constant = False
-			self._offset = None
 		else:
 			self._type = RegisterValueType(value.state)
 			if value.state == RegisterValueType.EntryValue:

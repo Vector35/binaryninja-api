@@ -948,8 +948,8 @@ class TagType(object):
 		self.handle = core.handle_of_type(handle, core.BNTagType)
 
 	@property
-	"""Name of the TagType"""
 	def name(self):
+		"""Name of the TagType"""
 		return core.BNTagTypeGetName(self.handle)
 
 	@name.setter
@@ -958,7 +958,7 @@ class TagType(object):
 
 	@property
 	def icon(self):
-	"""Unicode str containing an emoji to be used as an icon"""
+		"""Unicode str containing an emoji to be used as an icon"""
 		return core.BNTagTypeGetIcon(self.handle)
 
 	@icon.setter
@@ -967,7 +967,7 @@ class TagType(object):
 
 	@property
 	def visible(self):
-	"""Boolean for whether the tags of this type are visible"""
+		"""Boolean for whether the tags of this type are visible"""
 		return core.BNTagTypeGetVisible(self.handle)
 
 	@visible.setter
@@ -976,7 +976,7 @@ class TagType(object):
 
 	@property
 	def type(self):
-	"""Type from enums.TagTypeType"""
+		"""Type from enums.TagTypeType"""
 		return core.BNTagTypeGetType(self.handle)
 
 	@type.setter
@@ -5856,3 +5856,5 @@ class StructuredDataView(object):
 
 	def __len__(self):
 		return self._structure.width
+
+	"""Name of the TagType"""

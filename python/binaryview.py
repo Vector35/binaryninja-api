@@ -5856,5 +5856,3 @@ class StructuredDataView(object):
 
 	def __len__(self):
 		return self._structure.width
-
-	"""Name of the TagType"""

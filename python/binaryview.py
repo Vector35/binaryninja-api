@@ -639,12 +639,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@classmethod
 	def get_view_of_file(cls, filename, update_analysis=True, progress_func=None):
 		"""
-		``get_view_of_file`` returns the first available, non-Raw `BinaryView` available.
+		``get_view_of_file`` opens and returns the first available `BinaryView`, excluding 'Raw' `BinaryViewType`s
 
-		:param str filename: Path to filename or bndb
-		:param bool update_analysis: defaults to True. Pass False to not run update_analysis_and_wait.
-		:param callback progress_func: optional function to be called with the current progress and total count.
-		:return: returns a BinaryView object for the given filename.
+		:param str filename: path to filename or bndb to open
+		:param bool update_analysis: whether or not to run `update_analysis_and_wait` after opening a `BinaryView`, defaults to True
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:return: returns a BinaryView object for the given filename
 		:rtype: BinaryView or None
 		"""
 		sqlite = b"SQLite format 3"
@@ -678,7 +678,33 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		return bv
 
 	@classmethod
-	def get_view_of_file_with_options(cls, filename, update_analysis=True, options={}):
+	def get_view_of_file_with_options(cls, filename, update_analysis=True, progress_func=None, options={}):
+		"""
+		``get_view_of_file_with_options`` opens, generates default load options (which are overridable), and returns the first available \
+		`BinaryView`, excluding 'Raw' `BinaryViewType`s
+
+		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling `get_view_of_file`. Since \
+		`BinaryViewType`s are in control of generating load options, this method allows an alternative default way to open a file. For \
+		example, opening a relocatable object file with `get_view_of_file` sets 'loader.imageBase' to 0, whereas opening with `get_view_of_file_with_options` \
+		sets 'loader.imageBase' to 0x400000 for 64-bit binaries, or 0x10000 for 32-bit binaries, by default.
+
+		:param str filename: path to filename or bndb to open
+		:param bool update_analysis: whether or not to run `update_analysis_and_wait` after opening a `BinaryView`, defaults to True
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {str : str}, where key is a setting identifier, and value is a JSON formatted str
+		:return: returns a BinaryView object for the given filename
+		:rtype: BinaryView or None
+
+		:Example:
+
+			>>> BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
+			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
+			>>>
+		"""
+		isDatabase = filename.endswith(".bndb")
+		if isDatabase:
+			log.log_warn("Opening a database with options is not yet supported!")
+			return None
 		view = BinaryView.open(filename)
 		if view is None:
 			return None
@@ -1561,9 +1587,9 @@ class BinaryView(object):
 		performing incremental updates and is reset on a full function update. Per-function `update_count` tracks the
 		current number of incremental updates and is reset on a full function update. Per-function `submit_count` tracks the
 		current number of full updates that have completed.
-		
+
 		.. note:: `submit_count` is currently not reset across analysis updates.
-		
+
 		"""
 		info_ref = core.BNGetAnalysisInfo(self.handle)
 		info = info_ref[0]

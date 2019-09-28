@@ -932,7 +932,13 @@ class Function(object):
 		core.BNFreeAddressList(addrs)
 		return result
 
-	def create_tag(self, type, data):
+	def create_user_tag(self, type, data):
+		return self.create_tag(type, data, True)
+
+	def create_auto_tag(self, type, data):
+		return self.create_tag(type, data, False)
+
+	def create_tag(self, type, data, user=False):
 		"""
 		``create_tag`` creates a new Tag object but does not add it anywhere
 
@@ -942,12 +948,12 @@ class Function(object):
 		:rtype: Tag
 		:Example:
 
-			>>> tt = bv.tag_types["Crabby Functions"]
-			>>> tag = current_function.create_tag(tt, "Get Crabbed")
+			>>> tt = bv.tag_types["Crashes"]
+			>>> tag = current_function.create_tag(tt, "Null pointer dereference", True)
 			>>> current_function.add_user_address_tag(here, tag)
 			>>>
 		"""
-		return self.view.create_tag(type, data)
+		return self.view.create_tag(type, data, user)
 
 	@property
 	def address_tags(self):
@@ -1021,7 +1027,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, True)
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
@@ -1072,7 +1078,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, False)
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
@@ -1130,7 +1136,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, True)
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
 		return tag
 
@@ -1168,7 +1174,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, False)
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 		return tag
 

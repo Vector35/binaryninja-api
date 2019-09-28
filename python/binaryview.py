@@ -3484,13 +3484,13 @@ class BinaryView(object):
 		:rtype: Tag
 		:Example:
 
-			>>> tt = bv.tag_types["Crabby Functions"]
-			>>> tag = bv.create_tag(tt, "Get Crabbed")
+			>>> tt = bv.tag_types["Crashes"]
+			>>> tag = bv.create_tag(tt, "Null pointer dereference", True)
 			>>> bv.add_user_data_tag(here, tag)
 			>>>
 		"""
-		tag = Tag(core.BNCreateTag(type.handle, data, user))
-		core.BNAddTag(self.handle, tag.handle)
+		tag = Tag(core.BNCreateTag(type.handle, data))
+		core.BNAddTag(self.handle, tag.handle, user)
 		return tag
 
 	@property
@@ -3572,7 +3572,7 @@ class BinaryView(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, True)
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 		return tag
 
@@ -3614,7 +3614,7 @@ class BinaryView(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, False)
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 		return tag
 

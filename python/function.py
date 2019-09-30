@@ -940,7 +940,9 @@ class Function(object):
 
 	def create_tag(self, type, data, user=True):
 		"""
-		``create_tag`` creates a new Tag object but does not add it anywhere
+		``create_tag`` creates a new Tag object but does not add it anywhere.
+		Use :py:meth:`create_user_address_tag` or
+		:py:meth:`create_user_function_tag` to create and add in one step.
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
@@ -1008,8 +1010,10 @@ class Function(object):
 
 	def create_user_address_tag(self, addr, type, data, unique=False, arch=None):
 		"""
-		``create_user_address_tag`` creates and adds a Tag object at a given address.
-		Since this adds a user tag, it will be added to the current undo buffer.
+		``create_user_address_tag`` creates and adds a Tag object at a given
+		address. Since this adds a user tag, it will be added to the current
+		undo buffer. To create tags associated with an address that is not
+		inside of a function, use :py:meth:`create_user_data_tag <binaryninja.binaryview.BinaryView.create_user_data_tag>`.
 
 		:param int addr: Address at which to add the tag
 		:param TagType type: Tag Type for the Tag that is created

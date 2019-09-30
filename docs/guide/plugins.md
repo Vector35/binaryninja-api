@@ -35,6 +35,22 @@ Plugins can now be installed directly via the GUI from Binary Ninja. You can lau
 
 Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible. 
 
+#### Plugin Manager Searching
+
+The plugin manager also supports a number of helpful search keywords to filter through the list of plugins as it continues to grow:
+
+ - `@installed` to only show installed plugins
+ - `@enabled` to only show enabled plugins
+ - `@disabled` to show plugins that are installed but not enabled)
+
+The following plugin categories are also searchable:
+
+ - `@core`
+ - `@ui`
+ - `@architecture`
+ - `@binaryview`
+ - `@helper`
+
 ### Manual installation
 
 You can manually install a plugin either by adding a folder which contains it (the plugin folder must contain an `__init__.py` at the top of the folder, or a python file can be included directly in the plugin folder though this is not recommended).

@@ -3430,7 +3430,7 @@ class BinaryView(object):
 		:Example:
 
 			>>> tt = bv.create_tag_type("Crabby Functions", "🦀")
-			>>> current_function.create_user_address_tag(here, tt, "Get Crabbed")
+			>>> bv.create_user_data_tag(here, tt, "Get Crabbed")
 			>>>
 		"""
 		tag_type = TagType(core.BNCreateTagType(self.handle, name, icon))
@@ -3476,7 +3476,8 @@ class BinaryView(object):
 
 	def create_tag(self, type, data, user=True):
 		"""
-		``create_tag`` creates a new Tag object but does not add it anywhere
+		``create_tag`` creates a new Tag object but does not add it anywhere.
+		Use :py:meth:`create_user_data_tag` to create and add in one step.
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
@@ -3556,8 +3557,13 @@ class BinaryView(object):
 
 	def create_user_data_tag(self, addr, type, data, unique=False):
 		"""
-		``create_user_data_tag`` creates and adds a Tag object at a data address.
-		Since this adds a user tag, it will be added to the current undo buffer.
+		``create_user_data_tag`` creates and adds a Tag object at a data
+		address. Since this adds a user tag, it will be added to the current
+		undo buffer.
+
+		This API is appropriate for generic data tags, for functions,
+		consider using :meth:`create_user_function_tag <binaryninja.function.Function.create_user_function_tag>` or for
+		specific addresses inside of functions: :meth:`create_user_address_tag <binaryninja.function.Function.create_user_address_tag>`.
 
 		:param int addr: Address at which to add the tag
 		:param TagType type: Tag Type for the Tag that is created
@@ -3565,6 +3571,11 @@ class BinaryView(object):
 		:param bool unique: If a tag already exists at this location with this data, don't add another
 		:return: The created Tag
 		:rtype: Tag
+		:Example:
+
+			>>> tt = bv.tag_types["Crashes"]
+			>>> bv.create_user_data_tag(here, tt, "String data to associate with this tag")
+			>>>
 		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -4254,7 +4265,7 @@ class BinaryView(object):
 
 	def get_linear_disassembly_position_at(self, addr, settings):
 		"""
-		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition` object for use in
+		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition <binaryninja.lineardisassembly.LinearDisassemblyPosition>` object for use in
 		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
@@ -4690,8 +4701,8 @@ class BinaryView(object):
 		the event of a name conflict. To aid in this, the :py:Class:`Type` object returned is a `NamedTypeReference` to
 		the deconflicted name used.
 
-		:param QualifiedName name
-		:param TypeLibrary lib
+		:param QualifiedName name:
+		:param TypeLibrary lib:
 		:return: a `NamedTypeReference` to the type, taking into account any renaming performed
 		:rtype: Type
 		"""
@@ -4711,8 +4722,8 @@ class BinaryView(object):
 		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
 		when references to types provided by them are first encountered.
 
-		:param QualifiedName name
-		:param TypeLibrary lib
+		:param QualifiedName name:
+		:param TypeLibrary lib:
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
 		:rtype: Type
 		"""
@@ -4730,9 +4741,9 @@ class BinaryView(object):
 		As other referenced types are encountered, they are either copied into the destination type library or
 		else the type library that provided the referenced type is added as a dependency for the destination library.
 
-		:param TypeLibrary lib
-		:param QualifiedName name
-		:param Type type_obj
+		:param TypeLibrary lib:
+		:param QualifiedName name:
+		:param Type type_obj:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):
@@ -4750,9 +4761,9 @@ class BinaryView(object):
 		As other referenced types are encountered, they are either copied into the destination type library or
 		else the type library that provided the referenced type is added as a dependency for the destination library.
 
-		:param TypeLibrary lib
-		:param QualifiedName name
-		:param Type type_obj
+		:param TypeLibrary lib:
+		:param QualifiedName name:
+		:param Type type_obj:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):

@@ -24,7 +24,7 @@ class LinearDisassemblyPosition(object):
 	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly
 
 	.. note:: This object should not be instantiated directly. Rather call \
-	:py:meth:`get_linear_disassembly_position_at` which instantiates this object.
+	:py:meth:`get_linear_disassembly_position_at <binaryninja.binaryview.BinaryView.get_linear_disassembly_position_at>` which instantiates this object.
 	"""
 	def __init__(self, func, block, addr):
 		self._function = func

@@ -53,8 +53,8 @@ class TypeLibrary(object):
 		Creates an empty type library object with a random GUID and
 		the provided name.
 
-		:param Architecture arch
-		:param str name
+		:param Architecture arch:
+		:param str name:
 		:rtype: TypeLibrary
 		"""
 		handle = core.BNNewTypeLibrary(arch.handle, name)
@@ -65,7 +65,7 @@ class TypeLibrary(object):
 		"""
 		Loads a finalized type library instance from file
 
-		:param str path
+		:param str path:
 		:rtype: TypeLibrary
 		"""
 		handle = core.BNLoadTypeLibraryFromFile(path)
@@ -77,7 +77,7 @@ class TypeLibrary(object):
 		"""
 		Saves a finalized type library instance to file
 
-		:param str path
+		:param str path:
 		:rtype: None
 		"""
 		core.BNWriteTypeLibraryToFile(self.handle, path)
@@ -88,8 +88,8 @@ class TypeLibrary(object):
 		`from_name` looks up the first type library found with a matching name. Keep
 		in mind that names are not necessarily unique.
 
-		:param Architecture arch
-		:param str name
+		:param Architecture arch:
+		:param str name:
 		:rtype: TypeLibrary
 		"""
 		handle = core.BNLookupTypeLibraryByName(arch.handle, name)
@@ -103,8 +103,8 @@ class TypeLibrary(object):
 		`from_guid` attempts to grab a type library associated with the provided
 		Architecture and GUID pair
 
-		:param Architecture arch
-		:param str guid
+		:param Architecture arch:
+		:param str guid:
 		:rtype: TypeLibrary
 		"""
 		handle = core.BNLookupTypeLibraryByGuid(arch.handle, guid)
@@ -276,11 +276,11 @@ class TypeLibrary(object):
 		through NamedTypeReferences are already appropriately prepared.
 
 		To add types and objects from an existing BinaryView, it is recommended to use
-		:py:meth:`BinaryView.export_object_to_library`, which will automatically pull in
+		:py:meth:`export_object_to_library <binaryninja.binaryview.BinaryView.export_object_to_library>`, which will automatically pull in
 		all referenced types and record additional dependencies as needed.
 
-		:param QualifiedName name
-		:param Type t
+		:param QualifiedName name:
+		:param Type t:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):
@@ -296,11 +296,11 @@ class TypeLibrary(object):
 		through NamedTypeReferences are already appropriately prepared.
 
 		To add types and objects from an existing BinaryView, it is recommended to use
-		:py:meth:`BinaryView.export_type_to_library`, which will automatically pull in
+		:py:meth:`export_type_to_library <binaryninja.binaryview.BinaryView.export_type_to_library>`, which will automatically pull in
 		all referenced types and record additional dependencies as needed.
 
-		:param QualifiedName name
-		:param Type t
+		:param QualifiedName name:
+		:param Type t:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):
@@ -313,9 +313,9 @@ class TypeLibrary(object):
 		"""
 		`get_named_object` direct extracts a reference to a contained object -- when
 		attempting to extract types from a library into a BinaryView, consider using
-		:py:meth:`BinaryView.import_library_object` instead.
+		:py:meth:`import_library_object <binaryninja.binaryview.BinaryView.import_library_object>` instead.
 
-		:param QualifiedName name
+		:param QualifiedName name:
 		:rtype: Type
 		"""
 		if not isinstance(name, types.QualifiedName):
@@ -329,9 +329,9 @@ class TypeLibrary(object):
 		"""
 		`get_named_type` direct extracts a reference to a contained type -- when
 		attempting to extract types from a library into a BinaryView, consider using
-		:py:meth:`BinaryView.import_library_type` instead.
+		:py:meth:`import_library_type <binaryninja.binaryview.BinaryView.import_library_type>` instead.
 
-		:param QualifiedName name
+		:param QualifiedName name:
 		:rtype: Type
 		"""
 		if not isinstance(name, types.QualifiedName):

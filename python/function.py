@@ -938,7 +938,7 @@ class Function(object):
 	def create_auto_tag(self, type, data):
 		return self.create_tag(type, data, False)
 
-	def create_tag(self, type, data, user=False):
+	def create_tag(self, type, data, user=True):
 		"""
 		``create_tag`` creates a new Tag object but does not add it anywhere
 

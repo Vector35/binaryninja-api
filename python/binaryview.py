@@ -639,13 +639,13 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@classmethod
 	def get_view_of_file(cls, filename, update_analysis=True, progress_func=None):
 		"""
-		``get_view_of_file`` opens and returns the first available `BinaryView`, excluding 'Raw' `BinaryViewType`s
+		``get_view_of_file`` opens and returns the first available :class:`BinaryView`, excluding *'Raw'* :class:`BinaryViewType`s
 
 		:param str filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run `update_analysis_and_wait` after opening a `BinaryView`, defaults to True
+		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
-		:return: returns a BinaryView object for the given filename
-		:rtype: BinaryView or None
+		:return: returns a :class:`BinaryView` object for the given filename
+		:rtype: :class:`BinaryView` or ``None``
 		"""
 		sqlite = b"SQLite format 3"
 		isDatabase = filename.endswith(".bndb")
@@ -681,19 +681,19 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def get_view_of_file_with_options(cls, filename, update_analysis=True, progress_func=None, options={}):
 		"""
 		``get_view_of_file_with_options`` opens, generates default load options (which are overridable), and returns the first available \
-		`BinaryView`, excluding 'Raw' `BinaryViewType`s
+		:class:`BinaryView`, excluding *'Raw'* :class:`BinaryViewType`s
 
-		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling `get_view_of_file`. Since \
-		`BinaryViewType`s are in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with `get_view_of_file` sets 'loader.imageBase' to 0, whereas opening with `get_view_of_file_with_options` \
-		sets 'loader.imageBase' to 0x400000 for 64-bit binaries, or 0x10000 for 32-bit binaries, by default.
+		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. Since \
+		:class:`BinaryViewType`s are in control of generating load options, this method allows an alternative default way to open a file. For \
+		example, opening a relocatable object file with :func:`get_view_of_file` sets **'loader.imageBase'** to 0, whereas opening with \
+		:func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries, by default.
 
 		:param str filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run `update_analysis_and_wait` after opening a `BinaryView`, defaults to True
+		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {str : str}, where key is a setting identifier, and value is a JSON formatted str
-		:return: returns a BinaryView object for the given filename
-		:rtype: BinaryView or None
+		:return: returns a :class:`BinaryView` object for the given filename
+		:rtype: :class:`BinaryView` or ``None``
 
 		:Example:
 
@@ -5122,6 +5122,13 @@ class BinaryView(object):
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
 	def get_load_settings_type_names(self):
+		"""
+		``get_load_settings_type_names`` retrieve a list :class:`BinaryViewType` names for which load settings exist in \
+		this :class:`BinaryView` context
+
+		:return: list of :class:`BinaryViewType` names
+		:rtype: list(str)
+		"""
 		result = []
 		count = ctypes.c_ulonglong(0)
 		names = core.BNBinaryViewGetLoadSettingsTypeNames(self.handle, count)
@@ -5131,12 +5138,26 @@ class BinaryView(object):
 		return result
 
 	def get_load_settings(self, type_name):
+		"""
+		``get_load_settings`` retrieve a :class:`Settings` object which defines the load settings for the given :class:`BinaryViewType` ``type_name``
+
+		:param str type_name: the :class:`BinaryViewType` name
+		:return: the load settings
+		:rtype: :class:`Settings`, or ``None``
+		"""
 		settings_handle = core.BNBinaryViewGetLoadSettings(self.handle, type_name)
 		if settings_handle is None:
 			return None
 		return settings.Settings(handle=settings_handle)
 
 	def set_load_settings(self, type_name, settings):
+		"""
+		``set_load_settings`` set a :class:`Settings` object which defines the load settings for the given :class:`BinaryViewType` ``type_name``
+
+		:param str type_name: the :class:`BinaryViewType` name
+		:param Settings settings: the load settings
+		:rtype: None
+		"""
 		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings.handle)
 
 	def __setattr__(self, name, value):
@@ -5155,11 +5176,11 @@ class BinaryView(object):
 			- Symbols are everything in ``bv.symbols``, unnamed DataVariables (i.e. ``data_00005000``), unnamed functions (i.e. ``sub_00005000``), or section names (i.e. ``.text``)
 			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
-			
+
 				- ``0x`` - Hexadecimal
 				- ``0n`` - Decimal
 				- ``0`` - Octal
-			
+
 			- In the case of an ambiguous number/symbol (one with no prefix) for instance ``12345`` we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
 			  it to a hexadecimal number.
@@ -5171,7 +5192,7 @@ class BinaryView(object):
 				- ``[<expression>].w`` - read the word (2 bytes) at ``<expression>``
 				- ``[<expression>].d`` - read the dword (4 bytes) at ``<expression>``
 				- ``[<expression>].q`` - read the quadword (8 bytes) at ``<expression>``
-			
+
 			- The ``$here`` keyword can be used in calculations and is defined as the ``here`` parameter
 			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
 

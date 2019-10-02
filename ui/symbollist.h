@@ -25,10 +25,10 @@ class BINARYNINJAUIAPI SymbolListModel: public QAbstractItemModel, public Binary
 public:
 	enum SortType
 	{
-		SortAcendingAddresses,
-		SortDecendingAddresses,
-		SortAlphabeticallyAcending,
-		SortAlphabeticallyDecending
+		SortAscendingAddresses,
+		SortDescendingAddresses,
+		SortAlphabeticallyAscending,
+		SortAlphabeticallyDescending
 	};
 
 	struct NamedObject

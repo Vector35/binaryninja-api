@@ -2892,7 +2892,7 @@ class BinaryView(object):
 
 	def get_functions_containing(self, addr):
 		"""
-		``get_functions_containing`` returns a list of functions which contain the given address or None on failure.
+		``get_functions_containing`` returns a list of functions which contain the given address.
 
 		:param int addr: virtual address to query.
 		:rtype: list of Function objects

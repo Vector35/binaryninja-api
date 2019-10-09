@@ -287,7 +287,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		self._flag_write_types = {}
 		self._flag_write_types_by_index = {}
 		self.__dict__["flag_write_types"] = self.__class__.flag_write_types
-		write_type_index = 0
+		write_type_index = 1
 		for write_type in self.__class__.flag_write_types:
 			if write_type not in self._flag_write_types:
 				self._flag_write_types[write_type] = write_type_index

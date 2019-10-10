@@ -2103,11 +2103,34 @@ extern "C"
 	BINARYNINJACOREAPI void BNAddOptionalPluginDependency(const char* name);
 
 	// Logging
+#ifdef __GNUC__
+__attribute__ ((format (printf, 2, 3)))
+#endif
 	BINARYNINJACOREAPI void BNLog(BNLogLevel level, const char* fmt, ...);
+
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	BINARYNINJACOREAPI void BNLogDebug(const char* fmt, ...);
+
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	BINARYNINJACOREAPI void BNLogInfo(const char* fmt, ...);
+
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	BINARYNINJACOREAPI void BNLogWarn(const char* fmt, ...);
+
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	BINARYNINJACOREAPI void BNLogError(const char* fmt, ...);
+
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	BINARYNINJACOREAPI void BNLogAlert(const char* fmt, ...);
 
 	BINARYNINJACOREAPI void BNRegisterLogListener(BNLogListener* listener);

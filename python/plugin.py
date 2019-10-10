@@ -324,7 +324,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register`` Register a plugin
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -343,7 +343,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_address(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_address`` Register a plugin to be called with an address argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -362,7 +362,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_range(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_range`` Register a plugin to be called with a range argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -381,7 +381,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_function(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_function`` Register a plugin to be called with a function argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -400,7 +400,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_low_level_il_function(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_low_level_il_function`` Register a plugin to be called with a low level IL function argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -419,7 +419,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_low_level_il_instruction(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_low_level_il_instruction`` Register a plugin to be called with a low level IL instruction argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -438,7 +438,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_medium_level_il_function(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_medium_level_il_function`` Register a plugin to be called with a medium level IL function argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
@@ -457,7 +457,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@classmethod
 	def register_for_medium_level_il_instruction(cls, name, description, action, is_valid = None):
-		"""
+		r"""
 		``register_for_medium_level_il_instruction`` Register a plugin to be called with a medium level IL instruction argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)

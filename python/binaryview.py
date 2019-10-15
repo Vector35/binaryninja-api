@@ -813,6 +813,10 @@ class Segment(object):
 		return core.BNSegmentGetRelocationsCount(self.handle)
 
 	@property
+	def auto_defined(self):
+		return core.BNSegmentIsAutoDefined(self.handle)
+
+	@property
 	def relocation_ranges(self):
 		"""List of relocation range tuples (read-only)"""
 

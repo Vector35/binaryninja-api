@@ -545,6 +545,8 @@ bool TagReference::operator==(const TagReference& other) const
 			return func == other.func;
 		case DataTagReference:
 			return addr == other.addr;
+		default:
+			return false;
 	}
 }
 

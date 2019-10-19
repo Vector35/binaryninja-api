@@ -179,7 +179,7 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
-	class MediumLevelILInstructionAccessException: public std::exception
+	class __attribute__((visibility("default"))) MediumLevelILInstructionAccessException: public std::exception
 	{
 	public:
 		MediumLevelILInstructionAccessException(): std::exception() {}

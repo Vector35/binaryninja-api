@@ -278,9 +278,6 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	SymbolListModel* m_list;
 	QTimer* m_updateTimer;
 	bool m_disableScrollToFunction;
-	UIActionHandler m_actionHandler;
-	Menu m_menu;
-	ContextMenuManager m_contextMenuManager;
 
 	bool m_showExportedFunctions;
 	bool m_showExportedDataVars;
@@ -327,7 +324,6 @@ public:
 protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
-	virtual void contextMenuEvent(QContextMenuEvent* /*event*/) override;
 
 private Q_SLOTS:
 	void goToSymbol(const QModelIndex& i);

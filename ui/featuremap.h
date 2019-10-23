@@ -42,6 +42,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	uint64_t m_bvLength = 0;
 
 	int m_defaultWidth = 100;
+	bool m_autoRotate = true;
+	bool m_naturalOrientation = true;
 
 	int m_curLocX = 0;
 	int m_curLocY = 0;
@@ -64,6 +66,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	};
 
 	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
+
+	void updateCoordinates();
 
 public:
 	FeatureMap(ViewFrame* frame, BinaryViewRef data);

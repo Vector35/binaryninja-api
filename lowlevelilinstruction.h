@@ -61,6 +61,7 @@ namespace BinaryNinja
 
 		RegisterOrFlag();
 		RegisterOrFlag(bool flag, uint32_t i);
+		RegisterOrFlag(const RegisterOrFlag& v);
 
 		bool IsRegister() const { return !isFlag; }
 		bool IsFlag() const { return isFlag; }

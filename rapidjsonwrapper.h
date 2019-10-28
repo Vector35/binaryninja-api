@@ -2,6 +2,12 @@
 #include <exception>
 #include <stdexcept>
 
+#if defined(__GNUC__) && __GNUC__ >= 8
+// Disable warnings from rapidjson performance optimizations
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+
 struct GenericException;
 struct ParseException;
 
@@ -30,4 +36,6 @@ struct ParseException: public std::runtime_error, rapidjson::ParseResult
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
-
+#if defined(__GNUC__) && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif

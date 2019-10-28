@@ -72,6 +72,7 @@ struct BINARYNINJAUIAPI UIAction
 	UIAction(const std::function<void()>& activate,
 		const std::function<bool()>& isValid);
 	UIAction(const UIAction& other);
+	UIAction& operator=(const UIAction& other);
 
 	static void registerAction(const QString& name, const QKeySequence& defaultKeyBinding = QKeySequence());
 	static void registerAction(const QString& name, const QList<QKeySequence>& defaultKeyBinding);

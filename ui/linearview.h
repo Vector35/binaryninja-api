@@ -23,6 +23,7 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition: public BinaryNinja::LinearDisa
 	LinearViewCursorPosition();
 	LinearViewCursorPosition(const LinearViewCursorPosition& pos);
 	LinearViewCursorPosition(const BinaryNinja::LinearDisassemblyPosition& pos);
+	LinearViewCursorPosition& operator=(const LinearViewCursorPosition& pos);
 };
 
 class BINARYNINJAUIAPI LinearViewHistoryEntry: public HistoryEntry

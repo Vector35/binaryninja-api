@@ -1033,6 +1033,7 @@ __attribute__ ((format (printf, 1, 2)))
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
 		NameList(const NameList& name, const std::string& join);
+		NameList(const NameList& name);
 		virtual ~NameList();
 
 		virtual NameList& operator=(const std::string& name);
@@ -2424,6 +2425,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
 		Variable(BNVariableSourceType type, uint64_t storage);
 		Variable(const BNVariable& var);
+		Variable(const Variable& var);
 
 		Variable& operator=(const Variable& var);
 

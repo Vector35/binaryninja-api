@@ -48,6 +48,14 @@ Variable::Variable(const BNVariable& var)
 }
 
 
+Variable::Variable(const Variable& var)
+{
+	type = var.type;
+	index = var.index;
+	storage = var.storage;
+}
+
+
 Variable& Variable::operator=(const Variable& var)
 {
 	type = var.type;

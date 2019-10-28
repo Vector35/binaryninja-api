@@ -45,6 +45,10 @@ NameList::NameList(const NameList& name, const string& join): m_join(join), m_na
 {
 }
 
+NameList::NameList(const NameList& name): m_join(name.m_join), m_name(name.m_name)
+{
+}
+
 NameList::~NameList()
 {}
 

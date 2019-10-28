@@ -323,6 +323,11 @@ RegisterOrFlag::RegisterOrFlag(bool flag, uint32_t i): isFlag(flag), index(i)
 }
 
 
+RegisterOrFlag::RegisterOrFlag(const RegisterOrFlag& v): isFlag(v.isFlag), index(v.index)
+{
+}
+
+
 uint32_t RegisterOrFlag::GetRegister() const
 {
 	if (isFlag)

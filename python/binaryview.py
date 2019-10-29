@@ -3479,7 +3479,10 @@ class BinaryView(object):
 		for i in range(0, count.value):
 			tag = TagType(core.BNNewTagTypeReference(types[i]))
 			if tag.name in result:
-				result[tag.name] = [result[tag.name], tag]
+				if type(result[tag.name]) == list:
+					result[tag.name].append(tag)
+				else:
+					result[tag.name] = [result[tag.name], tag]
 			else:
 				result[tag.name] = tag
 		core.BNFreeTagTypeList(types, count.value)

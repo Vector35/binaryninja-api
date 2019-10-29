@@ -70,7 +70,9 @@
 
 #define BN_INVALID_EXPR             ((size_t)-1)
 
-#define BN_MAX_STRING_LENGTH         128
+#define BN_MAX_STRING_LENGTH        128
+
+#define BN_TAG_TOKEN_WIDTH          5
 
 #define LLVM_SVCS_CB_NOTE 0
 #define LLVM_SVCS_CB_WARNING 1

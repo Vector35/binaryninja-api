@@ -53,6 +53,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	QVector<QColor> m_colors;
 	QVector<QRgb> m_colorTable;
 
+	bool m_setInitialOrientation = true;
+
 	class BackgroundRefresh: public BinaryNinja::RefCountObject
 	{
 		std::mutex m_mutex;
@@ -68,6 +70,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
 
 	void updateCoordinates();
+	bool updateOrientation();
 
 public:
 	FeatureMap(ViewFrame* frame, BinaryViewRef data);

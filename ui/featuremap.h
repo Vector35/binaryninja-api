@@ -53,7 +53,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	QVector<QColor> m_colors;
 	QVector<QRgb> m_colorTable;
 
-	bool m_setInitialOrientation = true;
+	bool m_enableOrientationUpdate = false;
 
 	class BackgroundRefresh: public BinaryNinja::RefCountObject
 	{

@@ -909,6 +909,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool SaveAutoSnapshot(BinaryView* data,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
 
+		bool Rebase(BinaryView* data, uint64_t address);
+		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
+
 		void BeginUndoActions();
 		void CommitUndoActions();
 

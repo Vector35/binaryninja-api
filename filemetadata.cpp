@@ -330,6 +330,20 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
 }
 
 
+bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
+{
+	return BNRebase(data->GetObject(), address);
+}
+
+
+bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progressCallback;
+	return BNRebaseWithProgress(data->GetObject(), address, &cb, DatabaseProgressCallback);
+}
+
+
 void FileMetadata::BeginUndoActions()
 {
 	BNBeginUndoActions(m_object);

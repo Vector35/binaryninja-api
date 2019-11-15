@@ -4870,6 +4870,20 @@ class BinaryView(object):
 		"""
 		core.BNReanalyzeAllFunctions(self.handle)
 
+	def rebase(self, address, progress_func = None):
+		"""
+		``rebase`` rebase the binary view at the specified virtual address
+
+		:param int address: virtual address of the start of the binary view
+		:return: boolean True on success, False on failure.
+		:rtype: bool
+		"""
+		if progress_func is None:
+			return core.BNRebase(self.handle, address)
+		else:
+			return core.BNRebaseWithProgress(self.handle, address, None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				lambda ctxt, cur, total: progress_func(cur, total)))
+
 	def show_plain_text_report(self, title, contents):
 		core.BNShowPlainTextReport(self.handle, title, contents)
 

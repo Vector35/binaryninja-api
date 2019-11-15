@@ -56,6 +56,7 @@ public:
 	BinaryViewRef createDataView(const QString& type);
 	BinaryViewRef getDataView(const QString& type, bool createView = false);
 	std::vector<BinaryViewRef> getAllDataViews();
+	void refreshDataViewCache();
 
 	void setCurrentViewFrame(ViewFrame* view);
 

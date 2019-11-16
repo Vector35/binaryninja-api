@@ -483,18 +483,10 @@ class LowLevelILOperationAndSize(object):
 		""" """
 		return self._operation
 
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
-
 	@property
 	def size(self):
 		""" """
 		return self._size
-
-	@size.setter
-	def size(self, value):
-		self._size = value
 
 
 class LowLevelILInstruction(object):
@@ -1020,81 +1012,45 @@ class LowLevelILInstruction(object):
 		""" """
 		return self._function
 
-	@function.setter
-	def function(self, value):
-		self._function = value
-
 	@property
 	def expr_index(self):
 		""" """
 		return self._expr_index
-
-	@expr_index.setter
-	def expr_index(self, value):
-		self._expr_index = value
 
 	@property
 	def instr_index(self):
 		""" """
 		return self._instr_index
 
-	@instr_index.setter
-	def instr_index(self, value):
-		self._instr_index = value
-
 	@property
 	def operation(self):
 		""" """
 		return self._operation
-
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
 
 	@property
 	def size(self):
 		""" """
 		return self._size
 
-	@size.setter
-	def size(self, value):
-		self._size = value
-
 	@property
 	def address(self):
 		""" """
 		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
 
 	@property
 	def source_operand(self):
 		""" """
 		return self._source_operand
 
-	@source_operand.setter
-	def source_operand(self, value):
-		self._source_operand = value
-
 	@property
 	def flags(self):
 		""" """
 		return self._flags
 
-	@flags.setter
-	def flags(self, value):
-		self._flags = value
-
 	@property
 	def operands(self):
 		""" """
 		return self._operands
-
-	@operands.setter
-	def operands(self, value):
-		self._operands = value
 
 
 class LowLevelILExpr(object):

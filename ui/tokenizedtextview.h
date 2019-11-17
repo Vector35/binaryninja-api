@@ -44,6 +44,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	bool m_navByRef = false;
 
 	std::vector<BinaryNinja::LinearDisassemblyLine> m_lines;
+	DisassemblySettingsRef m_settings;
 
 	QTimer* m_updateTimer;
 

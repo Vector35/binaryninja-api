@@ -72,6 +72,18 @@ void DisassemblySettings::SetMaximumSymbolWidth(size_t width)
 }
 
 
+size_t DisassemblySettings::GetGutterWidth() const
+{
+	return BNGetDisassemblyGutterWidth(m_object);
+}
+
+
+void DisassemblySettings::SetGutterWidth(size_t width)
+{
+	BNSetDisassemblyGutterWidth(m_object, width);
+}
+
+
 DisassemblyTextLine::DisassemblyTextLine()
 {
 	addr = 0;

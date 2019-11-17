@@ -12,7 +12,6 @@
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
 #define MAX_STRING_TYPE_LENGTH 1048576
-#define EDGE_GUTTER_WIDTH 5
 
 struct BINARYNINJAUIAPI LinearViewCursorPosition: public BinaryNinja::LinearDisassemblyPosition
 {

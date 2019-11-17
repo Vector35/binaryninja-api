@@ -2797,6 +2797,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetWidth(size_t width);
 		size_t GetMaximumSymbolWidth() const;
 		void SetMaximumSymbolWidth(size_t width);
+		size_t GetGutterWidth() const;
+		void SetGutterWidth(size_t width);
 	};
 
 	class Function;

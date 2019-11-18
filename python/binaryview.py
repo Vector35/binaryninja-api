@@ -701,11 +701,17 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
 			>>>
 		"""
+		sqlite = b"SQLite format 3"
 		isDatabase = filename.endswith(".bndb")
 		if isDatabase:
-			log.log_warn("Opening a database with options is not yet supported!")
-			return None
-		view = BinaryView.open(filename)
+			f = open(filename, 'rb')
+			if f is None or f.read(len(sqlite)) != sqlite:
+				return None
+			f.close()
+			view = binaryninja.filemetadata.FileMetadata().open_database_for_configuration(filename)
+		else:
+			view = BinaryView.open(filename)
+
 		if view is None:
 			return None
 		bvt = None
@@ -4872,17 +4878,27 @@ class BinaryView(object):
 
 	def rebase(self, address, progress_func = None):
 		"""
-		``rebase`` rebase the binary view at the specified virtual address
+		``rebase`` rebase the existing BinaryView into a new BinaryView at the specified virtual address
+
+		.. note:: This method should not be called from the UI and is intended for headless operation only.
 
 		:param int address: virtual address of the start of the binary view
-		:return: boolean True on success, False on failure.
-		:rtype: bool
+		:return: the new BinaryView object or None on failure
+		:rtype: BinaryView or None
 		"""
+		result = False
+		if core.BNIsUIEnabled():
+			log.log_warn("The BinaryView.rebase API is for headless operation only.")
+			return False
 		if progress_func is None:
-			return core.BNRebase(self.handle, address)
+			result = core.BNRebase(self.handle, address)
 		else:
-			return core.BNRebaseWithProgress(self.handle, address, None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+			result = core.BNRebaseWithProgress(self.handle, address, None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 				lambda ctxt, cur, total: progress_func(cur, total)))
+		if result:
+			return self.get_view_of_type(self.view_type)
+		else:
+			return None
 
 	def show_plain_text_report(self, title, contents):
 		core.BNShowPlainTextReport(self.handle, title, contents)
@@ -4893,7 +4909,7 @@ class BinaryView(object):
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
 		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
 
-		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
+		Note: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
 
 		:param str contents: markdown contents to display

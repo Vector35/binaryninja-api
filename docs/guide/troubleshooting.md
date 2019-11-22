@@ -41,6 +41,10 @@ Next, if running a python plugin, make sure the python requirements are met by y
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
+## Python 3.8
+
+Unfortunately, Python 3.8 has come out in some rolling distributions though many applications are still incompatible. In particular, Pyside2 has a serious [compatibility issue](https://bugreports.qt.io/browse/PYSIDE-939) that need to be resolved before it will work with Python 3.8. There are two options to run Binary Ninja on a system with Python 3.8. First, install a compatible python (3.7 or below) and specify that version in your [settings](/getting-started/#settings). Second, if you are running on the [development channel](/getting-started/#updates) at version 1.2.1957 or later, we have a work-around that will let python 3.8 work with the core Binary Ninja APIs but will not allow for any UI plugins that rely on pyside2. Note that you may need to switch to the QT Download Provider (search settings for "provider") to even switch to the development branch in the first place with a broken python.
+
 ## Platforms
 
 The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.

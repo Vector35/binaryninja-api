@@ -95,13 +95,16 @@ class BINARYNINJAUIAPI ScriptingConsoleOutput: public QTextEdit
 	Q_OBJECT
 
 	ScriptingConsole* m_console;
-	QAction* m_outputActionClear;
+	UIActionHandler* m_handler;
+	UIActionHandler m_actionHandler;
+	ContextMenuManager* m_contextMenuManager;
+	Menu* m_menu;
 
 public:
-	ScriptingConsoleOutput(ScriptingConsole* parent);
+	ScriptingConsoleOutput(ScriptingConsole* parent, Menu* menu);
 
 protected:
-	virtual void contextMenuEvent(QContextMenuEvent *event) override;
+	void contextMenuEvent(QContextMenuEvent* event) override;
 };
 
 class ScriptingConsoleWidget;

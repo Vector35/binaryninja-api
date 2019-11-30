@@ -36,9 +36,9 @@ def loadSnippetFromFile(snippetPath):
     try:
         snippetText = open(snippetPath, 'r').readlines()
     except:
-        return (False, [], False)
+        return ("", "", "")
     if (len(snippetText) < 3):
-        return (False, [], False)
+        return ("", "", "")
     else:
         qKeySequence = QKeySequence(snippetText[1].strip()[1:])
         if qKeySequence.isEmpty():
@@ -84,13 +84,14 @@ class Snippets(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.title = QLabel(self.tr("Snippet Editor"))
         self.saveButton = QPushButton(self.tr("Save"))
-        self.revertButton = QPushButton(self.tr("Revert"))
+        self.closeButton = QPushButton(self.tr("Close"))
         self.clearHotkeyButton = QPushButton(self.tr("Clear Hotkey"))
         self.setWindowTitle(self.title.text())
         self.newFolderButton = QPushButton("New Folder")
         self.deleteSnippetButton = QPushButton("Delete")
         self.newSnippetButton = QPushButton("New Snippet")
         self.edit = QPlainTextEdit()
+        self.edit.setPlaceholderText("python code")
         self.resetting = False
         self.columns = 3
 
@@ -100,9 +101,7 @@ class Snippets(QDialog):
         self.currentFileLabel = QLabel()
         self.currentFile = ""
         self.snippetDescription = QLineEdit()
-        self.snippetEditsPending = False
-
-        self.clearSelection()
+        self.snippetDescription.setPlaceholderText("optional description")
 
         #Set Editbox Size
         font = getMonospaceFont(self)
@@ -140,7 +139,7 @@ class Snippets(QDialog):
         buttons.addWidget(self.clearHotkeyButton)
         buttons.addWidget(self.keySequenceEdit)
         buttons.addWidget(self.currentHotkeyLabel)
-        buttons.addWidget(self.revertButton)
+        buttons.addWidget(self.closeButton)
         buttons.addWidget(self.saveButton)
 
         description = QHBoxLayout()
@@ -149,9 +148,8 @@ class Snippets(QDialog):
 
         vlayoutWidget = QWidget()
         vlayout = QVBoxLayout()
-        vlayout.addWidget(self.currentFileLabel)
-        vlayout.addWidget(self.edit)
         vlayout.addLayout(description)
+        vlayout.addWidget(self.edit)
         vlayout.addLayout(buttons)
         vlayoutWidget.setLayout(vlayout)
 
@@ -175,7 +173,7 @@ class Snippets(QDialog):
 
         # Add signals
         self.saveButton.clicked.connect(self.save)
-        self.revertButton.clicked.connect(self.loadSnippet)
+        self.closeButton.clicked.connect(self.close)
         self.clearHotkeyButton.clicked.connect(self.clearHotkey)
         self.tree.selectionModel().selectionChanged.connect(self.selectFile)
         self.newSnippetButton.clicked.connect(self.newFileDialog)
@@ -198,7 +196,7 @@ class Snippets(QDialog):
             snippetKeys = None
             (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(snippet)
             if not snippetDescription:
-                actionText = "Snippets\\" + snippet
+                actionText = "Snippets\\" + os.path.basename(snippet).rstrip(".py")
             else:
                 actionText = "Snippets\\" + snippetDescription
             if snippetCode:
@@ -216,6 +214,7 @@ class Snippets(QDialog):
         self.currentFileLabel.setText("")
         self.snippetDescription.setText("")
         self.edit.setPlainText("")
+        self.currentFile = ""
 
     def reject(self):
         self.settings.setValue("ui/snippeteditor/geometry", self.saveGeometry())
@@ -243,7 +242,8 @@ class Snippets(QDialog):
         newSelection = self.files.filePath(new.indexes()[0])
         if QFileInfo(newSelection).isDir():
             self.readOnly(True)
-            self.clearSelection()
+            self.tree.clearSelection()
+            self.currentFile = ""
             return
 
         if old.length() > 0:
@@ -274,10 +274,12 @@ class Snippets(QDialog):
             index = self.tree.selectionModel().currentIndex()
             selection = self.files.filePath(index)
             if QFileInfo(selection).isDir():
-                open(os.path.join(selection, snippetName), "w").close()
+                path = os.path.join(selection, snippetName)
             else:
-                open(os.path.join(snippetPath, snippetName), "w").close()
+                path = os.path.join(snippetPath, snippetName)
                 self.readOnly(False)
+            open(path, "w").close()
+            self.tree.setCurrentIndex(self.files.index(path))
             log_debug("Snippet %s created." % snippetName)
 
     def readOnly(self, flag):
@@ -305,8 +307,6 @@ class Snippets(QDialog):
         if (self.currentFile == "" or QFileInfo(self.currentFile).isDir()):
             return False
         (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(self.currentFile)
-        if (not snippetCode):
-            return False
         if snippetKeys == None and not self.keySequenceEdit.keySequence().isEmpty():
             return True
         if snippetKeys != None and snippetKeys != self.keySequenceEdit.keySequence().toString():

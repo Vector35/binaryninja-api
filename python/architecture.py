@@ -96,16 +96,14 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		>>> #List the architectures
 		>>> list(Architecture)
-		[<arch: aarch64>, <arch: armv7>, <arch: armv7eb>, <arch: mipsel32>, <arch: mips32>, <arch: powerpc>,
-		<arch: x86>, <arch: x86_64>]
+		[<arch: aarch64>, <arch: armv7>, <arch: thumb2>, <arch: armv7eb>, <arch: thumb2eb>, <arch: mipsel32>, <arch: mips32>, <arch: ppc>, <arch: ppc64>, <arch: ppc_le>, <arch: ppc64_le>, <arch: x86_16>, <arch: x86>, <arch: x86_64>]
 		>>> #Register a new Architecture
 		>>> class MyArch(Architecture):
 		...  name = "MyArch"
 		...
 		>>> MyArch.register()
 		>>> list(Architecture)
-		[<arch: aarch64>, <arch: armv7>, <arch: armv7eb>, <arch: mipsel32>, <arch: mips32>, <arch: powerpc>,
-		<arch: x86>, <arch: x86_64>, <arch: MyArch>]
+		[<arch: aarch64>, <arch: armv7>, <arch: thumb2>, <arch: armv7eb>, <arch: thumb2eb>, <arch: mipsel32>, <arch: mips32>, <arch: ppc>, <arch: ppc64>, <arch: ppc_le>, <arch: ppc64_le>, <arch: x86_16>, <arch: x86>, <arch: x86_64>, <arch: MyArch>]
 		>>>
 
 	For the purposes of this documentation the variable ``arch`` will be used in the following context ::
@@ -1503,7 +1501,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: LowLevelILInstruction
 		:Example:
 
-			>>> arch.get_low_level_il_from_bytes('\xeb\xfe', 0x40DEAD)
+			>>> arch.get_low_level_il_from_bytes(b'\\xeb\\xfe', 0x40DEAD)
 			<il: jump(0x40dead)>
 			>>>
 		"""
@@ -1800,7 +1798,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:Example:
 
 			>>> arch.assemble("je 10")
-			'\\x0f\\x84\\x04\\x00\\x00\\x00'
+			b'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
 		return self.perform_assemble(code, addr)
@@ -1817,9 +1815,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_never_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_never_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_never_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_never_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -1838,9 +1836,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_always_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_always_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_always_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_always_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -1858,9 +1856,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_invert_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_invert_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_invert_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_invert_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -1879,11 +1877,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0"), 0)
 			True
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call eax")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call eax"), 0)
 			True
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax"), 0)
 			False
 			>>>
 		"""
@@ -1902,9 +1900,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("call 0")[0], 0)
+			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("call 0"), 0)
 			True
-			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("jmp eax")[0], 0)
+			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("jmp eax"), 0)
 			False
 			>>>
 		"""
@@ -1923,8 +1921,8 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: str
 		:Example:
 
-			>>> arch.convert_to_nop("\\x00\\x00", 0)
-			'\\x90\\x90'
+			>>> arch.convert_to_nop(b"\\x00\\x00", 0)
+			b'\\x90\\x90'
 			>>>
 		"""
 		return self.perform_convert_to_nop(data, addr)
@@ -1942,11 +1940,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: str
 		:Example:
 
-			>>> bytes = arch.always_branch(arch.assemble("je 10")[0], 0)
+			>>> bytes = arch.always_branch(arch.assemble("je 10"), 0)
 			>>> arch.get_instruction_text(bytes, 0)
-			(['nop     '], 1L)
+			(['nop', '     '], 1)
 			>>> arch.get_instruction_text(bytes[1:], 0)
-			(['jmp     ', '0x9'], 5L)
+			(['jmp', '     ', '0x9'], 5)
 			>>>
 		"""
 		return self.perform_always_branch(data, addr)
@@ -1964,12 +1962,12 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: str
 		:Example:
 
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("je 10")[0], 0), 0)
-			(['jne     ', '0xa'], 6L)
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jo 10")[0], 0), 0)
-			(['jno     ', '0xa'], 6L)
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jge 10")[0], 0), 0)
-			(['jl      ', '0xa'], 6L)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("je 10"), 0), 0)
+			(['jne', '     ', '0xa'], 6)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jo 10"), 0), 0)
+			(['jno', '     ', '0xa'], 6)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jge 10"), 0), 0)
+			(['jl', '      ', '0xa'], 6)
 			>>>
 		"""
 		return self.perform_invert_branch(data, addr)
@@ -1987,8 +1985,8 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: str
 		:Example:
 
-			>>> arch.get_instruction_text(arch.skip_and_return_value(arch.assemble("call 10")[0], 0, 0), 0)
-			(['mov     ', 'eax', ', ', '0x0'], 5L)
+			>>> arch.get_instruction_text(arch.skip_and_return_value(arch.assemble("call 10"), 0, 0), 0)
+			(['mov', '     ', 'eax', ', ', '0x0'], 5)
 			>>>
 		"""
 		return self.perform_skip_and_return_value(data, addr, value)
@@ -2001,6 +1999,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:rtype: None
 		:Example:
 
+			>>> ELF_RELOC_COPY = 5
 			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
 			>>> arch.is_view_type_constant_defined("ELF", "R_COPY")
 			True
@@ -2024,9 +2023,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			>>> ELF_RELOC_COPY = 5
 			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
 			>>> arch.get_view_type_constant("ELF", "R_COPY")
-			5L
+			5
 			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
-			100L
+			100
 		"""
 		return core.BNGetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, default_value)
 
@@ -2428,7 +2427,7 @@ class CoreArchitecture(Architecture):
 		:Example:
 
 			>>> arch.assemble("je 10")
-			'\\x0f\\x84\\x04\\x00\\x00\\x00'
+			b'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
 		result = databuffer.DataBuffer()
@@ -2452,9 +2451,9 @@ class CoreArchitecture(Architecture):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_never_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_never_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_never_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_never_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -2473,9 +2472,9 @@ class CoreArchitecture(Architecture):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_always_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_always_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_always_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_always_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -2493,9 +2492,9 @@ class CoreArchitecture(Architecture):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_invert_branch_patch_available(arch.assemble("je 10")[0], 0)
+			>>> arch.is_invert_branch_patch_available(arch.assemble("je 10"), 0)
 			True
-			>>> arch.is_invert_branch_patch_available(arch.assemble("nop")[0], 0)
+			>>> arch.is_invert_branch_patch_available(arch.assemble("nop"), 0)
 			False
 			>>>
 		"""
@@ -2514,11 +2513,11 @@ class CoreArchitecture(Architecture):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call 0"), 0)
 			True
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call eax")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("call eax"), 0)
 			True
-			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax")[0], 0)
+			>>> arch.is_skip_and_return_zero_patch_available(arch.assemble("jmp eax"), 0)
 			False
 			>>>
 		"""
@@ -2537,9 +2536,9 @@ class CoreArchitecture(Architecture):
 		:rtype: bool
 		:Example:
 
-			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("call 0")[0], 0)
+			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("call 0"), 0)
 			True
-			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("jmp eax")[0], 0)
+			>>> arch.is_skip_and_return_value_patch_available(arch.assemble("jmp eax"), 0)
 			False
 			>>>
 		"""
@@ -2558,8 +2557,8 @@ class CoreArchitecture(Architecture):
 		:rtype: str
 		:Example:
 
-			>>> arch.convert_to_nop("\\x00\\x00", 0)
-			'\\x90\\x90'
+			>>> arch.convert_to_nop(b"\\x00\\x00", 0)
+			b'\\x90\\x90'
 			>>>
 		"""
 		buf = (ctypes.c_ubyte * len(data))()
@@ -2581,11 +2580,11 @@ class CoreArchitecture(Architecture):
 		:rtype: str
 		:Example:
 
-			>>> bytes = arch.always_branch(arch.assemble("je 10")[0], 0)
+			>>> bytes = arch.always_branch(arch.assemble("je 10"), 0)
 			>>> arch.get_instruction_text(bytes, 0)
-			(['nop     '], 1L)
+			(['nop', '     '], 1)
 			>>> arch.get_instruction_text(bytes[1:], 0)
-			(['jmp     ', '0x9'], 5L)
+			(['jmp', '     ', '0x9'], 5)
 			>>>
 		"""
 		buf = (ctypes.c_ubyte * len(data))()
@@ -2607,12 +2606,12 @@ class CoreArchitecture(Architecture):
 		:rtype: str
 		:Example:
 
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("je 10")[0], 0), 0)
-			(['jne     ', '0xa'], 6L)
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jo 10")[0], 0), 0)
-			(['jno     ', '0xa'], 6L)
-			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jge 10")[0], 0), 0)
-			(['jl      ', '0xa'], 6L)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("je 10"), 0), 0)
+			(['jne', '     ', '0xa'], 6)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jo 10"), 0), 0)
+			(['jno', '     ', '0xa'], 6)
+			>>> arch.get_instruction_text(arch.invert_branch(arch.assemble("jge 10"), 0), 0)
+			(['jl', '      ', '0xa'], 6)
 			>>>
 		"""
 		buf = (ctypes.c_ubyte * len(data))()
@@ -2634,8 +2633,8 @@ class CoreArchitecture(Architecture):
 		:rtype: str
 		:Example:
 
-			>>> arch.get_instruction_text(arch.skip_and_return_value(arch.assemble("call 10")[0], 0, 0), 0)
-			(['mov     ', 'eax', ', ', '0x0'], 5L)
+			>>> arch.get_instruction_text(arch.skip_and_return_value(arch.assemble("call 10"), 0, 0), 0)
+			(['mov', '     ', 'eax', ', ', '0x0'], 5)
 			>>>
 		"""
 		buf = (ctypes.c_ubyte * len(data))()

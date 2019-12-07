@@ -640,7 +640,6 @@ class PythonScriptingInstance(ScriptingInstance):
 			if self.active_view is None:
 				return 0
 			selected_length = self.active_selection_end - self.active_selection_begin
-			data = str(data)
 			if (len(data) == selected_length) or (selected_length == 0):
 				return self.active_view.write(self.active_selection_begin, data)
 			else:

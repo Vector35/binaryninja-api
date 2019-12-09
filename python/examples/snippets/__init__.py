@@ -12,7 +12,7 @@ from PySide2.QtGui import (QFont, QFontMetrics, QDesktopServices, QKeySequence)
 from binaryninja import user_plugin_path
 from binaryninja.plugin import PluginCommand, MainThreadActionHandler
 from binaryninja.mainthread import execute_on_main_thread
-from binaryninja.log import (log_info, log_warn, log_alert, log_debug)
+from binaryninja.log import (log_error, log_info, log_warn, log_alert, log_debug)
 from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu)
 import numbers
 

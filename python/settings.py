@@ -65,7 +65,7 @@ class Settings(object):
 
 	def __init__(self, instance_id = "default", handle = None):
 		if handle is None:
-			if instance_id is None or instance_id is "":
+			if instance_id is None or instance_id == "":
 				instance_id = "default"
 			self._instance_id = instance_id
 			if instance_id == "default":

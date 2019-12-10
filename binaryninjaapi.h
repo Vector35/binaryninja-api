@@ -2478,19 +2478,12 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
-		void SetScope(const Confidence<BNMemberScope>& scope);
 		Confidence<BNMemberAccess> GetAccess() const;
-		void SetAccess(const Confidence<BNMemberAccess>& access);
-		void SetConst(const Confidence<bool>& cnst);
-		void SetVolatile(const Confidence<bool>& vltl);
-		void SetTypeName(const QualifiedName& name);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
-
-		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
@@ -2557,6 +2550,114 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsValue() const { return GetClass() == ValueTypeClass; }
 		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
 		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
+
+		Ref<Type> WithReplacedStructure(Structure* from, Structure* to);
+		Ref<Type> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
+		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
+	};
+
+	class TypeBuilder
+	{
+		BNTypeBuilder* m_object;
+
+	public:
+		TypeBuilder();
+		TypeBuilder(BNTypeBuilder* type);
+		TypeBuilder(const TypeBuilder& type);
+		TypeBuilder(TypeBuilder&& type);
+		TypeBuilder(Type* type);
+		TypeBuilder& operator=(const TypeBuilder& type);
+		TypeBuilder& operator=(TypeBuilder&& type);
+		TypeBuilder& operator=(Type* type);
+
+		Ref<Type> Finalize();
+
+		BNTypeClass GetClass() const;
+		uint64_t GetWidth() const;
+		size_t GetAlignment() const;
+		QualifiedName GetTypeName() const;
+		Confidence<bool> IsSigned() const;
+		Confidence<bool> IsConst() const;
+		Confidence<bool> IsVolatile() const;
+
+		Confidence<Ref<Type>> GetChildType() const;
+		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+		std::vector<FunctionParameter> GetParameters() const;
+		Confidence<bool> HasVariableArguments() const;
+		Confidence<bool> CanReturn() const;
+		Ref<Structure> GetStructure() const;
+		Ref<Enumeration> GetEnumeration() const;
+		Ref<NamedTypeReference> GetNamedTypeReference() const;
+		Confidence<BNMemberScope> GetScope() const;
+		void SetScope(const Confidence<BNMemberScope>& scope);
+		Confidence<BNMemberAccess> GetAccess() const;
+		void SetAccess(const Confidence<BNMemberAccess>& access);
+		void SetConst(const Confidence<bool>& cnst);
+		void SetVolatile(const Confidence<bool>& vltl);
+		void SetTypeName(const QualifiedName& name);
+		Confidence<int64_t> GetStackAdjustment() const;
+		QualifiedName GetStructureName() const;
+
+		uint64_t GetElementCount() const;
+		uint64_t GetOffset() const;
+
+		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
+
+		std::string GetString(Platform* platform = nullptr) const;
+		std::string GetTypeAndName(const QualifiedName& name) const;
+		std::string GetStringBeforeName(Platform* platform = nullptr) const;
+		std::string GetStringAfterName(Platform* platform = nullptr) const;
+
+		std::vector<InstructionTextToken> GetTokens(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensBeforeName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensAfterName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+
+		static TypeBuilder VoidType();
+		static TypeBuilder BoolType();
+		static TypeBuilder IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
+		static TypeBuilder FloatType(size_t width, const std::string& typeName = "");
+		static TypeBuilder StructureType(Structure* strct);
+		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
+		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
+		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);
+		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
+		static TypeBuilder PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static TypeBuilder PointerType(size_t width, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static TypeBuilder ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
+		static TypeBuilder FunctionType(const Confidence<Ref<Type>>& returnValue,
+			const Confidence<Ref<CallingConvention>>& callingConvention,
+			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
+			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+
+		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
+		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
+		bool IsEnumReference() { return IsReferenceOfType(EnumNamedTypeClass); }
+		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
+		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
+		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+
+		bool IsVoid() const { return GetClass() == VoidTypeClass; }
+		bool IsBool() const { return GetClass() == BoolTypeClass; }
+		bool IsInteger() const { return GetClass() == IntegerTypeClass; }
+		bool IsFloat() const { return GetClass() == FloatTypeClass; }
+		bool IsStructure() const { return GetClass() == StructureTypeClass; }
+		bool IsEnumeration() const { return GetClass() == EnumerationTypeClass; }
+		bool IsPointer() const { return GetClass() == PointerTypeClass; }
+		bool IsArray() const { return GetClass() == ArrayTypeClass; }
+		bool IsFunction() const { return GetClass() == FunctionTypeClass; }
+		bool IsVarArgs() const { return GetClass() == VarArgsTypeClass; }
+		bool IsValue() const { return GetClass() == ValueTypeClass; }
+		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
+		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -2567,11 +2668,8 @@ __attribute__ ((format (printf, 1, 2)))
 		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
 			const QualifiedName& name = QualifiedName());
 		BNNamedTypeReferenceClass GetTypeClass() const;
-		void SetTypeClass(BNNamedTypeReferenceClass cls);
 		std::string GetTypeId() const;
-		void SetTypeId(const std::string& id);
 		QualifiedName GetName() const;
-		void SetName(const QualifiedName& name);
 
 		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
 			const std::string& source, const QualifiedName& name);
@@ -2591,13 +2689,45 @@ __attribute__ ((format (printf, 1, 2)))
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	public:
-		Structure();
 		Structure(BNStructure* s);
-		Structure(BNStructureType type, bool packed = false);
 
 		std::vector<StructureMember> GetMembers() const;
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
+		uint64_t GetWidth() const;
+		size_t GetAlignment() const;
+		bool IsPacked() const;
+		bool IsUnion() const;
+		BNStructureType GetStructureType() const;
+
+		Ref<Structure> WithReplacedStructure(Structure* from, Structure* to);
+		Ref<Structure> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
+		Ref<Structure> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
+	};
+
+	class StructureBuilder
+	{
+		BNStructureBuilder* m_object;
+
+	public:
+		StructureBuilder();
+		StructureBuilder(BNStructureBuilder* s);
+		StructureBuilder(BNStructureType type, bool packed = false);
+		StructureBuilder(const StructureBuilder& s);
+		StructureBuilder(StructureBuilder&& s);
+		StructureBuilder(Structure* s);
+		~StructureBuilder();
+		StructureBuilder& operator=(const StructureBuilder& s);
+		StructureBuilder& operator=(StructureBuilder&& s);
+		StructureBuilder& operator=(Structure* s);
+
+		Ref<Structure> Finalize() const;
+
+		std::vector<StructureMember> GetMembers() const;
+		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
 		void SetWidth(size_t width);
 		size_t GetAlignment() const;
@@ -2623,8 +2753,27 @@ __attribute__ ((format (printf, 1, 2)))
 	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
 	public:
-		Enumeration();
 		Enumeration(BNEnumeration* e);
+
+		std::vector<EnumerationMember> GetMembers() const;
+	};
+
+	class EnumerationBuilder
+	{
+		BNEnumerationBuilder* m_object;
+
+	public:
+		EnumerationBuilder();
+		EnumerationBuilder(BNEnumerationBuilder* e);
+		EnumerationBuilder(const EnumerationBuilder& e);
+		EnumerationBuilder(EnumerationBuilder&& e);
+		EnumerationBuilder(Enumeration* e);
+		~EnumerationBuilder();
+		EnumerationBuilder& operator=(const EnumerationBuilder& e);
+		EnumerationBuilder& operator=(EnumerationBuilder&& e);
+		EnumerationBuilder& operator=(Enumeration* e);
+
+		Ref<Enumeration> Finalize() const;
 
 		std::vector<EnumerationMember> GetMembers() const;
 

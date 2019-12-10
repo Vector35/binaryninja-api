@@ -496,46 +496,10 @@ Confidence<BNMemberScope> Type::GetScope() const
 }
 
 
-void Type::SetScope(const Confidence<BNMemberScope>& scope)
-{
-	BNMemberScopeWithConfidence mc;
-	mc.value = scope.GetValue();
-	mc.confidence = scope.GetConfidence();
-	return BNTypeSetMemberScope(m_object, &mc);
-}
-
-
 Confidence<BNMemberAccess> Type::GetAccess() const
 {
 	BNMemberAccessWithConfidence result = BNTypeGetMemberAccess(m_object);
 	return Confidence<BNMemberAccess>(result.value, result.confidence);
-}
-
-
-void Type::SetAccess(const Confidence<BNMemberAccess>& access)
-{
-	BNMemberAccessWithConfidence mc;
-	mc.value = access.GetValue();
-	mc.confidence = access.GetConfidence();
-	return BNTypeSetMemberAccess(m_object, &mc);
-}
-
-
-void Type::SetConst(const Confidence<bool>& cnst)
-{
-	BNBoolWithConfidence bc;
-	bc.value = cnst.GetValue();
-	bc.confidence = cnst.GetConfidence();
-	BNTypeSetConst(m_object, &bc);
-}
-
-
-void Type::SetVolatile(const Confidence<bool>& vltl)
-{
-	BNBoolWithConfidence bc;
-	bc.value = vltl.GetValue();
-	bc.confidence = vltl.GetConfidence();
-	BNTypeSetVolatile(m_object, &bc);
 }
 
 
@@ -868,15 +832,6 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 }
 
 
-void Type::SetFunctionCanReturn(const Confidence<bool>& canReturn)
-{
-	BNBoolWithConfidence bc;
-	bc.value = canReturn.GetValue();
-	bc.confidence = canReturn.GetConfidence();
-	BNSetFunctionTypeCanReturn(m_object, &bc);
-}
-
-
 string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
@@ -943,14 +898,6 @@ QualifiedName Type::GetTypeName() const
 }
 
 
-void Type::SetTypeName(const QualifiedName& names)
-{
-	BNQualifiedName nameObj = names.GetAPIObject();
-	BNTypeSetTypeName(m_object, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
-}
-
-
 Confidence<Ref<Type>> Type::WithConfidence(uint8_t conf)
 {
 	return Confidence<Ref<Type>>(this, conf);
@@ -966,6 +913,551 @@ QualifiedName Type::GetStructureName() const
 }
 
 
+Ref<Type> Type::WithReplacedStructure(Structure* from, Structure* to)
+{
+	BNType* result = BNTypeWithReplacedStructure(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeType(result);
+		return this;
+	}
+	return new Type(result);
+}
+
+
+Ref<Type> Type::WithReplacedEnumeration(Enumeration* from, Enumeration* to)
+{
+	BNType* result = BNTypeWithReplacedEnumeration(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeType(result);
+		return this;
+	}
+	return new Type(result);
+}
+
+
+Ref<Type> Type::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to)
+{
+	BNType* result = BNTypeWithReplacedNamedTypeReference(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeType(result);
+		return this;
+	}
+	return new Type(result);
+}
+
+
+TypeBuilder::TypeBuilder()
+{
+	m_object = BNCreateVoidTypeBuilder();
+}
+
+
+TypeBuilder::TypeBuilder(BNTypeBuilder* type)
+{
+	m_object = type;
+}
+
+
+TypeBuilder::TypeBuilder(const TypeBuilder& type)
+{
+	m_object = BNDuplicateTypeBuilder(type.m_object);
+}
+
+
+TypeBuilder::TypeBuilder(TypeBuilder&& type)
+{
+	m_object = type.m_object;
+	type.m_object = BNCreateVoidTypeBuilder();
+}
+
+
+TypeBuilder::TypeBuilder(Type* type)
+{
+	m_object = BNCreateTypeBuilderFromType(type->GetObject());
+}
+
+
+TypeBuilder& TypeBuilder::operator=(const TypeBuilder& type)
+{
+	if (this != &type)
+	{
+		BNFreeTypeBuilder(m_object);
+		m_object = BNDuplicateTypeBuilder(type.m_object);
+	}
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::operator=(TypeBuilder&& type)
+{
+	std::swap(m_object, type.m_object);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::operator=(Type* type)
+{
+	BNFreeTypeBuilder(m_object);
+	m_object = BNCreateTypeBuilderFromType(type->GetObject());
+	return *this;
+}
+
+
+Ref<Type> TypeBuilder::Finalize()
+{
+	return new Type(BNFinalizeTypeBuilder(m_object));
+}
+
+
+BNTypeClass TypeBuilder::GetClass() const
+{
+	return BNGetTypeBuilderClass(m_object);
+}
+
+
+uint64_t TypeBuilder::GetWidth() const
+{
+	return BNGetTypeBuilderWidth(m_object);
+}
+
+
+size_t TypeBuilder::GetAlignment() const
+{
+	return BNGetTypeBuilderAlignment(m_object);
+}
+
+
+Confidence<bool> TypeBuilder::IsSigned() const
+{
+	BNBoolWithConfidence result = BNIsTypeBuilderSigned(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+Confidence<bool> TypeBuilder::IsConst() const
+{
+	BNBoolWithConfidence result = BNIsTypeBuilderConst(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+Confidence<BNMemberScope> TypeBuilder::GetScope() const
+{
+	BNMemberScopeWithConfidence result = BNTypeBuilderGetMemberScope(m_object);
+	return Confidence<BNMemberScope>(result.value, result.confidence);
+}
+
+
+void TypeBuilder::SetScope(const Confidence<BNMemberScope>& scope)
+{
+	BNMemberScopeWithConfidence mc;
+	mc.value = scope.GetValue();
+	mc.confidence = scope.GetConfidence();
+	return BNTypeBuilderSetMemberScope(m_object, &mc);
+}
+
+
+Confidence<BNMemberAccess> TypeBuilder::GetAccess() const
+{
+	BNMemberAccessWithConfidence result = BNTypeBuilderGetMemberAccess(m_object);
+	return Confidence<BNMemberAccess>(result.value, result.confidence);
+}
+
+
+void TypeBuilder::SetAccess(const Confidence<BNMemberAccess>& access)
+{
+	BNMemberAccessWithConfidence mc;
+	mc.value = access.GetValue();
+	mc.confidence = access.GetConfidence();
+	return BNTypeBuilderSetMemberAccess(m_object, &mc);
+}
+
+
+void TypeBuilder::SetConst(const Confidence<bool>& cnst)
+{
+	BNBoolWithConfidence bc;
+	bc.value = cnst.GetValue();
+	bc.confidence = cnst.GetConfidence();
+	BNTypeBuilderSetConst(m_object, &bc);
+}
+
+
+void TypeBuilder::SetVolatile(const Confidence<bool>& vltl)
+{
+	BNBoolWithConfidence bc;
+	bc.value = vltl.GetValue();
+	bc.confidence = vltl.GetConfidence();
+	BNTypeBuilderSetVolatile(m_object, &bc);
+}
+
+
+Confidence<Ref<Type>> TypeBuilder::GetChildType() const
+{
+	BNTypeWithConfidence type = BNGetTypeBuilderChildType(m_object);
+	if (type.type)
+		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
+	return nullptr;
+}
+
+
+Confidence<Ref<CallingConvention>> TypeBuilder::GetCallingConvention() const
+{
+	BNCallingConventionWithConfidence cc = BNGetTypeBuilderCallingConvention(m_object);
+	if (cc.convention)
+		return Confidence<Ref<CallingConvention>>(new CoreCallingConvention(cc.convention), cc.confidence);
+	return nullptr;
+}
+
+
+vector<FunctionParameter> TypeBuilder::GetParameters() const
+{
+	size_t count;
+	BNFunctionParameter* types = BNGetTypeBuilderParameters(m_object, &count);
+
+	vector<FunctionParameter> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		FunctionParameter param;
+		param.name = types[i].name;
+		param.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(types[i].type)), types[i].typeConfidence);
+		param.defaultLocation = types[i].defaultLocation;
+		param.location.type = types[i].location.type;
+		param.location.index = types[i].location.index;
+		param.location.storage = types[i].location.storage;
+		result.push_back(param);
+	}
+
+	BNFreeTypeParameterList(types, count);
+	return result;
+}
+
+
+Confidence<bool> TypeBuilder::HasVariableArguments() const
+{
+	BNBoolWithConfidence result = BNTypeBuilderHasVariableArguments(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+Confidence<bool> TypeBuilder::CanReturn() const
+{
+	BNBoolWithConfidence result = BNFunctionTypeBuilderCanReturn(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+Ref<Structure> TypeBuilder::GetStructure() const
+{
+	BNStructure* s = BNGetTypeBuilderStructure(m_object);
+	if (s)
+		return new Structure(s);
+	return nullptr;
+}
+
+
+Ref<Enumeration> TypeBuilder::GetEnumeration() const
+{
+	BNEnumeration* e = BNGetTypeBuilderEnumeration(m_object);
+	if (e)
+		return new Enumeration(e);
+	return nullptr;
+}
+
+
+Ref<NamedTypeReference> TypeBuilder::GetNamedTypeReference() const
+{
+	BNNamedTypeReference* ref = BNGetTypeBuilderNamedTypeReference(m_object);
+	if (ref)
+		return new NamedTypeReference(ref);
+	return nullptr;
+}
+
+
+uint64_t TypeBuilder::GetElementCount() const
+{
+	return BNGetTypeBuilderElementCount(m_object);
+}
+
+
+uint64_t TypeBuilder::GetOffset() const
+{
+	return BNGetTypeBuilderOffset(m_object);
+}
+
+
+Confidence<int64_t> TypeBuilder::GetStackAdjustment() const
+{
+	BNOffsetWithConfidence result = BNGetTypeBuilderStackAdjustment(m_object);
+	return Confidence<int64_t>(result.value, result.confidence);
+}
+
+
+string TypeBuilder::GetString(Platform* platform) const
+{
+	char* str = BNGetTypeBuilderString(m_object, platform ? platform->GetObject() : nullptr);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string TypeBuilder::GetTypeAndName(const QualifiedName& nameList) const
+{
+	BNQualifiedName name = nameList.GetAPIObject();
+	char* outName = BNGetTypeBuilderTypeAndName(m_object, &name);
+	QualifiedName::FreeAPIObject(&name);
+	return outName;
+}
+
+string TypeBuilder::GetStringBeforeName(Platform* platform) const
+{
+	char* str = BNGetTypeBuilderStringBeforeName(m_object, platform ? platform->GetObject() : nullptr);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+string TypeBuilder::GetStringAfterName(Platform* platform) const
+{
+	char* str = BNGetTypeBuilderStringAfterName(m_object, platform ? platform->GetObject() : nullptr);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+vector<InstructionTextToken> TypeBuilder::GetTokens(Platform* platform, uint8_t baseConfidence) const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeBuilderTokens(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+}
+
+
+vector<InstructionTextToken> TypeBuilder::GetTokensBeforeName(Platform* platform, uint8_t baseConfidence) const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeBuilderTokensBeforeName(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+}
+
+
+vector<InstructionTextToken> TypeBuilder::GetTokensAfterName(Platform* platform, uint8_t baseConfidence) const
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetTypeBuilderTokensAfterName(m_object,
+		platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+}
+
+
+TypeBuilder TypeBuilder::VoidType()
+{
+	return TypeBuilder(BNCreateVoidTypeBuilder());
+}
+
+
+TypeBuilder TypeBuilder::BoolType()
+{
+	return TypeBuilder(BNCreateBoolTypeBuilder());
+}
+
+
+TypeBuilder TypeBuilder::IntegerType(size_t width, const Confidence<bool>& sign, const string& altName)
+{
+	BNBoolWithConfidence bc;
+	bc.value = sign.GetValue();
+	bc.confidence = sign.GetConfidence();
+	return TypeBuilder(BNCreateIntegerTypeBuilder(width, &bc, altName.c_str()));
+}
+
+
+TypeBuilder TypeBuilder::FloatType(size_t width, const string& altName)
+{
+	return TypeBuilder(BNCreateFloatTypeBuilder(width, altName.c_str()));
+}
+
+
+TypeBuilder TypeBuilder::StructureType(Structure* strct)
+{
+	return TypeBuilder(BNCreateStructureTypeBuilder(strct->GetObject()));
+}
+
+
+TypeBuilder TypeBuilder::NamedType(NamedTypeReference* ref, size_t width, size_t align)
+{
+	return TypeBuilder(BNCreateNamedTypeReferenceBuilder(ref->GetObject(), width, align));
+}
+
+
+TypeBuilder TypeBuilder::NamedType(const QualifiedName& name, Type* type)
+{
+	return NamedType("", name, type);
+}
+
+
+TypeBuilder TypeBuilder::NamedType(const string& id, const QualifiedName& name, Type* type)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNTypeBuilder* coreObj = BNCreateNamedTypeReferenceBuilderFromTypeAndId(id.c_str(), &nameObj,
+		type ? type->GetObject() : nullptr);
+	QualifiedName::FreeAPIObject(&nameObj);
+	return coreObj ? TypeBuilder(coreObj) : VoidType();
+}
+
+
+TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
+{
+	BNQualifiedName nameObj = name.GetAPIObject();
+	BNTypeBuilder* coreObj = BNCreateNamedTypeReferenceBuilderFromType(view->GetObject(), &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+	return coreObj ? TypeBuilder(coreObj) : VoidType();
+}
+
+
+TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
+{
+	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
+}
+
+
+TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
+	const Confidence<bool>& cnst, const Confidence<bool>& vltl, BNReferenceType refType)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	BNBoolWithConfidence cnstConf;
+	cnstConf.value = cnst.GetValue();
+	cnstConf.confidence = cnst.GetConfidence();
+
+	BNBoolWithConfidence vltlConf;
+	vltlConf.value = vltl.GetValue();
+	vltlConf.confidence = vltl.GetConfidence();
+
+	return TypeBuilder(BNCreatePointerTypeBuilder(arch->GetObject(), &typeConf, &cnstConf, &vltlConf, refType));
+}
+
+
+TypeBuilder TypeBuilder::PointerType(size_t width, const Confidence<Ref<Type>>& type,
+	const Confidence<bool>& cnst, const Confidence<bool>& vltl, BNReferenceType refType)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	BNBoolWithConfidence cnstConf;
+	cnstConf.value = cnst.GetValue();
+	cnstConf.confidence = cnst.GetConfidence();
+
+	BNBoolWithConfidence vltlConf;
+	vltlConf.value = vltl.GetValue();
+	vltlConf.confidence = vltl.GetConfidence();
+
+	return TypeBuilder(BNCreatePointerTypeBuilderOfWidth(width, &typeConf, &cnstConf, &vltlConf, refType));
+}
+
+
+TypeBuilder TypeBuilder::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+	return TypeBuilder(BNCreateArrayTypeBuilder(&typeConf, elem));
+}
+
+
+TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
+	const Confidence<Ref<CallingConvention>>& callingConvention,
+	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg,
+	const Confidence<int64_t>& stackAdjust)
+{
+	BNTypeWithConfidence returnValueConf;
+	returnValueConf.type = returnValue->GetObject();
+	returnValueConf.confidence = returnValue.GetConfidence();
+
+	BNCallingConventionWithConfidence callingConventionConf;
+	callingConventionConf.convention = callingConvention ? callingConvention->GetObject() : nullptr;
+	callingConventionConf.confidence = callingConvention.GetConfidence();
+
+	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
+	for (size_t i = 0; i < params.size(); i++)
+	{
+		paramArray[i].name = (char*)params[i].name.c_str();
+		paramArray[i].type = params[i].type->GetObject();
+		paramArray[i].typeConfidence = params[i].type.GetConfidence();
+		paramArray[i].defaultLocation = params[i].defaultLocation;
+		paramArray[i].location.type = params[i].location.type;
+		paramArray[i].location.index = params[i].location.index;
+		paramArray[i].location.storage = params[i].location.storage;
+	}
+
+	BNBoolWithConfidence varArgConf;
+	varArgConf.value = varArg.GetValue();
+	varArgConf.confidence = varArg.GetConfidence();
+
+	BNOffsetWithConfidence stackAdjustConf;
+	stackAdjustConf.value = stackAdjust.GetValue();
+	stackAdjustConf.confidence = stackAdjust.GetConfidence();
+
+	TypeBuilder type(BNCreateFunctionTypeBuilder(&returnValueConf, &callingConventionConf,
+		paramArray, params.size(), &varArgConf, &stackAdjustConf));
+	delete[] paramArray;
+	return type;
+}
+
+
+void TypeBuilder::SetFunctionCanReturn(const Confidence<bool>& canReturn)
+{
+	BNBoolWithConfidence bc;
+	bc.value = canReturn.GetValue();
+	bc.confidence = canReturn.GetConfidence();
+	BNSetFunctionTypeBuilderCanReturn(m_object, &bc);
+}
+
+
+bool TypeBuilder::IsReferenceOfType(BNNamedTypeReferenceClass refType)
+{
+	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
+}
+
+
+QualifiedName TypeBuilder::GetTypeName() const
+{
+	BNQualifiedName name = BNTypeBuilderGetTypeName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+void TypeBuilder::SetTypeName(const QualifiedName& names)
+{
+	BNQualifiedName nameObj = names.GetAPIObject();
+	BNTypeBuilderSetTypeName(m_object, &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
+}
+
+
+QualifiedName TypeBuilder::GetStructureName() const
+{
+	BNQualifiedName name = BNTypeBuilderGetStructureName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
 NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
 {
 	m_object = nt;
@@ -974,24 +1466,9 @@ NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
 
 NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const string& id, const QualifiedName& names)
 {
-	m_object = BNCreateNamedType();
-	BNSetTypeReferenceClass(m_object, cls);
-	if (id.size() != 0)
-	{
-		BNSetTypeReferenceId(m_object, id.c_str());
-	}
-	if (names.size() != 0)
-	{
-		BNQualifiedName nameObj = names.GetAPIObject();
-		BNSetTypeReferenceName(m_object, &nameObj);
-		QualifiedName::FreeAPIObject(&nameObj);
-	}
-}
-
-
-void NamedTypeReference::SetTypeClass(BNNamedTypeReferenceClass cls)
-{
-	BNSetTypeReferenceClass(m_object, cls);
+	BNQualifiedName nameObj = names.GetAPIObject();
+	m_object = BNCreateNamedType(cls, id.c_str(), &nameObj);
+	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -1007,20 +1484,6 @@ string NamedTypeReference::GetTypeId() const
 	string result = str;
 	BNFreeString(str);
 	return result;
-}
-
-
-void NamedTypeReference::SetTypeId(const string& id)
-{
-	BNSetTypeReferenceId(m_object, id.c_str());
-}
-
-
-void NamedTypeReference::SetName(const QualifiedName& names)
-{
-	BNQualifiedName nameObj = names.GetAPIObject();
-	BNSetTypeReferenceName(m_object, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
 }
 
 
@@ -1054,18 +1517,6 @@ Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDebugTypeReference(BNNam
 {
 	string id = Type::GenerateAutoDebugTypeId(name);
 	return new NamedTypeReference(cls, id, name);
-}
-
-
-Structure::Structure()
-{
-	m_object = BNCreateStructure();
-}
-
-
-Structure::Structure(BNStructureType type, bool packed)
-{
-	m_object = BNCreateStructureWithOptions(type, packed);
 }
 
 
@@ -1113,7 +1564,14 @@ bool Structure::GetMemberByName(const string& name, StructureMember& result) con
 
 bool Structure::GetMemberAtOffset(int64_t offset, StructureMember& result) const
 {
-	BNStructureMember* member = BNGetStructureMemberAtOffset(m_object, offset);
+	size_t i;
+	return GetMemberAtOffset(offset, result, i);
+}
+
+
+bool Structure::GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const
+{
+	BNStructureMember* member = BNGetStructureMemberAtOffset(m_object, offset, &idx);
 	if (member)
 	{
 		result.type = new Type(BNNewTypeReference(member->type));
@@ -1132,21 +1590,9 @@ uint64_t Structure::GetWidth() const
 }
 
 
-void Structure::SetWidth(size_t width)
-{
-	BNSetStructureWidth(m_object, width);
-}
-
-
 size_t Structure::GetAlignment() const
 {
 	return BNGetStructureAlignment(m_object);
-}
-
-
-void Structure::SetAlignment(size_t align)
-{
-	BNSetStructureAlignment(m_object, align);
 }
 
 
@@ -1156,21 +1602,9 @@ bool Structure::IsPacked() const
 }
 
 
-void Structure::SetPacked(bool packed)
-{
-	BNSetStructurePacked(m_object, packed);
-}
-
-
 bool Structure::IsUnion() const
 {
 	return BNIsStructureUnion(m_object);
-}
-
-
-void Structure::SetStructureType(BNStructureType t)
-{
-	BNSetStructureType(m_object, t);
 }
 
 
@@ -1180,48 +1614,266 @@ BNStructureType Structure::GetStructureType() const
 }
 
 
-void Structure::AddMember(const Confidence<Ref<Type>>& type, const string& name)
+Ref<Structure> Structure::WithReplacedStructure(Structure* from, Structure* to)
+{
+	BNStructure* result = BNStructureWithReplacedStructure(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeStructure(result);
+		return this;
+	}
+	return new Structure(result);
+}
+
+
+Ref<Structure> Structure::WithReplacedEnumeration(Enumeration* from, Enumeration* to)
+{
+	BNStructure* result = BNStructureWithReplacedEnumeration(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeStructure(result);
+		return this;
+	}
+	return new Structure(result);
+}
+
+
+Ref<Structure> Structure::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to)
+{
+	BNStructure* result = BNStructureWithReplacedNamedTypeReference(m_object, from->GetObject(), to->GetObject());
+	if (result == m_object)
+	{
+		BNFreeStructure(result);
+		return this;
+	}
+	return new Structure(result);
+}
+
+
+StructureBuilder::StructureBuilder()
+{
+	m_object = BNCreateStructureBuilder();
+}
+
+
+StructureBuilder::StructureBuilder(BNStructureBuilder* s)
+{
+	m_object = s;
+}
+
+
+StructureBuilder::StructureBuilder(BNStructureType type, bool packed)
+{
+	m_object = BNCreateStructureBuilderWithOptions(type, packed);
+}
+
+
+StructureBuilder::StructureBuilder(const StructureBuilder& s)
+{
+	m_object = BNDuplicateStructureBuilder(s.m_object);
+}
+
+
+StructureBuilder::StructureBuilder(StructureBuilder&& s)
+{
+	m_object = s.m_object;
+	s.m_object = BNCreateStructureBuilder();
+}
+
+
+StructureBuilder::StructureBuilder(Structure* s)
+{
+	m_object = BNCreateStructureBuilderFromStructure(s->GetObject());
+}
+
+
+StructureBuilder::~StructureBuilder()
+{
+	BNFreeStructureBuilder(m_object);
+}
+
+
+StructureBuilder& StructureBuilder::operator=(const StructureBuilder& s)
+{
+	if (this != &s)
+	{
+		BNFreeStructureBuilder(m_object);
+		m_object = BNDuplicateStructureBuilder(s.m_object);
+	}
+	return *this;
+}
+
+
+StructureBuilder& StructureBuilder::operator=(StructureBuilder&& s)
+{
+	if (this != &s)
+		std::swap(m_object, s.m_object);
+	return *this;
+}
+
+
+StructureBuilder& StructureBuilder::operator=(Structure* s)
+{
+	BNFreeStructureBuilder(m_object);
+	m_object = BNCreateStructureBuilderFromStructure(s->GetObject());
+	return *this;
+}
+
+
+Ref<Structure> StructureBuilder::Finalize() const
+{
+	return new Structure(BNFinalizeStructureBuilder(m_object));
+}
+
+
+vector<StructureMember> StructureBuilder::GetMembers() const
+{
+	size_t count;
+	BNStructureMember* members = BNGetStructureBuilderMembers(m_object, &count);
+
+	vector<StructureMember> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		StructureMember member;
+		member.type = new Type(BNNewTypeReference(members[i].type));
+		member.name = members[i].name;
+		member.offset = members[i].offset;
+		result.push_back(member);
+	}
+
+	BNFreeStructureMemberList(members, count);
+	return result;
+}
+
+
+bool StructureBuilder::GetMemberByName(const string& name, StructureMember& result) const
+{
+	BNStructureMember* member = BNGetStructureBuilderMemberByName(m_object, name.c_str());
+	if (member)
+	{
+		result.type = new Type(BNNewTypeReference(member->type));
+		result.name = member->name;
+		result.offset = member->offset;
+		BNFreeStructureMember(member);
+		return true;
+	}
+	return false;
+}
+
+
+bool StructureBuilder::GetMemberAtOffset(int64_t offset, StructureMember& result) const
+{
+	size_t i;
+	return GetMemberAtOffset(offset, result, i);
+}
+
+
+bool StructureBuilder::GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const
+{
+	BNStructureMember* member = BNGetStructureBuilderMemberAtOffset(m_object, offset, &idx);
+	if (member)
+	{
+		result.type = new Type(BNNewTypeReference(member->type));
+		result.name = member->name;
+		result.offset = member->offset;
+		BNFreeStructureMember(member);
+		return true;
+	}
+	return false;
+}
+
+
+uint64_t StructureBuilder::GetWidth() const
+{
+	return BNGetStructureBuilderWidth(m_object);
+}
+
+
+void StructureBuilder::SetWidth(size_t width)
+{
+	BNSetStructureBuilderWidth(m_object, width);
+}
+
+
+size_t StructureBuilder::GetAlignment() const
+{
+	return BNGetStructureBuilderAlignment(m_object);
+}
+
+
+void StructureBuilder::SetAlignment(size_t align)
+{
+	BNSetStructureBuilderAlignment(m_object, align);
+}
+
+
+bool StructureBuilder::IsPacked() const
+{
+	return BNIsStructureBuilderPacked(m_object);
+}
+
+
+void StructureBuilder::SetPacked(bool packed)
+{
+	BNSetStructureBuilderPacked(m_object, packed);
+}
+
+
+bool StructureBuilder::IsUnion() const
+{
+	return BNIsStructureBuilderUnion(m_object);
+}
+
+
+void StructureBuilder::SetStructureType(BNStructureType t)
+{
+	BNSetStructureBuilderType(m_object, t);
+}
+
+
+BNStructureType StructureBuilder::GetStructureType() const
+{
+	return BNGetStructureBuilderType(m_object);
+}
+
+
+void StructureBuilder::AddMember(const Confidence<Ref<Type>>& type, const string& name)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureMember(m_object, &tc, name.c_str());
+	BNAddStructureBuilderMember(m_object, &tc, name.c_str());
 }
 
 
-void Structure::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name, uint64_t offset)
+void StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name, uint64_t offset)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureMemberAtOffset(m_object, &tc, name.c_str(), offset);
+	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset);
 }
 
 
-void Structure::RemoveMember(size_t idx)
+void StructureBuilder::RemoveMember(size_t idx)
 {
-	BNRemoveStructureMember(m_object, idx);
+	BNRemoveStructureBuilderMember(m_object, idx);
 }
 
 
-void Structure::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name)
+void StructureBuilder::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNReplaceStructureMember(m_object, idx, &tc, name.c_str());
+	BNReplaceStructureBuilderMember(m_object, idx, &tc, name.c_str());
 }
 
 
 Enumeration::Enumeration(BNEnumeration* e)
 {
 	m_object = e;
-}
-
-
-Enumeration::Enumeration()
-{
-	m_object = BNCreateEnumeration();
 }
 
 
@@ -1246,27 +1898,118 @@ vector<EnumerationMember> Enumeration::GetMembers() const
 }
 
 
-void Enumeration::AddMember(const string& name)
+EnumerationBuilder::EnumerationBuilder()
 {
-	BNAddEnumerationMember(m_object, name.c_str());
+	m_object = BNCreateEnumerationBuilder();
 }
 
 
-void Enumeration::AddMemberWithValue(const string& name, uint64_t value)
+EnumerationBuilder::EnumerationBuilder(BNEnumerationBuilder* e)
 {
-	BNAddEnumerationMemberWithValue(m_object, name.c_str(), value);
+	m_object = e;
 }
 
 
-void Enumeration::RemoveMember(size_t idx)
+EnumerationBuilder::EnumerationBuilder(const EnumerationBuilder& e)
 {
-	BNRemoveEnumerationMember(m_object, idx);
+	m_object = BNDuplicateEnumerationBuilder(e.m_object);
 }
 
 
-void Enumeration::ReplaceMember(size_t idx, const string& name, uint64_t value)
+EnumerationBuilder::EnumerationBuilder(EnumerationBuilder&& e)
 {
-	BNReplaceEnumerationMember(m_object, idx, name.c_str(), value);
+	m_object = e.m_object;
+	e.m_object = BNCreateEnumerationBuilder();
+}
+
+
+EnumerationBuilder::EnumerationBuilder(Enumeration* e)
+{
+	m_object = BNCreateEnumerationBuilderFromEnumeration(e->GetObject());
+}
+
+
+EnumerationBuilder::~EnumerationBuilder()
+{
+	BNFreeEnumerationBuilder(m_object);
+}
+
+
+EnumerationBuilder& EnumerationBuilder::operator=(const EnumerationBuilder& e)
+{
+	if (this != &e)
+	{
+		BNFreeEnumerationBuilder(m_object);
+		m_object = BNDuplicateEnumerationBuilder(e.m_object);
+	}
+	return *this;
+}
+
+
+EnumerationBuilder& EnumerationBuilder::operator=(EnumerationBuilder&& e)
+{
+	if (this != &e)
+		std::swap(m_object, e.m_object);
+	return *this;
+}
+
+
+EnumerationBuilder& EnumerationBuilder::operator=(Enumeration* e)
+{
+	BNFreeEnumerationBuilder(m_object);
+	m_object = BNCreateEnumerationBuilderFromEnumeration(e->GetObject());
+	return *this;
+}
+
+
+Ref<Enumeration> EnumerationBuilder::Finalize() const
+{
+	return new Enumeration(BNFinalizeEnumerationBuilder(m_object));
+}
+
+
+vector<EnumerationMember> EnumerationBuilder::GetMembers() const
+{
+	size_t count;
+	BNEnumerationMember* members = BNGetEnumerationBuilderMembers(m_object, &count);
+
+	vector<EnumerationMember> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		EnumerationMember member;
+		member.name = members[i].name;
+		member.value = members[i].value;
+		member.isDefault = members[i].isDefault;
+		result.push_back(member);
+	}
+
+	BNFreeEnumerationMemberList(members, count);
+	return result;
+}
+
+
+void EnumerationBuilder::AddMember(const string& name)
+{
+	BNAddEnumerationBuilderMember(m_object, name.c_str());
+}
+
+
+void EnumerationBuilder::AddMemberWithValue(const string& name, uint64_t value)
+{
+	BNAddEnumerationBuilderMemberWithValue(m_object, name.c_str(), value);
+}
+
+
+void EnumerationBuilder::RemoveMember(size_t idx)
+{
+	BNRemoveEnumerationBuilderMember(m_object, idx);
+}
+
+
+void EnumerationBuilder::ReplaceMember(size_t idx, const string& name, uint64_t value)
+{
+	BNReplaceEnumerationBuilderMember(m_object, idx, name.c_str(), value);
 }
 
 

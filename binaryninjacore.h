@@ -134,14 +134,17 @@ extern "C"
 	struct BNLowLevelILFunction;
 	struct BNMediumLevelILFunction;
 	struct BNType;
+	struct BNTypeBuilder;
 	struct BNTypeLibrary;
 	struct BNTypeLibraryMapping;
 	struct BNStructure;
+	struct BNStructureBuilder;
 	struct BNTagType;
 	struct BNTag;
 	struct BNTagReference;
 	struct BNNamedTypeReference;
 	struct BNEnumeration;
+	struct BNEnumerationBuilder;
 	struct BNCallingConvention;
 	struct BNPlatform;
 	struct BNAnalysisCompletionEvent;
@@ -3526,8 +3529,27 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNFreeType(BNType* type);
 
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateTypeBuilderFromType(BNType* type);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateVoidTypeBuilder(void);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateBoolTypeBuilder(void);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateIntegerTypeBuilder(size_t width, BNBoolWithConfidence* sign, const char* altName);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateFloatTypeBuilder(size_t width, const char* altName);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateStructureTypeBuilder(BNStructure* s);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilder(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilder(BNArchitecture* arch, BNTypeWithConfidence* type,
+		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilderOfWidth(size_t width, BNTypeWithConfidence* type,
+		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateArrayTypeBuilder(BNTypeWithConfidence* type, uint64_t elem);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateFunctionTypeBuilder(BNTypeWithConfidence* returnValue,
+		BNCallingConventionWithConfidence* callingConvention, BNFunctionParameter* params,
+		size_t paramCount, BNBoolWithConfidence* varArg, BNOffsetWithConfidence* stackAdjust);
+	BINARYNINJACOREAPI BNType* BNFinalizeTypeBuilder(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNTypeBuilder* BNDuplicateTypeBuilder(BNTypeBuilder* type);
+	BINARYNINJACOREAPI char* BNGetTypeBuilderTypeAndName(BNTypeBuilder* type, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNFreeTypeBuilder(BNTypeBuilder* type);
+
 	BINARYNINJACOREAPI BNQualifiedName BNTypeGetTypeName(BNType* nt);
-	BINARYNINJACOREAPI void BNTypeSetTypeName(BNType* type, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeClass(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeWidth(BNType* type);
 	BINARYNINJACOREAPI size_t BNGetTypeAlignment(BNType* type);
@@ -3546,13 +3568,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeOffset(BNType* type);
-	BINARYNINJACOREAPI void BNSetFunctionTypeCanReturn(BNType* type, BNBoolWithConfidence* canReturn);
 	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeGetMemberScope(BNType* type);
-	BINARYNINJACOREAPI void BNTypeSetMemberScope(BNType* type, BNMemberScopeWithConfidence* scope);
 	BINARYNINJACOREAPI BNMemberAccessWithConfidence BNTypeGetMemberAccess(BNType* type);
-	BINARYNINJACOREAPI void BNTypeSetMemberAccess(BNType* type, BNMemberAccessWithConfidence* access);
-	BINARYNINJACOREAPI void BNTypeSetConst(BNType* type, BNBoolWithConfidence* cnst);
-	BINARYNINJACOREAPI void BNTypeSetVolatile(BNType* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeStackAdjustment(BNType* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeGetStructureName(BNType* type);
 
@@ -3566,58 +3583,125 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeTokensAfterName(BNType* type, BNPlatform* platform,
 		uint8_t baseConfidence, size_t* count);
 
+	BINARYNINJACOREAPI BNType* BNTypeWithReplacedStructure(BNType* type, BNStructure* from, BNStructure* to);
+	BINARYNINJACOREAPI BNType* BNTypeWithReplacedEnumeration(BNType* type, BNEnumeration* from, BNEnumeration* to);
+	BINARYNINJACOREAPI BNType* BNTypeWithReplacedNamedTypeReference(BNType* type, BNNamedTypeReference* from, BNNamedTypeReference* to);
+
+	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
+	BINARYNINJACOREAPI void BNTypeBuilderSetTypeName(BNTypeBuilder* type, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNTypeClass BNGetTypeBuilderClass(BNTypeBuilder* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderWidth(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderAlignment(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeBuilderSigned(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeBuilderConst(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeBuilderVolatile(BNTypeBuilder* type);
+	BINARYNINJACOREAPI bool BNIsTypeBuilderFloatingPoint(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNTypeWithConfidence BNGetTypeBuilderChildType(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNCallingConventionWithConfidence BNGetTypeBuilderCallingConvention(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNFunctionParameter* BNGetTypeBuilderParameters(BNTypeBuilder* type, size_t* count);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeBuilderHasVariableArguments(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeBuilderCanReturn(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNStructure* BNGetTypeBuilderStructure(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNEnumeration* BNGetTypeBuilderEnumeration(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeBuilderNamedTypeReference(BNTypeBuilder* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderElementCount(BNTypeBuilder* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
+	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
+	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeBuilderGetMemberScope(BNTypeBuilder* type);
+	BINARYNINJACOREAPI void BNTypeBuilderSetMemberScope(BNTypeBuilder* type, BNMemberScopeWithConfidence* scope);
+	BINARYNINJACOREAPI BNMemberAccessWithConfidence BNTypeBuilderGetMemberAccess(BNTypeBuilder* type);
+	BINARYNINJACOREAPI void BNTypeBuilderSetMemberAccess(BNTypeBuilder* type, BNMemberAccessWithConfidence* access);
+	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);
+	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
+	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetStructureName(BNTypeBuilder* type);
+
+	BINARYNINJACOREAPI char* BNGetTypeBuilderString(BNTypeBuilder* type, BNPlatform* platform);
+	BINARYNINJACOREAPI char* BNGetTypeBuilderStringBeforeName(BNTypeBuilder* type, BNPlatform* platform);
+	BINARYNINJACOREAPI char* BNGetTypeBuilderStringAfterName(BNTypeBuilder* type, BNPlatform* platform);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderTokens(BNTypeBuilder* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderTokensBeforeName(BNTypeBuilder* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderTokensAfterName(BNTypeBuilder* type, BNPlatform* platform,
+		uint8_t baseConfidence, size_t* count);
+
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReference(BNNamedTypeReference* nt, size_t width, size_t align);
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromTypeAndId(const char* id, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromType(BNBinaryView* view, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNNamedTypeReference* BNCreateNamedType(void);
-	BINARYNINJACOREAPI void BNSetTypeReferenceClass(BNNamedTypeReference* nt, BNNamedTypeReferenceClass cls);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilder(BNNamedTypeReference* nt, size_t width, size_t align);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderFromTypeAndId(const char* id, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderFromType(BNBinaryView* view, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNNamedTypeReference* BNCreateNamedType(BNNamedTypeReferenceClass cls, const char* id, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNNamedTypeReferenceClass BNGetTypeReferenceClass(BNNamedTypeReference* nt);
-	BINARYNINJACOREAPI void BNSetTypeReferenceId(BNNamedTypeReference* nt, const char* id);
 	BINARYNINJACOREAPI char* BNGetTypeReferenceId(BNNamedTypeReference* nt);
-	BINARYNINJACOREAPI void BNSetTypeReferenceName(BNNamedTypeReference* nt, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNQualifiedName BNGetTypeReferenceName(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI void BNFreeQualifiedName(BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNFreeNamedTypeReference(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNNewNamedTypeReference(BNNamedTypeReference* nt);
 
-	BINARYNINJACOREAPI BNStructure* BNCreateStructure(void);
-	BINARYNINJACOREAPI BNStructure* BNCreateStructureWithOptions(BNStructureType type, bool packed);
+	BINARYNINJACOREAPI BNStructureBuilder* BNCreateStructureBuilder(void);
+	BINARYNINJACOREAPI BNStructureBuilder* BNCreateStructureBuilderWithOptions(BNStructureType type, bool packed);
+	BINARYNINJACOREAPI BNStructureBuilder* BNCreateStructureBuilderFromStructure(BNStructure* s);
+	BINARYNINJACOREAPI BNStructureBuilder* BNDuplicateStructureBuilder(BNStructureBuilder* s);
+	BINARYNINJACOREAPI BNStructure* BNFinalizeStructureBuilder(BNStructureBuilder* s);
 	BINARYNINJACOREAPI BNStructure* BNNewStructureReference(BNStructure* s);
 	BINARYNINJACOREAPI void BNFreeStructure(BNStructure* s);
+	BINARYNINJACOREAPI void BNFreeStructureBuilder(BNStructureBuilder* s);
 
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMemberByName(BNStructure* s, const char* name);
-	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMemberAtOffset(BNStructure* s, int64_t offset);
+	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMemberAtOffset(BNStructure* s, int64_t offset, size_t* idx);
 	BINARYNINJACOREAPI void BNFreeStructureMember(BNStructureMember* s);
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
 	BINARYNINJACOREAPI uint64_t BNGetStructureWidth(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructureWidth(BNStructure* s, uint64_t width);
 	BINARYNINJACOREAPI size_t BNGetStructureAlignment(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructureAlignment(BNStructure* s, size_t align);
 	BINARYNINJACOREAPI bool BNIsStructurePacked(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructurePacked(BNStructure* s, bool packed);
 	BINARYNINJACOREAPI bool BNIsStructureUnion(BNStructure* s);
-	BINARYNINJACOREAPI void BNSetStructureType(BNStructure* s, BNStructureType type);
 	BINARYNINJACOREAPI BNStructureType BNGetStructureType(BNStructure* s);
 
-	BINARYNINJACOREAPI void BNAddStructureMember(BNStructure* s, BNTypeWithConfidence* type, const char* name);
-	BINARYNINJACOREAPI void BNAddStructureMemberAtOffset(BNStructure* s, BNTypeWithConfidence* type,
+	BINARYNINJACOREAPI BNStructure* BNStructureWithReplacedStructure(BNStructure* s, BNStructure* from, BNStructure* to);
+	BINARYNINJACOREAPI BNStructure* BNStructureWithReplacedEnumeration(BNStructure* s, BNEnumeration* from, BNEnumeration* to);
+	BINARYNINJACOREAPI BNStructure* BNStructureWithReplacedNamedTypeReference(BNStructure* s,
+		BNNamedTypeReference* from, BNNamedTypeReference* to);
+
+	BINARYNINJACOREAPI BNStructureMember* BNGetStructureBuilderMemberByName(BNStructureBuilder* s, const char* name);
+	BINARYNINJACOREAPI BNStructureMember* BNGetStructureBuilderMemberAtOffset(BNStructureBuilder* s, int64_t offset, size_t* idx);
+	BINARYNINJACOREAPI BNStructureMember* BNGetStructureBuilderMembers(BNStructureBuilder* s, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNGetStructureBuilderWidth(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderWidth(BNStructureBuilder* s, uint64_t width);
+	BINARYNINJACOREAPI size_t BNGetStructureBuilderAlignment(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderAlignment(BNStructureBuilder* s, size_t align);
+	BINARYNINJACOREAPI bool BNIsStructureBuilderPacked(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderPacked(BNStructureBuilder* s, bool packed);
+	BINARYNINJACOREAPI bool BNIsStructureBuilderUnion(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderType(BNStructureBuilder* s, BNStructureType type);
+	BINARYNINJACOREAPI BNStructureType BNGetStructureBuilderType(BNStructureBuilder* s);
+
+	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, BNTypeWithConfidence* type, const char* name);
+	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s, BNTypeWithConfidence* type,
 		const char* name, uint64_t offset);
-	BINARYNINJACOREAPI void BNRemoveStructureMember(BNStructure* s, size_t idx);
-	BINARYNINJACOREAPI void BNReplaceStructureMember(BNStructure* s, size_t idx, BNTypeWithConfidence* type,
+	BINARYNINJACOREAPI void BNRemoveStructureBuilderMember(BNStructureBuilder* s, size_t idx);
+	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx, BNTypeWithConfidence* type,
 		const char* name);
 
-	BINARYNINJACOREAPI BNEnumeration* BNCreateEnumeration(void);
+	BINARYNINJACOREAPI BNEnumerationBuilder* BNCreateEnumerationBuilder(void);
+	BINARYNINJACOREAPI BNEnumerationBuilder* BNCreateEnumerationBuilderFromEnumeration(BNEnumeration* e);
+	BINARYNINJACOREAPI BNEnumerationBuilder* BNDuplicateEnumerationBuilder(BNEnumerationBuilder* e);
+	BINARYNINJACOREAPI BNEnumeration* BNFinalizeEnumerationBuilder(BNEnumerationBuilder* e);
 	BINARYNINJACOREAPI BNEnumeration* BNNewEnumerationReference(BNEnumeration* e);
 	BINARYNINJACOREAPI void BNFreeEnumeration(BNEnumeration* e);
+	BINARYNINJACOREAPI void BNFreeEnumerationBuilder(BNEnumerationBuilder* e);
 
 	BINARYNINJACOREAPI BNEnumerationMember* BNGetEnumerationMembers(BNEnumeration* e, size_t* count);
 	BINARYNINJACOREAPI void BNFreeEnumerationMemberList(BNEnumerationMember* members, size_t count);
 
-	BINARYNINJACOREAPI void BNAddEnumerationMember(BNEnumeration* e, const char* name);
-	BINARYNINJACOREAPI void BNAddEnumerationMemberWithValue(BNEnumeration* e, const char* name, uint64_t value);
-	BINARYNINJACOREAPI void BNRemoveEnumerationMember(BNEnumeration* e, size_t idx);
-	BINARYNINJACOREAPI void BNReplaceEnumerationMember(BNEnumeration* e, size_t idx, const char* name, uint64_t value);
+	BINARYNINJACOREAPI BNEnumerationMember* BNGetEnumerationBuilderMembers(BNEnumerationBuilder* e, size_t* count);
+
+	BINARYNINJACOREAPI void BNAddEnumerationBuilderMember(BNEnumerationBuilder* e, const char* name);
+	BINARYNINJACOREAPI void BNAddEnumerationBuilderMemberWithValue(BNEnumerationBuilder* e, const char* name, uint64_t value);
+	BINARYNINJACOREAPI void BNRemoveEnumerationBuilderMember(BNEnumerationBuilder* e, size_t idx);
+	BINARYNINJACOREAPI void BNReplaceEnumerationBuilderMember(BNEnumerationBuilder* e, size_t idx, const char* name, uint64_t value);
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,

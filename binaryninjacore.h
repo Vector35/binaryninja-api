@@ -1919,10 +1919,10 @@ extern "C"
 	{
 		void* context;
 		void (*freeObject)(void* ctxt);
-		bool (*isValidForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext** typeCtx,
+		bool (*isValidForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext* typeCtx,
 			size_t ctxCount);
 		BNDisassemblyTextLine* (*getLinesForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext** typeCtx,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCtx,
 			size_t ctxCount);
 	};
 
@@ -4197,10 +4197,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNDataRenderer* BNCreateDataRenderer(BNCustomDataRenderer* renderer);
 	BINARYNINJACOREAPI BNDataRenderer* BNNewDataRendererReference(BNDataRenderer* renderer);
 	BINARYNINJACOREAPI bool BNIsValidForData(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-		BNTypeContext** typeCtx, size_t ctxCount);
+		BNTypeContext* typeCtx, size_t ctxCount);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLinesForData(void* ctxt, BNBinaryView* view, uint64_t addr,
 		BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
-		BNTypeContext** typeCtx, size_t ctxCount);
+		BNTypeContext* typeCtx, size_t ctxCount);
 	BINARYNINJACOREAPI void BNFreeDataRenderer(BNDataRenderer* renderer);
 	BINARYNINJACOREAPI BNDataRendererContainer* BNGetDataRendererContainer();
 	BINARYNINJACOREAPI void BNRegisterGenericDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);

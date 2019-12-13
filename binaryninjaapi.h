@@ -4714,9 +4714,9 @@ __attribute__ ((format (printf, 1, 2)))
 	class DataRenderer: public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
 	{
 		static bool IsValidForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			BNTypeContext** typeCtx, size_t ctxCount);
+			BNTypeContext* typeCtx, size_t ctxCount);
 		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext** typeCxt,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCxt,
 			size_t ctxCount);
 		static void FreeCallback(void* ctxt);
 	public:

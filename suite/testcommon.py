@@ -7,6 +7,9 @@ import inspect
 import binaryninja as binja
 from binaryninja.binaryview import BinaryViewType, BinaryView
 from binaryninja.filemetadata import FileMetadata
+from binaryninja.datarender import DataRenderer
+from binaryninja.function import InstructionTextToken, DisassemblyTextLine
+from binaryninja.enums import InstructionTextTokenType
 import subprocess
 import re
 
@@ -614,6 +617,32 @@ class TestBuilder(Builder):
         file_name = self.unpackage_file("helloworld")
         try:
             bv = binja.BinaryViewType['ELF'].open(file_name)
+            disass = bv.linear_disassembly
+            retinfo = []
+            for i in disass:
+                i = str(i)
+                i = remove_low_confidence(i)
+                retinfo.append(i)
+            return retinfo
+        finally:
+            self.delete_package("helloworld")
+
+    def test_data_renderer(self):
+        """data renderer produced different result"""
+        file_name = self.unpackage_file("helloworld")
+        class ElfHeaderDataRenderer(DataRenderer):
+            def __init__(self):
+                DataRenderer.__init__(self)
+            def perform_is_valid_for_data(self, ctxt, view, addr, type, context):
+                return DataRenderer.is_type_of_struct_name(type, "Elf64_Header", context)
+            def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context):
+                prefix.append(InstructionTextToken(InstructionTextTokenType.TextToken, "I'm in ur Elf64_Header"))
+                return [DisassemblyTextLine(prefix, addr)]
+            def __del__(self):
+                pass
+        try:
+            bv = binja.BinaryViewType['ELF'].open(file_name)
+            ElfHeaderDataRenderer().register_type_specific()
             disass = bv.linear_disassembly
             retinfo = []
             for i in disass:

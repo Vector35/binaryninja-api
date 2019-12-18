@@ -2589,19 +2589,19 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
-		void SetScope(const Confidence<BNMemberScope>& scope);
+		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		Confidence<BNMemberAccess> GetAccess() const;
-		void SetAccess(const Confidence<BNMemberAccess>& access);
-		void SetConst(const Confidence<bool>& cnst);
-		void SetVolatile(const Confidence<bool>& vltl);
-		void SetTypeName(const QualifiedName& name);
+		TypeBuilder& SetAccess(const Confidence<BNMemberAccess>& access);
+		TypeBuilder& SetConst(const Confidence<bool>& cnst);
+		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
+		TypeBuilder& SetTypeName(const QualifiedName& name);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
 
-		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
+		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
@@ -2729,18 +2729,18 @@ __attribute__ ((format (printf, 1, 2)))
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
-		void SetWidth(size_t width);
+		StructureBuilder& SetWidth(size_t width);
 		size_t GetAlignment() const;
-		void SetAlignment(size_t align);
+		StructureBuilder& SetAlignment(size_t align);
 		bool IsPacked() const;
-		void SetPacked(bool packed);
+		StructureBuilder& SetPacked(bool packed);
 		bool IsUnion() const;
-		void SetStructureType(BNStructureType type);
+		StructureBuilder& SetStructureType(BNStructureType type);
 		BNStructureType GetStructureType() const;
-		void AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
-		void AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
-		void RemoveMember(size_t idx);
-		void ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
+		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
+		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
+		StructureBuilder& RemoveMember(size_t idx);
+		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -2777,10 +2777,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<EnumerationMember> GetMembers() const;
 
-		void AddMember(const std::string& name);
-		void AddMemberWithValue(const std::string& name, uint64_t value);
-		void RemoveMember(size_t idx);
-		void ReplaceMember(size_t idx, const std::string& name, uint64_t value);
+		EnumerationBuilder& AddMember(const std::string& name);
+		EnumerationBuilder& AddMemberWithValue(const std::string& name, uint64_t value);
+		EnumerationBuilder& RemoveMember(size_t idx);
+		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,

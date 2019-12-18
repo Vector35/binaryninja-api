@@ -1051,12 +1051,13 @@ Confidence<BNMemberScope> TypeBuilder::GetScope() const
 }
 
 
-void TypeBuilder::SetScope(const Confidence<BNMemberScope>& scope)
+TypeBuilder& TypeBuilder::SetScope(const Confidence<BNMemberScope>& scope)
 {
 	BNMemberScopeWithConfidence mc;
 	mc.value = scope.GetValue();
 	mc.confidence = scope.GetConfidence();
-	return BNTypeBuilderSetMemberScope(m_object, &mc);
+	BNTypeBuilderSetMemberScope(m_object, &mc);
+	return *this;
 }
 
 
@@ -1067,30 +1068,33 @@ Confidence<BNMemberAccess> TypeBuilder::GetAccess() const
 }
 
 
-void TypeBuilder::SetAccess(const Confidence<BNMemberAccess>& access)
+TypeBuilder& TypeBuilder::SetAccess(const Confidence<BNMemberAccess>& access)
 {
 	BNMemberAccessWithConfidence mc;
 	mc.value = access.GetValue();
 	mc.confidence = access.GetConfidence();
-	return BNTypeBuilderSetMemberAccess(m_object, &mc);
+	BNTypeBuilderSetMemberAccess(m_object, &mc);
+	return *this;
 }
 
 
-void TypeBuilder::SetConst(const Confidence<bool>& cnst)
+TypeBuilder& TypeBuilder::SetConst(const Confidence<bool>& cnst)
 {
 	BNBoolWithConfidence bc;
 	bc.value = cnst.GetValue();
 	bc.confidence = cnst.GetConfidence();
 	BNTypeBuilderSetConst(m_object, &bc);
+	return *this;
 }
 
 
-void TypeBuilder::SetVolatile(const Confidence<bool>& vltl)
+TypeBuilder& TypeBuilder::SetVolatile(const Confidence<bool>& vltl)
 {
 	BNBoolWithConfidence bc;
 	bc.value = vltl.GetValue();
 	bc.confidence = vltl.GetConfidence();
 	BNTypeBuilderSetVolatile(m_object, &bc);
+	return *this;
 }
 
 
@@ -1417,12 +1421,13 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 }
 
 
-void TypeBuilder::SetFunctionCanReturn(const Confidence<bool>& canReturn)
+TypeBuilder& TypeBuilder::SetFunctionCanReturn(const Confidence<bool>& canReturn)
 {
 	BNBoolWithConfidence bc;
 	bc.value = canReturn.GetValue();
 	bc.confidence = canReturn.GetConfidence();
 	BNSetFunctionTypeBuilderCanReturn(m_object, &bc);
+	return *this;
 }
 
 
@@ -1441,11 +1446,12 @@ QualifiedName TypeBuilder::GetTypeName() const
 }
 
 
-void TypeBuilder::SetTypeName(const QualifiedName& names)
+TypeBuilder& TypeBuilder::SetTypeName(const QualifiedName& names)
 {
 	BNQualifiedName nameObj = names.GetAPIObject();
 	BNTypeBuilderSetTypeName(m_object, &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
+	return *this;
 }
 
 
@@ -1790,9 +1796,10 @@ uint64_t StructureBuilder::GetWidth() const
 }
 
 
-void StructureBuilder::SetWidth(size_t width)
+StructureBuilder& StructureBuilder::SetWidth(size_t width)
 {
 	BNSetStructureBuilderWidth(m_object, width);
+	return *this;
 }
 
 
@@ -1802,9 +1809,10 @@ size_t StructureBuilder::GetAlignment() const
 }
 
 
-void StructureBuilder::SetAlignment(size_t align)
+StructureBuilder& StructureBuilder::SetAlignment(size_t align)
 {
 	BNSetStructureBuilderAlignment(m_object, align);
+	return *this;
 }
 
 
@@ -1814,9 +1822,10 @@ bool StructureBuilder::IsPacked() const
 }
 
 
-void StructureBuilder::SetPacked(bool packed)
+StructureBuilder& StructureBuilder::SetPacked(bool packed)
 {
 	BNSetStructureBuilderPacked(m_object, packed);
+	return *this;
 }
 
 
@@ -1826,9 +1835,10 @@ bool StructureBuilder::IsUnion() const
 }
 
 
-void StructureBuilder::SetStructureType(BNStructureType t)
+StructureBuilder& StructureBuilder::SetStructureType(BNStructureType t)
 {
 	BNSetStructureBuilderType(m_object, t);
+	return *this;
 }
 
 
@@ -1838,36 +1848,40 @@ BNStructureType StructureBuilder::GetStructureType() const
 }
 
 
-void StructureBuilder::AddMember(const Confidence<Ref<Type>>& type, const string& name)
+StructureBuilder& StructureBuilder::AddMember(const Confidence<Ref<Type>>& type, const string& name)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
 	BNAddStructureBuilderMember(m_object, &tc, name.c_str());
+	return *this;
 }
 
 
-void StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name, uint64_t offset)
+StructureBuilder& StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name, uint64_t offset)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
 	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset);
+	return *this;
 }
 
 
-void StructureBuilder::RemoveMember(size_t idx)
+StructureBuilder& StructureBuilder::RemoveMember(size_t idx)
 {
 	BNRemoveStructureBuilderMember(m_object, idx);
+	return *this;
 }
 
 
-void StructureBuilder::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name)
+StructureBuilder& StructureBuilder::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
 	BNReplaceStructureBuilderMember(m_object, idx, &tc, name.c_str());
+	return *this;
 }
 
 
@@ -1989,27 +2003,31 @@ vector<EnumerationMember> EnumerationBuilder::GetMembers() const
 }
 
 
-void EnumerationBuilder::AddMember(const string& name)
+EnumerationBuilder& EnumerationBuilder::AddMember(const string& name)
 {
 	BNAddEnumerationBuilderMember(m_object, name.c_str());
+	return *this;
 }
 
 
-void EnumerationBuilder::AddMemberWithValue(const string& name, uint64_t value)
+EnumerationBuilder& EnumerationBuilder::AddMemberWithValue(const string& name, uint64_t value)
 {
 	BNAddEnumerationBuilderMemberWithValue(m_object, name.c_str(), value);
+	return *this;
 }
 
 
-void EnumerationBuilder::RemoveMember(size_t idx)
+EnumerationBuilder& EnumerationBuilder::RemoveMember(size_t idx)
 {
 	BNRemoveEnumerationBuilderMember(m_object, idx);
+	return *this;
 }
 
 
-void EnumerationBuilder::ReplaceMember(size_t idx, const string& name, uint64_t value)
+EnumerationBuilder& EnumerationBuilder::ReplaceMember(size_t idx, const string& name, uint64_t value)
 {
 	BNReplaceEnumerationBuilderMember(m_object, idx, name.c_str(), value);
+	return *this;
 }
 
 

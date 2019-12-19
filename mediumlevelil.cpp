@@ -165,12 +165,19 @@ vector<uint64_t> MediumLevelILFunction::GetOperandList(ExprId expr, size_t listO
 }
 
 
-ExprId MediumLevelILFunction::AddLabelList(const vector<BNMediumLevelILLabel*>& labels)
+ExprId MediumLevelILFunction::AddLabelMap(const map<uint64_t, BNMediumLevelILLabel*>& labels)
 {
+	uint64_t* valueList = new uint64_t[labels.size()];
 	BNMediumLevelILLabel** labelList = new BNMediumLevelILLabel*[labels.size()];
-	for (size_t i = 0; i < labels.size(); i++)
-		labelList[i] = labels[i];
-	ExprId result = (ExprId)BNMediumLevelILAddLabelList(m_object, labelList, labels.size());
+	size_t i = 0;
+	for (auto& j : labels)
+	{
+		valueList[i] = j.first;
+		labelList[i] = j.second;
+		i++;
+	}
+	ExprId result = (ExprId)BNMediumLevelILAddLabelMap(m_object, valueList, labelList, labels.size());
+	delete[] valueList;
 	delete[] labelList;
 	return result;
 }

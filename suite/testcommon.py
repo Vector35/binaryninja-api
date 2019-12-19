@@ -189,8 +189,29 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL: {}".format(func.start, ins.address, str(ins.mapped_medium_level_il)))
                     retinfo.append("Function: {:x} Instruction: {:x} Value: {}".format(func.start, ins.address, str(ins.value)))
                     retinfo.append("Function: {:x} Instruction: {:x} Possible Values: {}".format(func.start, ins.address, str(ins.possible_values)))
-                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands: {}".format(func.start, ins.address, str(ins.prefix_operands)))
-                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands: {}".format(func.start, ins.address, str(ins.postfix_operands)))
+
+                    prefixList = []
+                    for i in ins.prefix_operands:
+                        if isinstance(i, dict):
+                            contents = []
+                            for j in sorted(i.keys()):
+                                contents.append((j, i[j]))
+                            prefixList.append(str(contents))
+                        else:
+                            prefixList.append(i)
+                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands: {}".format(func.start, ins.address, str(prefixList)))
+
+                    postfixList = []
+                    for i in ins.postfix_operands:
+                        if isinstance(i, dict):
+                            contents = []
+                            for j in sorted(i.keys()):
+                                contents.append((j, i[j]))
+                            postfixList.append(str(contents))
+                        else:
+                            postfixList.append(i)
+                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands: {}".format(func.start, ins.address, str(postfixList)))
+
                     retinfo.append("Function: {:x} Instruction: {:x} SSA form: {}".format(func.start, ins.address, str(ins.ssa_form)))
                     retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
         return fixOutput(retinfo)
@@ -236,15 +257,25 @@ class BinaryViewTestBuilder(Builder):
                             prefixList.append(str(round(i, 21)))
                         elif isinstance(i, float):
                             prefixList.append(str(round(i, 11)))
+                        elif isinstance(i, dict):
+                            contents = []
+                            for j in sorted(i.keys()):
+                                contents.append((j, i[j]))
+                            prefixList.append(str(contents))
                         else:
                             prefixList.append(str(i))
                     retinfo.append("Function: {:x} Instruction: {:x} Prefix operands:  {}".format(func.start, ins.address, str(sorted(prefixList))))
                     postfixList = []
-                    for i in ins.prefix_operands:
+                    for i in ins.postfix_operands:
                         if isinstance(i, float) and 'e' in str(i):
                             postfixList.append(str(round(i, 21)))
                         elif isinstance(i, float):
                             postfixList.append(str(round(i, 11)))
+                        elif isinstance(i, dict):
+                            contents = []
+                            for j in sorted(i.keys()):
+                                contents.append((j, i[j]))
+                            postfixList.append(str(contents))
                         else:
                             postfixList.append(str(i))
 

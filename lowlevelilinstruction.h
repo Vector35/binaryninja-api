@@ -158,6 +158,7 @@ namespace BinaryNinja
 		SSARegisterStackLowLevelOperand,
 		SSAFlagLowLevelOperand,
 		IndexListLowLevelOperand,
+		IndexMapLowLevelOperand,
 		ExprListLowLevelOperand,
 		RegisterOrFlagListLowLevelOperand,
 		SSARegisterListLowLevelOperand,
@@ -218,7 +219,7 @@ namespace BinaryNinja
 		OutputRegisterOrFlagListLowLevelOperandUsage,
 		OutputSSARegisterOrFlagListLowLevelOperandUsage,
 		SourceMemoryVersionsLowLevelOperandUsage,
-		TargetListLowLevelOperandUsage,
+		TargetsLowLevelOperandUsage,
 		RegisterStackAdjustmentsLowLevelOperandUsage,
 		OffsetLowLevelOperandUsage
 	};
@@ -383,6 +384,33 @@ namespace BinaryNinja
 		size_t operator[](size_t i) const;
 
 		operator std::vector<size_t>() const;
+	};
+
+	class LowLevelILIndexMap
+	{
+		struct ListIterator
+		{
+			LowLevelILIntegerList::const_iterator pos;
+			bool operator==(const ListIterator& a) const { return pos == a.pos; }
+			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
+			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			ListIterator& operator++() { ++pos; ++pos; return *this; }
+			const std::pair<uint64_t, size_t> operator*();
+		};
+
+		LowLevelILIntegerList m_list;
+
+	public:
+		typedef ListIterator const_iterator;
+
+		LowLevelILIndexMap(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+
+		const_iterator begin() const;
+		const_iterator end() const;
+		size_t size() const;
+		size_t operator[](uint64_t value) const;
+
+		operator std::map<uint64_t, size_t>() const;
 	};
 
 	class LowLevelILInstructionList
@@ -577,6 +605,7 @@ namespace BinaryNinja
 		SSARegisterStack GetRawOperandAsPartialSSARegisterStackSource(size_t operand) const;
 		SSAFlag GetRawOperandAsSSAFlag(size_t operand) const;
 		LowLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
+		LowLevelILIndexMap GetRawOperandAsIndexMap(size_t operand) const;
 		LowLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
 		LowLevelILRegisterOrFlagList GetRawOperandAsRegisterOrFlagList(size_t operand) const;
 		LowLevelILSSARegisterList GetRawOperandAsSSARegisterList(size_t operand) const;
@@ -731,7 +760,7 @@ namespace BinaryNinja
 		template <BNLowLevelILOperation N> LowLevelILRegisterOrFlagList GetOutputRegisterOrFlagList() const { return As<N>().GetOutputRegisterOrFlagList(); }
 		template <BNLowLevelILOperation N> LowLevelILSSARegisterOrFlagList GetOutputSSARegisterOrFlagList() const { return As<N>().GetOutputSSARegisterOrFlagList(); }
 		template <BNLowLevelILOperation N> LowLevelILIndexList GetSourceMemoryVersions() const { return As<N>().GetSourceMemoryVersions(); }
-		template <BNLowLevelILOperation N> LowLevelILIndexList GetTargetList() const { return As<N>().GetTargetList(); }
+		template <BNLowLevelILOperation N> LowLevelILIndexMap GetTargets() const { return As<N>().GetTargets(); }
 		template <BNLowLevelILOperation N> std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const { return As<N>().GetRegisterStackAdjustments(); }
 
 		template <BNLowLevelILOperation N> void SetDestSSAVersion(size_t version) { As<N>().SetDestSSAVersion(version); }
@@ -796,7 +825,7 @@ namespace BinaryNinja
 		LowLevelILRegisterOrFlagList GetOutputRegisterOrFlagList() const;
 		LowLevelILSSARegisterOrFlagList GetOutputSSARegisterOrFlagList() const;
 		LowLevelILIndexList GetSourceMemoryVersions() const;
-		LowLevelILIndexList GetTargetList() const;
+		LowLevelILIndexMap GetTargets() const;
 		std::map<uint32_t, int32_t> GetRegisterStackAdjustments() const;
 	};
 
@@ -828,6 +857,7 @@ namespace BinaryNinja
 		SSARegisterStack GetSSARegisterStack() const;
 		SSAFlag GetSSAFlag() const;
 		LowLevelILIndexList GetIndexList() const;
+		LowLevelILIndexMap GetIndexMap() const;
 		LowLevelILInstructionList GetExprList() const;
 		LowLevelILSSARegisterList GetSSARegisterList() const;
 		LowLevelILSSARegisterStackList GetSSARegisterStackList() const;
@@ -1104,7 +1134,7 @@ namespace BinaryNinja
 	template <> struct LowLevelILInstructionAccessor<LLIL_JUMP_TO>: public LowLevelILInstructionBase
 	{
 		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILIndexList GetTargetList() const { return GetRawOperandAsIndexList(1); }
+		LowLevelILIndexMap GetTargets() const { return GetRawOperandAsIndexMap(1); }
 	};
 	template <> struct LowLevelILInstructionAccessor<LLIL_CALL>: public LowLevelILInstructionBase
 	{

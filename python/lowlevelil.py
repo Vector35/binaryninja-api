@@ -550,7 +550,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_ZX: [("src", "expr")],
 		LowLevelILOperation.LLIL_LOW_PART: [("src", "expr")],
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
-		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
 		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
 		LowLevelILOperation.LLIL_TAILCALL: [("dest", "expr")],
@@ -784,6 +784,16 @@ class LowLevelILInstruction(object):
 					if adjust & 0x80000000:
 						adjust |= ~0x80000000
 					value[func.arch.get_reg_stack_name(reg_stack)] = adjust
+				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "target_map":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = {}
+				for j in range(count.value // 2):
+					key = operand_list[j * 2]
+					target = operand_list[(j * 2) + 1]
+					value[key] = target
 				core.BNLowLevelILFreeOperandList(operand_list)
 			self._operands.append(value)
 			self.__dict__[name] = value

@@ -60,7 +60,7 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType>
 		{FalseTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 		{DestMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
 		{SourceMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-		{TargetListMediumLevelOperandUsage, IndexListMediumLevelOperand},
+		{TargetsMediumLevelOperandUsage, IndexMapMediumLevelOperand},
 		{SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
 		{OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
 		{OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
@@ -121,7 +121,7 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_ADDRESS_OF, {SourceVariableMediumLevelOperandUsage}},
 		{MLIL_ADDRESS_OF_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
 		{MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
-		{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetListMediumLevelOperandUsage}},
+		{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
 		{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
 		{MLIL_CALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
 			ParameterExprsMediumLevelOperandUsage}},
@@ -280,6 +280,7 @@ static unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperan
 				{
 				case SSAVariableMediumLevelOperand:
 				case IndexListMediumLevelOperand:
+				case IndexMapMediumLevelOperand:
 				case VariableListMediumLevelOperand:
 				case SSAVariableListMediumLevelOperand:
 				case ExprListMediumLevelOperand:
@@ -503,6 +504,64 @@ MediumLevelILIndexList::operator vector<size_t>() const
 	vector<size_t> result;
 	for (auto i : *this)
 		result.push_back(i);
+	return result;
+}
+
+
+const pair<uint64_t, size_t> MediumLevelILIndexMap::ListIterator::operator*()
+{
+	MediumLevelILIntegerList::const_iterator cur = pos;
+	uint64_t value = *cur;
+	++cur;
+	size_t target = (size_t)*cur;
+	return pair<uint64_t, size_t>(value, target);
+}
+
+
+MediumLevelILIndexMap::MediumLevelILIndexMap(MediumLevelILFunction* func,
+	const BNMediumLevelILInstruction& instr, size_t count): m_list(func, instr, count & (~1))
+{
+}
+
+
+MediumLevelILIndexMap::const_iterator MediumLevelILIndexMap::begin() const
+{
+	const_iterator result;
+	result.pos = m_list.begin();
+	return result;
+}
+
+
+MediumLevelILIndexMap::const_iterator MediumLevelILIndexMap::end() const
+{
+	const_iterator result;
+	result.pos = m_list.end();
+	return result;
+}
+
+
+size_t MediumLevelILIndexMap::size() const
+{
+	return m_list.size() / 2;
+}
+
+
+size_t MediumLevelILIndexMap::operator[](uint64_t value) const
+{
+	for (auto iter = begin(); iter != end(); ++iter)
+	{
+		if ((*iter).first == value)
+			return (*iter).second;
+	}
+	throw MediumLevelILInstructionAccessException();
+}
+
+
+MediumLevelILIndexMap::operator map<uint64_t, size_t>() const
+{
+	map<uint64_t, size_t> result;
+	for (auto& i : *this)
+		result[i.first] = i.second;
 	return result;
 }
 
@@ -749,6 +808,14 @@ MediumLevelILIndexList MediumLevelILOperand::GetIndexList() const
 }
 
 
+MediumLevelILIndexMap MediumLevelILOperand::GetIndexMap() const
+{
+	if (m_type != IndexMapMediumLevelOperand)
+		throw MediumLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsIndexMap(m_operandIndex);
+}
+
+
 MediumLevelILVariableList MediumLevelILOperand::GetVariableList() const
 {
 	if (m_type != VariableListMediumLevelOperand)
@@ -938,6 +1005,12 @@ SSAVariable MediumLevelILInstructionBase::GetRawOperandAsPartialSSAVariableSourc
 MediumLevelILIndexList MediumLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
 {
 	return MediumLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+}
+
+
+MediumLevelILIndexMap MediumLevelILInstructionBase::GetRawOperandAsIndexMap(size_t operand) const
+{
+	return MediumLevelILIndexMap(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
 }
 
 
@@ -1425,7 +1498,6 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	const std::function<ExprId(const MediumLevelILInstruction& subExpr)>& subExprHandler) const
 {
 	vector<ExprId> params;
-	vector<BNMediumLevelILLabel*> labelList;
 	BNMediumLevelILLabel* labelA;
 	BNMediumLevelILLabel* labelB;
 	switch (operation)
@@ -1664,14 +1736,17 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
 			subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case MLIL_JUMP_TO:
-		for (auto target : GetTargetList<MLIL_JUMP_TO>())
 		{
-			labelA = dest->GetLabelForSourceInstruction(target);
-			if (!labelA)
-				return dest->Jump(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), *this);
-			labelList.push_back(labelA);
+			map<uint64_t, BNMediumLevelILLabel*> labelList;
+			for (auto target : GetTargets<MLIL_JUMP_TO>())
+			{
+				labelA = dest->GetLabelForSourceInstruction(target.second);
+				if (!labelA)
+					return dest->Jump(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), *this);
+				labelList[target.first] = labelA;
+			}
+			return dest->JumpTo(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), labelList, *this);
 		}
-		return dest->JumpTo(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), labelList, *this);
 	case MLIL_GOTO:
 		labelA = dest->GetLabelForSourceInstruction(GetTarget<MLIL_GOTO>());
 		if (!labelA)
@@ -1961,11 +2036,11 @@ size_t MediumLevelILInstruction::GetSourceMemoryVersion() const
 }
 
 
-MediumLevelILIndexList MediumLevelILInstruction::GetTargetList() const
+MediumLevelILIndexMap MediumLevelILInstruction::GetTargets() const
 {
 	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetListMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexList(operandIndex);
+	if (GetOperandIndexForUsage(TargetsMediumLevelOperandUsage, operandIndex))
+		return GetRawOperandAsIndexMap(operandIndex);
 	throw MediumLevelILInstructionAccessException();
 }
 
@@ -2502,10 +2577,10 @@ ExprId MediumLevelILFunction::Jump(ExprId dest, const ILSourceLocation& loc)
 }
 
 
-ExprId MediumLevelILFunction::JumpTo(ExprId dest, const vector<BNMediumLevelILLabel*>& targets,
+ExprId MediumLevelILFunction::JumpTo(ExprId dest, const map<uint64_t, BNMediumLevelILLabel*>& targets,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_JUMP_TO, loc, 0, dest, targets.size(), AddLabelList(targets));
+	return AddExprWithLocation(MLIL_JUMP_TO, loc, 0, dest, targets.size() * 2, AddLabelMap(targets));
 }
 
 

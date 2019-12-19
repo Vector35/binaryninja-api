@@ -3468,7 +3468,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
+		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
@@ -3562,7 +3562,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void MarkLabel(BNLowLevelILLabel& label);
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
-		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
+		ExprId AddLabelMap(const std::map<uint64_t, BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t> operands);
 		ExprId AddRegisterOrFlagList(const std::vector<RegisterOrFlag>& regs);
@@ -3792,7 +3792,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId JumpTo(ExprId dest, const std::vector<BNMediumLevelILLabel*>& targets,
+		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNMediumLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
@@ -3897,7 +3897,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId AddInstruction(ExprId expr);
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
-		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
+		ExprId AddLabelMap(const std::map<uint64_t, BNMediumLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t>& operands);
 		ExprId AddVariableList(const std::vector<Variable>& vars);

@@ -184,12 +184,18 @@ vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOper
 }
 
 
-ExprId LowLevelILFunction::AddLabelList(const vector<BNLowLevelILLabel*>& labels)
+ExprId LowLevelILFunction::AddLabelMap(const map<uint64_t, BNLowLevelILLabel*>& labels)
 {
+	uint64_t* valueList = new uint64_t[labels.size()];
 	BNLowLevelILLabel** labelList = new BNLowLevelILLabel*[labels.size()];
-	for (size_t i = 0; i < labels.size(); i++)
-		labelList[i] = labels[i];
-	ExprId result = (ExprId)BNLowLevelILAddLabelList(m_object, labelList, labels.size());
+	size_t i = 0;
+	for (auto& j : labels)
+	{
+		valueList[i] = j.first;
+		labelList[i] = j.second;
+		i++;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddLabelMap(m_object, valueList, labelList, labels.size());
 	delete[] labelList;
 	return result;
 }

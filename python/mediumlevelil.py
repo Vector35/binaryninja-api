@@ -170,7 +170,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
 		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
-		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
 		MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
@@ -334,6 +334,16 @@ class MediumLevelILInstruction(object):
 				value = []
 				for j in range(count.value):
 					value.append(MediumLevelILInstruction(func, operand_list[j]))
+				core.BNMediumLevelILFreeOperandList(operand_list)
+			elif operand_type == "target_map":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
+				i += 1
+				value = {}
+				for j in range(count.value // 2):
+					key = operand_list[j * 2]
+					target = operand_list[(j * 2) + 1]
+					value[key] = target
 				core.BNMediumLevelILFreeOperandList(operand_list)
 			self._operands.append(value)
 			self.__dict__[name] = value

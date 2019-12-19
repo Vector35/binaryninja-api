@@ -3219,7 +3219,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNPrepareToCopyLowLevelILBasicBlock(BNLowLevelILFunction* func, BNBasicBlock* block);
 	BINARYNINJACOREAPI BNLowLevelILLabel* BNGetLabelForLowLevelILSourceInstruction(BNLowLevelILFunction* func, size_t instr);
 
-	BINARYNINJACOREAPI size_t BNLowLevelILAddLabelList(BNLowLevelILFunction* func, BNLowLevelILLabel** labels, size_t count);
+	BINARYNINJACOREAPI size_t BNLowLevelILAddLabelMap(BNLowLevelILFunction* func, uint64_t* values,
+		BNLowLevelILLabel** labels, size_t count);
 	BINARYNINJACOREAPI size_t BNLowLevelILAddOperandList(BNLowLevelILFunction* func, uint64_t* operands, size_t count);
 	BINARYNINJACOREAPI uint64_t* BNLowLevelILGetOperandList(BNLowLevelILFunction* func, size_t expr, size_t operand,
 	                                                        size_t* count);
@@ -3344,8 +3345,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNMediumLevelILLabel* BNGetLabelForMediumLevelILSourceInstruction(BNMediumLevelILFunction* func,
 		size_t instr);
 
-	BINARYNINJACOREAPI size_t BNMediumLevelILAddLabelList(BNMediumLevelILFunction* func,
-		BNMediumLevelILLabel** labels, size_t count);
+	BINARYNINJACOREAPI size_t BNMediumLevelILAddLabelMap(BNMediumLevelILFunction* func,
+		uint64_t* values, BNMediumLevelILLabel** labels, size_t count);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddOperandList(BNMediumLevelILFunction* func,
 		uint64_t* operands, size_t count);
 	BINARYNINJACOREAPI uint64_t* BNMediumLevelILGetOperandList(BNMediumLevelILFunction* func, size_t expr,

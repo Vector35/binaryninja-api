@@ -84,7 +84,7 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType>
 		{OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
 		{OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
 		{SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
-		{TargetListLowLevelOperandUsage, IndexListLowLevelOperand},
+		{TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
 		{RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand}
 	};
 
@@ -144,7 +144,7 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_FLAG_SSA, {SourceSSAFlagLowLevelOperandUsage}},
 		{LLIL_FLAG_BIT_SSA, {SourceSSAFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
 		{LLIL_JUMP, {DestExprLowLevelOperandUsage}},
-		{LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetListLowLevelOperandUsage}},
+		{LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetsLowLevelOperandUsage}},
 		{LLIL_CALL, {DestExprLowLevelOperandUsage}},
 		{LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage,
 			RegisterStackAdjustmentsLowLevelOperandUsage}},
@@ -288,6 +288,7 @@ static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage
 				case SSARegisterStackLowLevelOperand:
 				case SSAFlagLowLevelOperand:
 				case IndexListLowLevelOperand:
+				case IndexMapLowLevelOperand:
 				case SSARegisterListLowLevelOperand:
 				case SSARegisterStackListLowLevelOperand:
 				case SSAFlagListLowLevelOperand:
@@ -736,6 +737,64 @@ LowLevelILIndexList::operator vector<size_t>() const
 	vector<size_t> result;
 	for (auto i : *this)
 		result.push_back(i);
+	return result;
+}
+
+
+const pair<uint64_t, size_t> LowLevelILIndexMap::ListIterator::operator*()
+{
+	LowLevelILIntegerList::const_iterator cur = pos;
+	uint64_t value = *cur;
+	++cur;
+	size_t target = (size_t)*cur;
+	return pair<uint64_t, size_t>(value, target);
+}
+
+
+LowLevelILIndexMap::LowLevelILIndexMap(LowLevelILFunction* func,
+	const BNLowLevelILInstruction& instr, size_t count): m_list(func, instr, count & (~1))
+{
+}
+
+
+LowLevelILIndexMap::const_iterator LowLevelILIndexMap::begin() const
+{
+	const_iterator result;
+	result.pos = m_list.begin();
+	return result;
+}
+
+
+LowLevelILIndexMap::const_iterator LowLevelILIndexMap::end() const
+{
+	const_iterator result;
+	result.pos = m_list.end();
+	return result;
+}
+
+
+size_t LowLevelILIndexMap::size() const
+{
+	return m_list.size() / 2;
+}
+
+
+size_t LowLevelILIndexMap::operator[](uint64_t value) const
+{
+	for (auto iter = begin(); iter != end(); ++iter)
+	{
+		if ((*iter).first == value)
+			return (*iter).second;
+	}
+	throw LowLevelILInstructionAccessException();
+}
+
+
+LowLevelILIndexMap::operator map<uint64_t, size_t>() const
+{
+	map<uint64_t, size_t> result;
+	for (auto& i : *this)
+		result[i.first] = i.second;
 	return result;
 }
 
@@ -1218,6 +1277,14 @@ LowLevelILIndexList LowLevelILOperand::GetIndexList() const
 }
 
 
+LowLevelILIndexMap LowLevelILOperand::GetIndexMap() const
+{
+	if (m_type != IndexMapLowLevelOperand)
+		throw LowLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsIndexMap(m_operandIndex);
+}
+
+
 LowLevelILInstructionList LowLevelILOperand::GetExprList() const
 {
 	if (m_type != ExprListLowLevelOperand)
@@ -1454,6 +1521,12 @@ SSAFlag LowLevelILInstructionBase::GetRawOperandAsSSAFlag(size_t operand) const
 LowLevelILIndexList LowLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
 {
 	return LowLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+}
+
+
+LowLevelILIndexMap LowLevelILInstructionBase::GetRawOperandAsIndexMap(size_t operand) const
+{
+	return LowLevelILIndexMap(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
 }
 
 
@@ -1938,7 +2011,6 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest) const
 ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	const std::function<ExprId(const LowLevelILInstruction& subExpr)>& subExprHandler) const
 {
-	vector<BNLowLevelILLabel*> labelList;
 	vector<ExprId> params;
 	BNLowLevelILLabel* labelA;
 	BNLowLevelILLabel* labelB;
@@ -2060,14 +2132,17 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_RET:
 		return dest->Return(subExprHandler(GetDestExpr<LLIL_RET>()), *this);
 	case LLIL_JUMP_TO:
-		for (auto target : GetTargetList<LLIL_JUMP_TO>())
 		{
-			labelA = dest->GetLabelForSourceInstruction(target);
-			if (!labelA)
-				return dest->Jump(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), *this);
-			labelList.push_back(labelA);
+			map<uint64_t, BNLowLevelILLabel*> labelList;
+			for (auto target : GetTargets<LLIL_JUMP_TO>())
+			{
+				labelA = dest->GetLabelForSourceInstruction(target.second);
+				if (!labelA)
+					return dest->Jump(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), *this);
+				labelList[target.first] = labelA;
+			}
+			return dest->JumpTo(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), labelList, *this);
 		}
-		return dest->JumpTo(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), labelList, *this);
 	case LLIL_GOTO:
 		labelA = dest->GetLabelForSourceInstruction(GetTarget<LLIL_GOTO>());
 		if (!labelA)
@@ -2663,11 +2738,11 @@ LowLevelILIndexList LowLevelILInstruction::GetSourceMemoryVersions() const
 }
 
 
-LowLevelILIndexList LowLevelILInstruction::GetTargetList() const
+LowLevelILIndexMap LowLevelILInstruction::GetTargets() const
 {
 	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetListLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexList(operandIndex);
+	if (GetOperandIndexForUsage(TargetsLowLevelOperandUsage, operandIndex))
+		return GetRawOperandAsIndexMap(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -3173,10 +3248,10 @@ ExprId LowLevelILFunction::Jump(ExprId dest, const ILSourceLocation& loc)
 }
 
 
-ExprId LowLevelILFunction::JumpTo(ExprId dest, const vector<BNLowLevelILLabel*>& targets,
+ExprId LowLevelILFunction::JumpTo(ExprId dest, const map<uint64_t, BNLowLevelILLabel*>& targets,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_JUMP_TO, loc, 0, 0, dest, targets.size(), AddLabelList(targets));
+	return AddExprWithLocation(LLIL_JUMP_TO, loc, 0, 0, dest, targets.size() * 2, AddLabelMap(targets));
 }
 
 

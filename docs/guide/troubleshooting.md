@@ -41,10 +41,6 @@ Next, if running a python plugin, make sure the python requirements are met by y
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
-## Python 3.8
-
-Unfortunately, Python 3.8 has come out in some rolling distributions though many applications are still incompatible. In particular, Pyside2 has a serious [compatibility issue](https://bugreports.qt.io/browse/PYSIDE-939) that need to be resolved before it will work with Python 3.8. There are two options to run Binary Ninja on a system with Python 3.8. First, install a compatible python (3.7 or below) and specify that version in your [settings](/getting-started/#settings). Second, if you are running on the [development channel](/getting-started/#updates) at version 1.2.1957 or later, we have a work-around that will let python 3.8 work with the core Binary Ninja APIs but will not allow for any UI plugins that rely on pyside2. Note that you may need to switch to the QT Download Provider (search settings for "provider") to even switch to the development branch in the first place with a broken python.
-
 ## Platforms
 
 The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
@@ -64,7 +60,29 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 - If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store. 
 
 
-### OS X
+### MacOS
+
+#### Xcode Installed Python 3
+
+If you're running Catlina MacOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
+
+1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
+1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
+
+```
+{
+	"downloadClient" :
+	{
+		"providerName" : "QtDownloadProvider"
+	},
+	"python" :
+	{
+		"interpreter" : "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7/lib/libpython3.7.dylib"
+	}
+}
+```
+
+#### Old MacOS
 
 While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
 
@@ -148,3 +166,4 @@ stdenv.mkDerivation rec {
 [FAQ]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
 [unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
+

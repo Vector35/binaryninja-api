@@ -797,9 +797,7 @@ PossibleValueSet HighLevelILInstructionBase::GetPossibleValues(const set<BNDataF
 
 Confidence<Ref<Type>> HighLevelILInstructionBase::GetType() const
 {
-	if (!HasMediumLevelIL())
-		return nullptr;
-	return GetMediumLevelILSSAForm().GetType();
+	return function->GetExprType(exprIndex);
 }
 
 

@@ -4244,6 +4244,9 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<DisassemblyTextLine> GetExprText(ExprId expr, bool asFullAst = true);
 		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr, bool asFullAst = true);
 
+		Confidence<Ref<Type>> GetExprType(size_t expr);
+		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);
+
 		void VisitAllExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func);
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);

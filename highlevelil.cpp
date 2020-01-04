@@ -295,6 +295,21 @@ vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(const HighLevelILIn
 }
 
 
+Confidence<Ref<Type>> HighLevelILFunction::GetExprType(size_t expr)
+{
+	BNTypeWithConfidence result = BNGetHighLevelILExprType(m_object, expr);
+	if (!result.type)
+		return nullptr;
+	return Confidence<Ref<Type>>(new Type(result.type), result.confidence);
+}
+
+
+Confidence<Ref<Type>> HighLevelILFunction::GetExprType(const HighLevelILInstruction& expr)
+{
+	return GetExprType(expr.exprIndex);
+}
+
+
 void HighLevelILFunction::VisitAllExprs(
 	const function<bool(const HighLevelILInstruction& expr)>& func)
 {

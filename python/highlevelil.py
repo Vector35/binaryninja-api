@@ -29,6 +29,7 @@ from binaryninja import function
 from binaryninja import lowlevelil
 from binaryninja import mediumlevelil
 from binaryninja import basicblock
+from binaryninja import types
 
 # 2-3 compatibility
 from binaryninja import range
@@ -467,10 +468,13 @@ class HighLevelILInstruction(object):
 	@property
 	def expr_type(self):
 		"""Type of expression"""
-		mlil = self.mlil
-		if mlil is None:
-			return None
-		return mlil.expr_type
+		result = core.BNGetHighLevelILExprType(self._function.handle, self._expr_index)
+		if result.type:
+			platform = None
+			if self._function.source_function:
+				platform = self._function.source_function.platform
+			return types.Type(result.type, platform = platform, confidence = result.confidence)
+		return None
 
 	def get_possible_values(self, options = []):
 		mlil = self.mlil

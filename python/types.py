@@ -573,6 +573,16 @@ class Type(object):
 			result = core.BNGetTypeStackAdjustment(self._handle)
 		return SizeWithConfidence(result.value, confidence = result.confidence)
 
+	@property
+	def registered_name(self):
+		"""Name of type registered to binary view, if any (read-only)"""
+		if self._mutable:
+			return None
+		name = core.BNGetRegisteredTypeName(self._handle)
+		if not name:
+			return None
+		return NamedTypeReference(handle = name)
+
 	def __len__(self):
 		return self.width
 
@@ -582,6 +592,9 @@ class Type(object):
 			platform = self._platform.handle
 		if self._mutable:
 			return core.BNGetTypeBuilderString(self._handle, platform)
+		name = self.registered_name
+		if name is not None:
+			return self.get_string_before_name() + " " + str(name.name) + self.get_string_after_name()
 		return core.BNGetTypeString(self._handle, platform)
 
 	def __repr__(self):

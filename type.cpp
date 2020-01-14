@@ -913,6 +913,15 @@ QualifiedName Type::GetStructureName() const
 }
 
 
+Ref<NamedTypeReference> Type::GetRegisteredName() const
+{
+	BNNamedTypeReference* name = BNGetRegisteredTypeName(m_object);
+	if (!name)
+		return nullptr;
+	return new NamedTypeReference(name);
+}
+
+
 Ref<Type> Type::WithReplacedStructure(Structure* from, Structure* to)
 {
 	BNType* result = BNTypeWithReplacedStructure(m_object, from->GetObject(), to->GetObject());

@@ -2481,6 +2481,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<BNMemberAccess> GetAccess() const;
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
+		Ref<NamedTypeReference> GetRegisteredName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;

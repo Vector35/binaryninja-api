@@ -4079,18 +4079,18 @@ __attribute__ ((format (printf, 1, 2)))
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemPhi(size_t dest, const std::vector<size_t>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StructField(size_t size, ExprId src, uint64_t offset,
+		ExprId StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DerefField(size_t size, ExprId src, uint64_t offset,
+		ExprId DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DerefSSA(size_t size, ExprId src, size_t srcMemVersion,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset,
+		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset, size_t memberIndex,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());

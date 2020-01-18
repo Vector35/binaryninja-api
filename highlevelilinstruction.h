@@ -85,6 +85,7 @@ namespace BinaryNinja
 		HighExprHighLevelOperandUsage,
 		LowExprHighLevelOperandUsage,
 		OffsetHighLevelOperandUsage,
+		MemberIndexHighLevelOperandUsage,
 		ConstantHighLevelOperandUsage,
 		VectorHighLevelOperandUsage,
 		IntrinsicHighLevelOperandUsage,
@@ -390,6 +391,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetHighExpr() const { return As<N>().GetHighExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetLowExpr() const { return As<N>().GetLowExpr(); }
 		template <BNHighLevelILOperation N> uint64_t GetOffset() const { return As<N>().GetOffset(); }
+		template <BNHighLevelILOperation N> size_t GetMemberIndex() const { return As<N>().GetMemberIndex(); }
 		template <BNHighLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
 		template <BNHighLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
 		template <BNHighLevelILOperation N> uint32_t GetIntrinsic() const { return As<N>().GetIntrinsic(); }
@@ -443,6 +445,7 @@ namespace BinaryNinja
 		HighLevelILInstruction GetHighExpr() const;
 		HighLevelILInstruction GetLowExpr() const;
 		uint64_t GetOffset() const;
+		size_t GetMemberIndex() const;
 		int64_t GetConstant() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
@@ -628,11 +631,13 @@ namespace BinaryNinja
 	{
 		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
 		uint64_t GetOffset() const { return GetRawOperandAsInteger(1); }
+		size_t GetMemberIndex() const { return GetRawOperandAsIndex(2); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_DEREF_FIELD>: public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
 		uint64_t GetOffset() const { return GetRawOperandAsInteger(1); }
+		size_t GetMemberIndex() const { return GetRawOperandAsIndex(2); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_DEREF_SSA>: public HighLevelILInstructionBase
 	{
@@ -646,6 +651,7 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(1); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(1, version); }
 		uint64_t GetOffset() const { return GetRawOperandAsInteger(2); }
+		size_t GetMemberIndex() const { return GetRawOperandAsIndex(3); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_ARRAY_INDEX>: public HighLevelILInstructionBase
 	{

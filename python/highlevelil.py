@@ -102,14 +102,14 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_VAR_SSA: [("var", "var_ssa")],
 		HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
 		HighLevelILOperation.HLIL_MEM_PHI: [("dest", "int"), ("src", "int_list")],
-		HighLevelILOperation.HLIL_STRUCT_FIELD: [("src", "expr"), ("offset", "int")],
+		HighLevelILOperation.HLIL_STRUCT_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
 		HighLevelILOperation.HLIL_ARRAY_INDEX: [("src", "expr"), ("index", "expr")],
 		HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: [("src", "expr"), ("src_memory", "int"), ("index", "expr")],
 		HighLevelILOperation.HLIL_SPLIT: [("high", "expr"), ("low", "expr")],
 		HighLevelILOperation.HLIL_DEREF: [("src", "expr")],
-		HighLevelILOperation.HLIL_DEREF_FIELD: [("src", "expr"), ("offset", "int")],
+		HighLevelILOperation.HLIL_DEREF_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
 		HighLevelILOperation.HLIL_DEREF_SSA: [("src", "expr"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [("src", "expr"), ("src_memory", "int"), ("offset", "int")],
+		HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index")],
 		HighLevelILOperation.HLIL_ADDRESS_OF: [("src", "expr")],
 		HighLevelILOperation.HLIL_CONST: [("constant", "int")],
 		HighLevelILOperation.HLIL_CONST_PTR: [("constant", "int")],
@@ -257,6 +257,10 @@ class HighLevelILInstruction(object):
 					value.append(mediumlevelil.SSAVariable(function.Variable.from_identifier(self._function.source_function,
 						var_id), var_version))
 				core.BNHighLevelILFreeOperandList(operand_list)
+			elif operand_type == "member_index":
+				value = instr.operands[i]
+				if (value & (1 << 63)) != 0:
+					value = None
 			self._operands.append(value)
 			self.__dict__[name] = value
 			i += 1

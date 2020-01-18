@@ -54,6 +54,7 @@ unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
 		{HighExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{LowExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{OffsetHighLevelOperandUsage, IntegerHighLevelOperand},
+		{MemberIndexHighLevelOperandUsage, IndexHighLevelOperand},
 		{ConstantHighLevelOperandUsage, IntegerHighLevelOperand},
 		{VectorHighLevelOperandUsage, IntegerHighLevelOperand},
 		{IntrinsicHighLevelOperandUsage, IntrinsicHighLevelOperand},
@@ -104,16 +105,18 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
 		{HLIL_VAR_SSA, {SSAVariableHighLevelOperandUsage}},
 		{HLIL_VAR_PHI, {DestSSAVariableHighLevelOperandUsage, SourceSSAVariablesHighLevelOperandUsage}},
 		{HLIL_MEM_PHI, {DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionsHighLevelOperandUsage}},
-		{HLIL_STRUCT_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
+		{HLIL_STRUCT_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage,
+			MemberIndexHighLevelOperandUsage}},
 		{HLIL_ARRAY_INDEX, {SourceExprHighLevelOperandUsage, IndexExprHighLevelOperandUsage}},
 		{HLIL_ARRAY_INDEX_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
 			IndexExprHighLevelOperandUsage}},
 		{HLIL_SPLIT, {HighExprHighLevelOperandUsage, LowExprHighLevelOperandUsage}},
 		{HLIL_DEREF, {SourceExprHighLevelOperandUsage}},
-		{HLIL_DEREF_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
+		{HLIL_DEREF_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage,
+			MemberIndexHighLevelOperandUsage}},
 		{HLIL_DEREF_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
 		{HLIL_DEREF_FIELD_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
-			OffsetHighLevelOperandUsage}},
+			OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
 		{HLIL_ADDRESS_OF, {SourceExprHighLevelOperandUsage}},
 		{HLIL_CALL, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
 		{HLIL_SYSCALL, {ParameterExprsHighLevelOperandUsage}},
@@ -1155,7 +1158,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->MemPhi(GetDestMemoryVersion<HLIL_MEM_PHI>(), GetSourceMemoryVersions<HLIL_MEM_PHI>(), *this);
 	case HLIL_STRUCT_FIELD:
 		return dest->StructField(size, subExprHandler(GetSourceExpr<HLIL_STRUCT_FIELD>()),
-			GetOffset<HLIL_STRUCT_FIELD>(), *this);
+			GetOffset<HLIL_STRUCT_FIELD>(), GetMemberIndex<HLIL_STRUCT_FIELD>(), *this);
 	case HLIL_ARRAY_INDEX:
 		return dest->ArrayIndex(size, subExprHandler(GetSourceExpr<HLIL_ARRAY_INDEX>()),
 			subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX>()), *this);
@@ -1170,13 +1173,14 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->Deref(size, subExprHandler(GetSourceExpr<HLIL_DEREF>()), *this);
 	case HLIL_DEREF_FIELD:
 		return dest->DerefField(size, subExprHandler(GetSourceExpr<HLIL_DEREF_FIELD>()),
-			GetOffset<HLIL_DEREF_FIELD>(), *this);
+			GetOffset<HLIL_DEREF_FIELD>(), GetMemberIndex<HLIL_DEREF_FIELD>(), *this);
 	case HLIL_DEREF_SSA:
 		return dest->DerefSSA(size, subExprHandler(GetSourceExpr<HLIL_DEREF_SSA>()),
 			GetSourceMemoryVersion<HLIL_DEREF_SSA>(), *this);
 	case HLIL_DEREF_FIELD_SSA:
 		return dest->DerefFieldSSA(size, subExprHandler(GetSourceExpr<HLIL_DEREF_FIELD_SSA>()),
-			GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>(), GetOffset<HLIL_DEREF_FIELD_SSA>(), *this);
+			GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>(), GetOffset<HLIL_DEREF_FIELD_SSA>(),
+			GetMemberIndex<HLIL_DEREF_FIELD_SSA>(), *this);
 	case HLIL_ADDRESS_OF:
 		return dest->AddressOf(subExprHandler(GetSourceExpr<HLIL_ADDRESS_OF>()), *this);
 	case HLIL_CALL:
@@ -1474,7 +1478,11 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return true;
 		if (other.GetSourceExpr<HLIL_STRUCT_FIELD>() < GetSourceExpr<HLIL_STRUCT_FIELD>())
 			return false;
-		return GetOffset<HLIL_STRUCT_FIELD>() < other.GetOffset<HLIL_STRUCT_FIELD>();
+		if (GetOffset<HLIL_STRUCT_FIELD>() < other.GetOffset<HLIL_STRUCT_FIELD>())
+			return true;
+		if (other.GetOffset<HLIL_STRUCT_FIELD>() < GetOffset<HLIL_STRUCT_FIELD>())
+			return false;
+		return GetMemberIndex<HLIL_STRUCT_FIELD>() < other.GetMemberIndex<HLIL_STRUCT_FIELD>();
 	case HLIL_ARRAY_INDEX:
 		if (size < other.size)
 			return true;
@@ -1518,7 +1526,11 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return true;
 		if (other.GetSourceExpr<HLIL_DEREF_FIELD>() < GetSourceExpr<HLIL_DEREF_FIELD>())
 			return false;
-		return GetOffset<HLIL_DEREF_FIELD>() < other.GetOffset<HLIL_DEREF_FIELD>();
+		if (GetOffset<HLIL_DEREF_FIELD>() < other.GetOffset<HLIL_DEREF_FIELD>())
+			return true;
+		if (other.GetOffset<HLIL_DEREF_FIELD>() < GetOffset<HLIL_DEREF_FIELD>())
+			return false;
+		return GetMemberIndex<HLIL_DEREF_FIELD>() < other.GetMemberIndex<HLIL_DEREF_FIELD>();
 	case HLIL_DEREF_SSA:
 		if (size < other.size)
 			return true;
@@ -1541,6 +1553,10 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (GetOffset<HLIL_DEREF_FIELD_SSA>() < other.GetOffset<HLIL_DEREF_FIELD_SSA>())
 			return true;
 		if (other.GetOffset<HLIL_DEREF_FIELD_SSA>() < GetOffset<HLIL_DEREF_FIELD_SSA>())
+			return false;
+		if (GetMemberIndex<HLIL_DEREF_FIELD_SSA>() < other.GetMemberIndex<HLIL_DEREF_FIELD_SSA>())
+			return true;
+		if (other.GetMemberIndex<HLIL_DEREF_FIELD_SSA>() < GetMemberIndex<HLIL_DEREF_FIELD_SSA>())
 			return false;
 		return GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>() < other.GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>();
 	case HLIL_ADDRESS_OF:
@@ -1958,6 +1974,15 @@ uint64_t HighLevelILInstruction::GetOffset() const
 }
 
 
+size_t HighLevelILInstruction::GetMemberIndex() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(MemberIndexHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsIndex(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 int64_t HighLevelILInstruction::GetConstant() const
 {
 	size_t operandIndex;
@@ -2233,9 +2258,10 @@ ExprId HighLevelILFunction::MemPhi(size_t dest, const vector<size_t>& sources, c
 }
 
 
-ExprId HighLevelILFunction::StructField(size_t size, ExprId src, uint64_t offset, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
+	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_STRUCT_FIELD, loc, size, src, offset);
+	return AddExprWithLocation(HLIL_STRUCT_FIELD, loc, size, src, offset, memberIndex);
 }
 
 
@@ -2264,9 +2290,10 @@ ExprId HighLevelILFunction::Deref(size_t size, ExprId src, const ILSourceLocatio
 }
 
 
-ExprId HighLevelILFunction::DerefField(size_t size, ExprId src, uint64_t offset, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
+	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_DEREF_FIELD, loc, size, src, offset);
+	return AddExprWithLocation(HLIL_DEREF_FIELD, loc, size, src, offset, memberIndex);
 }
 
 
@@ -2277,9 +2304,9 @@ ExprId HighLevelILFunction::DerefSSA(size_t size, ExprId src, size_t srcMemVersi
 
 
 ExprId HighLevelILFunction::DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion,
-	uint64_t offset, const ILSourceLocation& loc)
+	uint64_t offset, size_t memberIndex, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_DEREF_FIELD_SSA, loc, size, src, srcMemVersion, offset);
+	return AddExprWithLocation(HLIL_DEREF_FIELD_SSA, loc, size, src, srcMemVersion, offset, memberIndex);
 }
 
 

@@ -3048,17 +3048,20 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
+		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
+		void SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
 
+		Confidence<Ref<Type>> GetCallTypeAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int64_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
 		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);

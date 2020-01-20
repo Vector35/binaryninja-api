@@ -2225,6 +2225,17 @@ class Function(object):
 		core.BNSetAutoCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
 			adjust.value, adjust.confidence)
 
+	def set_call_type_adjustment(self, addr, adjust_type, arch=None):
+		if arch is None:
+			arch = self.arch
+		if adjust_type is None:
+			tc = None
+		else:
+			tc = core.BNTypeWithConfidence()
+			tc.type = adjust_type.handle
+			tc.confidence = adjust_type.confidence
+		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
+
 	def set_call_stack_adjustment(self, addr, adjust, arch=None):
 		if arch is None:
 			arch = self.arch
@@ -2255,6 +2266,15 @@ class Function(object):
 			adjust = types.RegisterStackAdjustmentWithConfidence(adjust)
 		core.BNSetUserCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
 			adjust.value, adjust.confidence)
+
+	def get_call_type_adjustment(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNGetCallTypeAdjustment(self.handle, arch.handle, addr)
+		if result.type:
+			platform = self.platform
+			return types.Type(result.type, platform = platform, confidence = result.confidence)
+		return None
 
 	def get_call_stack_adjustment(self, addr, arch=None):
 		if arch is None:

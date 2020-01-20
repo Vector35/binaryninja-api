@@ -319,6 +319,7 @@ private Q_SLOTS:
 	void reanalyze();
 
 	void setStackAdjustment();
+	void setCallTypeAdjustment();
 
 	void editInstruction();
 	void instrEditDoneEvent();

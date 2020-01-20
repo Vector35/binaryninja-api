@@ -1069,6 +1069,15 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+void Function::SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust)
+{
+	BNTypeWithConfidence apiObject;
+	apiObject.type = adjust ? adjust->GetObject() : nullptr;
+	apiObject.confidence = adjust.GetConfidence();
+	BNSetAutoCallTypeAdjustment(m_object, arch->GetObject(), addr, adjust ? &apiObject : nullptr);
+}
+
+
 void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetAutoCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
@@ -1100,6 +1109,15 @@ void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
+void Function::SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust)
+{
+	BNTypeWithConfidence apiObject;
+	apiObject.type = adjust ? adjust->GetObject() : nullptr;
+	apiObject.confidence = adjust.GetConfidence();
+	BNSetUserCallTypeAdjustment(m_object, arch->GetObject(), addr, adjust ? &apiObject : nullptr);
+}
+
+
 void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetUserCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
@@ -1128,6 +1146,13 @@ void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 {
 	BNSetUserCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
 		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+Confidence<Ref<Type>> Function::GetCallTypeAdjustment(Architecture* arch, uint64_t addr)
+{
+	BNTypeWithConfidence result = BNGetCallTypeAdjustment(m_object, arch->GetObject(), addr);
+	return Confidence<Ref<Type>>(result.type ? new Type(result.type) : nullptr, result.confidence);
 }
 
 

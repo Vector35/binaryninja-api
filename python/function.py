@@ -2766,38 +2766,46 @@ class InstructionTextToken(object):
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
+	The below table is provided for ducmentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are addded by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
+	
+	Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended), or additionally, applying color schemes appropriately.
+
 		========================== ============================================
 		InstructionTextTokenType   Description
 		========================== ============================================
-		TextToken                  Text that doesn't fit into the other tokens
-		InstructionToken           The instruction mnemonic
-		OperandSeparatorToken      The comma or whatever else separates tokens
-		RegisterToken              Registers
-		IntegerToken               Integers
-		PossibleAddressToken       Integers that are likely addresses
+		AddressDisplayToken        **Not emitted by architectures**
+		AnnotationToken            **Not emitted by architectures**
+		ArgumentNameToken          **Not emitted by architectures**
 		BeginMemoryOperandToken    The start of memory operand
+		CharacterConstantToken     A printable character
+		CodeRelativeAddressToken   **Not emitted by architectures**
+		CodeSymbolToken            **Not emitted by architectures**
+		DataSymbolToken            **Not emitted by architectures**
 		EndMemoryOperandToken      The end of a memory operand
+		ExternalSymbolToken        **Not emitted by architectures**
+		FieldNameToken             **Not emitted by architectures**
 		FloatingPointToken         Floating point number
-		AnnotationToken            **For internal use only**
-		CodeRelativeAddressToken   **For internal use only**
-		StackVariableTypeToken     **For internal use only**
-		DataVariableTypeToken      **For internal use only**
-		FunctionReturnTypeToken    **For internal use only**
-		FunctionAttributeToken     **For internal use only**
-		ArgumentTypeToken          **For internal use only**
-		ArgumentNameToken          **For internal use only**
-		HexDumpByteValueToken      **For internal use only**
-		HexDumpSkippedByteToken    **For internal use only**
-		HexDumpInvalidByteToken    **For internal use only**
-		HexDumpTextToken           **For internal use only**
-		OpcodeToken                **For internal use only**
-		StringToken                **For internal use only**
-		CharacterConstantToken     **For internal use only**
-		CodeSymbolToken            **For internal use only**
-		DataSymbolToken            **For internal use only**
-		StackVariableToken         **For internal use only**
-		ImportToken                **For internal use only**
-		AddressDisplayToken        **For internal use only**
+		HexDumpByteValueToken      **Not emitted by architectures**
+		HexDumpInvalidByteToken    **Not emitted by architectures**
+		HexDumpSkippedByteToken    **Not emitted by architectures**
+		HexDumpTextToken           **Not emitted by architectures**
+		ImportToken                **Not emitted by architectures**
+		IndirectImportToken        **Not emitted by architectures**
+		InstructionToken           The instruction mnemonic
+		IntegerToken               Integers
+		KeywordToken               **Not emitted by architectures**
+		LocalVariableToken         **Not emitted by architectures**
+		NameSpaceSeparatorToken    **Not emitted by architectures**
+		NameSpaceToken             **Not emitted by architectures**
+		OpcodeToken                **Not emitted by architectures**
+		OperandSeparatorToken      The comma or delimeter that separates tokens
+		PossibleAddressToken       Integers that are likely addresses
+		RegisterToken              Registers
+		StringToken                **Not emitted by architectures**
+		StructOffsetToken          **Not emitted by architectures**
+		TagToken                   **Not emitted by architectures**
+		TextToken                  Used for anything not of another type.
+		TypeNameToken              **Not emitted by architectures**
 		========================== ============================================
 
 	"""

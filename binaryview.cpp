@@ -1117,34 +1117,34 @@ bool BinaryView::IsBackedByDatabase() const
 }
 
 
-bool BinaryView::CreateDatabase(const string& path)
+bool BinaryView::CreateDatabase(const string& path, bool clean)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path);
-	return m_file->CreateDatabase(path, this);
+		return parent->CreateDatabase(path, clean);
+	return m_file->CreateDatabase(path, this, clean);
 }
 
 
 bool BinaryView::CreateDatabase(const string& path,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path);
-	return m_file->CreateDatabase(path, this, progressCallback);
+		return parent->CreateDatabase(path, clean);
+	return m_file->CreateDatabase(path, this, progressCallback, clean);
 }
 
 
-bool BinaryView::SaveAutoSnapshot()
+bool BinaryView::SaveAutoSnapshot(bool clean)
 {
-	return m_file->SaveAutoSnapshot(this);
+	return m_file->SaveAutoSnapshot(this, clean);
 }
 
 
-bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback)
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
-	return m_file->SaveAutoSnapshot(this, progressCallback);
+	return m_file->SaveAutoSnapshot(this, progressCallback, clean);
 }
 
 

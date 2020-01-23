@@ -270,18 +270,18 @@ bool FileMetadata::IsBackedByDatabase() const
 }
 
 
-bool FileMetadata::CreateDatabase(const string& name, BinaryView* data)
+bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, bool clean)
 {
-	return BNCreateDatabase(data->GetObject(), name.c_str());
+	return BNCreateDatabase(data->GetObject(), name.c_str(), clean);
 }
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback);
+	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, clean);
 }
 
 
@@ -315,18 +315,18 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 }
 
 
-bool FileMetadata::SaveAutoSnapshot(BinaryView* data)
+bool FileMetadata::SaveAutoSnapshot(BinaryView* data, bool clean)
 {
-	return BNSaveAutoSnapshot(data->GetObject());
+	return BNSaveAutoSnapshot(data->GetObject(), clean);
 }
 
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback);
+	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback, clean);
 }
 
 

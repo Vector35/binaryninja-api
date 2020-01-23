@@ -897,16 +897,16 @@ __attribute__ ((format (printf, 1, 2)))
 		void MarkFileSaved();
 
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& name, BinaryView* data);
+		bool CreateDatabase(const std::string& name, BinaryView* data, bool clean = false);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
-		bool SaveAutoSnapshot(BinaryView* data);
+		bool SaveAutoSnapshot(BinaryView* data, bool clean = false);
 		bool SaveAutoSnapshot(BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
 
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
@@ -1452,11 +1452,11 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsModified() const;
 		bool IsAnalysisChanged() const;
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& path);
+		bool CreateDatabase(const std::string& path, bool clean = false);
 		bool CreateDatabase(const std::string& path,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
-		bool SaveAutoSnapshot();
-		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+		bool SaveAutoSnapshot(bool clean = false);
+		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);

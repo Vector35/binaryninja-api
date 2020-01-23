@@ -2318,28 +2318,30 @@ class BinaryView(object):
 		"""
 		return False
 
-	def create_database(self, filename, progress_func=None):
+	def create_database(self, filename, progress_func=None, clean=False):
 		"""
 		``create_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callback progress_func: optional function to be called with the current progress and total count.
+		:param bool clean: optional argument to determine if undo data is saved in the database.
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
-		return self._file.create_database(filename, progress_func)
+		return self._file.create_database(filename, progress_func, clean)
 
-	def save_auto_snapshot(self, progress_func=None):
+	def save_auto_snapshot(self, progress_func=None, clean=False):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
 		.. note:: :py:meth:`create_database` should have been called prior to executing this method
 
 		:param callback progress_func: optional function to be called with the current progress and total count.
+		:param bool clean: optional argument to determine if undo data is saved in the database.
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
-		return self._file.save_auto_snapshot(progress_func)
+		return self._file.save_auto_snapshot(progress_func, clean)
 
 	def get_view_of_type(self, name):
 		"""

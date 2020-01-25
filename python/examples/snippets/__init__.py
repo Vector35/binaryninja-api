@@ -185,11 +185,6 @@ class Snippets(QDialog):
         else:
             self.edit.setMinimumWidth(80 * font.averageCharWidth())
             self.edit.setMinimumHeight(30 * font.lineSpacing())
-        if self.settings.contains("ui/snippeteditor/selected"):
-            selectedName = self.settings.value("ui/snippeteditor/selected")
-            self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
-            if self.tree.selectionModel().hasSelection():
-                self.selectFile(self.tree.selectionModel().selection(), None)
 
         # Set dialog layout
         self.setLayout(hlayout)
@@ -203,8 +198,20 @@ class Snippets(QDialog):
         self.deleteSnippetButton.clicked.connect(self.deleteSnippet)
         self.newFolderButton.clicked.connect(self.newFolder)
 
-        #Read-only until new snippet
-        self.readOnly(True)
+        if self.settings.contains("ui/snippeteditor/selected"):
+            selectedName = self.settings.value("ui/snippeteditor/selected")
+            self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+            if self.tree.selectionModel().hasSelection():
+                self.selectFile(self.tree.selectionModel().selection(), None)
+                self.edit.setFocus()
+                cursor = self.edit.textCursor()
+                cursor.setPosition(self.edit.document().characterCount()-1)
+                self.edit.setTextCursor(cursor)
+            else:
+                self.readOnly(True)
+        else:
+            self.readOnly(True)
+
 
     @staticmethod
     def registerAllSnippets():

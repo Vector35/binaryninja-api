@@ -52,7 +52,26 @@ def executeSnippet(code, context):
     snippetGlobals = {}
     snippetGlobals['current_view'] = context.binaryView
     snippetGlobals['bv'] = context.binaryView
-    snippetGlobals['current_function'] = context.function
+    if not context.function:
+        if not context.lowLevelILFunction:
+            if not context.mediumLevelILFunction:
+                snippetGlobals['current_mlil'] = None
+                snippetGlobals['current_function'] = None
+                snippetGlobals['current_llil'] = None
+            else:
+                snippetGlobals['current_mlil'] = context.mediumLevelILFunction
+                snippetGlobals['current_function'] = context.mediumLevelILFunction.source_function
+                snippetGlobals['current_llil'] = context.mediumLevelILFunction.source_function.llil
+        else:
+            snippetGlobals['current_llil'] = context.lowLevelILFunction
+            snippetGlobals['current_function'] = context.lowLevelILFunction.source_function
+            snippetGlobals['current_mlil'] = context.lowLevelILFunction.source_function.mlil
+    else:
+        snippetGlobals['current_function'] = context.function
+        snippetGlobals['current_mlil'] = context.function.mlil
+        snippetGlobals['current_llil'] = context.function.llil
+        snippetGlobals['current_token'] = context.function.llil
+
     if context.function is not None:
         snippetGlobals['current_basic_block'] = context.function.get_basic_block_at(context.address)
     else:
@@ -63,8 +82,7 @@ def executeSnippet(code, context):
         snippetGlobals['current_selection'] = (context.address, context.address+context.length)
     else:
         snippetGlobals['current_selection'] = None
-    snippetGlobals['current_llil'] = context.lowLevelILFunction
-    snippetGlobals['current_mlil'] = context.mediumLevelILFunction
+    snippetGlobals['uicontext'] = context
 
     exec("from binaryninja import *", snippetGlobals)
     exec(code, snippetGlobals)

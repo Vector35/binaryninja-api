@@ -185,6 +185,11 @@ class Snippets(QDialog):
         else:
             self.edit.setMinimumWidth(80 * font.averageCharWidth())
             self.edit.setMinimumHeight(30 * font.lineSpacing())
+        if self.settings.contains("ui/snippeteditor/selected"):
+            selectedName = self.settings.value("ui/snippeteditor/selected")
+            self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+            if self.tree.selectionModel().hasSelection():
+                self.selectFile(self.tree.selectionModel().selection(), None)
 
         # Set dialog layout
         self.setLayout(hlayout)
@@ -258,13 +263,14 @@ class Snippets(QDialog):
             self.resetting = False
             return
         newSelection = self.files.filePath(new.indexes()[0])
+        self.settings.setValue("ui/snippeteditor/selected", newSelection)
         if QFileInfo(newSelection).isDir():
             self.readOnly(True)
             self.tree.clearSelection()
             self.currentFile = ""
             return
 
-        if old.length() > 0:
+        if old and old.length() > 0:
             oldSelection = self.files.filePath(old.indexes()[0])
             if not QFileInfo(oldSelection).isDir() and self.snippetChanged():
                 question = QMessageBox.question(self, self.tr("Discard"), self.tr("Snippet changed. Discard changes?"))

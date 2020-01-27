@@ -1197,6 +1197,13 @@ class LowLevelILFunction(object):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
+	def __repr__(self):
+		arch = self.source_function.arch
+		if arch:
+			return "<llil func: %s@%#x>" % (arch.name, self.source_function.start)
+		else:
+			return "<llil func: %#x>" % self.source_function.start
+
 	@property
 	def current_address(self):
 		"""Current IL Address (read/write)"""

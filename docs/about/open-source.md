@@ -36,6 +36,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
     - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
+    - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -70,6 +71,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
+[flatbuffer]: https://github.com/google/flatbuffers
+[flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE.txt
 [libgit2]: https://libgit2.github.com/
 [libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
 [libmspack]: https://www.cabextract.org.uk/libmspack/

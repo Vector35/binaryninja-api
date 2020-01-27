@@ -1304,8 +1304,10 @@ class LowLevelILFunction(object):
 		# for backwards compatibility
 		if isinstance(i, LowLevelILInstruction):
 			return i
-		if (i < 0) or (i >= len(self)):
+		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
 		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
 
 	def __setitem__(self, i, j):

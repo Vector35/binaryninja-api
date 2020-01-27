@@ -905,8 +905,10 @@ class MediumLevelILFunction(object):
 		# for backwards compatibility
 		if isinstance(i, MediumLevelILInstruction):
 			return i
-		if (i < 0) or (i >= len(self)):
+		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
 		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
 
 	def __setitem__(self, i, j):

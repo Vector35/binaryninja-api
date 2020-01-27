@@ -769,8 +769,10 @@ class Function(object):
 		try:
 			if i < 0:
 				i = count.value + i
-			if i < 0 or i >= count.value:
+			if i < -len(self.basic_blocks) or i >= count.value:
 				raise IndexError("index out of range")
+			if i < 0:
+				i = len(self.basic_blocks) + i
 			block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
 			return block
 		finally:

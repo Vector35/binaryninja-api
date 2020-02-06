@@ -1227,12 +1227,12 @@ def get_form_input(fields, title):
 		- OpenFileNameField  - Prompt for file to open
 		- SaveFileNameField  - Prompt for file to save to
 		- DirectoryNameField - Prompt for directory name
-	This API is flexible and works both in the UI via a pop-up dialog and on the command-line. Note that more complicated APIs should consider usin the included pyside2 functionality in the `binaryninjaui` module.
+	This API is flexible and works both in the UI via a pop-up dialog and on the command-line. Note that more complicated APIs should consider usin the included pyside2 functionality in the `binaryninjaui` module. Returns true or false depending on whether the user submitted responses or cancelled the dialog.
 
 	:param fields: A list containing these classes, strings or None
 	:type fields: list(str) or list(None) or list(LabelField) or list(SeparatorField) or list(TextLineField) or list(MultilineTextField) or list(IntegerField) or list(AddressField) or list(ChoiceField) or list(OpenFileNameField) or list(SaveFileNameField) or list(DirectoryNameField)
 	:param str title: The title of the pop-up dialog
-	:rtype: None
+	:rtype: bool
 	:Example:
 
 		>>> int_f = IntegerField("Specify Integer")

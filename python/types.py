@@ -593,7 +593,7 @@ class Type(object):
 		if self._mutable:
 			return core.BNGetTypeBuilderString(self._handle, platform)
 		name = self.registered_name
-		if name is not None:
+		if (name is not None) and (self.type_class != TypeClass.StructureTypeClass) and (self.type_class != TypeClass.EnumerationTypeClass):
 			return self.get_string_before_name() + " " + str(name.name) + self.get_string_after_name()
 		return core.BNGetTypeString(self._handle, platform)
 

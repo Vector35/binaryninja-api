@@ -4066,6 +4066,11 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Goto(size_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Label(size_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInit(size_t size, const Variable& dest, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInitSSA(size_t size, const SSAVariable& dest, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignUnpack(const std::vector<ExprId>& output, ExprId src,
 			const ILSourceLocation& loc = ILSourceLocation());

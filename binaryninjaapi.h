@@ -911,6 +911,8 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
 
+		bool MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress);
+
 		void BeginUndoActions();
 		void CommitUndoActions();
 

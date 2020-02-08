@@ -832,46 +832,46 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class BinaryView;
 
-	class UndoAction
+	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
 	{
-	private:
-		std::string m_typeName;
-		BNActionType m_actionType;
-
-		static void FreeCallback(void* ctxt);
-		static void UndoCallback(void* ctxt, BNBinaryView* data);
-		static void RedoCallback(void* ctxt, BNBinaryView* data);
-		static char* SerializeCallback(void* ctxt);
-
-	public:
-		UndoAction(const std::string& name, BNActionType action);
-		virtual ~UndoAction() {}
-
-		const std::string& GetTypeName() const { return m_typeName; }
-		BNActionType GetActionType() const { return m_actionType; }
-		BNUndoAction GetCallbacks();
-
-		void Add(BNBinaryView* view);
-
-		virtual void Undo(BinaryView* data) = 0;
-		virtual void Redo(BinaryView* data) = 0;
-		virtual Json::Value Serialize() = 0;
+		private:
+			std::string m_id;
+			std::string m_name;
+			std::string m_email;
+		public:
+			User(BNUser* user);
+			std::string GetName();
+			std::string GetEmail();
+			std::string GetId();
 	};
 
-	class UndoActionType
+	struct InstructionTextToken;
+
+	struct UndoAction
 	{
-	protected:
-		std::string m_nameForRegister;
+		BNActionType actionType;
+		std::string summaryText;
+		std::vector<InstructionTextToken> summaryTokens;
 
-		static bool DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result);
+		UndoAction() {};
+		UndoAction(const BNUndoAction& action);
+	};
 
-	public:
-		UndoActionType(const std::string& name);
-		virtual ~UndoActionType() {}
+	struct UndoEntry
+	{
+		Ref<User> user;
+		std::string hash;
+		std::vector<UndoAction> actions;
+		uint64_t timestamp;
+	};
 
-		static void Register(UndoActionType* type);
+	struct MergeResult
+	{
+		BNMergeStatus status;
+		UndoAction action;
+		std::string hash;
 
-		virtual UndoAction* Deserialize(const Json::Value& data) = 0;
+		MergeResult(const BNMergeResult& result);
 	};
 
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
@@ -911,11 +911,17 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
 
+		MergeResult MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress,
+				const std::vector<std::string> excludedHashes = {} );
+
 		void BeginUndoActions();
 		void CommitUndoActions();
 
 		bool Undo();
 		bool Redo();
+
+		std::vector<Ref<User>> GetUsers();
+		std::vector<UndoEntry> GetUndoEntries();
 
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();

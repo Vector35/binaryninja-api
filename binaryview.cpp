@@ -1154,12 +1154,6 @@ void BinaryView::BeginUndoActions()
 }
 
 
-void BinaryView::AddUndoAction(UndoAction* action)
-{
-	action->Add(m_object);
-}
-
-
 void BinaryView::CommitUndoActions()
 {
 	m_file->CommitUndoActions();

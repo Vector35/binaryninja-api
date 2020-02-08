@@ -142,6 +142,7 @@ extern "C"
 	struct BNTagType;
 	struct BNTag;
 	struct BNTagReference;
+	struct BNUser;
 	struct BNNamedTypeReference;
 	struct BNEnumeration;
 	struct BNEnumerationBuilder;
@@ -1438,12 +1439,33 @@ extern "C"
 
 	struct BNUndoAction
 	{
-		BNActionType type;
-		void* context;
-		void (*freeObject)(void* ctxt);
-		void (*undo)(void* ctxt, BNBinaryView* data);
-		void (*redo)(void* ctxt, BNBinaryView* data);
-		char* (*serialize)(void* ctxt);
+		BNActionType actionType;
+		char* summaryText;
+		BNInstructionTextToken* summaryTokens;
+		size_t summaryTokenCount;
+	};
+
+	struct BNUndoEntry
+	{
+		BNUser* user;
+		char* hash;
+		BNUndoAction* actions;
+		uint64_t actionCount;
+		uint64_t timestamp;
+	};
+
+	enum BNMergeStatus
+	{
+		NOT_APPLICABLE = 0,
+		OK = 1,
+		CONFLICT = 2
+	};
+
+	struct BNMergeResult
+	{
+		BNMergeStatus status;
+		BNUndoAction action;
+		const char* hash;
 	};
 
 	struct BNCallingConventionWithConfidence
@@ -2221,20 +2243,31 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(BNBinaryView* data, uint64_t address, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 
+	BINARYNINJACOREAPI BNMergeResult BNMergeUserAnalysis(BNFileMetadata* file, const char* name, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total),
+			char** excludedHashes, size_t excludedHashesCount);
+
 	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);
 
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
 
-	BINARYNINJACOREAPI void BNRegisterUndoActionType(const char* name, void* typeContext,
-	                                                 bool (*deserialize)(void* ctxt, const char* data, BNUndoAction* result));
 	BINARYNINJACOREAPI void BNBeginUndoActions(BNFileMetadata* file);
-	BINARYNINJACOREAPI void BNAddUndoAction(BNBinaryView* view, const char* type, BNUndoAction* action);
 	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
+
+	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
+
+	BINARYNINJACOREAPI BNUser* BNNewUserReference(BNUser* user);
+	BINARYNINJACOREAPI void BNFreeUser(BNUser* user);
+	BINARYNINJACOREAPI BNUser** BNGetUsers(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUserList(BNUser** users, size_t count);
+	BINARYNINJACOREAPI char* BNGetUserName(BNUser* user);
+	BINARYNINJACOREAPI char* BNGetUserEmail(BNUser* user);
+	BINARYNINJACOREAPI char* BNGetUserId(BNUser* user);
 
 	BINARYNINJACOREAPI char* BNGetCurrentView(BNFileMetadata* file);
 	BINARYNINJACOREAPI uint64_t BNGetCurrentOffset(BNFileMetadata* file);

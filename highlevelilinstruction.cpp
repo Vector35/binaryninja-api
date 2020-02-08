@@ -37,6 +37,7 @@ unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
 	HighLevelILInstructionBase::operandTypeForUsage = {
 		{SourceExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{VariableHighLevelOperandUsage, VariableHighLevelOperand},
+		{DestVariableHighLevelOperandUsage, VariableHighLevelOperand},
 		{SSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
 		{DestSSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
 		{DestExprHighLevelOperandUsage, ExprHighLevelOperand},
@@ -95,6 +96,9 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
 		{HLIL_RET, {SourceExprsHighLevelOperandUsage}},
 		{HLIL_GOTO, {TargetHighLevelOperandUsage}},
 		{HLIL_LABEL, {TargetHighLevelOperandUsage}},
+		{HLIL_VAR_DECLARE, {VariableHighLevelOperandUsage}},
+		{HLIL_VAR_INIT, {DestVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
+		{HLIL_VAR_INIT_SSA, {DestSSAVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 		{HLIL_ASSIGN, {DestExprHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 		{HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 		{HLIL_ASSIGN_MEM_SSA, {DestExprHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
@@ -912,6 +916,12 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
 				toProcess.push(i->exprIndex);
 			break;
+		case HLIL_VAR_INIT:
+			toProcess.push(cur.GetSourceExpr<HLIL_VAR_INIT>().exprIndex);
+			break;
+		case HLIL_VAR_INIT_SSA:
+			toProcess.push(cur.GetSourceExpr<HLIL_VAR_INIT_SSA>().exprIndex);
+			break;
 		case HLIL_ASSIGN:
 			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN>().exprIndex);
 			toProcess.push(cur.GetDestExpr<HLIL_ASSIGN>().exprIndex);
@@ -1111,8 +1121,8 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->While(subExprHandler(GetConditionExpr<HLIL_WHILE>()),
 			subExprHandler(GetLoopExpr<HLIL_WHILE>()), *this);
 	case HLIL_DO_WHILE:
-		return dest->DoWhile(subExprHandler(GetLoopExpr<HLIL_WHILE>()),
-			subExprHandler(GetConditionExpr<HLIL_WHILE>()), *this);
+		return dest->DoWhile(subExprHandler(GetLoopExpr<HLIL_DO_WHILE>()),
+			subExprHandler(GetConditionExpr<HLIL_DO_WHILE>()), *this);
 	case HLIL_FOR:
 		return dest->For(subExprHandler(GetInitExpr<HLIL_FOR>()),
 			subExprHandler(GetConditionExpr<HLIL_FOR>()), subExprHandler(GetUpdateExpr<HLIL_FOR>()),
@@ -1130,6 +1140,18 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->Break(*this);
 	case HLIL_CONTINUE:
 		return dest->Continue(*this);
+	case HLIL_GOTO:
+		return dest->Goto(GetTarget<HLIL_GOTO>(), *this);
+	case HLIL_LABEL:
+		return dest->Label(GetTarget<HLIL_LABEL>(), *this);
+	case HLIL_VAR_DECLARE:
+		return dest->VarDeclare(GetVariable<HLIL_VAR_DECLARE>(), *this);
+	case HLIL_VAR_INIT:
+		return dest->VarInit(size, GetDestVariable<HLIL_VAR_INIT>(),
+			subExprHandler(GetSourceExpr<HLIL_VAR_INIT>()), *this);
+	case HLIL_VAR_INIT_SSA:
+		return dest->VarInitSSA(size, GetDestSSAVariable<HLIL_VAR_INIT_SSA>(),
+			subExprHandler(GetSourceExpr<HLIL_VAR_INIT_SSA>()), *this);
 	case HLIL_ASSIGN:
 		return dest->Assign(size, subExprHandler(GetDestExpr<HLIL_ASSIGN>()),
 			subExprHandler(GetSourceExpr<HLIL_ASSIGN>()), *this);
@@ -1409,6 +1431,28 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		return GetTarget<HLIL_GOTO>() < other.GetTarget<HLIL_GOTO>();
 	case HLIL_LABEL:
 		return GetTarget<HLIL_LABEL>() < other.GetTarget<HLIL_LABEL>();
+	case HLIL_VAR_DECLARE:
+		return GetVariable<HLIL_VAR_DECLARE>() < other.GetVariable<HLIL_VAR_DECLARE>();
+	case HLIL_VAR_INIT:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestVariable<HLIL_VAR_INIT>() < other.GetDestVariable<HLIL_VAR_INIT>())
+			return true;
+		if (other.GetDestVariable<HLIL_VAR_INIT>() < GetDestVariable<HLIL_VAR_INIT>())
+			return false;
+		return GetSourceExpr<HLIL_VAR_INIT>() < other.GetSourceExpr<HLIL_VAR_INIT>();
+	case HLIL_VAR_INIT_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestSSAVariable<HLIL_VAR_INIT_SSA>() < other.GetDestSSAVariable<HLIL_VAR_INIT_SSA>())
+			return true;
+		if (other.GetDestSSAVariable<HLIL_VAR_INIT_SSA>() < GetDestSSAVariable<HLIL_VAR_INIT_SSA>())
+			return false;
+		return GetSourceExpr<HLIL_VAR_INIT_SSA>() < other.GetSourceExpr<HLIL_VAR_INIT_SSA>();
 	case HLIL_ASSIGN:
 		if (size < other.size)
 			return true;
@@ -1821,6 +1865,15 @@ Variable HighLevelILInstruction::GetVariable() const
 }
 
 
+Variable HighLevelILInstruction::GetDestVariable() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(DestVariableHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsVariable(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 SSAVariable HighLevelILInstruction::GetSSAVariable() const
 {
 	size_t operandIndex;
@@ -2200,6 +2253,24 @@ ExprId HighLevelILFunction::Goto(size_t target, const ILSourceLocation& loc)
 ExprId HighLevelILFunction::Label(size_t target, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_LABEL, loc, 0, target);
+}
+
+
+ExprId HighLevelILFunction::VarDeclare(const Variable& var, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_VAR_DECLARE, loc, 0, var.ToIdentifier());
+}
+
+
+ExprId HighLevelILFunction::VarInit(size_t size, const Variable& dest, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_VAR_INIT, loc, size, dest.ToIdentifier(), src);
+}
+
+
+ExprId HighLevelILFunction::VarInitSSA(size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_VAR_INIT_SSA, loc, size, dest.var.ToIdentifier(), dest.version, src);
 }
 
 

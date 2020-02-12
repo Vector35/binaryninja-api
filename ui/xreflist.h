@@ -97,7 +97,7 @@ public:
 };
 
 
-class CrossReferenceListModel : public QAbstractItemModel
+class BINARYNINJAUIAPI CrossReferenceListModel : public QAbstractItemModel
 {
 	Q_OBJECT
 

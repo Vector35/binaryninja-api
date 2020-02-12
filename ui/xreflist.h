@@ -14,7 +14,7 @@
 #include "viewframe.h"
 
 
-class BINARYNINJAUIAPI XrefItem
+class XrefItem
 {
 public:
 	enum XrefDirection
@@ -79,19 +79,21 @@ public:
 };
 
 
-class BINARYNINJAUIAPI XrefHeader: public XrefItem
+class XrefHeader: public XrefItem
 {
 	QString m_name;
 public:
+	XrefHeader() {}
 	XrefHeader(const QString& name);
 	virtual ~XrefHeader() {}
 	virtual QString name() const { return m_name; }
 };
 
 
-class BINARYNINJAUIAPI XrefFunctionHeader: public XrefItem
+class XrefFunctionHeader: public XrefItem
 {
 public:
+	XrefFunctionHeader() {}
 	XrefFunctionHeader(FunctionRef func) : XrefItem(func) {};
 	virtual ~XrefFunctionHeader() {}
 };

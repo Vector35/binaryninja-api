@@ -4285,13 +4285,13 @@ class BinaryView(object):
 		"""
 		return core.BNGetPreviousDataVariableStartBeforeAddress(self.handle, addr)
 
-	def get_linear_disassembly_position_at(self, addr, settings):
+	def get_linear_disassembly_position_at(self, addr, settings=None):
 		"""
 		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition <binaryninja.lineardisassembly.LinearDisassemblyPosition>` object for use in
 		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
-		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object
+		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object, defaults to None which will use default settings
 		:return: An instantiated :py:class:`LinearDisassemblyPosition` object for the provided virtual address
 		:rtype: LinearDisassemblyPosition
 		:Example:
@@ -4314,7 +4314,7 @@ class BinaryView(object):
 			block = basicblock.BasicBlock(pos.block, self)
 		return lineardisassembly.LinearDisassemblyPosition(func, block, pos.address)
 
-	def _get_linear_disassembly_lines(self, api, pos, settings):
+	def _get_linear_disassembly_lines(self, api, pos, settings=None):
 		pos_obj = core.BNLinearDisassemblyPosition()
 		pos_obj.function = None
 		pos_obj.block = None
@@ -4357,14 +4357,14 @@ class BinaryView(object):
 		core.BNFreeLinearDisassemblyLines(lines, count.value)
 		return result
 
-	def get_previous_linear_disassembly_lines(self, pos, settings):
+	def get_previous_linear_disassembly_lines(self, pos, settings=None):
 		"""
 		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
 		previous disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
 		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
-		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly
+		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly, defaults to None which will use default settings
 		:return: a list of :py:class:`LinearDisassemblyLine` objects for the previous lines.
 		:Example:
 
@@ -4377,14 +4377,14 @@ class BinaryView(object):
 		"""
 		return self._get_linear_disassembly_lines(core.BNGetPreviousLinearDisassemblyLines, pos, settings)
 
-	def get_next_linear_disassembly_lines(self, pos, settings):
+	def get_next_linear_disassembly_lines(self, pos, settings=None):
 		"""
 		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
 		next disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
 		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
-		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly
+		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly, defaults to None which will use default settings
 		:return: a list of :py:class:`LinearDisassemblyLine` objects for the next lines.
 		:Example:
 
@@ -4398,7 +4398,7 @@ class BinaryView(object):
 		"""
 		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
 
-	def get_linear_disassembly(self, settings):
+	def get_linear_disassembly(self, settings=None):
 		"""
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
 		disassembly settings.
@@ -4406,7 +4406,7 @@ class BinaryView(object):
 		.. note:: linear_disassembly doesn't just return disassembly it will return a single line from the linear view,\
 		 and thus will contain both data views, and disassembly.
 
-		:param DisassemblySettings settings: instance specifying the desired output formatting.
+		:param DisassemblySettings settings: instance specifying the desired output formatting. Defaults to None which will use default settings.
 		:return: An iterator containing formatted disassembly lines.
 		:rtype: LinearDisassemblyIterator
 		:Example:

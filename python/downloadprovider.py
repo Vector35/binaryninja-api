@@ -40,6 +40,7 @@ from binaryninja import range
 
 class DownloadInstance(object):
 	_registered_instances = []
+	_response = b""
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNDownloadInstanceCallbacks()
@@ -79,6 +80,23 @@ class DownloadInstance(object):
 	def perform_request(self, ctxt, url):
 		raise NotImplementedError
 
+	def _write_callback(self, data, len, ctxt):
+		try:
+			str_ptr = ctypes.cast(data, ctypes.c_char_p)
+			str_bytes = str_ptr.value
+			self._response = self._response + str_bytes
+			return len
+		except:
+			log.log_error(traceback.format_exc())
+
+	def get_response(self, url):
+		callbacks = core.BNDownloadInstanceOutputCallbacks()
+		callbacks.writeCallback = callbacks.writeCallback.__class__(self._write_callback)
+		callbacks.writeContext = 0
+		callbacks.progressContext = 0
+		self._response = b""
+		result = core.BNPerformDownloadRequest(self.handle, url, callbacks)
+		return (result, self._response)
 
 class _DownloadProviderMetaclass(type):
 	@property

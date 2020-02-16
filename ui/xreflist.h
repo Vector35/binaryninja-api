@@ -66,6 +66,9 @@ public:
 				(m_type == other.m_type)))
 			return false;
 
+		if (!m_func ^ !other.m_func)
+			return false;
+
 		if (!m_func && !other.m_func)
 			return true;
 

@@ -1784,6 +1784,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string m_nameForRegister, m_longNameForRegister;
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
+		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
@@ -1812,6 +1813,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetLongName();
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
+		virtual BinaryView* Parse(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
 	};
@@ -1821,6 +1823,7 @@ __attribute__ ((format (printf, 1, 2)))
 	public:
 		CoreBinaryViewType(BNBinaryViewType* type);
 		virtual BinaryView* Create(BinaryView* data) override;
+		virtual BinaryView* Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};

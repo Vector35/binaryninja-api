@@ -1145,6 +1145,7 @@ extern "C"
 	{
 		void* context;
 		BNBinaryView* (*create)(void* ctxt, BNBinaryView* data);
+		BNBinaryView* (*parse)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
 		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
 	};
@@ -2385,6 +2386,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeName(BNBinaryViewType* type);
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeLongName(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
+	BINARYNINJACOREAPI BNBinaryView* BNParseBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewDefaultLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);
@@ -2861,7 +2863,7 @@ __attribute__ ((format (printf, 1, 2)))
 	                                                                 uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
 
-	BINARYNINJACOREAPI void BNSetAutoCallTypeAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr, 
+	BINARYNINJACOREAPI void BNSetAutoCallTypeAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 		BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNSetUserCallTypeAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 		BNTypeWithConfidence* type);

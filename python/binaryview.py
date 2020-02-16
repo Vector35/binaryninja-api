@@ -747,6 +747,12 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			bv.update_analysis_and_wait()
 		return bv
 
+	def parse(self, data):
+		view = core.BNParseBinaryViewOfType(self.handle, data.handle)
+		if view is None:
+			return None
+		return BinaryView(file_metadata=data.file, handle=view)
+
 	def is_valid_for_data(self, data):
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
@@ -1211,6 +1217,7 @@ class BinaryView(object):
 		cls._registered_cb = core.BNCustomBinaryViewType()
 		cls._registered_cb.context = 0
 		cls._registered_cb.create = cls._registered_cb.create.__class__(cls._create)
+		cls._registered_cb.parse = cls._registered_cb.parse.__class__(cls._parse)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(cls._get_load_settings_for_data)
 		cls.registered_view_type = BinaryViewType(core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb))
@@ -1223,6 +1230,22 @@ class BinaryView(object):
 			view = cls(BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data)))
 			if view is None:
 				return None
+			# FIXME: There is probably a better way to convey this information...
+			view.__dict__.update({'parse_only' : False})
+			return ctypes.cast(core.BNNewViewReference(view.handle), ctypes.c_void_p).value
+		except:
+			log.log_error(traceback.format_exc())
+			return None
+
+	@classmethod
+	def _parse(cls, ctxt, data):
+		try:
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
+			view = cls(BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data)))
+			if view is None:
+				return None
+			# FIXME: There is probably a better way to convey this information...
+			view.__dict__.update({'parse_only' : True})
 			return ctypes.cast(core.BNNewViewReference(view.handle), ctypes.c_void_p).value
 		except:
 			log.log_error(traceback.format_exc())

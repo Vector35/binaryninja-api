@@ -35,6 +35,17 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 }
 
 
+BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
+{
+	BinaryViewType* type = (BinaryViewType*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> result = type->Parse(view);
+	if (!result)
+		return nullptr;
+	return BNNewViewReference(result->GetObject());
+}
+
+
 bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
@@ -72,6 +83,7 @@ void BinaryViewType::Register(BinaryViewType* type)
 	BNCustomBinaryViewType callbacks;
 	callbacks.context = type;
 	callbacks.create = CreateCallback;
+	callbacks.parse = ParseCallback;
 	callbacks.isValidForData = IsValidCallback;
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
 
@@ -211,6 +223,15 @@ CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(t
 BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 {
 	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, data->GetObject());
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
+}
+
+
+BinaryView* CoreBinaryViewType::Parse(BinaryView* data)
+{
+	BNBinaryView* view = BNParseBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);

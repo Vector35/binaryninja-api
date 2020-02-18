@@ -59,6 +59,10 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 - While Windows 7 is not officially supported (by us, or Microsoft for that matter), it's possible to have Binary Ninja work if all available windows updates are installed as a library pack update somewhere in the updates is required for us to run.
 - If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store. 
 
+#### Some Graphics Chipsets
+
+Some graphics chipsets may experience problems with [scaling](https://github.com/Vector35/binaryninja-api/issues/1529) resulting in the top menu disappearing. In that case, the simplest fix is to set the environment variable `QT_OPENGL=angle`.
+
 
 ### MacOS
 

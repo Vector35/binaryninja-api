@@ -1455,15 +1455,15 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def get_instruction_text(self, data, addr):
 		"""
-		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
+		``get_instruction_text`` returns a tuple containing a list of decoded InstructionTextToken objects and the bytes used at the given virtual
 		address ``addr`` with data ``data``.
 
 		.. note:: Architecture subclasses should implement this method.
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
-		:return: an InstructionTextToken list for the current instruction
-		:rtype: list(InstructionTextToken)
+		:return: a tuple containing the InstructionTextToken list and length of bytes decoded
+		:rtype: tuple(list(InstructionTextToken), int)
 		"""
 		return self.perform_get_instruction_text(data, addr)
 

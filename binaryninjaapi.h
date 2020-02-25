@@ -832,6 +832,19 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class BinaryView;
 
+	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
+	{
+		private:
+			std::string m_id;
+			std::string m_name;
+			std::string m_email;
+		public:
+			User(BNUser* user);
+			std::string GetName() { return m_name; }
+			std::string GetEmail() { return m_email; }
+			std::string GetId() { return m_id; }
+	};
+
 	class UndoAction
 	{
 	private:
@@ -918,6 +931,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool Undo();
 		bool Redo();
+
+		std::vector<Ref<User>> GetUsers();
 
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();

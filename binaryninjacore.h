@@ -142,6 +142,7 @@ extern "C"
 	struct BNTagType;
 	struct BNTag;
 	struct BNTagReference;
+	struct BNUser;
 	struct BNNamedTypeReference;
 	struct BNEnumeration;
 	struct BNEnumerationBuilder;
@@ -2237,6 +2238,11 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
+
+	BINARYNINJACOREAPI BNUser* BNNewUserReference(BNUser* user);
+	BINARYNINJACOREAPI void BNFreeUser(BNUser* user);
+	BINARYNINJACOREAPI BNUser** BNGetUsers(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUserList(BNUser** users, size_t count);
 
 	BINARYNINJACOREAPI char* BNGetCurrentView(BNFileMetadata* file);
 	BINARYNINJACOREAPI uint64_t BNGetCurrentOffset(BNFileMetadata* file);

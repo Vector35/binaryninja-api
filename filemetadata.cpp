@@ -375,6 +375,20 @@ bool FileMetadata::Redo()
 	return BNRedo(m_object);
 }
 
+vector<Ref<User>> FileMetadata::GetUsers()
+{
+	size_t count;
+	BNUser** users = BNGetUsers(m_object, &count);
+
+	vector<Ref<User>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new User(BNNewUserReference(users[i])));
+
+	BNFreeUserList(users, count);
+	return result;
+}
+
 
 string FileMetadata::GetCurrentView()
 {

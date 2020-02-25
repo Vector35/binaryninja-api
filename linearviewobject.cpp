@@ -260,3 +260,10 @@ Ref<LinearViewObject> LinearViewObject::CreateHighLevelIL(BinaryView* view, Disa
 	return new LinearViewObject(BNCreateLinearViewHighLevelIL(view->GetObject(),
 		settings ? settings->GetObject() : nullptr));
 }
+
+
+Ref<LinearViewObject> LinearViewObject::CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewHighLevelILSSAForm(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}

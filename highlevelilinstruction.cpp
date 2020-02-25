@@ -46,6 +46,7 @@ unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
 		{CarryExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{IndexExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{ConditionExprHighLevelOperandUsage, ExprHighLevelOperand},
+		{ConditionPhiExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{TrueExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{FalseExprHighLevelOperandUsage, ExprHighLevelOperand},
 		{LoopExprHighLevelOperandUsage, ExprHighLevelOperand},
@@ -86,9 +87,16 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
 		{HLIL_IF, {ConditionExprHighLevelOperandUsage, TrueExprHighLevelOperandUsage,
 			FalseExprHighLevelOperandUsage}},
 		{HLIL_WHILE, {ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
+		{HLIL_WHILE_SSA, {ConditionPhiExprHighLevelOperandUsage,
+			ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
 		{HLIL_DO_WHILE, {LoopExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage}},
+		{HLIL_DO_WHILE_SSA, {LoopExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage,
+			ConditionExprHighLevelOperandUsage}},
 		{HLIL_FOR, {InitExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage,
 			UpdateExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
+		{HLIL_FOR_SSA, {InitExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage,
+			ConditionExprHighLevelOperandUsage, UpdateExprHighLevelOperandUsage,
+			LoopExprHighLevelOperandUsage}},
 		{HLIL_SWITCH, {ConditionExprHighLevelOperandUsage, DefaultExprHighLevelOperandUsage,
 			CasesHighLevelOperandUsage}},
 		{HLIL_CASE, {ValueExprsHighLevelOperandUsage, TrueExprHighLevelOperandUsage}},
@@ -394,12 +402,20 @@ HighLevelILIndexList::operator vector<size_t>() const
 
 const HighLevelILInstruction HighLevelILInstructionList::ListIterator::operator*()
 {
-	return HighLevelILInstruction(pos.GetFunction(), pos.GetFunction()->GetRawExpr((size_t)*pos), (size_t)*pos);
+	if (ast)
+	{
+		return HighLevelILInstruction(pos.GetFunction(), pos.GetFunction()->GetRawExpr((size_t)*pos),
+			(size_t)*pos, true, instructionIndex);
+	}
+	return HighLevelILInstruction(pos.GetFunction(), pos.GetFunction()->GetRawNonASTExpr((size_t)*pos),
+		(size_t)*pos, false, instructionIndex);
 }
 
 
 HighLevelILInstructionList::HighLevelILInstructionList(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t count): m_list(func, instr, count)
+	const BNHighLevelILInstruction& instr, size_t count, bool asFullAst,
+	size_t instructionIndex): m_list(func, instr, count), m_ast(asFullAst),
+	m_instructionIndex(instructionIndex)
 {
 }
 
@@ -408,6 +424,8 @@ HighLevelILInstructionList::const_iterator HighLevelILInstructionList::begin() c
 {
 	const_iterator result;
 	result.pos = m_list.begin();
+	result.ast = m_ast;
+	result.instructionIndex = m_instructionIndex;
 	return result;
 }
 
@@ -416,6 +434,8 @@ HighLevelILInstructionList::const_iterator HighLevelILInstructionList::end() con
 {
 	const_iterator result;
 	result.pos = m_list.end();
+	result.ast = m_ast;
+	result.instructionIndex = m_instructionIndex;
 	return result;
 }
 
@@ -661,7 +681,7 @@ HighLevelILInstruction::HighLevelILInstruction()
 
 
 HighLevelILInstruction::HighLevelILInstruction(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t expr)
+	const BNHighLevelILInstruction& instr, size_t expr, bool asFullAst, size_t instrIdx)
 {
 	operation = instr.operation;
 	sourceOperand = instr.sourceOperand;
@@ -675,6 +695,8 @@ HighLevelILInstruction::HighLevelILInstruction(HighLevelILFunction* func,
 	parent = instr.parent;
 	function = func;
 	exprIndex = expr;
+	instructionIndex = instrIdx;
+	ast = asFullAst;
 }
 
 
@@ -691,6 +713,8 @@ HighLevelILInstruction::HighLevelILInstruction(const HighLevelILInstructionBase&
 	address = instr.address;
 	function = instr.function;
 	exprIndex = instr.exprIndex;
+	instructionIndex = instr.instructionIndex;
+	ast = instr.ast;
 	parent = instr.parent;
 }
 
@@ -721,7 +745,13 @@ size_t HighLevelILInstructionBase::GetRawOperandAsIndex(size_t operand) const
 
 HighLevelILInstruction HighLevelILInstructionBase::GetRawOperandAsExpr(size_t operand) const
 {
-	return HighLevelILInstruction(function, function->GetRawExpr(operands[operand]), operands[operand]);
+	if (ast)
+	{
+		return HighLevelILInstruction(function, function->GetRawExpr(operands[operand]),
+			operands[operand], true, instructionIndex);
+	}
+	return HighLevelILInstruction(function, function->GetRawNonASTExpr(operands[operand]),
+		operands[operand], false, instructionIndex);
 }
 
 
@@ -739,7 +769,8 @@ SSAVariable HighLevelILInstructionBase::GetRawOperandAsSSAVariable(size_t operan
 
 HighLevelILInstructionList HighLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
 {
-	return HighLevelILInstructionList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return HighLevelILInstructionList(function, function->GetRawExpr(operands[operand + 1]),
+		operands[operand], ast, instructionIndex);
 }
 
 
@@ -865,6 +896,30 @@ HighLevelILInstruction HighLevelILInstructionBase::GetInstruction() const
 }
 
 
+HighLevelILInstruction HighLevelILInstructionBase::AsAST() const
+{
+	return function->GetExpr(exprIndex, true);
+}
+
+
+HighLevelILInstruction HighLevelILInstructionBase::AsNonAST() const
+{
+	return function->GetExpr(exprIndex, false);
+}
+
+
+bool HighLevelILInstructionBase::HasParent() const
+{
+	return parent != BN_INVALID_EXPR;
+}
+
+
+HighLevelILInstruction HighLevelILInstructionBase::GetParent() const
+{
+	return function->GetExpr(parent, true);
+}
+
+
 void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func) const
 {
 	stack<size_t> toProcess;
@@ -873,7 +928,7 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 	toProcess.push(exprIndex);
 	while (!toProcess.empty())
 	{
-		HighLevelILInstruction cur = function->GetExpr(toProcess.top());
+		HighLevelILInstruction cur = function->GetExpr(toProcess.top(), ast);
 		toProcess.pop();
 		if (!func(cur))
 			continue;
@@ -885,29 +940,58 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 				toProcess.push(i->exprIndex);
 			break;
 		case HLIL_IF:
-			toProcess.push(cur.GetFalseExpr<HLIL_IF>().exprIndex);
-			toProcess.push(cur.GetTrueExpr<HLIL_IF>().exprIndex);
+			if (ast)
+			{
+				toProcess.push(cur.GetFalseExpr<HLIL_IF>().exprIndex);
+				toProcess.push(cur.GetTrueExpr<HLIL_IF>().exprIndex);
+			}
 			toProcess.push(cur.GetConditionExpr<HLIL_IF>().exprIndex);
 			break;
 		case HLIL_WHILE:
-			toProcess.push(cur.GetLoopExpr<HLIL_WHILE>().exprIndex);
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_WHILE>().exprIndex);
 			toProcess.push(cur.GetConditionExpr<HLIL_WHILE>().exprIndex);
+			break;
+		case HLIL_WHILE_SSA:
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_WHILE_SSA>().exprIndex);
+			toProcess.push(cur.GetConditionExpr<HLIL_WHILE_SSA>().exprIndex);
+			toProcess.push(cur.GetConditionPhiExpr<HLIL_WHILE_SSA>().exprIndex);
 			break;
 		case HLIL_DO_WHILE:
 			toProcess.push(cur.GetConditionExpr<HLIL_DO_WHILE>().exprIndex);
-			toProcess.push(cur.GetLoopExpr<HLIL_DO_WHILE>().exprIndex);
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_DO_WHILE>().exprIndex);
+			break;
+		case HLIL_DO_WHILE_SSA:
+			toProcess.push(cur.GetConditionExpr<HLIL_DO_WHILE_SSA>().exprIndex);
+			toProcess.push(cur.GetConditionPhiExpr<HLIL_DO_WHILE_SSA>().exprIndex);
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_DO_WHILE_SSA>().exprIndex);
 			break;
 		case HLIL_FOR:
-			toProcess.push(cur.GetLoopExpr<HLIL_FOR>().exprIndex);
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_FOR>().exprIndex);
 			toProcess.push(cur.GetUpdateExpr<HLIL_FOR>().exprIndex);
 			toProcess.push(cur.GetConditionExpr<HLIL_FOR>().exprIndex);
 			toProcess.push(cur.GetInitExpr<HLIL_FOR>().exprIndex);
 			break;
+		case HLIL_FOR_SSA:
+			if (ast)
+				toProcess.push(cur.GetLoopExpr<HLIL_FOR_SSA>().exprIndex);
+			toProcess.push(cur.GetUpdateExpr<HLIL_FOR_SSA>().exprIndex);
+			toProcess.push(cur.GetConditionExpr<HLIL_FOR_SSA>().exprIndex);
+			toProcess.push(cur.GetConditionPhiExpr<HLIL_FOR_SSA>().exprIndex);
+			toProcess.push(cur.GetInitExpr<HLIL_FOR_SSA>().exprIndex);
+			break;
 		case HLIL_SWITCH:
-			exprs = cur.GetCases<HLIL_SWITCH>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			toProcess.push(cur.GetDefaultExpr<HLIL_SWITCH>().exprIndex);
+			if (ast)
+			{
+				exprs = cur.GetCases<HLIL_SWITCH>();
+				for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+					toProcess.push(i->exprIndex);
+				toProcess.push(cur.GetDefaultExpr<HLIL_SWITCH>().exprIndex);
+			}
 			toProcess.push(cur.GetConditionExpr<HLIL_SWITCH>().exprIndex);
 			break;
 		case HLIL_CASE:
@@ -1120,13 +1204,27 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_WHILE:
 		return dest->While(subExprHandler(GetConditionExpr<HLIL_WHILE>()),
 			subExprHandler(GetLoopExpr<HLIL_WHILE>()), *this);
+	case HLIL_WHILE_SSA:
+		return dest->WhileSSA(subExprHandler(GetConditionPhiExpr<HLIL_WHILE_SSA>()),
+			subExprHandler(GetConditionExpr<HLIL_WHILE_SSA>()),
+			subExprHandler(GetLoopExpr<HLIL_WHILE_SSA>()), *this);
 	case HLIL_DO_WHILE:
 		return dest->DoWhile(subExprHandler(GetLoopExpr<HLIL_DO_WHILE>()),
 			subExprHandler(GetConditionExpr<HLIL_DO_WHILE>()), *this);
+	case HLIL_DO_WHILE_SSA:
+		return dest->DoWhileSSA(subExprHandler(GetLoopExpr<HLIL_DO_WHILE_SSA>()),
+			subExprHandler(GetConditionPhiExpr<HLIL_DO_WHILE_SSA>()),
+			subExprHandler(GetConditionExpr<HLIL_DO_WHILE_SSA>()), *this);
 	case HLIL_FOR:
 		return dest->For(subExprHandler(GetInitExpr<HLIL_FOR>()),
 			subExprHandler(GetConditionExpr<HLIL_FOR>()), subExprHandler(GetUpdateExpr<HLIL_FOR>()),
 			subExprHandler(GetLoopExpr<HLIL_FOR>()), *this);
+	case HLIL_FOR_SSA:
+		return dest->ForSSA(subExprHandler(GetInitExpr<HLIL_FOR_SSA>()),
+			subExprHandler(GetConditionPhiExpr<HLIL_FOR_SSA>()),
+			subExprHandler(GetConditionExpr<HLIL_FOR_SSA>()),
+			subExprHandler(GetUpdateExpr<HLIL_FOR_SSA>()),
+			subExprHandler(GetLoopExpr<HLIL_FOR_SSA>()), *this);
 	case HLIL_SWITCH:
 		for (auto& i : GetCases<HLIL_SWITCH>())
 			params.push_back(subExprHandler(i));
@@ -1387,12 +1485,32 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.GetConditionExpr<HLIL_WHILE>() < GetConditionExpr<HLIL_WHILE>())
 			return false;
 		return GetLoopExpr<HLIL_WHILE>() < other.GetLoopExpr<HLIL_WHILE>();
+	case HLIL_WHILE_SSA:
+		if (GetConditionPhiExpr<HLIL_WHILE_SSA>() < other.GetConditionPhiExpr<HLIL_WHILE_SSA>())
+			return true;
+		if (other.GetConditionPhiExpr<HLIL_WHILE_SSA>() < GetConditionPhiExpr<HLIL_WHILE_SSA>())
+			return false;
+		if (GetConditionExpr<HLIL_WHILE>() < other.GetConditionExpr<HLIL_WHILE>())
+			return true;
+		if (other.GetConditionExpr<HLIL_WHILE>() < GetConditionExpr<HLIL_WHILE>())
+			return false;
+		return GetLoopExpr<HLIL_WHILE>() < other.GetLoopExpr<HLIL_WHILE>();
 	case HLIL_DO_WHILE:
 		if (GetLoopExpr<HLIL_DO_WHILE>() < other.GetLoopExpr<HLIL_DO_WHILE>())
 			return true;
 		if (other.GetLoopExpr<HLIL_DO_WHILE>() < GetLoopExpr<HLIL_DO_WHILE>())
 			return false;
 		return GetConditionExpr<HLIL_DO_WHILE>() < other.GetConditionExpr<HLIL_DO_WHILE>();
+	case HLIL_DO_WHILE_SSA:
+		if (GetLoopExpr<HLIL_DO_WHILE_SSA>() < other.GetLoopExpr<HLIL_DO_WHILE_SSA>())
+			return true;
+		if (other.GetLoopExpr<HLIL_DO_WHILE_SSA>() < GetLoopExpr<HLIL_DO_WHILE_SSA>())
+			return false;
+		if (GetConditionPhiExpr<HLIL_DO_WHILE_SSA>() < other.GetConditionPhiExpr<HLIL_DO_WHILE_SSA>())
+			return true;
+		if (other.GetConditionPhiExpr<HLIL_DO_WHILE_SSA>() < GetConditionPhiExpr<HLIL_DO_WHILE_SSA>())
+			return false;
+		return GetConditionExpr<HLIL_DO_WHILE_SSA>() < other.GetConditionExpr<HLIL_DO_WHILE_SSA>();
 	case HLIL_FOR:
 		if (GetInitExpr<HLIL_FOR>() < other.GetInitExpr<HLIL_FOR>())
 			return true;
@@ -1407,6 +1525,24 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.GetUpdateExpr<HLIL_FOR>() < GetUpdateExpr<HLIL_FOR>())
 			return false;
 		return GetLoopExpr<HLIL_FOR>() < other.GetLoopExpr<HLIL_FOR>();
+	case HLIL_FOR_SSA:
+		if (GetInitExpr<HLIL_FOR_SSA>() < other.GetInitExpr<HLIL_FOR_SSA>())
+			return true;
+		if (other.GetInitExpr<HLIL_FOR_SSA>() < GetInitExpr<HLIL_FOR_SSA>())
+			return false;
+		if (GetConditionPhiExpr<HLIL_FOR_SSA>() < other.GetConditionPhiExpr<HLIL_FOR_SSA>())
+			return true;
+		if (other.GetConditionPhiExpr<HLIL_FOR_SSA>() < GetConditionPhiExpr<HLIL_FOR_SSA>())
+			return false;
+		if (GetConditionExpr<HLIL_FOR_SSA>() < other.GetConditionExpr<HLIL_FOR_SSA>())
+			return true;
+		if (other.GetConditionExpr<HLIL_FOR_SSA>() < GetConditionExpr<HLIL_FOR_SSA>())
+			return false;
+		if (GetUpdateExpr<HLIL_FOR_SSA>() < other.GetUpdateExpr<HLIL_FOR_SSA>())
+			return true;
+		if (other.GetUpdateExpr<HLIL_FOR_SSA>() < GetUpdateExpr<HLIL_FOR_SSA>())
+			return false;
+		return GetLoopExpr<HLIL_FOR_SSA>() < other.GetLoopExpr<HLIL_FOR_SSA>();
 	case HLIL_SWITCH:
 		if (GetConditionExpr<HLIL_SWITCH>() < other.GetConditionExpr<HLIL_SWITCH>())
 			return true;
@@ -1946,6 +2082,15 @@ HighLevelILInstruction HighLevelILInstruction::GetConditionExpr() const
 }
 
 
+HighLevelILInstruction HighLevelILInstruction::GetConditionPhiExpr() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(ConditionPhiExprHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExpr(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 HighLevelILInstruction HighLevelILInstruction::GetTrueExpr() const
 {
 	size_t operandIndex;
@@ -2187,9 +2332,23 @@ ExprId HighLevelILFunction::While(ExprId condition, ExprId loopExpr, const ILSou
 }
 
 
+ExprId HighLevelILFunction::WhileSSA(ExprId conditionPhi, ExprId condition, ExprId loopExpr,
+	const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_WHILE_SSA, loc, 0, conditionPhi, condition, loopExpr);
+}
+
+
 ExprId HighLevelILFunction::DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DO_WHILE, loc, 0, loopExpr, condition);
+}
+
+
+ExprId HighLevelILFunction::DoWhileSSA(ExprId loopExpr, ExprId conditionPhi, ExprId condition,
+	const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_DO_WHILE_SSA, loc, 0, loopExpr, conditionPhi, condition);
 }
 
 
@@ -2197,6 +2356,13 @@ ExprId HighLevelILFunction::For(ExprId initExpr, ExprId condition, ExprId update
 	const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_FOR, loc, 0, initExpr, condition, updateExpr, loopExpr);
+}
+
+
+ExprId HighLevelILFunction::ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition,
+	ExprId updateExpr, ExprId loopExpr, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_FOR_SSA, loc, 0, initExpr, conditionPhi, condition, updateExpr, loopExpr);
 }
 
 

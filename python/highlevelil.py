@@ -83,8 +83,11 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
 		HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"), ("false", "expr")],
 		HighLevelILOperation.HLIL_WHILE: [("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_WHILE_SSA: [("condition_phi", "expr"), ("condition", "expr"), ("body", "expr")],
 		HighLevelILOperation.HLIL_DO_WHILE: [("body", "expr"), ("condition", "expr")],
+		HighLevelILOperation.HLIL_DO_WHILE_SSA: [("body", "expr"), ("condition_phi", "expr"), ("condition", "expr")],
 		HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_FOR_SSA: [("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
 		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
 		HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
 		HighLevelILOperation.HLIL_BREAK: [],
@@ -198,10 +201,14 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
 	}
 
-	def __init__(self, func, expr_index, as_ast = True):
-		instr = core.BNGetHighLevelILByIndex(func.handle, expr_index)
+	def __init__(self, func, expr_index, as_ast = True, instr_index = None):
+		instr = core.BNGetHighLevelILByIndex(func.handle, expr_index, as_ast)
 		self._function = func
 		self._expr_index = expr_index
+		if instr_index is None:
+			self._instr_index = core.BNGetHighLevelILInstructionForExpr(func.handle, expr_index)
+		else:
+			self._instr_index = instr_index
 		self._operation = HighLevelILOperation(instr.operation)
 		self._size = instr.size
 		self._address = instr.address
@@ -383,7 +390,7 @@ class HighLevelILInstruction(object):
 	@property
 	def non_ast(self):
 		"""This expression without full AST printing (read-only)"""
-		if self._as_ast:
+		if not self._as_ast:
 			return self
 		return HighLevelILInstruction(self._function, self._expr_index, False)
 
@@ -439,6 +446,28 @@ class HighLevelILInstruction(object):
 		return HighLevelILInstruction(self._function, self._parent, self._as_ast)
 
 	@property
+	def instr_index(self):
+		""" """
+		return self._instr_index
+
+	@property
+	def instr(self):
+		"""High level IL instruction that contains this expression"""
+		return self._function[self._instr_index]
+
+	@property
+	def ssa_form(self):
+		"""SSA form of expression (read-only)"""
+		return HighLevelILInstruction(self._function.ssa_form,
+			core.BNGetHighLevelILSSAExprIndex(self._function.handle, self._expr_index), self._as_ast)
+
+	@property
+	def non_ssa_form(self):
+		"""Non-SSA form of expression (read-only)"""
+		return HighLevelILInstruction(self._function.non_ssa_form,
+			core.BNGetHighLevelILNonSSAExprIndex(self._function.handle, self._expr_index), self._as_ast)
+
+	@property
 	def medium_level_il(self):
 		"""Medium level IL form of this expression"""
 		expr = self._function.get_medium_level_il_expr_index(self._expr_index)
@@ -488,6 +517,18 @@ class HighLevelILInstruction(object):
 		if mlil is None:
 			return function.RegisterValue()
 		return mlil.get_possible_values(options)
+
+	@property
+	def ssa_memory_version(self):
+		"""Version of active memory contents in SSA form for this instruction"""
+		return core.BNGetHighLevelILSSAMemoryVersionAtILInstruction(self._function.handle, self._instr_index)
+
+	def get_ssa_var_version(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		return core.BNGetHighLevelILSSAVarVersionAtILInstruction(self._function.handle, var_data, self._instr_index)
 
 
 class HighLevelILExpr(object):
@@ -597,6 +638,106 @@ class HighLevelILFunction(object):
 			for i in block:
 				yield i
 
+	@property
+	def ssa_form(self):
+		"""High level IL in SSA form (read-only)"""
+		result = core.BNGetHighLevelILSSAForm(self.handle)
+		if not result:
+			return None
+		return HighLevelILFunction(self._arch, result, self._source_function)
+
+	@property
+	def non_ssa_form(self):
+		"""High level IL in non-SSA (default) form (read-only)"""
+		result = core.BNGetHighLevelILNonSSAForm(self.handle)
+		if not result:
+			return None
+		return HighLevelILFunction(self._arch, result, self._source_function)
+
+	def get_ssa_instruction_index(self, instr):
+		return core.BNGetHighLevelILSSAInstructionIndex(self.handle, instr)
+
+	def get_non_ssa_instruction_index(self, instr):
+		return core.BNGetHighLevelILNonSSAInstructionIndex(self.handle, instr)
+
+	def get_ssa_var_definition(self, ssa_var):
+		var_data = core.BNVariable()
+		var_data.type = ssa_var.var.source_type
+		var_data.index = ssa_var.var.index
+		var_data.storage = ssa_var.var.storage
+		result = core.BNGetHighLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
+		if result >= core.BNGetHighLevelILExprCount(self.handle):
+			return None
+		return HighLevelILInstruction(self, result)
+
+	def get_ssa_memory_definition(self, version):
+		result = core.BNGetHighLevelILSSAMemoryDefinition(self.handle, version)
+		if result >= core.BNGetHighLevelILExprCount(self.handle):
+			return None
+		return HighLevelILInstruction(self, result)
+
+	def get_ssa_var_uses(self, ssa_var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = ssa_var.var.source_type
+		var_data.index = ssa_var.var.index
+		var_data.storage = ssa_var.var.storage
+		instrs = core.BNGetHighLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(HighLevelILInstruction(self, instrs[i]))
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_ssa_memory_uses(self, version):
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetHighLevelILSSAMemoryUses(self.handle, version, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(HighLevelILInstruction(self, instrs[i]))
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def is_ssa_var_live(self, ssa_var):
+		"""
+		``is_ssa_var_live`` determines if ``ssa_var`` is live at any point in the function
+
+		:param SSAVariable ssa_var: the SSA variable to query
+		:return: whether the variable is live at any point in the function
+		:rtype: bool
+		"""
+		var_data = core.BNVariable()
+		var_data.type = ssa_var.var.source_type
+		var_data.index = ssa_var.var.index
+		var_data.storage = ssa_var.var.storage
+		return core.BNIsHighLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
+
+	def get_var_definitions(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetHighLevelILVariableDefinitions(self.handle, var_data, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(HighLevelILInstruction(self, instrs[i]))
+		core.BNFreeILInstructionList(instrs)
+		return result
+
+	def get_var_uses(self, var):
+		count = ctypes.c_ulonglong()
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		instrs = core.BNGetHighLevelILVariableUses(self.handle, var_data, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(HighLevelILInstruction(self, instrs[i]))
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -616,7 +757,7 @@ class HighLevelILFunction(object):
 			return i
 		if (i < 0) or (i >= len(self)):
 			raise IndexError("index out of range")
-		return HighLevelILInstruction(self, core.BNGetHighLevelILIndexForInstruction(self.handle, i), False)
+		return HighLevelILInstruction(self, core.BNGetHighLevelILIndexForInstruction(self.handle, i), False, i)
 
 	def __setitem__(self, i, j):
 		raise IndexError("instruction modification not implemented")

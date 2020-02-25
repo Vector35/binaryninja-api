@@ -4052,9 +4052,15 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId If(ExprId condition, ExprId trueExpr, ExprId falseExpr,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId While(ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId WhileSSA(ExprId conditionPhi, ExprId condition, ExprId loopExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhileSSA(ExprId loopExpr, ExprId conditionPhi, ExprId condition,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr,
+			ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Case(const std::vector<ExprId>& condition, ExprId expr,
@@ -4227,9 +4233,10 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId AddSSAVariableList(const std::vector<SSAVariable>& vars);
 
 		BNHighLevelILInstruction GetRawExpr(size_t i) const;
+		BNHighLevelILInstruction GetRawNonASTExpr(size_t i) const;
 		HighLevelILInstruction operator[](size_t i);
 		HighLevelILInstruction GetInstruction(size_t i);
-		HighLevelILInstruction GetExpr(size_t i);
+		HighLevelILInstruction GetExpr(size_t i, bool asFullAst = true);
 		size_t GetIndexForInstruction(size_t i) const;
 		size_t GetInstructionForExpr(size_t expr) const;
 		size_t GetInstructionCount() const;
@@ -4237,6 +4244,24 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
+
+		Ref<HighLevelILFunction> GetSSAForm() const;
+		Ref<HighLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
+
+		size_t GetSSAVarDefinition(const SSAVariable& var) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSAVarUses(const SSAVariable& var) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
+		bool IsSSAVarLive(const SSAVariable& var) const;
+
+		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
+		std::set<size_t> GetVariableUses(const Variable& var) const;
+		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
+		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		size_t GetMediumLevelILExprIndex(size_t expr) const;
@@ -5249,6 +5274,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<LinearViewObject> CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

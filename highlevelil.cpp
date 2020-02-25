@@ -162,7 +162,13 @@ ExprId HighLevelILFunction::AddSSAVariableList(const vector<SSAVariable>& vars)
 
 BNHighLevelILInstruction HighLevelILFunction::GetRawExpr(size_t i) const
 {
-	return BNGetHighLevelILByIndex(m_object, i);
+	return BNGetHighLevelILByIndex(m_object, i, true);
+}
+
+
+BNHighLevelILInstruction HighLevelILFunction::GetRawNonASTExpr(size_t i) const
+{
+	return BNGetHighLevelILByIndex(m_object, i, false);
 }
 
 
@@ -175,13 +181,15 @@ HighLevelILInstruction HighLevelILFunction::operator[](size_t i)
 HighLevelILInstruction HighLevelILFunction::GetInstruction(size_t i)
 {
 	size_t expr = GetIndexForInstruction(i);
-	return HighLevelILInstruction(this, GetRawExpr(expr), expr);
+	return HighLevelILInstruction(this, GetRawNonASTExpr(expr), expr, false, i);
 }
 
 
-HighLevelILInstruction HighLevelILFunction::GetExpr(size_t i)
+HighLevelILInstruction HighLevelILFunction::GetExpr(size_t i, bool asFullAst)
 {
-	return HighLevelILInstruction(this, GetRawExpr(i), i);
+	if (asFullAst)
+		return HighLevelILInstruction(this, GetRawExpr(i), i, true, GetInstructionForExpr(i));
+	return HighLevelILInstruction(this, GetRawNonASTExpr(i), i, false, GetInstructionForExpr(i));
 }
 
 
@@ -230,6 +238,134 @@ Ref<BasicBlock> HighLevelILFunction::GetBasicBlockForInstruction(size_t i) const
 	if (!block)
 		return nullptr;
 	return new BasicBlock(block);
+}
+
+
+Ref<HighLevelILFunction> HighLevelILFunction::GetSSAForm() const
+{
+	BNHighLevelILFunction* func = BNGetHighLevelILSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
+Ref<HighLevelILFunction> HighLevelILFunction::GetNonSSAForm() const
+{
+	BNHighLevelILFunction* func = BNGetHighLevelILNonSSAForm(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
+size_t HighLevelILFunction::GetSSAInstructionIndex(size_t instr) const
+{
+	return BNGetHighLevelILSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t HighLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
+{
+	return BNGetHighLevelILNonSSAInstructionIndex(m_object, instr);
+}
+
+
+size_t HighLevelILFunction::GetSSAExprIndex(size_t expr) const
+{
+	return BNGetHighLevelILSSAExprIndex(m_object, expr);
+}
+
+
+size_t HighLevelILFunction::GetNonSSAExprIndex(size_t expr) const
+{
+	return BNGetHighLevelILNonSSAExprIndex(m_object, expr);
+}
+
+
+size_t HighLevelILFunction::GetSSAVarDefinition(const SSAVariable& var) const
+{
+	return BNGetHighLevelILSSAVarDefinition(m_object, &var.var, var.version);
+}
+
+
+size_t HighLevelILFunction::GetSSAMemoryDefinition(size_t version) const
+{
+	return BNGetHighLevelILSSAMemoryDefinition(m_object, version);
+}
+
+
+set<size_t> HighLevelILFunction::GetSSAVarUses(const SSAVariable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetHighLevelILSSAVarUses(m_object, &var.var, var.version, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> HighLevelILFunction::GetSSAMemoryUses(size_t version) const
+{
+	size_t count;
+	size_t* instrs = BNGetHighLevelILSSAMemoryUses(m_object, version, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+bool HighLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
+{
+	return BNIsHighLevelILSSAVarLive(m_object, &var.var, var.version);
+}
+
+
+set<size_t> HighLevelILFunction::GetVariableDefinitions(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetHighLevelILVariableDefinitions(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+set<size_t> HighLevelILFunction::GetVariableUses(const Variable& var) const
+{
+	size_t count;
+	size_t* instrs = BNGetHighLevelILVariableUses(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
+size_t HighLevelILFunction::GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const
+{
+	return BNGetHighLevelILSSAVarVersionAtILInstruction(m_object, &var, instr);
+}
+
+
+size_t HighLevelILFunction::GetSSAMemoryVersionAtInstruction(size_t instr) const
+{
+	return BNGetHighLevelILSSAMemoryVersionAtILInstruction(m_object, instr);
 }
 
 

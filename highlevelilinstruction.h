@@ -77,6 +77,7 @@ namespace BinaryNinja
 		CarryExprHighLevelOperandUsage,
 		IndexExprHighLevelOperandUsage,
 		ConditionExprHighLevelOperandUsage,
+		ConditionPhiExprHighLevelOperandUsage,
 		TrueExprHighLevelOperandUsage,
 		FalseExprHighLevelOperandUsage,
 		LoopExprHighLevelOperandUsage,
@@ -214,8 +215,9 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			size_t instructionIndex;
 			HighLevelILIntegerList::const_iterator pos;
+			bool ast;
+			size_t instructionIndex;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -224,11 +226,14 @@ namespace BinaryNinja
 		};
 
 		HighLevelILIntegerList m_list;
+		bool m_ast;
+		size_t m_instructionIndex;
 
 	public:
 		typedef ListIterator const_iterator;
 
-		HighLevelILInstructionList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count);
+		HighLevelILInstructionList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr,
+			size_t count, bool asFullAst, size_t instructionIndex);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -272,7 +277,8 @@ namespace BinaryNinja
 #else
 		Ref<HighLevelILFunction> function;
 #endif
-		size_t exprIndex;
+		size_t exprIndex, instructionIndex;
+		bool ast;
 
 		static std::unordered_map<HighLevelILOperandUsage, HighLevelILOperandType> operandTypeForUsage;
 		static std::unordered_map<BNHighLevelILOperation,
@@ -310,6 +316,12 @@ namespace BinaryNinja
 
 		size_t GetInstructionIndex() const;
 		HighLevelILInstruction GetInstruction() const;
+
+		HighLevelILInstruction AsAST() const;
+		HighLevelILInstruction AsNonAST() const;
+
+		bool HasParent() const;
+		HighLevelILInstruction GetParent() const;
 
 		template <BNHighLevelILOperation N>
 		HighLevelILInstructionAccessor<N>& As()
@@ -359,7 +371,8 @@ namespace BinaryNinja
 	struct HighLevelILInstruction: public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction();
-		HighLevelILInstruction(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t expr);
+		HighLevelILInstruction(HighLevelILFunction* func, const BNHighLevelILInstruction& instr,
+			size_t expr, bool asFullAst, size_t instructionIndex);
 		HighLevelILInstruction(const HighLevelILInstructionBase& instr);
 
 		void VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func) const;
@@ -383,6 +396,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetRightExpr() const { return As<N>().GetRightExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetCarryExpr() const { return As<N>().GetCarryExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetIndexExpr() const { return As<N>().GetIndexExpr(); }
+		template <BNHighLevelILOperation N> HighLevelILInstruction GetConditionPhiExpr() const { return As<N>().GetConditionPhiExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetConditionExpr() const { return As<N>().GetConditionExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetTrueExpr() const { return As<N>().GetTrueExpr(); }
 		template <BNHighLevelILOperation N> HighLevelILInstruction GetFalseExpr() const { return As<N>().GetFalseExpr(); }
@@ -410,6 +424,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> size_t GetDestMemoryVersion() const { return As<N>().GetDestMemoryVersion(); }
 
 		template <BNHighLevelILOperation N> void SetSSAVersion(size_t version) { As<N>().SetSSAVersion(version); }
+		template <BNHighLevelILOperation N> void SetDestSSAVersion(size_t version) { As<N>().SetDestSSAVersion(version); }
 		template <BNHighLevelILOperation N> void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
 		template <BNHighLevelILOperation N> void SetParameterExprs(const std::vector<ExprId>& params) { As<N>().SetParameterExprs(params); }
 		template <BNHighLevelILOperation N> void SetSourceExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
@@ -439,6 +454,7 @@ namespace BinaryNinja
 		HighLevelILInstruction GetCarryExpr() const;
 		HighLevelILInstruction GetIndexExpr() const;
 		HighLevelILInstruction GetConditionExpr() const;
+		HighLevelILInstruction GetConditionPhiExpr() const;
 		HighLevelILInstruction GetTrueExpr() const;
 		HighLevelILInstruction GetFalseExpr() const;
 		HighLevelILInstruction GetLoopExpr() const;
@@ -563,10 +579,22 @@ namespace BinaryNinja
 		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(0); }
 		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(1); }
 	};
+	template <> struct HighLevelILInstructionAccessor<HLIL_WHILE_SSA>: public HighLevelILInstructionBase
+	{
+		HighLevelILInstruction GetConditionPhiExpr() const { return GetRawOperandAsExpr(0); }
+		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(1); }
+		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(2); }
+	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_DO_WHILE>: public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(0); }
 		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(1); }
+	};
+	template <> struct HighLevelILInstructionAccessor<HLIL_DO_WHILE_SSA>: public HighLevelILInstructionBase
+	{
+		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(0); }
+		HighLevelILInstruction GetConditionPhiExpr() const { return GetRawOperandAsExpr(1); }
+		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(2); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_FOR>: public HighLevelILInstructionBase
 	{
@@ -574,6 +602,14 @@ namespace BinaryNinja
 		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(1); }
 		HighLevelILInstruction GetUpdateExpr() const { return GetRawOperandAsExpr(2); }
 		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(3); }
+	};
+	template <> struct HighLevelILInstructionAccessor<HLIL_FOR_SSA>: public HighLevelILInstructionBase
+	{
+		HighLevelILInstruction GetInitExpr() const { return GetRawOperandAsExpr(0); }
+		HighLevelILInstruction GetConditionPhiExpr() const { return GetRawOperandAsExpr(1); }
+		HighLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(2); }
+		HighLevelILInstruction GetUpdateExpr() const { return GetRawOperandAsExpr(3); }
+		HighLevelILInstruction GetLoopExpr() const { return GetRawOperandAsExpr(4); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_SWITCH>: public HighLevelILInstructionBase
 	{
@@ -614,7 +650,7 @@ namespace BinaryNinja
 	{
 		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
 		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
-		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_ASSIGN>: public HighLevelILInstructionBase
 	{

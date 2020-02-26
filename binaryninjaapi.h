@@ -933,6 +933,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Redo();
 
 		std::vector<Ref<User>> GetUsers();
+		std::vector<BNUndoEntry> GetUndoEntries();
 
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();

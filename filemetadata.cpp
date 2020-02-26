@@ -390,6 +390,23 @@ vector<Ref<User>> FileMetadata::GetUsers()
 }
 
 
+vector<BNUndoEntry> FileMetadata::GetUndoEntries()
+{
+	size_t count;
+	BNUndoEntry* entries = BNGetUndoEntries(m_object, &count);
+
+	vector<BNUndoEntry> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(entries[i]);
+	}
+
+	//BNFreeUndoEntries(entries, count);
+	return result;
+}
+
+
 string FileMetadata::GetCurrentView()
 {
 	char* view = BNGetCurrentView(m_object);

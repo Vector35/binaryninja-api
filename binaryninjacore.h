@@ -1447,6 +1447,15 @@ extern "C"
 		char* (*serialize)(void* ctxt);
 	};
 
+	struct BNUndoEntry
+	{
+		BNUser* user;
+		const char* hash;
+		char** actions;
+		uint64_t actionCount;
+		uint64_t timestamp;
+	};
+
 	struct BNCallingConventionWithConfidence
 	{
 		BNCallingConvention* convention;
@@ -2238,6 +2247,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
+
+	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
 
 	BINARYNINJACOREAPI BNUser* BNNewUserReference(BNUser* user);
 	BINARYNINJACOREAPI void BNFreeUser(BNUser* user);

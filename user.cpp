@@ -29,3 +29,21 @@ User::User(BNUser* user)
 {
 	m_object = user;
 }
+
+
+string User::GetName()
+{
+	return BNGetUserName(m_object);
+}
+
+
+string User::GetEmail()
+{
+	return BNGetUserEmail(m_object);
+}
+
+
+string User::GetId()
+{
+	return BNGetUserId(m_object);
+}

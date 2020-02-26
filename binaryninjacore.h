@@ -2243,6 +2243,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeUser(BNUser* user);
 	BINARYNINJACOREAPI BNUser** BNGetUsers(BNFileMetadata* file, size_t* count);
 	BINARYNINJACOREAPI void BNFreeUserList(BNUser** users, size_t count);
+	BINARYNINJACOREAPI char* BNGetUserName(BNUser* user);
+	BINARYNINJACOREAPI char* BNGetUserEmail(BNUser* user);
+	BINARYNINJACOREAPI char* BNGetUserId(BNUser* user);
 
 	BINARYNINJACOREAPI char* BNGetCurrentView(BNFileMetadata* file);
 	BINARYNINJACOREAPI uint64_t BNGetCurrentOffset(BNFileMetadata* file);

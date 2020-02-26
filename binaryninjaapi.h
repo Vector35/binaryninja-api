@@ -840,9 +840,9 @@ __attribute__ ((format (printf, 1, 2)))
 			std::string m_email;
 		public:
 			User(BNUser* user);
-			std::string GetName() { return m_name; }
-			std::string GetEmail() { return m_email; }
-			std::string GetId() { return m_id; }
+			std::string GetName();
+			std::string GetEmail();
+			std::string GetId();
 	};
 
 	class UndoAction

@@ -390,19 +390,29 @@ vector<Ref<User>> FileMetadata::GetUsers()
 }
 
 
-vector<BNUndoEntry> FileMetadata::GetUndoEntries()
+vector<UndoEntry> FileMetadata::GetUndoEntries()
 {
 	size_t count;
 	BNUndoEntry* entries = BNGetUndoEntries(m_object, &count);
 
-	vector<BNUndoEntry> result;
+	vector<UndoEntry> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
-		result.push_back(entries[i]);
+		UndoEntry temp;
+		temp.timestamp = entries[i].timestamp;
+		temp.hash = entries[i].hash;
+		temp.user = new User(BNNewUserReference(entries[i].user));
+		temp.actions.reserve(entries[i].actionCount);
+		for (size_t actionIndex = 0; actionIndex < entries[i].actionCount; actionIndex++)
+		{
+			printf("Action: %s\n", entries[i].actions[actionIndex]);
+			temp.actions.emplace_back(entries[i].actions[actionIndex]);
+		}
+		result.push_back(temp);
 	}
 
-	//BNFreeUndoEntries(entries, count);
+	BNFreeUndoEntries(entries, count);
 	return result;
 }
 

@@ -1450,7 +1450,7 @@ extern "C"
 	struct BNUndoEntry
 	{
 		BNUser* user;
-		const char* hash;
+		char* hash;
 		char** actions;
 		uint64_t actionCount;
 		uint64_t timestamp;

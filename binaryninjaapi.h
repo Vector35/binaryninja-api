@@ -845,6 +845,14 @@ __attribute__ ((format (printf, 1, 2)))
 			std::string GetId();
 	};
 
+	struct UndoEntry
+	{
+		Ref<User> user;
+		std::string hash;
+		std::vector<std::string> actions;
+		uint64_t timestamp;
+	};
+
 	class UndoAction
 	{
 	private:
@@ -933,7 +941,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Redo();
 
 		std::vector<Ref<User>> GetUsers();
-		std::vector<BNUndoEntry> GetUndoEntries();
+		std::vector<UndoEntry> GetUndoEntries();
 
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();

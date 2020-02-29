@@ -243,6 +243,7 @@ public:
 	void setCurrentFunction(FunctionRef func);
 	void updateCrossReferences();
 	void showCrossReferences();
+	void showPinnedCrossReferences();
 	void nextCrossReference();
 	void prevCrossReference();
 

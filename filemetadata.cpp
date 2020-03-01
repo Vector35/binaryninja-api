@@ -406,7 +406,6 @@ vector<UndoEntry> FileMetadata::GetUndoEntries()
 		temp.actions.reserve(entries[i].actionCount);
 		for (size_t actionIndex = 0; actionIndex < entries[i].actionCount; actionIndex++)
 		{
-			printf("Action: %s\n", entries[i].actions[actionIndex]);
 			temp.actions.emplace_back(entries[i].actions[actionIndex]);
 		}
 		result.push_back(temp);

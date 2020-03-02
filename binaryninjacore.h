@@ -1456,6 +1456,19 @@ extern "C"
 		uint64_t timestamp;
 	};
 
+	enum BNMergeStatus
+	{
+		NOT_APPLICABLE = 0,
+		OK = 1,
+		CONFLICT = 2
+	};
+
+	struct BNMergeResult
+	{
+		BNMergeStatus status;
+		BNUndoAction* action;
+	};
+
 	struct BNCallingConventionWithConfidence
 	{
 		BNCallingConvention* convention;
@@ -2231,7 +2244,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(BNBinaryView* data, uint64_t address, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 
-	BINARYNINJACOREAPI bool BNMergeUndo(BNFileMetadata* file, const char* name, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
+	BINARYNINJACOREAPI BNMergeResult BNMergeUndo(BNFileMetadata* file, const char* name, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 
 	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);

@@ -344,7 +344,7 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
-bool FileMetadata::MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress)
+BNMergeResult FileMetadata::MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;

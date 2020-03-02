@@ -114,6 +114,14 @@ open /Applications/Python\ 3.6/Install\ Certificates.command
 
 Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
 
+#### Debian
+
+Debian requires one package be manually installed to support the emoji icons used in the Tag system:
+
+```
+apt install fonts-noto-color-emoji
+```
+
 #### Headless Ubuntu
 
 If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requirements (for at least 14.04 LTS):

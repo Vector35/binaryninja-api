@@ -237,11 +237,11 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
-MergeResult FileMetadata::MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress)
+MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
-	BNMergeResult bnResult = BNMergeUndo(m_object, name.c_str(), &cb, DatabaseProgressCallback);
+	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback);
 	MergeResult result(bnResult);
 	return result;
 }

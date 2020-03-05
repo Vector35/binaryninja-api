@@ -110,9 +110,9 @@ class MappedView(BinaryView):
 			self.arch = Architecture[arch]
 			self.platform = Architecture[arch].standalone_platform
 			self.load_address = load_settings.get_integer("loader.imageBase", self)
+			self.add_auto_segment(self.load_address, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 			entry_point = load_settings.get_integer("loader.entryPoint", self)
 			self.add_entry_point(self.load_address + entry_point)
-			self.add_auto_segment(self.load_address, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 			return True
 		except:
 			log_error(traceback.format_exc())

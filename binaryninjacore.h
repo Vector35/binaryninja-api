@@ -1465,6 +1465,7 @@ extern "C"
 	{
 		BNMergeStatus status;
 		BNUndoAction action;
+		const char* hash;
 	};
 
 	struct BNCallingConventionWithConfidence

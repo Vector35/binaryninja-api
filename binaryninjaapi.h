@@ -867,8 +867,9 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNMergeStatus status;
 		UndoAction action;
+		std::string hash;
 
-		MergeResult(const BNMergeResult& result) : status(result.status), action(result.action) {};
+		MergeResult(const BNMergeResult& result) : status(result.status), action(result.action), hash(result.hash) {};
 	};
 
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>

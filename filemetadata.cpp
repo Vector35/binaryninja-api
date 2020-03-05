@@ -243,6 +243,7 @@ MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::
 	cb.func = progress;
 	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback);
 	MergeResult result(bnResult);
+	result.hash = bnResult.hash;
 	return result;
 }
 

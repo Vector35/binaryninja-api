@@ -845,54 +845,30 @@ __attribute__ ((format (printf, 1, 2)))
 			std::string GetId();
 	};
 
+	struct UndoAction
+	{
+		BNActionType actionType;
+		std::string summaryText;
+		std::vector<BNInstructionTextToken> summaryTokens;
+
+		UndoAction() {};
+		UndoAction(const BNUndoAction& action);
+	};
+
 	struct UndoEntry
 	{
 		Ref<User> user;
 		std::string hash;
-		std::vector<std::string> actions;
+		std::vector<UndoAction> actions;
 		uint64_t timestamp;
 	};
 
-	class UndoAction
+	struct MergeResult
 	{
-	private:
-		std::string m_typeName;
-		BNActionType m_actionType;
+		BNMergeStatus status;
+		UndoAction action;
 
-		static void FreeCallback(void* ctxt);
-		static void UndoCallback(void* ctxt, BNBinaryView* data);
-		static void RedoCallback(void* ctxt, BNBinaryView* data);
-		static char* SerializeCallback(void* ctxt);
-
-	public:
-		UndoAction(const std::string& name, BNActionType action);
-		virtual ~UndoAction() {}
-
-		const std::string& GetTypeName() const { return m_typeName; }
-		BNActionType GetActionType() const { return m_actionType; }
-		BNUndoAction GetCallbacks();
-
-		void Add(BNBinaryView* view);
-
-		virtual void Undo(BinaryView* data) = 0;
-		virtual void Redo(BinaryView* data) = 0;
-		virtual Json::Value Serialize() = 0;
-	};
-
-	class UndoActionType
-	{
-	protected:
-		std::string m_nameForRegister;
-
-		static bool DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result);
-
-	public:
-		UndoActionType(const std::string& name);
-		virtual ~UndoActionType() {}
-
-		static void Register(UndoActionType* type);
-
-		virtual UndoAction* Deserialize(const Json::Value& data) = 0;
+		MergeResult(const BNMergeResult& result) : status(result.status), action(result.action) {};
 	};
 
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
@@ -932,7 +908,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
 
-		BNMergeResult MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress);
+		MergeResult MergeUndo(const std::string& name, const std::function<void(size_t, size_t)>& progress);
 
 		void BeginUndoActions();
 		void CommitUndoActions();

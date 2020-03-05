@@ -1439,19 +1439,17 @@ extern "C"
 
 	struct BNUndoAction
 	{
-		BNActionType type;
-		void* context;
-		void (*freeObject)(void* ctxt);
-		void (*undo)(void* ctxt, BNBinaryView* data);
-		void (*redo)(void* ctxt, BNBinaryView* data);
-		char* (*serialize)(void* ctxt);
+		BNActionType actionType;
+		char* summaryText;
+		BNInstructionTextToken* summaryTokens;
+		size_t summaryTokenCount;
 	};
 
 	struct BNUndoEntry
 	{
 		BNUser* user;
 		char* hash;
-		char** actions;
+		BNUndoAction* actions;
 		uint64_t actionCount;
 		uint64_t timestamp;
 	};
@@ -1466,7 +1464,7 @@ extern "C"
 	struct BNMergeResult
 	{
 		BNMergeStatus status;
-		BNUndoAction* action;
+		BNUndoAction action;
 	};
 
 	struct BNCallingConventionWithConfidence
@@ -2252,10 +2250,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
 
-	BINARYNINJACOREAPI void BNRegisterUndoActionType(const char* name, void* typeContext,
-	                                                 bool (*deserialize)(void* ctxt, const char* data, BNUndoAction* result));
 	BINARYNINJACOREAPI void BNBeginUndoActions(BNFileMetadata* file);
-	BINARYNINJACOREAPI void BNAddUndoAction(BNBinaryView* view, const char* type, BNUndoAction* action);
 	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);

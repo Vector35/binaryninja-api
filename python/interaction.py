@@ -1150,12 +1150,17 @@ def get_open_filename_input(prompt, ext=""):
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
 	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
+	Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be specified by using a space within the parenthesis.
+
+	Also, a simple selector of "*.extension" by itself may also be used instead of specifying the description.
+
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
 	:Example:
-		>>> get_open_filename_input("filename:", "exe")
-		filename: foo.exe
-		'foo.exe'
+		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
+		b'foo.exe'
+		>>> get_open_filename_input("filename:", "*.py")
+		b'test.py'
 	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetOpenFileNameInput(value, prompt, ext):

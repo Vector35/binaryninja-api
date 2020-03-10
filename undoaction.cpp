@@ -32,7 +32,7 @@ UndoAction::UndoAction(const BNUndoAction& action)
 	summaryTokens.reserve(action.summaryTokenCount);
 	for (size_t i = 0; i < action.summaryTokenCount; i++)
 	{
-		summaryTokens[i] = action.summaryTokens[i];
+		summaryTokens.push_back(action.summaryTokens[i]);
 	}
 }
 

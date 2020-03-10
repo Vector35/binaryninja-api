@@ -845,11 +845,13 @@ __attribute__ ((format (printf, 1, 2)))
 			std::string GetId();
 	};
 
+	struct InstructionTextToken;
+
 	struct UndoAction
 	{
 		BNActionType actionType;
 		std::string summaryText;
-		std::vector<BNInstructionTextToken> summaryTokens;
+		std::vector<InstructionTextToken> summaryTokens;
 
 		UndoAction() {};
 		UndoAction(const BNUndoAction& action);

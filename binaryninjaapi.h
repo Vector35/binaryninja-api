@@ -869,7 +869,7 @@ __attribute__ ((format (printf, 1, 2)))
 		UndoAction action;
 		std::string hash;
 
-		MergeResult(const BNMergeResult& result) : status(result.status), action(result.action), hash(result.hash) {};
+		MergeResult(const BNMergeResult& result);
 	};
 
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
@@ -909,7 +909,8 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
 
-		MergeResult MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress);
+		MergeResult MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress,
+				const std::vector<std::string> excludedHashes = {} );
 
 		void BeginUndoActions();
 		void CommitUndoActions();

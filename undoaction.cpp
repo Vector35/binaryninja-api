@@ -36,3 +36,13 @@ UndoAction::UndoAction(const BNUndoAction& action)
 	}
 }
 
+
+MergeResult::MergeResult(const BNMergeResult& result)
+{
+	status = result.status;
+	if (status == BNMergeStatus::CONFLICT)
+	{
+		action = result.action;
+		hash = result.hash;
+	}
+};

@@ -237,13 +237,21 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
-MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress)
+MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress, std::vector<string> excludedHashes)
 {
+	size_t numHashes = excludedHashes.size();
+	char** tempList = new char*[numHashes];
+	for (size_t i = 0; i < numHashes; i++)
+	{
+		tempList[i] = BNAllocString(excludedHashes[i].c_str());
+	}
+
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
-	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback);
+
+	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback, tempList, numHashes);
+	//BNFreeStringList(hashList, numHashes);
 	MergeResult result(bnResult);
-	result.hash = bnResult.hash;
 	return result;
 }
 

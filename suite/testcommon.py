@@ -403,9 +403,9 @@ class BinaryViewTestBuilder(Builder):
         retinfo.append("Session Data: " + str(self.bv.session_data))
         for var in map(hex, sorted(self.bv.data_vars.keys())):
             retinfo.append("BV data var: " + var)
-        retinfo.append("BV Entry function: " + str(self.bv.entry_function))
+        retinfo.append("BV Entry function: " + repr(self.bv.entry_function))
         for i in self.bv:
-            retinfo.append("BV function: " + str(i))
+            retinfo.append("BV function: " + repr(i))
         retinfo.append("BV entry point: " + hex(self.bv.entry_point))
         retinfo.append("BV start: " + hex(self.bv.start))
         retinfo.append("BV length: " + hex(len(self.bv)))

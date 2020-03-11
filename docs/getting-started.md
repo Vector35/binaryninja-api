@@ -61,7 +61,7 @@ You can load files in many ways:
 5. Clicking an item in the recent files list (hold `CMD`/`CTL` and `SHIFT` while clicking to use the `Open with Options` workflow)
 6. Running Binary Ninja with an optional command-line parameter
 7. Opening a file from a URL via the `CMD-l` or `CTRL-l` hot key
-8. Opening a file using the binaryninja: URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. The URL handler can open remote URLs like: `binaryninja:https://captf2.captf.com/2015/plaidctf/pwnable/datastore_7e64104f876f0aa3f8330a409d9b9924.elf`, or even local files like `binarynina://bin/ls` in cases where you wish to script up Binary Ninja from a local web application.
+8. Opening a file using the binaryninja: URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. The URL handler can open remote URLs like: `binaryninja:https://captf2.captf.com/2015/plaidctf/pwnable/datastore_7e64104f876f0aa3f8330a409d9b9924.elf`, or even local files like `binaryninja://bin/ls` in cases where you wish to script up Binary Ninja from a local web application.
 
 ## Analysis
 

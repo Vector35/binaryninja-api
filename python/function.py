@@ -793,6 +793,12 @@ class Function(object):
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
 
+	def __str__(self):
+		result = ""
+		for token in self.type_tokens:
+			result += token.text
+		return result
+
 	def __repr__(self):
 		arch = self.arch
 		if arch:
@@ -1220,11 +1226,14 @@ class Function(object):
 
 	@property
 	def function_type(self):
-		"""Function type object"""
+		"""Function type object, can be set with either a string representing the function prototype (`str(function)` shows examples) or a :py:class:`Type` object"""
 		return types.Type(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
 	def function_type(self, value):
+		if isinstance(value, str):
+			(value, new_name) = self.view.parse_type_string(value)
+			self.name = str(new_name)
 		self.set_user_type(value)
 
 	@property

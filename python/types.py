@@ -319,6 +319,17 @@ class FunctionParameter(object):
 
 
 class Type(object):
+	"""
+	``class Type`` allows you to interact with the Binary Ninja type system. Note that the ``repr`` and ``str``
+	handlers respond differently on type objects.
+
+	Other related functions that may be helpful include:
+
+	:py:meth:`parse_type_string <binaryninja.binaryview.BinaryView.parse_type_string>`
+	:py:meth:`parse_types_from_source <binaryninja.platform.Platform.parse_types_from_source>`
+	:py:meth:`parse_types_from_source_file <binaryninja.platform.Platform.parse_types_from_source_file>`
+
+	"""
 	def __init__(self, handle, platform = None, confidence = max_confidence):
 		self._handle = handle
 		self._mutable = isinstance(handle.contents, core.BNTypeBuilder)

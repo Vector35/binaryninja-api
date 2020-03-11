@@ -64,7 +64,7 @@ private Q_SLOTS:
 
 public:
 	AddressDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here,
-		const QString& title = "Go to Address", const QString& prompt = "Enter Expression");
+		const QString& title = "Go to Address", const QString& prompt = "Enter Expression", bool defaultToCurrent = false);
 	~AddressDialogWithPreview() { delete m_updateThread; }
 	uint64_t getOffset() const { return m_addr; }
 };

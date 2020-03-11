@@ -238,7 +238,7 @@ public:
 	static bool getAddressFromString(QWidget* parent, BinaryViewRef data, uint64_t& offset,
 		uint64_t currentAddress, const QString& addrStr, std::string& errorString);
 	static bool getAddressFromInput(QWidget* parent, BinaryViewRef data, uint64_t& offset,
-		uint64_t currentAddress, const QString& title = "Go to Address", const QString& msg = "Address:");
+		uint64_t currentAddress, const QString& title = "Go to Address", const QString& msg = "Address:", bool defaultToCurrent = false);
 
 	void setCurrentFunction(FunctionRef func);
 	void updateCrossReferences();

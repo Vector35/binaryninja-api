@@ -58,10 +58,16 @@ You can load files in many ways:
 2. Use the `File/Open` menu or `Open` button on the start screen (`CMD-o` or `CTL-o`)
 3. Use the `File/Open with Options` menu which allows you to customize the analysis options (`CMD-SHIFT-o` or `CTL-SHIFT-o`)
 4. Open a file from the Triage picker (`File/Open for Triage`) which enables several minimal analysis options and shows a summary view first
-5. Clicking an item in the recent files list (hold `CMD`/`CTL` and `SHIFT` while clicking to use the `Open with Options` workflow)
-6. Running Binary Ninja with an optional command-line parameter
-7. Opening a file from a URL via the `CMD-l` or `CTRL-l` hot key
-8. Opening a file using the binaryninja: URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. The URL handler can open remote URLs like: `binaryninja:https://captf2.captf.com/2015/plaidctf/pwnable/datastore_7e64104f876f0aa3f8330a409d9b9924.elf`, or even local files like `binaryninja://bin/ls` in cases where you wish to script up Binary Ninja from a local web application.
+5. Click an item in the recent files list (hold `CMD`/`CTL` and `SHIFT` while clicking to use the `Open with Options` workflow)
+6. Run Binary Ninja with an optional command-line parameter
+7. Open a file from a URL via the `CMD-l` or `CTRL-l` hot key
+8. Open a file using the `binaryninja:` URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. URLs additionally support deep linking using the `expr` query parameter where expression value is a valid parsable expression such as those possible in the [navigation dialog](#navigating), and fully documented in the [`parse_expression`](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression) API. Below a few examples are provided:
+    * URLs For referencing files on the local file system.
+        * `binaryninja:///bin/ls?expr=sub_2830` - open the given file and navigate to the function: `sub_2830`
+        * `binaryninja:///bin/ls?expr=.text` - open the given file and navigate to the start address of the `.text` section
+        * `binaryninja:///bin/ls?expr=.text+6b` - open the given file and navigate to the hexadecimal offset `6b` from the `.text` section.
+    * URLs For referencing remote file files either the url should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
+        * `binaryninja:file://<remote_path>?expr=[.data + 400]` - Download the remote file and navigate to the address at `.data` plus `0x400`
 
 ## Analysis
 
@@ -83,9 +89,12 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 
 ### Navigating
 
-Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jmp edges, etc, can all be double-clicked to navigate. Additionally, The `g` hot key can navigate to a specific address in the current view.
 
-![graph view](img/view-choices.png "Different Views")
+![navigation >](img/navigation.png "Navigation") <br>
+Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jmp edges, etc, can all be double-clicked to navigate. Additionally, The `g` hot key can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (funciton names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
+<br><br><br><br>
+### Switching Views
+![graph view >](img/view-choices.png "Different Views")
 
 Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hot keys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
 

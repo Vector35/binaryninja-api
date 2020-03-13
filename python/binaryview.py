@@ -874,7 +874,7 @@ class Segment(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
 
 	def __hash__(self):
-		return hash(self.handle.contents)
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def __len__(self):
 		return core.BNSegmentGetLength(self.handle)
@@ -948,7 +948,7 @@ class Section(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
 
 	def __hash__(self):
-		return hash(self.handle.contents)
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def __len__(self):
 		return core.BNSectionGetLength(self.handle)
@@ -1048,7 +1048,7 @@ class TagType(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
 
 	def __hash__(self):
-		return hash(self.handle.contents)
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def __repr__(self):
 		return "<tag type %s: %s>" % (self.name, self.icon)

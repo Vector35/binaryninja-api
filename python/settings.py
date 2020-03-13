@@ -91,7 +91,7 @@ class Settings(object):
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	def __hash__(self):
-		return hash((self.instance_id, self.handle))
+		return hash((self.instance_id, ctypes.addressof(self.handle.contents)))
 
 	@property
 	def instance_id(self):

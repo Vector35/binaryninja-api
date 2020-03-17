@@ -2724,6 +2724,16 @@ class ReferenceSource(object):
 		else:
 			return "<ref: %#x>" % self._address
 
+	def __eq__(self, value):
+		if not isinstance(value, ReferenceSource):
+			return False
+		return self.function == value.function and self.arch == value.arch and self.address == value.address
+
+	def __lt__(self, value):
+		if not isinstance(value, ReferenceSource):
+			raise TypeError("Can only compare to other ReferenceSource objects")
+		return self.address < value.address
+
 	@property
 	def function(self):
 		""" """

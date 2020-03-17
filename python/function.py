@@ -752,7 +752,7 @@ class Function(object):
 
 	def __lt__(self, value):
 		if not isinstance(value, Function):
-			return False
+			raise TypeError("Can only compare to other Function objects")
 		return self.start < value.start
 
 	def __eq__(self, value):

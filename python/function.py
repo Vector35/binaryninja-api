@@ -750,6 +750,11 @@ class Function(object):
 				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 			core.BNFreeFunction(self.handle)
 
+	def __lt__(self, value):
+		if not isinstance(value, Function):
+			return False
+		return self.start < value.start
+
 	def __eq__(self, value):
 		if not isinstance(value, Function):
 			return False

@@ -263,6 +263,7 @@ protected:
 public Q_SLOTS:
 	void directionChanged(int index);
 	void typeChanged(int index);
+	void resetFilter();
 };
 
 class CrossReferenceWidget;

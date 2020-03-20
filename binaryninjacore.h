@@ -4062,7 +4062,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI const char* BNPluginGetLicense(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNRepoPlugin* p);
-	BINARYNINJACOREAPI uint64_t BNPluginGetMinimimVersion(BNRepoPlugin* p);
+	BINARYNINJACOREAPI uint64_t BNPluginGetMinimumVersion(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetName(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetProjectUrl(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetPackageUrl(BNRepoPlugin* p);

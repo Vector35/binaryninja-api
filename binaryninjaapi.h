@@ -4707,7 +4707,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetRepository() const;
 		std::string GetProjectData();
 		std::string GetInstallInstructions(const std::string& platform) const;
-		uint64_t GetMinimimVersion() const;
+		uint64_t GetMinimumVersion() const;
 		uint64_t GetLastUpdate();
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;

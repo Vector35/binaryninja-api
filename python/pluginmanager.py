@@ -116,7 +116,7 @@ class RepoPlugin(object):
 	@property
 	def minimum_version(self):
 		"""String minimum version the plugin was tested on"""
-		return core.BNPluginGetMinimimVersion(self.handle)
+		return core.BNPluginGetMinimumVersion(self.handle)
 
 	@property
 	def name(self):

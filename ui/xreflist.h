@@ -249,11 +249,17 @@ class BINARYNINJAUIAPI CrossReferenceFilterProxyModel : public QSortFilterProxyM
 
 public:
 	CrossReferenceFilterProxyModel(QObject* parent, bool table);
+	QModelIndex nextValidIndex(const QModelIndex& current) const;
+	QModelIndex getFirstLeaf(const QModelIndex& index) const;
+	QModelIndex prevValidIndex(const QModelIndex& current) const;
+	QModelIndex getLastLeaf(const QModelIndex& index) const;
+
 protected:
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 	virtual bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 	virtual QVariant data(const QModelIndex& index, int role) const override;
 	virtual bool hasChildren(const QModelIndex& parent) const override;
+
 public Q_SLOTS:
 	void directionChanged(int index);
 	void typeChanged(int index);

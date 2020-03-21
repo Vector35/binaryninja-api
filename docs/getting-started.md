@@ -212,45 +212,47 @@ The hexadecimal view is useful for view raw binary files that may or may not eve
 
 ![Cross Reference Tree <](img/cross-reference-tree.png "xrefs tree")
 
-The xrefs view in the lower-left shows all cross-references to the currently selected address or address range. Additionally this pane will update depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected. For instance if you click on the symbol in `call memmove` it will display all references known cross-references to `memmove`, where as if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data or code. To be explicit:
+The xrefs view in the lower-left shows all cross-references to the currently selected address or address range. Additionally this pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data or code. To be explicit:
 
 * Incoming-Data References - The reference is a data variable pointing to this location.
 * Incoming-Code References - The reference is a pointer in code pointing to this location.
 * Outgoing-Data References - The currently selected item is a data variable pointer to the reference which itself is either data or code.
-* Outgoing-Code References - The currently selected item is a code which is pointing to the reference which itself is either data or code.
+* Outgoing-Code References - The currently selected item is code pointing to the reference which itself is either data or code.
 
 #### Tree-based Layout
-The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (This can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed form of information, allowing users to quickly see (for instance) how many references are present to the current selection, overall and by function. It also allows collapsing allowing users to quickly hide uninteresting results.
+The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (this can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed view, allowing users to quickly see (for instance) how many references are present to the current selection overall and by function. It also allows collapsing to quickly hide uninteresting results.
 
 #### Table-based Layout
 
 ![xrefs >](img/cross-reference-table.png "xrefs table")
 
-The table-based layout provides field-based sorting, and multi-select. Clicking the `Filter` text expands the filter pane, presenting a set of options for quickly filtering through the current results.
+The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
 
 #### Cross-Reference Filtering
 
 ![xrefs <](img/cross-reference-filter.png "xrefs filter")
 
-The the first of the two drop down boxes allows the selection of showing incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, or code and data (default). The text box allows regex-based matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
+The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, or code and data (default). The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
 
-#### Cross-Reference Pinning.
+#### Cross-Reference Pinning
 
-By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevent references.  Sometimes users would rather have the current references stick around so they can be used as a sort of worklist. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox. This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively as a second option `SHIFT+X` (Or selecting `Focus Pinned Cross References` in the context menu, or command palette ) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pinned Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references the right-click `Tag Selected Rows`. The tag pane can then be used to navigate.
+By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevent references.  Sometimes users would rather have the current references stick around so they can be used as a sort of worklist. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox. This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Focus Pinned Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pinned Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session. 
+
 
 #### Cross-Reference Hotkeys
 
-* `X` - Focus the cross-references pane
-* `SHIFT+X` Focus the pinned cross-references pane
-* `OPTION/ALT+X` - Navigate to the next cross-reference
-* `OPTION/ALT+SHIFT+X` - Navigate to the previous cross-reference
+* `x` - Focus the cross-references pane
+* `[SHIFT] x` Focus the pinned cross-references pane
+* `[OPTION/ALT] x` - Navigate to the next cross-reference
+* `[OPTION/ALT-SHIFT] x` - Navigate to the previous cross-reference
 
-The following are only available when the cross-references pane is in focus
+The following are only available when the cross-references pane is in focus:
 
-* `CMD/CTRL+F` - Open the filter dialog
-* `ESC` - Clear the search dialog
-* `CMD/CTRL+A` - Select all cross-references
-* `ARROW UP/DOWN` - Select (but don't navigate) next/previous cross-reference
+* `[CMD/CTRL] f` - Open the filter dialog
+* `[ESC]` - Clear the search dialog
+* `[CMD/CTRL] a` - Select all cross-references
+* `[ARROW UP/DOWN]` - Select (but don't navigate) next/previous cross-reference
+* `[ENTER]` - Navigate to the selected refereence
 
 
 ### Linear View

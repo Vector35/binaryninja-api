@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "elif core_platform == \"Linux\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
-	fprintf(out, "elif core_platform == \"Windows\":\n");
+	fprintf(out, "elif core_platform == \"Windows\" or core_platform == \"CYGWIN_NT\":\n");
 	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
 	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
 	fprintf(out, "else:\n");

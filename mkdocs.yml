@@ -6,7 +6,8 @@ site_description: 'Documentation for the Binary Ninja reverse engineering platfo
 site_author: 'Vector 35 Inc'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
-extra_css: ['docs.css?1535411025']
+extra_css: ['docs.css?1585271138','lightslider.min.css?1585271138']
+extra_javascript: ['lightslider.min.js?1585271138']
 theme:
     name: readthedocs
     favicon: 'img/favicon.ico'
@@ -37,9 +38,9 @@ nav:
         #- Interface: 'guide/interface.md'
         #- Patching: 'guide/patching.md'
         #- SCC: 'guide/scc.md'
-        #- Types Library: 'guide/type.md'
         - Using and Writing Plugins: 'guide/plugins.md'
         - Troubleshooting: 'guide/troubleshooting.md'
+        - Working with Types: 'guide/type.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'
         - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'

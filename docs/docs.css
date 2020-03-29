@@ -91,3 +91,24 @@ color: #ccc;
 color: #fff;
 }
 
+
+#light-slider li, #light-slider img {
+	list-style: none;
+	margin-left: 0px;
+}
+
+.cS-hidden {
+    height: 1px;
+    opacity: 0;
+    filter: alpha(opacity=0);
+    overflow: hidden;
+}
+
+ol#taped li#currentline {
+	background-color: #6e6e6e;
+	color: #fff;
+	font-weight: bold;
+}
+ol#taped li {
+	list-style-position: inside;
+}

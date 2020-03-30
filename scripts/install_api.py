@@ -80,6 +80,8 @@ if ( len(sys.argv) > 1 and sys.argv[1].lower() == "root" ):
     if not os.access(install_path, os.W_OK):
         print("Root install specified but cannot write to {}".format(install_path))
         sys.exit(1)
+elif os.environ.get('VIRTUAL_ENV'):
+    install_path = getsitepackages()[0]
 else:
     if check_enableusersite():
         install_path = getusersitepackages()

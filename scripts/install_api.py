@@ -81,6 +81,8 @@ if ( len(sys.argv) > 1 and sys.argv[1].lower() == "root" ):
         print("Root install specified but cannot write to {}".format(install_path))
         sys.exit(1)
 elif os.environ.get('VIRTUAL_ENV'):
+    print("Virtual environment detected - installing API in virtual environment.\n\
+           Deactivate environment and re-run this script to perform normal installation.")
     install_path = getsitepackages()[0]
 else:
     if check_enableusersite():

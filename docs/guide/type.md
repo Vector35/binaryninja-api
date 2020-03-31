@@ -14,72 +14,90 @@ There are two main ways to interact with types from within a binary view. The fi
 
 New to stable version 1.3.2015 is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
-<ol id="taped">
-<li id="currentline">Assembly view of the start of <code>0x8048e20</code></li>
-<li>MLIL view of the same basic block</li>
-<li>MLIL view after selecting the return of <code>calloc</code> and pressing <code>s</code></li>
-<li>MLIL view after selecting the offset and pressing <code>s</code> to turn it into a member access</li>
-<li>MLIL view after selecting the remaining offsets and pressing <code>s</code> in turn</li>
-<li>Viewing the structure automatically created after this workflow</li>
-<li>Selecting the remaining bytes and turning them into an array using <code>1</code> to turn them all into uint_8 variables, and then <code>*</code> to turn them all into an array</li>
-<ol>
+<div class="inline-slides">
+    <ol id="taped">
+        <li id="currentline">Assembly view of the start of <code>0x8048e20</code></li>
+        <li>MLIL view of the same basic block</li>
+        <li>MLIL view after selecting the return of <code>calloc</code> and pressing <code>s</code></li>
+        <li>MLIL view after selecting the offset and pressing <code>s</code> to turn it into a member access</li>
+        <li>MLIL view after selecting the remaining offsets and pressing <code>s</code> in turn</li>
+        <li>Viewing the structure automatically created after this workflow</li>
+        <li>Selecting the remaining bytes and turning them into an array using <code>1</code> to turn them all into uint_8 variables, and then <code>*</code> to turn them all into an array</li>
+    </ol>
 
-<h4>Taped <span id="current">1</span> of <span id="total">7</span></h4>
-<ul id="light-slider" class="cS-hidden" width="501">
-    <li>
-      <img src="../img/taped-1.png" alt="Structure Workflow 1"/>
-    </li>
-    <li>
-      <img src="../img/taped-2.png" alt="Structure Workflow 2"/>
-    </li>
-    <li>
-      <img src="../img/taped-3.png" alt="Structure Workflow 3"/>
-    </li>
-    <li>
-      <img src="../img/taped-4.png" alt="Structure Workflow 4"/>
-    </li>
-    <li>
-      <img src="../img/taped-5.png" alt="Structure Workflow 5"/>
-    </li>
-    <li>
-      <img src="../img/taped-6.png" alt="Structure Workflow 6"/>
-    </li>
-    <li>
-      <img src="../img/taped-7.png" alt="Structure Workflow 7"/>
-    </li>
-</ul>
+    <div id="light-slider-container">
+        <ul id="light-slider">
+            <li>
+              <img src="../img/taped-1.png" alt="Structure Workflow 1"/>
+            </li>
+            <li>
+              <img src="../img/taped-2.png" alt="Structure Workflow 2"/>
+            </li>
+            <li>
+              <img src="../img/taped-3.png" alt="Structure Workflow 3"/>
+            </li>
+            <li>
+              <img src="../img/taped-4.png" alt="Structure Workflow 4"/>
+            </li>
+            <li>
+              <img src="../img/taped-5.png" alt="Structure Workflow 5"/>
+            </li>
+            <li>
+              <img src="../img/taped-6.png" alt="Structure Workflow 6"/>
+            </li>
+            <li>
+              <img src="../img/taped-7.png" alt="Structure Workflow 7"/>
+            </li>
+        </ul>
+    </div>
+</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(event) { 
-	window.slider = $("#light-slider").lightSlider({
-    item:1,
-    loop: true,
-    auto: true,
-    speed: 200,
-    pause: 3000,
-    pauseOnHover: true,
-    slideMargin:0,
-    autoWidth:true,
-    thumbMargin:0,
-    onBeforeSlide: function (el) {
-            $('#current').text(el.getCurrentSlideCount());
+document.addEventListener("DOMContentLoaded", function(event) {
+    let pause = 3000;
+    let slider = $("#light-slider");
+    let sliderContainer = $(slider.selector + "-container");
+    window.slider = slider.lightSlider({
+        item:1,
+        loop: false,
+        auto: false,
+        speed: 200,
+        pause: pause,
+        slideMargin: 0,
+        pauseOnHover: true,
+        autoWidth:false,
+        thumbMargin:0,
+        onBeforeSlide: function (el) {
             Array.from($('ol#taped')[0].children).forEach(function(item, index, arr) {
-              if (index == el.getCurrentSlideCount()-1)
-              {
+              if (index == el.getCurrentSlideCount() - 1)
                 item.id = "currentline";
-              } else 
-              {
+              else
                 item.id = "";
-              }
-             })
+             });
         },
-    onSliderLoad: function() {
-            $('#light-slider').removeClass('cS-hidden');
-    }
-  });
-  Array.from($('ol#taped')[0].children).forEach(function(item, index, arr) {
-    item.addEventListener('click', function() { window.slider.goToSlide(index+1)});
-  });
+        onSliderLoad: function() {
+            let sliderHeight = slider.height();
+            slider.find('img').each(function() {
+                $(this).parent().css("padding-top", (sliderHeight - this.naturalHeight)/2);
+            });
+            slider.removeClass('cS-hidden');
+        },
+        onAfterSlide: function(el) {
+            if (el.getCurrentSlideCount() == el.getTotalSlideCount()) {
+                setTimeout(() => {!el.is(':hover') && el.goToSlide(0)}, pause);
+            }
+        },
+        onBeforeStart: function() {
+            let width = 0;
+            slider.find('img').each(function() {
+                width = Math.max(width, this.naturalWidth);
+            });
+            sliderContainer.width(width);
+        },
+    });
+    Array.from($('ol#taped')[0].children).forEach(function(item, index, arr) {
+        item.addEventListener('click', function() { window.slider.goToSlide(index)});
+    });
 });
 </script>
 

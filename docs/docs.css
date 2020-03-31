@@ -91,10 +91,17 @@ color: #ccc;
 color: #fff;
 }
 
+#light-slider {
+    background-color: #000;
+}
 
 #light-slider li, #light-slider img {
 	list-style: none;
-	margin-left: 0px;
+}
+
+.lslide {
+    margin: 0px !important;
+    text-align: center;
 }
 
 .cS-hidden {
@@ -109,6 +116,24 @@ ol#taped li#currentline {
 	color: #fff;
 	font-weight: bold;
 }
+
 ol#taped li {
 	list-style-position: inside;
+}
+
+
+@media screen and (max-width: 1020px) {
+  .inline-slides {
+    flex-wrap: wrap;
+  }
+}
+
+.inline-slides {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.inline-slides > #light-slider-container {
+    margin-left: 10px;
+    flex-shrink: 1;
 }

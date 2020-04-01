@@ -2807,8 +2807,7 @@ class BinaryView(object):
 		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
 		start analysis by calling either :func:`update_analysis` or :func:`update_analysis_and_wait`.
 
-		:param str name: name of the analysis option. Available options:
-				"linearsweep" : apply linearsweep analysis during the next analysis update (run-once semantics)
+		:param str name: name of the analysis option. Available options are: "linearsweep", and "signaturematcher".
 
 		:rtype: None
 		:Example:

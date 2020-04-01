@@ -55,12 +55,12 @@ You can load files in many ways:
 ![open with options >](img/open-with-options.png "Open with Options")
 
 1. Drag-and-drop a file onto the Binary Ninja window
-2. Use the `File/Open` menu or `Open` button on the start screen (`CMD-o` or `CTL-o`)
-3. Use the `File/Open with Options` menu which allows you to customize the analysis options (`CMD-SHIFT-o` or `CTL-SHIFT-o`)
+2. Use the `File/Open` menu or `Open` button on the start screen (`[CMD/CTRL] o`)
+3. Use the `File/Open with Options` menu which allows you to customize the analysis options (`[CMD/CTRL-SHIFT] o`)
 4. Open a file from the Triage picker (`File/Open for Triage`) which enables several minimal analysis options and shows a summary view first
-5. Click an item in the recent files list (hold `CMD`/`CTL` and `SHIFT` while clicking to use the `Open with Options` workflow)
+5. Click an item in the recent files list (hold `[CMD/CTRL-SHIFT]` while clicking to use the `Open with Options` workflow)
 6. Run Binary Ninja with an optional command-line parameter
-7. Open a file from a URL via the `CMD-l` or `CTRL-l` hot key
+7. Open a file from a URL via the `[CMD/CTRL] l` hot key
 8. Open a file using the `binaryninja:` URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. URLs additionally support deep linking using the `expr` query parameter where expression value is a valid parsable expression such as those possible in the [navigation dialog](#navigating), and fully documented in the [`parse_expression`](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression) API. Below a few examples are provided:
     * URLs For referencing files on the local file system.
         * `binaryninja:///bin/ls?expr=sub_2830` - open the given file and navigate to the function: `sub_2830`
@@ -104,13 +104,13 @@ Switching views happens multiple ways. In some instances, it is automatic (click
 
 One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html), and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitve action system that all actions, plugins, and hotekys in the system are routed through.
 
-To trigger it, simply use the `CMD-p` or `CTRL-p` hot key. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine whether the action should be available.
+To trigger it, simply use the `[CMD/CTRL] p` hot key. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine whether the action should be available.
 
 ### Custom Hotkeys
 
 ![keybindings](img/keybindings.png "Keybindings")
 
-Any action in the [action system](#command-palette) can have a custom hot key mapped to it. To access the keybindings menu, use the `CMD-SHIFT-p` or `CTRL-SHIFT-p` hot key, via the `Edit / Keybindings...` menu, or the `Keybindings` [command palette](#commnad-palette) entry.
+Any action in the [action system](#command-palette) can have a custom hot key mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hot key, via the `Edit / Keybindings...` menu, or the `Keybindings` [command palette](#command-palette) entry.
 
 Note
 !!! Tip "Note"
@@ -327,7 +327,7 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 
 ## Settings
 
-Settings are available via the `CMD-,` or `CTRL-,` hot key and allow a wide variety of customization.
+Settings are available via the `[CMD/CTRL] ,` hot key and allow a wide variety of customization.
 
 All settings are saved in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin or logical group.  
 
@@ -343,74 +343,79 @@ Here's a list of all settings currently available from the UI:
 
 |Category|Setting|Description|Type|Default|Key|
 |---|---|---|---|---|---|
-|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting is experimental and may be useful for malformed binaries.|`boolean`|`False`|<a name='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
-|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|<a name='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
-|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values are may result in very high memory utilization.|`number`|`64`|<a name='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
-|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. Default value of 0 disables this feature. Time is specified in milliseconds.|`number`|`0`|<a name='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
-|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65535`|<a name='analysis.limits.maxFunctionSize'>analysis.limits.maxFunctionSize</a>|
-|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|<a name='analysis.limits.maxFunctionUpdateCount'>analysis.limits.maxFunctionUpdateCount</a>|
-|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|<a name='analysis.limits.minStringLength'>analysis.limits.minStringLength</a>|
-|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`11`|<a name='analysis.limits.workerThreadCount'>analysis.limits.workerThreadCount</a>|
-|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|<a name='analysis.linearSweep.autorun'>analysis.linearSweep.autorun</a>|
-|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|<a name='analysis.linearSweep.controlFlowGraph'>analysis.linearSweep.controlFlowGraph</a>|
-|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|<a name='analysis.linearSweep.detailedLogInfo'>analysis.linearSweep.detailedLogInfo</a>|
-|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|<a name='analysis.linearSweep.entropyHeuristics'>analysis.linearSweep.entropyHeuristics</a>|
-|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|<a name='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
-|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|<a name='analysis.mode'>analysis.mode</a>|
-|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|<a name='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
-|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|<a name='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
-|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|`[]`|<a name='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
-|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
-|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
-|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|<a name='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
-|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|<a name='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
-|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|<a name='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
-|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|<a name='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
-|bnil-graph|Show Common ILs|Show common forms (non-SSA, non-mapped) in the output.|`boolean`|`True`|<a name='bnil-graph.showCommon'>bnil-graph.showCommon</a>|
-|bnil-graph|Include MMLIL|Show the MappedMediumLevelIL form in the output.|`boolean`|`False`|<a name='bnil-graph.showMapped'>bnil-graph.showMapped</a>|
-|bnil-graph|Include SSA|Include SSA forms in the output.|`boolean`|`True`|<a name='bnil-graph.showSSA'>bnil-graph.showSSA</a>|
-|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`||<a name='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
-|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|<a name='downloadClient.providerName'>downloadClient.providerName</a>|
-|format_string_finder|Should Enable Tests Plugin|Enable the tests plugin. Only for development.|`boolean`|`False`|<a name='format_string_finder.should_enable_tests_plugin'>format_string_finder.should_enable_tests_plugin</a>|
-|format_string_finder|Should Highlight Variable Trace|Highlight instructions that are used in the trace of the format parameter origin.|`boolean`|`False`|<a name='format_string_finder.should_highlight_variable_trace'>format_string_finder.should_highlight_variable_trace</a>|
-|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|<a name='pdb.autoDownload'>pdb.autoDownload</a>|
-|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`||<a name='pdb.localStoreAbsolute'>pdb.localStoreAbsolute</a>|
-|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|<a name='pdb.localStoreRelative'>pdb.localStoreRelative</a>|
-|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|`['https://msdl.microsoft.com/download/symbols']`|<a name='pdb.symbolServerList'>pdb.symbolServerList</a>|
-|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|<a name='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
-|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|<a name='pluginManager.officialUpdateChannel'>pluginManager.officialUpdateChannel</a>|
-|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`|`libpython2.7.dylib`|<a name='python.interpreter'>python.interpreter</a>|
-|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|<a name='triage.analysisMode'>triage.analysisMode</a>|
-|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|<a name='triage.hiddenFiles'>triage.hiddenFiles</a>|
-|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|<a name='triage.linearSweep'>triage.linearSweep</a>|
-|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|<a name='triage.preferSummaryView'>triage.preferSummaryView</a>|
-|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|<a name='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
-|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|<a name='ui.colorBlind'>ui.colorBlind</a>|
-|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|<a name='ui.debugMode'>ui.debugMode</a>|
-|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|<a name='ui.featureMap.enable'>ui.featureMap.enable</a>|
-|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|<a name='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
-|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|<a name='ui.font.antialiasing'>ui.font.antialiasing</a>|
-|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|<a name='ui.font.bold'>ui.font.bold</a>|
-|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|<a name='ui.font.name'>ui.font.name</a>|
-|ui|Font Size|Font point size selection.|`number`|`12`|<a name='ui.font.size'>ui.font.size</a>|
-|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|<a name='ui.font.spacing'>ui.font.spacing</a>|
-|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL']`|<a name='ui.graph.carousel'>ui.graph.carousel</a>|
-|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a name='ui.graph.default'>ui.graph.default</a>|
-|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a name='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
-|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a name='ui.log.minLevel'>ui.log.minLevel</a>|
-|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|<a name='ui.manualTooltip'>ui.manualTooltip</a>|
-|ui|Recent File Limit|Specify a limit for the recent file history.|`number`|`10`|<a name='ui.recentFileLimit'>ui.recentFileLimit</a>|
-|ui|Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI|`string`|`Python`|<a name='ui.scriptingProvider'>ui.scriptingProvider</a>|
-|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|<a name='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
-|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a name='ui.theme'>ui.theme</a>|
-|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a name='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
-|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a name='updates.activeContent'>updates.activeContent</a>|
-|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|<a name='updates.channelPreferences'>updates.channelPreferences</a>|
-|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|<a name='updates.showAllVersions'>updates.showAllVersions</a>|
+|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
+|analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`False`|<a id='analysis.experimental.alternateTypePropagation'>analysis.experimental.alternateTypePropagation</a>|
+|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
+|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values are may result in very high memory utilization.|`number`|`64`|<a id='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
+|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. A value of 0 disables this feature. The default value is 20 seconds. Time is specified in milliseconds.|`number`|`20000`|<a id='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
+|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65536`|<a id='analysis.limits.maxFunctionSize'>analysis.limits.maxFunctionSize</a>|
+|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|<a id='analysis.limits.maxFunctionUpdateCount'>analysis.limits.maxFunctionUpdateCount</a>|
+|analysis|Max Lookup Table Size|Limits the maximum number of entries for a lookup table.|`number`|`4095`|<a id='analysis.limits.maxLookupTableSize'>analysis.limits.maxLookupTableSize</a>|
+|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|<a id='analysis.limits.minStringLength'>analysis.limits.minStringLength</a>|
+|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`11`|<a id='analysis.limits.workerThreadCount'>analysis.limits.workerThreadCount</a>|
+|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|<a id='analysis.linearSweep.autorun'>analysis.linearSweep.autorun</a>|
+|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|<a id='analysis.linearSweep.controlFlowGraph'>analysis.linearSweep.controlFlowGraph</a>|
+|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|<a id='analysis.linearSweep.detailedLogInfo'>analysis.linearSweep.detailedLogInfo</a>|
+|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|<a id='analysis.linearSweep.entropyHeuristics'>analysis.linearSweep.entropyHeuristics</a>|
+|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|<a id='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
+|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|<a id='analysis.mode'>analysis.mode</a>|
+|analysis|Never Save Undo Data|Never save previous user actions to the database.|`boolean`|`False`|<a id='analysis.neverSaveUndoData'>analysis.neverSaveUndoData</a>|
+|analysis|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
+|analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
+|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
+|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
+|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|`[]`|<a id='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
+|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
+|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
+|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
+|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
+|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
+|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
+|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`||<a id='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
+|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|<a id='downloadClient.providerName'>downloadClient.providerName</a>|
+|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|<a id='pdb.autoDownload'>pdb.autoDownload</a>|
+|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`||<a id='pdb.localStoreAbsolute'>pdb.localStoreAbsolute</a>|
+|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|<a id='pdb.localStoreRelative'>pdb.localStoreRelative</a>|
+|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|`['https://msdl.microsoft.com/download/symbols']`|<a id='pdb.symbolServerList'>pdb.symbolServerList</a>|
+|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|<a id='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
+|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|<a id='pluginManager.officialUpdateChannel'>pluginManager.officialUpdateChannel</a>|
+|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`|`libpython2.7.dylib`|<a id='python.interpreter'>python.interpreter</a>|
+|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|<a id='triage.analysisMode'>triage.analysisMode</a>|
+|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|<a id='triage.hiddenFiles'>triage.hiddenFiles</a>|
+|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|<a id='triage.linearSweep'>triage.linearSweep</a>|
+|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
+|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
+|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|<a id='ui.colorBlind'>ui.colorBlind</a>|
+|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|<a id='ui.debugMode'>ui.debugMode</a>|
+|ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
+|ui|Feature Map Auto-Rotate|Automatically rotate the feature map orientation based on the current layout and dimensions.|`boolean`|`True`|<a id='ui.featureMap.autoRotate'>ui.featureMap.autoRotate</a>|
+|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|
+|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|<a id='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
+|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|<a id='ui.font.antialiasing'>ui.font.antialiasing</a>|
+|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|<a id='ui.font.bold'>ui.font.bold</a>|
+|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|<a id='ui.font.name'>ui.font.name</a>|
+|ui|Font Size|Font point size selection.|`number`|`12`|<a id='ui.font.size'>ui.font.size</a>|
+|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|<a id='ui.font.spacing'>ui.font.spacing</a>|
+|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL']`|<a id='ui.graph.carousel'>ui.graph.carousel</a>|
+|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a id='ui.graph.default'>ui.graph.default</a>|
+|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
+|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a id='ui.log.minLevel'>ui.log.minLevel</a>|
+|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|<a id='ui.manualTooltip'>ui.manualTooltip</a>|
+|ui|Recent File Limit|Specify a limit for the recent file history.|`number`|`10`|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
+|ui|Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI|`string`|`Python`|<a id='ui.scriptingProvider'>ui.scriptingProvider</a>|
+|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
+|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a id='ui.theme'>ui.theme</a>|
+|ui|Gutter Width|Disassembly view gutter and tags width, in characters.|`number`|`5`|<a id='ui.view.disassembly.gutterWidth'>ui.view.disassembly.gutterWidth</a>|
+|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
+|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a id='updates.activeContent'>updates.activeContent</a>|
+|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
+|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|<a id='updates.showAllVersions'>updates.showAllVersions</a>|
+|user|Email|The email that will be shown when collaborating with other users.|`string`||<a id='user.email'>user.email</a>|
+|user|Name|The name that will be shown when collaborating with other users.|`string`||<a id='user.name'>user.name</a>|
 
 ## Updates
 
-Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`CMD-p`/`CTL-p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on MacOS) preferences by turning off the `Update to latest version automatically` option. 
+Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on MacOS) preferences by turning off the `Update to latest version automatically` option. 
 
 Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 

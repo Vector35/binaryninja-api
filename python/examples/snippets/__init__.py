@@ -4,7 +4,7 @@ import sys
 import os
 import re
 from PySide2.QtWidgets import (QLineEdit, QPushButton, QApplication, QTextEdit, QWidget,
-    QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter, 
+    QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
     QInputDialog, QMessageBox, QHeaderView, QMenu, QAction, QKeySequenceEdit,
     QPlainTextEdit)
 from PySide2.QtCore import (QDir, QObject, Qt, QFileInfo, QItemSelectionModel, QSettings)
@@ -12,7 +12,7 @@ from PySide2.QtGui import (QFont, QFontMetrics, QDesktopServices, QKeySequence)
 from binaryninja import user_plugin_path
 from binaryninja.plugin import PluginCommand, MainThreadActionHandler
 from binaryninja.mainthread import execute_on_main_thread
-from binaryninja.log import (log_error, log_info, log_warn, log_alert, log_debug)
+from binaryninja.log import (log_error, log_debug)
 from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu)
 import numbers
 
@@ -43,7 +43,7 @@ def loadSnippetFromFile(snippetPath):
         qKeySequence = QKeySequence(snippetText[1].strip()[1:])
         if qKeySequence.isEmpty():
             qKeySequence = None
-        return (snippetText[0].strip()[1:], 
+        return (snippetText[0].strip()[1:],
                 qKeySequence,
                 ''.join(snippetText[2:])
         )
@@ -141,7 +141,7 @@ class Snippets(QDialog):
         self.tree.setRootIndex(self.files.index(snippetPath))
         for x in range(self.columns):
             #self.tree.resizeColumnToContents(x)
-            self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents) 
+            self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
         treeLayout = QVBoxLayout()
         treeLayout.addWidget(self.tree)
         treeButtons = QHBoxLayout()
@@ -179,7 +179,11 @@ class Snippets(QDialog):
         hlayout.addWidget(hsplitter)
 
         self.showNormal() #Fixes bug that maximized windows are "stuck"
-        self.settings = QSettings("Vector35", "Snippet Editor")
+        #Because you can't trust QT to do the right thing here
+        if (sys.platform == "darwin"):
+            self.settings = QSettings("Vector35", "Snippet Editor")
+        else:
+            self.settings = QSettings("Vector 35", "Snippet Editor")
         if self.settings.contains("ui/snippeteditor/geometry"):
             self.restoreGeometry(self.settings.value("ui/snippeteditor/geometry"))
         else:
@@ -263,7 +267,7 @@ class Snippets(QDialog):
             if QFileInfo(selection).isDir():
                 QDir(selection).mkdir(folderName)
             else:
-                QDir(snippetPath).mkdir(folderName)    
+                QDir(snippetPath).mkdir(folderName)
 
     def selectFile(self, new, old):
         if (self.resetting):

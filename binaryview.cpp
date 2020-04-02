@@ -409,7 +409,10 @@ BinaryView* TagType::GetView() const
 
 std::string TagType::GetName() const
 {
-	return BNTagTypeGetName(m_object);
+	char* str = BNTagTypeGetName(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -725,13 +728,19 @@ Section::Section(BNSection* sec)
 
 std::string Section::GetName() const
 {
-	return BNSectionGetName(m_object);
+	char* str = BNSectionGetName(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
 std::string Section::GetType() const
 {
-	return BNSectionGetType(m_object);
+	char* str = BNSectionGetType(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 

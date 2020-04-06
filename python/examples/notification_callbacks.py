@@ -20,8 +20,7 @@
 
 import inspect
 
-from binaryninja import BinaryDataNotification
-from binaryninja import PluginCommand
+from binaryninja import BinaryDataNotification, PluginCommand, log
 
 
 def reg_notif(view):
@@ -57,6 +56,30 @@ class DemoNotification(BinaryDataNotification):
 		log.log_info(inspect.stack()[0][3] + str(args))
 
 	def data_var_removed(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def data_metadata_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def tag_type_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def tag_added(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def tag_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def tag_removed(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def symbol_added(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def symbol_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def symbol_removed(self, *args):
 		log.log_info(inspect.stack()[0][3] + str(args))
 
 	def string_found(self, *args):

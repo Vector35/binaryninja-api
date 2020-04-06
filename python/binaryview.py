@@ -86,6 +86,30 @@ class BinaryDataNotification(object):
 	def data_var_updated(self, view, var):
 		pass
 
+	def data_metadata_updated(self, view, offset):
+		pass
+
+	def tag_type_updated(self, view, tag_type):
+		pass
+
+	def tag_added(self, view, tag, ref_type, auto_defined, arch, func, addr):
+		pass
+
+	def tag_updated(self, view, tag, ref_type, auto_defined, arch, func, addr):
+		pass
+
+	def tag_removed(self, view, tag, ref_type, auto_defined, arch, func, addr):
+		pass
+
+	def symbol_added(self, view, sym):
+		pass
+
+	def symbol_updated(self, view, sym):
+		pass
+
+	def symbol_removed(self, view, sym):
+		pass
+
 	def string_found(self, view, string_type, offset, length):
 		pass
 
@@ -434,6 +458,14 @@ class BinaryDataNotificationCallbacks(object):
 		self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
 		self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
 		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
+		self._cb.dataMetadataUpdated = self._cb.dataMetadataUpdated.__class__(self._data_metadata_updated)
+		self._cb.tagTypeUpdated = self._cb.tagTypeUpdated.__class__(self._tag_type_updated)
+		self._cb.tagAdded = self._cb.tagAdded.__class__(self._tag_added)
+		self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
+		self._cb.tagRemoved = self._cb.tagRemoved.__class__(self._tag_removed)
+		self._cb.symbolAdded = self._cb.symbolAdded.__class__(self._symbol_added)
+		self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
+		self._cb.symbolRemoved = self._cb.symbolRemoved.__class__(self._symbol_removed)
 		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
 		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
@@ -511,6 +543,72 @@ class BinaryDataNotificationCallbacks(object):
 			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
 			self._notify.data_var_updated(self._view, DataVariable(address, var_type, auto_discovered, view))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _data_metadata_updated(self, ctxt, view, offset):
+		try:
+			self._notify.data_metadata_updated(self._view, offset)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _tag_type_updated(self, ctxt, view, tag_type):
+		try:
+			self._notify.tag_type_updated(self._view, TagType(core.BNNewTagTypeReference(tag_type)))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _tag_added(self, ctxt, view, tag_ref):
+		try:
+			ref_type = tag_ref[0].refType
+			auto_defined = tag_ref[0].autoDefined
+			tag = tag_ref[0].tag
+			arch = tag_ref[0].arch
+			func = tag_ref[0].func
+			addr = tag_ref[0].addr
+			self._notify.tag_added(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _tag_updated(self, ctxt, view, tag_ref):
+		try:
+			ref_type = tag_ref[0].refType
+			auto_defined = tag_ref[0].autoDefined
+			tag = tag_ref[0].tag
+			arch = tag_ref[0].arch
+			func = tag_ref[0].func
+			addr = tag_ref[0].addr
+			self._notify.tag_updated(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _tag_removed(self, ctxt, view, tag_ref):
+		try:
+			ref_type = tag_ref[0].refType
+			auto_defined = tag_ref[0].autoDefined
+			tag = tag_ref[0].tag
+			arch = tag_ref[0].arch
+			func = tag_ref[0].func
+			addr = tag_ref[0].addr
+			self._notify.tag_removed(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _symbol_added(self, ctxt, view, sym):
+		try:
+			self._notify.symbol_added(self._view, types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _symbol_updated(self, ctxt, view, sym):
+		try:
+			self._notify.symbol_updated(self._view, types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _symbol_removed(self, ctxt, view, sym):
+		try:
+			self._notify.symbol_removed(self._view, types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
 		except:
 			log.log_error(traceback.format_exc())
 

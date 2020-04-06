@@ -5074,7 +5074,15 @@ class BinaryView(object):
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
 
 	def show_graph_report(self, title, graph):
-		core.BNShowHTMLReport(self.handle, title, graph.handle)
+		"""
+		``show_graph_report`` displays a :py:Class:`FlowGraph` object `graph` in a new tab with ``title``.
+
+		:param title: Title of the graph
+		:type title: Plain text string title
+		:param graph: The graph you wish to display
+		:type graph: :py:Class:`FlowGraph` object
+		"""
+		core.BNShowGraphReport(self.handle, title, graph.handle)
 
 	def get_address_input(self, prompt, title, current_address = None):
 		if current_address is None:

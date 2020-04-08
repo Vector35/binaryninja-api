@@ -837,11 +837,13 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		view.set_load_settings(bvt.name, load_settings)
 		for key, value in options.items():
 			if load_settings.contains(key):
-				load_settings.set_json(key, json.dumps(value), view)
+				if not load_settings.set_json(key, json.dumps(value), view):
+					raise ValueError("Setting: {} set operation failed!".format(key))
 			elif default_settings.contains(key):
-				default_settings.set_json(key, json.dumps(value), view)
+				if not default_settings.set_json(key, json.dumps(value), view):
+					raise ValueError("Setting: {} set operation failed!".format(key))
 			else:
-				log.log_error("Setting: {} not available!".format(key))
+				raise NotImplementedError("Setting: {} not available!".format(key))
 
 		bv = bvt.create(view)
 

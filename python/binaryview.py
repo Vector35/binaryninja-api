@@ -830,14 +830,18 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		if bvt is None:
 			bvt = cls["Mapped"]
 
+		default_settings = settings.Settings()
+		default_settings.set_resource_id(bvt.name)
 		load_settings = bvt.get_load_settings_for_data(view)
 		load_settings.set_resource_id(bvt.name)
 		view.set_load_settings(bvt.name, load_settings)
 		for key, value in options.items():
 			if load_settings.contains(key):
 				load_settings.set_json(key, json.dumps(value), view)
+			elif default_settings.contains(key):
+				default_settings.set_json(key, json.dumps(value), view)
 			else:
-				log.log_warn("Load Setting: {} not available!".format(key))
+				log.log_error("Setting: {} not available!".format(key))
 
 		bv = bvt.create(view)
 

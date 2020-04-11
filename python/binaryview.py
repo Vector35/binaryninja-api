@@ -4469,7 +4469,7 @@ class BinaryView(object):
 			addr = lines[i].contents.addr
 			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
 			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
-			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, lines[i].lineOffset, contents))
+			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, contents))
 
 		func = None
 		block = None

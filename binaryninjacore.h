@@ -169,6 +169,8 @@ extern "C"
 	struct BNDataRenderer;
 	struct BNDataRendererContainer;
 	struct BNDisassemblyTextRenderer;
+	struct BNLinearViewObject;
+	struct BNLinearViewCursor;
 
 	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, bool force, void* ctx);
 
@@ -1395,7 +1397,6 @@ extern "C"
 		BNLinearDisassemblyLineType type;
 		BNFunction* function;
 		BNBasicBlock* block;
-		size_t lineOffset;
 		BNDisassemblyTextLine contents;
 	};
 
@@ -2087,6 +2088,20 @@ extern "C"
 		SettingsUserScope = 4,
 		SettingsWorkspaceScope = 8,
 		SettingsContextScope = 0x10
+	};
+
+	enum BNLinearViewObjectIdentifierType
+	{
+		SingleLinearViewObject,
+		AddressLinearViewObject,
+		AddressRangeLinearViewObject
+	};
+
+	struct BNLinearViewObjectIdentifier
+	{
+		char* name;
+		BNLinearViewObjectIdentifierType type;
+		uint64_t start, end;
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
@@ -2971,6 +2986,63 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetNextLinearDisassemblyLines(BNBinaryView* view,
 		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
 	BINARYNINJACOREAPI void BNFreeLinearDisassemblyLines(BNLinearDisassemblyLine* lines, size_t count);
+
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewDisassemblyByBlock(BNBinaryView* view,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNNewLinearViewObjectReference(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI void BNFreeLinearViewObject(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetFirstLinearViewObjectChild(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetLastLinearViewObjectChild(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetPreviousLinearViewObjectChild(BNLinearViewObject* parent,
+		BNLinearViewObject* child);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetNextLinearViewObjectChild(BNLinearViewObject* parent,
+		BNLinearViewObject* child);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetLinearViewObjectChildForAddress(BNLinearViewObject* parent,
+		uint64_t addr);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetLinearViewObjectChildForIdentifier(BNLinearViewObject* parent,
+		BNLinearViewObjectIdentifier* id);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetLinearViewObjectLines(BNLinearViewObject* obj,
+		BNLinearViewObject* prev, BNLinearViewObject* next, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectStart(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectEnd(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI BNLinearViewObjectIdentifier BNGetLinearViewObjectIdentifier(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI void BNFreeLinearViewObjectIdentifier(BNLinearViewObjectIdentifier* id);
+	BINARYNINJACOREAPI int BNCompareLinearViewObjectChildren(BNLinearViewObject* obj,
+		BNLinearViewObject* a, BNLinearViewObject* b);
+	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectOrderingIndexTotal(BNLinearViewObject* obj);
+	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectOrderingIndexForChild(BNLinearViewObject* parent,
+		BNLinearViewObject* child);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetLinearViewObjectChildForOrderingIndex(BNLinearViewObject* parent,
+		uint64_t idx);
+
+	BINARYNINJACOREAPI BNLinearViewCursor* BNCreateLinearViewCursor(BNLinearViewObject* root);
+	BINARYNINJACOREAPI BNLinearViewCursor* BNDuplicateLinearViewCursor(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI BNLinearViewCursor* BNNewLinearViewCursorReference(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI void BNFreeLinearViewCursor(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI bool BNIsLinearViewCursorBeforeBegin(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI bool BNIsLinearViewCursorAfterEnd(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI BNLinearViewObject* BNGetLinearViewCursorCurrentObject(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI BNLinearViewObjectIdentifier* BNGetLinearViewCursorPath(BNLinearViewCursor* cursor, size_t* count);
+	BINARYNINJACOREAPI void BNFreeLinearViewCursorPath(BNLinearViewObjectIdentifier* objs, size_t count);
+	BINARYNINJACOREAPI BNLinearViewObject** BNGetLinearViewCursorPathObjects(BNLinearViewCursor* cursor, size_t* count);
+	BINARYNINJACOREAPI void BNFreeLinearViewCursorPathObjects(BNLinearViewObject** objs, size_t count);
+	BINARYNINJACOREAPI BNAddressRange BNGetLinearViewCursorOrderingIndex(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI uint64_t BNGetLinearViewCursorOrderingIndexTotal(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI void BNSeekLinearViewCursorToBegin(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI void BNSeekLinearViewCursorToEnd(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI void BNSeekLinearViewCursorToAddress(BNLinearViewCursor* cursor, uint64_t addr);
+	BINARYNINJACOREAPI bool BNSeekLinearViewCursorToPath(BNLinearViewCursor* cursor,
+		BNLinearViewObjectIdentifier* ids, size_t count);
+	BINARYNINJACOREAPI bool BNSeekLinearViewCursorToPathAndAddress(BNLinearViewCursor* cursor,
+		BNLinearViewObjectIdentifier* ids, size_t count, uint64_t addr);
+	BINARYNINJACOREAPI bool BNSeekLinearViewCursorToCursorPath(BNLinearViewCursor* cursor, BNLinearViewCursor* path);
+	BINARYNINJACOREAPI bool BNSeekLinearViewCursorToCursorPathAndAddress(BNLinearViewCursor* cursor,
+		BNLinearViewCursor* path, uint64_t addr);
+	BINARYNINJACOREAPI void BNSeekLinearViewCursorToOrderingIndex(BNLinearViewCursor* cursor, uint64_t idx);
+	BINARYNINJACOREAPI bool BNLinearViewCursorNext(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI bool BNLinearViewCursorPrevious(BNLinearViewCursor* cursor);
+	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetLinearViewCursorLines(BNLinearViewCursor* cursor, size_t* count);
+	BINARYNINJACOREAPI int BNCompareLinearViewCursors(BNLinearViewCursor* a, BNLinearViewCursor* b);
 
 	BINARYNINJACOREAPI void BNDefineDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNDefineUserDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);

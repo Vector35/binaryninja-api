@@ -1210,7 +1210,6 @@ __attribute__ ((format (printf, 1, 2)))
 		BNLinearDisassemblyLineType type;
 		Ref<Function> function;
 		Ref<BasicBlock> block;
-		size_t lineOffset;
 		DisassemblyTextLine contents;
 	};
 
@@ -4962,5 +4961,82 @@ __attribute__ ((format (printf, 1, 2)))
 			const std::string& comment,
 			bool hasAutoAnnotations,
 			const std::string& leadingSpaces="  ");
+	};
+
+	struct LinearViewObjectIdentifier
+	{
+		std::string name;
+		BNLinearViewObjectIdentifierType type;
+		uint64_t start, end;
+
+		LinearViewObjectIdentifier();
+		LinearViewObjectIdentifier(const std::string& name);
+		LinearViewObjectIdentifier(const std::string& name, uint64_t addr);
+		LinearViewObjectIdentifier(const std::string& name, uint64_t start, uint64_t end);
+		LinearViewObjectIdentifier(const LinearViewObjectIdentifier& other);
+	};
+
+	class LinearViewObject: public CoreRefCountObject<BNLinearViewObject,
+		BNNewLinearViewObjectReference, BNFreeLinearViewObject>
+	{
+	public:
+		LinearViewObject(BNLinearViewObject* obj);
+
+		Ref<LinearViewObject> GetFirstChild();
+		Ref<LinearViewObject> GetLastChild();
+		Ref<LinearViewObject> GetPreviousChild(LinearViewObject* obj);
+		Ref<LinearViewObject> GetNextChild(LinearViewObject* obj);
+
+		Ref<LinearViewObject> GetChildForAddress(uint64_t addr);
+		Ref<LinearViewObject> GetChildForIdentifier(const LinearViewObjectIdentifier& id);
+		int CompareChildren(LinearViewObject* a, LinearViewObject* b);
+
+		std::vector<LinearDisassemblyLine> GetLines(LinearViewObject* prev, LinearViewObject* next);
+
+		uint64_t GetStart() const;
+		uint64_t GetEnd() const;
+
+		LinearViewObjectIdentifier GetIdentifier() const;
+
+		uint64_t GetOrderingIndexTotal() const;
+		uint64_t GetOrderingIndexForChild(LinearViewObject* obj) const;
+		Ref<LinearViewObject> GetChildForOrderingIndex(uint64_t idx);
+
+		static Ref<LinearViewObject> CreateDisassemblyByBlock(BinaryView* view, DisassemblySettings* settings);
+	};
+
+	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,
+		BNNewLinearViewCursorReference, BNFreeLinearViewCursor>
+	{
+	public:
+		LinearViewCursor(LinearViewObject* root);
+		LinearViewCursor(BNLinearViewCursor* cursor);
+
+		bool IsBeforeBegin() const;
+		bool IsAfterEnd() const;
+		bool IsValid() const;
+
+		Ref<LinearViewObject> GetCurrentObject() const;
+		std::vector<LinearViewObjectIdentifier> GetPath() const;
+		std::vector<Ref<LinearViewObject>> GetPathObjects() const;
+		BNAddressRange GetOrderingIndex() const;
+		uint64_t GetOrderingIndexTotal() const;
+
+		void SeekToBegin();
+		void SeekToEnd();
+		void SeekToAddress(uint64_t addr);
+		bool SeekToPath(const std::vector<LinearViewObjectIdentifier>& path);
+		bool SeekToPath(const std::vector<LinearViewObjectIdentifier>& path, uint64_t addr);
+		bool SeekToPath(LinearViewCursor* cursor);
+		bool SeekToPath(LinearViewCursor* cursor, uint64_t addr);
+		void SeekToOrderingIndex(uint64_t idx);
+		bool Next();
+		bool Previous();
+
+		std::vector<LinearDisassemblyLine> GetLines();
+
+		Ref<LinearViewCursor> Duplicate();
+
+		static int Compare(LinearViewCursor* a, LinearViewCursor* b);
 	};
 }

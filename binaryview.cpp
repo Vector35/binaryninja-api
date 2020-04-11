@@ -2480,7 +2480,6 @@ vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(Line
 		line.type = lines[i].type;
 		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
 		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.highlight = lines[i].contents.highlight;
@@ -2518,7 +2517,6 @@ vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDi
 		line.type = lines[i].type;
 		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
 		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.lineOffset = lines[i].lineOffset;
 		line.contents.addr = lines[i].contents.addr;
 		line.contents.instrIndex = lines[i].contents.instrIndex;
 		line.contents.highlight = lines[i].contents.highlight;

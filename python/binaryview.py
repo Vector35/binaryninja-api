@@ -831,6 +831,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			bvt = cls["Mapped"]
 
 		default_settings = settings.Settings(bvt.name + "_settings")
+		default_settings.deserialize_schema(settings.Settings().serialize_schema())
 		default_settings.set_resource_id(bvt.name)
 		load_settings = bvt.get_load_settings_for_data(view)
 		load_settings.set_resource_id(bvt.name)

@@ -1198,13 +1198,6 @@ __attribute__ ((format (printf, 1, 2)))
 		DisassemblyTextLine();
 	};
 
-	struct LinearDisassemblyPosition
-	{
-		Ref<Function> function;
-		Ref<BasicBlock> block;
-		uint64_t address;
-	};
-
 	struct LinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
@@ -1654,12 +1647,6 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
-
-		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
-		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-			DisassemblySettings* settings);
-		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-			DisassemblySettings* settings);
 
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& result, std::string& errors);

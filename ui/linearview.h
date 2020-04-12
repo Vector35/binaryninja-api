@@ -19,15 +19,17 @@ struct BINARYNINJAUIAPI LinearViewLine: public BinaryNinja::LinearDisassemblyLin
 	size_t lineIndex;
 };
 
-struct BINARYNINJAUIAPI LinearViewCursorPosition: public BinaryNinja::LinearDisassemblyPosition
+struct BINARYNINJAUIAPI LinearViewCursorPosition
 {
+	FunctionRef function;
+	BasicBlockRef block;
+	uint64_t address;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor;
 	size_t lineIndex;
 	size_t tokenIndex;
 
 	LinearViewCursorPosition();
 	LinearViewCursorPosition(const LinearViewCursorPosition& pos);
-	LinearViewCursorPosition(const BinaryNinja::LinearDisassemblyPosition& pos);
 	LinearViewCursorPosition(const LinearViewLine& line);
 	LinearViewCursorPosition& operator=(const LinearViewCursorPosition& pos);
 

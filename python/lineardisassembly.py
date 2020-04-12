@@ -28,46 +28,6 @@ from binaryninja import basicblock
 from binaryninja.enums import LinearViewObjectIdentifierType
 
 
-class LinearDisassemblyPosition(object):
-	"""
-	``class LinearDisassemblyPosition`` is a helper object containing the position of the current Linear Disassembly
-
-	.. note:: This object should not be instantiated directly. Rather call \
-	:py:meth:`get_linear_disassembly_position_at <binaryninja.binaryview.BinaryView.get_linear_disassembly_position_at>` which instantiates this object.
-	"""
-	def __init__(self, func, block, addr):
-		self._function = func
-		self._block = block
-		self._address = addr
-
-	@property
-	def function(self):
-		""" """
-		return self._function
-
-	@function.setter
-	def function(self, value):
-		self._function = value
-
-	@property
-	def block(self):
-		""" """
-		return self._block
-
-	@block.setter
-	def block(self, value):
-		self._block = value
-
-	@property
-	def address(self):
-		""" """
-		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
-
-
 class LinearDisassemblyLine(object):
 	def __init__(self, line_type, func, block, contents):
 		self.type = line_type

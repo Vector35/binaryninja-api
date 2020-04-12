@@ -4414,13 +4414,13 @@ class BinaryView(object):
 
 	def get_linear_disassembly_position_at(self, addr, settings=None):
 		"""
-		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearDisassemblyPosition <binaryninja.lineardisassembly.LinearDisassemblyPosition>` object for use in
+		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearViewCursor <binaryninja.lineardisassembly.LinearViewCursor>` object for use in
 		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
 		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object, defaults to None which will use default settings
-		:return: An instantiated :py:class:`LinearDisassemblyPosition` object for the provided virtual address
-		:rtype: LinearDisassemblyPosition
+		:return: An instantiated :py:class:`LinearViewCursor` object for the provided virtual address
+		:rtype: LinearViewCursor
 		:Example:
 
 			>>> settings = DisassemblySettings()
@@ -4432,65 +4432,17 @@ class BinaryView(object):
 		"""
 		if settings is not None:
 			settings = settings.handle
-		pos = core.BNGetLinearDisassemblyPositionForAddress(self.handle, addr, settings)
-		func = None
-		block = None
-		if pos.function:
-			func = binaryninja.function.Function(self, pos.function)
-		if pos.block:
-			block = basicblock.BasicBlock(pos.block, self)
-		return lineardisassembly.LinearDisassemblyPosition(func, block, pos.address)
-
-	def _get_linear_disassembly_lines(self, api, pos, settings=None):
-		pos_obj = core.BNLinearDisassemblyPosition()
-		pos_obj.function = None
-		pos_obj.block = None
-		pos_obj.address = pos.address
-		if pos.function is not None:
-			pos_obj.function = core.BNNewFunctionReference(pos.function.handle)
-		if pos.block is not None:
-			pos_obj.block = core.BNNewBasicBlockReference(pos.block.handle)
-
-		if settings is not None:
-			settings = settings.handle
-
-		count = ctypes.c_ulonglong(0)
-		lines = api(self.handle, pos_obj, settings, count)
-
-		result = []
-		for i in range(0, count.value):
-			func = None
-			block = None
-			if lines[i].function:
-				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
-			if lines[i].block:
-				block = basicblock.BasicBlock(core.BNNewBasicBlockReference(lines[i].block), self)
-			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
-			addr = lines[i].contents.addr
-			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
-			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
-			result.append(lineardisassembly.LinearDisassemblyLine(lines[i].type, func, block, contents))
-
-		func = None
-		block = None
-		if pos_obj.function:
-			func = binaryninja.function.Function(self, pos_obj.function)
-		if pos_obj.block:
-			block = basicblock.BasicBlock(pos_obj.block, self)
-		pos.function = func
-		pos.block = block
-		pos.address = pos_obj.address
-
-		core.BNFreeLinearDisassemblyLines(lines, count.value)
-		return result
+		pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly_by_block(self, settings))
+		pos.seek_to_address(addr)
+		return pos
 
 	def get_previous_linear_disassembly_lines(self, pos, settings=None):
 		"""
 		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
-		previous disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
+		previous disassembly lines, and updates the LinearViewCursor passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
-		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
+		:param LinearViewCursor pos: Position to start retrieving linear disassembly lines from
 		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly, defaults to None which will use default settings
 		:return: a list of :py:class:`LinearDisassemblyLine` objects for the previous lines.
 		:Example:
@@ -4502,15 +4454,20 @@ class BinaryView(object):
 			>>> bv.get_previous_linear_disassembly_lines(pos, settings)
 			[<0x10001483: xor     eax, eax  {0x0}>, ... , <0x10001488: >]
 		"""
-		return self._get_linear_disassembly_lines(core.BNGetPreviousLinearDisassemblyLines, pos, settings)
+		result = []
+		while len(result) == 0:
+			if not pos.previous():
+				return result
+			result = pos.lines
+		return result
 
 	def get_next_linear_disassembly_lines(self, pos, settings=None):
 		"""
 		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
-		next disassembly lines, and updates the LinearDisassemblyPosition passed in. This function can be called
+		next disassembly lines, and updates the LinearViewCursor passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
-		:param LinearDisassemblyPosition pos: Position to start retrieving linear disassembly lines from
+		:param LinearViewCursor pos: Position to start retrieving linear disassembly lines from
 		:param DisassemblySettings settings: DisassemblySettings display settings for the linear disassembly, defaults to None which will use default settings
 		:return: a list of :py:class:`LinearDisassemblyLine` objects for the next lines.
 		:Example:
@@ -4523,7 +4480,12 @@ class BinaryView(object):
 			[<0x10001488: push    dword [ebp+0x10 {arg_c}]>, ... , <0x1000149a: >]
 			>>>
 		"""
-		return self._get_linear_disassembly_lines(core.BNGetNextLinearDisassemblyLines, pos, settings)
+		result = []
+		while len(result) == 0:
+			result = pos.lines
+			if not pos.next():
+				return result
+		return result
 
 	def get_linear_disassembly(self, settings=None):
 		"""
@@ -4552,7 +4514,8 @@ class BinaryView(object):
 				self._settings = settings
 
 			def __iter__(self):
-				pos = self._view.get_linear_disassembly_position_at(self._view.start, self.settings)
+				pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly_by_block(
+					self.view, self.settings))
 				while True:
 					lines = self._view.get_next_linear_disassembly_lines(pos, self.settings)
 					if len(lines) == 0:

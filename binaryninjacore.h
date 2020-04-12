@@ -1400,13 +1400,6 @@ extern "C"
 		BNDisassemblyTextLine contents;
 	};
 
-	struct BNLinearDisassemblyPosition
-	{
-		BNFunction* function;
-		BNBasicBlock* block;
-		uint64_t address;
-	};
-
 	struct BNReferenceSource
 	{
 		BNFunction* func;
@@ -2978,15 +2971,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNGetPreviousDataBeforeAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetPreviousDataVariableStartBeforeAddress(BNBinaryView* view, uint64_t addr);
 
-	BINARYNINJACOREAPI BNLinearDisassemblyPosition BNGetLinearDisassemblyPositionForAddress(BNBinaryView* view,
-		uint64_t addr, BNDisassemblySettings* settings);
-	BINARYNINJACOREAPI void BNFreeLinearDisassemblyPosition(BNLinearDisassemblyPosition* pos);
-	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetPreviousLinearDisassemblyLines(BNBinaryView* view,
-		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
-	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetNextLinearDisassemblyLines(BNBinaryView* view,
-		BNLinearDisassemblyPosition* pos, BNDisassemblySettings* settings, size_t* count);
-	BINARYNINJACOREAPI void BNFreeLinearDisassemblyLines(BNLinearDisassemblyLine* lines, size_t count);
-
 	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewDisassemblyByBlock(BNBinaryView* view,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNNewLinearViewObjectReference(BNLinearViewObject* obj);
@@ -3003,6 +2987,7 @@ __attribute__ ((format (printf, 1, 2)))
 		BNLinearViewObjectIdentifier* id);
 	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetLinearViewObjectLines(BNLinearViewObject* obj,
 		BNLinearViewObject* prev, BNLinearViewObject* next, size_t* count);
+	BINARYNINJACOREAPI void BNFreeLinearDisassemblyLines(BNLinearDisassemblyLine* lines, size_t count);
 	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectStart(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI uint64_t BNGetLinearViewObjectEnd(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI BNLinearViewObjectIdentifier BNGetLinearViewObjectIdentifier(BNLinearViewObject* obj);

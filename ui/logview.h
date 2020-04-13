@@ -125,6 +125,8 @@ public:
 	virtual bool canCopy();
 
 	static void SetLogLevel(BNLogLevel level);
+	static bool IsHexString(const QString& str, std::pair<int, int> offsetLen);
+	static bool StartsWith0x(const QString& str, std::pair<int, int> offsetLen);
 
 protected:
 	void contextMenuEvent(QContextMenuEvent* event) override;

@@ -98,13 +98,18 @@ class BINARYNINJAUIAPI ScriptingConsoleOutput: public QTextEdit
 	UIActionHandler* m_handler;
 	UIActionHandler m_actionHandler;
 	ContextMenuManager* m_contextMenuManager;
+	BinaryViewRef m_data;
 	Menu* m_menu;
 
 public:
 	ScriptingConsoleOutput(ScriptingConsole* parent, Menu* menu);
-
+	bool IsNavigable(const QString& str, const std::pair<int, int>& offsetLen, uint64_t& value, bool highlight) const;
 protected:
 	void contextMenuEvent(QContextMenuEvent* event) override;
+
+public Q_SLOTS:
+	virtual void mousePressEvent(QMouseEvent* event) override;
+	void viewChanged(QWidget* frame);
 };
 
 class ScriptingConsoleWidget;
@@ -146,6 +151,9 @@ private Q_SLOTS:
 	void cancel();
 	void showCancelButton();
 
+Q_SIGNALS:
+	void viewChanged(QWidget* frame);
+
 protected:
 	void customEvent(QEvent* event) override;
 	void notifyFontChanged() override;
@@ -167,6 +175,7 @@ public:
 	virtual void NotifyOutput(const std::string& text) override;
 	virtual void NotifyError(const std::string& text) override;
 	virtual void NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState state) override;
+	virtual void notifyViewChanged(ViewFrame* frame) override;
 
 	void moveUpInHistory();
 	void moveDownInHistory();

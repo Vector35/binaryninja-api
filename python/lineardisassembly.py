@@ -253,10 +253,10 @@ class LinearViewObject(object):
 		return core.BNGetLinearViewObjectOrderingIndexForChild(self.handle, child.handle)
 
 	@classmethod
-	def disassembly_by_block(cls, view, settings = None):
+	def disassembly(cls, view, settings = None):
 		if settings is not None:
 			settings = settings.handle
-		return LinearViewObject(core.BNCreateLinearViewDisassemblyByBlock(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewDisassembly(view.handle, settings))
 
 
 class LinearViewCursor(object):

@@ -4989,7 +4989,7 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetOrderingIndexForChild(LinearViewObject* obj) const;
 		Ref<LinearViewObject> GetChildForOrderingIndex(uint64_t idx);
 
-		static Ref<LinearViewObject> CreateDisassemblyByBlock(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateDisassembly(BinaryView* view, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

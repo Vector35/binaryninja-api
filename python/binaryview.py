@@ -4432,7 +4432,7 @@ class BinaryView(object):
 		"""
 		if settings is not None:
 			settings = settings.handle
-		pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly_by_block(self, settings))
+		pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly(self, settings))
 		pos.seek_to_address(addr)
 		return pos
 
@@ -4514,7 +4514,7 @@ class BinaryView(object):
 				self._settings = settings
 
 			def __iter__(self):
-				pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly_by_block(
+				pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly(
 					self.view, self.settings))
 				while True:
 					lines = self._view.get_next_linear_disassembly_lines(pos, self.settings)

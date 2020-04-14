@@ -2971,7 +2971,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNGetPreviousDataBeforeAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetPreviousDataVariableStartBeforeAddress(BNBinaryView* view, uint64_t addr);
 
-	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewDisassemblyByBlock(BNBinaryView* view,
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewDisassembly(BNBinaryView* view,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNNewLinearViewObjectReference(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI void BNFreeLinearViewObject(BNLinearViewObject* obj);

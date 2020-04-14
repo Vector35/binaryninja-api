@@ -199,8 +199,8 @@ Ref<LinearViewObject> LinearViewObject::GetChildForOrderingIndex(uint64_t idx)
 }
 
 
-Ref<LinearViewObject> LinearViewObject::CreateDisassemblyByBlock(BinaryView* view, DisassemblySettings* settings)
+Ref<LinearViewObject> LinearViewObject::CreateDisassembly(BinaryView* view, DisassemblySettings* settings)
 {
-	return new LinearViewObject(BNCreateLinearViewDisassemblyByBlock(view->GetObject(),
+	return new LinearViewObject(BNCreateLinearViewDisassembly(view->GetObject(),
 		settings ? settings->GetObject() : nullptr));
 }

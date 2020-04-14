@@ -4158,12 +4158,12 @@ class BinaryView(object):
 
 			>>> s1 = bv.get_ascii_string_at(0x70d0)
 			>>> s1
-			[<AsciiString: 0x70d0, len 0xb>]
+			<AsciiString: 0x70d0, len 0xb>
 			>>> s1.value
 			'AWAVAUATUSH'
 			>>> s2 = bv.get_ascii_string_at(0x70d1)
 			>>> s2
-			[<AsciiString: 0x70d1, len 0xa>]
+			<AsciiString: 0x70d1, len 0xa>
 			>>> s2.value
 			'WAVAUATUSH'
 		"""

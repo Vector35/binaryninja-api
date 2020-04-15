@@ -9,6 +9,7 @@
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QListView>
 #include <QtCore/QAbstractListModel>
+#include <QtCore/QMimeData>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -82,6 +83,8 @@ public:
 	void setCharHeight(int height);
 	void setContinutation(bool cont);
 	void setCompletionCallback(CompletionCallback callback) { m_completionCallback = callback; }
+	void insertFromMimeData(const QMimeData * source) override;
+
 
 private Q_SLOTS:
 	void complete(QString text);

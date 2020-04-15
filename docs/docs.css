@@ -8,6 +8,10 @@ background: rgba(0, 0, 0, 0);
 }
  */
 
+code, .codehilite {
+	background-color: #eee;
+}
+
 .admonition.warning .admonition-title, .admonition.warning {
 background-color: #d73726 !important;
 color: #fff !important;

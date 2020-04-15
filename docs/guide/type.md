@@ -1,10 +1,12 @@
-# Working with Types and Structures
+# Working with Types, Structures, and Symbols
 
-This document is organized into three sections describing how to work with types in Binary Ninja. The first [section](#working-with-types) is how to interact with any type, regardless of its source.
+This document is organized into four sections describing how to work with types in Binary Ninja. The first [section](#working-with-types) is how to interact with any type, regardless of its source.
 
 The [second section](#type-library) explains how to work with the Type Library. This includes multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them.
 
-Finally, the [third section](#signature-library) explains how to work with the signature library. While the signature library technically does not directly inform types, it will help automatically match statically compiled functions which are then matched with the type libraries described in the previous section.
+Next, the [third section](#signature-library) explains how to work with the signature library. While the signature library technically does not directly inform types, it will help automatically match statically compiled functions which are then matched with the type libraries described in the previous section.
+
+Finally, we'll [cover](#symbols) how to work with Symbols in a binary.
 
 # Working With Types
 
@@ -103,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 });
 </script>
 
-Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do a bit of reverse engineering we learn that this is actually a linked list and that the structure /should/ look like:
+Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do a bit of reverse engineering we learn that this is actually a linked list and that the structure should look like:
 
 ```C
 struct Page
@@ -116,7 +118,7 @@ struct Page
 }
 ```
 
-Where tapes look like:
+Where tapes is:
 ```C
 struct Tape
 {
@@ -126,9 +128,9 @@ struct Tape
 };
 ```
 
-![Taped HLIL >](../img/taped-hlil.png "Taped HLIL")
-
 We can either update our automatically created structure by pressing `y` to change member types and `n` to change their names, or we can use the [types view](#types-view) to directly import the c code directly and then apply the types using `y`. That gives us HLIL that now looks like:
+
+![Taped HLIL](../img/taped-hlil.png "Taped HLIL")
 
 
 ## Types View
@@ -154,9 +156,18 @@ The shortcuts for editing existing elements are:
 * `y` - Edit type / field 
 * `n` - Rename type / field
 * `l` - Set structure size
-* `u` - undefine field.
+* `u` - undefine field
 
-Structs support the attribute `__packed` to indicate that there is no padding.
+Structs support the attribute `__packed` to indicate that there is no padding. Additionally, function prototypes support the following keywords to indicate their calling convention:
+
+```
+__cdecl
+__stdcall
+__fastcall
+__convention
+__noreturn
+```
+
 
 ### Applying Structures and Types
 
@@ -186,6 +197,103 @@ struct Header __packed
     enum _flags flags;
 };
 ```
+
+# Using the API
+
+Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples. 
+
+## Create a new type
+
+First we'll want to make a new type, then we'll want to insert it into a BinaryView and then finally we'll want to apply it to a location in memory.
+
+### From C syntax
+
+There are two main ways to create a type with the API. The first is to use [one of](https://api.binary.ninja/search.html?q=parse_type&check_keywords=yes&area=default#) our APIs that parse a type string and return a type object. For a simple, single type, [parse_type_string](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_type_string) will return a tuple of the [Type](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and the [QualifiedName](https://api.binary.ninja/binaryninja.types.QualifiedName.html#binaryninja.types.QualifiedName):
+
+```py
+>>> bv.parse_type_string("int foo")
+(<type: int32_t>, 'foo')
+>>>
+```
+
+For more complicated types that are already in C syntax, you may want to take advantage of the [parse_types_*](https://api.binary.ninja/search.html?q=parse_types&check_keywords=yes&area=default) APIs. 
+
+```py
+>>> bv.platform.parse_types_from_source('''
+enum colors {blue, green, brown};
+
+struct person
+{
+	char name[20];
+	int age;
+	colors eyecolor;
+};
+''')
+<types: {'colors': <type: enum>, 'person': <type: struct>}, variables: {}, functions: {}>
+```
+
+If you're importing a large number of headers from an existing project you might find that some features are not compatible with the type parser that Binary Ninja uses. In that case, you may find the [Header Plugin](https://github.com/rmspeers/binja_load_headers) useful as it attempts to automate the normalization of these features in a way that simplifies importing headers into your analysis.
+
+NOTE: While they have similar names, be aware that the parse_types APIs live off of the [Platform](https://api.binary.ninja/binaryninja.platform.Platform.html#binaryninja.platform.Platform) class as they require knowledge of the existing architecture's platform whereas the simpler `parse_type_string` is accessed directly from the [BinaryView](https://api.binary.ninja/binaryninja.binaryview.BinaryView.html#binaryninja.binaryview.BinaryView) class.
+
+### Using Type objects
+
+Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easily composed to create simple type objects:
+
+```py
+>>> myar = Type.array(Type.char(), 20)
+>>> print(repr(myar))
+<type: char [20]>
+```
+
+### Adding types
+
+Next, we're going to take the optional step of inserting our type into the current BinaryView with the [define_user_type](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_user_type) API:
+
+
+```py
+>>> bv.define_user_type("myString", myar)
+```
+
+And we can verify the type shows up in the types view as expected:
+
+![Custom type](../img/mystring.png "Custom type")
+
+This makes the type available to the user to apply more easily and is appropriate for named structures, but is not required if you simply with to set a type as shown in the next step.
+
+### Applying 
+
+Of course, having the type available doesn't actually apply it to anything in the Binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string like the one at `0x8049f34` and create a data variable using our new type:
+
+```py
+>>> bv.define_data_var(here, bv.types["myString"])
+```
+And now we can see that the string was indeed applied to our location:
+
+![Custom type](../img/stringapplied.png "Custom type")
+
+Of course, we could have just directly applied our type without inserting it into the types available in the binary. For example:
+
+```py
+>>> bv.define_data_var(here, Type.array(Type.char(), 20))
+```
+
+If we want to name the variable there, see the section below on working with [symbols](#symbols).
+
+
+## Delete a type
+
+_coming soon..._
+
+## Change the name of a member of an existing struct
+
+_coming soon..._
+
+## Add/remove/change the type of a member of an existing struct
+
+_coming soon..._
+
+
 
 # Type Library
 
@@ -239,3 +347,41 @@ To help debug and optimize your signature libraries in a Signature Explorer GUI 
 For a text-based approach, you can also export your signature libraries to JSON using the Signature Explorer. Then, you can edit them in a text editor and convert them back to a .sig using the Signature Explorer afterwards. Of course, these conversions are also accessible through the API as the [`sigkit.sig_serialize_json`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_json.py) module, which provides a pickle-like interface. Likewise, [`sigkit.sig_serialize_fb`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_fb.py) provides serialization for the standard .sig format.
 
 
+# Symbols
+
+Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, this couldn't be simpler. Just select the function, variable, member, register, or whatever you want to change the symbol of and press `n`. 
+
+![Rename a function >](../img/rename.png "Renaming a function")
+
+That's it! From an API perspective, there are some helper functions to make the process easier. For example, to rename a function:
+
+```py
+>>> current_function.name
+'main'
+>>> current_function.name = "newName"
+>>> current_function.name
+'newName'
+```
+
+Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied:
+
+```py
+>>> mysym = Symbol(SymbolType.FunctionSymbol, here, "myVariableName")
+>>> mysym
+<SymbolType.FunctionSymbol: "myVariableName" @ 0x80498d0>
+>>> bv.define_user_symbol(mysym)
+```
+
+Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](../getting-started.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
+
+Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
+
+| SymbolType | Description | 
+| ---------- | ----------- |
+	| FunctionSymbol |            Symbol for function that exists in the current binary |
+	| ImportAddressSymbol |       Symbol defined in the Import Address Table |
+	| ImportedFunctionSymbol |    Symbol for a function that is not defined in the current binary |
+	| DataSymbol |                Symbol for data in the current binary |
+	| ImportedDataSymbol |        Symbol for data that is not defined in the current binary |
+	| ExternalSymbol |            Symbols for data and code that reside outside the BinaryView |
+	| LibraryFunctionSymbol |     Symbols for external functions outside the library |

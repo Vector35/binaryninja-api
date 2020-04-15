@@ -164,12 +164,13 @@ class Symbol(object):
 		=========================== ==============================================================
 		SymbolType                  Description
 		=========================== ==============================================================
-		FunctionSymbol              Symbol for Function that exists in the current binary
+		FunctionSymbol              Symbol for function that exists in the current binary
 		ImportAddressSymbol         Symbol defined in the Import Address Table
-		ImportedFunctionSymbol      Symbol for Function that is not defined in the current binary
-		DataSymbol                  Symbol for Data in the current binary
-		ImportedDataSymbol          Symbol for Data that is not defined in the current binary
+		ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
+		DataSymbol                  Symbol for data in the current binary
+		ImportedDataSymbol          Symbol for data that is not defined in the current binary
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
+		LibraryFunctionSymbol       Symbols for external functions outside the library
 		=========================== ==============================================================
 	"""
 	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None, ordinal=0):

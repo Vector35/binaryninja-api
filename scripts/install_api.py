@@ -20,6 +20,14 @@ INTERACTIVE = True
 if '-s' in sys.argv[1:]:
     INTERACTIVE = False
 
+INSTALL_VENV = False
+if '-v' in sys.argv[1:]:
+    if os.environ.get('VIRTUAL_ENV'):
+        INSTALL_VENV = True
+    else:
+        print("Error: venv installation requested without an active python3 venv.")
+        sys.exit(1)
+    
 try:
     import binaryninja
     import binaryninjaui #To better detect if migrating from a version without UI plugin support
@@ -80,9 +88,7 @@ if ( len(sys.argv) > 1 and sys.argv[1].lower() == "root" ):
     if not os.access(install_path, os.W_OK):
         print("Root install specified but cannot write to {}".format(install_path))
         sys.exit(1)
-elif os.environ.get('VIRTUAL_ENV'):
-    print("Virtual environment detected - installing API in virtual environment.\n\
-           Deactivate environment and re-run this script to perform normal installation.")
+elif INSTALL_VENV:
     install_path = getsitepackages()[0]
 else:
     if check_enableusersite():

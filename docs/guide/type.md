@@ -293,6 +293,23 @@ _coming soon..._
 
 _coming soon..._
 
+# Modify a function type
+
+Here's a snippet to take an existing function, and set the confidence of all the parameter types to 100%:
+
+```py`
+old = current_function.function_type
+new_parameters = []
+for v, p in zip(current_function.parameter_vars, old.parameters):
+    new_type = v
+    new_type.confidence = 256 #max-confidence
+    new_parameters.append(FunctionParameter(new_type, p.name, p.location))
+
+current_function.function_type = types.Type.function(old.return_value, new_parameters, \
+old.calling_convention, old.has_variable_arguments, old.stack_adjustment)
+```
+
+
 
 
 # Type Library

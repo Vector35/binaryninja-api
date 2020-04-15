@@ -293,6 +293,12 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 }
 
 
+Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
+{
+	return new LowLevelILFunction(BNGetFunctionLowLevelILIfAvailable(m_object));
+}
+
+
 size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
@@ -467,6 +473,12 @@ Ref<LowLevelILFunction> Function::GetLiftedIL() const
 }
 
 
+Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
+{
+	return new LowLevelILFunction(BNGetFunctionLiftedILIfAvailable(m_object));
+}
+
+
 size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLiftedILForInstruction(m_object, arch->GetObject(), addr);
@@ -524,6 +536,12 @@ set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 {
 	return new MediumLevelILFunction(BNGetFunctionMediumLevelIL(m_object));
+}
+
+
+Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
+{
+	return new MediumLevelILFunction(BNGetFunctionMediumLevelILIfAvailable(m_object));
 }
 
 

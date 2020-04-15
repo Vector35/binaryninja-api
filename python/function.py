@@ -1215,9 +1215,19 @@ class Function(object):
 		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
+	def llil_if_available(self):
+		"""returns LowLevelILFunction used to represent Function low level IL, or None if not loaded (read-only)"""
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelILIfAvailable(self.handle), self)
+
+	@property
 	def lifted_il(self):
 		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
 		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
+
+	@property
+	def lifted_il_if_available(self):
+		"""returns LowLevelILFunction used to represent lifted IL, or None if not loaded (read-only)"""
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedILIfAvailable(self.handle), self)
 
 	@property
 	def medium_level_il(self):
@@ -1228,6 +1238,11 @@ class Function(object):
 	def mlil(self):
 		"""Function medium level IL (read-only)"""
 		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
+
+	@property
+	def mlil_if_available(self):
+		"""Function medium level IL, or None if not loaded (read-only)"""
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelILIfAvailable(self.handle), self)
 
 	@property
 	def function_type(self):

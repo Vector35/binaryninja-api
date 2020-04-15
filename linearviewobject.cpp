@@ -204,3 +204,52 @@ Ref<LinearViewObject> LinearViewObject::CreateDisassembly(BinaryView* view, Disa
 	return new LinearViewObject(BNCreateLinearViewDisassembly(view->GetObject(),
 		settings ? settings->GetObject() : nullptr));
 }
+
+
+Ref<LinearViewObject> LinearViewObject::CreateLiftedIL(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewLiftedIL(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateLowLevelIL(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewLowLevelIL(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateLowLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewLowLevelILSSAForm(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateMediumLevelIL(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewMediumLevelIL(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewMediumLevelILSSAForm(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewMappedMediumLevelIL(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewMappedMediumLevelILSSAForm(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}

@@ -258,6 +258,48 @@ class LinearViewObject(object):
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewDisassembly(view.handle, settings))
 
+	@classmethod
+	def lifted_il(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewLiftedIL(view.handle, settings))
+
+	@classmethod
+	def llil(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewLowLevelIL(view.handle, settings))
+
+	@classmethod
+	def llil_ssa_form(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewLowLevelILSSAForm(view.handle, settings))
+
+	@classmethod
+	def mlil(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewMediumLevelIL(view.handle, settings))
+
+	@classmethod
+	def mlil_ssa_form(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewMediumLevelILSSAForm(view.handle, settings))
+
+	@classmethod
+	def mmlil(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelIL(view.handle, settings))
+
+	@classmethod
+	def mmlil_ssa_form(cls, view, settings = None):
+		if settings is not None:
+			settings = settings.handle
+		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, settings))
+
 
 class LinearViewCursor(object):
 	def __init__(self, root_object, handle = None):

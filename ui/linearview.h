@@ -117,7 +117,9 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	uint64_t m_navByRefTarget;
 	bool m_navByRef = false;
 
-	DisassemblySettingsRef m_settings;
+	SettingsRef m_settings;
+	DisassemblySettingsRef m_options;
+	BNFunctionGraphType m_type;
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
@@ -127,6 +129,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	ContextMenuManager m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
+
+	std::map<FunctionRef, BinaryNinja::AdvancedFunctionAnalysisDataRequestor> m_analysisRequestors;
 
 	void adjustSize(int width, int height);
 
@@ -170,6 +174,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 		const std::vector<BinaryNinja::LinearViewObjectIdentifier>& path,
 		BinaryNinja::LinearViewCursor* newCursor);
 	uint64_t getOrderingIndexForLine(const LinearViewLine& line);
+
+	void updateAnalysisRequestorsForCache();
 
 private Q_SLOTS:
 	void viewInHexEditor();
@@ -280,6 +286,7 @@ public:
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
 
 	void toggleOption(BNDisassemblyOption option);
+	void setViewType(BNFunctionGraphType type);
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }

@@ -2962,6 +2962,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
@@ -2976,6 +2977,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
+		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
 		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
@@ -2983,6 +2985,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
@@ -4990,6 +4993,13 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<LinearViewObject> GetChildForOrderingIndex(uint64_t idx);
 
 		static Ref<LinearViewObject> CreateDisassembly(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLiftedIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLowLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLowLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

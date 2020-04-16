@@ -151,6 +151,7 @@ class BINARYNINJAUIAPI ScriptingConsole: public QWidget, public DockContextHandl
 
 private Q_SLOTS:
 	void updateTimerEvent();
+	void consoleTextChanged();
 	void cancel();
 	void showCancelButton();
 

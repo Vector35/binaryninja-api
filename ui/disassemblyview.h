@@ -94,6 +94,7 @@ private:
 private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInLinearDisassembly();
+	void viewInDecompiler();
 };
 
 

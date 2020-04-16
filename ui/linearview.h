@@ -132,6 +132,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	std::map<FunctionRef, BinaryNinja::AdvancedFunctionAnalysisDataRequestor> m_analysisRequestors;
 
+	std::string m_navigationMode = "";
+
 	void adjustSize(int width, int height);
 
 	void setTopToAddress(uint64_t addr);
@@ -256,6 +258,10 @@ public:
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual bool navigate(uint64_t pos) override;
+
+	virtual std::string getNavigationMode() override;
+	virtual void setNavigationMode(std::string mode) override;
+	virtual std::vector<std::string> getNavigationModes() override;
 
 	virtual HistoryEntry* getHistoryEntry() override;
 	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;

@@ -2682,7 +2682,7 @@ ExprId HighLevelILFunction::RotateLeft(size_t size, ExprId left, ExprId right,
 ExprId HighLevelILFunction::RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
 	const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_RRC, loc, size, left, right, carry);
+	return AddExprWithLocation(HLIL_RLC, loc, size, left, right, carry);
 }
 
 

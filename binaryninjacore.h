@@ -2980,7 +2980,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererLines(BNDisassemblyTextRenderer* renderer,
 		uint64_t addr, size_t* len, BNDisassemblyTextLine** result, size_t* count);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNPostProcessDisassemblyTextRendererLines(BNDisassemblyTextRenderer* renderer,
-		uint64_t addr, size_t len, BNDisassemblyTextLine* inLines, size_t inCount, size_t* outCount);
+		uint64_t addr, size_t len, BNDisassemblyTextLine* inLines, size_t inCount, size_t* outCount, const char* indentSpaces);
 	BINARYNINJACOREAPI void BNResetDisassemblyTextRendererDeduplicatedComments(BNDisassemblyTextRenderer* renderer);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererSymbolTokens(BNDisassemblyTextRenderer* renderer, uint64_t addr,
 		size_t size, size_t operand, BNInstructionTextToken** result, size_t* count);
@@ -2991,7 +2991,7 @@ __attribute__ ((format (printf, 1, 2)))
 		BNInstructionTextToken* token, BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNDisassemblyTextRendererWrapComment(BNDisassemblyTextRenderer* renderer,
 		const BNDisassemblyTextLine* inLine, size_t* outLineCount, const char* comment, bool hasAutoAnnotations,
-		const char* leadingSpaces);
+		const char* leadingSpaces, const char* indentSpaces);
 
 	BINARYNINJACOREAPI void BNMarkFunctionAsRecentlyUsed(BNFunction* func);
 	BINARYNINJACOREAPI void BNMarkBasicBlockAsRecentlyUsed(BNBasicBlock* block);

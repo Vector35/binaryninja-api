@@ -3153,7 +3153,7 @@ class DisassemblyTextRenderer(object):
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return (result, length.value)
 
-	def post_process_lines(self, addr, length, in_lines):
+	def post_process_lines(self, addr, length, in_lines, indent_spaces=""):
 		if isinstance(in_lines, str):
 			in_lines = in_lines.split('\n')
 		line_buf = (core.BNDisassemblyTextLine * len(in_lines))()
@@ -3184,7 +3184,7 @@ class DisassemblyTextRenderer(object):
 			line_buf[i].tokens = InstructionTextToken.get_instruction_lines(line.tokens)
 		count = ctypes.c_ulonglong()
 		lines = ctypes.POINTER(core.BNDisassemblyTextLine)()
-		lines = core.BNPostProcessDisassemblyTextRendererLines(self.handle, addr, length, line_buf, len(in_lines), count)
+		lines = core.BNPostProcessDisassemblyTextRendererLines(self.handle, addr, length, line_buf, len(in_lines), count, indent_spaces)
 		il_function = self.il_function
 		result = []
 		for i in range(0, count.value):
@@ -3250,7 +3250,7 @@ class DisassemblyTextRenderer(object):
 		tokens += result
 		core.BNFreeInstructionText(new_tokens, count.value)
 
-	def wrap_comment(self, lines, cur_line, comment, has_auto_annotations, leading_spaces = "  "):
+	def wrap_comment(self, lines, cur_line, comment, has_auto_annotations, leading_spaces = "  ", indent_spaces = ""):
 		cur_line_obj = core.BNDisassemblyTextLine()
 		cur_line_obj.addr = cur_line.address
 		if cur_line.il_instruction is None:
@@ -3262,7 +3262,7 @@ class DisassemblyTextRenderer(object):
 		cur_line_obj.count = len(cur_line.tokens)
 		count = ctypes.c_ulonglong()
 		new_lines = core.BNDisassemblyTextRendererWrapComment(self.handle, cur_line_obj, count, comment,
-			has_auto_annotations, leading_spaces)
+			has_auto_annotations, leading_spaces, indent_spaces)
 		il_function = self.il_function
 		for i in range(0, count.value):
 			addr = new_lines[i].addr

@@ -5206,7 +5206,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void GetInstructionAnnotations(std::vector<InstructionTextToken>& tokens, uint64_t addr);
 		virtual bool GetInstructionText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		std::vector<DisassemblyTextLine> PostProcessInstructionTextLines(uint64_t addr,
-			size_t len, const std::vector<DisassemblyTextLine>& lines);
+			size_t len, const std::vector<DisassemblyTextLine>& lines, const std::string& indentSpaces = "");
 
 		virtual bool GetDisassemblyText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		void ResetDeduplicatedComments();
@@ -5223,7 +5223,8 @@ __attribute__ ((format (printf, 1, 2)))
 			std::vector<DisassemblyTextLine>& lines,
 			const std::string& comment,
 			bool hasAutoAnnotations,
-			const std::string& leadingSpaces="  ");
+			const std::string& leadingSpaces="  ",
+			const std::string& indentSpaces="");
 	};
 
 	struct LinearViewObjectIdentifier

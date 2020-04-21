@@ -2302,7 +2302,7 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
 
 
 vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextLines(uint64_t addr,
-	size_t len, const vector<DisassemblyTextLine>& lines)
+	size_t len, const vector<DisassemblyTextLine>& lines, const string& indentSpaces)
 {
 	BNDisassemblyTextLine* inLines = new BNDisassemblyTextLine[lines.size()];
 	for (size_t i = 0; i < lines.size(); i++)
@@ -2317,7 +2317,8 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 
 	BNDisassemblyTextLine* result = nullptr;
 	size_t count = 0;
-	result = BNPostProcessDisassemblyTextRendererLines(m_object, addr, len, inLines, lines.size(), &count);
+	result = BNPostProcessDisassemblyTextRendererLines(m_object, addr, len, inLines, lines.size(), &count,
+		indentSpaces.c_str());
 	BNFreeDisassemblyTextLines(inLines, lines.size());
 
 	vector<DisassemblyTextLine> outLines;
@@ -2427,7 +2428,7 @@ void DisassemblyTextRenderer::AddIntegerToken(vector<InstructionTextToken>& toke
 
 
 void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<DisassemblyTextLine>& lines,
-	const string& comment, bool hasAutoAnnotations, const string& leadingSpaces)
+	const string& comment, bool hasAutoAnnotations, const string& leadingSpaces, const string& indentSpaces)
 {
 	BNDisassemblyTextLine inLine;
 	inLine.addr = line.addr;
@@ -2439,7 +2440,7 @@ void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<Disa
 
 	size_t count = 0;
 	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(m_object, &inLine, &count,
-		comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str());
+		comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str(), indentSpaces.c_str());
 
 	for (size_t i = 0; i < count; i++)
 	{

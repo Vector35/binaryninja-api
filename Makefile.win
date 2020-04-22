@@ -4,7 +4,36 @@ TARGETDIR = bin
 TARGETNAME = libbinaryninjaapi.lib
 TARGET = .\$(TARGETDIR)\$(TARGETNAME)
 
-OBJS = architecture.obj backgroundtask.obj basicblock.obj binaryninjaapi.obj binaryreader.obj binaryview.obj binaryviewtype.obj binarywriter.obj callingconvention.obj databuffer.obj demangle.obj fileaccessor.obj filemetadata.obj function.obj functiongraph.obj functiongraphblock.obj functionrecognizer.obj interaction.obj log.obj lowlevelil.obj mainthread.obj platform.obj plugin.obj scriptingprovider.obj tempfile.obj transform.obj type.obj update.obj jsoncpp.obj
+OBJS = \
+	   architecture.obj \
+	   backgroundtask.obj \
+	   basicblock.obj \
+	   binaryninjaapi.obj \
+	   binaryreader.obj \
+	   binaryview.obj \
+	   binaryviewtype.obj \
+	   binarywriter.obj \
+	   callingconvention.obj \
+	   databuffer.obj \
+	   demangle.obj \
+	   fileaccessor.obj \
+	   filemetadata.obj \
+	   function.obj \
+	   functiongraph.obj \
+	   functiongraphblock.obj \
+	   functionrecognizer.obj \
+	   interaction.obj \
+	   log.obj \
+	   lowlevelil.obj \
+	   mainthread.obj \
+	   platform.obj \
+	   plugin.obj \
+	   scriptingprovider.obj \
+	   tempfile.obj \
+	   transform.obj \
+	   type.obj \
+	   update.obj \
+	   jsoncpp.obj
 
 $(TARGET): $(OBJS)
 	if not exist $(TARGETDIR) mkdir $(TARGETDIR)

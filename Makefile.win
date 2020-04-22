@@ -1,4 +1,4 @@
-CFLAGS = /EHsc /DWIN32
+CFLAGS = /EHsc /DWIN32 /nologo
 
 TARGETDIR = bin
 TARGETNAME = libbinaryninjaapi.lib

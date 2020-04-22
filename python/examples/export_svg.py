@@ -2,6 +2,7 @@
 import os
 import webbrowser
 import time
+import sys
 try:
     from urllib import pathname2url          # Python 2.x
 except:
@@ -27,7 +28,10 @@ def escape(toescape):
     # handle extended unicode
     toescape = toescape.encode('ascii', 'xmlcharrefreplace')
     # still escape the basics
-    return ''.join(escape_table.get(chr(i), chr(i)) for i in toescape)
+    if sys.version_info[0] == 3:
+        return ''.join(escape_table.get(chr(i), chr(i)) for i in toescape)
+    else:
+        return ''.join(escape_table.get(i, i) for i in toescape)
 
 
 def save_svg(bv, function):
@@ -47,7 +51,7 @@ def save_svg(bv, function):
     result = show_message_box("Open SVG", "Would you like to view the exported SVG?",
                               buttons=MessageBoxButtonSet.YesNoButtonSet, icon=MessageBoxIcon.QuestionIcon)
     if result == MessageBoxButtonResult.YesButton:
-        url = 'file:{}'.format(pathname2url(outputfile))
+        url = 'file:{}'.format(pathname2url(bytes(outputfile)))
         webbrowser.open(url)
 
 
@@ -55,7 +59,10 @@ def instruction_data_flow(function, address):
     ''' TODO:  Extract data flow information '''
     length = function.view.get_instruction_length(address)
     func_bytes = function.view.read(address, length)
-    hex = func_bytes.hex()
+    if sys.version_info[0] == 3:
+        hex = func_bytes.hex()
+    else:
+        hex = func_bytes.encode('hex')
     padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
     return 'Opcode: {bytes}'.format(bytes=padded)
 

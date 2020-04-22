@@ -179,6 +179,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	void updateAnalysisRequestorsForCache();
 
+	ArchitectureRef getArchitecture(const LinearViewLine& line);
+
 private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInGraph();

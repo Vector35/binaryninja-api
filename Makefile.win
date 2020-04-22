@@ -15,24 +15,39 @@ OBJS = \
 	   binarywriter.obj \
 	   callingconvention.obj \
 	   databuffer.obj \
+	   datarenderer.obj \
+	   downloadprovider.obj \
 	   demangle.obj \
 	   fileaccessor.obj \
 	   filemetadata.obj \
+	   flowgraph.obj \
+	   flowgraphnode.obj \
 	   function.obj \
-	   functiongraph.obj \
-	   functiongraphblock.obj \
 	   functionrecognizer.obj \
+	   highlevelil.obj \
+	   highlevelilinstruction.obj \
 	   interaction.obj \
+	   linearviewcursor.obj \
+	   linearviewobject.obj \
 	   log.obj \
 	   lowlevelil.obj \
+	   lowlevelilinstruction.obj \
 	   mainthread.obj \
+	   mediumlevelil.obj \
+	   mediumlevelilinstruction.obj \
+	   metadata.obj \
 	   platform.obj \
 	   plugin.obj \
+	   pluginmanager.obj \
+	   relocationhandler.obj \
 	   scriptingprovider.obj \
+	   settings.obj \
 	   tempfile.obj \
 	   transform.obj \
 	   type.obj \
+	   undoaction.obj \
 	   update.obj \
+	   user.obj \
 	   jsoncpp.obj
 
 $(TARGET): $(OBJS)

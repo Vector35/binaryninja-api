@@ -214,6 +214,7 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 
 			except URLError as e:
 				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+				log.log_error(str(e))
 				return -1
 			except:
 				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")

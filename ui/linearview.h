@@ -181,6 +181,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	ArchitectureRef getArchitecture(const LinearViewLine& line);
 
+	BNAnalysisWarningActionType getAnalysisWarningActionAtPos(const LinearViewLine& line, int x);
+
 private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInGraph();

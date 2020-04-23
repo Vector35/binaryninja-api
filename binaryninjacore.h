@@ -293,7 +293,15 @@ extern "C"
 		SectionStartLineType,
 		SectionEndLineType,
 		SectionSeparatorLineType,
-		NonContiguousSeparatorLineType
+		NonContiguousSeparatorLineType,
+		AnalysisWarningLineType
+	};
+
+	enum BNAnalysisWarningActionType
+	{
+		NoAnalysisWarningAction = 0,
+		ForceAnalysisWarningAction = 1,
+		ShowStackGraphWarningAction = 2
 	};
 
 	enum BNSymbolType

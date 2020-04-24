@@ -2159,6 +2159,16 @@ void ArchitectureHook::Register(BNCustomArchitecture* callbacks)
 }
 
 
+string DisassemblyTextRenderer::GetDisplayStringForInteger(Ref<BinaryView> binaryView, BNIntegerDisplayType type,
+	uint64_t value, size_t inputWidth)
+{
+	char* str = BNGetDisplayStringForInteger(binaryView->GetObject(), type, value, inputWidth);
+	string s(str);
+	BNFreeString(str);
+	return s;
+}
+
+
 DisassemblyTextRenderer::DisassemblyTextRenderer(Function* func, DisassemblySettings* settings)
 {
 	m_object = BNCreateDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);

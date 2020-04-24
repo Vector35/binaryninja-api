@@ -5225,6 +5225,7 @@ __attribute__ ((format (printf, 1, 2)))
 			bool hasAutoAnnotations,
 			const std::string& leadingSpaces="  ",
 			const std::string& indentSpaces="");
+		static std::string GetDisplayStringForInteger(Ref<BinaryView> binaryView, BNIntegerDisplayType type, uint64_t value, size_t inputWidth);
 	};
 
 	struct LinearViewObjectIdentifier

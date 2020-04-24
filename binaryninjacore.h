@@ -2961,6 +2961,7 @@ __attribute__ ((format (printf, 1, 2)))
 		BNDisassemblySettings* settings, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDisassemblyTextLines(BNDisassemblyTextLine* lines, size_t count);
 
+	BINARYNINJACOREAPI char* BNGetDisplayStringForInteger(BNBinaryView* binaryView, BNIntegerDisplayType type, uint64_t value, size_t inputWidth);
 	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateDisassemblyTextRenderer(BNFunction* func,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateLowLevelILDisassemblyTextRenderer(BNLowLevelILFunction* func,

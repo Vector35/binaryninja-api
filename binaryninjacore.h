@@ -1888,6 +1888,7 @@ extern "C"
 	enum BNAnalysisMode
 	{
 		FullAnalysisMode,
+		IntermediateAnalysisMode,
 		BasicAnalysisMode,
 		ControlFlowAnalysisMode
 	};
@@ -2222,7 +2223,8 @@ extern "C"
 		ExceedFunctionAnalysisTimeSkipReason,
 		ExceedFunctionUpdateCountSkipReason,
 		NewAutoFunctionAnalysisSuppressedReason,
-		BasicAnalysisSkipReason
+		BasicAnalysisSkipReason,
+		IntermediateAnalysisSkipReason
 	};
 
 	enum BNSettingsScope

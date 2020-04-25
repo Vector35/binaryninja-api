@@ -221,10 +221,12 @@ TriageViewType::TriageViewType(): ViewType("Triage", "Triage Summary")
 int TriageViewType::getPriority(BinaryViewRef data, const QString&)
 {
 	BinaryNinja::Ref<BinaryNinja::Settings> settings = BinaryNinja::Settings::Instance();
-	bool full = settings->Get<std::string>("analysis.mode", data) == "full";
+	auto analysisMode = settings->Get<std::string>("analysis.mode", data);
+	bool full = analysisMode == "full";
+	bool intermediate = analysisMode == "intermediate";
 	bool alwaysPrefer = settings->Get<bool>("triage.preferSummaryView", data);
 	bool preferForRaw = settings->Get<bool>("triage.preferSummaryViewForRaw", data);
-	if (data->IsExecutable() && (alwaysPrefer || !full))
+	if (data->IsExecutable() && (alwaysPrefer || (!full && !intermediate)))
 		return 100;
 	if (data->GetLength() > 0)
 	{

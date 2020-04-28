@@ -2064,6 +2064,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetSystemRegistersCallback(void* ctxt, size_t* count);
 
 		static char* GetRegisterStackNameCallback(void* ctxt, uint32_t regStack);
 		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
@@ -2151,6 +2152,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual uint32_t GetLinkRegister();
 		virtual std::vector<uint32_t> GetGlobalRegisters();
 		bool IsGlobalRegister(uint32_t reg);
+		virtual std::vector<uint32_t> GetSystemRegisters();
+		bool IsSystemRegister(uint32_t reg);
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
 
@@ -2303,6 +2306,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual std::vector<uint32_t> GetSystemRegisters() override;
 
 		virtual std::string GetRegisterStackName(uint32_t regStack) override;
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
@@ -2377,6 +2381,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual std::vector<uint32_t> GetSystemRegisters() override;
 
 		virtual std::string GetRegisterStackName(uint32_t regStack) override;
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;

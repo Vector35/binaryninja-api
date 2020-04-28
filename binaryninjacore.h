@@ -1456,6 +1456,7 @@ extern "C"
 		uint32_t (*getStackPointerRegister)(void* ctxt);
 		uint32_t (*getLinkRegister)(void* ctxt);
 		uint32_t* (*getGlobalRegisters)(void* ctxt, size_t* count);
+		uint32_t* (*getSystemRegisters)(void* ctxt, size_t* count);
 
 		char* (*getRegisterStackName)(void* ctxt, uint32_t regStack);
 		uint32_t* (*getAllRegisterStacks)(void* ctxt, size_t* count);
@@ -2673,6 +2674,7 @@ __attribute__ ((format (printf, 1, 2)))
 		BNArchitecture* base, BNCustomArchitecture* arch);
 	BINARYNINJACOREAPI void BNAddArchitectureRedirection(BNArchitecture* arch, BNArchitecture* from, BNArchitecture* to);
 	BINARYNINJACOREAPI BNArchitecture* BNRegisterArchitectureHook(BNArchitecture* base, BNCustomArchitecture* arch);
+	BINARYNINJACOREAPI void BNFinalizeArchitectureHook(BNArchitecture* base);
 
 	BINARYNINJACOREAPI char* BNGetArchitectureName(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNEndianness BNGetArchitectureEndianness(BNArchitecture* arch);
@@ -2730,6 +2732,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinkRegister(BNArchitecture* arch);
 	BINARYNINJACOREAPI uint32_t* BNGetArchitectureGlobalRegisters(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI bool BNIsArchitectureGlobalRegister(BNArchitecture* arch, uint32_t reg);
+	BINARYNINJACOREAPI uint32_t* BNGetArchitectureSystemRegisters(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI bool BNIsArchitectureSystemRegister(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterByName(BNArchitecture* arch, const char* name);
 
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterStackName(BNArchitecture* arch, uint32_t regStack);

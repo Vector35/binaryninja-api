@@ -122,6 +122,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	stack_pointer = None
 	link_reg = None
 	global_regs = []
+	system_regs = []
 	flags = []
 	flag_write_types = []
 	semantic_flag_classes = []
@@ -194,6 +195,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			self._get_stack_pointer_register)
 		self._cb.getLinkRegister = self._cb.getLinkRegister.__class__(self._get_link_register)
 		self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_registers)
+		self._cb.getSystemRegisters = self._cb.getSystemRegisters.__class__(self._get_system_registers)
 		self._cb.getRegisterStackName = self._cb.getRegisterStackName.__class__(self._get_register_stack_name)
 		self._cb.getAllRegisterStacks = self._cb.getAllRegisterStacks.__class__(self._get_all_register_stacks)
 		self._cb.getRegisterStackInfo = self._cb.getRegisterStackInfo.__class__(self._get_register_stack_info)
@@ -360,6 +362,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			self._semantic_class_for_flag_write_type[self._flag_write_types[write_type]] = sem_class_index
 
 		self.__dict__["global_regs"] = self.__class__.global_regs
+		self.__dict__["system_regs"] = self.__class__.system_regs
 
 		self._intrinsics = {}
 		self._intrinsics_by_index = {}
@@ -918,6 +921,20 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			reg_buf = (ctypes.c_uint * len(self.global_regs))()
 			for i in range(0, len(self.global_regs)):
 				reg_buf[i] = self._all_regs[self.global_regs[i]]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except KeyError:
+			log.log_error(traceback.format_exc())
+			count[0] = 0
+			return None
+
+	def _get_system_registers(self, ctxt, count):
+		try:
+			count[0] = len(self.system_regs)
+			reg_buf = (ctypes.c_uint * len(self.system_regs))()
+			for i in range(0, len(self.system_regs)):
+				reg_buf[i] = self._all_regs[self.system_regs[i]]
 			result = ctypes.cast(reg_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
@@ -2231,6 +2248,13 @@ class CoreArchitecture(Architecture):
 		core.BNFreeRegisterList(regs)
 
 		count = ctypes.c_ulonglong()
+		regs = core.BNGetArchitectureSystemRegisters(self.handle, count)
+		self.__dict__["system_regs"] = []
+		for i in range(0, count.value):
+			self.system_regs.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+		core.BNFreeRegisterList(regs)
+
+		count = ctypes.c_ulonglong()
 		regs = core.BNGetAllArchitectureRegisterStacks(self.handle, count)
 		self._all_reg_stacks = {}
 		self._reg_stacks_by_index = {}
@@ -2701,6 +2725,7 @@ class ArchitectureHook(CoreArchitecture):
 	def register(self):
 		self.__class__._registered_cb = self._cb
 		self.handle = core.BNRegisterArchitectureHook(self._base_arch.handle, self._cb)
+		core.BNFinalizeArchitectureHook(self._base_arch.handle)
 
 	@property
 	def base_arch(self):

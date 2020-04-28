@@ -8,11 +8,11 @@ Next, the [third section](#signature-library) explains how to work with the sign
 
 Finally, we'll [cover](#symbols) how to work with Symbols in a binary.
 
-# Working With Types
+## Working With Types
 
 There are two main ways to interact with types from within a binary view. The first is to use the [types view](#types-view), and the second is to take advantage of the [smart structures workflow](#smart-structures-workflow) or otherwise annotate types directly in a disassembly or IL view.
 
-## Smart Structures Workflow
+### Smart Structures Workflow
 
 New to [stable version 1.3.2015](https://binary.ninja/changelog/) is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 });
 </script>
 
-Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do a bit of reverse engineering we learn that this is actually a linked list and that the structure should look like:
+Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do some reverse engineering on these binaries, we learn that this is actually a linked list and that the structures should look like:
 
 ```C
 struct Page
@@ -118,7 +118,7 @@ struct Page
 }
 ```
 
-Where tapes is:
+and:
 ```C
 struct Tape
 {
@@ -128,12 +128,12 @@ struct Tape
 };
 ```
 
-We can either update our automatically created structure by pressing `y` to change member types and `n` to change their names, or we can use the [types view](#types-view) to directly import the c code directly and then apply the types using `y`. That gives us HLIL that now looks like:
+We can either update our automatically created structure by pressing `y` to change member types and `n` to change their names, or we can use the [types view](#types-view) to directly import the c code and then apply the types using `y`. That gives us HLIL that now looks like:
 
 ![Taped HLIL](../img/taped-hlil.png "Taped HLIL")
 
 
-## Types View
+### Types View
 
 To see all types in a Binary View, use the types view. It can be accessed from the menu `View > Types`. Alternatively, you can access it with the `t` hotkey from most other views, or using `[CMD/CTRL] p` to access the command-palette and typing "types". This is the most common interface for creating structures, unions and types using C-style syntax.
 
@@ -141,7 +141,7 @@ For many built-in file formats you'll notice that common headers are already enu
 
 ![Types View](../img/types-view.png "Types View")
 
-### Shortcuts and Attributes
+#### Shortcuts and Attributes
 
 From within the Types view, you can use the following hotkeys to create new types, structures, or unions. Alternatively, you can use the right-click menu to access these options and more.
 
@@ -158,7 +158,7 @@ The shortcuts for editing existing elements are:
 * `l` - Set structure size
 * `u` - undefine field
 
-Structs support the attribute `__packed` to indicate that there is no padding. Additionally, function prototypes support the following keywords to indicate their calling convention:
+Structs support the attribute `__packed` to indicate that there is no padding. Additionally, function prototypes support the following keywords to indicate their calling convention or other features:
 
 ```
 __cdecl
@@ -169,14 +169,14 @@ __noreturn
 ```
 
 
-### Applying Structures and Types
+#### Applying Structures and Types
 
 ![Changing a type](../img/change-type.png "Changing a type")
 
-Once you've created your structures, you can apply them to your disassembly. Simply select an appropriate token (variable or memory address), and press `y` to bring up the change type dialog. Note that for simple types you can also create them directly in the linear views or graph views. Additionally, you can apply types on both disassembly and all levels of IL. Any variables that are shared between the ILs will be updated through all of them as types are applied. 
+Once you've created your structures, you can apply them to your disassembly. Simply select an appropriate token (variable or memory address), and press `y` to bring up the change type dialog. Types can be applied on both disassembly and all levels of IL. Any variables that are shared between the ILs will be updated as types are applied.
 
 
-### Examples 
+#### Examples 
 
 ```C
 enum _flags
@@ -198,15 +198,15 @@ struct Header __packed
 };
 ```
 
-# Using the API
+## Using the API
 
 Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples. 
 
-## Create a new type
+### Create a new type
 
-First we'll want to make a new type, then we'll want to insert it into a BinaryView and then finally we'll want to apply it to a location in memory.
+Let's follow the most basic workflow: making a new type, inserting it into a BinaryView, and then applying to a variable or memory address.
 
-### From C syntax
+#### From C syntax
 
 There are two main ways to create a type with the API. The first is to use [one of](https://api.binary.ninja/search.html?q=parse_type&check_keywords=yes&area=default#) our APIs that parse a type string and return a type object. For a simple, single type, [parse_type_string](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_type_string) will return a tuple of the [Type](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and the [QualifiedName](https://api.binary.ninja/binaryninja.types.QualifiedName.html#binaryninja.types.QualifiedName):
 
@@ -232,13 +232,13 @@ struct person
 <types: {'colors': <type: enum>, 'person': <type: struct>}, variables: {}, functions: {}>
 ```
 
-If you're importing a large number of headers from an existing project you might find that some features are not compatible with the type parser that Binary Ninja uses. In that case, you may find the [Header Plugin](https://github.com/rmspeers/binja_load_headers) useful as it attempts to automate the normalization of these features in a way that simplifies importing headers into your analysis.
+If you're importing a large number of headers from an existing project you might find that some features are not compatible with the type parser that Binary Ninja currently uses. In that case, you may find the [Header Plugin](https://github.com/rmspeers/binja_load_headers) useful as it attempts to automate the normalization of headers to make them compatible with Binary Ninja's type parser.
 
 NOTE: While they have similar names, be aware that the parse_types APIs live off of the [Platform](https://api.binary.ninja/binaryninja.platform.Platform.html#binaryninja.platform.Platform) class as they require knowledge of the existing architecture's platform whereas the simpler `parse_type_string` is accessed directly from the [BinaryView](https://api.binary.ninja/binaryninja.binaryview.BinaryView.html#binaryninja.binaryview.BinaryView) class.
 
-### Using Type objects
+#### Using Type objects
 
-Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easily composed to create simple type objects:
+Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easily composed to create simple type objects or added with [Structures](https://api.binary.ninja/binaryninja.types.Structure.html#binaryninja.types.Structure):
 
 ```py
 >>> myar = Type.array(Type.char(), 20)
@@ -246,7 +246,18 @@ Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easi
 <type: char [20]>
 ```
 
-### Adding types
+This is useful for creating structures that are not easily created in C syntax, such as sparse structures with only some members defined:
+
+```py
+>>> s = types.Structure()
+>>> s
+<struct: size 0x0>
+>>> s.insert(0x20, myar, name='name')
+>>> s
+<struct: size 0x34>
+```
+
+#### Adding types
 
 Next, we're going to take the optional step of inserting our type into the current BinaryView with the [define_user_type](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_user_type) API:
 
@@ -261,12 +272,12 @@ And we can verify the type shows up in the types view as expected:
 
 This makes the type available to the user to apply more easily and is appropriate for named structures, but is not required if you simply with to set a type as shown in the next step.
 
-### Applying 
+#### Applying 
 
-Of course, having the type available doesn't actually apply it to anything in the Binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string like the one at `0x8049f34` and create a data variable using our new type:
+Of course, having the type available doesn't actually apply it to anything in the binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string (like the one at `0x8049f34`) and create a data variable using our new type:
 
 ```py
->>> bv.define_data_var(here, bv.types["myString"])
+>>> bv.define_user_data_var(0x8049f34, bv.types["myString"])
 ```
 And now we can see that the string was indeed applied to our location:
 
@@ -275,52 +286,54 @@ And now we can see that the string was indeed applied to our location:
 Of course, we could have just directly applied our type without inserting it into the types available in the binary. For example:
 
 ```py
->>> bv.define_data_var(here, Type.array(Type.char(), 20))
+>>> bv.define_user_data_var(0x8049f34, Type.array(Type.char(), 20))
 ```
 
 If we want to name the variable there, see the section below on working with [symbols](#symbols).
 
+NOTE: There also exists the [`define_data_var`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_data_var) API, however that will create an AUTO data variable. Auto-APIs are intended for code which is expected to be run every-time a binary is opened. Thus, they're not saved to the analysis database since they will generally be generated on load. Keep that in mind when you see multiple APIs that have both `_auto_` and `_user_` variants.
 
-## Delete a type
+### Deleting
 
-_coming soon..._
+To remove a type from the view:
 
-## Change the name of a member of an existing struct
+```py
+>>> bv.undefine_user_type('person')
+```
 
-_coming soon..._
+Or you can remove a type applied to memory:
 
-## Add/remove/change the type of a member of an existing struct
+```py
+>>> bv.undefine_user_data_var(0x8049f34)
+```
 
-_coming soon..._
 
-# Modify a function type
+### Modifying
 
 Here's a snippet to take an existing function, and set the confidence of all the parameter types to 100%:
 
-```py`
+```py
 old = current_function.function_type
 new_parameters = []
-for v, p in zip(current_function.parameter_vars, old.parameters):
-    new_type = v
+for vars, params in zip(current_function.parameter_vars, old.parameters):
+    new_type = vars
     new_type.confidence = 256 #max-confidence
-    new_parameters.append(FunctionParameter(new_type, p.name, p.location))
+    new_parameters.append(FunctionParameter(new_type, params.name, params.location))
 
 current_function.function_type = types.Type.function(old.return_value, new_parameters, \
 old.calling_convention, old.has_variable_arguments, old.stack_adjustment)
 ```
 
 
-
-
-# Type Library
+## Type Library
 
 _coming soon..._
 
-# Signature Library
+## Signature Library
 
 While many signatures are [built-in](https://github.com/Vector35/binaryninja-api/issues/1551) and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](plugins.md#plugin-manager).
 
-## Running the signature matcher
+### Running the signature matcher
 
 The signature matcher runs automatically by default once analysis completes. You can turn this off in `Settings > Analysis > Autorun Function Signature Matcher` (or, [analysis.signatureMatcher.autorun](../getting-started.md#analysis.signatureMatcher.autorun) in Settings).
 
@@ -332,7 +345,7 @@ Once the signature matcher runs, it will print a brief report to the console det
 1 functions matched total, 0 name-only matches, 0 thunks resolved, 33 functions skipped because they were too small
 ```
 
-## Generating signature libraries
+### Generating signature libraries
 
 To generate a signature library for the currently-open binary, use `Tools > Signature Library > Generate Signature Library`. This will generate signatures for all functions in the binary that have a name attached to them. Note that functions with automatically-chosen names such as `sub_401000` will be skipped. Once it's generated, you'll be prompted where to save the resulting signature library.
 
@@ -344,7 +357,7 @@ If you are accessing the sigkit API through the Binary Ninja GUI and you've inst
 import Vector35_sigkit as sigkit
 ```
 
-## Installing signature libraries
+### Installing signature libraries
 
 Binary Ninja loads signature libraries from 2 locations:
 
@@ -355,7 +368,7 @@ Binary Ninja loads signature libraries from 2 locations:
 
 Inside the signatures folder, each platform has its own folder for its set of signatures. For example, `windows-x86_64` and `linux-ppc32` are two sample platforms. When the signature matcher runs, it uses the signature libraries that are relevant to the current binary's platform. (You can check the platform of any binary you have open in the UI using the console and typing `bv.platform`)
 
-### Manipulating signature libraries
+#### Manipulating signature libraries
 
 You can edit signature libraries programmatically using the sigkit API. A very basic [example](https://github.com/Vector35/sigkit/blob/master/examples/convert_siglib.py) shows how to load and save signature libraries. Note that Binary Ninja only supports signatures in the `.sig` format; the other formats are for debugging. The easiest way to load and save signature libraries in this format are the [`sigkit.load_signature_library()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) and [`sigkit.save_signature_library()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) functions.
 
@@ -364,7 +377,7 @@ To help debug and optimize your signature libraries in a Signature Explorer GUI 
 For a text-based approach, you can also export your signature libraries to JSON using the Signature Explorer. Then, you can edit them in a text editor and convert them back to a .sig using the Signature Explorer afterwards. Of course, these conversions are also accessible through the API as the [`sigkit.sig_serialize_json`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_json.py) module, which provides a pickle-like interface. Likewise, [`sigkit.sig_serialize_fb`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_fb.py) provides serialization for the standard .sig format.
 
 
-# Symbols
+## Symbols
 
 Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, this couldn't be simpler. Just select the function, variable, member, register, or whatever you want to change the symbol of and press `n`. 
 

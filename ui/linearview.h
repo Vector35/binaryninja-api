@@ -144,6 +144,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void updateCache();
 	void refreshAtCurrentLocation();
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
+	bool navigateToGotoLabel(uint64_t label);
 
 	void scrollLines(int count);
 

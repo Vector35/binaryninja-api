@@ -460,3 +460,23 @@ Ref<FlowGraph> HighLevelILFunction::CreateFunctionGraph(DisassemblySettings* set
 	BNFlowGraph* graph = BNCreateHighLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
+
+
+size_t HighLevelILFunction::GetExprIndexForLabel(uint64_t label)
+{
+	return BNGetHighLevelILExprIndexForLabel(m_object, label);
+}
+
+
+set<size_t> HighLevelILFunction::GetUsesForLabel(uint64_t label)
+{
+	size_t count;
+	size_t* uses = BNGetHighLevelILUsesForLabel(m_object, label, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(uses[i]);
+
+	BNFreeILInstructionList(uses);
+	return result;
+}

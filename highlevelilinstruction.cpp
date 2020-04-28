@@ -793,6 +793,13 @@ void HighLevelILInstructionBase::UpdateRawOperand(size_t operandIndex, ExprId va
 }
 
 
+void HighLevelILInstructionBase::UpdateRawOperandAsInteger(size_t operandIndex, uint64_t value)
+{
+	operands[operandIndex] = value;
+	function->UpdateInstructionOperand(exprIndex, operandIndex, value);
+}
+
+
 void HighLevelILInstructionBase::UpdateRawOperandAsExprList(size_t operandIndex, const vector<HighLevelILInstruction>& exprs)
 {
 	vector<ExprId> exprIndexList;
@@ -2208,11 +2215,11 @@ uint32_t HighLevelILInstruction::GetIntrinsic() const
 }
 
 
-size_t HighLevelILInstruction::GetTarget() const
+uint64_t HighLevelILInstruction::GetTarget() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(TargetHighLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
+		return GetRawOperandAsInteger(operandIndex);
 	throw HighLevelILInstructionAccessException();
 }
 
@@ -2410,13 +2417,13 @@ ExprId HighLevelILFunction::NoReturn(const ILSourceLocation& loc)
 }
 
 
-ExprId HighLevelILFunction::Goto(size_t target, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Goto(uint64_t target, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_GOTO, loc, 0, target);
 }
 
 
-ExprId HighLevelILFunction::Label(size_t target, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Label(uint64_t target, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_LABEL, loc, 0, target);
 }

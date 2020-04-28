@@ -3144,6 +3144,9 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
 
 		void RequestDebugReport(const std::string& name);
+
+		std::string GetGotoLabelName(uint64_t labelId);
+		void SetGotoLabelName(uint64_t labelId, const std::string& name);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -4070,8 +4073,8 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Goto(size_t target, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Label(size_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Goto(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Label(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarInit(size_t size, const Variable& dest, ExprId src,
 			const ILSourceLocation& loc = ILSourceLocation());
@@ -4280,6 +4283,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void VisitAllExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func);
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
+
+		size_t GetExprIndexForLabel(uint64_t label);
+		std::set<size_t> GetUsesForLabel(uint64_t label);
 	};
 
 	class FunctionRecognizer

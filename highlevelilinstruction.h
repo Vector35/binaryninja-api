@@ -298,6 +298,7 @@ namespace BinaryNinja
 		HighLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
+		void UpdateRawOperandAsInteger(size_t operandIndex, uint64_t value);
 		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const std::vector<SSAVariable>& vars);
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<HighLevelILInstruction>& exprs);
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
@@ -411,7 +412,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> int64_t GetConstant() const { return As<N>().GetConstant(); }
 		template <BNHighLevelILOperation N> int64_t GetVector() const { return As<N>().GetVector(); }
 		template <BNHighLevelILOperation N> uint32_t GetIntrinsic() const { return As<N>().GetIntrinsic(); }
-		template <BNHighLevelILOperation N> size_t GetTarget() const { return As<N>().GetTarget(); }
+		template <BNHighLevelILOperation N> uint64_t GetTarget() const { return As<N>().GetTarget(); }
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetParameterExprs() const { return As<N>().GetParameterExprs(); }
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetSourceExprs() const { return As<N>().GetSourceExprs(); }
 		template <BNHighLevelILOperation N> HighLevelILInstructionList GetDestExprs() const { return As<N>().GetDestExprs(); }
@@ -438,6 +439,7 @@ namespace BinaryNinja
 		template <BNHighLevelILOperation N> void SetSourceSSAVariables(const std::vector<SSAVariable>& vars) { As<N>().SetSourceSSAVariables(vars); }
 		template <BNHighLevelILOperation N> void SetSourceMemoryVersion(size_t version) { return As<N>().SetSourceMemoryVersion(version); }
 		template <BNHighLevelILOperation N> void SetDestMemoryVersion(size_t version) { return As<N>().SetDestMemoryVersion(version); }
+		template <BNHighLevelILOperation N> void SetTarget(uint64_t target) { As<N>().SetTarget(target); }
 
 		bool GetOperandIndexForUsage(HighLevelILOperandUsage usage, size_t& operandIndex) const;
 
@@ -468,7 +470,7 @@ namespace BinaryNinja
 		int64_t GetConstant() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
-		size_t GetTarget() const;
+		uint64_t GetTarget() const;
 		HighLevelILInstructionList GetParameterExprs() const;
 		HighLevelILInstructionList GetSourceExprs() const;
 		HighLevelILInstructionList GetDestExprs() const;
@@ -624,11 +626,13 @@ namespace BinaryNinja
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_GOTO>: public HighLevelILInstructionBase
 	{
-		size_t GetTarget() const { return GetRawOperandAsIndex(0); }
+		uint64_t GetTarget() const { return GetRawOperandAsInteger(0); }
+		void SetTarget(uint64_t target) { UpdateRawOperandAsInteger(0, target); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_LABEL>: public HighLevelILInstructionBase
 	{
-		size_t GetTarget() const { return GetRawOperandAsIndex(0); }
+		uint64_t GetTarget() const { return GetRawOperandAsInteger(0); }
+		void SetTarget(uint64_t target) { UpdateRawOperandAsInteger(0, target); }
 	};
 
 	template <> struct HighLevelILInstructionAccessor<HLIL_RET>: public HighLevelILInstructionBase

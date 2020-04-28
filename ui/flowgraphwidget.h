@@ -155,6 +155,7 @@ protected:
 	void bindActions();
 
 	void navigateToAddress(uint64_t addr);
+	void navigateToGotoLabel(uint64_t label);
 
 	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify,
 		bool recenterWithPreviousGraph);

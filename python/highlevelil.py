@@ -72,6 +72,38 @@ class HighLevelILOperationAndSize(object):
 		self._size = value
 
 
+class GotoLabel(object):
+	def __init__(self, function, id):
+		self._function = function
+		self._id = id
+
+	@property
+	def label_id(self):
+		return self._id
+
+	@property
+	def name(self):
+		return core.BNGetGotoLabelName(self._function.source_function.handle, self._id)
+
+	@name.setter
+	def name(self, value):
+		core.BNSetUserGotoLabelName(self._function.source_function.handle, self._id, value)
+
+	@property
+	def definition(self):
+		return self._function.get_label(self._id)
+
+	@property
+	def uses(self):
+		return self._function.get_label_uses(self._id)
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return "<label: %s>" % self.name
+
+
 class HighLevelILInstruction(object):
 	"""
 	``class HighLevelILInstruction`` High Level Intermediate Language Instructions form an abstract syntax tree of
@@ -95,8 +127,8 @@ class HighLevelILInstruction(object):
 		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
 		HighLevelILOperation.HLIL_RET: [("src", "expr_list")],
 		HighLevelILOperation.HLIL_NORET: [],
-		HighLevelILOperation.HLIL_GOTO: [("target", "int")],
-		HighLevelILOperation.HLIL_LABEL: [("target", "int")],
+		HighLevelILOperation.HLIL_GOTO: [("target", "label")],
+		HighLevelILOperation.HLIL_LABEL: [("target", "label")],
 		HighLevelILOperation.HLIL_VAR_DECLARE: [("var", "var")],
 		HighLevelILOperation.HLIL_VAR_INIT: [("dest", "var"), ("src", "expr")],
 		HighLevelILOperation.HLIL_VAR_INIT_SSA: [("dest", "var_ssa"), ("src", "expr")],
@@ -271,6 +303,8 @@ class HighLevelILInstruction(object):
 				value = instr.operands[i]
 				if (value & (1 << 63)) != 0:
 					value = None
+			elif operand_type == "label":
+				value = GotoLabel(self.function, instr.operands[i])
 			self._operands.append(value)
 			self.__dict__[name] = value
 			i += 1
@@ -875,6 +909,21 @@ class HighLevelILFunction(object):
 		result = core.BNGetMediumLevelILExprIndexFromHighLevelIL(self.handle, expr)
 		if result >= core.BNGetMediumLevelILExprCount(medium_il.handle):
 			return None
+		return result
+
+	def get_label(self, label_idx):
+		result = core.BNGetHighLevelILExprIndexForLabel(self.handle, label_idx)
+		if result >= core.BNGetHighLevelILExprCount(self.handle):
+			return None
+		return HighLevelILInstruction(self, result)
+
+	def get_label_uses(self, label_idx):
+		count = ctypes.c_ulonglong()
+		uses = core.BNGetHighLevelILUsesForLabel(self.handle, label_idx, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(HighLevelILInstruction(self, uses[i]))
+		core.BNFreeILInstructionList(uses)
 		return result
 
 

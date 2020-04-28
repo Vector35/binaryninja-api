@@ -1718,6 +1718,21 @@ void Function::RequestDebugReport(const string& name)
 }
 
 
+string Function::GetGotoLabelName(uint64_t labelId)
+{
+	char* name = BNGetGotoLabelName(m_object, labelId);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+void Function::SetGotoLabelName(uint64_t labelId, const std::string& name)
+{
+	BNSetUserGotoLabelName(m_object, labelId, name.c_str());
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
 {
 	if (m_func)

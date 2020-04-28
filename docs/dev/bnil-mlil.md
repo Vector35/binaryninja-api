@@ -282,9 +282,9 @@ The parameter list can be accessed through the ``params`` property:
 * ``MLIL_RET`` - Return to the calling function.
 * ``MLIL_RET_HINT`` - Indirect jump to ``dest`` expression (only used in internal analysis passes.)
 * ``MLIL_NORET`` - This instruction will never be executed, the instruction before it is a call that doesn't return
-* ``MLIL_IF`` - Branch to the ``true``/``false`` mlil instruction identifier depending on the result of the ``condition`` expression
+* ``MLIL_IF`` - Branch to the ``true``/``false`` MLIL instruction identifier depending on the result of the ``condition`` expression
 * ``MLIL_GOTO`` - Branch to the ``dest`` expression id
-* ``MLIL_TAILCALL`` - This instruction calls an the expression ``dest`` using ``params`` as input and ``output`` for return values
+* ``MLIL_TAILCALL`` - This instruction calls the expression ``dest`` using ``params`` as input and ``output`` for return values
 * ``MLIL_SYSCALL`` - Make a system/service call with parameters ``params`` and output ``output``
 * ``MLIL_SYSCALL_UNTYPED`` - Makes a system/service call, but an exact set of parameters couldn't be determined.
 

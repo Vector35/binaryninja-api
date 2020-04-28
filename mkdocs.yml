@@ -43,6 +43,7 @@ nav:
         - Working with Types: 'guide/type.md'
     - Developer Guide:
         - Contributing Documentation: 'dev/documentation.md'
+        - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
         - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
         - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
         #- Plugin Design: 'dev/plugins.md'

@@ -42,7 +42,7 @@ def save_svg(bv, function):
         path, 'binaryninja-{filename}-{function}.html'.format(filename=origname, function=address))
     outputfile = get_save_filename_input(
         'File name for export_svg', 'HTML files (*.html)', filename)
-    if sys.platfirm == "win32":
+    if sys.platform == "win32":
         outputfile = outputfile.replace('/', '\\')
     if outputfile is None:
         return

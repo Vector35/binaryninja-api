@@ -3519,7 +3519,7 @@ class BinaryView(object):
 		elif not isinstance(plat, binaryninja.platform.Platform):
 			raise AttributeError("Provided platform is not of type `binaryninja.platform.Platform`")
 
-		if isinstance(sym_type, binaryninja.SymbolType):
+		if isinstance(sym_type, binaryninja.Type):
 			sym_type = sym_type.handle
 		elif sym_type is not None:
 			raise AttributeError("Provided sym_type is not of type `binaryninja.SymbolType`")

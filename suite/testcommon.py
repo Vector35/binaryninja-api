@@ -337,6 +337,14 @@ class BinaryViewTestBuilder(Builder):
                 retinfo.append("Function: {:x} Instruction: {}: {}".format(func.start, hex(ins[1]), ''.join([str(i) for i in ins[0]])))
         return fixOutput(retinfo)
 
+    def test_function_hlil(self):
+        """Function HLIL produced different output"""
+        retinfo = []
+        for func in self.bv.functions:
+            for line in func.hlil.root.lines:
+                retinfo.append("Function: {:x} HLIL line: {}".format(func.start, str(line)))
+        return fixOutput(retinfo)
+
     def test_functions_attributes(self):
         """Function attributes don't match"""
         funcinfo = []

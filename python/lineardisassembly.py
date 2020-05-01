@@ -137,7 +137,7 @@ class LinearViewObject(object):
 
 	@property
 	def previous(self):
-		if parent is None:
+		if self._parent is None:
 			return None
 		result = core.BNGetPreviousLinearViewObjectChild(self._parent.handle, self.handle)
 		if not result:
@@ -146,7 +146,7 @@ class LinearViewObject(object):
 
 	@property
 	def next(self):
-		if parent is None:
+		if self._parent is None:
 			return None
 		result = core.BNGetNextLinearViewObjectChild(self._parent.handle, self.handle)
 		if not result:

@@ -176,6 +176,8 @@ protected:
 	void selectNone();
 	void navigateToHighlightedToken();
 
+	uint64_t getTokenAddress();
+
 public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
 	~FlowGraphWidget();

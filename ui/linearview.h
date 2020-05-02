@@ -181,6 +181,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void updateAnalysisRequestorsForCache();
 
 	ArchitectureRef getArchitecture(const LinearViewLine& line);
+	uint64_t getTokenAddress();
 
 	BNAnalysisWarningActionType getAnalysisWarningActionAtPos(const LinearViewLine& line, int x);
 

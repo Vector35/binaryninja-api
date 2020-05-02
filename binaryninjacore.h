@@ -271,7 +271,9 @@ extern "C"
 		NoTokenContext = 0,
 		LocalVariableTokenContext = 1,
 		DataVariableTokenContext = 2,
-		FunctionReturnTokenContext = 3
+		FunctionReturnTokenContext = 3,
+		InstructionAddressTokenContext = 4,
+		ILInstructionIndexTokenContext = 5
 	};
 
 	enum BNLinearDisassemblyLineType

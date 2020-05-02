@@ -281,7 +281,7 @@ class ScriptingInstance(object):
 		core.BNSetScriptingInstanceCurrentSelection(self.handle, begin, end)
 
 	def complete_input(self, text, state):
-		return core.BNScriptingInstanceCompleteInput(self.handlue, text, state)
+		return core.BNScriptingInstanceCompleteInput(self.handle, text, state)
 
 	def register_output_listener(self, listener):
 		listener._register(self.handle)
@@ -291,7 +291,7 @@ class ScriptingInstance(object):
 		if listener in self.listeners:
 			listener._unregister(self.handle)
 			self.listeners.remove(listener)
-	
+
 	@property
 	def delimiters(self):
 		return core.BNGetScriptingInstanceDelimiters(self.handle)

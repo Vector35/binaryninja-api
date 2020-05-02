@@ -533,19 +533,19 @@ class FlowGraph(object):
 
 	@property
 	def horizontal_block_margin(self):
-		return core.BNGetHorizontalFlowGraphBlockMargin(self.handle)
+		return core.BNGetHorizontalFlowGraphNodeMargin(self.handle)
 
 	@horizontal_block_margin.setter
 	def horizontal_block_margin(self, value):
-		core.BNSetFlowGraphBlockMargins(self.handle, value, self.vertical_block_margin)
+		core.BNSetFlowGraphNodeMargins(self.handle, value, self.vertical_block_margin)
 
 	@property
 	def vertical_block_margin(self):
-		return core.BNGetVerticalFlowGraphBlockMargin(self.handle)
+		return core.BNGetVerticalFlowGraphNodeMargin(self.handle)
 
 	@vertical_block_margin.setter
 	def vertical_block_margin(self, value):
-		core.BNSetFlowGraphBlockMargins(self.handle, self.horizontal_block_margin, value)
+		core.BNSetFlowGraphNodeMargins(self.handle, self.horizontal_block_margin, value)
 
 	@property
 	def is_il(self):

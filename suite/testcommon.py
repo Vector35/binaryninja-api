@@ -583,6 +583,7 @@ class TestBuilder(Builder):
         struct.packed = 1
         retinfo.append("Struct packed after adjustment: " + str(struct.packed))
         retinfo.append("Struct type: " + str(struct.type))
+        retinfo.append(str((struct == struct) and not (struct != struct)))
         return retinfo
 
     def test_Enumeration(self):

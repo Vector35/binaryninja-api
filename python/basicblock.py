@@ -39,14 +39,6 @@ class BasicBlockEdge(object):
 		self._back_edge = back_edge
 		self._fall_through = fall_through
 
-	def __eq__(self, value):
-		if not isinstance(value, BasicBlockEdge):
-			return False
-		return (self._type, self._source, self._target, self._back_edge, self._fall_through) == (value.type, value.source, value.target, value.back_edge, value.fall_through)
-
-	def __hash__(self):
-		return hash((self._type, self._source, self._target, self.back_edge, self.fall_through))
-
 	def __repr__(self):
 		if self._type == BranchType.UnresolvedBranch:
 			return "<%s>" % BranchType(self._type).name
@@ -54,6 +46,20 @@ class BasicBlockEdge(object):
 			return "<%s: %s@%#x>" % (BranchType(self._type).name, self._target.arch.name, self._target.start)
 		else:
 			return "<%s: %#x>" % (BranchType(self._type).name, self._target.start)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._type, self._source, self._target, self._back_edge, self._fall_through) == \
+			(other._type, other._source, other._target, other._back_edge, other._fall_through)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._type, self._source, self._target, self.back_edge, self.fall_through))
 
 	@property
 	def type(self):
@@ -114,31 +120,34 @@ class BasicBlock(object):
 	def __del__(self):
 		core.BNFreeBasicBlock(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, BasicBlock):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, BasicBlock):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __len__(self):
-		return int(core.BNGetBasicBlockLength(self.handle))
-
 	def __repr__(self):
 		arch = self.arch
 		if arch:
 			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
 		else:
 			return "<block: %#x-%#x>" % (self.start, self.end)
+
+	def __len__(self):
+		return int(core.BNGetBasicBlockLength(self.handle))
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self.arch.name))
+
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __iter__(self):
 		if self._instStarts is None:
@@ -164,9 +173,6 @@ class BasicBlock(object):
 		length = self._instLengths[i]
 		data = self._view.read(start, length)
 		return self.arch.get_instruction_text(data, start)
-
-	def __hash__(self):
-		return hash((self.start, self.end, self.arch.name))
 
 	def _buildStartCache(self):
 		if self._instStarts is None:

@@ -49,6 +49,19 @@ class LookupTableEntry(object):
 	def __repr__(self):
 		return "[%s] -> %#x" % (', '.join(["%#x" % i for i in self.from_values]), self.to_value)
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._from_values, self._to_value) == (other._from_values, other._to_value)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._from_values, self._to_value))
+
 	@property
 	def from_values(self):
 		""" """
@@ -113,26 +126,30 @@ class RegisterValue(object):
 		return "<undetermined>"
 
 	def __hash__(self):
-			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue]:
-				return hash(self._value)
-			elif self.type == RegisterValueType.EntryValue:
-				return hash(self._reg)
-			elif self._type == RegisterValueType.StackFrameOffset:
-				return hash(self._offset)
+		if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue]:
+			return hash(self._value)
+		elif self.type == RegisterValueType.EntryValue:
+			return hash(self._reg)
+		elif self._type == RegisterValueType.StackFrameOffset:
+			return hash(self._offset)
 
 	def __eq__(self, other):
-			if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and isinstance(other, numbers.Integral):
-				return self._value == other
-			elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
-				return self._value == other.value
-			elif self._type == RegisterValueType.EntryValue and hasattr(other, "type") and other.type == self._type:
-				return self._reg == other.reg
-			elif self._type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self._type:
-				return self._offset == other.offset
-			elif self._type == RegisterValueType.StackFrameOffset and isinstance(other, numbers.Integral):
-				return self._offset == other
-			else:
-				raise TypeError("'%s' is not valid for comparison to '%s'" % (other, self))
+		if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and isinstance(other, numbers.Integral):
+			return self._value == other
+		elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
+			return self._value == other.value
+		elif self._type == RegisterValueType.EntryValue and hasattr(other, "type") and other.type == self._type:
+			return self._reg == other.reg
+		elif self._type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self._type:
+			return self._offset == other.offset
+		elif self._type == RegisterValueType.StackFrameOffset and isinstance(other, numbers.Integral):
+			return self._offset == other
+		return NotImplemented
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
 
 	def _to_api_object(self):
 		result = core.BNRegisterValue()
@@ -351,6 +368,19 @@ class PossibleValueSet(object):
 			return "<return address>"
 		return "<undetermined>"
 
+	def __eq__(self, other):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and isinstance(other, numbers.Integral):
+			return self.value == other
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and hasattr(other, 'type') and other.type == self.type:
+			return self.value == other.value
+		else:
+			return self == other
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
 	@property
 	def type(self):
 		""" """
@@ -431,14 +461,6 @@ class PossibleValueSet(object):
 		""" """
 		self._values = value
 
-	def __eq__(self, other):
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and isinstance(other, numbers.Integral):
-			return self.value == other
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and hasattr(other, 'type') and other.type == self.type:
-			return self.value == other.value
-		else:
-			return self == other
-
 
 class StackVariableReference(object):
 	def __init__(self, src_operand, t, name, var, ref_ofs, size):
@@ -459,6 +481,20 @@ class StackVariableReference(object):
 		if self._referenced_offset != self._var.storage:
 			return "<operand %d ref to %s%+#x>" % (self._source_operand, self._name, self._var.storage)
 		return "<operand %d ref to %s>" % (self._source_operand, self._name)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._source_operand, self._type, self._name, self._var, self._referenced_offset, self._size) == \
+			(other._source_operand, other._type, other._name, other._var, other._referenced_offset, other._size)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._source_operand, self._type, self._name, self._var, self._referenced_offset, self._size))
 
 	@property
 	def source_operand(self):
@@ -541,6 +577,27 @@ class Variable(object):
 		self._name = name
 		self._type = var_type
 
+	def __repr__(self):
+		if self._type is None:
+			return "<var %s>" % self.name
+		return "<var %s %s%s>" % (self._type.get_string_before_name(), self.name, self._type.get_string_after_name())
+
+	def __str__(self):
+		return self.name
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self.identifier, self.function) == (other.identifier, other.function)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self.identifier, self.function))
+
 	@property
 	def function(self):
 		"""Function where the variable is defined"""
@@ -608,23 +665,6 @@ class Variable(object):
 	def from_identifier(self, func, identifier, name = None, var_type = None):
 		var = core.BNFromVariableIdentifier(identifier)
 		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
-
-	def __repr__(self):
-		if self._type is None:
-			return "<var %s>" % self.name
-		return "<var %s %s%s>" % (self._type.get_string_before_name(), self.name, self._type.get_string_after_name())
-
-	def __str__(self):
-		return self.name
-
-	def __eq__(self, other):
-		if not isinstance(other, Variable):
-			return False
-		return (self.identifier, self.function) == (other.identifier, other.function)
-
-	def __hash__(self):
-		return hash((self.identifier, self.function))
-
 
 class ConstantReference(object):
 	def __init__(self, val, size, ptr, intermediate):
@@ -698,15 +738,15 @@ class ParameterVariables(object):
 	def __repr__(self):
 		return repr(self._vars)
 
+	def __len__(self):
+		return len(self._vars)
+
 	def __iter__(self):
 		for var in self._vars:
 			yield var
 
 	def __getitem__(self, idx):
 		return self._vars[idx]
-
-	def __len__(self):
-		return len(self._vars)
 
 	def with_confidence(self, confidence):
 		return ParameterVariables(list(self._vars), confidence = confidence)
@@ -756,20 +796,42 @@ class Function(object):
 				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 			core.BNFreeFunction(self.handle)
 
-	def __lt__(self, value):
-		if not isinstance(value, Function):
-			raise TypeError("Can only compare to other Function objects")
-		return self.start < value.start
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<func: %s@%#x>" % (arch.name, self.start)
+		else:
+			return "<func: %#x>" % self.start
 
-	def __eq__(self, value):
-		if not isinstance(value, Function):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, value):
-		if not isinstance(value, Function):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start < other.start
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start > other.start
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start <= other.start
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start >= other.start
 
 	def __hash__(self):
 		return hash((self.start, self.arch.name, self.platform.name))
@@ -798,24 +860,11 @@ class Function(object):
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 	def __str__(self):
 		result = ""
 		for token in self.type_tokens:
 			result += token.text
 		return result
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<func: %s@%#x>" % (arch.name, self.start)
-		else:
-			return "<func: %#x>" % self.start
 
 	@classmethod
 	def _unregister(cls, func):

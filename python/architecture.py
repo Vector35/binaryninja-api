@@ -79,12 +79,6 @@ class _ArchitectureMetaClass(type):
 		cls._registered_cb = arch._cb
 		arch.handle = core.BNRegisterArchitecture(cls.name, arch._cb)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 
 class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	"""
@@ -387,15 +381,32 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		self._pending_name_and_type_lists = {}
 		self._pending_type_lists = {}
 
-	def __eq__(self, value):
-		if not isinstance(value, Architecture):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		return "<arch: %s>" % self.name
 
-	def __ne__(self, value):
-		if not isinstance(value, Architecture):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
+	def __setattr__(self, name, value):
+		if ((name == "name") or (name == "endianness") or (name == "address_size") or
+			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length") or
+			(name == "get_instruction_alignment")):
+			raise AttributeError("attribute '%s' is read only" % name)
+		else:
+			try:
+				object.__setattr__(self, name, value)
+			except AttributeError:
+				raise AttributeError("attribute '%s' is read only" % name)
 
 	@property
 	def list(self):
@@ -441,21 +452,6 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			result.append(binaryninja.typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(handles[i])))
 		core.BNFreeTypeLibraryList(handles, count.value)
 		return result
-
-
-	def __setattr__(self, name, value):
-		if ((name == "name") or (name == "endianness") or (name == "address_size") or
-			(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length") or
-			(name == "get_instruction_alignment")):
-			raise AttributeError("attribute '%s' is read only" % name)
-		else:
-			try:
-				object.__setattr__(self, name, value)
-			except AttributeError:
-				raise AttributeError("attribute '%s' is read only" % name)
-
-	def __repr__(self):
-		return "<arch: %s>" % self.name
 
 	def _init(self, ctxt, handle):
 		self.handle = handle
@@ -2749,15 +2745,38 @@ class ReferenceSource(object):
 		else:
 			return "<ref: %#x>" % self._address
 
-	def __eq__(self, value):
-		if not isinstance(value, ReferenceSource):
-			return False
-		return self.function == value.function and self.arch == value.arch and self.address == value.address
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self.function, self.arch, self.address) == (other.address, other.function, other.arch)
 
-	def __lt__(self, value):
-		if not isinstance(value, ReferenceSource):
-			raise TypeError("Can only compare to other ReferenceSource objects")
-		return self.address < value.address
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.address < other.address
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.address > other.address
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.address >= other.address
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.address <= other.address
+
+	def __hash__(self):
+		hash((self._function, self._arch, self._address))
 
 	@property
 	def function(self):

@@ -38,7 +38,7 @@ class QualifiedName(object):
 		if isinstance(name, str):
 			self._name = [name]
 			self._byte_name = [name.encode('charmap')]
-		elif isinstance(name, QualifiedName):
+		elif isinstance(name, self.__class__):
 			self._name = name.name
 			self._byte_name = [n.encode('charmap') for n in name.name]
 		else:
@@ -54,47 +54,56 @@ class QualifiedName(object):
 	def __len__(self):
 		return len(self.name)
 
-	def __hash__(self):
-		return hash(str(self))
-
 	def __eq__(self, other):
 		if isinstance(other, str):
 			return str(self) == other
 		elif isinstance(other, list):
 			return self.name == other
-		elif isinstance(other, QualifiedName):
+		elif isinstance(other, self.__class__):
 			return self.name == other.name
-		return False
+		return NotImplemented
 
 	def __ne__(self, other):
-		return not (self == other)
+		if isinstance(other, str):
+			return str(self) != other
+		elif isinstance(other, list):
+			return self.name != other
+		elif isinstance(other, self.__class__):
+			return self.name != other.name
+		return NotImplemented
 
 	def __lt__(self, other):
-		if isinstance(other, QualifiedName):
+		if isinstance(other, self.__class__):
 			return self.name < other.name
-		return False
+		return NotImplemented
 
 	def __le__(self, other):
-		if isinstance(other, QualifiedName):
+		if isinstance(other, self.__class__):
 			return self.name <= other.name
-		return False
+		return NotImplemented
 
 	def __gt__(self, other):
-		if isinstance(other, QualifiedName):
+		if isinstance(other, self.__class__):
 			return self.name > other.name
-		return False
+		return NotImplemented
 
 	def __ge__(self, other):
-		if isinstance(other, QualifiedName):
+		if isinstance(other, self.__class__):
 			return self.name >= other.name
-		return False
+		return NotImplemented
 
 	def __cmp__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+
 		if self == other:
 			return 0
 		if self < other:
 			return -1
 		return 1
+
+	def __hash__(self):
+		return hash(str(self))
 
 	def __getitem__(self, key):
 		return self.name[key]
@@ -157,6 +166,7 @@ class NameSpace(QualifiedName):
 			result.append(name.name[i])
 		return NameSpace(result)
 
+
 class Symbol(object):
 	"""
 	Symbols are defined as one of the following types:
@@ -194,15 +204,21 @@ class Symbol(object):
 	def __del__(self):
 		core.BNFreeSymbol(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, Symbol):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
 
-	def __ne__(self, value):
-		if not isinstance(value, Symbol):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def type(self):
@@ -270,15 +286,6 @@ class Symbol(object):
 		core.BNFreeStringList(aliases, count)
 		return result
 
-	def __repr__(self):
-		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 
 class FunctionParameter(object):
 	def __init__(self, param_type, name = "", location = None):
@@ -343,15 +350,34 @@ class Type(object):
 		else:
 			core.BNFreeType(self._handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, Type):
-			return False
-		return core.BNTypesEqual(self.handle, value.handle)
+	def __repr__(self):
+		if self._confidence < max_confidence:
+			return "<type: %s, %d%% confidence>" % (str(self), (self._confidence * 100) // max_confidence)
+		return "<type: %s>" % str(self)
 
-	def __ne__(self, value):
-		if not isinstance(value, Type):
-			return True
-		return core.BNTypesNotEqual(self.handle, value.handle)
+	def __str__(self):
+		platform = None
+		if self._platform is not None:
+			platform = self._platform.handle
+		if self._mutable:
+			return core.BNGetTypeBuilderString(self._handle, platform)
+		name = self.registered_name
+		if (name is not None) and (self.type_class != TypeClass.StructureTypeClass) and (self.type_class != TypeClass.EnumerationTypeClass):
+			return self.get_string_before_name() + " " + str(name.name) + self.get_string_after_name()
+		return core.BNGetTypeString(self._handle, platform)
+
+	def __len__(self):
+		return self.width
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return core.BNTypesEqual(self.handle, other.handle)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return core.BNTypesNotEqual(self.handle, other.handle)
 
 	@property
 	def handle(self):
@@ -594,25 +620,6 @@ class Type(object):
 		if not name:
 			return None
 		return NamedTypeReference(handle = name)
-
-	def __len__(self):
-		return self.width
-
-	def __str__(self):
-		platform = None
-		if self._platform is not None:
-			platform = self._platform.handle
-		if self._mutable:
-			return core.BNGetTypeBuilderString(self._handle, platform)
-		name = self.registered_name
-		if (name is not None) and (self.type_class != TypeClass.StructureTypeClass) and (self.type_class != TypeClass.EnumerationTypeClass):
-			return self.get_string_before_name() + " " + str(name.name) + self.get_string_after_name()
-		return core.BNGetTypeString(self._handle, platform)
-
-	def __repr__(self):
-		if self._confidence < max_confidence:
-			return "<type: %s, %d%% confidence>" % (str(self), (self._confidence * 100) // max_confidence)
-		return "<type: %s>" % str(self)
 
 	def get_string_before_name(self):
 		platform = None
@@ -868,7 +875,7 @@ class Type(object):
 		return core.BNGetAutoDemangledTypeIdSource()
 
 	def with_confidence(self, confidence):
-		return Type(handle = core.BNNewTypeReference(self.handle), platform = self._platform, confidence = confidence)
+		return Type(handle = core.BNNewTypeReference(self._handle), platform = self._platform, confidence = confidence)
 
 	@property
 	def confidence(self):
@@ -894,13 +901,13 @@ class Type(object):
 		return Type(core.BNCreateTypeBuilderFromType(self._handle), confidence = self._confidence)
 
 	def with_replaced_structure(self, from_struct, to_struct):
-		return Type(handle = core.BNTypeWithReplacedStructure(self.handle, from_struct.handle, to_struct.handle))
+		return Type(handle = core.BNTypeWithReplacedStructure(self._handle, from_struct.handle, to_struct.handle))
 
 	def with_replaced_enumeration(self, from_enum, to_enum):
-		return Type(handle = core.BNTypeWithReplacedEnumeration(self.handle, from_enum.handle, to_enum.handle))
+		return Type(handle = core.BNTypeWithReplacedEnumeration(self._handle, from_enum.handle, to_enum.handle))
 
 	def with_replaced_named_type_reference(self, from_ref, to_ref):
-		return Type(handle = core.BNTypeWithReplacedNamedTypeReference(self.handle, from_ref.handle, to_ref.handle))
+		return Type(handle = core.BNTypeWithReplacedNamedTypeReference(self._handle, from_ref.handle, to_ref.handle))
 
 
 class BoolWithConfidence(object):
@@ -1087,15 +1094,29 @@ class NamedTypeReference(object):
 	def __del__(self):
 		core.BNFreeNamedTypeReference(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, NamedTypeReference):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		if self.type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
+			return "<named type: typedef %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.StructNamedTypeClass:
+			return "<named type: struct %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
+			return "<named type: union %s>" % str(self.name)
+		if self.type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
+			return "<named type: enum %s>" % str(self.name)
+		return "<named type: unknown %s>" % str(self.name)
 
-	def __ne__(self, value):
-		if not isinstance(value, NamedTypeReference):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def type_class(self):
@@ -1111,17 +1132,6 @@ class NamedTypeReference(object):
 		result = QualifiedName._from_core_struct(name)
 		core.BNFreeQualifiedName(name)
 		return result
-
-	def __repr__(self):
-		if self.type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return "<named type: typedef %s>" % str(self.name)
-		if self.type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return "<named type: struct %s>" % str(self.name)
-		if self.type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return "<named type: union %s>" % str(self.name)
-		if self.type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return "<named type: enum %s>" % str(self.name)
-		return "<named type: unknown %s>" % str(self.name)
 
 	@classmethod
 	def generate_auto_type_ref(self, type_class, source, name):
@@ -1145,6 +1155,39 @@ class StructureMember(object):
 			return "<member: %s, offset %#x>" % (str(self._type), self._offset)
 		return "<%s %s%s, offset %#x>" % (self._type.get_string_before_name(), self._name,
 							 self._type.get_string_after_name(), self._offset)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._type, self._name, self._offset) == (other._type, other._name, other._offset)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._offset < other._offset
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._offset > other._offset
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._offset <= other._offset
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._offset >= other._offset
+
+	def __hash__(self):
+		return hash((self._type, self._name, self._offset))
 
 	@property
 	def type(self):
@@ -1189,15 +1232,21 @@ class Structure(object):
 		else:
 			core.BNFreeStructure(self._handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, Structure):
-			return False
-		return ctypes.addressof(self._handle.contents) == ctypes.addressof(value._handle.contents)
+	def __repr__(self):
+		return "<struct: size %#x>" % self.width
 
-	def __ne__(self, value):
-		if not isinstance(value, Structure):
-			return True
-		return ctypes.addressof(self._handle.contents) != ctypes.addressof(value._handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self._handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self._handle.contents))
 
 	def __getitem__(self, name):
 		try:
@@ -1304,9 +1353,6 @@ class Structure(object):
 			raise AttributeError("Finalized Structure object is immutable, use mutable_copy()")
 		core.BNSetStructureBuilderType(self._handle, value)
 
-	def __repr__(self):
-		return "<struct: size %#x>" % self.width
-
 	def append(self, t, name = ""):
 		if not self._mutable:
 			raise AttributeError("Finalized Structure object is immutable, use mutable_copy()")
@@ -1342,13 +1388,13 @@ class Structure(object):
 		return Structure(core.BNCreateStructureBuilderFromStructure(self._handle))
 
 	def with_replaced_structure(self, from_struct, to_struct):
-		return Structure(core.BNStructureWithReplacedStructure(self.handle, from_struct.handle, to_struct.handle))
+		return Structure(core.BNStructureWithReplacedStructure(self._handle, from_struct.handle, to_struct.handle))
 
 	def with_replaced_enumeration(self, from_enum, to_enum):
-		return Structure(core.BNStructureWithReplacedEnumeration(self.handle, from_enum.handle, to_enum.handle))
+		return Structure(core.BNStructureWithReplacedEnumeration(self._handle, from_enum.handle, to_enum.handle))
 
 	def with_replaced_named_type_reference(self, from_ref, to_ref):
-		return Structure(core.BNStructureWithReplacedNamedTypeReference(self.handle, from_ref.handle, to_ref.handle))
+		return Structure(core.BNStructureWithReplacedNamedTypeReference(self._handle, from_ref.handle, to_ref.handle))
 
 
 class EnumerationMember(object):
@@ -1403,15 +1449,21 @@ class Enumeration(object):
 		else:
 			core.BNFreeEnumeration(self._handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, Enumeration):
-			return False
-		return ctypes.addressof(self._handle.contents) == ctypes.addressof(value._handle.contents)
+	def __repr__(self):
+		return "<enum: %s>" % repr(self.members)
 
-	def __ne__(self, value):
-		if not isinstance(value, Enumeration):
-			return True
-		return ctypes.addressof(self._handle.contents) != ctypes.addressof(value._handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def handle(self):
@@ -1436,9 +1488,6 @@ class Enumeration(object):
 			result.append(EnumerationMember(members[i].name, members[i].value, members[i].isDefault))
 		core.BNFreeEnumerationMemberList(members, count.value)
 		return result
-
-	def __repr__(self):
-		return "<enum: %s>" % repr(self.members)
 
 	def append(self, name, value = None):
 		if not self._mutable:

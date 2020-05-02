@@ -166,15 +166,18 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 	def __repr__(self):
 		return "<transform: %s>" % self.name
 
-	def __eq__(self, value):
-		if not isinstance(value, Transform):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, value):
-		if not isinstance(value, Transform):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def _get_parameters(self, ctxt, count):
 		try:

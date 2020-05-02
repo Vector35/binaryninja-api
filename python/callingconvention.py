@@ -159,15 +159,24 @@ class CallingConvention(object):
 		if self.handle is not None:
 			core.BNFreeCallingConvention(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, CallingConvention):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		return "<calling convention: %s %s>" % (self.arch.name, self.name)
 
-	def __ne__(self, value):
-		if not isinstance(value, CallingConvention):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __str__(self):
+		return self.name
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def _get_caller_saved_regs(self, ctxt, count):
 		try:
@@ -363,12 +372,6 @@ class CallingConvention(object):
 			result[0].type = in_var[0].type
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
-
-	def __repr__(self):
-		return "<calling convention: %s %s>" % (self.arch.name, self.name)
-
-	def __str__(self):
-		return self.name
 
 	def perform_get_incoming_reg_value(self, reg, func):
 		reg_stack = self.arch.get_reg_stack_for_reg(reg)

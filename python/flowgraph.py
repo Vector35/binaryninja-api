@@ -67,15 +67,41 @@ class FlowGraphNode(object):
 		if self.handle is not None:
 			core.BNFreeFlowGraphNode(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, FlowGraphNode):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		block = self.basic_block
+		if block:
+			arch = block.arch
+			if arch:
+				return "<graph node: %s@%#x-%#x>" % (arch.name, block.start, block.end)
+			else:
+				return "<graph node: %#x-%#x>" % (block.start, block.end)
+		return "<graph node>"
 
-	def __ne__(self, value):
-		if not isinstance(value, FlowGraphNode):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		lines = core.BNGetFlowGraphNodeLines(self.handle, count)
+		block = self.basic_block
+		try:
+			for i in range(0, count.value):
+				addr = lines[i].addr
+				if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
+					il_instr = block.il_function[lines[i].instrIndex]
+				else:
+					il_instr = None
+				tokens = function.InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
+				yield function.DisassemblyTextLine(tokens, addr, il_instr)
+		finally:
+			core.BNFreeDisassemblyTextLines(lines, count.value)
 
 	@property
 	def graph(self):
@@ -245,32 +271,6 @@ class FlowGraphNode(object):
 			color = highlight.HighlightColor(color)
 		core.BNSetFlowGraphNodeHighlight(self.handle, color._get_core_struct())
 
-	def __repr__(self):
-		block = self.basic_block
-		if block:
-			arch = block.arch
-			if arch:
-				return "<graph node: %s@%#x-%#x>" % (arch.name, block.start, block.end)
-			else:
-				return "<graph node: %#x-%#x>" % (block.start, block.end)
-		return "<graph node>"
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		lines = core.BNGetFlowGraphNodeLines(self.handle, count)
-		block = self.basic_block
-		try:
-			for i in range(0, count.value):
-				addr = lines[i].addr
-				if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
-					il_instr = block.il_function[lines[i].instrIndex]
-				else:
-					il_instr = None
-				tokens = function.InstructionTextToken.get_instruction_lines(lines[i].tokens, lines[i].count)
-				yield function.DisassemblyTextLine(tokens, addr, il_instr)
-		finally:
-			core.BNFreeDisassemblyTextLines(lines, count.value)
-
 	def add_outgoing_edge(self, edge_type, target):
 		"""
 		``add_outgoing_edge`` connects two flow graph nodes with an edge.
@@ -366,15 +366,42 @@ class FlowGraph(object):
 	def __del__(self):
 		core.BNFreeFlowGraph(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, FlowGraph):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		function = self.function
+		if function is None:
+			return "<flow graph>"
+		return "<graph of %s>" % repr(function)
 
-	def __ne__(self, value):
-		if not isinstance(value, FlowGraph):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __setattr__(self, name, value):
+		try:
+			object.__setattr__(self, name, value)
+		except AttributeError:
+			raise AttributeError("attribute '%s' is read only" % name)
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		nodes = core.BNGetFlowGraphNodes(self.handle, count)
+		try:
+			for i in range(0, count.value):
+				yield FlowGraphNode(self, core.BNNewFlowGraphNodeReference(nodes[i]))
+		finally:
+			core.BNFreeFlowGraphNodeList(nodes, count.value)
+
+	def __getitem__(self, i):
+		node = core.BNGetFlowGraphNode(self.handle, i)
+		if node is None:
+			return None
+		return FlowGraphNode(self, node)
 
 	def _prepare_for_layout(self, ctxt):
 		try:
@@ -639,27 +666,6 @@ class FlowGraph(object):
 	def shows_secondary_reg_highlighting(self, value):
 		self.set_option(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting, value)
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __repr__(self):
-		function = self.function
-		if function is None:
-			return "<flow graph>"
-		return "<graph of %s>" % repr(function)
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		nodes = core.BNGetFlowGraphNodes(self.handle, count)
-		try:
-			for i in range(0, count.value):
-				yield FlowGraphNode(self, core.BNNewFlowGraphNodeReference(nodes[i]))
-		finally:
-			core.BNFreeFlowGraphNodeList(nodes, count.value)
-
 	def layout(self, callback = None):
 		"""
 		``layout`` starts rendering a graph for display. Once a layout is complete, each node will contain
@@ -711,12 +717,6 @@ class FlowGraph(object):
 		:rtype: int
 		"""
 		return core.BNAddFlowGraphNode(self.handle, node.handle)
-
-	def __getitem__(self, i):
-		node = core.BNGetFlowGraphNode(self.handle, i)
-		if node is None:
-			return None
-		return FlowGraphNode(self, node)
 
 	def show(self, title):
 		"""

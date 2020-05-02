@@ -54,16 +54,24 @@ class ILRegister(object):
 	def info(self):
 		return self._arch.regs[self._name]
 
-	def __str__(self):
-		return self._name
-
 	def __repr__(self):
 		return self._name
 
+	def __str__(self):
+		return self._name
+
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return self.info == other.info
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -112,16 +120,24 @@ class ILRegisterStack(object):
 	def info(self):
 		return self._arch.reg_stacks[self._name]
 
-	def __str__(self):
-		return self._name
-
 	def __repr__(self):
 		return self._name
 
+	def __str__(self):
+		return self._name
+
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return self.info == other.info
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -161,11 +177,24 @@ class ILFlag(object):
 		else:
 			self._name = self._arch.get_flag_name(self._index)
 
+	def __repr__(self):
+		return self._name
+
 	def __str__(self):
 		return self._name
 
-	def __repr__(self):
-		return self._name
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -210,16 +239,24 @@ class ILSemanticFlagClass(object):
 		self._index = sem_class
 		self._name = self._arch.get_semantic_flag_class_name(self._index)
 
-	def __str__(self):
-		return self._name
-
 	def __repr__(self):
 		return self._name
 
+	def __str__(self):
+		return self._name
+
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return self._index == other._index
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -255,16 +292,24 @@ class ILSemanticFlagGroup(object):
 		self._index = sem_group
 		self._name = self._arch.get_semantic_flag_group_name(self._index)
 
-	def __str__(self):
-		return self._name
-
 	def __repr__(self):
 		return self._name
 
+	def __str__(self):
+		return self._name
+
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return self._index == other.index
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -303,16 +348,24 @@ class ILIntrinsic(object):
 			self._inputs = self._arch.intrinsics[self._name].inputs
 			self._outputs = self._arch.intrinsics[self._name].outputs
 
-	def __str__(self):
-		return self._name
-
 	def __repr__(self):
 		return self._name
 
+	def __str__(self):
+		return self._name
+
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return self._index == other.index
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._arch, self._index, self._name))
 
 	@property
 	def arch(self):
@@ -368,6 +421,19 @@ class SSARegister(object):
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self._reg), self._version)
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._reg, self._version) == (other._reg, other._version)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._reg, self._version))
+
 	@property
 	def reg(self):
 		""" """
@@ -394,6 +460,19 @@ class SSARegisterStack(object):
 
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self._reg_stack), self._version)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._reg_stack, self._version) == (other._reg_stack, other._version)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._reg_stack, self._version))
 
 	@property
 	def reg_stack(self):
@@ -422,6 +501,19 @@ class SSAFlag(object):
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self._flag), self._version)
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._flag, self._version) == (other._flag, other._version)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._flag, self._version))
+
 	@property
 	def flag(self):
 		""" """
@@ -448,6 +540,19 @@ class SSARegisterOrFlag(object):
 
 	def __repr__(self):
 		return "<ssa %s version %d>" % (repr(self._reg_or_flag), self._version)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._reg_or_flag == other._reg_or_flag) and (self._version == other._version)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._reg_or_flag, self._version))
 
 	@property
 	def reg_or_flag(self):
@@ -477,6 +582,19 @@ class LowLevelILOperationAndSize(object):
 		if self._size == 0:
 			return "<%s>" % self._operation.name
 		return "<%s %d>" % (self._operation.name, self._size)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._operation, self._size) == (other._operation, other._size)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._operation, self._size))
 
 	@property
 	def operation(self):
@@ -811,30 +929,38 @@ class LowLevelILInstruction(object):
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
-	def __eq__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index == value.expr_index
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index == other.expr_index
 
-	def __lt__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index < value.expr_index
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
 
-	def __le__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index <= value.expr_index
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index < other.expr_index
 
-	def __gt__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index > value.expr_index
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index <= other.expr_index
 
-	def __ge__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index >= value.expr_index
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index > other.expr_index
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index >= other.expr_index
+
+	def __hash__(self):
+		return hash((self._function, self.expr_index))
 
 	@property
 	def tokens(self):
@@ -1058,12 +1184,6 @@ class LowLevelILInstruction(object):
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 	@property
 	def function(self):
 		""" """
@@ -1180,22 +1300,9 @@ class LowLevelILFunction(object):
 				func_handle = self._source_function.handle
 			self.handle = core.BNCreateLowLevelILFunction(arch.handle, func_handle)
 
-	def __hash__(self):
-		return hash(('LLIL', self._source_function))
-
 	def __del__(self):
 		if self.handle is not None:
 			core.BNFreeLowLevelILFunction(self.handle)
-
-	def __eq__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, LowLevelILFunction):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	def __repr__(self):
 		arch = self.source_function.arch
@@ -1203,6 +1310,51 @@ class LowLevelILFunction(object):
 			return "<llil func: %s@%#x>" % (arch.name, self.source_function.start)
 		else:
 			return "<llil func: %#x>" % self.source_function.start
+
+	def __len__(self):
+		return int(core.BNGetLowLevelILInstructionCount(self.handle))
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(('LLIL', self._source_function))
+
+	def __getitem__(self, i):
+		if isinstance(i, slice) or isinstance(i, tuple):
+			raise IndexError("expected integer instruction index")
+		if isinstance(i, LowLevelILExpr):
+			return LowLevelILInstruction(self, i.index)
+		# for backwards compatibility
+		if isinstance(i, LowLevelILInstruction):
+			return i
+		if i < -len(self) or i >= len(self):
+			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
+		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
+
+	def __setitem__(self, i, j):
+		raise IndexError("instruction modification not implemented")
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
+		view = None
+		if self._source_function is not None:
+			view = self._source_function.view
+		try:
+			for i in range(0, count.value):
+				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def current_address(self):
@@ -1294,43 +1446,23 @@ class LowLevelILFunction(object):
 	def mmlil(self):
 		return self.mapped_medium_level_il
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
+	@property
+	def arch(self):
+		""" """
+		return self._arch
 
-	def __len__(self):
-		return int(core.BNGetLowLevelILInstructionCount(self.handle))
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
 
-	def __getitem__(self, i):
-		if isinstance(i, slice) or isinstance(i, tuple):
-			raise IndexError("expected integer instruction index")
-		if isinstance(i, LowLevelILExpr):
-			return LowLevelILInstruction(self, i.index)
-		# for backwards compatibility
-		if isinstance(i, LowLevelILInstruction):
-			return i
-		if i < -len(self) or i >= len(self):
-			raise IndexError("index out of range")
-		if i < 0:
-			i = len(self) + i
-		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
+	@property
+	def source_function(self):
+		""" """
+		return self._source_function
 
-	def __setitem__(self, i, j):
-		raise IndexError("instruction modification not implemented")
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
-		view = None
-		if self._source_function is not None:
-			view = self._source_function.view
-		try:
-			for i in range(0, count.value):
-				yield LowLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+	@source_function.setter
+	def source_function(self, value):
+		self._source_function = value
 
 	def get_instruction_start(self, addr, arch = None):
 		if arch is None:
@@ -2871,29 +3003,26 @@ class LowLevelILFunction(object):
 			settings_obj = None
 		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateLowLevelILFunctionGraph(self.handle, settings_obj))
 
-	@property
-	def arch(self):
-		""" """
-		return self._arch
-
-	@arch.setter
-	def arch(self, value):
-		self._arch = value
-
-	@property
-	def source_function(self):
-		""" """
-		return self._source_function
-
-	@source_function.setter
-	def source_function(self, value):
-		self._source_function = value
-
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(self, view, handle, owner):
 		super(LowLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<llil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<llil block: %d-%d>" % (self.start, self.end)
+
+	def __hash__(self):
+		return hash((self.start, self.end, self._il_function))
+
+	def __contains__(self, instruction):
+		if type(instruction) != LowLevelILInstruction or instruction.il_basic_block != self:
+			return False
+		return True
 
 	def __iter__(self):
 		for idx in range(self.start, self.end):
@@ -2911,21 +3040,6 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def _create_instance(self, handle, view):
 		"""Internal method by super to instantiate child instances"""
 		return LowLevelILBasicBlock(view, handle, self._il_function)
-
-	def __hash__(self):
-		return hash((self.start, self.end, self._il_function))
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<llil block: %s@%d-%d>" % (arch.name, self.start, self.end)
-		else:
-			return "<llil block: %d-%d>" % (self.start, self.end)
-
-	def __contains__(self, instruction):
-		if type(instruction) != LowLevelILInstruction or instruction.il_basic_block != self:
-			return False
-		return True
 
 	@property
 	def il_function(self):

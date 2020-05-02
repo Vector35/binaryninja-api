@@ -66,6 +66,148 @@ class Metadata(object):
 		else:
 			raise ValueError("{} doesn't contain type of: int, bool, str, float, list, dict".format(type(value).__name__))
 
+	def __len__(self):
+		if self.is_array or self.is_dict or self.is_string or self.is_raw:
+			return core.BNMetadataSize(self.handle)
+		raise Exception("Metadata object doesn't support len()")
+
+	def __eq__(self, other):
+		if isinstance(other, int) and self.is_integer:
+			return int(self) == other
+		elif isinstance(other, str) and (self.is_string or self.is_raw):
+			return str(self) == other
+		elif isinstance(other, float) and self.is_float:
+			return float(self) == other
+		elif isinstance(other, bool) and self.is_boolean:
+			return bool(self) == other
+		elif self.is_array and ((isinstance(other, Metadata) and other.is_array) or isinstance(other, list)):
+			if len(self) != len(other):
+				return False
+			for a, b in zip(self, other):
+				if a != b:
+					return False
+			return True
+		elif self.is_dict and ((isinstance(other, Metadata) and other.is_dict) or isinstance(other, dict)):
+			if len(self) != len(other):
+				return False
+			for a, b in zip(self, other):
+				if a != b or self[a] != other[b]:
+					return False
+			return True
+		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
+			return int(self) == int(other)
+		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
+			return str(self) == str(other)
+		elif isinstance(other, Metadata) and self.is_float and other.is_float:
+			return float(self) == float(other)
+		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
+			return bool(self) == bool(other)
+		return NotImplemented
+
+	def __ne__(self, other):
+		if isinstance(other, int) and self.is_integer:
+			return int(self) != other
+		elif isinstance(other, str) and (self.is_string or self.is_raw):
+			return str(self) != other
+		elif isinstance(other, float) and self.is_float:
+			return float(self) != other
+		elif isinstance(other, bool):
+			return bool(self) != other
+		elif self.is_array and ((isinstance(other, Metadata) and other.is_array) or isinstance(other, list)):
+			if len(self) != len(other):
+				return True
+			areEqual = True
+			for a, b in zip(self, other):
+				if a != b:
+					areEqual = False
+			return not areEqual
+		elif self.is_dict and ((isinstance(other, Metadata) and other.is_dict) or isinstance(other, dict)):
+			if len(self) != len(other):
+				return True
+			for a, b in zip(self, other):
+				if a != b or self[a] != other[b]:
+					return True
+			return False
+		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
+			return int(self) != int(other)
+		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
+			return str(self) != str(other)
+		elif isinstance(other, Metadata) and self.is_float and other.is_float:
+			return float(self) != float(other)
+		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
+			return bool(self) != bool(other)
+		return NotImplemented
+
+	def __iter__(self):
+		if self.is_array:
+			for i in range(core.BNMetadataSize(self.handle)):
+				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
+		elif self.is_dict:
+			result = core.BNMetadataGetValueStore(self.handle)
+			try:
+				for i in range(result.contents.size):
+					if isinstance(result.contents.keys[i], bytes):
+						yield str(pyNativeStr(result.contents.keys[i]))
+					else:
+						yield result.contents.keys[i]
+			finally:
+				core.BNFreeMetadataValueStore(result)
+		else:
+			raise Exception("Metadata object doesn't support iteration")
+
+	def __getitem__(self, value):
+		if self.is_array:
+			if not isinstance(value, int):
+				raise ValueError("Metadata object only supports integers for indexing")
+			if value >= len(self):
+				raise IndexError("Index value out of range")
+			return Metadata(handle=core.BNMetadataGetForIndex(self.handle, value)).value
+		if self.is_dict:
+			if not isinstance(value, str):
+				raise ValueError("Metadata object only supports strings for indexing")
+			handle = core.BNMetadataGetForKey(self.handle, value)
+			if handle is None:
+				raise KeyError(value)
+			return Metadata(handle=handle).value
+
+		raise NotImplementedError("Metadata object doesn't support indexing")
+
+	def __str__(self):
+		if self.is_string:
+			return str(core.BNMetadataGetString(self.handle))
+		if self.is_raw:
+			length = ctypes.c_ulonglong()
+			length.value = 0
+			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
+			out_list = []
+			for i in range(length.value):
+				out_list.append(native_list[i])
+			core.BNFreeMetadataRaw(native_list)
+			return ''.join(chr(a) for a in out_list)
+
+		raise ValueError("Metadata object not a string or raw type")
+
+	def __bytes__(self):
+		return bytes(bytearray(ord(i) for i in self.__str__()))
+
+	def __int__(self):
+		if self.is_signed_integer:
+			return core.BNMetadataGetSignedInteger(self.handle)
+		if self.is_unsigned_integer:
+			return core.BNMetadataGetUnsignedInteger(self.handle)
+
+		raise ValueError("Metadata object not of integer type")
+
+	def __float__(self):
+		if not self.is_float:
+			raise ValueError("Metadata object is not float type")
+		return core.BNMetadataGetDouble(self.handle)
+
+	def __nonzero__(self):
+		if not self.is_boolean:
+			raise ValueError("Metadata object is not boolean type")
+		return core.BNMetadataGetBoolean(self.handle)
+
 	@property
 	def value(self):
 		if self.is_integer:
@@ -139,144 +281,3 @@ class Metadata(object):
 			core.BNMetadataRemoveIndex(self.handle, key_or_index)
 		else:
 			raise TypeError("remove only valid for dict and array objects")
-
-	def __len__(self):
-		if self.is_array or self.is_dict or self.is_string or self.is_raw:
-			return core.BNMetadataSize(self.handle)
-		raise Exception("Metadata object doesn't support len()")
-
-	def __iter__(self):
-		if self.is_array:
-			for i in range(core.BNMetadataSize(self.handle)):
-				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
-		elif self.is_dict:
-			result = core.BNMetadataGetValueStore(self.handle)
-			try:
-				for i in range(result.contents.size):
-					if isinstance(result.contents.keys[i], bytes):
-						yield str(pyNativeStr(result.contents.keys[i]))
-					else:
-						yield result.contents.keys[i]
-			finally:
-				core.BNFreeMetadataValueStore(result)
-		else:
-			raise Exception("Metadata object doesn't support iteration")
-
-	def __getitem__(self, value):
-		if self.is_array:
-			if not isinstance(value, int):
-				raise ValueError("Metadata object only supports integers for indexing")
-			if value >= len(self):
-				raise IndexError("Index value out of range")
-			return Metadata(handle=core.BNMetadataGetForIndex(self.handle, value)).value
-		if self.is_dict:
-			if not isinstance(value, str):
-				raise ValueError("Metadata object only supports strings for indexing")
-			handle = core.BNMetadataGetForKey(self.handle, value)
-			if handle is None:
-				raise KeyError(value)
-			return Metadata(handle=handle).value
-
-		raise NotImplementedError("Metadata object doesn't support indexing")
-
-	def __str__(self):
-		if self.is_string:
-			return str(core.BNMetadataGetString(self.handle))
-		if self.is_raw:
-			length = ctypes.c_ulonglong()
-			length.value = 0
-			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
-			out_list = []
-			for i in range(length.value):
-				out_list.append(native_list[i])
-			core.BNFreeMetadataRaw(native_list)
-			return ''.join(chr(a) for a in out_list)
-
-		raise ValueError("Metadata object not a string or raw type")
-
-	def __bytes__(self):
-		return bytes(bytearray(ord(i) for i in self.__str__()))
-
-	def __int__(self):
-		if self.is_signed_integer:
-			return core.BNMetadataGetSignedInteger(self.handle)
-		if self.is_unsigned_integer:
-			return core.BNMetadataGetUnsignedInteger(self.handle)
-
-		raise ValueError("Metadata object not of integer type")
-
-	def __float__(self):
-		if not self.is_float:
-			raise ValueError("Metadata object is not float type")
-		return core.BNMetadataGetDouble(self.handle)
-
-	def __nonzero__(self):
-		if not self.is_boolean:
-			raise ValueError("Metadata object is not boolean type")
-		return core.BNMetadataGetBoolean(self.handle)
-
-	def __eq__(self, other):
-		if isinstance(other, int) and self.is_integer:
-			return int(self) == other
-		elif isinstance(other, str) and (self.is_string or self.is_raw):
-			return str(self) == other
-		elif isinstance(other, float) and self.is_float:
-			return float(self) == other
-		elif isinstance(other, bool) and self.is_boolean:
-			return bool(self) == other
-		elif self.is_array and ((isinstance(other, Metadata) and other.is_array) or isinstance(other, list)):
-			if len(self) != len(other):
-				return False
-			for a, b in zip(self, other):
-				if a != b:
-					return False
-			return True
-		elif self.is_dict and ((isinstance(other, Metadata) and other.is_dict) or isinstance(other, dict)):
-			if len(self) != len(other):
-				return False
-			for a, b in zip(self, other):
-				if a != b or self[a] != other[b]:
-					return False
-			return True
-		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
-			return int(self) == int(other)
-		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
-			return str(self) == str(other)
-		elif isinstance(other, Metadata) and self.is_float and other.is_float:
-			return float(self) == float(other)
-		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
-			return bool(self) == bool(other)
-		raise NotImplementedError()
-
-	def __ne__(self, other):
-		if isinstance(other, int) and self.is_integer:
-			return int(self) != other
-		elif isinstance(other, str) and (self.is_string or self.is_raw):
-			return str(self) != other
-		elif isinstance(other, float) and self.is_float:
-			return float(self) != other
-		elif isinstance(other, bool):
-			return bool(self) != other
-		elif self.is_array and ((isinstance(other, Metadata) and other.is_array) or isinstance(other, list)):
-			if len(self) != len(other):
-				return True
-			areEqual = True
-			for a, b in zip(self, other):
-				if a != b:
-					areEqual = False
-			return not areEqual
-		elif self.is_dict and ((isinstance(other, Metadata) and other.is_dict) or isinstance(other, dict)):
-			if len(self) != len(other):
-				return True
-			for a, b in zip(self, other):
-				if a != b or self[a] != other[b]:
-					return True
-			return False
-		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
-			return int(self) != int(other)
-		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
-			return str(self) != str(other)
-		elif isinstance(other, Metadata) and self.is_float and other.is_float:
-			return float(self) != float(other)
-		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
-			return bool(self) != bool(other)

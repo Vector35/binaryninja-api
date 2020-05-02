@@ -340,9 +340,6 @@ class _ScriptingProviderMetaclass(type):
 
 
 class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
-
-	name = None
-	instance_class = None
 	_registered_providers = []
 
 	def __init__(self, handle = None):
@@ -351,10 +348,17 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 			self.__dict__["name"] = core.BNGetScriptingProviderName(handle)
 
 	@property
+	def name(self):
+		return NotImplemented
+
+	@property
+	def instance_class(self):
+		return NotImplemented
+
+	@property
 	def list(self):
 		"""Allow tab completion to discover metaclass list property"""
 		pass
-
 
 	def register(self):
 		self._cb = core.BNScriptingProviderCallbacks()

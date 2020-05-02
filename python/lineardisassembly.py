@@ -35,11 +35,11 @@ class LinearDisassemblyLine(object):
 		self.block = block
 		self.contents = contents
 
-	def __str__(self):
-		return str(self.contents)
-
 	def __repr__(self):
 		return repr(self.contents)
+
+	def __str__(self):
+		return str(self.contents)
 
 
 class LinearViewObjectIdentifier(object):
@@ -47,6 +47,49 @@ class LinearViewObjectIdentifier(object):
 		self._name = name
 		self._start = start
 		self._end = end
+
+	def __repr__(self):
+		return "<LinearViewObjectIdentifier: " + str(self) + ">"
+
+	def __str__(self):
+		if not self.has_address:
+			return self._name
+		if self.has_range:
+			return "%s 0x%x-0x%x" % (self._name, self._start, self._end)
+		return "%s 0x%x" % (self._name, self._start)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._name, self._start, self._end) == (other._name, other._start, other._end)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._name, self._start, self._end))
+
+	def _to_api_object(self, obj = None):
+		if obj is None:
+			result = core.BNLinearViewObjectIdentifier()
+		else:
+			result = obj
+		result.name = self.name
+		if self.has_range:
+			result.type = LinearViewObjectIdentifierType.AddressRangeLinearViewObject
+			result.start = self.start
+			result.end = self.end
+		elif self.has_address:
+			result.type = LinearViewObjectIdentifierType.AddressLinearViewObject
+			result.start = self.start
+			result.end = self.start
+		else:
+			result.type = LinearViewObjectIdentifierType.SingleLinearViewObject
+			result.start = 0
+			result.end = 0
+		return result
 
 	@property
 	def name(self):
@@ -72,36 +115,6 @@ class LinearViewObjectIdentifier(object):
 	def has_range(self):
 		return self._start is not None and self._end is not None
 
-	def __str__(self):
-		if not self.has_address:
-			return self._name
-		if self.has_range:
-			return "%s 0x%x-0x%x" % (self._name, self._start, self._end)
-		return "%s 0x%x" % (self._name, self._start)
-
-	def __repr__(self):
-		return "<LinearViewObjectIdentifier: " + str(self) + ">"
-
-	def _to_api_object(self, obj = None):
-		if obj is None:
-			result = core.BNLinearViewObjectIdentifier()
-		else:
-			result = obj
-		result.name = self.name
-		if self.has_range:
-			result.type = LinearViewObjectIdentifierType.AddressRangeLinearViewObject
-			result.start = self.start
-			result.end = self.end
-		elif self.has_address:
-			result.type = LinearViewObjectIdentifierType.AddressLinearViewObject
-			result.start = self.start
-			result.end = self.start
-		else:
-			result.type = LinearViewObjectIdentifierType.SingleLinearViewObject
-			result.start = 0
-			result.end = 0
-		return result
-
 	@classmethod
 	def _from_api_object(cls, obj):
 		if obj.type == LinearViewObjectIdentifierType.AddressLinearViewObject:
@@ -120,6 +133,18 @@ class LinearViewObject(object):
 
 	def __del__(self):
 		core.BNFreeLinearViewObject(self.handle)
+
+	def __repr__(self):
+		return "<LinearViewObject: " + str(self) + ">"
+
+	def __len__(self):
+		return self.end - self.start
+
+	def __str__(self):
+		result = str(self.identifier)
+		if self._parent is not None:
+			result = str(self._parent) + "/" + result
+		return result
 
 	@property
 	def first_child(self):
@@ -188,18 +213,6 @@ class LinearViewObject(object):
 	@property
 	def ordering_index_total(self):
 		return core.BNGetLinearViewObjectOrderingIndexTotal(self.handle)
-
-	def __len__(self):
-		return self.end - self.start
-
-	def __str__(self):
-		result = str(self.identifier)
-		if self._parent is not None:
-			result = str(self._parent) + "/" + result
-		return result
-
-	def __repr__(self):
-		return "<LinearViewObject: " + str(self) + ">"
 
 	def child_for_address(self, addr):
 		result = core.BNGetLinearViewObjectChildForAddress(self.handle, addr)
@@ -323,6 +336,47 @@ class LinearViewCursor(object):
 	def __del__(self):
 		core.BNFreeLinearViewCursor(self.handle)
 
+	def __repr__(self):
+		return "<LinearViewCursor: " + str(self.current_object) + ">"
+
+	def __str__(self):
+		return str(self.current_object)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) == 0
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) != 0
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) < 0
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) <= 0
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) > 0
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other) >= 0
+
+	def __cmp__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return LinearViewCursor.compare(self, other)
+
 	@property
 	def before_begin(self):
 		return core.BNIsLinearViewCursorBeforeBegin(self.handle)
@@ -430,47 +484,6 @@ class LinearViewCursor(object):
 
 	def duplicate(self):
 		return LinearViewCursor(None, handle = core.BNDuplicateLinearViewCursor(self.handle))
-
-	def __str__(self):
-		return str(self.current_object)
-
-	def __repr__(self):
-		return "<LinearViewCursor: " + str(self.current_object) + ">"
-
-	def __eq__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) == 0
-		return False
-
-	def __ne__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) != 0
-		return True
-
-	def __lt__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) < 0
-		return False
-
-	def __le__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) <= 0
-		return False
-
-	def __gt__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) > 0
-		return False
-
-	def __ge__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other) >= 0
-		return False
-
-	def __cmp__(self, other):
-		if isinstance(other, LinearViewCursor):
-			return LinearViewCursor.compare(self, other)
-		return 0
 
 	@classmethod
 	def compare(cls, a, b):

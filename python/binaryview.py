@@ -137,13 +137,8 @@ class StringReference(object):
 		self._length = length
 		self._view = bv
 
-	@property
-	def value(self):
-		return self._view.read(self._start, self._length).decode(_decodings[self._type])
-
-	@property
-	def raw(self):
-		return self._view.read(self._start, self._length)
+	def __repr__(self):
+		return "<%s: %#x, len %#x>" % (self._type, self._start, self._length)
 
 	def __str__(self):
 		return pyNativeStr(self.raw)
@@ -151,8 +146,13 @@ class StringReference(object):
 	def __len__(self):
 		return self._length
 
-	def __repr__(self):
-		return "<%s: %#x, len %#x>" % (self._type, self._start, self._length)
+	@property
+	def value(self):
+		return self._view.read(self._start, self._length).decode(_decodings[self._type])
+
+	@property
+	def raw(self):
+		return self._view.read(self._start, self._length)
 
 	@property
 	def type(self):
@@ -694,15 +694,21 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNBinaryViewType)
 
-	def __eq__(self, value):
-		if not isinstance(value, BinaryViewType):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		return "<view type: '%s'>" % self.name
 
-	def __ne__(self, value):
-		if not isinstance(value, BinaryViewType):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def list(self):
@@ -718,9 +724,6 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def long_name(self):
 		"""BinaryView long name (read-only)"""
 		return core.BNGetBinaryViewTypeLongName(self.handle)
-
-	def __repr__(self):
-		return "<view type: '%s'>" % self.name
 
 	def create(self, data):
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
@@ -902,6 +905,31 @@ class Segment(object):
 	def __init__(self, handle):
 		self.handle = handle
 
+	def __del__(self):
+		core.BNFreeSegment(self.handle)
+
+	def __repr__(self):
+		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
+			"r" if self.readable else "-",
+			"w" if self.writable else "-",
+			"x" if self.executable else "-")
+
+	def __len__(self):
+		return core.BNSegmentGetLength(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
 	@property
 	def start(self):
 		return core.BNSegmentGetStart(self.handle)
@@ -965,35 +993,33 @@ class Segment(object):
 		core.BNFreeRelocationRanges(ranges, count)
 		return result
 
-	def __del__(self):
-		core.BNFreeSegment(self.handle)
-
-	def __eq__(self, other):
-		if not isinstance(other, Segment):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, Segment):
-			return False
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
-
-	def __hash__(self):
-		return hash(ctypes.addressof(self.handle.contents))
-
-	def __len__(self):
-		return core.BNSegmentGetLength(self.handle)
-
-	def __repr__(self):
-		return "<segment: %#x-%#x, %s%s%s>" % (self.start, self.end,
-			"r" if self.readable else "-",
-			"w" if self.writable else "-",
-			"x" if self.executable else "-")
 
 
 class Section(object):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNSection)
+
+	def __del__(self):
+		core.BNFreeSection(self.handle)
+
+	def __repr__(self):
+		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
+
+	def __len__(self):
+		return core.BNSectionGetLength(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def name(self):
@@ -1039,46 +1065,34 @@ class Section(object):
 	def end(self):
 		return self.start + len(self)
 
-	def __del__(self):
-		core.BNFreeSection(self.handle)
-
-	def __eq__(self, other):
-		if not isinstance(other, Section):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, Section):
-			return False
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
-
-	def __hash__(self):
-		return hash(ctypes.addressof(self.handle.contents))
-
-	def __len__(self):
-		return core.BNSectionGetLength(self.handle)
-
-	def __repr__(self):
-		return "<section %s: %#x-%#x>" % (self.name, self.start, self.end)
-
 
 class AddressRange(object):
 	def __init__(self, start, end):
 		self._start = start
 		self._end = end
 
+	def __repr__(self):
+		return "<%#x-%#x>" % (self._start, self._end)
+
 	def __len__(self):
 		return self._end - self.start
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._start, self._end) == (other._start, other._end)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._start, self._end))
 
 	@property
 	def length(self):
 		return self._end - self._start
-
-	def __len__(self):
-		return self._end - self._start
-
-	def __repr__(self):
-		return "<%#x-%#x>" % (self._start, self._end)
 
 	@property
 	def start(self):
@@ -1102,6 +1116,25 @@ class AddressRange(object):
 class TagType(object):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNTagType)
+
+	def __del__(self):
+		core.BNFreeTagType(self.handle)
+
+	def __repr__(self):
+		return "<tag type %s: %s>" % (self.name, self.icon)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def name(self):
@@ -1139,29 +1172,30 @@ class TagType(object):
 	def type(self, value):
 		core.BNTagTypeSetType(self.handle, value)
 
-	def __del__(self):
-		core.BNFreeTagType(self.handle)
-
-	def __eq__(self, other):
-		if not isinstance(other, TagType):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, TagType):
-			return False
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
-
-	def __hash__(self):
-		return hash(ctypes.addressof(self.handle.contents))
-
-	def __repr__(self):
-		return "<tag type %s: %s>" % (self.name, self.icon)
 
 
 class Tag(object):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNTag)
+
+	def __del__(self):
+		core.BNFreeTag(self.handle)
+
+	def __repr__(self):
+		return "<tag %s %s: %s>" % (self.type.icon, self.type.name, self.data)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def type(self):
@@ -1174,25 +1208,6 @@ class Tag(object):
 	@data.setter
 	def data(self, value):
 		core.BNTagSetData(self.handle, value)
-
-	def __del__(self):
-		core.BNFreeTag(self.handle)
-
-	def __eq__(self, other):
-		if not isinstance(other, Tag):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, Tag):
-			return False
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(other.handle.contents)
-
-	def __hash__(self):
-		return hash(self.handle.contents)
-
-	def __repr__(self):
-		return "<tag %s %s: %s>" % (self.type.icon, self.type.name, self.data)
 
 
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -1302,15 +1317,108 @@ class BinaryView(object):
 		self._notifications = {}
 		self._next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
-	def __eq__(self, value):
-		if not isinstance(value, BinaryView):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __del__(self):
+		for i in self.notifications.values():
+			i._unregister()
+		core.BNFreeBinaryView(self.handle)
 
-	def __ne__(self, value):
-		if not isinstance(value, BinaryView):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __repr__(self):
+		start = self.start
+		length = len(self)
+		if start != 0:
+			size = "start %#x, len %#x" % (start, length)
+		else:
+			size = "len %#x" % length
+		filename = self._file.filename
+		if len(filename) > 0:
+			return "<BinaryView: '%s', %s>" % (filename, size)
+		return "<BinaryView: %s>" % (size)
+
+	def __len__(self):
+		return int(core.BNGetViewLength(self.handle))
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong(0)
+		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
+		try:
+			for i in range(0, count.value):
+				yield binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i]))
+		finally:
+			core.BNFreeFunctionList(funcs, count.value)
+
+
+	def __getitem__(self, i):
+		if isinstance(i, tuple):
+			result = bytes()
+			for s in i:
+				result += self.__getitem__(s)
+			return result
+		elif isinstance(i, slice):
+			if i.step is not None:
+				raise IndexError("step not implemented")
+			i = i.indices(self.end)
+			start = i[0]
+			stop = i[1]
+			if stop <= start:
+				return ""
+			return self.read(start, stop - start)
+		elif i < 0:
+			if i >= -len(self):
+				value = self.read(int(len(self) + i), 1)
+				if len(value) == 0:
+					return IndexError("index not readable")
+				return value
+			raise IndexError("index out of range")
+		elif (i >= self.start) and (i < self.end):
+			value = self.read(int(i), 1)
+			if len(value) == 0:
+				return IndexError("index not readable")
+			return value
+		else:
+			raise IndexError("index out of range")
+
+	def __setitem__(self, i, value):
+		if isinstance(i, slice):
+			if i.step is not None:
+				raise IndexError("step not supported on assignment")
+			i = i.indices(self.end)
+			start = i[0]
+			stop = i[1]
+			if stop < start:
+				stop = start
+			if len(value) != (stop - start):
+				self.remove(start, stop - start)
+				self.insert(start, value)
+			else:
+				self.write(start, value)
+		elif i < 0:
+			if i >= -len(self):
+				if len(value) != 1:
+					raise ValueError("expected single byte for assignment")
+				if self.write(int(len(self) + i), value) != 1:
+					raise IndexError("index not writable")
+			else:
+				raise IndexError("index out of range")
+		elif (i >= self.start) and (i < self.end):
+			if len(value) != 1:
+				raise ValueError("expected single byte for assignment")
+			if self.write(int(i), value) != 1:
+				raise IndexError("index not writable")
+		else:
+			raise IndexError("index out of range")
 
 	@classmethod
 	def register(cls):
@@ -1471,20 +1579,6 @@ class BinaryView(object):
 		for block in self.mlil_basic_blocks:
 			for i in block:
 				yield i
-
-	def __del__(self):
-		for i in self.notifications.values():
-			i._unregister()
-		core.BNFreeBinaryView(self.handle)
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong(0)
-		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
-		try:
-			for i in range(0, count.value):
-				yield binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i]))
-		finally:
-			core.BNFreeFunctionList(funcs, count.value)
 
 	@property
 	def parent_view(self):
@@ -1908,81 +2002,6 @@ class BinaryView(object):
 	@new_auto_function_analysis_suppressed.setter
 	def new_auto_function_analysis_suppressed(self, suppress):
 		core.BNSetNewAutoFunctionAnalysisSuppressed(self.handle, suppress)
-
-	def __len__(self):
-		return int(core.BNGetViewLength(self.handle))
-
-	def __getitem__(self, i):
-		if isinstance(i, tuple):
-			result = bytes()
-			for s in i:
-				result += self.__getitem__(s)
-			return result
-		elif isinstance(i, slice):
-			if i.step is not None:
-				raise IndexError("step not implemented")
-			i = i.indices(self.end)
-			start = i[0]
-			stop = i[1]
-			if stop <= start:
-				return ""
-			return self.read(start, stop - start)
-		elif i < 0:
-			if i >= -len(self):
-				value = self.read(int(len(self) + i), 1)
-				if len(value) == 0:
-					return IndexError("index not readable")
-				return value
-			raise IndexError("index out of range")
-		elif (i >= self.start) and (i < self.end):
-			value = self.read(int(i), 1)
-			if len(value) == 0:
-				return IndexError("index not readable")
-			return value
-		else:
-			raise IndexError("index out of range")
-
-	def __setitem__(self, i, value):
-		if isinstance(i, slice):
-			if i.step is not None:
-				raise IndexError("step not supported on assignment")
-			i = i.indices(self.end)
-			start = i[0]
-			stop = i[1]
-			if stop < start:
-				stop = start
-			if len(value) != (stop - start):
-				self.remove(start, stop - start)
-				self.insert(start, value)
-			else:
-				self.write(start, value)
-		elif i < 0:
-			if i >= -len(self):
-				if len(value) != 1:
-					raise ValueError("expected single byte for assignment")
-				if self.write(int(len(self) + i), value) != 1:
-					raise IndexError("index not writable")
-			else:
-				raise IndexError("index out of range")
-		elif (i >= self.start) and (i < self.end):
-			if len(value) != 1:
-				raise ValueError("expected single byte for assignment")
-			if self.write(int(i), value) != 1:
-				raise IndexError("index not writable")
-		else:
-			raise IndexError("index out of range")
-
-	def __repr__(self):
-		start = self.start
-		length = len(self)
-		if start != 0:
-			size = "start %#x, len %#x" % (start, length)
-		else:
-			size = "len %#x" % length
-		filename = self._file.filename
-		if len(filename) > 0:
-			return "<BinaryView: '%s', %s>" % (filename, size)
-		return "<BinaryView: %s>" % (size)
 
 	def _init(self, ctxt):
 		try:
@@ -5386,15 +5405,18 @@ class BinaryReader(object):
 	def __del__(self):
 		core.BNFreeBinaryReader(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, BinaryReader):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, value):
-		if not isinstance(value, BinaryReader):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def endianness(self):
@@ -5706,15 +5728,18 @@ class BinaryWriter(object):
 	def __del__(self):
 		core.BNFreeBinaryWriter(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, BinaryWriter):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, value):
-		if not isinstance(value, BinaryWriter):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def endianness(self):
@@ -5920,6 +5945,27 @@ class StructuredDataValue(object):
 		self._address = address
 		self._value = value
 
+	def __str__(self):
+		decode_str = "{}B".format(self._type.width)
+		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
+
+	def __repr__(self):
+		return "<StructuredDataValue type:{} value:{}>".format(str(self._type), str(self))
+
+	def __int__(self):
+		if self._type.width == 1:
+			code = "B"
+		elif self._type.width == 2:
+			code = "H"
+		elif self._type.width == 4:
+			code = "I"
+		elif self._type.width == 8:
+			code = "Q"
+		else:
+			raise Exception("Could not convert to integer with width {}".format(self._type.width))
+
+		return struct.unpack(code, self._value)[0]
+
 	@property
 	def type(self):
 		return self._type
@@ -5943,27 +5989,6 @@ class StructuredDataValue(object):
 	@property
 	def str(self):
 		return str(self)
-
-	def __int__(self):
-		if self._type.width == 1:
-			code = "B"
-		elif self._type.width == 2:
-			code = "H"
-		elif self._type.width == 4:
-			code = "I"
-		elif self._type.width == 8:
-			code = "Q"
-		else:
-			raise Exception("Could not convert to integer with width {}".format(self._type.width))
-
-		return struct.unpack(code, self._value)[0]
-
-	def __str__(self):
-		decode_str = "{}B".format(self._type.width)
-		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
-
-	def __repr__(self):
-		return "<StructuredDataValue type:{} value:{}>".format(str(self._type), str(self))
 
 
 class StructuredDataView(object):
@@ -6000,19 +6025,12 @@ class StructuredDataView(object):
 		self._lookup_structure()
 		self._define_members()
 
-	def _lookup_structure(self):
-		s = self._bv.get_type_by_name(self._structure_name)
-		if s is None:
-			raise Exception("Could not find structure with name: {}".format(self._structure_name))
+	def __repr__(self):
+		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
+																			  self._structure.width, self._address)
 
-		if s.type_class != TypeClass.StructureTypeClass:
-			raise Exception("{} is not a StructureTypeClass, got: {}".format(self._structure_name, s._type_class))
-
-		self._structure = s.structure
-
-	def _define_members(self):
-		for m in self._structure.members:
-			self._members[m.name] = m
+	def __len__(self):
+		return self._structure.width
 
 	def __getattr__(self, key):
 		m = self._members.get(key, None)
@@ -6056,9 +6074,16 @@ class StructuredDataView(object):
 
 		return rv
 
-	def __repr__(self):
-		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
-																			  self._structure.width, self._address)
+	def _lookup_structure(self):
+		s = self._bv.get_type_by_name(self._structure_name)
+		if s is None:
+			raise Exception("Could not find structure with name: {}".format(self._structure_name))
 
-	def __len__(self):
-		return self._structure.width
+		if s.type_class != TypeClass.StructureTypeClass:
+			raise Exception("{} is not a StructureTypeClass, got: {}".format(self._structure_name, s._type_class))
+
+		self._structure = s.structure
+
+	def _define_members(self):
+		for m in self._structure.members:
+			self._members[m.name] = m

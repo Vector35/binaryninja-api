@@ -48,10 +48,17 @@ class HighLevelILOperationAndSize(object):
 	def __eq__(self, other):
 		if isinstance(other, HighLevelILOperation):
 			return other == self._operation
-		if isinstance(other, HighLevelILOperationAndSize):
+		if isinstance(other, self.__class__):
 			return other.size == self._size and other.operation == self._operation
-		else:
-			return False
+		return NotImplemented
+
+	def __ne__(self, other):
+		if isinstance(other, self.__class__) or isinstance(other, HighLevelILOperation):
+			return not (self == other)
+		return NotImplemented
+
+	def __hash__(self):
+		return hash((self._operation, self._size))
 
 	@property
 	def operation(self):
@@ -77,6 +84,12 @@ class GotoLabel(object):
 		self._function = function
 		self._id = id
 
+	def __repr__(self):
+		return "<label: %s>" % self.name
+
+	def __str__(self):
+		return self.name
+
 	@property
 	def label_id(self):
 		return self._id
@@ -96,12 +109,6 @@ class GotoLabel(object):
 	@property
 	def uses(self):
 		return self._function.get_label_uses(self._id)
-
-	def __str__(self):
-		return self.name
-
-	def __repr__(self):
-		return "<label: %s>" % self.name
 
 
 class HighLevelILInstruction(object):
@@ -334,10 +341,18 @@ class HighLevelILInstruction(object):
 				continuation = "..."
 		return "<%s: %s%s>" % (self._operation.name, first_line, continuation)
 
-	def __eq__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self._expr_index == value.expr_index
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._function, self._expr_index) == (other._function, other._expr_index)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash((self._function, self._expr_index))
 
 	@property
 	def lines(self):
@@ -380,20 +395,10 @@ class HighLevelILInstruction(object):
 		result.append(HighLevelILOperationAndSize(self._operation, self._size))
 		return result
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 	@property
 	def function(self):
 		""" """
 		return self._function
-
-	@function.setter
-	def function(self, value):
-		self._function = value
 
 	@property
 	def expr_index(self):
@@ -478,16 +483,6 @@ class HighLevelILInstruction(object):
 		if self._parent >= core.BNGetHighLevelILExprCount(self._function.handle):
 			return None
 		return HighLevelILInstruction(self._function, self._parent, self._as_ast)
-
-	@property
-	def instr_index(self):
-		""" """
-		return self._instr_index
-
-	@property
-	def instr(self):
-		"""High level IL instruction that contains this expression"""
-		return self._function[self._instr_index]
 
 	@property
 	def ssa_form(self):
@@ -608,22 +603,22 @@ class HighLevelILFunction(object):
 			func_handle = self._source_function.handle
 			self.handle = core.BNCreateHighLevelILFunction(arch.handle, func_handle)
 
-	def __hash__(self):
-		return hash(('HLIL', self._source_function))
-
 	def __del__(self):
 		if self.handle is not None:
 			core.BNFreeHighLevelILFunction(self.handle)
 
-	def __eq__(self, value):
-		if not isinstance(value, HighLevelILFunction):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, value):
-		if not isinstance(value, HighLevelILFunction):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(('HLIL', self._source_function))
 
 	@property
 	def current_address(self):

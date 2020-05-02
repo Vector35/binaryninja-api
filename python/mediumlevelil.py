@@ -43,12 +43,14 @@ class SSAVariable(object):
 		return "<ssa %s version %d>" % (repr(self._var), self._version)
 
 	def __eq__(self, other):
-		if not isinstance(other, type(self)):
-			return False
-		return isinstance(other, SSAVariable) and (
-			(self._var, self._version) ==
-			(other.var, other.version)
-		)
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self._var, self._version) == (other.var, other.version)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
 
 	def __hash__(self):
 		return hash((self._var, self._version))
@@ -94,13 +96,17 @@ class MediumLevelILOperationAndSize(object):
 	def __eq__(self, other):
 		if isinstance(other, MediumLevelILOperation):
 			return other == self._operation
-		if isinstance(other, MediumLevelILOperationAndSize):
-			return other.size == self._size and other.operation == self._operation
-		else:
-			return False
+		if isinstance(other, self.__class__):
+			return (other.size, other.operation) == (self._size, self._operation)
+		return NotImplemented
+
+	def __ne__(self, other):
+		if isinstance(other, MediumLevelILOperation) or isinstance(other, self.__class__):
+			return not (self == other)
+		return NotImplemented
 
 	def __hash__(self):
-		return hash((self._size, self._operation))
+		return hash((self._operation, self._size))
 
 	@property
 	def operation(self):
@@ -361,33 +367,33 @@ class MediumLevelILInstruction(object):
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self._expr_index == other.expr_index
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index < other.expr_index
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index <= other.expr_index
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index > other.expr_index
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other.function and self.expr_index >= other.expr_index
+
 	def __hash__(self):
 		return hash((self._instr_index, self._function))
-
-	def __eq__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self._expr_index == value.expr_index
-
-	def __lt__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index < value.expr_index
-
-	def __le__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index <= value.expr_index
-
-	def __gt__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index > value.expr_index
-
-	def __ge__(self, value):
-		if not isinstance(value, type(self)):
-			return False
-		return self._function == value.function and self.expr_index >= value.expr_index
 
 	@property
 	def tokens(self):
@@ -716,12 +722,6 @@ class MediumLevelILInstruction(object):
 	def get_branch_dependence(self, branch_instr):
 		return ILBranchDependence(core.BNGetMediumLevelILBranchDependence(self._function.handle, self._instr_index, branch_instr))
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 	@property
 	def function(self):
 		""" """
@@ -807,22 +807,9 @@ class MediumLevelILFunction(object):
 			func_handle = self._source_function.handle
 			self.handle = core.BNCreateMediumLevelILFunction(arch.handle, func_handle)
 
-	def __hash__(self):
-		return hash(('MLIL', self._source_function))
-
 	def __del__(self):
 		if self.handle is not None:
 			core.BNFreeMediumLevelILFunction(self.handle)
-
-	def __eq__(self, value):
-		if not isinstance(value, MediumLevelILFunction):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, MediumLevelILFunction):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	def __repr__(self):
 		arch = self.source_function.arch
@@ -830,6 +817,51 @@ class MediumLevelILFunction(object):
 			return "<mlil func: %s@%#x>" % (arch.name, self.source_function.start)
 		else:
 			return "<mlil func: %#x>" % self.source_function.start
+
+	def __len__(self):
+		return int(core.BNGetMediumLevelILInstructionCount(self.handle))
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(('MLIL', self._source_function))
+
+	def __getitem__(self, i):
+		if isinstance(i, slice) or isinstance(i, tuple):
+			raise IndexError("expected integer instruction index")
+		if isinstance(i, MediumLevelILExpr):
+			return MediumLevelILInstruction(self, i.index)
+		# for backwards compatibility
+		if isinstance(i, MediumLevelILInstruction):
+			return i
+		if i < -len(self) or i >= len(self):
+			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
+		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
+
+	def __setitem__(self, i, j):
+		raise IndexError("instruction modification not implemented")
+
+	def __iter__(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
+		view = None
+		if self._source_function is not None:
+			view = self._source_function.view
+		try:
+			for i in range(0, count.value):
+				yield MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def current_address(self):
@@ -894,44 +926,6 @@ class MediumLevelILFunction(object):
 	def llil(self):
 		"""Alias for low_level_il"""
 		return self.low_level_il
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def __len__(self):
-		return int(core.BNGetMediumLevelILInstructionCount(self.handle))
-
-	def __getitem__(self, i):
-		if isinstance(i, slice) or isinstance(i, tuple):
-			raise IndexError("expected integer instruction index")
-		if isinstance(i, MediumLevelILExpr):
-			return MediumLevelILInstruction(self, i.index)
-		# for backwards compatibility
-		if isinstance(i, MediumLevelILInstruction):
-			return i
-		if i < -len(self) or i >= len(self):
-			raise IndexError("index out of range")
-		if i < 0:
-			i = len(self) + i
-		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
-
-	def __setitem__(self, i, j):
-		raise IndexError("instruction modification not implemented")
-
-	def __iter__(self):
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
-		view = None
-		if self._source_function is not None:
-			view = self._source_function.view
-		try:
-			for i in range(0, count.value):
-				yield MediumLevelILBasicBlock(view, core.BNNewBasicBlockReference(blocks[i]), self)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
 
 	def get_instruction_start(self, addr, arch = None):
 		if arch is None:
@@ -1186,6 +1180,13 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		super(MediumLevelILBasicBlock, self).__init__(handle, view)
 		self.il_function = owner
 
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<mlil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<mlil block: %d-%d>" % (self.start, self.end)
+
 	def __iter__(self):
 		for idx in range(self.start, self.end):
 			yield self.il_function[idx]
@@ -1199,19 +1200,8 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
-	def _create_instance(self, handle, view):
-		"""Internal method by super to instantiate child instances"""
-		return MediumLevelILBasicBlock(view, handle, self.il_function)
-
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
-
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return "<mlil block: %s@%d-%d>" % (arch.name, self.start, self.end)
-		else:
-			return "<mlil block: %d-%d>" % (self.start, self.end)
 
 	def __contains__(self, instruction):
 		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:
@@ -1220,6 +1210,10 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 			return True
 		else:
 			return False
+
+	def _create_instance(self, handle, view):
+		"""Internal method by super to instantiate child instances"""
+		return MediumLevelILBasicBlock(view, handle, self.il_function)
 
 	@property
 	def il_function(self):

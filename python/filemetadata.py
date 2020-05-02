@@ -88,6 +88,27 @@ class FileMetadata(object):
 				core.BNSetFilename(self.handle, str(filename))
 		self._nav = None
 
+	def __repr__(self):
+		return "<FileMetadata: %s>" % self.filename
+
+	def __del__(self):
+		if self.navigation is not None:
+			core.BNSetFileMetadataNavigationHandler(self.handle, None)
+		core.BNFreeFileMetadata(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
 	@property
 	def nav(self):
 		"""
@@ -97,21 +118,6 @@ class FileMetadata(object):
 	@nav.setter
 	def nav(self, value):
 		self._nav = value
-
-	def __del__(self):
-		if self.navigation is not None:
-			core.BNSetFileMetadataNavigationHandler(self.handle, None)
-		core.BNFreeFileMetadata(self.handle)
-
-	def __eq__(self, value):
-		if not isinstance(value, FileMetadata):
-			return False
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(value.handle.contents)
-
-	def __ne__(self, value):
-		if not isinstance(value, FileMetadata):
-			return True
-		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
 
 	@classmethod
 	def _unregister(cls, f):
@@ -373,9 +379,3 @@ class FileMetadata(object):
 			if view is None:
 				return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
-
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)

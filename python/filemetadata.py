@@ -364,8 +364,8 @@ class FileMetadata(object):
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 					lambda ctxt, cur, total: progress_func(cur, total)), clean)
 
-	def merge_database(self, path, progress_func = None):
-		return core.BNMergeUndo(self.handle, str(path), None,
+	def merge_user_analysis(self, path, progress_func = None):
+		return core.BNMergeUserAnalysis(self.handle, str(path), None,
 			ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 			lambda ctxt, cur, total: progress_func(cur, total)))
 

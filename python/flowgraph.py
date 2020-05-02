@@ -736,7 +736,7 @@ class FlowGraph(object):
 		:return: Updated graph, or ``None``
 		:rtype: FlowGraph
 		"""
-		return None
+		return NotImplemented
 
 	def set_option(self, option, value = True):
 		core.BNSetFlowGraphOption(self.handle, option, value)

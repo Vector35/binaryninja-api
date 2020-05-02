@@ -675,7 +675,7 @@ class InteractionHandler(object):
 		pass
 
 	def get_text_line_input(self, prompt, title):
-		return None
+		return NotImplemented
 
 	def get_int_input(self, prompt, title):
 		while True:
@@ -691,7 +691,7 @@ class InteractionHandler(object):
 		return get_int_input(prompt, title)
 
 	def get_choice_input(self, prompt, title, choices):
-		return None
+		return NotImplemented
 
 	def get_open_filename_input(self, prompt, ext):
 		return get_text_line_input(prompt, "Open File")

@@ -5326,12 +5326,12 @@ class BinaryView(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def parse_expression(self, expression, here=0):
-		"""
+		r"""
 		Evaluates a string expression to an integer value.
 
 		The parser uses the following rules:
 
-			- Symbols are defined by the lexer as ``[A-Za-z0-9_:<>][A-Za-z0-9_:$\\-<>]+`` or anything enclosed in either single or double quotes
+			- Symbols are defined by the lexer as ``[A-Za-z0-9_:<>][A-Za-z0-9_:$\-<>]+`` or anything enclosed in either single or double quotes
 			- Symbols are everything in ``bv.symbols``, unnamed DataVariables (i.e. ``data_00005000``), unnamed functions (i.e. ``sub_00005000``), or section names (i.e. ``.text``)
 			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:

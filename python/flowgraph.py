@@ -691,10 +691,8 @@ class FlowGraph(object):
 		Do not use this API on the UI thread (use :func:`layout` with a callback instead).
 		"""
 		self._wait_cond = threading.Lock()
-		
 		self._wait_cond.acquire()
-		
-		request = self.layout(self._wait_complete)
+		_ = self.layout(self._wait_complete)
 
 		self._wait_cond.acquire()
 		self._wait_cond.release()

@@ -57,7 +57,7 @@ def fixSet(string):
 def get_file_list(test_store_rel):
     test_store = os.path.join(os.path.dirname(__file__), test_store_rel)
     all_files = []
-    for root, dir, files in os.walk(test_store):
+    for root, _, files in os.walk(test_store):
         for file in files:
             all_files.append(os.path.join(root, file))
     return all_files
@@ -75,7 +75,7 @@ class Builder(object):
 
     def methods(self):
         methodnames = []
-        for methodname, method in inspect.getmembers(self, predicate=inspect.ismethod):
+        for methodname, _ in inspect.getmembers(self, predicate=inspect.ismethod):
             if methodname.startswith("test_"):
                 methodnames.append(methodname)
         return methodnames
@@ -334,7 +334,7 @@ class BinaryViewTestBuilder(Builder):
             for mlilins in func.mlil_instructions:
                 retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction: {}".format(func.start, mlilins.address, str(mlilins)))
             for ins in func.instructions:
-                retinfo.append("Function: {:x} Instruction: {}: ".format(func.start, hex(ins[1]), ''.join([str(i) for i in ins[0]])))
+                retinfo.append("Function: {:x} Instruction: {}: {}".format(func.start, hex(ins[1]), ''.join([str(i) for i in ins[0]])))
         return fixOutput(retinfo)
 
     def test_functions_attributes(self):
@@ -589,7 +589,6 @@ class TestBuilder(Builder):
     def test_Enumeration(self):
         """Enumeration produced different result"""
         retinfo = []
-        inttype = binja.Type.int(4)
         enum = binja.Enumeration()
         enum.a = 1
         enum.append("a", 1)
@@ -619,9 +618,8 @@ class TestBuilder(Builder):
             typelist = bv.platform.parse_types_from_source(source)
             inttype = binja.Type.int(4)
 
-            tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
             namedtype = binja.NamedTypeReference()
-
+            tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
             retinfo = []
             for i in range(len(typelist.variables)):
                 for j in typelist.variables.popitem():
@@ -713,7 +711,7 @@ class TestBuilder(Builder):
         file_name = self.unpackage_file("jumptable_reordered")
         try:
             bv = binja.BinaryViewType.get_view_of_file(file_name)
-            reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+            # reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
             flag_list = ['c', 'p', 'a', 'z', 's', 'o']
             retinfo = []
             for func in bv.functions:
@@ -724,10 +722,10 @@ class TestBuilder(Builder):
                         retinfo.append("LLIL possible first stack element: " + str(ins.get_possible_stack_contents(0,1)))
                         retinfo.append("LLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0,1)))
                         for flag in flag_list:
-                            retinfo.append("LLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
-                            retinfo.append("LLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
-                            retinfo.append("LLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values(flag)))
-                            retinfo.append("LLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + str(ins.get_possible_flag_values_after(flag)))
+                            retinfo.append("LLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
+                            retinfo.append("LLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
+                            retinfo.append("LLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values(flag))))
+                            retinfo.append("LLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values_after(flag))))
             return fixOutput(retinfo)
         finally:
             self.delete_package("jumptable_reordered")
@@ -750,17 +748,17 @@ class TestBuilder(Builder):
                         retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
 
                         for reg in reg_list:
-                            retinfo.append("MLIL reg {} var at {}: ".format(reg, hex(ins.address)) + str(ins.get_var_for_reg(reg)))
-                            retinfo.append("MLIL reg {} value at {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value(reg)))
-                            retinfo.append("MLIL reg {} value after {}: ".format(reg, hex(ins.address)) + str(ins.get_reg_value_after(reg)))
-                            retinfo.append("MLIL reg {} possible value at {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values(reg))))
-                            retinfo.append("MLIL reg {} possible value after {}: ".format(reg, hex(ins.address)) + fixSet(str(ins.get_possible_reg_values_after(reg))))
+                            retinfo.append("MLIL reg {} var at {}: {}".format(reg, hex(ins.address), str(ins.get_var_for_reg(reg))))
+                            retinfo.append("MLIL reg {} value at {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value(reg))))
+                            retinfo.append("MLIL reg {} value after {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value_after(reg))))
+                            retinfo.append("MLIL reg {} possible value at {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values(reg)))))
+                            retinfo.append("MLIL reg {} possible value after {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values_after(reg)))))
 
                         for flag in flag_list:
-                            retinfo.append("MLIL flag {} value at: ".format(flag, hex(ins.address)) + str(ins.get_flag_value(flag)))
-                            retinfo.append("MLIL flag {} value after {}: ".format(flag, hex(ins.address)) + str(ins.get_flag_value_after(flag)))
-                            retinfo.append("MLIL flag {} possible value at {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
-                            retinfo.append("MLIL flag {} possible value after {}: ".format(flag, hex(ins.address)) + fixSet(str(ins.get_possible_flag_values(flag))))
+                            retinfo.append("MLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
+                            retinfo.append("MLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
+                            retinfo.append("MLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
+                            retinfo.append("MLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
             return fixOutput(retinfo)
         finally:
             self.delete_package("jumptable_reordered")
@@ -776,7 +774,7 @@ class TestBuilder(Builder):
 
             def simple_complete(self):
                 results.append("analysis complete")
-            evt = binja.AnalysisCompletionEvent(bv, simple_complete)
+            _ = binja.AnalysisCompletionEvent(bv, simple_complete)
 
             class NotifyTest(binja.BinaryDataNotification):
                 def data_written(self, view, offset, length):

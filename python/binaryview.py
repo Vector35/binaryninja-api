@@ -4989,7 +4989,7 @@ class BinaryView(object):
 		result = False
 		if core.BNIsUIEnabled():
 			log.log_warn("The BinaryView.rebase API is for headless operation only.")
-			return False
+			return None
 		if progress_func is None:
 			result = core.BNRebase(self.handle, address)
 		else:

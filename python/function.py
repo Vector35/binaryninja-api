@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -73,13 +73,13 @@ class LookupTableEntry(object):
 class RegisterValue(object):
 	def __init__(self, arch = None, value = None, confidence = types.max_confidence):
 		self._is_constant = False
+		self._value = None
+		self._arch = None
+		self._reg = None
+		self._is_constant = False
+		self._offset = None
 		if value is None:
 			self._type = RegisterValueType.UndeterminedValue
-			self._value = None
-			self._arch = None
-			self._reg = None
-			self._is_constant = False
-			self._offset = None
 		else:
 			self._type = RegisterValueType(value.state)
 			if value.state == RegisterValueType.EntryValue:
@@ -278,10 +278,16 @@ class ValueRange(object):
 
 
 class PossibleValueSet(object):
-	def __init__(self, arch, value):
+	def __init__(self, arch = None, value = None):
+		if value is None:
+			self._type = RegisterValueType.UndeterminedValue
+			return
 		self._type = RegisterValueType(value.state)
 		if value.state == RegisterValueType.EntryValue:
-			self._reg = arch.get_reg_name(value.value)
+			if arch is None:
+				self._reg = value.value
+			else:
+				self._reg = arch.get_reg_name(value.value)
 		elif value.state == RegisterValueType.ConstantValue:
 			self._value = value.value
 		elif value.state == RegisterValueType.ConstantPointerValue:
@@ -537,7 +543,7 @@ class Variable(object):
 
 	@property
 	def function(self):
-		""" """
+		"""Function where the variable is defined"""
 		return self._function
 
 	@function.setter
@@ -546,7 +552,7 @@ class Variable(object):
 
 	@property
 	def source_type(self):
-		""" """
+		""":class:`~enums.VariableSourceType`"""
 		return self._source_type
 
 	@source_type.setter
@@ -564,7 +570,7 @@ class Variable(object):
 
 	@property
 	def storage(self):
-		""" """
+		"""Stack offset for StackVariableSourceType, register index for RegisterVariableSourceType"""
 		return self._storage
 
 	@storage.setter
@@ -582,7 +588,7 @@ class Variable(object):
 
 	@property
 	def name(self):
-		""" """
+		"""Name of the variable"""
 		return self._name
 
 	@name.setter
@@ -750,6 +756,11 @@ class Function(object):
 				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 			core.BNFreeFunction(self.handle)
 
+	def __lt__(self, value):
+		if not isinstance(value, Function):
+			raise TypeError("Can only compare to other Function objects")
+		return self.start < value.start
+
 	def __eq__(self, value):
 		if not isinstance(value, Function):
 			return False
@@ -769,8 +780,10 @@ class Function(object):
 		try:
 			if i < 0:
 				i = count.value + i
-			if i < 0 or i >= count.value:
+			if i < -len(self.basic_blocks) or i >= count.value:
 				raise IndexError("index out of range")
+			if i < 0:
+				i = len(self.basic_blocks) + i
 			block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(blocks[i]), self._view)
 			return block
 		finally:
@@ -790,6 +803,12 @@ class Function(object):
 			object.__setattr__(self, name, value)
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
+
+	def __str__(self):
+		result = ""
+		for token in self.type_tokens:
+			result += token.text
+		return result
 
 	def __repr__(self):
 		arch = self.arch
@@ -932,22 +951,30 @@ class Function(object):
 		core.BNFreeAddressList(addrs)
 		return result
 
-	def create_tag(self, type, data):
+	def create_user_tag(self, type, data):
+		return self.create_tag(type, data, True)
+
+	def create_auto_tag(self, type, data):
+		return self.create_tag(type, data, False)
+
+	def create_tag(self, type, data, user=True):
 		"""
-		``create_tag`` creates a new Tag object but does not add it anywhere
+		``create_tag`` creates a new Tag object but does not add it anywhere.
+		Use :py:meth:`create_user_address_tag` or
+		:py:meth:`create_user_function_tag` to create and add in one step.
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		:Example:
 
-			>>> tt = bv.tag_types["Crabby Functions"]
-			>>> tag = current_function.create_tag(tt, "Get Crabbed")
+			>>> tt = bv.tag_types["Crashes"]
+			>>> tag = current_function.create_tag(tt, "Null pointer dereference", True)
 			>>> current_function.add_user_address_tag(here, tag)
 			>>>
 		"""
-		return self.view.create_tag(type, data)
+		return self.view.create_tag(type, data, user)
 
 	@property
 	def address_tags(self):
@@ -955,7 +982,7 @@ class Function(object):
 		``address_tags`` gets a list of all address Tags in the function.
 		Tags are returned as a list of (arch, address, Tag) tuples.
 
-		:type [(Architecture, int, Tag)]
+		:rtype: list((Architecture, int, Tag))
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAddressTagReferences(self.handle, count)
@@ -973,8 +1000,8 @@ class Function(object):
 
 		:param int addr: Address to get tags at
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return A list of Tags
-		:rtype [Tag]
+		:return: A list of Tags
+		:rtype: list(Tag)
 		"""
 		if arch is None:
 			arch = self.arch
@@ -994,7 +1021,7 @@ class Function(object):
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype None
+		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1002,16 +1029,18 @@ class Function(object):
 
 	def create_user_address_tag(self, addr, type, data, unique=False, arch=None):
 		"""
-		``create_user_address_tag`` creates and adds a Tag object at a given address.
-		Since this adds a user tag, it will be added to the current undo buffer.
+		``create_user_address_tag`` creates and adds a Tag object at a given
+		address. Since this adds a user tag, it will be added to the current
+		undo buffer. To create tags associated with an address that is not
+		inside of a function, use :py:meth:`create_user_data_tag <binaryninja.binaryview.BinaryView.create_user_data_tag>`.
 
 		:param int addr: Address at which to add the tag
 		:param TagType type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists at this location with this data, don't add another
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1021,7 +1050,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, True)
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
@@ -1033,7 +1062,7 @@ class Function(object):
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype None
+		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1046,7 +1075,7 @@ class Function(object):
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype None
+		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1061,8 +1090,8 @@ class Function(object):
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists at this location with this data, don't add another
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1072,7 +1101,7 @@ class Function(object):
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, False)
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
@@ -1083,7 +1112,7 @@ class Function(object):
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype None
+		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
@@ -1094,7 +1123,7 @@ class Function(object):
 		"""
 		``function_tags`` gets a list of all function Tags for the function.
 
-		:type [Tag]
+		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTags(self.handle, count)
@@ -1110,7 +1139,7 @@ class Function(object):
 		Since this adds a user tag, it will be added to the current undo buffer.
 
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
 
@@ -1122,15 +1151,15 @@ class Function(object):
 		:param TagType type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists with this data, don't add another
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, True)
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
 		return tag
 
@@ -1140,7 +1169,7 @@ class Function(object):
 		Since this removes a user tag, it will be added to the current undo buffer.
 
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNRemoveUserFunctionTag(self.handle, tag.handle)
 
@@ -1149,7 +1178,7 @@ class Function(object):
 		``add_user_function_tag`` adds an already-created Tag object as a function tag.
 
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 
@@ -1160,15 +1189,15 @@ class Function(object):
 		:param TagType type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists with this data, don't add another
-		:return The created Tag
-		:rtype Tag
+		:return: The created Tag
+		:rtype: Tag
 		"""
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
 					return
 
-		tag = self.create_tag(type, data)
+		tag = self.create_tag(type, data, False)
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 		return tag
 
@@ -1177,7 +1206,7 @@ class Function(object):
 		``remove_user_function_tag`` removes a Tag object as a function tag.
 
 		:param Tag tag: Tag object to be added
-		:rtype None
+		:rtype: None
 		"""
 		core.BNRemoveAutoFunctionTag(self.handle, tag.handle)
 
@@ -1192,9 +1221,25 @@ class Function(object):
 		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLowLevelIL(self.handle), self)
 
 	@property
+	def llil_if_available(self):
+		"""returns LowLevelILFunction used to represent Function low level IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionLowLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, result, self)
+
+	@property
 	def lifted_il(self):
 		"""returns LowLevelILFunction used to represent lifted IL (read-only)"""
 		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, core.BNGetFunctionLiftedIL(self.handle), self)
+
+	@property
+	def lifted_il_if_available(self):
+		"""returns LowLevelILFunction used to represent lifted IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionLiftedILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.lowlevelil.LowLevelILFunction(self.arch, result, self)
 
 	@property
 	def medium_level_il(self):
@@ -1207,12 +1252,41 @@ class Function(object):
 		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMediumLevelIL(self.handle), self)
 
 	@property
+	def mlil_if_available(self):
+		"""Function medium level IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionMediumLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.mediumlevelil.MediumLevelILFunction(self.arch, result, self)
+
+	@property
+	def high_level_il(self):
+		"""Deprecated property provided for compatibility. Use hlil instead."""
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, core.BNGetFunctionHighLevelIL(self.handle), self)
+
+	@property
+	def hlil(self):
+		"""Function high level IL (read-only)"""
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, core.BNGetFunctionHighLevelIL(self.handle), self)
+
+	@property
+	def hlil_if_available(self):
+		"""Function high level IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionHighLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return binaryninja.highlevelil.HighLevelILFunction(self.arch, result, self)
+
+	@property
 	def function_type(self):
-		"""Function type object"""
+		"""Function type object, can be set with either a string representing the function prototype (`str(function)` shows examples) or a :py:class:`Type` object"""
 		return types.Type(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
 	def function_type(self, value):
+		if isinstance(value, str):
+			(value, new_name) = self.view.parse_type_string(value)
+			self.name = str(new_name)
 		self.set_user_type(value)
 
 	@property
@@ -1557,8 +1631,8 @@ class Function(object):
 		"""
 		``set_comment_at`` sets a comment for the current function at the address specified
 
-		:param addr int: virtual address within the current function to apply the comment to
-		:param comment str: string comment to apply
+		:param int addr: virtual address within the current function to apply the comment to
+		:param str comment: string comment to apply
 		:rtype: None
 		:Example:
 
@@ -1574,9 +1648,9 @@ class Function(object):
 		source instruction is not contained within this function, no action is performed.
 		To remove the reference, use :func:`remove_user_code_ref`.
 
-		:param from_addr int: virtual address of the source instruction
-		:param to_addr int: virtual address of the xref's destination.
-		:param from_arch Architecture: (optional) architecture of the source instruction
+		:param int from_addr: virtual address of the source instruction
+		:param int to_addr: virtual address of the xref's destination.
+		:param Architecture from_arch: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 
@@ -1595,9 +1669,9 @@ class Function(object):
 		If the given address is not contained within this function, or if there is no
 		such user-defined cross-reference, no action is performed.
 
-		:param from_addr int: virtual address of the source instruction
-		:param to_addr int: virtual address of the xref's destination.
-		:param from_arch Architecture: (optional) architecture of the source instruction
+		:param int from_addr: virtual address of the source instruction
+		:param int to_addr: virtual address of the xref's destination.
+		:param Architecture from_arch: (optional) architecture of the source instruction
 		:rtype: None
 		:Example:
 
@@ -1695,7 +1769,7 @@ class Function(object):
 		:param Architecture arch: (optional) Architecture for the given function
 		:rtype: binaryninja.function.RegisterValue
 
-		.. note:: Stack base is zero on entry into the function unless the architecture places the return address on the
+		.. note:: Stack base is zero on entry into the function unless the architecture places the return address on the \
 		stack as in (x86/x86_64) where the stack base will start at address_size
 
 		:Example:
@@ -2215,6 +2289,17 @@ class Function(object):
 		core.BNSetAutoCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
 			adjust.value, adjust.confidence)
 
+	def set_call_type_adjustment(self, addr, adjust_type, arch=None):
+		if arch is None:
+			arch = self.arch
+		if adjust_type is None:
+			tc = None
+		else:
+			tc = core.BNTypeWithConfidence()
+			tc.type = adjust_type.handle
+			tc.confidence = adjust_type.confidence
+		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
+
 	def set_call_stack_adjustment(self, addr, adjust, arch=None):
 		if arch is None:
 			arch = self.arch
@@ -2245,6 +2330,15 @@ class Function(object):
 			adjust = types.RegisterStackAdjustmentWithConfidence(adjust)
 		core.BNSetUserCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
 			adjust.value, adjust.confidence)
+
+	def get_call_type_adjustment(self, addr, arch=None):
+		if arch is None:
+			arch = self.arch
+		result = core.BNGetCallTypeAdjustment(self.handle, arch.handle, addr)
+		if result.type:
+			platform = self.platform
+			return types.Type(result.type, platform = platform, confidence = result.confidence)
+		return None
 
 	def get_call_stack_adjustment(self, addr, arch=None):
 		if arch is None:
@@ -2686,6 +2780,9 @@ class InstructionInfo(object):
 	def add_branch(self, branch_type, target = 0, arch = None):
 		self._branches.append(InstructionBranch(branch_type, target, arch))
 
+	def __len__(self):
+		return self._length
+
 	def __repr__(self):
 		branch_delay = ""
 		if self._branch_delay:
@@ -2733,38 +2830,46 @@ class InstructionTextToken(object):
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
+	The below table is provided for ducmentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are addded by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
+	
+	Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended), or additionally, applying color schemes appropriately.
+
 		========================== ============================================
 		InstructionTextTokenType   Description
 		========================== ============================================
-		TextToken                  Text that doesn't fit into the other tokens
-		InstructionToken           The instruction mnemonic
-		OperandSeparatorToken      The comma or whatever else separates tokens
-		RegisterToken              Registers
-		IntegerToken               Integers
-		PossibleAddressToken       Integers that are likely addresses
+		AddressDisplayToken        **Not emitted by architectures**
+		AnnotationToken            **Not emitted by architectures**
+		ArgumentNameToken          **Not emitted by architectures**
 		BeginMemoryOperandToken    The start of memory operand
+		CharacterConstantToken     A printable character
+		CodeRelativeAddressToken   **Not emitted by architectures**
+		CodeSymbolToken            **Not emitted by architectures**
+		DataSymbolToken            **Not emitted by architectures**
 		EndMemoryOperandToken      The end of a memory operand
+		ExternalSymbolToken        **Not emitted by architectures**
+		FieldNameToken             **Not emitted by architectures**
 		FloatingPointToken         Floating point number
-		AnnotationToken            **For internal use only**
-		CodeRelativeAddressToken   **For internal use only**
-		StackVariableTypeToken     **For internal use only**
-		DataVariableTypeToken      **For internal use only**
-		FunctionReturnTypeToken    **For internal use only**
-		FunctionAttributeToken     **For internal use only**
-		ArgumentTypeToken          **For internal use only**
-		ArgumentNameToken          **For internal use only**
-		HexDumpByteValueToken      **For internal use only**
-		HexDumpSkippedByteToken    **For internal use only**
-		HexDumpInvalidByteToken    **For internal use only**
-		HexDumpTextToken           **For internal use only**
-		OpcodeToken                **For internal use only**
-		StringToken                **For internal use only**
-		CharacterConstantToken     **For internal use only**
-		CodeSymbolToken            **For internal use only**
-		DataSymbolToken            **For internal use only**
-		StackVariableToken         **For internal use only**
-		ImportToken                **For internal use only**
-		AddressDisplayToken        **For internal use only**
+		HexDumpByteValueToken      **Not emitted by architectures**
+		HexDumpInvalidByteToken    **Not emitted by architectures**
+		HexDumpSkippedByteToken    **Not emitted by architectures**
+		HexDumpTextToken           **Not emitted by architectures**
+		ImportToken                **Not emitted by architectures**
+		IndirectImportToken        **Not emitted by architectures**
+		InstructionToken           The instruction mnemonic
+		IntegerToken               Integers
+		KeywordToken               **Not emitted by architectures**
+		LocalVariableToken         **Not emitted by architectures**
+		NameSpaceSeparatorToken    **Not emitted by architectures**
+		NameSpaceToken             **Not emitted by architectures**
+		OpcodeToken                **Not emitted by architectures**
+		OperandSeparatorToken      The comma or delimeter that separates tokens
+		PossibleAddressToken       Integers that are likely addresses
+		RegisterToken              Registers
+		StringToken                **Not emitted by architectures**
+		StructOffsetToken          **Not emitted by architectures**
+		TagToken                   **Not emitted by architectures**
+		TextToken                  Used for anything not of another type.
+		TypeNameToken              **Not emitted by architectures**
 		========================== ============================================
 
 	"""
@@ -2932,6 +3037,8 @@ class DisassemblyTextRenderer(object):
 				self.handle = core.BNCreateLowLevelILDisassemblyTextRenderer(func.handle, settings_obj)
 			elif isinstance(func, binaryninja.mediumlevelil.MediumLevelILFunction):
 				self.handle = core.BNCreateMediumLevelILDisassemblyTextRenderer(func.handle, settings_obj)
+			elif isinstance(func, binaryninja.highlevelil.HighLevelILFunction):
+				self.handle = core.BNCreateHighLevelILDisassemblyTextRenderer(func.handle, settings_obj)
 			else:
 				raise TypeError("invalid function object")
 		else:
@@ -2952,6 +3059,9 @@ class DisassemblyTextRenderer(object):
 		mlil = core.BNGetDisassemblyTextRendererMediumLevelILFunction(self.handle)
 		if mlil:
 			return binaryninja.mediumlevelil.MediumLevelILFunction(handle = mlil)
+		hlil = core.BNGetDisassemblyTextRendererHighLevelILFunction(self.handle)
+		if hlil:
+			return binaryninja.highlevelil.HighLevelILFunction(handle = hlil)
 		return None
 
 	@property
@@ -3043,7 +3153,7 @@ class DisassemblyTextRenderer(object):
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return (result, length.value)
 
-	def post_process_lines(self, addr, length, in_lines):
+	def post_process_lines(self, addr, length, in_lines, indent_spaces=""):
 		if isinstance(in_lines, str):
 			in_lines = in_lines.split('\n')
 		line_buf = (core.BNDisassemblyTextLine * len(in_lines))()
@@ -3074,7 +3184,7 @@ class DisassemblyTextRenderer(object):
 			line_buf[i].tokens = InstructionTextToken.get_instruction_lines(line.tokens)
 		count = ctypes.c_ulonglong()
 		lines = ctypes.POINTER(core.BNDisassemblyTextLine)()
-		lines = core.BNPostProcessDisassemblyTextRendererLines(self.handle, addr, length, line_buf, len(in_lines), count)
+		lines = core.BNPostProcessDisassemblyTextRendererLines(self.handle, addr, length, line_buf, len(in_lines), count, indent_spaces)
 		il_function = self.il_function
 		result = []
 		for i in range(0, count.value):
@@ -3140,7 +3250,7 @@ class DisassemblyTextRenderer(object):
 		tokens += result
 		core.BNFreeInstructionText(new_tokens, count.value)
 
-	def wrap_comment(self, lines, cur_line, comment, has_auto_annotations, leading_spaces = "  "):
+	def wrap_comment(self, lines, cur_line, comment, has_auto_annotations, leading_spaces = "  ", indent_spaces = ""):
 		cur_line_obj = core.BNDisassemblyTextLine()
 		cur_line_obj.addr = cur_line.address
 		if cur_line.il_instruction is None:
@@ -3152,7 +3262,7 @@ class DisassemblyTextRenderer(object):
 		cur_line_obj.count = len(cur_line.tokens)
 		count = ctypes.c_ulonglong()
 		new_lines = core.BNDisassemblyTextRendererWrapComment(self.handle, cur_line_obj, count, comment,
-			has_auto_annotations, leading_spaces)
+			has_auto_annotations, leading_spaces, indent_spaces)
 		il_function = self.il_function
 		for i in range(0, count.value):
 			addr = new_lines[i].addr

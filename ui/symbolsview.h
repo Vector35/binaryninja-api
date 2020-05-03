@@ -14,6 +14,8 @@ class BINARYNINJAUIAPI SymbolsView: public QWidget, public DockContextHandler, p
 	Q_OBJECT
 	Q_INTERFACES(DockContextHandler)
 
+	friend class SymbolList;
+
 	BinaryViewRef m_data;
 
 	SymbolList* m_funcList;

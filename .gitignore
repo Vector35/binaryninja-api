@@ -52,3 +52,8 @@ types/
 python/generator.log
 python/generator.tlog
 python/generator.*.log
+examples/triage/moc_predefs.h
+examples/triage/moc_predefs.h.cbt
+examples/triage/triage.dll
+examples/triage/triage.lib
+*.opt

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Vector 35 Inc
+// Copyright (c) 2017-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -165,12 +165,19 @@ vector<uint64_t> MediumLevelILFunction::GetOperandList(ExprId expr, size_t listO
 }
 
 
-ExprId MediumLevelILFunction::AddLabelList(const vector<BNMediumLevelILLabel*>& labels)
+ExprId MediumLevelILFunction::AddLabelMap(const map<uint64_t, BNMediumLevelILLabel*>& labels)
 {
+	uint64_t* valueList = new uint64_t[labels.size()];
 	BNMediumLevelILLabel** labelList = new BNMediumLevelILLabel*[labels.size()];
-	for (size_t i = 0; i < labels.size(); i++)
-		labelList[i] = labels[i];
-	ExprId result = (ExprId)BNMediumLevelILAddLabelList(m_object, labelList, labels.size());
+	size_t i = 0;
+	for (auto& j : labels)
+	{
+		valueList[i] = j.first;
+		labelList[i] = j.second;
+		i++;
+	}
+	ExprId result = (ExprId)BNMediumLevelILAddLabelMap(m_object, valueList, labelList, labels.size());
+	delete[] valueList;
 	delete[] labelList;
 	return result;
 }
@@ -537,23 +544,37 @@ RegisterValue MediumLevelILFunction::GetExprValue(const MediumLevelILInstruction
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const SSAVariable& var, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(const SSAVariable& var, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var.var, var.version, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleSSAVarValues(m_object, &var.var, var.version, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr)
+PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleExprValues(m_object, expr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleExprValues(m_object, expr, optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(const MediumLevelILInstruction& expr)
+PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(const MediumLevelILInstruction& expr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	return GetPossibleExprValues(expr.exprIndex);
+	return GetPossibleExprValues(expr.exprIndex, options);
 }
 
 
@@ -601,16 +622,30 @@ RegisterValue MediumLevelILFunction::GetRegisterValueAfterInstruction(uint32_t r
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -629,16 +664,30 @@ RegisterValue MediumLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag,
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -657,16 +706,30 @@ RegisterValue MediumLevelILFunction::GetStackContentsAfterInstruction(int32_t of
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 

@@ -39,6 +39,7 @@ typedef BinaryNinja::Ref<BinaryNinja::BinaryView> BinaryViewRef;
 typedef BinaryNinja::Ref<BinaryNinja::BinaryViewType> BinaryViewTypeRef;
 typedef BinaryNinja::Ref<BinaryNinja::DisassemblySettings> DisassemblySettingsRef;
 typedef BinaryNinja::Ref<BinaryNinja::DownloadProvider> DownloadProviderRef;
+typedef BinaryNinja::Ref<BinaryNinja::Enumeration> EnumerationRef;
 typedef BinaryNinja::Ref<BinaryNinja::FileMetadata> FileMetadataRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraph> FlowGraphRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraphLayoutRequest> FlowGraphLayoutRequestRef;

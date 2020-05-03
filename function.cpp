@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -41,6 +41,14 @@ Variable::Variable(BNVariableSourceType t, uint32_t i, uint64_t s)
 
 
 Variable::Variable(const BNVariable& var)
+{
+	type = var.type;
+	index = var.index;
+	storage = var.storage;
+}
+
+
+Variable::Variable(const Variable& var)
 {
 	type = var.type;
 	index = var.index;
@@ -285,6 +293,12 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 }
 
 
+Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
+{
+	return new LowLevelILFunction(BNGetFunctionLowLevelILIfAvailable(m_object));
+}
+
+
 size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
@@ -459,6 +473,12 @@ Ref<LowLevelILFunction> Function::GetLiftedIL() const
 }
 
 
+Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
+{
+	return new LowLevelILFunction(BNGetFunctionLiftedILIfAvailable(m_object));
+}
+
+
 size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLiftedILForInstruction(m_object, arch->GetObject(), addr);
@@ -516,6 +536,24 @@ set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 {
 	return new MediumLevelILFunction(BNGetFunctionMediumLevelIL(m_object));
+}
+
+
+Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
+{
+	return new MediumLevelILFunction(BNGetFunctionMediumLevelILIfAvailable(m_object));
+}
+
+
+Ref<HighLevelILFunction> Function::GetHighLevelIL() const
+{
+	return new HighLevelILFunction(BNGetFunctionHighLevelIL(m_object));
+}
+
+
+Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
+{
+	return new HighLevelILFunction(BNGetFunctionHighLevelILIfAvailable(m_object));
 }
 
 
@@ -1061,6 +1099,15 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+void Function::SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust)
+{
+	BNTypeWithConfidence apiObject;
+	apiObject.type = adjust ? adjust->GetObject() : nullptr;
+	apiObject.confidence = adjust.GetConfidence();
+	BNSetAutoCallTypeAdjustment(m_object, arch->GetObject(), addr, adjust ? &apiObject : nullptr);
+}
+
+
 void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetAutoCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
@@ -1092,6 +1139,15 @@ void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
+void Function::SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust)
+{
+	BNTypeWithConfidence apiObject;
+	apiObject.type = adjust ? adjust->GetObject() : nullptr;
+	apiObject.confidence = adjust.GetConfidence();
+	BNSetUserCallTypeAdjustment(m_object, arch->GetObject(), addr, adjust ? &apiObject : nullptr);
+}
+
+
 void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust)
 {
 	BNSetUserCallStackAdjustment(m_object, arch->GetObject(), addr, adjust.GetValue(), adjust.GetConfidence());
@@ -1120,6 +1176,13 @@ void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 {
 	BNSetUserCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
 		adjust.GetValue(), adjust.GetConfidence());
+}
+
+
+Confidence<Ref<Type>> Function::GetCallTypeAdjustment(Architecture* arch, uint64_t addr)
+{
+	BNTypeWithConfidence result = BNGetCallTypeAdjustment(m_object, arch->GetObject(), addr);
+	return Confidence<Ref<Type>>(result.type ? new Type(result.type) : nullptr, result.confidence);
 }
 
 
@@ -1652,6 +1715,21 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 void Function::RequestDebugReport(const string& name)
 {
 	BNRequestFunctionDebugReport(m_object, name.c_str());
+}
+
+
+string Function::GetGotoLabelName(uint64_t labelId)
+{
+	char* name = BNGetGotoLabelName(m_object, labelId);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+void Function::SetGotoLabelName(uint64_t labelId, const std::string& name)
+{
+	BNSetUserGotoLabelName(m_object, labelId, name.c_str());
 }
 
 

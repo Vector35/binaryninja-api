@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -184,12 +184,18 @@ vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOper
 }
 
 
-ExprId LowLevelILFunction::AddLabelList(const vector<BNLowLevelILLabel*>& labels)
+ExprId LowLevelILFunction::AddLabelMap(const map<uint64_t, BNLowLevelILLabel*>& labels)
 {
+	uint64_t* valueList = new uint64_t[labels.size()];
 	BNLowLevelILLabel** labelList = new BNLowLevelILLabel*[labels.size()];
-	for (size_t i = 0; i < labels.size(); i++)
-		labelList[i] = labels[i];
-	ExprId result = (ExprId)BNLowLevelILAddLabelList(m_object, labelList, labels.size());
+	size_t i = 0;
+	for (auto& j : labels)
+	{
+		valueList[i] = j.first;
+		labelList[i] = j.second;
+		i++;
+	}
+	ExprId result = (ExprId)BNLowLevelILAddLabelMap(m_object, valueList, labelList, labels.size());
 	delete[] labelList;
 	return result;
 }
@@ -617,16 +623,22 @@ RegisterValue LowLevelILFunction::GetExprValue(const LowLevelILInstruction& expr
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleExprValues(size_t expr)
+PossibleValueSet LowLevelILFunction::GetPossibleExprValues(size_t expr, const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleExprValues(m_object, expr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleExprValues(m_object, expr, optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleExprValues(const LowLevelILInstruction& expr)
+PossibleValueSet LowLevelILFunction::GetPossibleExprValues(const LowLevelILInstruction& expr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	return GetPossibleExprValues(expr.exprIndex);
+	return GetPossibleExprValues(expr.exprIndex, options);
 }
 
 
@@ -644,16 +656,30 @@ RegisterValue LowLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg,
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -672,16 +698,30 @@ RegisterValue LowLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, si
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
@@ -700,16 +740,30 @@ RegisterValue LowLevelILFunction::GetStackContentsAfterInstruction(int32_t offse
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+	const set<BNDataFlowQueryOption>& options)
 {
-	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr);
+	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
+	size_t idx = 0;
+	for (auto i : options)
+		optionArray[idx++] = i;
+	BNPossibleValueSet value = BNGetLowLevelILPossibleStackContentsAfterInstruction(m_object, offset, len, instr,
+		optionArray, options.size());
+	delete[] optionArray;
 	return PossibleValueSet::FromAPIObject(value);
 }
 

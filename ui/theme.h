@@ -69,6 +69,7 @@ enum ThemeColor
 	UncertainColor,
 	NameSpaceColor,
 	NameSpaceSeparatorColor,
+	GotoLabelColor,
 
 	// Script console colors
 	ScriptConsoleOutputColor,
@@ -98,7 +99,8 @@ enum ThemeColor
 	FeatureMapUnicodeStringColor,
 	FeatureMapFunctionColor,
 	FeatureMapImportColor,
-	FeatureMapExternColor
+	FeatureMapExternColor,
+	FeatureMapLibraryColor
 };
 
 void BINARYNINJAUIAPI initThemes();

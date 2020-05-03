@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -191,8 +191,8 @@ class AddressField(object):
 	offsets can be used instead of just an address. The result is stored as in int in self.result.
 
 	Note: This API currently functions differently on the command-line, as the view and current_address are
-	      disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be 
-	      specified.
+	disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be 
+	specified.
 	"""
 	def __init__(self, prompt, view=None, current_address=0):
 		self._prompt = prompt
@@ -956,8 +956,8 @@ def markdown_to_html(contents):
 	"""
 	``markdown_to_html`` converts the provided markdown to HTML
 
-	:param string contents: Markdown contents to convert to HTML
-	:rtype: string
+	:param str contents: Markdown contents to convert to HTML
+	:rtype: str
 	:Example:
 		>>> markdown_to_html("##Yay")
 		'<h2>Yay</h2>'
@@ -970,7 +970,7 @@ def show_plain_text_report(title, contents):
 	``show_plain_text_report`` displays contents to the user in the UI or on the command-line
 
 	Note: This API functions differently on the command-line vs the UI. In the UI, a pop-up is used. On the command-line,
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str title: title to display in the UI pop-up
 	:param str contents: plaintext contents to display
@@ -989,7 +989,7 @@ def show_markdown_report(title, contents, plaintext=""):
 	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str contents: markdown contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
@@ -1008,7 +1008,7 @@ def show_html_report(title, contents, plaintext=""):
 	if hyperlinking is needed.
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str contents: HTML contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
@@ -1053,11 +1053,11 @@ def get_text_line_input(prompt, title):
 	``get_text_line_input`` prompts the user to input a string with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
-	:rtype: string containing the input without trailing newline character.
+	:rtype: str containing the input without trailing newline character.
 	:Example:
 		>>> get_text_line_input("PROMPT>", "getinfo")
 		PROMPT> Input!
@@ -1076,7 +1076,7 @@ def get_int_input(prompt, title):
 	``get_int_input`` prompts the user to input a integer with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1097,7 +1097,7 @@ def get_address_input(prompt, title):
 	``get_address_input`` prompts the user for an address with the given prompt and title
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used.
+	a simple text prompt is used.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
@@ -1118,11 +1118,12 @@ def get_choice_input(prompt, title, choices):
 	``get_choice_input`` prompts the user to select the one of the provided choices
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses a combo box.
+	a simple text prompt is used. The UI uses a combo box.
 
 	:param str prompt: String to prompt with.
 	:param str title: Title of the window when executed in the UI.
-	:param list choices: A list of strings for the user to choose from.
+	:param choices: A list of strings for the user to choose from.
+	:type choices: list(str)
 	:rtype: integer array index of the selected option
 	:Example:
 		>>> get_choice_input("PROMPT>", "choices", ["Yes", "No", "Maybe"])
@@ -1147,14 +1148,19 @@ def get_open_filename_input(prompt, ext=""):
 	``get_open_filename_input`` prompts the user for a file name to open
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
+	a simple text prompt is used. The UI uses the native window pop-up for file selection.
+
+	Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be specified by using a space within the parenthesis.
+
+	Also, a simple selector of "*.extension" by itself may also be used instead of specifying the description.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
 	:Example:
-		>>> get_open_filename_input("filename:", "exe")
-		filename: foo.exe
-		'foo.exe'
+		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
+		b'foo.exe'
+		>>> get_open_filename_input("filename:", "*.py")
+		b'test.py'
 	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetOpenFileNameInput(value, prompt, ext):
@@ -1170,7 +1176,7 @@ def get_save_filename_input(prompt, ext="", default_name=""):
 	default_name
 
 	Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line
-	      a simple text prompt is used. The UI uses the native window pop-up for file selection.
+	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
@@ -1226,9 +1232,12 @@ def get_form_input(fields, title):
 		- OpenFileNameField  - Prompt for file to open
 		- SaveFileNameField  - Prompt for file to save to
 		- DirectoryNameField - Prompt for directory name
-	This API is flexible and works both in the UI via a pop-up dialog and on the command-line.
-	:params list fields: A list containing of the above specified classes, strings or None
-	:params str title: The title of the pop-up dialog.
+	This API is flexible and works both in the UI via a pop-up dialog and on the command-line. Note that more complicated APIs should consider usin the included pyside2 functionality in the `binaryninjaui` module. Returns true or false depending on whether the user submitted responses or cancelled the dialog.
+
+	:param fields: A list containing these classes, strings or None
+	:type fields: list(str) or list(None) or list(LabelField) or list(SeparatorField) or list(TextLineField) or list(MultilineTextField) or list(IntegerField) or list(AddressField) or list(ChoiceField) or list(OpenFileNameField) or list(SaveFileNameField) or list(DirectoryNameField)
+	:param str title: The title of the pop-up dialog
+	:rtype: bool
 	:Example:
 
 		>>> int_f = IntegerField("Specify Integer")
@@ -1236,7 +1245,7 @@ def get_form_input(fields, title):
 		>>> choice_f = ChoiceField("Options", ["Yes", "No", "Maybe"])
 		>>> get_form_input(["Get Data", None, int_f, tex_f, choice_f], "The options")
 		Get Data
-
+		<empty>
 		Specify Integer 1337
 		Specify name Peter
 		The options

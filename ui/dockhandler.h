@@ -26,6 +26,19 @@ struct BINARYNINJAUIAPI DockProperties
 		dockWidget(dp.dockWidget), visibleState(dp.visibleState), defaultArea(dp.defaultArea),
 		defaultOrientation(dp.defaultOrientation), defaultVisibility(dp.defaultVisibility),
 		viewSensitive(dp.viewSensitive), neverBeenVisible(dp.neverBeenVisible), sizeStash(dp.sizeStash), actionOnShow(dp.actionOnShow) { }
+	DockProperties& operator=(const DockProperties& dp)
+	{
+		dockWidget = dp.dockWidget;
+		visibleState = dp.visibleState;
+		defaultArea = dp.defaultArea;
+		defaultOrientation = dp.defaultOrientation;
+		defaultVisibility = dp.defaultVisibility;
+		viewSensitive = dp.viewSensitive;
+		neverBeenVisible = dp.neverBeenVisible;
+		sizeStash = dp.sizeStash;
+		actionOnShow = dp.actionOnShow;
+		return *this;
+	}
 
 	QDockWidget* dockWidget;
 	bool visibleState;

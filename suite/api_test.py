@@ -1,12 +1,24 @@
 import unittest
 import platform
 import os
+import sys
+import pickle
+import zipfile
+import difflib
+from collections import Counter
+
 from binaryninja.binaryview import BinaryView, BinaryViewType
 from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, get_qualified_name
 from binaryninja.architecture import Architecture
 
+api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(api_suite_path)
+import testcommon
+
+global verbose
+verbose = False
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -172,6 +184,107 @@ class SettingsAPI(unittest.TestCase):
 		assert mapped_view.segments[0].start == 0x500000, "test_load_settings failed"
 		assert len(mapped_view) == 4, "test_load_settings failed"
 
+
+class RebaseAPI(unittest.TestCase):
+	@classmethod
+	def setUpClass(cls):
+		pass
+
+	@classmethod
+	def tearDownClass(cls):
+		pass
+
+	# Returns a tuple of:
+	#   bool   : Two lists are equal
+	#   string : The string diff
+	# Args:
+	#   list
+	#   list   : (compare list one vs list two)
+	#   string : anything additional wanted to be printed before the string diff
+	#   bool   : the ordering of the items in the two lists must be the same
+	def report(self, oracle, test, firstText='', strictOrdering = False):
+		stringDiff = ""
+
+		equality = False
+		if not strictOrdering:
+			equality = (Counter(oracle) == Counter(test))
+		else:
+			equality = (oracle == test)
+
+		if equality:
+			return (True, '')
+		elif not strictOrdering:
+			try:
+					for elem in oracle:
+						test.remove(elem)
+						oracle.remove(elem)  # If it's not in the test, it won't get here!
+			except ValueError:
+					pass
+
+		differ = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+		skipped_lines = 0
+		for delta in differ.compare(oracle, test):
+			if delta[0] == ' ':
+					skipped_lines += 1
+					continue
+			if skipped_lines > 0:
+					stringDiff += "<---" + str(skipped_lines) + ' same lines--->\n'
+					skipped_lines = 0
+			delta = delta.replace('\n', '')
+			stringDiff += delta + '\n'
+
+		stringDiffList = stringDiff.split('\n')
+
+		if len(stringDiffList) > 10:
+			if not verbose:
+					stringDiff = '\n'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList[:10])
+					stringDiff += '\n\n### And ' + str(len(stringDiffList)) + " more lines, use '-v' to show ###"
+		elif not verbose:
+			stringDiff = '\n'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList)
+		stringDiff = '\n\n' + firstText + stringDiff
+		return (equality, stringDiff)
+
+	def run_rebase_test(self, testfile):
+		testname = None
+		with zipfile.ZipFile(os.path.join(api_suite_path, testfile), "r") as zf:
+			testname = zf.namelist()[0]
+			zf.extractall(path=api_suite_path)
+
+		pickle_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), testname + "_rebasing.pkl")
+		self.assertTrue(pickle_path, "Test pickle doesn't exist")
+		try:
+			# Python 2 does not have the encodings option
+			binary_oracle = pickle.load(open(pickle_path, "rb"), encoding='charmap')
+		except TypeError:
+			binary_oracle = pickle.load(open(pickle_path, "rb"))
+
+		test_builder = testcommon.BinaryViewTestBuilder(testname, imageBase=0xf00000)
+		self.assertTrue(test_builder.bv.start == 0xf00000)
+		for method in test_builder.methods():
+			test = getattr(test_builder, method)()
+			oracle = binary_oracle[method]
+			if test == oracle:
+					continue
+
+			result = getattr(test_builder, method).__doc__
+			result += ":\n"
+			report = self.report(oracle, test, result)
+			self.assertTrue(report[0], report[1])  # Test does not agree with oracle
+		os.unlink(os.path.join(api_suite_path, testname))
+
+	def test_rebasing__elf(self):
+		self.run_rebase_test('binaries/test_corpus/helloworld.zip')
+
+	def test_rebasing__macho(self):
+		self.run_rebase_test('binaries/test_corpus/duff.zip')
+
+	def test_rebasing__pe(self):
+		self.run_rebase_test('binaries/test_corpus/partial_register_dataflow.zip')
+
+	def test_rebasing__raw(self):
+		self.run_rebase_test('binaries/test_corpus/raw.zip')
+
+
 class MetaddataAPI(unittest.TestCase):
 	def test_metadata_basic_types(self):
 		# Core is tested thoroughly through the C++ unit tests here we focus on the python api side
@@ -301,7 +414,7 @@ class DemanglerTest(unittest.TestCase):
 			"int32_t QList<QAbstractState*>::end()",
 			"int32_t BinaryNinjaCore::ArchitectureWrapper::GetOpcodeDisplayLength() const",
 			"int32_t BinaryNinjaCore::ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)",
-			"qt_meta_stringdata_QHistoryState",
+			"qt_meta_stringdata_QHistoryState _qt_meta_stringdata_QHistoryState",
 			"int32_t (anonymous namespace)::TypeDestructor::DestructorImpl<QStringList, true>::Destruct(int32_t, void*)",
 			"int32_t QGb18030Codec::_name()",
 			"int32_t QList<QObject*>::detach()",
@@ -315,4 +428,4 @@ class DemanglerTest(unittest.TestCase):
 
 		for i, test in enumerate(tests):
 			t, n = demangle_gnu3(Architecture['x86'], test)
-			assert self.get_type_string(t, n) == results[i]
+			self.get_type_string(t, n) == results[i]

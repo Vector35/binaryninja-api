@@ -22,33 +22,85 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
 
-## Disabling Plugins
+## Troubleshooting Plugins
 
-Disabling plugins can be a quick way to diagnose whether some unexpected behavior is casued by Binary Ninja itself or a plugin. Simply launch the process with the extra command-lien option `-p` to disable all user plugins at load time.
+### Disabling Plugins
 
-## Plugin Troubleshooting
+Disabling plugins can be a quick way to diagnose whether some unexpected behavior is caused by Binary Ninja itself or a plugin. Simply launch the process with the extra command-line option `-p` to disable all user plugins at load time. Note that repository plugins are currently not disabled with this switch.
+
+### Other Steps
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
 
-Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you'er running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
+Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
 
 Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](/getting-started/#directories).
-
 
 ## License Problems
 
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
-## Windows
+## Platforms
+
+The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
+
+## API
+
+ - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 2.7, or 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
+
+
+## Database Issues
+
+ - BNDBs may grow in size after repeated saving/loading. While a future update to Binary Ninja will implement this optimization internally, this [unofficial script] may be useful for shrinking the size of a BNDB. Please ensure you backup your database prior to trying that script as it is not an officially supported operation.
+
+### Windows
 
 - While Windows 7 is not officially supported (by us, or Microsoft for that matter), it's possible to have Binary Ninja work if all available windows updates are installed as a library pack update somewhere in the updates is required for us to run.
 - If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store. 
 
+#### Some Graphics Chipsets
 
-## OS X
+Some graphics chipsets may experience problems with [scaling](https://github.com/Vector35/binaryninja-api/issues/1529) resulting in the top menu disappearing. In that case, the simplest fix is to set the environment variable `QT_OPENGL=angle`.
 
-### Older Versions
+#### VirtualBox
+
+If you're using Windows virtual machines within virtualbox, you may have trouble with the 3d acceleration drivers. If so, disabling the 3d acceleration is the easiest way to get BN working.
+
+You may also manually create a `settings.json` file in your [user folder](../getting-started.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
+
+```
+{
+	"updates" :
+	{
+		"activeContent" : false
+	}
+}
+```
+
+### MacOS
+
+#### Xcode Installed Python 3
+
+If you're running Catlina MacOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
+
+1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
+1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
+
+```
+{
+	"downloadClient" :
+	{
+		"providerName" : "QtDownloadProvider"
+	},
+	"python" :
+	{
+		"interpreter" : "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7/lib/libpython3.7.dylib"
+	}
+}
+```
+
+#### Old MacOS
 
 While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
 
@@ -58,9 +110,9 @@ DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/MacOS" /Applications/
 
 Or second, modify the binary itself using the [install_name_tool](https://blogs.oracle.com/dipol/dynamic-libraries,-rpath,-and-mac-os).
 
-### Non-brew installed Python 3
+#### Non-brew installed Python 3
 
-One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an erorr while attempting to download updates using the python provider. One of the following may fix this: 
+One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an erorr while attempting to download updates using the python provider. One of the following may fix this:
 
 ```
 pip install --upgrade certifi
@@ -72,23 +124,31 @@ or:
 open /Applications/Python\ 3.6/Install\ Certificates.command
 ```
 
-## Linux
+### Linux
 
-Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][faq].
+Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
 
-### Headless Ubuntu
+#### Debian
 
-If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requiremetns (for at least 14.04 LTS):
+Debian requires one package be manually installed to support the emoji icons used in the Tag system:
+
+```
+apt install fonts-noto-color-emoji
+```
+
+#### Headless Ubuntu
+
+If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requirements (for at least 14.04 LTS):
 
 ```
 apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 libnspr4 libsm6
 ```
 
-### Arch Linux
+#### Arch Linux
 
  - The only known issues with Arch linux are related to not being able to automatically find the appropriate libpython. Specifying your own custom path to the `libpython.so` in the [Advanced Settings](../getting-started.md#advanced-settings) dialog under the `Python Interpreter` setting should solve any issues.
 
-### KDE
+#### KDE
 
 To run Binary Ninja in a KDE based environment, set the `QT_PLUGIN_PATH` to the `QT` sub-folder:
 
@@ -97,7 +157,7 @@ cd ~/binaryninja
 QT_PLUGIN_PATH=./qt ./binaryninja
 ```
 
-### NixOS
+#### NixOS
 
 Here's a customer-provided nix derivation file for the Binary Ninja demo. Note that you'll likely want to update the SHA256 field with the latest value available [here](https://binary.ninja/js/hashes.js).  Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
 
@@ -124,14 +184,12 @@ stdenv.mkDerivation rec {
 }
 ```
 
-## API
-
- - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 2.7, or 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
-
 [known issues]: https://github.com/Vector35/binaryninja-api/issues?q=is%3Aissue
 [libcurl-compat]: https://www.archlinux.org/packages/community/x86_64/libcurl-compat/
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html
-[faq]: https://binary.ninja/faq.html
+[FAQ]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
+[unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
+

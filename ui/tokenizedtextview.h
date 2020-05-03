@@ -44,6 +44,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	bool m_navByRef = false;
 
 	std::vector<BinaryNinja::LinearDisassemblyLine> m_lines;
+	DisassemblySettingsRef m_settings;
 
 	QTimer* m_updateTimer;
 
@@ -138,6 +139,7 @@ public:
 	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView* view, uint64_t offset) override;
+	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 
 	virtual void updateFonts() override;
 

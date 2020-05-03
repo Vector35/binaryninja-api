@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -30,6 +30,7 @@ from binaryninja import function
 from binaryninja import binaryview
 from binaryninja import lowlevelil
 from binaryninja import mediumlevelil
+from binaryninja import highlevelil
 from binaryninja import basicblock
 from binaryninja import log
 from binaryninja import highlight
@@ -532,6 +533,10 @@ class FlowGraph(object):
 		return core.BNIsMediumLevelILFlowGraph(self.handle)
 
 	@property
+	def is_high_level_il(self):
+		return core.BNIsHighLevelILFlowGraph(self.handle)
+
+	@property
 	def il_function(self):
 		if self.is_low_level_il:
 			il_func = core.BNGetFlowGraphLowLevelILFunction(self.handle)
@@ -549,6 +554,14 @@ class FlowGraph(object):
 			if function is None:
 				return None
 			return mediumlevelil.MediumLevelILFunction(function.arch, il_func, function)
+		if self.is_high_level_il:
+			il_func = core.BNGetFlowGraphHighLevelILFunction(self.handle)
+			if not il_func:
+				return None
+			function = self.function
+			if function is None:
+				return None
+			return highlevelil.HighLevelILFunction(function.arch, il_func, function)
 		return None
 
 	@il_function.setter
@@ -556,12 +569,19 @@ class FlowGraph(object):
 		if isinstance(func, lowlevelil.LowLevelILFunction):
 			core.BNSetFlowGraphLowLevelILFunction(self.handle, func.handle)
 			core.BNSetFlowGraphMediumLevelILFunction(self.handle, None)
+			core.BNSetFlowGraphHighLevelILFunction(self.handle, None)
 		elif isinstance(func, mediumlevelil.MediumLevelILFunction):
 			core.BNSetFlowGraphLowLevelILFunction(self.handle, None)
 			core.BNSetFlowGraphMediumLevelILFunction(self.handle, func.handle)
+			core.BNSetFlowGraphHighLevelILFunction(self.handle, None)
+		elif isinstance(func, highlevelil.HighLevelILFunction):
+			core.BNSetFlowGraphLowLevelILFunction(self.handle, None)
+			core.BNSetFlowGraphMediumLevelILFunction(self.handle, None)
+			core.BNSetFlowGraphHighLevelILFunction(self.handle, func.handle)
 		elif func is None:
 			core.BNSetFlowGraphLowLevelILFunction(self.handle, None)
 			core.BNSetFlowGraphMediumLevelILFunction(self.handle, None)
+			core.BNSetFlowGraphHighLevelILFunction(self.handle, None)
 		else:
 			raise TypeError("expected IL function for setting il_function property")
 
@@ -647,7 +667,7 @@ class FlowGraph(object):
 		This function does not wait for the graph to be ready to display, but a callback can be provided
 		to signal when the graph is ready.
 
-		:param callable() callback: Function to be called when the graph is ready to display
+		:param callback callback: Function to be called when the graph is ready to display
 		:return: Pending flow graph layout request object
 		:rtype: FlowGraphLayoutRequest
 		"""

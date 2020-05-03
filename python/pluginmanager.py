@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -32,7 +32,7 @@ from binaryninja import range
 
 class RepoPlugin(object):
 	"""
-	``RepoPlugin` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
+	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
 	def __init__(self, handle):
@@ -116,7 +116,7 @@ class RepoPlugin(object):
 	@property
 	def minimum_version(self):
 		"""String minimum version the plugin was tested on"""
-		return core.BNPluginGetMinimimVersion(self.handle)
+		return core.BNPluginGetMinimumVersion(self.handle)
 
 	@property
 	def name(self):

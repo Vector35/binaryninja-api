@@ -19,6 +19,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [opensans] ([opensans license] - Apache 2.0)
     - [qt] ([qt license] - LGPLv3 / note, please see our [qt build instructions below](open-source.md#building-qt))
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
+    - [rlcompleter] ([python license] - Python Software Foundation License 2)
 
 * Core
     - [discount] ([discount license] - BSD)
@@ -26,13 +27,16 @@ The previous tools are used in the generation of our documentation, but are not 
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
+    - [python] ([python license] - Python Software Foundation License 2 -- a Python 2.7 built without GPL components is currently shipped with Windows builds only, other platforms leverage existing Python installs)
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
+    - [rapidjson] ([rapidjson license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
     - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
+    - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -40,12 +44,12 @@ The previous tools are used in the generation of our documentation, but are not 
 
 ## Building Qt
 
-Binary Ninja uses [Qt 5.12] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
+Binary Ninja uses [Qt 5.14] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
 
 Please note that we offer no support for running Binary Ninja with modified Qt libraries.
 
 1. Follow the installation requirements on the [Building Qt 5 from Git] page.
-2. Download the Qt 5.12.3 [tarball] from binary.ninja. (Note this is an unmodified 5.12 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.12] terms.)
+2. Download the Qt 5.14.0 [tarball] from binary.ninja. (Note this is an unmodified 5.14 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.14] terms.)
 3. Next, build QT using the aforementioned instructions.
 4. On OS X, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
 5. Finally, replace the built libraries:
@@ -54,7 +58,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
      - On Linux, replace the `libQt5Core.so.5`, `libQt5DBus.so.5`, `libQt5Gui.so.5`, `libQt5Network.so.5`, `libQt5Widgets.so.5`, `libQt5XcbQpa.so.5` files wherever Binary Ninja was extracted
 
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
-[Qt 5.12]: https://www.qt.io/qt-licensing-terms/
+[Qt 5.14]: https://www.qt.io/qt-licensing-terms/
 [capstone]: https://github.com/aquynh/capstone
 [capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE
@@ -67,6 +71,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [discount]: http://www.pell.portland.or.us/~orc/Code/discount/
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
+[flatbuffer]: https://github.com/google/flatbuffers
+[flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE.txt
 [libgit2]: https://libgit2.github.com/
 [libgit2 license]: https://github.com/libgit2/libgit2/blob/master/COPYING
 [libmspack]: https://www.cabextract.org.uk/libmspack/
@@ -82,15 +88,19 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
 [PPC architecture module]: https://github.com/Vector35/ppc-capstone
+[python license]: https://github.com/python/cpython/blob/master/LICENSE
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
+[rapidjson]: http://rapidjson.org/
+[rapidjson license]: https://github.com/Tencent/rapidjson/blob/master/license.txt
+[rlcompleter]: https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.md
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
-[tarball]: https://binary.ninja/qt5.12.3.tar.xz
+[tarball]: https://binary.ninja/qt5.14.0.tar.xz
 [tomcrypt license]: https://github.com/libtom/libtomcrypt/blob/develop/LICENSE
 [tomcrypt]:  https://github.com/libtom/libtomcrypt
 [unsign]: https://github.com/steakknife/unsign

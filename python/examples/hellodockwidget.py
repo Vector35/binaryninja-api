@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -94,14 +94,13 @@ class HelloDockWidget(QWidget, DockContextHandler):
 		return HelloDockWidget(parent, name, data)
 
 def addStaticDockWidget():
-	mw = QApplication.allWidgets()[0].window()
-	dock_handler = mw.findChild(DockHandler, '__DockHandler')
-	dock_widget = HelloDockWidget.create_widget("HelloDockWidget (Static Dock)", dock_handler.parent())
+	dock_handler = DockHandler.getActiveDockHandler()
+	parent = dock_handler.parent()
+	dock_widget = HelloDockWidget.create_widget("HelloDockWidget (Static Dock)", parent)
 	dock_handler.addDockWidget(dock_widget, Qt.BottomDockWidgetArea, Qt.Horizontal, True, False)
 
 def addDynamicDockWidget():
-	mw = QApplication.allWidgets()[0].window()
-	dock_handler = mw.findChild(DockHandler, '__DockHandler')
+	dock_handler = DockHandler.getActiveDockHandler()
 	dock_handler.addDockWidget("HelloDockWidget (Dynamic Dock)", HelloDockWidget.create_widget, Qt.BottomDockWidgetArea, Qt.Horizontal, True)
 
 addStaticDockWidget()

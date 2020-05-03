@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -33,7 +33,8 @@ def get_qualified_name(names):
 	"""
 	``get_qualified_name`` gets a qualified name for the provided name list.
 
-	:param list(str) names: name list to qualify
+	:param names: name list to qualify
+	:type names: list(str)
 	:return: a qualified name
 	:rtype: str
 	:Example:

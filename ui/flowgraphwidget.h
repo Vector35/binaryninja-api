@@ -155,6 +155,7 @@ protected:
 	void bindActions();
 
 	void navigateToAddress(uint64_t addr);
+	void navigateToGotoLabel(uint64_t label);
 
 	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify,
 		bool recenterWithPreviousGraph);
@@ -175,6 +176,8 @@ protected:
 	void selectNone();
 	void navigateToHighlightedToken();
 
+	uint64_t getTokenAddress();
+
 public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
 	~FlowGraphWidget();
@@ -182,6 +185,7 @@ public:
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionUpdateRequested(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView* data, uint64_t offset) override;
+	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 
 	void setInitialGraph(FlowGraphRef graph);
 	void setInitialGraph(FlowGraphRef graph, uint64_t addr);
@@ -318,6 +322,7 @@ private Q_SLOTS:
 	void reanalyze();
 
 	void setStackAdjustment();
+	void setCallTypeAdjustment();
 
 	void editInstruction();
 	void instrEditDoneEvent();

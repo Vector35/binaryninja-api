@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -585,6 +585,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+    __attribute__ ((format (printf, 2, 3)))
+#endif
 	void Log(BNLogLevel level, const char* fmt, ...);
 
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
@@ -593,6 +596,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	void LogDebug(const char* fmt, ...);
 
 	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
@@ -601,6 +607,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	void LogInfo(const char* fmt, ...);
 
 	/*! LogWarn writes text to the error console including a warning icon,
@@ -609,6 +618,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	void LogWarn(const char* fmt, ...);
 
 	/*! LogError writes text to the error console and pops up the error console. Additionall,
@@ -617,6 +629,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	void LogError(const char* fmt, ...);
 
 	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
@@ -625,6 +640,9 @@ namespace BinaryNinja
 		\param fmt C-style format string.
 		\param ... Variable arguments corresponding to the format string.
 	 */
+#ifdef __GNUC__
+__attribute__ ((format (printf, 1, 2)))
+#endif
 	void LogAlert(const char* fmt, ...);
 
 	void LogToStdout(BNLogLevel minimumLevel);
@@ -682,14 +700,13 @@ namespace BinaryNinja
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
 	bool DemangleMS(Architecture* arch,
-	                const std::string& mangledName,
-	                Type** outType,
-	                QualifiedName& outVarName);
-	bool DemangleGNU3(Architecture* arch,
-	                  const std::string& mangledName,
-	                  Type** outType,
-	                  QualifiedName& outVarName);
-
+		const std::string& mangledName,
+		Type** outType,
+		QualifiedName& outVarName);
+	bool DemangleGNU3(Ref<Architecture> arch,
+		const std::string& mangledName,
+		Type** outType,
+		QualifiedName& outVarName);
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
@@ -815,46 +832,46 @@ namespace BinaryNinja
 
 	class BinaryView;
 
-	class UndoAction
+	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
 	{
-	private:
-		std::string m_typeName;
-		BNActionType m_actionType;
-
-		static void FreeCallback(void* ctxt);
-		static void UndoCallback(void* ctxt, BNBinaryView* data);
-		static void RedoCallback(void* ctxt, BNBinaryView* data);
-		static char* SerializeCallback(void* ctxt);
-
-	public:
-		UndoAction(const std::string& name, BNActionType action);
-		virtual ~UndoAction() {}
-
-		const std::string& GetTypeName() const { return m_typeName; }
-		BNActionType GetActionType() const { return m_actionType; }
-		BNUndoAction GetCallbacks();
-
-		void Add(BNBinaryView* view);
-
-		virtual void Undo(BinaryView* data) = 0;
-		virtual void Redo(BinaryView* data) = 0;
-		virtual Json::Value Serialize() = 0;
+		private:
+			std::string m_id;
+			std::string m_name;
+			std::string m_email;
+		public:
+			User(BNUser* user);
+			std::string GetName();
+			std::string GetEmail();
+			std::string GetId();
 	};
 
-	class UndoActionType
+	struct InstructionTextToken;
+
+	struct UndoAction
 	{
-	protected:
-		std::string m_nameForRegister;
+		BNActionType actionType;
+		std::string summaryText;
+		std::vector<InstructionTextToken> summaryTokens;
 
-		static bool DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result);
+		UndoAction() {};
+		UndoAction(const BNUndoAction& action);
+	};
 
-	public:
-		UndoActionType(const std::string& name);
-		virtual ~UndoActionType() {}
+	struct UndoEntry
+	{
+		Ref<User> user;
+		std::string hash;
+		std::vector<UndoAction> actions;
+		uint64_t timestamp;
+	};
 
-		static void Register(UndoActionType* type);
+	struct MergeResult
+	{
+		BNMergeStatus status;
+		UndoAction action;
+		std::string hash;
 
-		virtual UndoAction* Deserialize(const Json::Value& data) = 0;
+		MergeResult(const BNMergeResult& result);
 	};
 
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
@@ -880,21 +897,31 @@ namespace BinaryNinja
 		void MarkFileSaved();
 
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& name, BinaryView* data);
+		bool CreateDatabase(const std::string& name, BinaryView* data, bool clean = false);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
-		bool SaveAutoSnapshot(BinaryView* data);
+		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
+		bool SaveAutoSnapshot(BinaryView* data, bool clean = false);
 		bool SaveAutoSnapshot(BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+
+		bool Rebase(BinaryView* data, uint64_t address);
+		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
+
+		MergeResult MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress,
+				const std::vector<std::string> excludedHashes = {} );
 
 		void BeginUndoActions();
 		void CommitUndoActions();
 
 		bool Undo();
 		bool Redo();
+
+		std::vector<Ref<User>> GetUsers();
+		std::vector<UndoEntry> GetUndoEntries();
 
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();
@@ -907,6 +934,8 @@ namespace BinaryNinja
 	struct DataVariable;
 	class Symbol;
 	class Tag;
+	class TagType;
+	struct TagReference;
 
 	class BinaryDataNotification
 	{
@@ -927,6 +956,10 @@ namespace BinaryNinja
 		static void SymbolUpdatedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void SymbolRemovedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset);
+		static void TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType);
+		static void TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+		static void TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+		static void TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
@@ -949,6 +982,10 @@ namespace BinaryNinja
 		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
 		virtual void OnDataMetadataUpdated(BinaryView* view, uint64_t offset) { (void)view; (void)offset; }
+		virtual void OnTagTypeUpdated(BinaryView* view, Ref<TagType> tagTypeRef) { (void)view; (void)tagTypeRef; }
+		virtual void OnTagAdded(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
+		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
+		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
 		virtual void OnSymbolAdded(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
 		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
 		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
@@ -1004,6 +1041,7 @@ namespace BinaryNinja
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
 		NameList(const NameList& name, const std::string& join);
+		NameList(const NameList& name);
 		virtual ~NameList();
 
 		virtual NameList& operator=(const std::string& name);
@@ -1160,19 +1198,11 @@ namespace BinaryNinja
 		DisassemblyTextLine();
 	};
 
-	struct LinearDisassemblyPosition
-	{
-		Ref<Function> function;
-		Ref<BasicBlock> block;
-		uint64_t address;
-	};
-
 	struct LinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
 		Ref<Function> function;
 		Ref<BasicBlock> block;
-		size_t lineOffset;
 		DisassemblyTextLine contents;
 	};
 
@@ -1420,11 +1450,11 @@ namespace BinaryNinja
 		bool IsModified() const;
 		bool IsAnalysisChanged() const;
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& path);
+		bool CreateDatabase(const std::string& path, bool clean = false);
 		bool CreateDatabase(const std::string& path,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
-		bool SaveAutoSnapshot();
-		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+		bool SaveAutoSnapshot(bool clean = false);
+		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);
@@ -1558,8 +1588,8 @@ namespace BinaryNinja
 		Ref<TagType> GetTagType(const std::string& name, TagType::Type type);
 		std::vector<Ref<TagType>> GetTagTypes();
 
-		void AddTag(Ref<Tag> tag);
-		void RemoveTag(Ref<Tag> tag);
+		void AddTag(Ref<Tag> tag, bool user = false);
+		void RemoveTag(Ref<Tag> tag, bool user = false);
 		Ref<Tag> GetTag(uint64_t tagId);
 
 		std::vector<TagReference> GetAllTagReferences();
@@ -1567,6 +1597,9 @@ namespace BinaryNinja
 		std::vector<TagReference> GetAllFunctionTagReferences();
 		std::vector<TagReference> GetAllTagReferencesOfType(Ref<TagType> tagType);
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+
+		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
+		size_t GetAllTagReferencesOfTypeCount(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetDataTagReferences();
 		std::vector<Ref<Tag>> GetDataTags(uint64_t addr);
@@ -1614,12 +1647,6 @@ namespace BinaryNinja
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
-
-		LinearDisassemblyPosition GetLinearDisassemblyPositionForAddress(uint64_t addr, DisassemblySettings* settings);
-		std::vector<LinearDisassemblyLine> GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-			DisassemblySettings* settings);
-		std::vector<LinearDisassemblyLine> GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-			DisassemblySettings* settings);
 
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& result, std::string& errors);
@@ -1698,6 +1725,7 @@ namespace BinaryNinja
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
 
+		std::vector<std::string> GetLoadSettingsTypeNames();
 		Ref<Settings> GetLoadSettings(const std::string& typeName);
 		void SetLoadSettings(const std::string& typeName, Ref<Settings> settings);
 
@@ -1748,6 +1776,7 @@ namespace BinaryNinja
 		std::string m_nameForRegister, m_longNameForRegister;
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
+		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
@@ -1776,6 +1805,7 @@ namespace BinaryNinja
 		std::string GetLongName();
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
+		virtual BinaryView* Parse(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
 	};
@@ -1785,6 +1815,7 @@ namespace BinaryNinja
 	public:
 		CoreBinaryViewType(BNBinaryViewType* type);
 		virtual BinaryView* Create(BinaryView* data) override;
+		virtual BinaryView* Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
@@ -2033,6 +2064,7 @@ namespace BinaryNinja
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);
 		static uint32_t GetLinkRegisterCallback(void* ctxt);
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetSystemRegistersCallback(void* ctxt, size_t* count);
 
 		static char* GetRegisterStackNameCallback(void* ctxt, uint32_t regStack);
 		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
@@ -2120,6 +2152,8 @@ namespace BinaryNinja
 		virtual uint32_t GetLinkRegister();
 		virtual std::vector<uint32_t> GetGlobalRegisters();
 		bool IsGlobalRegister(uint32_t reg);
+		virtual std::vector<uint32_t> GetSystemRegisters();
+		bool IsSystemRegister(uint32_t reg);
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
 		uint32_t GetRegisterByName(const std::string& name);
 
@@ -2272,6 +2306,7 @@ namespace BinaryNinja
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual std::vector<uint32_t> GetSystemRegisters() override;
 
 		virtual std::string GetRegisterStackName(uint32_t regStack) override;
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
@@ -2346,6 +2381,7 @@ namespace BinaryNinja
 		virtual uint32_t GetStackPointerRegister() override;
 		virtual uint32_t GetLinkRegister() override;
 		virtual std::vector<uint32_t> GetGlobalRegisters() override;
+		virtual std::vector<uint32_t> GetSystemRegisters() override;
 
 		virtual std::string GetRegisterStackName(uint32_t regStack) override;
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
@@ -2391,6 +2427,7 @@ namespace BinaryNinja
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
 		Variable(BNVariableSourceType type, uint64_t storage);
 		Variable(const BNVariable& var);
+		Variable(const Variable& var);
 
 		Variable& operator=(const Variable& var);
 
@@ -2431,7 +2468,7 @@ namespace BinaryNinja
 		Confidence<bool> IsSigned() const;
 		Confidence<bool> IsConst() const;
 		Confidence<bool> IsVolatile() const;
-		bool IsFloat() const;
+
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
 		std::vector<FunctionParameter> GetParameters() const;
@@ -2441,19 +2478,13 @@ namespace BinaryNinja
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
-		void SetScope(const Confidence<BNMemberScope>& scope);
 		Confidence<BNMemberAccess> GetAccess() const;
-		void SetAccess(const Confidence<BNMemberAccess>& access);
-		void SetConst(const Confidence<bool>& cnst);
-		void SetVolatile(const Confidence<bool>& vltl);
-		void SetTypeName(const QualifiedName& name);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
+		Ref<NamedTypeReference> GetRegisteredName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
-
-		void SetFunctionCanReturn(const Confidence<bool>& canReturn);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;
@@ -2498,6 +2529,136 @@ namespace BinaryNinja
 		static std::string GetAutoDebugTypeIdSource();
 
 		Confidence<Ref<Type>> WithConfidence(uint8_t conf);
+
+		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
+		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
+		bool IsEnumReference() { return IsReferenceOfType(EnumNamedTypeClass); }
+		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
+		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
+		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+
+		bool IsVoid() const { return GetClass() == VoidTypeClass; }
+		bool IsBool() const { return GetClass() == BoolTypeClass; }
+		bool IsInteger() const { return GetClass() == IntegerTypeClass; }
+		bool IsFloat() const { return GetClass() == FloatTypeClass; }
+		bool IsStructure() const { return GetClass() == StructureTypeClass; }
+		bool IsEnumeration() const { return GetClass() == EnumerationTypeClass; }
+		bool IsPointer() const { return GetClass() == PointerTypeClass; }
+		bool IsArray() const { return GetClass() == ArrayTypeClass; }
+		bool IsFunction() const { return GetClass() == FunctionTypeClass; }
+		bool IsVarArgs() const { return GetClass() == VarArgsTypeClass; }
+		bool IsValue() const { return GetClass() == ValueTypeClass; }
+		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
+		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
+
+		Ref<Type> WithReplacedStructure(Structure* from, Structure* to);
+		Ref<Type> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
+		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
+	};
+
+	class TypeBuilder
+	{
+		BNTypeBuilder* m_object;
+
+	public:
+		TypeBuilder();
+		TypeBuilder(BNTypeBuilder* type);
+		TypeBuilder(const TypeBuilder& type);
+		TypeBuilder(TypeBuilder&& type);
+		TypeBuilder(Type* type);
+		TypeBuilder& operator=(const TypeBuilder& type);
+		TypeBuilder& operator=(TypeBuilder&& type);
+		TypeBuilder& operator=(Type* type);
+
+		Ref<Type> Finalize();
+
+		BNTypeClass GetClass() const;
+		uint64_t GetWidth() const;
+		size_t GetAlignment() const;
+		QualifiedName GetTypeName() const;
+		Confidence<bool> IsSigned() const;
+		Confidence<bool> IsConst() const;
+		Confidence<bool> IsVolatile() const;
+
+		Confidence<Ref<Type>> GetChildType() const;
+		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+		std::vector<FunctionParameter> GetParameters() const;
+		Confidence<bool> HasVariableArguments() const;
+		Confidence<bool> CanReturn() const;
+		Ref<Structure> GetStructure() const;
+		Ref<Enumeration> GetEnumeration() const;
+		Ref<NamedTypeReference> GetNamedTypeReference() const;
+		Confidence<BNMemberScope> GetScope() const;
+		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
+		Confidence<BNMemberAccess> GetAccess() const;
+		TypeBuilder& SetAccess(const Confidence<BNMemberAccess>& access);
+		TypeBuilder& SetConst(const Confidence<bool>& cnst);
+		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
+		TypeBuilder& SetTypeName(const QualifiedName& name);
+		Confidence<int64_t> GetStackAdjustment() const;
+		QualifiedName GetStructureName() const;
+
+		uint64_t GetElementCount() const;
+		uint64_t GetOffset() const;
+
+		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
+
+		std::string GetString(Platform* platform = nullptr) const;
+		std::string GetTypeAndName(const QualifiedName& name) const;
+		std::string GetStringBeforeName(Platform* platform = nullptr) const;
+		std::string GetStringAfterName(Platform* platform = nullptr) const;
+
+		std::vector<InstructionTextToken> GetTokens(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensBeforeName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensAfterName(Platform* platform = nullptr,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+
+		static TypeBuilder VoidType();
+		static TypeBuilder BoolType();
+		static TypeBuilder IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
+		static TypeBuilder FloatType(size_t width, const std::string& typeName = "");
+		static TypeBuilder StructureType(Structure* strct);
+		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
+		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
+		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);
+		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
+		static TypeBuilder PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static TypeBuilder PointerType(size_t width, const Confidence<Ref<Type>>& type,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static TypeBuilder ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
+		static TypeBuilder FunctionType(const Confidence<Ref<Type>>& returnValue,
+			const Confidence<Ref<CallingConvention>>& callingConvention,
+			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
+			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+
+		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
+		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
+		bool IsEnumReference() { return IsReferenceOfType(EnumNamedTypeClass); }
+		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
+		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
+		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+
+		bool IsVoid() const { return GetClass() == VoidTypeClass; }
+		bool IsBool() const { return GetClass() == BoolTypeClass; }
+		bool IsInteger() const { return GetClass() == IntegerTypeClass; }
+		bool IsFloat() const { return GetClass() == FloatTypeClass; }
+		bool IsStructure() const { return GetClass() == StructureTypeClass; }
+		bool IsEnumeration() const { return GetClass() == EnumerationTypeClass; }
+		bool IsPointer() const { return GetClass() == PointerTypeClass; }
+		bool IsArray() const { return GetClass() == ArrayTypeClass; }
+		bool IsFunction() const { return GetClass() == FunctionTypeClass; }
+		bool IsVarArgs() const { return GetClass() == VarArgsTypeClass; }
+		bool IsValue() const { return GetClass() == ValueTypeClass; }
+		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
+		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 	};
 
 	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
@@ -2508,11 +2669,8 @@ namespace BinaryNinja
 		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
 			const QualifiedName& name = QualifiedName());
 		BNNamedTypeReferenceClass GetTypeClass() const;
-		void SetTypeClass(BNNamedTypeReferenceClass cls);
 		std::string GetTypeId() const;
-		void SetTypeId(const std::string& id);
 		QualifiedName GetName() const;
-		void SetName(const QualifiedName& name);
 
 		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
 			const std::string& source, const QualifiedName& name);
@@ -2532,25 +2690,58 @@ namespace BinaryNinja
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	public:
-		Structure();
 		Structure(BNStructure* s);
-		Structure(BNStructureType type, bool packed = false);
 
 		std::vector<StructureMember> GetMembers() const;
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
-		void SetWidth(size_t width);
 		size_t GetAlignment() const;
-		void SetAlignment(size_t align);
 		bool IsPacked() const;
-		void SetPacked(bool packed);
 		bool IsUnion() const;
-		void SetStructureType(BNStructureType type);
 		BNStructureType GetStructureType() const;
-		void AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
-		void AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
-		void RemoveMember(size_t idx);
-		void ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
+
+		Ref<Structure> WithReplacedStructure(Structure* from, Structure* to);
+		Ref<Structure> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
+		Ref<Structure> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
+	};
+
+	class StructureBuilder
+	{
+		BNStructureBuilder* m_object;
+
+	public:
+		StructureBuilder();
+		StructureBuilder(BNStructureBuilder* s);
+		StructureBuilder(BNStructureType type, bool packed = false);
+		StructureBuilder(const StructureBuilder& s);
+		StructureBuilder(StructureBuilder&& s);
+		StructureBuilder(Structure* s);
+		~StructureBuilder();
+		StructureBuilder& operator=(const StructureBuilder& s);
+		StructureBuilder& operator=(StructureBuilder&& s);
+		StructureBuilder& operator=(Structure* s);
+
+		Ref<Structure> Finalize() const;
+
+		std::vector<StructureMember> GetMembers() const;
+		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
+		uint64_t GetWidth() const;
+		StructureBuilder& SetWidth(size_t width);
+		size_t GetAlignment() const;
+		StructureBuilder& SetAlignment(size_t align);
+		bool IsPacked() const;
+		StructureBuilder& SetPacked(bool packed);
+		bool IsUnion() const;
+		StructureBuilder& SetStructureType(BNStructureType type);
+		BNStructureType GetStructureType() const;
+		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
+		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
+		StructureBuilder& RemoveMember(size_t idx);
+		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
 	};
 
 	struct EnumerationMember
@@ -2563,15 +2754,34 @@ namespace BinaryNinja
 	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
 	public:
-		Enumeration();
 		Enumeration(BNEnumeration* e);
 
 		std::vector<EnumerationMember> GetMembers() const;
+	};
 
-		void AddMember(const std::string& name);
-		void AddMemberWithValue(const std::string& name, uint64_t value);
-		void RemoveMember(size_t idx);
-		void ReplaceMember(size_t idx, const std::string& name, uint64_t value);
+	class EnumerationBuilder
+	{
+		BNEnumerationBuilder* m_object;
+
+	public:
+		EnumerationBuilder();
+		EnumerationBuilder(BNEnumerationBuilder* e);
+		EnumerationBuilder(const EnumerationBuilder& e);
+		EnumerationBuilder(EnumerationBuilder&& e);
+		EnumerationBuilder(Enumeration* e);
+		~EnumerationBuilder();
+		EnumerationBuilder& operator=(const EnumerationBuilder& e);
+		EnumerationBuilder& operator=(EnumerationBuilder&& e);
+		EnumerationBuilder& operator=(Enumeration* e);
+
+		Ref<Enumeration> Finalize() const;
+
+		std::vector<EnumerationMember> GetMembers() const;
+
+		EnumerationBuilder& AddMember(const std::string& name);
+		EnumerationBuilder& AddMemberWithValue(const std::string& name, uint64_t value);
+		EnumerationBuilder& RemoveMember(size_t idx);
+		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
@@ -2588,6 +2798,8 @@ namespace BinaryNinja
 		void SetWidth(size_t width);
 		size_t GetMaximumSymbolWidth() const;
 		void SetMaximumSymbolWidth(size_t width);
+		size_t GetGutterWidth() const;
+		void SetGutterWidth(size_t width);
 	};
 
 	class Function;
@@ -2720,6 +2932,7 @@ namespace BinaryNinja
 
 	class FlowGraph;
 	class MediumLevelILFunction;
+	class HighLevelILFunction;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
@@ -2755,6 +2968,7 @@ namespace BinaryNinja
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
@@ -2769,6 +2983,7 @@ namespace BinaryNinja
 		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
+		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
 		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
@@ -2776,6 +2991,9 @@ namespace BinaryNinja
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
+		Ref<HighLevelILFunction> GetHighLevelIL() const;
+		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
@@ -2837,17 +3055,20 @@ namespace BinaryNinja
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
+		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
+		void SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
 			const std::map<uint32_t, Confidence<int32_t>>& adjust);
 		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
 			const Confidence<int32_t>& adjust);
 
+		Confidence<Ref<Type>> GetCallTypeAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int64_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
 		std::map<uint32_t, Confidence<int32_t>> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int32_t> GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack);
@@ -2878,6 +3099,7 @@ namespace BinaryNinja
 
 		std::vector<TagReference> GetAllTagReferences();
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
+		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetAddressTagReferences();
 		std::vector<Ref<Tag>> GetAddressTags(Architecture* arch, uint64_t addr);
@@ -2927,6 +3149,9 @@ namespace BinaryNinja
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
 
 		void RequestDebugReport(const std::string& name);
+
+		std::string GetGotoLabelName(uint64_t labelId);
+		void SetGotoLabelName(uint64_t labelId, const std::string& name);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor
@@ -3047,10 +3272,13 @@ namespace BinaryNinja
 		bool IsILGraph() const;
 		bool IsLowLevelILGraph() const;
 		bool IsMediumLevelILGraph() const;
+		bool IsHighLevelILGraph() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 		void SetLowLevelILFunction(LowLevelILFunction* func);
 		void SetMediumLevelILFunction(MediumLevelILFunction* func);
+		void SetHighLevelILFunction(HighLevelILFunction* func);
 
 		void Show(const std::string& title);
 
@@ -3092,6 +3320,11 @@ namespace BinaryNinja
 		}
 
 		ILSourceLocation(const BNMediumLevelILInstruction& instr):
+			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
+		{
+		}
+
+		ILSourceLocation(const BNHighLevelILInstruction& instr):
 			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
 		{
 		}
@@ -3258,7 +3491,7 @@ namespace BinaryNinja
 		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId JumpTo(ExprId dest, const std::vector<BNLowLevelILLabel*>& targets,
+		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNLowLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
@@ -3352,7 +3585,7 @@ namespace BinaryNinja
 		void MarkLabel(BNLowLevelILLabel& label);
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
-		ExprId AddLabelList(const std::vector<BNLowLevelILLabel*>& labels);
+		ExprId AddLabelMap(const std::map<uint64_t, BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t> operands);
 		ExprId AddRegisterOrFlagList(const std::vector<RegisterOrFlag>& regs);
@@ -3415,21 +3648,29 @@ namespace BinaryNinja
 
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const LowLevelILInstruction& expr);
-		PossibleValueSet GetPossibleExprValues(size_t expr);
-		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr);
+		PossibleValueSet GetPossibleExprValues(size_t expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
@@ -3582,7 +3823,7 @@ namespace BinaryNinja
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId JumpTo(ExprId dest, const std::vector<BNMediumLevelILLabel*>& targets,
+		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNMediumLevelILLabel*>& targets,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
@@ -3687,7 +3928,7 @@ namespace BinaryNinja
 		ExprId AddInstruction(ExprId expr);
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
-		ExprId AddLabelList(const std::vector<BNMediumLevelILLabel*>& labels);
+		ExprId AddLabelMap(const std::map<uint64_t, BNMediumLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t>& operands);
 		ExprId AddVariableList(const std::vector<Variable>& vars);
@@ -3741,9 +3982,12 @@ namespace BinaryNinja
 		RegisterValue GetSSAVarValue(const SSAVariable& var);
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const MediumLevelILInstruction& expr);
-		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr);
-		PossibleValueSet GetPossibleExprValues(size_t expr);
-		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr);
+		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(size_t expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
 		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
@@ -3753,16 +3997,22 @@ namespace BinaryNinja
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
 		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;
@@ -3777,6 +4027,270 @@ namespace BinaryNinja
 		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
+	};
+
+	struct HighLevelILInstruction;
+
+	class HighLevelILFunction: public CoreRefCountObject<BNHighLevelILFunction,
+		BNNewHighLevelILFunctionReference, BNFreeHighLevelILFunction>
+	{
+	public:
+		HighLevelILFunction(Architecture* arch, Function* func = nullptr);
+		HighLevelILFunction(BNHighLevelILFunction* func);
+
+		Ref<Function> GetFunction() const;
+		Ref<Architecture> GetArchitecture() const;
+
+		uint64_t GetCurrentAddress() const;
+		void SetCurrentAddress(Architecture* arch, uint64_t addr);
+
+		HighLevelILInstruction GetRootExpr();
+		void SetRootExpr(ExprId expr);
+		void SetRootExpr(const HighLevelILInstruction& expr);
+
+		ExprId AddExpr(BNHighLevelILOperation operation, size_t size,
+			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
+			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, const ILSourceLocation& loc,
+			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+
+		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Block(const std::vector<ExprId>& exprs, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId If(ExprId condition, ExprId trueExpr, ExprId falseExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId While(ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId WhileSSA(ExprId conditionPhi, ExprId condition, ExprId loopExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhileSSA(ExprId loopExpr, ExprId conditionPhi, ExprId condition,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr,
+			ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Case(const std::vector<ExprId>& condition, ExprId expr,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Break(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Continue(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Goto(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Label(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInit(size_t size, const Variable& dest, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInitSSA(size_t size, const SSAVariable& dest, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpack(const std::vector<ExprId>& output, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignMemSSA(size_t size, ExprId dest, size_t destMemVersion, ExprId src, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
+			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemPhi(size_t dest, const std::vector<size_t>& sources,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefSSA(size_t size, ExprId src, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset, size_t memberIndex,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Sub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SubWithBorrow(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId And(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Or(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Xor(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ShiftLeft(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LogicalShiftRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArithShiftRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeft(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRight(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Call(ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(ExprId dest, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareNotEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterThan(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TestBit(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddOverflow(size_t size, ExprId left, ExprId right,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(uint32_t intrinsic, const std::vector<ExprId>& params,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(uint32_t intrinsic, const std::vector<ExprId>& params, size_t destMemVersion,
+			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Floor(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Ceil(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+
+		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		ExprId AddOperandList(const std::vector<ExprId>& operands);
+		ExprId AddIndexList(const std::vector<size_t>& operands);
+		ExprId AddSSAVariableList(const std::vector<SSAVariable>& vars);
+
+		BNHighLevelILInstruction GetRawExpr(size_t i) const;
+		BNHighLevelILInstruction GetRawNonASTExpr(size_t i) const;
+		HighLevelILInstruction operator[](size_t i);
+		HighLevelILInstruction GetInstruction(size_t i);
+		HighLevelILInstruction GetExpr(size_t i, bool asFullAst = true);
+		size_t GetIndexForInstruction(size_t i) const;
+		size_t GetInstructionForExpr(size_t expr) const;
+		size_t GetInstructionCount() const;
+		size_t GetExprCount() const;
+
+		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		Ref<BasicBlock> GetBasicBlockForInstruction(size_t i) const;
+
+		Ref<HighLevelILFunction> GetSSAForm() const;
+		Ref<HighLevelILFunction> GetNonSSAForm() const;
+		size_t GetSSAInstructionIndex(size_t instr) const;
+		size_t GetNonSSAInstructionIndex(size_t instr) const;
+		size_t GetSSAExprIndex(size_t instr) const;
+		size_t GetNonSSAExprIndex(size_t instr) const;
+
+		size_t GetSSAVarDefinition(const SSAVariable& var) const;
+		size_t GetSSAMemoryDefinition(size_t version) const;
+		std::set<size_t> GetSSAVarUses(const SSAVariable& var) const;
+		std::set<size_t> GetSSAMemoryUses(size_t version) const;
+		bool IsSSAVarLive(const SSAVariable& var) const;
+
+		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
+		std::set<size_t> GetVariableUses(const Variable& var) const;
+		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
+		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
+
+		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+		size_t GetMediumLevelILExprIndex(size_t expr) const;
+
+		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
+		void ReplaceExpr(size_t expr, size_t newExpr);
+
+		void Finalize();
+
+		std::vector<DisassemblyTextLine> GetExprText(ExprId expr, bool asFullAst = true);
+		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr, bool asFullAst = true);
+
+		Confidence<Ref<Type>> GetExprType(size_t expr);
+		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);
+
+		void VisitAllExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func);
+
+		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
+
+		size_t GetExprIndexForLabel(uint64_t label);
+		std::set<size_t> GetUsesForLabel(uint64_t label);
 	};
 
 	class FunctionRecognizer
@@ -4145,7 +4659,7 @@ namespace BinaryNinja
 		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetVariableByName(const QualifiedName& name);
-		Ref<Type> GetFunctionByName(const QualifiedName& name);
+		Ref<Type> GetFunctionByName(const QualifiedName& name, bool exactMatch = false);
 		std::string GetSystemCallName(uint32_t n);
 		Ref<Type> GetSystemCallType(uint32_t n);
 
@@ -4471,7 +4985,7 @@ namespace BinaryNinja
 		std::string GetRepository() const;
 		std::string GetProjectData();
 		std::string GetInstallInstructions(const std::string& platform) const;
-		uint64_t GetMinimimVersion() const;
+		uint64_t GetMinimumVersion() const;
 		uint64_t GetLastUpdate();
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
@@ -4571,6 +5085,7 @@ namespace BinaryNinja
 		bool Set(const std::string& key, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
@@ -4652,20 +5167,20 @@ namespace BinaryNinja
 	class DataRenderer: public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
 	{
 		static bool IsValidForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			BNType** typeCtx, size_t ctxCount);
+			BNTypeContext* typeCtx, size_t ctxCount);
 		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNType** typeCxt,
+			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCxt,
 			size_t ctxCount);
 		static void FreeCallback(void* ctxt);
 	public:
 		DataRenderer();
 		DataRenderer(BNDataRenderer* renderer);
-		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<Type*>& context);
+		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<std::pair<Type*, size_t>>& context);
 		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
-			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<Type*>& context);
+			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
 
-		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<Type*>& context);
-		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<Type*>& context);
+		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);
+		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);
 	};
 
 	class DataRendererContainer
@@ -4687,6 +5202,7 @@ namespace BinaryNinja
 		Ref<Function> GetFunction() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 
 		Ref<BasicBlock> GetBasicBlock() const;
 		Ref<Architecture> GetArchitecture() const;
@@ -4701,7 +5217,7 @@ namespace BinaryNinja
 		virtual void GetInstructionAnnotations(std::vector<InstructionTextToken>& tokens, uint64_t addr);
 		virtual bool GetInstructionText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		std::vector<DisassemblyTextLine> PostProcessInstructionTextLines(uint64_t addr,
-			size_t len, const std::vector<DisassemblyTextLine>& lines);
+			size_t len, const std::vector<DisassemblyTextLine>& lines, const std::string& indentSpaces = "");
 
 		virtual bool GetDisassemblyText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		void ResetDeduplicatedComments();
@@ -4718,6 +5234,94 @@ namespace BinaryNinja
 			std::vector<DisassemblyTextLine>& lines,
 			const std::string& comment,
 			bool hasAutoAnnotations,
-			const std::string& leadingSpaces="  ");
+			const std::string& leadingSpaces="  ",
+			const std::string& indentSpaces="");
+		static std::string GetDisplayStringForInteger(Ref<BinaryView> binaryView, BNIntegerDisplayType type, uint64_t value, size_t inputWidth);
+	};
+
+	struct LinearViewObjectIdentifier
+	{
+		std::string name;
+		BNLinearViewObjectIdentifierType type;
+		uint64_t start, end;
+
+		LinearViewObjectIdentifier();
+		LinearViewObjectIdentifier(const std::string& name);
+		LinearViewObjectIdentifier(const std::string& name, uint64_t addr);
+		LinearViewObjectIdentifier(const std::string& name, uint64_t start, uint64_t end);
+		LinearViewObjectIdentifier(const LinearViewObjectIdentifier& other);
+	};
+
+	class LinearViewObject: public CoreRefCountObject<BNLinearViewObject,
+		BNNewLinearViewObjectReference, BNFreeLinearViewObject>
+	{
+	public:
+		LinearViewObject(BNLinearViewObject* obj);
+
+		Ref<LinearViewObject> GetFirstChild();
+		Ref<LinearViewObject> GetLastChild();
+		Ref<LinearViewObject> GetPreviousChild(LinearViewObject* obj);
+		Ref<LinearViewObject> GetNextChild(LinearViewObject* obj);
+
+		Ref<LinearViewObject> GetChildForAddress(uint64_t addr);
+		Ref<LinearViewObject> GetChildForIdentifier(const LinearViewObjectIdentifier& id);
+		int CompareChildren(LinearViewObject* a, LinearViewObject* b);
+
+		std::vector<LinearDisassemblyLine> GetLines(LinearViewObject* prev, LinearViewObject* next);
+
+		uint64_t GetStart() const;
+		uint64_t GetEnd() const;
+
+		LinearViewObjectIdentifier GetIdentifier() const;
+
+		uint64_t GetOrderingIndexTotal() const;
+		uint64_t GetOrderingIndexForChild(LinearViewObject* obj) const;
+		Ref<LinearViewObject> GetChildForOrderingIndex(uint64_t idx);
+
+		static Ref<LinearViewObject> CreateDisassembly(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLiftedIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLowLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLowLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+	};
+
+	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,
+		BNNewLinearViewCursorReference, BNFreeLinearViewCursor>
+	{
+	public:
+		LinearViewCursor(LinearViewObject* root);
+		LinearViewCursor(BNLinearViewCursor* cursor);
+
+		bool IsBeforeBegin() const;
+		bool IsAfterEnd() const;
+		bool IsValid() const;
+
+		Ref<LinearViewObject> GetCurrentObject() const;
+		std::vector<LinearViewObjectIdentifier> GetPath() const;
+		std::vector<Ref<LinearViewObject>> GetPathObjects() const;
+		BNAddressRange GetOrderingIndex() const;
+		uint64_t GetOrderingIndexTotal() const;
+
+		void SeekToBegin();
+		void SeekToEnd();
+		void SeekToAddress(uint64_t addr);
+		bool SeekToPath(const std::vector<LinearViewObjectIdentifier>& path);
+		bool SeekToPath(const std::vector<LinearViewObjectIdentifier>& path, uint64_t addr);
+		bool SeekToPath(LinearViewCursor* cursor);
+		bool SeekToPath(LinearViewCursor* cursor, uint64_t addr);
+		void SeekToOrderingIndex(uint64_t idx);
+		bool Next();
+		bool Previous();
+
+		std::vector<LinearDisassemblyLine> GetLines();
+
+		Ref<LinearViewCursor> Duplicate();
+
+		static int Compare(LinearViewCursor* a, LinearViewCursor* b);
 	};
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -66,113 +66,6 @@ NavigationHandler::NavigationHandler()
 	m_callbacks.getCurrentView = GetCurrentViewCallback;
 	m_callbacks.getCurrentOffset = GetCurrentOffsetCallback;
 	m_callbacks.navigate = NavigateCallback;
-}
-
-
-void UndoAction::FreeCallback(void* ctxt)
-{
-	UndoAction* action = (UndoAction*)ctxt;
-	delete action;
-}
-
-
-void UndoAction::UndoCallback(void* ctxt, BNBinaryView* data)
-{
-	UndoAction* action = (UndoAction*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	action->Undo(view);
-}
-
-
-void UndoAction::RedoCallback(void* ctxt, BNBinaryView* data)
-{
-	UndoAction* action = (UndoAction*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	action->Redo(view);
-}
-
-
-char* UndoAction::SerializeCallback(void* ctxt)
-{
-	try
-	{
-		UndoAction* action = (UndoAction*)ctxt;
-		Value data = action->Serialize();
-		Json::StreamWriterBuilder builder;
-		builder["indentation"] = "";
-		string json = Json::writeString(builder, data);
-		return BNAllocString(json.c_str());
-	}
-	catch (exception& e)
-	{
-		LogError("Undo action failed to serialize: %s", e.what());
-		return nullptr;
-	}
-}
-
-
-UndoAction::UndoAction(const string& name, BNActionType action): m_typeName(name), m_actionType(action)
-{
-}
-
-
-BNUndoAction UndoAction::GetCallbacks()
-{
-	BNUndoAction action;
-	action.type = m_actionType;
-	action.context = this;
-	action.freeObject = FreeCallback;
-	action.undo = UndoCallback;
-	action.redo = RedoCallback;
-	action.serialize = SerializeCallback;
-	return action;
-}
-
-
-void UndoAction::Add(BNBinaryView* view)
-{
-	BNUndoAction action = GetCallbacks();
-	BNAddUndoAction(view, m_typeName.c_str(), &action);
-}
-
-
-bool UndoActionType::DeserializeCallback(void* ctxt, const char* data, BNUndoAction* result)
-{
-	try
-	{
-		UndoActionType* type = (UndoActionType*)ctxt;
-		unique_ptr<CharReader> reader(CharReaderBuilder().newCharReader());
-		Value val;
-		string errors;
-		if (!reader->parse(data, data + strlen(data), &val, &errors))
-		{
-			LogError("Invalid JSON while deserializing undo action");
-			return false;
-		}
-
-		UndoAction* action = type->Deserialize(val);
-		if (!action)
-			return false;
-
-		*result = action->GetCallbacks();
-		return true;
-	}
-	catch (exception& e)
-	{
-		LogError("Error while deserializing undo action: %s", e.what());
-		return false;
-	}
-}
-
-
-UndoActionType::UndoActionType(const string& name): m_nameForRegister(name)
-{
-}
-
-
-void UndoActionType::Register(UndoActionType* type)
-{
-	BNRegisterUndoActionType(type->m_nameForRegister.c_str(), type, DeserializeCallback);
 }
 
 
@@ -270,18 +163,18 @@ bool FileMetadata::IsBackedByDatabase() const
 }
 
 
-bool FileMetadata::CreateDatabase(const string& name, BinaryView* data)
+bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, bool clean)
 {
-	return BNCreateDatabase(data->GetObject(), name.c_str());
+	return BNCreateDatabase(data->GetObject(), name.c_str(), clean);
 }
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback);
+	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, clean);
 }
 
 
@@ -306,18 +199,60 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path,
 }
 
 
-bool FileMetadata::SaveAutoSnapshot(BinaryView* data)
+Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 {
-	return BNSaveAutoSnapshot(data->GetObject());
+	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, path.c_str());
+	if (!data)
+		return nullptr;
+	return new BinaryView(data);
+}
+
+
+bool FileMetadata::SaveAutoSnapshot(BinaryView* data, bool clean)
+{
+	return BNSaveAutoSnapshot(data->GetObject(), clean);
 }
 
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback);
+	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback, clean);
+}
+
+
+bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
+{
+	return BNRebase(data->GetObject(), address);
+}
+
+
+bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progressCallback;
+	return BNRebaseWithProgress(data->GetObject(), address, &cb, DatabaseProgressCallback);
+}
+
+
+MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress, std::vector<string> excludedHashes)
+{
+	size_t numHashes = excludedHashes.size();
+	char** tempList = new char*[numHashes];
+	for (size_t i = 0; i < numHashes; i++)
+	{
+		tempList[i] = BNAllocString(excludedHashes[i].c_str());
+	}
+
+	DatabaseProgressCallbackContext cb;
+	cb.func = progress;
+
+	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback, tempList, numHashes);
+	//BNFreeStringList(hashList, numHashes);
+	MergeResult result(bnResult);
+	return result;
 }
 
 
@@ -342,6 +277,46 @@ bool FileMetadata::Undo()
 bool FileMetadata::Redo()
 {
 	return BNRedo(m_object);
+}
+
+vector<Ref<User>> FileMetadata::GetUsers()
+{
+	size_t count;
+	BNUser** users = BNGetUsers(m_object, &count);
+
+	vector<Ref<User>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new User(BNNewUserReference(users[i])));
+
+	BNFreeUserList(users, count);
+	return result;
+}
+
+
+vector<UndoEntry> FileMetadata::GetUndoEntries()
+{
+	size_t numEntries;
+	BNUndoEntry* entries = BNGetUndoEntries(m_object, &numEntries);
+
+	vector<UndoEntry> result;
+	result.reserve(numEntries);
+	for (size_t i = 0; i < numEntries; i++)
+	{
+		UndoEntry temp;
+		temp.timestamp = entries[i].timestamp;
+		temp.hash = entries[i].hash;
+		temp.user = new User(BNNewUserReference(entries[i].user));
+		size_t actionCount = entries[i].actionCount;
+		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
+		{
+			temp.actions.emplace_back(entries[i].actions[actionIndex]);
+		}
+		result.push_back(temp);
+	}
+
+	//BNFreeUndoEntries(entries, count);
+	return result;
 }
 
 

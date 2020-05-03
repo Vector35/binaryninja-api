@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -40,6 +40,7 @@ from binaryninja import range
 
 class DownloadInstance(object):
 	_registered_instances = []
+	_response = b""
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNDownloadInstanceCallbacks()
@@ -79,6 +80,23 @@ class DownloadInstance(object):
 	def perform_request(self, ctxt, url):
 		raise NotImplementedError
 
+	def _write_callback(self, data, len, ctxt):
+		try:
+			str_ptr = ctypes.cast(data, ctypes.c_char_p)
+			str_bytes = str_ptr.value
+			self._response = self._response + str_bytes
+			return len
+		except:
+			log.log_error(traceback.format_exc())
+
+	def get_response(self, url):
+		callbacks = core.BNDownloadInstanceOutputCallbacks()
+		callbacks.writeCallback = callbacks.writeCallback.__class__(self._write_callback)
+		callbacks.writeContext = 0
+		callbacks.progressContext = 0
+		self._response = b""
+		result = core.BNPerformDownloadRequest(self.handle, url, callbacks)
+		return (result, self._response)
 
 class _DownloadProviderMetaclass(type):
 	@property
@@ -196,6 +214,7 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 
 			except URLError as e:
 				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+				log.log_error(str(e))
 				return -1
 			except:
 				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
@@ -214,6 +233,40 @@ else:
 		import requests
 		if sys.platform != "win32":
 			from requests import pyopenssl
+		elif core.BNIsUIEnabled():
+			try:
+				# since requests will use urllib behind the scenes, which will use
+				# the openssl statically linked into _ssl.pyd, the first connection made
+				# will attempt to walk the entire process heap on windows using Heap32First
+				# and Heap32Next, which is O(n^2) in heap allocations. by doing this now,
+				# earlier and before threads are started, hopefully we dodge some of the impact.
+				# this should also help with some issues where when Heap32First fails to walk the
+				# heap and causes an exception, and because openssl 1.0.2q's RAND_poll implementation
+				# wraps this all in a __try block and silently eats said exception, when the windows
+				# segment heap is explicitly turned on this leaves the heap in a locked state resulting
+				# in process deadlock as other threads attempt to allocate or free memory.
+				#
+				# as an additional *delightful* addendum, it turns out that when the windows segment
+				# heap is manually flipped on, Heap32First/Heap32Next being called while another
+				# thread is interacting with the allocator can deadlock (or outright crash) the entire
+				# process.
+				#
+				# considering that this can be reproduced in a 60 line C file that mallocs/frees in a loop
+				# while another thread just runs the toolhelp example code from msdn, this is probably
+				# a windows bug. if it's not, then it's an openssl bug. ugh.
+				#
+				# radioactive superfund site workaround follows:
+				# RAND_status should cause the broken openssl code to run before too many threads are
+				# started in the UI case. this drastically reduces the repro rate in the interim. it still
+				# happens occasionally; threads spawned by the intel graphics drivers seem to still get hit here,
+				# but only ~1/2 the time. on machines i've interacted with personally, this drops repro rate to 0%.
+				#
+				# TODO FIXME remove asap when windows patch/hotfix (hopefully) gets released
+				import _ssl
+				_ssl.RAND_status()
+			except:
+				pass
+
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):
 				super(PythonDownloadInstance, self).__init__(provider)

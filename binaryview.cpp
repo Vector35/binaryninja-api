@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -122,6 +122,39 @@ void BinaryDataNotification::DataMetadataUpdatedCallback(void* ctxt, BNBinaryVie
 }
 
 
+void BinaryDataNotification::TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	Ref<TagType> tagTypeRef = new TagType(BNNewTagTypeReference(tagType));
+	notify->OnTagTypeUpdated(view, tagTypeRef);
+}
+
+
+void BinaryDataNotification::TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagAdded(view, TagReference(*tagRef));
+}
+
+
+void BinaryDataNotification::TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagUpdated(view, TagReference(*tagRef));
+}
+
+
+void BinaryDataNotification::TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	notify->OnTagRemoved(view, TagReference(*tagRef));
+}
+
+
 void BinaryDataNotification::SymbolAddedCallback(void* ctxt, BNBinaryView* object, BNSymbol* symobj)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -197,6 +230,10 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.dataVariableRemoved = DataVariableRemovedCallback;
 	m_callbacks.dataVariableUpdated = DataVariableUpdatedCallback;
 	m_callbacks.dataMetadataUpdated = DataMetadataUpdatedCallback;
+	m_callbacks.tagTypeUpdated = TagTypeUpdatedCallback;
+	m_callbacks.tagAdded = TagAddedCallback;
+	m_callbacks.tagUpdated = TagUpdatedCallback;
+	m_callbacks.tagRemoved = TagRemovedCallback;
 	m_callbacks.symbolAdded = SymbolAddedCallback;
 	m_callbacks.symbolUpdated = SymbolUpdatedCallback;
 	m_callbacks.symbolRemoved = SymbolRemovedCallback;
@@ -372,7 +409,10 @@ BinaryView* TagType::GetView() const
 
 std::string TagType::GetName() const
 {
-	return BNTagTypeGetName(m_object);
+	char* str = BNTagTypeGetName(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -508,6 +548,8 @@ bool TagReference::operator==(const TagReference& other) const
 			return func == other.func;
 		case DataTagReference:
 			return addr == other.addr;
+		default:
+			return false;
 	}
 }
 
@@ -686,13 +728,19 @@ Section::Section(BNSection* sec)
 
 std::string Section::GetName() const
 {
-	return BNSectionGetName(m_object);
+	char* str = BNSectionGetName(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
 std::string Section::GetType() const
 {
-	return BNSectionGetType(m_object);
+	char* str = BNSectionGetType(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -1078,46 +1126,40 @@ bool BinaryView::IsBackedByDatabase() const
 }
 
 
-bool BinaryView::CreateDatabase(const string& path)
+bool BinaryView::CreateDatabase(const string& path, bool clean)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path);
-	return m_file->CreateDatabase(path, this);
+		return parent->CreateDatabase(path, clean);
+	return m_file->CreateDatabase(path, this, clean);
 }
 
 
 bool BinaryView::CreateDatabase(const string& path,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path);
-	return m_file->CreateDatabase(path, this, progressCallback);
+		return parent->CreateDatabase(path, clean);
+	return m_file->CreateDatabase(path, this, progressCallback, clean);
 }
 
 
-bool BinaryView::SaveAutoSnapshot()
+bool BinaryView::SaveAutoSnapshot(bool clean)
 {
-	return m_file->SaveAutoSnapshot(this);
+	return m_file->SaveAutoSnapshot(this, clean);
 }
 
 
-bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback)
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
 {
-	return m_file->SaveAutoSnapshot(this, progressCallback);
+	return m_file->SaveAutoSnapshot(this, progressCallback, clean);
 }
 
 
 void BinaryView::BeginUndoActions()
 {
 	m_file->BeginUndoActions();
-}
-
-
-void BinaryView::AddUndoAction(UndoAction* action)
-{
-	action->Add(m_object);
 }
 
 
@@ -2047,15 +2089,15 @@ std::vector<Ref<TagType>> BinaryView::GetTagTypes()
 }
 
 
-void BinaryView::AddTag(Ref<Tag> tag)
+void BinaryView::AddTag(Ref<Tag> tag, bool user)
 {
-	BNAddTag(m_object, tag->GetObject());
+	BNAddTag(m_object, tag->GetObject(), user);
 }
 
 
-void BinaryView::RemoveTag(Ref<Tag> tag)
+void BinaryView::RemoveTag(Ref<Tag> tag, bool user)
 {
-	BNRemoveTag(m_object, tag->GetObject());
+	BNRemoveTag(m_object, tag->GetObject(), user);
 }
 
 
@@ -2106,6 +2148,18 @@ std::vector<TagReference> BinaryView::GetTagReferencesOfType(Ref<TagType> tagTyp
 	size_t count;
 	BNTagReference* refs = BNGetTagReferencesOfType(m_object, tagType->GetObject(), &count);
 	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+size_t BinaryView::GetAllTagReferencesOfTypeCount(Ref<TagType> tagType)
+{
+	return BNGetAllTagReferencesOfTypeCount(m_object, tagType->GetObject());
+}
+
+
+size_t BinaryView::GetTagReferencesOfTypeCount(Ref<TagType> tagType)
+{
+	return BNGetTagReferencesOfTypeCount(m_object, tagType->GetObject());
 }
 
 
@@ -2389,96 +2443,6 @@ uint64_t BinaryView::GetPreviousDataBeforeAddress(uint64_t addr)
 uint64_t BinaryView::GetPreviousDataVariableStartBeforeAddress(uint64_t addr)
 {
 	return BNGetPreviousDataVariableStartBeforeAddress(m_object, addr);
-}
-
-
-LinearDisassemblyPosition BinaryView::GetLinearDisassemblyPositionForAddress(uint64_t addr,
-	DisassemblySettings* settings)
-{
-	BNLinearDisassemblyPosition pos = BNGetLinearDisassemblyPositionForAddress(m_object, addr,
-		settings ? settings->GetObject() : nullptr);
-
-	LinearDisassemblyPosition result;
-	result.function = pos.function ? new Function(pos.function) : nullptr;
-	result.block = pos.block ? new BasicBlock(pos.block) : nullptr;
-	result.address = pos.address;
-	return result;
-}
-
-
-vector<LinearDisassemblyLine> BinaryView::GetPreviousLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-	DisassemblySettings* settings)
-{
-	BNLinearDisassemblyPosition linearPos;
-	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
-	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
-	linearPos.address = pos.address;
-
-	size_t count;
-	BNLinearDisassemblyLine* lines = BNGetPreviousLinearDisassemblyLines(m_object, &linearPos,
-		settings ? settings->GetObject() : nullptr, &count);
-
-	vector<LinearDisassemblyLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		LinearDisassemblyLine line;
-		line.type = lines[i].type;
-		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
-		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.lineOffset = lines[i].lineOffset;
-		line.contents.addr = lines[i].contents.addr;
-		line.contents.instrIndex = lines[i].contents.instrIndex;
-		line.contents.highlight = lines[i].contents.highlight;
-		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
-		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
-		result.push_back(line);
-	}
-
-	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
-	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
-	pos.address = linearPos.address;
-
-	BNFreeLinearDisassemblyLines(lines, count);
-	return result;
-}
-
-
-vector<LinearDisassemblyLine> BinaryView::GetNextLinearDisassemblyLines(LinearDisassemblyPosition& pos,
-	DisassemblySettings* settings)
-{
-	BNLinearDisassemblyPosition linearPos;
-	linearPos.function = pos.function ? BNNewFunctionReference(pos.function->GetObject()) : nullptr;
-	linearPos.block = pos.block ? BNNewBasicBlockReference(pos.block->GetObject()) : nullptr;
-	linearPos.address = pos.address;
-
-	size_t count;
-	BNLinearDisassemblyLine* lines = BNGetNextLinearDisassemblyLines(m_object, &linearPos,
-		settings ? settings->GetObject() : nullptr, &count);
-
-	vector<LinearDisassemblyLine> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		LinearDisassemblyLine line;
-		line.type = lines[i].type;
-		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
-		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.lineOffset = lines[i].lineOffset;
-		line.contents.addr = lines[i].contents.addr;
-		line.contents.instrIndex = lines[i].contents.instrIndex;
-		line.contents.highlight = lines[i].contents.highlight;
-		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
-		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
-		result.push_back(line);
-	}
-
-	pos.function = linearPos.function ? new Function(linearPos.function) : nullptr;
-	pos.block = linearPos.block ? new BasicBlock(linearPos.block) : nullptr;
-	pos.address = linearPos.address;
-
-	BNFreeLinearDisassemblyLines(lines, count);
-	return result;
 }
 
 
@@ -2991,6 +2955,20 @@ uint64_t BinaryView::GetUIntMetadata(const string& key)
 	if (!data || !data->IsUnsignedInteger())
 		throw QueryMetadataException("Failed to find key: " + key);
 	return data->GetUnsignedInteger();
+}
+
+
+vector<string> BinaryView::GetLoadSettingsTypeNames()
+{
+	size_t count = 0;
+	char** outgoingNames = BNBinaryViewGetLoadSettingsTypeNames(m_object, &count);
+	vector<string> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(outgoingNames[i]);
+
+	BNFreeStringList(outgoingNames, count);
+	return result;
 }
 
 

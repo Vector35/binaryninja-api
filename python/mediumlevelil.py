@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Vector 35 Inc
+# Copyright (c) 2018-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -24,7 +24,7 @@ import struct
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence
+from binaryninja.enums import MediumLevelILOperation, InstructionTextTokenType, ILBranchDependence, DataFlowQueryOption
 from binaryninja import basicblock #required for MediumLevelILBasicBlock argument
 from binaryninja import function
 from binaryninja import types
@@ -107,18 +107,10 @@ class MediumLevelILOperationAndSize(object):
 		""" """
 		return self._operation
 
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
-
 	@property
 	def size(self):
 		""" """
 		return self._size
-
-	@size.setter
-	def size(self, value):
-		self._size = value
 
 
 class MediumLevelILInstruction(object):
@@ -178,7 +170,7 @@ class MediumLevelILInstruction(object):
 		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
 		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
 		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
-		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
 		MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")],
 		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 		MediumLevelILOperation.MLIL_CALL_UNTYPED: [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
@@ -343,6 +335,16 @@ class MediumLevelILInstruction(object):
 				for j in range(count.value):
 					value.append(MediumLevelILInstruction(func, operand_list[j]))
 				core.BNMediumLevelILFreeOperandList(operand_list)
+			elif operand_type == "target_map":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNMediumLevelILGetOperandList(func.handle, self._expr_index, i, count)
+				i += 1
+				value = {}
+				for j in range(count.value // 2):
+					key = operand_list[j * 2]
+					target = operand_list[(j * 2) + 1]
+					value[key] = target
+				core.BNMediumLevelILFreeOperandList(operand_list)
 			self._operands.append(value)
 			self.__dict__[name] = value
 			i += 1
@@ -432,7 +434,7 @@ class MediumLevelILInstruction(object):
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index)
+		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index, None, 0)
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -553,12 +555,29 @@ class MediumLevelILInstruction(object):
 			return types.Type(result.type, platform = platform, confidence = result.confidence)
 		return None
 
-	def get_ssa_var_possible_values(self, ssa_var):
+	def get_possible_values(self, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleExprValues(self._function.handle, self._expr_index, option_array, len(options))
+		result = function.PossibleValueSet(self._function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
+	def get_ssa_var_possible_values(self, ssa_var, options = []):
 		var_data = core.BNVariable()
 		var_data.type = ssa_var.var.source_type
 		var_data.index = ssa_var.var.index
 		var_data.storage = ssa_var.var.storage
-		value = core.BNGetMediumLevelILPossibleSSAVarValues(self._function.handle, var_data, ssa_var.version, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleSSAVarValues(self._function.handle, var_data, ssa_var.version,
+			self._instr_index, option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -596,16 +615,28 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_reg_values(self, reg):
+	def get_possible_reg_values(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg):
+	def get_possible_reg_values_after(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -622,16 +653,28 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_flag_values(self, flag):
+	def get_possible_flag_values(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag):
+	def get_possible_flag_values_after(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -646,14 +689,26 @@ class MediumLevelILInstruction(object):
 		result = function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_stack_contents(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset, size):
-		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents_after(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -672,72 +727,40 @@ class MediumLevelILInstruction(object):
 		""" """
 		return self._function
 
-	@function.setter
-	def function(self, value):
-		self._function = value
-
 	@property
 	def expr_index(self):
 		""" """
 		return self._expr_index
-
-	@expr_index.setter
-	def expr_index(self, value):
-		self._expr_index = value
 
 	@property
 	def instr_index(self):
 		""" """
 		return self._instr_index
 
-	@instr_index.setter
-	def instr_index(self, value):
-		self._instr_index = value
-
 	@property
 	def operation(self):
 		""" """
 		return self._operation
-
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
 
 	@property
 	def size(self):
 		""" """
 		return self._size
 
-	@size.setter
-	def size(self, value):
-		self._size = value
-
 	@property
 	def address(self):
 		""" """
 		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
 
 	@property
 	def source_operand(self):
 		""" """
 		return self._source_operand
 
-	@source_operand.setter
-	def source_operand(self, value):
-		self._source_operand = value
-
 	@property
 	def operands(self):
 		""" """
 		return self._operands
-
-	@operands.setter
-	def operands(self, value):
-		self._operands = value
 
 
 class MediumLevelILExpr(object):
@@ -800,6 +823,13 @@ class MediumLevelILFunction(object):
 		if not isinstance(value, MediumLevelILFunction):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def __repr__(self):
+		arch = self.source_function.arch
+		if arch:
+			return "<mlil func: %s@%#x>" % (arch.name, self.source_function.start)
+		else:
+			return "<mlil func: %#x>" % self.source_function.start
 
 	@property
 	def current_address(self):
@@ -882,8 +912,10 @@ class MediumLevelILFunction(object):
 		# for backwards compatibility
 		if isinstance(i, MediumLevelILInstruction):
 			return i
-		if (i < 0) or (i >= len(self)):
+		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
 		return MediumLevelILInstruction(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
 
 	def __setitem__(self, i, j):
@@ -962,7 +994,8 @@ class MediumLevelILFunction(object):
 		"""
 		``add_label_list`` returns a label list expression for the given list of MediumLevelILLabel objects.
 
-		:param list(MediumLevelILLabel) labels: the list of MediumLevelILLabel to get a label list expression from
+		:param labels: the list of MediumLevelILLabel to get a label list expression from
+		:type labels: list(MediumLevelILLabel)
 		:return: the label list expression
 		:rtype: MediumLevelILExpr
 		"""
@@ -975,7 +1008,8 @@ class MediumLevelILFunction(object):
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
-		:param list(int) operands: list of operand numbers
+		:param operands: list of operand numbers
+		:type operands: list(int)
 		:return: an operand list expression
 		:rtype: MediumLevelILExpr
 		"""
@@ -1171,6 +1205,13 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<mlil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<mlil block: %d-%d>" % (self.start, self.end)
 
 	def __contains__(self, instruction):
 		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:

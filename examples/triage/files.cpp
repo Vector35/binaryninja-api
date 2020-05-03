@@ -94,16 +94,19 @@ void TriageFilePicker::openSelectedFiles()
 				if (linearSweepMode == "none")
 				{
 					settings->Set("analysis.linearSweep.autorun", false, data);
+					settings->Set("analysis.signatureMatcher.autorun", false, data);
 				}
 				else if (linearSweepMode == "partial")
 				{
 					settings->Set("analysis.linearSweep.autorun", true, data);
 					settings->Set("analysis.linearSweep.controlFlowGraph", false, data);
+					settings->Set("analysis.signatureMatcher.autorun", true, data);
 				}
 				else if (linearSweepMode == "full")
 				{
 					settings->Set("analysis.linearSweep.autorun", true, data);
 					settings->Set("analysis.linearSweep.controlFlowGraph", true, data);
+					settings->Set("analysis.signatureMatcher.autorun", true, data);
 				}
 			}
 		}

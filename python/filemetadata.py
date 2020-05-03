@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -76,7 +76,7 @@ class FileMetadata(object):
 		"""
 		Instantiates a new FileMetadata class.
 
-		:param filename: The string path to the file to be opened. Defaults to None.
+		:param str filename: The string path to the file to be opened. Defaults to None.
 		:param handle: A handle to the underlying C FileMetadata object. Defaults to None.
 		"""
 		if handle is not None:
@@ -325,13 +325,13 @@ class FileMetadata(object):
 	def navigate(self, view, offset):
 		return core.BNNavigate(self.handle, str(view), offset)
 
-	def create_database(self, filename, progress_func = None):
+	def create_database(self, filename, progress_func = None, clean = False):
 		if progress_func is None:
-			return core.BNCreateDatabase(self.raw.handle, str(filename))
+			return core.BNCreateDatabase(self.raw.handle, str(filename), clean)
 		else:
 			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)))
+					lambda ctxt, cur, total: progress_func(cur, total)), clean)
 
 	def open_existing_database(self, filename, progress_func = None):
 		if progress_func is None:
@@ -344,13 +344,24 @@ class FileMetadata(object):
 			return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
-	def save_auto_snapshot(self, progress_func = None):
+	def open_database_for_configuration(self, filename):
+		view = core.BNOpenDatabaseForConfiguration(self.handle, str(filename))
+		if view is None:
+			return None
+		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+
+	def save_auto_snapshot(self, progress_func = None, clean = False):
 		if progress_func is None:
-			return core.BNSaveAutoSnapshot(self.raw.handle)
+			return core.BNSaveAutoSnapshot(self.raw.handle, clean)
 		else:
 			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)))
+					lambda ctxt, cur, total: progress_func(cur, total)), clean)
+
+	def merge_database(self, path, progress_func = None):
+		return core.BNMergeUndo(self.handle, str(path), None,
+			ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+			lambda ctxt, cur, total: progress_func(cur, total)))
 
 	def get_view_of_type(self, name):
 		view = core.BNGetFileViewOfType(self.handle, str(name))

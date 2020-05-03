@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -483,18 +483,10 @@ class LowLevelILOperationAndSize(object):
 		""" """
 		return self._operation
 
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
-
 	@property
 	def size(self):
 		""" """
 		return self._size
-
-	@size.setter
-	def size(self, value):
-		self._size = value
 
 
 class LowLevelILInstruction(object):
@@ -558,7 +550,7 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_ZX: [("src", "expr")],
 		LowLevelILOperation.LLIL_LOW_PART: [("src", "expr")],
 		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
-		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "int_list")],
+		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
 		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
 		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
 		LowLevelILOperation.LLIL_TAILCALL: [("dest", "expr")],
@@ -793,6 +785,16 @@ class LowLevelILInstruction(object):
 						adjust |= ~0x80000000
 					value[func.arch.get_reg_stack_name(reg_stack)] = adjust
 				core.BNLowLevelILFreeOperandList(operand_list)
+			elif operand_type == "target_map":
+				count = ctypes.c_ulonglong()
+				operand_list = core.BNLowLevelILGetOperandList(func.handle, self.expr_index, i, count)
+				i += 1
+				value = {}
+				for j in range(count.value // 2):
+					key = operand_list[j * 2]
+					target = operand_list[(j * 2) + 1]
+					value[key] = target
+				core.BNLowLevelILFreeOperandList(operand_list)
 			self._operands.append(value)
 			self.__dict__[name] = value
 			i += 1
@@ -907,7 +909,7 @@ class LowLevelILInstruction(object):
 	@property
 	def possible_values(self):
 		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index)
+		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index, None, 0)
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -935,6 +937,17 @@ class LowLevelILInstruction(object):
 		result.append(LowLevelILOperationAndSize(self._operation, self._size))
 		return result
 
+	def get_possible_values(self, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleExprValues(self._function.handle, self.expr_index, option_array, len(options))
+		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
+		core.BNFreePossibleValueSet(value)
+		return result
+
 	def get_reg_value(self, reg):
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAtInstruction(self._function.handle, reg, self._instr_index)
@@ -947,16 +960,28 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_reg_values(self, reg):
+	def get_possible_reg_values(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg):
+	def get_possible_reg_values_after(self, reg, options = []):
 		reg = self._function.arch.get_reg_index(reg)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self._function.handle, reg, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -973,16 +998,28 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_flag_values(self, flag):
+	def get_possible_flag_values(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag):
+	def get_possible_flag_values_after(self, flag, options = []):
 		flag = self._function.arch.get_flag_index(flag)
-		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index)
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self._function.handle, flag, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -997,14 +1034,26 @@ class LowLevelILInstruction(object):
 		result = binaryninja.function.RegisterValue(self._function.arch, value)
 		return result
 
-	def get_possible_stack_contents(self, offset, size):
-		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset, size):
-		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
+	def get_possible_stack_contents_after(self, offset, size, options = []):
+		option_array = (ctypes.c_int * len(options))()
+		idx = 0
+		for option in options:
+			option_array[idx] = option
+			idx += 1
+		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index,
+			option_array, len(options))
 		result = binaryninja.function.PossibleValueSet(self._function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -1020,81 +1069,45 @@ class LowLevelILInstruction(object):
 		""" """
 		return self._function
 
-	@function.setter
-	def function(self, value):
-		self._function = value
-
 	@property
 	def expr_index(self):
 		""" """
 		return self._expr_index
-
-	@expr_index.setter
-	def expr_index(self, value):
-		self._expr_index = value
 
 	@property
 	def instr_index(self):
 		""" """
 		return self._instr_index
 
-	@instr_index.setter
-	def instr_index(self, value):
-		self._instr_index = value
-
 	@property
 	def operation(self):
 		""" """
 		return self._operation
-
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
 
 	@property
 	def size(self):
 		""" """
 		return self._size
 
-	@size.setter
-	def size(self, value):
-		self._size = value
-
 	@property
 	def address(self):
 		""" """
 		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
 
 	@property
 	def source_operand(self):
 		""" """
 		return self._source_operand
 
-	@source_operand.setter
-	def source_operand(self, value):
-		self._source_operand = value
-
 	@property
 	def flags(self):
 		""" """
 		return self._flags
 
-	@flags.setter
-	def flags(self, value):
-		self._flags = value
-
 	@property
 	def operands(self):
 		""" """
 		return self._operands
-
-	@operands.setter
-	def operands(self, value):
-		self._operands = value
 
 
 class LowLevelILExpr(object):
@@ -1183,6 +1196,13 @@ class LowLevelILFunction(object):
 		if not isinstance(value, LowLevelILFunction):
 			return True
 		return ctypes.addressof(self.handle.contents) != ctypes.addressof(value.handle.contents)
+
+	def __repr__(self):
+		arch = self.source_function.arch
+		if arch:
+			return "<llil func: %s@%#x>" % (arch.name, self.source_function.start)
+		else:
+			return "<llil func: %#x>" % self.source_function.start
 
 	@property
 	def current_address(self):
@@ -1291,8 +1311,10 @@ class LowLevelILFunction(object):
 		# for backwards compatibility
 		if isinstance(i, LowLevelILInstruction):
 			return i
-		if (i < 0) or (i >= len(self)):
+		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
+		if i < 0:
+			i = len(self) + i
 		return LowLevelILInstruction(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
 
 	def __setitem__(self, i, j):
@@ -2667,7 +2689,8 @@ class LowLevelILFunction(object):
 		"""
 		``add_label_list`` returns a label list expression for the given list of LowLevelILLabel objects.
 
-		:param list(LowLevelILLabel) lables: the list of LowLevelILLabel to get a label list expression from
+		:param labels: the list of LowLevelILLabel to get a label list expression from
+		:type labels: list(LowLevelILLabel)
 		:return: the label list expression
 		:rtype: LowLevelILExpr
 		"""
@@ -2680,7 +2703,8 @@ class LowLevelILFunction(object):
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
-		:param list(int) operands: list of operand numbers
+		:param operands: list of operand numbers
+		:type operands: list(int)
 		:return: an operand list expression
 		:rtype: LowLevelILExpr
 		"""
@@ -2890,6 +2914,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 
 	def __hash__(self):
 		return hash((self.start, self.end, self._il_function))
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return "<llil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+		else:
+			return "<llil block: %d-%d>" % (self.start, self.end)
 
 	def __contains__(self, instruction):
 		if type(instruction) != LowLevelILInstruction or instruction.il_basic_block != self:

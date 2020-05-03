@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -45,7 +45,9 @@ from binaryninja.function import *
 from binaryninja.log import *
 from binaryninja.lowlevelil import *
 from binaryninja.mediumlevelil import *
+from binaryninja.highlevelil import *
 from binaryninja.types import *
+from binaryninja.typelibrary import *
 from binaryninja.functionrecognizer import *
 from binaryninja.update import *
 from binaryninja.plugin import *
@@ -253,3 +255,4 @@ def get_memory_usage_info():
 		result[info[i].name] = info[i].value
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
+

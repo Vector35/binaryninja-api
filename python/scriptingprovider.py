@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -25,7 +25,7 @@ import ctypes
 import threading
 import abc
 import sys
-import rlcompleter
+from binaryninja import bncompleter
 import re
 
 # Binary Ninja components
@@ -118,7 +118,7 @@ class ScriptingInstance(object):
 			self._cb.completeInput = self._cb.completeInput.__class__(self._complete_input)
 			self._cb.completeInput.restype = ctypes.c_void_p
 			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
-			self.delimiters = ' \t\n`~!@#$%^&*()-=+[{]}\\|;:\'",<>/?'
+			self.delimiters = ' \t\n`~!@#$%^&*()-=+{}\\|;:\'",<>/?'
 		else:
 			self.handle = core.handle_of_type(handle, core.BNScriptingInstance)
 		self.listeners = []
@@ -536,7 +536,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.code = None
 			self.input = ""
 
-			self.completer = rlcompleter.Completer(namespace = self.locals)
+			self.completer = bncompleter.Completer(namespace = self.locals)
 
 			self.interpreter.push("from binaryninja import *")
 
@@ -625,9 +625,11 @@ class PythonScriptingInstance(ScriptingInstance):
 			if self.active_func is None:
 				self.locals["current_llil"] = None
 				self.locals["current_mlil"] = None
+				self.locals["current_hlil"] = None
 			else:
 				self.locals["current_llil"] = self.active_func.llil
 				self.locals["current_mlil"] = self.active_func.mlil
+				self.locals["current_hlil"] = self.active_func.hlil
 
 
 		def get_selected_data(self):
@@ -640,7 +642,6 @@ class PythonScriptingInstance(ScriptingInstance):
 			if self.active_view is None:
 				return 0
 			selected_length = self.active_selection_end - self.active_selection_begin
-			data = str(data)
 			if (len(data) == selected_length) or (selected_length == 0):
 				return self.active_view.write(self.active_selection_begin, data)
 			else:

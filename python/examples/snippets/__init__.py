@@ -4,7 +4,7 @@ import sys
 import os
 import re
 from PySide2.QtWidgets import (QLineEdit, QPushButton, QApplication, QTextEdit, QWidget,
-    QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter, 
+    QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
     QInputDialog, QMessageBox, QHeaderView, QMenu, QAction, QKeySequenceEdit,
     QPlainTextEdit)
 from PySide2.QtCore import (QDir, QObject, Qt, QFileInfo, QItemSelectionModel, QSettings)
@@ -12,7 +12,7 @@ from PySide2.QtGui import (QFont, QFontMetrics, QDesktopServices, QKeySequence)
 from binaryninja import user_plugin_path
 from binaryninja.plugin import PluginCommand, MainThreadActionHandler
 from binaryninja.mainthread import execute_on_main_thread
-from binaryninja.log import (log_info, log_warn, log_alert, log_debug)
+from binaryninja.log import (log_error, log_debug)
 from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu)
 import numbers
 
@@ -36,14 +36,14 @@ def loadSnippetFromFile(snippetPath):
     try:
         snippetText = open(snippetPath, 'r').readlines()
     except:
-        return (False, [], False)
+        return ("", "", "")
     if (len(snippetText) < 3):
-        return (False, [], False)
+        return ("", "", "")
     else:
         qKeySequence = QKeySequence(snippetText[1].strip()[1:])
         if qKeySequence.isEmpty():
             qKeySequence = None
-        return (snippetText[0].strip()[1:], 
+        return (snippetText[0].strip()[1:],
                 qKeySequence,
                 ''.join(snippetText[2:])
         )
@@ -52,7 +52,26 @@ def executeSnippet(code, context):
     snippetGlobals = {}
     snippetGlobals['current_view'] = context.binaryView
     snippetGlobals['bv'] = context.binaryView
-    snippetGlobals['current_function'] = context.function
+    if not context.function:
+        if not context.lowLevelILFunction:
+            if not context.mediumLevelILFunction:
+                snippetGlobals['current_mlil'] = None
+                snippetGlobals['current_function'] = None
+                snippetGlobals['current_llil'] = None
+            else:
+                snippetGlobals['current_mlil'] = context.mediumLevelILFunction
+                snippetGlobals['current_function'] = context.mediumLevelILFunction.source_function
+                snippetGlobals['current_llil'] = context.mediumLevelILFunction.source_function.llil
+        else:
+            snippetGlobals['current_llil'] = context.lowLevelILFunction
+            snippetGlobals['current_function'] = context.lowLevelILFunction.source_function
+            snippetGlobals['current_mlil'] = context.lowLevelILFunction.source_function.mlil
+    else:
+        snippetGlobals['current_function'] = context.function
+        snippetGlobals['current_mlil'] = context.function.mlil
+        snippetGlobals['current_llil'] = context.function.llil
+        snippetGlobals['current_token'] = context.function.llil
+
     if context.function is not None:
         snippetGlobals['current_basic_block'] = context.function.get_basic_block_at(context.address)
     else:
@@ -63,8 +82,7 @@ def executeSnippet(code, context):
         snippetGlobals['current_selection'] = (context.address, context.address+context.length)
     else:
         snippetGlobals['current_selection'] = None
-    snippetGlobals['current_llil'] = context.lowLevelILFunction
-    snippetGlobals['current_mlil'] = context.mediumLevelILFunction
+    snippetGlobals['uicontext'] = context
 
     exec("from binaryninja import *", snippetGlobals)
     exec(code, snippetGlobals)
@@ -81,16 +99,17 @@ class Snippets(QDialog):
     def __init__(self, parent=None):
         super(Snippets, self).__init__(parent)
         # Create widgets
-        self.setWindowModality(Qt.NonModal)
+        self.setWindowModality(Qt.ApplicationModal)
         self.title = QLabel(self.tr("Snippet Editor"))
         self.saveButton = QPushButton(self.tr("Save"))
-        self.revertButton = QPushButton(self.tr("Revert"))
+        self.closeButton = QPushButton(self.tr("Close"))
         self.clearHotkeyButton = QPushButton(self.tr("Clear Hotkey"))
         self.setWindowTitle(self.title.text())
         self.newFolderButton = QPushButton("New Folder")
         self.deleteSnippetButton = QPushButton("Delete")
         self.newSnippetButton = QPushButton("New Snippet")
         self.edit = QPlainTextEdit()
+        self.edit.setPlaceholderText("python code")
         self.resetting = False
         self.columns = 3
 
@@ -100,9 +119,7 @@ class Snippets(QDialog):
         self.currentFileLabel = QLabel()
         self.currentFile = ""
         self.snippetDescription = QLineEdit()
-        self.snippetEditsPending = False
-
-        self.clearSelection()
+        self.snippetDescription.setPlaceholderText("optional description")
 
         #Set Editbox Size
         font = getMonospaceFont(self)
@@ -124,7 +141,7 @@ class Snippets(QDialog):
         self.tree.setRootIndex(self.files.index(snippetPath))
         for x in range(self.columns):
             #self.tree.resizeColumnToContents(x)
-            self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents) 
+            self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
         treeLayout = QVBoxLayout()
         treeLayout.addWidget(self.tree)
         treeButtons = QHBoxLayout()
@@ -140,7 +157,7 @@ class Snippets(QDialog):
         buttons.addWidget(self.clearHotkeyButton)
         buttons.addWidget(self.keySequenceEdit)
         buttons.addWidget(self.currentHotkeyLabel)
-        buttons.addWidget(self.revertButton)
+        buttons.addWidget(self.closeButton)
         buttons.addWidget(self.saveButton)
 
         description = QHBoxLayout()
@@ -149,9 +166,8 @@ class Snippets(QDialog):
 
         vlayoutWidget = QWidget()
         vlayout = QVBoxLayout()
-        vlayout.addWidget(self.currentFileLabel)
-        vlayout.addWidget(self.edit)
         vlayout.addLayout(description)
+        vlayout.addWidget(self.edit)
         vlayout.addLayout(buttons)
         vlayoutWidget.setLayout(vlayout)
 
@@ -163,7 +179,11 @@ class Snippets(QDialog):
         hlayout.addWidget(hsplitter)
 
         self.showNormal() #Fixes bug that maximized windows are "stuck"
-        self.settings = QSettings("Vector 35", "Snippet Editor")
+        #Because you can't trust QT to do the right thing here
+        if (sys.platform == "darwin"):
+            self.settings = QSettings("Vector35", "Snippet Editor")
+        else:
+            self.settings = QSettings("Vector 35", "Snippet Editor")
         if self.settings.contains("ui/snippeteditor/geometry"):
             self.restoreGeometry(self.settings.value("ui/snippeteditor/geometry"))
         else:
@@ -175,12 +195,27 @@ class Snippets(QDialog):
 
         # Add signals
         self.saveButton.clicked.connect(self.save)
-        self.revertButton.clicked.connect(self.loadSnippet)
+        self.closeButton.clicked.connect(self.close)
         self.clearHotkeyButton.clicked.connect(self.clearHotkey)
         self.tree.selectionModel().selectionChanged.connect(self.selectFile)
         self.newSnippetButton.clicked.connect(self.newFileDialog)
         self.deleteSnippetButton.clicked.connect(self.deleteSnippet)
         self.newFolderButton.clicked.connect(self.newFolder)
+
+        if self.settings.contains("ui/snippeteditor/selected"):
+            selectedName = self.settings.value("ui/snippeteditor/selected")
+            self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+            if self.tree.selectionModel().hasSelection():
+                self.selectFile(self.tree.selectionModel().selection(), None)
+                self.edit.setFocus()
+                cursor = self.edit.textCursor()
+                cursor.setPosition(self.edit.document().characterCount()-1)
+                self.edit.setTextCursor(cursor)
+            else:
+                self.readOnly(True)
+        else:
+            self.readOnly(True)
+
 
     @staticmethod
     def registerAllSnippets():
@@ -195,7 +230,7 @@ class Snippets(QDialog):
             snippetKeys = None
             (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(snippet)
             if not snippetDescription:
-                actionText = "Snippets\\" + snippet
+                actionText = "Snippets\\" + os.path.basename(snippet).rstrip(".py")
             else:
                 actionText = "Snippets\\" + snippetDescription
             if snippetCode:
@@ -213,6 +248,7 @@ class Snippets(QDialog):
         self.currentFileLabel.setText("")
         self.snippetDescription.setText("")
         self.edit.setPlainText("")
+        self.currentFile = ""
 
     def reject(self):
         self.settings.setValue("ui/snippeteditor/geometry", self.saveGeometry())
@@ -231,18 +267,21 @@ class Snippets(QDialog):
             if QFileInfo(selection).isDir():
                 QDir(selection).mkdir(folderName)
             else:
-                QDir(snippetPath).mkdir(folderName)    
+                QDir(snippetPath).mkdir(folderName)
 
     def selectFile(self, new, old):
         if (self.resetting):
             self.resetting = False
             return
         newSelection = self.files.filePath(new.indexes()[0])
+        self.settings.setValue("ui/snippeteditor/selected", newSelection)
         if QFileInfo(newSelection).isDir():
-            self.clearSelection()
+            self.readOnly(True)
+            self.tree.clearSelection()
+            self.currentFile = ""
             return
 
-        if old.length() > 0:
+        if old and old.length() > 0:
             oldSelection = self.files.filePath(old.indexes()[0])
             if not QFileInfo(oldSelection).isDir() and self.snippetChanged():
                 question = QMessageBox.question(self, self.tr("Discard"), self.tr("Snippet changed. Discard changes?"))
@@ -260,6 +299,7 @@ class Snippets(QDialog):
         self.snippetDescription.setText(snippetDescription) if snippetDescription else self.snippetDescription.setText("")
         self.keySequenceEdit.setKeySequence(snippetKeys) if snippetKeys else self.keySequenceEdit.setKeySequence(QKeySequence(""))
         self.edit.setPlainText(snippetCode) if snippetCode else self.edit.setPlainText("")
+        self.readOnly(False)
 
     def newFileDialog(self):
         (snippetName, ok) = QInputDialog.getText(self, self.tr("Snippet Name"), self.tr("Snippet Name: "))
@@ -269,10 +309,24 @@ class Snippets(QDialog):
             index = self.tree.selectionModel().currentIndex()
             selection = self.files.filePath(index)
             if QFileInfo(selection).isDir():
-                open(os.path.join(selection, snippetName), "w").close()
+                path = os.path.join(selection, snippetName)
             else:
-                open(os.path.join(snippetPath, snippetName), "w").close()
+                path = os.path.join(snippetPath, snippetName)
+                self.readOnly(False)
+            open(path, "w").close()
+            self.tree.setCurrentIndex(self.files.index(path))
             log_debug("Snippet %s created." % snippetName)
+
+    def readOnly(self, flag):
+        self.keySequenceEdit.setEnabled(not flag)
+        self.snippetDescription.setReadOnly(flag)
+        self.edit.setReadOnly(flag)
+        if flag:
+            self.snippetDescription.setDisabled(True)
+            self.edit.setDisabled(True)
+        else:
+            self.snippetDescription.setEnabled(True)
+            self.edit.setEnabled(True)
 
     def deleteSnippet(self):
         selection = self.tree.selectedIndexes()[::self.columns][0] #treeview returns each selected element in the row
@@ -282,13 +336,12 @@ class Snippets(QDialog):
             log_debug("Deleting snippet %s." % snippetName)
             self.clearSelection()
             self.files.remove(selection)
+            self.registerAllSnippets()
 
     def snippetChanged(self):
         if (self.currentFile == "" or QFileInfo(self.currentFile).isDir()):
             return False
         (snippetDescription, snippetKeys, snippetCode) = loadSnippetFromFile(self.currentFile)
-        if (not snippetCode):
-            return False
         if snippetKeys == None and not self.keySequenceEdit.keySequence().isEmpty():
             return True
         if snippetKeys != None and snippetKeys != self.keySequenceEdit.keySequence().toString():

@@ -42,6 +42,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	uint64_t m_bvLength = 0;
 
 	int m_defaultWidth = 100;
+	bool m_autoRotate = true;
+	bool m_naturalOrientation = true;
 
 	int m_curLocX = 0;
 	int m_curLocY = 0;
@@ -50,6 +52,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 
 	QVector<QColor> m_colors;
 	QVector<QRgb> m_colorTable;
+
+	bool m_enableOrientationUpdate = false;
 
 	class BackgroundRefresh: public BinaryNinja::RefCountObject
 	{
@@ -64,6 +68,9 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	};
 
 	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
+
+	void updateCoordinates();
+	bool updateOrientation();
 
 public:
 	FeatureMap(ViewFrame* frame, BinaryViewRef data);

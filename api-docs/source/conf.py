@@ -32,7 +32,7 @@ binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return sorted(set(x for x in modules if x[0] not in ("abc", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "threading", "startup", "associateddatastore")))
+	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "with_metaclass", "cstr", "fnsignature", "get_class_members", "datetime")))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
@@ -134,7 +134,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja API'
-copyright = u'2015-2019, Vector 35 Inc'
+copyright = u'2015-2020, Vector 35 Inc'
 author = u'Vector 35 Inc'
 
 # The version info for the project you're documenting, acts as replacement for

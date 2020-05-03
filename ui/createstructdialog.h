@@ -16,7 +16,7 @@ class BINARYNINJAUIAPI CreateStructDialog: public QDialog
 	uint64_t m_resultSize;
 
 public:
-	CreateStructDialog(QWidget* parent);
+	CreateStructDialog(QWidget* parent, const std::string& name);
 
 	BinaryNinja::QualifiedName getName() { return m_resultName; }
 	uint64_t getSize() { return m_resultSize; }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -75,6 +75,7 @@ namespace BinaryNinja
 		VariableMediumLevelOperand,
 		SSAVariableMediumLevelOperand,
 		IndexListMediumLevelOperand,
+		IndexMapMediumLevelOperand,
 		VariableListMediumLevelOperand,
 		SSAVariableListMediumLevelOperand,
 		ExprListMediumLevelOperand
@@ -107,7 +108,7 @@ namespace BinaryNinja
 		FalseTargetMediumLevelOperandUsage,
 		DestMemoryVersionMediumLevelOperandUsage,
 		SourceMemoryVersionMediumLevelOperandUsage,
-		TargetListMediumLevelOperandUsage,
+		TargetsMediumLevelOperandUsage,
 		SourceMemoryVersionsMediumLevelOperandUsage,
 		OutputVariablesMediumLevelOperandUsage,
 		OutputVariablesSubExprMediumLevelOperandUsage,
@@ -249,6 +250,33 @@ namespace BinaryNinja
 		operator std::vector<size_t>() const;
 	};
 
+	class MediumLevelILIndexMap
+	{
+		struct ListIterator
+		{
+			MediumLevelILIntegerList::const_iterator pos;
+			bool operator==(const ListIterator& a) const { return pos == a.pos; }
+			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
+			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			ListIterator& operator++() { ++pos; ++pos; return *this; }
+			const std::pair<uint64_t, size_t> operator*();
+		};
+
+		MediumLevelILIntegerList m_list;
+
+	public:
+		typedef ListIterator const_iterator;
+
+		MediumLevelILIndexMap(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+
+		const_iterator begin() const;
+		const_iterator end() const;
+		size_t size() const;
+		size_t operator[](uint64_t) const;
+
+		operator std::map<uint64_t, size_t>() const;
+	};
+
 	class MediumLevelILVariableList
 	{
 		struct ListIterator
@@ -357,6 +385,7 @@ namespace BinaryNinja
 		SSAVariable GetRawOperandAsSSAVariable(size_t operand) const;
 		SSAVariable GetRawOperandAsPartialSSAVariableSource(size_t operand) const;
 		MediumLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
+		MediumLevelILIndexMap GetRawOperandAsIndexMap(size_t operand) const;
 		MediumLevelILVariableList GetRawOperandAsVariableList(size_t operand) const;
 		MediumLevelILSSAVariableList GetRawOperandAsSSAVariableList(size_t operand) const;
 		MediumLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
@@ -367,7 +396,8 @@ namespace BinaryNinja
 		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
 
 		RegisterValue GetValue() const;
-		PossibleValueSet GetPossibleValues() const;
+		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
+			std::set<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
 		size_t GetSSAVarVersion(const Variable& var);
@@ -494,7 +524,7 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> size_t GetFalseTarget() const { return As<N>().GetFalseTarget(); }
 		template <BNMediumLevelILOperation N> size_t GetDestMemoryVersion() const { return As<N>().GetDestMemoryVersion(); }
 		template <BNMediumLevelILOperation N> size_t GetSourceMemoryVersion() const { return As<N>().GetSourceMemoryVersion(); }
-		template <BNMediumLevelILOperation N> MediumLevelILIndexList GetTargetList() const { return As<N>().GetTargetList(); }
+		template <BNMediumLevelILOperation N> MediumLevelILIndexMap GetTargets() const { return As<N>().GetTargets(); }
 		template <BNMediumLevelILOperation N> MediumLevelILIndexList GetSourceMemoryVersions() const { return As<N>().GetSourceMemoryVersions(); }
 		template <BNMediumLevelILOperation N> MediumLevelILVariableList GetOutputVariables() const { return As<N>().GetOutputVariables(); }
 		template <BNMediumLevelILOperation N> MediumLevelILSSAVariableList GetOutputSSAVariables() const { return As<N>().GetOutputSSAVariables(); }
@@ -545,7 +575,7 @@ namespace BinaryNinja
 		size_t GetFalseTarget() const;
 		size_t GetDestMemoryVersion() const;
 		size_t GetSourceMemoryVersion() const;
-		MediumLevelILIndexList GetTargetList() const;
+		MediumLevelILIndexMap GetTargets() const;
 		MediumLevelILIndexList GetSourceMemoryVersions() const;
 		MediumLevelILVariableList GetOutputVariables() const;
 		MediumLevelILSSAVariableList GetOutputSSAVariables() const;
@@ -577,6 +607,7 @@ namespace BinaryNinja
 		Variable GetVariable() const;
 		SSAVariable GetSSAVariable() const;
 		MediumLevelILIndexList GetIndexList() const;
+		MediumLevelILIndexMap GetIndexMap() const;
 		MediumLevelILVariableList GetVariableList() const;
 		MediumLevelILSSAVariableList GetSSAVariableList() const;
 		MediumLevelILInstructionList GetExprList() const;
@@ -812,7 +843,7 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_JUMP_TO>: public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		MediumLevelILIndexList GetTargetList() const { return GetRawOperandAsIndexList(1); }
+		MediumLevelILIndexMap GetTargets() const { return GetRawOperandAsIndexMap(1); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RET_HINT>: public MediumLevelILInstructionBase
 	{

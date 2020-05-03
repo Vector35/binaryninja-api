@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -530,6 +530,19 @@ uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
 }
 
 
+uint32_t* Architecture::GetSystemRegistersCallback(void* ctxt, size_t* count)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	vector<uint32_t> regs = arch->GetSystemRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
 char* Architecture::GetRegisterStackNameCallback(void* ctxt, uint32_t regStack)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -756,6 +769,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getStackPointerRegister = GetStackPointerRegisterCallback;
 	callbacks.getLinkRegister = GetLinkRegisterCallback;
 	callbacks.getGlobalRegisters = GetGlobalRegistersCallback;
+	callbacks.getSystemRegisters = GetSystemRegistersCallback;
 	callbacks.getRegisterStackName = GetRegisterStackNameCallback;
 	callbacks.getAllRegisterStacks = GetAllRegisterStacksCallback;
 	callbacks.getRegisterStackInfo = GetRegisterStackInfoCallback;
@@ -1035,9 +1049,21 @@ vector<uint32_t> Architecture::GetGlobalRegisters()
 }
 
 
+vector<uint32_t> Architecture::GetSystemRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
 bool Architecture::IsGlobalRegister(uint32_t reg)
 {
 	return BNIsArchitectureGlobalRegister(m_object, reg);
+}
+
+
+bool Architecture::IsSystemRegister(uint32_t reg)
+{
+	return BNIsArchitectureSystemRegister(m_object, reg);
 }
 
 
@@ -1647,6 +1673,21 @@ vector<uint32_t> CoreArchitecture::GetGlobalRegisters()
 }
 
 
+vector<uint32_t> CoreArchitecture::GetSystemRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetArchitectureSystemRegisters(m_object, &count);
+
+	vector<uint32_t> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
 string CoreArchitecture::GetRegisterStackName(uint32_t regStack)
 {
 	char* name = BNGetArchitectureRegisterStackName(m_object, regStack);
@@ -2020,6 +2061,12 @@ vector<uint32_t> ArchitectureExtension::GetGlobalRegisters()
 }
 
 
+vector<uint32_t> ArchitectureExtension::GetSystemRegisters()
+{
+	return m_base->GetSystemRegisters();
+}
+
+
 string ArchitectureExtension::GetRegisterStackName(uint32_t regStack)
 {
 	return m_base->GetRegisterStackName(regStack);
@@ -2156,6 +2203,17 @@ void ArchitectureHook::Register(BNCustomArchitecture* callbacks)
 {
 	AddRefForRegistration();
 	m_object = BNRegisterArchitectureHook(m_base->GetObject(), callbacks);
+	BNFinalizeArchitectureHook(m_base->GetObject());
+}
+
+
+string DisassemblyTextRenderer::GetDisplayStringForInteger(Ref<BinaryView> binaryView, BNIntegerDisplayType type,
+	uint64_t value, size_t inputWidth)
+{
+	char* str = BNGetDisplayStringForInteger(binaryView->GetObject(), type, value, inputWidth);
+	string s(str);
+	BNFreeString(str);
+	return s;
 }
 
 
@@ -2228,6 +2286,15 @@ Ref<MediumLevelILFunction> DisassemblyTextRenderer::GetMediumLevelILFunction() c
 }
 
 
+Ref<HighLevelILFunction> DisassemblyTextRenderer::GetHighLevelILFunction() const
+{
+	BNHighLevelILFunction* result = BNGetDisassemblyTextRendererHighLevelILFunction(m_object);
+	if (result)
+		return new HighLevelILFunction(result);
+	return nullptr;
+}
+
+
 void DisassemblyTextRenderer::SetBasicBlock(BasicBlock* block)
 {
 	BNSetDisassemblyTextRendererBasicBlock(m_object, block ? block->GetObject() : nullptr);
@@ -2293,7 +2360,7 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len,
 
 
 vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextLines(uint64_t addr,
-	size_t len, const vector<DisassemblyTextLine>& lines)
+	size_t len, const vector<DisassemblyTextLine>& lines, const string& indentSpaces)
 {
 	BNDisassemblyTextLine* inLines = new BNDisassemblyTextLine[lines.size()];
 	for (size_t i = 0; i < lines.size(); i++)
@@ -2308,7 +2375,8 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 
 	BNDisassemblyTextLine* result = nullptr;
 	size_t count = 0;
-	result = BNPostProcessDisassemblyTextRendererLines(m_object, addr, len, inLines, lines.size(), &count);
+	result = BNPostProcessDisassemblyTextRendererLines(m_object, addr, len, inLines, lines.size(), &count,
+		indentSpaces.c_str());
 	BNFreeDisassemblyTextLines(inLines, lines.size());
 
 	vector<DisassemblyTextLine> outLines;
@@ -2418,7 +2486,7 @@ void DisassemblyTextRenderer::AddIntegerToken(vector<InstructionTextToken>& toke
 
 
 void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<DisassemblyTextLine>& lines,
-	const string& comment, bool hasAutoAnnotations, const string& leadingSpaces)
+	const string& comment, bool hasAutoAnnotations, const string& leadingSpaces, const string& indentSpaces)
 {
 	BNDisassemblyTextLine inLine;
 	inLine.addr = line.addr;
@@ -2430,7 +2498,7 @@ void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<Disa
 
 	size_t count = 0;
 	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(m_object, &inLine, &count,
-		comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str());
+		comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str(), indentSpaces.c_str());
 
 	for (size_t i = 0; i < count; i++)
 	{

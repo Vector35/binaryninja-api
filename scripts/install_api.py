@@ -20,6 +20,14 @@ INTERACTIVE = True
 if '-s' in sys.argv[1:]:
     INTERACTIVE = False
 
+INSTALL_VENV = False
+if '-v' in sys.argv[1:]:
+    if os.environ.get('VIRTUAL_ENV'):
+        INSTALL_VENV = True
+    else:
+        print("Error: venv installation requested without an active python3 venv.")
+        sys.exit(1)
+    
 try:
     import binaryninja
     import binaryninjaui #To better detect if migrating from a version without UI plugin support
@@ -80,6 +88,8 @@ if ( len(sys.argv) > 1 and sys.argv[1].lower() == "root" ):
     if not os.access(install_path, os.W_OK):
         print("Root install specified but cannot write to {}".format(install_path))
         sys.exit(1)
+elif INSTALL_VENV:
+    install_path = getsitepackages()[0]
 else:
     if check_enableusersite():
         install_path = getusersitepackages()
@@ -92,6 +102,7 @@ else:
 binaryninja_pth_path = os.path.join(install_path, 'binaryninja.pth')
 with open(binaryninja_pth_path, 'wb') as pth_file:
     pth_file.write((api_path+"\n").encode('charmap'))
-    pth_file.write((api_path+sys.version[0]+"\n").encode('charmap')) #support for python2/3 QT bindings
+    if sys.version_info.major < 3 or (sys.version_info.major == 3 and sys.version_info.minor < 9):
+        pth_file.write((api_path+sys.version[0]+"\n").encode('charmap')) #support for python2/3 QT bindings
 
 print("Binary Ninja API installed using {}".format(binaryninja_pth_path))

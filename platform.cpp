@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Vector 35 Inc
+// Copyright (c) 2015-2020 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -353,10 +353,10 @@ Ref<Type> Platform::GetVariableByName(const QualifiedName& name)
 }
 
 
-Ref<Type> Platform::GetFunctionByName(const QualifiedName& name)
+Ref<Type> Platform::GetFunctionByName(const QualifiedName& name, bool exactMatch)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNType* type = BNGetPlatformFunctionByName(m_object, &nameObj);
+	BNType* type = BNGetPlatformFunctionByName(m_object, &nameObj, exactMatch);
 	QualifiedName::FreeAPIObject(&nameObj);
 	if (!type)
 		return nullptr;

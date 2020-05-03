@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Vector 35 Inc
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -286,6 +286,25 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
 
+	@property
+	def type_libraries(self):
+		count = ctypes.c_ulonglong(0)
+		libs = core.BNGetPlatformTypeLibraries(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+		core.BNFreeTypeLibraryList(libs, count.value)
+		return result
+
+	def get_type_libraries_by_name(self, name):
+		count = ctypes.c_ulonglong(0)
+		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+		core.BNFreeTypeLibraryList(libs, count.value)
+		return result
+
 	def __setattr__(self, name, value):
 		try:
 			object.__setattr__(self, name, value)
@@ -345,9 +364,9 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			return None
 		return types.Type(obj, platform = self)
 
-	def get_function_by_name(self, name):
+	def get_function_by_name(self, name, exactMatch=False):
 		name = types.QualifiedName(name)._get_core_struct()
-		obj = core.BNGetPlatformFunctionByName(self.handle, name)
+		obj = core.BNGetPlatformFunctionByName(self.handle, name, exactMatch)
 		if not obj:
 			return None
 		return types.Type(obj, platform = self)
@@ -379,7 +398,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
-		:param list(str) include_dirs: optional list of string filename include directories
+		:param include_dirs: optional list of string filename include directories
+		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
@@ -425,7 +445,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		the optional list of directories provided in ``include_dirs``.
 
 		:param str filename: filename of file to be parsed
-		:param list(str) include_dirs: optional list of string filename include directories
+		:param include_dirs: optional list of string filename include directories
+		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
 		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult

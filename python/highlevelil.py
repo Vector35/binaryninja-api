@@ -813,16 +813,6 @@ class HighLevelILFunction(object):
 			operation = operation.value
 		return HighLevelILExpr(core.BNHighLevelILAddExpr(self.handle, operation, size, a, b, c, d, e))
 
-	def append(self, expr):
-		"""
-		``append`` adds the HighLevelILExpr ``expr`` to the current HighLevelILFunction.
-
-		:param HighLevelILExpr expr: the HighLevelILExpr to add to the current HighLevelILFunction
-		:return: number of HighLevelILExpr in the current function
-		:rtype: int
-		"""
-		return core.BNHighLevelILAddInstruction(self.handle, expr.index)
-
 	def add_operand_list(self, operands):
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
@@ -835,18 +825,6 @@ class HighLevelILFunction(object):
 		for i in range(len(operands)):
 			operand_list[i] = operands[i]
 		return HighLevelILExpr(core.BNHighLevelILAddOperandList(self.handle, operand_list, len(operands)))
-
-	def operand(self, n, expr):
-		"""
-		``operand`` sets the operand number of the expression ``expr`` and passes back ``expr`` without modification.
-
-		:param int n:
-		:param HighLevelILExpr expr:
-		:return: returns the expression ``expr`` unmodified
-		:rtype: HighLevelILExpr
-		"""
-		core.BNHighLevelILSetExprSourceOperand(self.handle, expr.index, n)
-		return expr
 
 	def finalize(self):
 		"""

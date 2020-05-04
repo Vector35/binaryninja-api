@@ -1012,18 +1012,6 @@ class MediumLevelILFunction(object):
 			operand_list[i] = operands[i]
 		return MediumLevelILExpr(core.BNMediumLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
-	def operand(self, n, expr):
-		"""
-		``operand`` sets the operand number of the expression ``expr`` and passes back ``expr`` without modification.
-
-		:param int n:
-		:param MediumLevelILExpr expr:
-		:return: returns the expression ``expr`` unmodified
-		:rtype: MediumLevelILExpr
-		"""
-		core.BNMediumLevelILSetExprSourceOperand(self.handle, expr.index, n)
-		return expr
-
 	def finalize(self):
 		"""
 		``finalize`` ends the function and computes the list of basic blocks.

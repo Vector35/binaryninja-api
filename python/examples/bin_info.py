@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# Copyright (c) 2015-2024 Vector 35 Inc
+#!/usr/bin/env python3
+# Copyright (c) 2015-2020 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -21,15 +21,17 @@
 
 import sys
 import os
+from glob import glob
 
-from binaryninja.log import log_warn, log_to_stdout
-import binaryninja.interaction as interaction
-from binaryninja.plugin import PluginCommand
+from binaryninja import load, PluginCommand, log_warn, log_to_stdout, interaction
 from binaryninja import load
 
-
-def get_bininfo(bv):
+def get_bininfo(bv, filename=None):
 	if bv is None:
+		if not (os.path.isfile(filename) and os.access(filename, os.R_OK)):
+			return("Cannot read {}\n".format(filename))
+		bv = load(filename, options={'analysis.mode': 'basic', 'analysis.linearSweep.autorun' : False})
+	else:
 		filename = ""
 		if len(sys.argv) > 1:
 			filename = sys.argv[1]
@@ -62,6 +64,13 @@ def get_bininfo(bv):
 		length = bv.strings[i].length
 		string = bv.strings[i].value
 		contents += "| 0x%x |%d | %s |\n" % (start, length, string)
+
+	# Note that we need to close BV file handles that we opened to prevent a
+	# memory leak due to a circular reference between BinaryViews and the
+	# FileMetadata that backs them
+
+	if filename != "":
+		bv.file.close()
 	return contents
 
 
@@ -70,6 +79,17 @@ def display_bininfo(bv):
 
 
 if __name__ == "__main__":
-	print(get_bininfo(None))
+	if len(sys.argv) == 1:
+		filename = interaction.get_open_filename_input("Filename:")
+		if filename is None:
+			log.log_warn("No file specified")
+		else:
+			print(get_bininfo(None, filename=filename))
+	else:
+		for i in range(1, len(sys.argv)):
+			print(sys.argv[i])
+			pattern = sys.argv[i]
+			for filename in glob(pattern):
+				print(get_bininfo(None, filename=filename))
 else:
-	PluginCommand.register("Binary Info", "Display basic info about the binary", display_bininfo)
+	PluginCommand.register("Binary Info", "Display basic info about the binary using minimal analysis modes", display_bininfo)

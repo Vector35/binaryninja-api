@@ -57,7 +57,6 @@ from binaryninja.demangle import *
 from binaryninja.mainthread import *
 from binaryninja.interaction import *
 from binaryninja.lineardisassembly import *
-from binaryninja.undoaction import *
 from binaryninja.highlight import *
 from binaryninja.scriptingprovider import *
 from binaryninja.downloadprovider import *

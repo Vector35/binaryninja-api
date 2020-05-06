@@ -2528,9 +2528,6 @@ class BinaryView(object):
 		"""
 		self._file.begin_undo_actions()
 
-	def add_undo_action(self, action):
-		core.BNAddUndoAction(self.handle, action.__class__.name, action._cb)
-
 	def commit_undo_actions(self):
 		"""
 		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.

@@ -218,8 +218,9 @@ class AnalysisCompletionEvent(object):
 		if id(self) in _pending_analysis_completion_events:
 			del _pending_analysis_completion_events[id(self)]
 		try:
-			callback_sig = inspect.signature(self.callback)
-			if len(callback_sig.parameters):
+			arg_offset = inspect.ismethod(self.callback)
+			callback_spec = inspect.getargspec(self.callback)
+			if len(callback_spec.args) > arg_offset:
 				self.callback(self)
 			else:
 				self.callback()

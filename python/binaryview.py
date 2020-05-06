@@ -25,6 +25,7 @@ import ctypes
 import abc
 import numbers
 import json
+import inspect
 
 from collections import OrderedDict
 
@@ -217,7 +218,11 @@ class AnalysisCompletionEvent(object):
 		if id(self) in _pending_analysis_completion_events:
 			del _pending_analysis_completion_events[id(self)]
 		try:
-			self.callback(self)
+			callback_sig = inspect.signature(self.callback)
+			if len(callback_sig.parameters):
+				self.callback(self)
+			else:
+				self.callback()
 		except:
 			log.log_error(traceback.format_exc())
 

@@ -4219,6 +4219,8 @@ class BinaryView(object):
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
+		.. warning: The built-in python console automatically updates analysis after every command is run, which means this call back may not behave as expected if entered interactively.
+
 		:param callback callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.
 		:rtype: AnalysisCompletionEvent

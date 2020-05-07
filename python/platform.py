@@ -28,6 +28,7 @@ from binaryninja import types
 # 2-3 compatibility
 from binaryninja import range
 from binaryninja import with_metaclass
+import os
 
 
 class _PlatformMetaClass(type):
@@ -401,6 +402,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 		if filename is None:
 			filename = "input"
+		if not isinstance(source, str):
+			raise AttributeError("Source must be a string")
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
 			dir_buf[i] = include_dirs[i].encode('charmap')
@@ -448,6 +451,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			{'bar': <type: int32_t(int32_t x)>}}, '')
 			>>>
 		"""
+		if not (isinstance(filename, str) and os.path.isfile(filename) and os.access(filename, os.R_OK)):
+			 raise AttributeError("File {} doesn't exist or isn't readable".format(filename))
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
 			dir_buf[i] = include_dirs[i].encode('charmap')

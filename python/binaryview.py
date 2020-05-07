@@ -4577,6 +4577,8 @@ class BinaryView(object):
 			(<type: int32_t>, 'foo')
 			>>>
 		"""
+		if not isinstance(text, str):
+			raise AttributeError("Text must be a string")
 		result = core.BNQualifiedNameAndType()
 		errors = ctypes.c_char_p()
 		if not core.BNParseTypeString(self.handle, text, result, errors):

@@ -424,7 +424,7 @@ class FlowGraph(object):
 	def _update(self, ctxt):
 		try:
 			graph = self.update()
-			if graph is None:
+			if graph is NotImplemented:
 				return None
 			return ctypes.cast(core.BNNewFlowGraphReference(graph.handle), ctypes.c_void_p).value
 		except:

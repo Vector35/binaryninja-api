@@ -623,6 +623,7 @@ class TestBuilder(Builder):
             #endif
             """)
             source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
+            source = str(source) #TODO: remove when PY2 support has ended
             typelist = bv.platform.parse_types_from_source(source)
             inttype = binja.Type.int(4)
 

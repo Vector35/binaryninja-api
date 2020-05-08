@@ -142,6 +142,16 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
+#ifdef BINARYNINJACORE_LIBRARY
+#define _STD_VECTOR vector
+#define _STD_SET set
+#define _STD_UNORDERED_MAP unordered_map
+#else
+#define _STD_VECTOR std::vector
+#define _STD_SET std::set
+#define _STD_UNORDERED_MAP std::unordered_map
+#endif
+
 	class HighLevelILInstructionAccessException: public std::exception
 	{
 	public:
@@ -181,7 +191,7 @@ namespace BinaryNinja
 		size_t size() const;
 		uint64_t operator[](size_t i) const;
 
-		operator std::vector<uint64_t>() const;
+		operator _STD_VECTOR<uint64_t>() const;
 	};
 
 	class HighLevelILIndexList
@@ -208,7 +218,7 @@ namespace BinaryNinja
 		size_t size() const;
 		size_t operator[](size_t i) const;
 
-		operator std::vector<size_t>() const;
+		operator _STD_VECTOR<size_t>() const;
 	};
 
 	class HighLevelILInstructionList
@@ -240,7 +250,7 @@ namespace BinaryNinja
 		size_t size() const;
 		const HighLevelILInstruction operator[](size_t i) const;
 
-		operator std::vector<HighLevelILInstruction>() const;
+		operator _STD_VECTOR<HighLevelILInstruction>() const;
 	};
 
 	class HighLevelILSSAVariableList
@@ -267,7 +277,7 @@ namespace BinaryNinja
 		size_t size() const;
 		const SSAVariable operator[](size_t i) const;
 
-		operator std::vector<SSAVariable>() const;
+		operator _STD_VECTOR<SSAVariable>() const;
 	};
 
 	struct HighLevelILInstructionBase: public BNHighLevelILInstruction
@@ -280,11 +290,11 @@ namespace BinaryNinja
 		size_t exprIndex, instructionIndex;
 		bool ast;
 
-		static std::unordered_map<HighLevelILOperandUsage, HighLevelILOperandType> operandTypeForUsage;
-		static std::unordered_map<BNHighLevelILOperation,
-			std::vector<HighLevelILOperandUsage>> operationOperandUsage;
-		static std::unordered_map<BNHighLevelILOperation,
-			std::unordered_map<HighLevelILOperandUsage, size_t>> operationOperandIndex;
+		static _STD_UNORDERED_MAP<HighLevelILOperandUsage, HighLevelILOperandType> operandTypeForUsage;
+		static _STD_UNORDERED_MAP<BNHighLevelILOperation,
+			_STD_VECTOR<HighLevelILOperandUsage>> operationOperandUsage;
+		static _STD_UNORDERED_MAP<BNHighLevelILOperation,
+			_STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>> operationOperandIndex;
 
 		HighLevelILOperandList GetOperands() const;
 
@@ -299,13 +309,13 @@ namespace BinaryNinja
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsInteger(size_t operandIndex, uint64_t value);
-		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const std::vector<SSAVariable>& vars);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<HighLevelILInstruction>& exprs);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
+		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const _STD_VECTOR<SSAVariable>& vars);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<HighLevelILInstruction>& exprs);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<size_t>& exprs);
 
 		RegisterValue GetValue() const;
-		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
-			std::set<BNDataFlowQueryOption>()) const;
+		PossibleValueSet GetPossibleValues(const _STD_SET<BNDataFlowQueryOption>& options =
+			_STD_SET<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
 		size_t GetMediumLevelILExprIndex() const;
@@ -426,17 +436,17 @@ namespace BinaryNinja
 
 		template <BNHighLevelILOperation N> void SetSSAVersion(size_t version) { As<N>().SetSSAVersion(version); }
 		template <BNHighLevelILOperation N> void SetDestSSAVersion(size_t version) { As<N>().SetDestSSAVersion(version); }
-		template <BNHighLevelILOperation N> void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
-		template <BNHighLevelILOperation N> void SetParameterExprs(const std::vector<ExprId>& params) { As<N>().SetParameterExprs(params); }
-		template <BNHighLevelILOperation N> void SetSourceExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
-		template <BNHighLevelILOperation N> void SetSourceExprs(const std::vector<ExprId>& params) { As<N>().SetSourceExprs(params); }
-		template <BNHighLevelILOperation N> void SetDestExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetDestExprs(params); }
-		template <BNHighLevelILOperation N> void SetDestExprs(const std::vector<ExprId>& params) { As<N>().SetDestExprs(params); }
-		template <BNHighLevelILOperation N> void SetBlockExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetBlockExprs(params); }
-		template <BNHighLevelILOperation N> void SetBlockExprs(const std::vector<ExprId>& params) { As<N>().SetBlockExprs(params); }
-		template <BNHighLevelILOperation N> void SetCases(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetCases(params); }
-		template <BNHighLevelILOperation N> void SetCases(const std::vector<ExprId>& params) { As<N>().SetCases(params); }
-		template <BNHighLevelILOperation N> void SetSourceSSAVariables(const std::vector<SSAVariable>& vars) { As<N>().SetSourceSSAVariables(vars); }
+		template <BNHighLevelILOperation N> void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
+		template <BNHighLevelILOperation N> void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetParameterExprs(params); }
+		template <BNHighLevelILOperation N> void SetSourceExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
+		template <BNHighLevelILOperation N> void SetSourceExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetSourceExprs(params); }
+		template <BNHighLevelILOperation N> void SetDestExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetDestExprs(params); }
+		template <BNHighLevelILOperation N> void SetDestExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetDestExprs(params); }
+		template <BNHighLevelILOperation N> void SetBlockExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetBlockExprs(params); }
+		template <BNHighLevelILOperation N> void SetBlockExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetBlockExprs(params); }
+		template <BNHighLevelILOperation N> void SetCases(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetCases(params); }
+		template <BNHighLevelILOperation N> void SetCases(const _STD_VECTOR<ExprId>& params) { As<N>().SetCases(params); }
+		template <BNHighLevelILOperation N> void SetSourceSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { As<N>().SetSourceSSAVariables(vars); }
 		template <BNHighLevelILOperation N> void SetSourceMemoryVersion(size_t version) { return As<N>().SetSourceMemoryVersion(version); }
 		template <BNHighLevelILOperation N> void SetDestMemoryVersion(size_t version) { return As<N>().SetDestMemoryVersion(version); }
 		template <BNHighLevelILOperation N> void SetTarget(uint64_t target) { As<N>().SetTarget(target); }
@@ -513,7 +523,7 @@ namespace BinaryNinja
 		struct ListIterator
 		{
 			const HighLevelILOperandList* owner;
-			std::vector<HighLevelILOperandUsage>::const_iterator pos;
+			_STD_VECTOR<HighLevelILOperandUsage>::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -522,22 +532,22 @@ namespace BinaryNinja
 		};
 
 		HighLevelILInstruction m_instr;
-		const std::vector<HighLevelILOperandUsage>& m_usageList;
-		const std::unordered_map<HighLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const _STD_VECTOR<HighLevelILOperandUsage>& m_usageList;
+		const _STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>& m_operandIndexMap;
 
 	public:
 		typedef ListIterator const_iterator;
 
 		HighLevelILOperandList(const HighLevelILInstruction& instr,
-			const std::vector<HighLevelILOperandUsage>& usageList,
-			const std::unordered_map<HighLevelILOperandUsage, size_t>& operandIndexMap);
+			const _STD_VECTOR<HighLevelILOperandUsage>& usageList,
+			const _STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>& operandIndexMap);
 
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t size() const;
 		const HighLevelILOperand operator[](size_t i) const;
 
-		operator std::vector<HighLevelILOperand>() const;
+		operator _STD_VECTOR<HighLevelILOperand>() const;
 	};
 
 	struct HighLevelILConstantInstruction: public HighLevelILInstructionBase
@@ -638,7 +648,7 @@ namespace BinaryNinja
 	template <> struct HighLevelILInstructionAccessor<HLIL_RET>: public HighLevelILInstructionBase
 	{
 		HighLevelILInstructionList GetSourceExprs() const { return GetRawOperandAsExprList(0); }
-		void SetSourceExprs(const std::vector<ExprId>& exprs) { UpdateRawOperandAsExprList(0, exprs); }
+		void SetSourceExprs(const _STD_VECTOR<ExprId>& exprs) { UpdateRawOperandAsExprList(0, exprs); }
 	};
 
 	template <> struct HighLevelILInstructionAccessor<HLIL_VAR_DECLARE>: public HighLevelILInstructionBase
@@ -742,7 +752,7 @@ namespace BinaryNinja
 	{
 		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0); }
 		HighLevelILSSAVariableList GetSourceSSAVariables() const { return GetRawOperandAsSSAVariableList(2); }
-		void SetSourceSSAVariables(const std::vector<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(2, vars); }
+		void SetSourceSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(2, vars); }
 	};
 	template <> struct HighLevelILInstructionAccessor<HLIL_MEM_PHI>: public HighLevelILInstructionBase
 	{
@@ -897,4 +907,8 @@ namespace BinaryNinja
 	template <> struct HighLevelILInstructionAccessor<HLIL_FLOOR>: public HighLevelILOneOperandInstruction {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_CEIL>: public HighLevelILOneOperandInstruction {};
 	template <> struct HighLevelILInstructionAccessor<HLIL_FTRUNC>: public HighLevelILOneOperandInstruction {};
+
+#undef _STD_VECTOR
+#undef _STD_SET
+#undef _STD_UNORDERED_MAP
 }

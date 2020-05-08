@@ -30,7 +30,9 @@ using namespace BinaryNinjaCore;
 using namespace BinaryNinja;
 #endif
 
+#ifndef BINARYNINJACORE_LIBRARY
 using namespace std;
+#endif
 
 
 unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType>

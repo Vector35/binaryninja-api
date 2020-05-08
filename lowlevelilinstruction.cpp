@@ -30,7 +30,9 @@ using namespace BinaryNinjaCore;
 using namespace BinaryNinja;
 #endif
 
+#ifndef BINARYNINJACORE_LIBRARY
 using namespace std;
+#endif
 
 
 unordered_map<LowLevelILOperandUsage, LowLevelILOperandType>
@@ -3262,7 +3264,7 @@ ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
 
 
 ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, int64_t adjust,
-	const std::map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
+	const map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
 {
 	vector<size_t> list;
 	for (auto& i : regStackAdjust)

@@ -30,7 +30,9 @@ using namespace BinaryNinjaCore;
 using namespace BinaryNinja;
 #endif
 
+#ifndef BINARYNINJACORE_LIBRARY
 using namespace std;
+#endif
 
 
 unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
@@ -2320,7 +2322,7 @@ ExprId HighLevelILFunction::Nop(const ILSourceLocation& loc)
 }
 
 
-ExprId HighLevelILFunction::Block(const std::vector<ExprId>& exprs, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Block(const vector<ExprId>& exprs, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_BLOCK, loc, 0, exprs.size(), AddOperandList(exprs));
 }
@@ -2373,7 +2375,7 @@ ExprId HighLevelILFunction::ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId 
 }
 
 
-ExprId HighLevelILFunction::Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
+ExprId HighLevelILFunction::Switch(ExprId condition, ExprId defaultExpr, const vector<ExprId>& cases,
 	const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_SWITCH, loc, 0, condition, defaultExpr,
@@ -2381,7 +2383,7 @@ ExprId HighLevelILFunction::Switch(ExprId condition, ExprId defaultExpr, const s
 }
 
 
-ExprId HighLevelILFunction::Case(const std::vector<ExprId>& values, ExprId expr, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Case(const vector<ExprId>& values, ExprId expr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CASE, loc, 0, values.size(), AddOperandList(values), expr);
 }

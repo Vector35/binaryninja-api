@@ -179,6 +179,18 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
+#ifdef BINARYNINJACORE_LIBRARY
+#define _STD_VECTOR vector
+#define _STD_SET set
+#define _STD_UNORDERED_MAP unordered_map
+#define _STD_MAP map
+#else
+#define _STD_VECTOR std::vector
+#define _STD_SET std::set
+#define _STD_UNORDERED_MAP std::unordered_map
+#define _STD_MAP std::map
+#endif
+
 	class MediumLevelILInstructionAccessException: public std::exception
 	{
 	public:
@@ -219,7 +231,7 @@ namespace BinaryNinja
 		size_t size() const;
 		uint64_t operator[](size_t i) const;
 
-		operator std::vector<uint64_t>() const;
+		operator _STD_VECTOR<uint64_t>() const;
 	};
 
 	class MediumLevelILIndexList
@@ -246,7 +258,7 @@ namespace BinaryNinja
 		size_t size() const;
 		size_t operator[](size_t i) const;
 
-		operator std::vector<size_t>() const;
+		operator _STD_VECTOR<size_t>() const;
 	};
 
 	class MediumLevelILIndexMap
@@ -273,7 +285,7 @@ namespace BinaryNinja
 		size_t size() const;
 		size_t operator[](uint64_t) const;
 
-		operator std::map<uint64_t, size_t>() const;
+		operator _STD_MAP<uint64_t, size_t>() const;
 	};
 
 	class MediumLevelILVariableList
@@ -300,7 +312,7 @@ namespace BinaryNinja
 		size_t size() const;
 		const Variable operator[](size_t i) const;
 
-		operator std::vector<Variable>() const;
+		operator _STD_VECTOR<Variable>() const;
 	};
 
 	class MediumLevelILSSAVariableList
@@ -327,7 +339,7 @@ namespace BinaryNinja
 		size_t size() const;
 		const SSAVariable operator[](size_t i) const;
 
-		operator std::vector<SSAVariable>() const;
+		operator _STD_VECTOR<SSAVariable>() const;
 	};
 
 	class MediumLevelILInstructionList
@@ -357,7 +369,7 @@ namespace BinaryNinja
 		size_t size() const;
 		const MediumLevelILInstruction operator[](size_t i) const;
 
-		operator std::vector<MediumLevelILInstruction>() const;
+		operator _STD_VECTOR<MediumLevelILInstruction>() const;
 	};
 
 	struct MediumLevelILInstructionBase: public BNMediumLevelILInstruction
@@ -369,11 +381,11 @@ namespace BinaryNinja
 #endif
 		size_t exprIndex, instructionIndex;
 
-		static std::unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType> operandTypeForUsage;
-		static std::unordered_map<BNMediumLevelILOperation,
-			std::vector<MediumLevelILOperandUsage>> operationOperandUsage;
-		static std::unordered_map<BNMediumLevelILOperation,
-			std::unordered_map<MediumLevelILOperandUsage, size_t>> operationOperandIndex;
+		static _STD_UNORDERED_MAP<MediumLevelILOperandUsage, MediumLevelILOperandType> operandTypeForUsage;
+		static _STD_UNORDERED_MAP<BNMediumLevelILOperation,
+			_STD_VECTOR<MediumLevelILOperandUsage>> operationOperandUsage;
+		static _STD_UNORDERED_MAP<BNMediumLevelILOperation,
+			_STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>> operationOperandIndex;
 
 		MediumLevelILOperandList GetOperands() const;
 
@@ -390,13 +402,13 @@ namespace BinaryNinja
 		MediumLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
 
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
-		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const std::vector<SSAVariable>& vars);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<MediumLevelILInstruction>& exprs);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const std::vector<size_t>& exprs);
+		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const _STD_VECTOR<SSAVariable>& vars);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<MediumLevelILInstruction>& exprs);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<size_t>& exprs);
 
 		RegisterValue GetValue() const;
-		PossibleValueSet GetPossibleValues(const std::set<BNDataFlowQueryOption>& options =
-			std::set<BNDataFlowQueryOption>()) const;
+		PossibleValueSet GetPossibleValues(const _STD_SET<BNDataFlowQueryOption>& options =
+			_STD_SET<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
 		size_t GetSSAVarVersion(const Variable& var);
@@ -421,7 +433,7 @@ namespace BinaryNinja
 
 		BNILBranchDependence GetBranchDependence(size_t branchInstr);
 		BNILBranchDependence GetBranchDependence(const MediumLevelILInstruction& branch);
-		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependence();
+		_STD_UNORDERED_MAP<size_t, BNILBranchDependence> GetAllBranchDependence();
 
 		size_t GetSSAInstructionIndex() const;
 		size_t GetNonSSAInstructionIndex() const;
@@ -539,12 +551,12 @@ namespace BinaryNinja
 		template <BNMediumLevelILOperation N> void SetLowSSAVersion(size_t version) { As<N>().SetLowSSAVersion(version); }
 		template <BNMediumLevelILOperation N> void SetDestMemoryVersion(size_t version) { As<N>().SetDestMemoryVersion(version); }
 		template <BNMediumLevelILOperation N> void SetSourceMemoryVersion(size_t version) { As<N>().SetSourceMemoryVersion(version); }
-		template <BNMediumLevelILOperation N> void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { As<N>().SetOutputSSAVariables(vars); }
-		template <BNMediumLevelILOperation N> void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { As<N>().SetParameterSSAVariables(vars); }
-		template <BNMediumLevelILOperation N> void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
-		template <BNMediumLevelILOperation N> void SetParameterExprs(const std::vector<ExprId>& params) { As<N>().SetParameterExprs(params); }
-		template <BNMediumLevelILOperation N> void SetSourceExprs(const std::vector<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
-		template <BNMediumLevelILOperation N> void SetSourceExprs(const std::vector<ExprId>& params) { As<N>().SetSourceExprs(params); }
+		template <BNMediumLevelILOperation N> void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { As<N>().SetOutputSSAVariables(vars); }
+		template <BNMediumLevelILOperation N> void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { As<N>().SetParameterSSAVariables(vars); }
+		template <BNMediumLevelILOperation N> void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetParameterExprs(params); }
+		template <BNMediumLevelILOperation N> void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetParameterExprs(params); }
+		template <BNMediumLevelILOperation N> void SetSourceExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { As<N>().SetSourceExprs(params); }
+		template <BNMediumLevelILOperation N> void SetSourceExprs(const _STD_VECTOR<ExprId>& params) { As<N>().SetSourceExprs(params); }
 
 		bool GetOperandIndexForUsage(MediumLevelILOperandUsage usage, size_t& operandIndex) const;
 
@@ -617,7 +629,7 @@ namespace BinaryNinja
 		struct ListIterator
 		{
 			const MediumLevelILOperandList* owner;
-			std::vector<MediumLevelILOperandUsage>::const_iterator pos;
+			_STD_VECTOR<MediumLevelILOperandUsage>::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -626,22 +638,22 @@ namespace BinaryNinja
 		};
 
 		MediumLevelILInstruction m_instr;
-		const std::vector<MediumLevelILOperandUsage>& m_usageList;
-		const std::unordered_map<MediumLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const _STD_VECTOR<MediumLevelILOperandUsage>& m_usageList;
+		const _STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>& m_operandIndexMap;
 
 	public:
 		typedef ListIterator const_iterator;
 
 		MediumLevelILOperandList(const MediumLevelILInstruction& instr,
-			const std::vector<MediumLevelILOperandUsage>& usageList,
-			const std::unordered_map<MediumLevelILOperandUsage, size_t>& operandIndexMap);
+			const _STD_VECTOR<MediumLevelILOperandUsage>& usageList,
+			const _STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>& operandIndexMap);
 
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t size() const;
 		const MediumLevelILOperand operator[](size_t i) const;
 
-		operator std::vector<MediumLevelILOperand>() const;
+		operator _STD_VECTOR<MediumLevelILOperand>() const;
 	};
 
 	struct MediumLevelILConstantInstruction: public MediumLevelILInstructionBase
@@ -896,9 +908,9 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(4); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(4, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(2, params); }
-		void SetParameterExprs(const std::vector<ExprId>& params) { UpdateRawOperandAsExprList(2, params); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(2, params); }
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { UpdateRawOperandAsExprList(2, params); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CALL_UNTYPED_SSA>: public MediumLevelILInstructionBase
 	{
@@ -910,8 +922,8 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(0, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_SYSCALL_SSA>: public MediumLevelILInstructionBase
 	{
@@ -921,9 +933,9 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(3); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(3, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(1, params); }
-		void SetParameterExprs(const std::vector<ExprId>& params) { UpdateRawOperandAsExprList(1, params); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(1, params); }
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { UpdateRawOperandAsExprList(1, params); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_SYSCALL_UNTYPED_SSA>: public MediumLevelILInstructionBase
 	{
@@ -934,8 +946,8 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(2); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(0, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(1).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(1).UpdateRawOperandAsSSAVariableList(1, vars); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_SSA>: public MediumLevelILInstructionBase
 	{
@@ -946,9 +958,9 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(4); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(4, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterExprs(const std::vector<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(2, params); }
-		void SetParameterExprs(const std::vector<ExprId>& params) { UpdateRawOperandAsExprList(2, params); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params) { UpdateRawOperandAsExprList(2, params); }
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { UpdateRawOperandAsExprList(2, params); }
 	};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_UNTYPED_SSA>: public MediumLevelILInstructionBase
 	{
@@ -960,14 +972,14 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
 		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
 		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(0, version); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
-		void SetParameterSSAVariables(const std::vector<SSAVariable>& vars) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_RET>: public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstructionList GetSourceExprs() const { return GetRawOperandAsExprList(0); }
-		void SetSourceExprs(const std::vector<ExprId>& exprs) { UpdateRawOperandAsExprList(0, exprs); }
+		void SetSourceExprs(const _STD_VECTOR<ExprId>& exprs) { UpdateRawOperandAsExprList(0, exprs); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_IF>: public MediumLevelILInstructionBase
@@ -992,7 +1004,7 @@ namespace BinaryNinja
 		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsSSAVariableList(0); }
 		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(2); }
 		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
-		void SetOutputSSAVariables(const std::vector<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT>: public MediumLevelILInstructionBase
@@ -1108,4 +1120,9 @@ namespace BinaryNinja
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FLOOR>: public MediumLevelILOneOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_CEIL>: public MediumLevelILOneOperandInstruction {};
 	template <> struct MediumLevelILInstructionAccessor<MLIL_FTRUNC>: public MediumLevelILOneOperandInstruction {};
+
+#undef _STD_VECTOR
+#undef _STD_SET
+#undef _STD_UNORDERED_MAP
+#undef _STD_MAP
 }

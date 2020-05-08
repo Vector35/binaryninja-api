@@ -71,7 +71,9 @@ license you like.
 
 
 
-
+#ifdef BINARYNINJACORE_LIBRARY
+#include "binaryninjacore_global.h"
+#endif
 
 #include "json/json.h"
 

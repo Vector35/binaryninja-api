@@ -402,7 +402,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 		if filename is None:
 			filename = "input"
-		if not isinstance(source, str):
+		if not (isinstance(source, str) or isinstance(source, unicode)):
 			raise AttributeError("Source must be a string")
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):

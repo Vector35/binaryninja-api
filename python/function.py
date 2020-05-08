@@ -1639,17 +1639,17 @@ class Function(object):
 		"""Whether automatic analysis was skipped for this function"""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
 
-	@property
-	def analysis_skip_reason(self):
-		"""Function analysis skip reason"""
-		return AnalysisSkipReason(core.BNGetAnalysisSkipReason(self.handle))
-
 	@analysis_skipped.setter
 	def analysis_skipped(self, skip):
 		if skip:
 			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.AlwaysSkipFunctionAnalysis)
 		else:
 			core.BNSetFunctionAnalysisSkipOverride(self.handle, FunctionAnalysisSkipOverride.NeverSkipFunctionAnalysis)
+
+	@property
+	def analysis_skip_reason(self):
+		"""Function analysis skip reason"""
+		return AnalysisSkipReason(core.BNGetAnalysisSkipReason(self.handle))
 
 	@property
 	def analysis_skip_override(self):

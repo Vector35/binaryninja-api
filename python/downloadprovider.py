@@ -82,8 +82,7 @@ class DownloadInstance(object):
 
 	def _write_callback(self, data, len, ctxt):
 		try:
-			str_ptr = ctypes.cast(data, ctypes.c_char_p)
-			str_bytes = str_ptr.value
+			str_bytes = ctypes.string_at(data, len)
 			self._response = self._response + str_bytes
 			return len
 		except:

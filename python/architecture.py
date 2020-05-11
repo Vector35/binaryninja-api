@@ -2765,6 +2765,11 @@ class ReferenceSource(object):
 			return NotImplemented
 		return self.address > other.address
 
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.address >= other.address
+
 	def __le__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented

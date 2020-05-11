@@ -12,9 +12,23 @@ Finally, we'll [cover](#symbols) how to work with Symbols in a binary.
 
 There are two main ways to interact with types from within a binary view. The first is to use the [types view](#types-view), and the second is to take advantage of the [smart structures workflow](#smart-structures-workflow) or otherwise annotate types directly in a disassembly or IL view.
 
+### Direct UI manipulation
+
+The simplest way to directly manipulate types in disassembly is by viewing an existing variable or sequence of bytes in linear view and using the following hotkeys:
+
+ - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey. 
+ - `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
+ - `-`: To quickly toggle integers between signed and unsigned integers, you can use the `-` hotkey.
+ - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
+ - `o`: `o` will set or create the current variable to be a pointer reference.
+ - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements.
+ - `s`: `s` is a magic hotkey described in the next section in greater detail
+
+ Note that you can apply these types to a region of memory as well, not just a single variable. So selecting a large block of bytes and pressing `2` `*` for example will create an array of `int16_t` sized elements. 
+
 ### Smart Structures Workflow
 
-New to [stable version 1.3.2015](https://binary.ninja/changelog/) is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
+New to [stable version 1.3.2015](https://binary.ninja/changelog/) is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](binaryninja:http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
 <div class="inline-slides">
     <ol id="inline-slides-text">

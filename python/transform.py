@@ -267,7 +267,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			param_buf[i].value = data[i].handle
 		if not core.BNDecode(self.handle, input_buf.handle, output_buf.handle, param_buf, len(keys)):
 			return None
-		return str(output_buf)
+		return bytes(output_buf)
 
 	def encode(self, input_buf, params = {}):
 		if isinstance(input_buf, int) or isinstance(input_buf, numbers.Integral):
@@ -283,4 +283,4 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			param_buf[i].value = data[i].handle
 		if not core.BNEncode(self.handle, input_buf.handle, output_buf.handle, param_buf, len(keys)):
 			return None
-		return str(output_buf)
+		return bytes(output_buf)

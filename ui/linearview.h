@@ -248,6 +248,9 @@ private Q_SLOTS:
 	void scrollBarAction(int action);
 	void updateTimerEvent();
 
+	void setStackAdjustment();
+	void setCallTypeAdjustment();
+
 public:
 	explicit LinearView(BinaryViewRef data, ViewFrame* view);
 	virtual ~LinearView();

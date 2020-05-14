@@ -1895,7 +1895,7 @@ class LowLevelILFunction(object):
 
 	def shift_left(self, size, a, b, flags=None):
 		"""
-		``shift_left`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
+		``shift_left`` shifts left expression ``a`` by expression ``b`` from expression ``a`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
@@ -1910,7 +1910,7 @@ class LowLevelILFunction(object):
 	def logical_shift_right(self, size, a, b, flags=None):
 		"""
 		``logical_shift_right`` shifts logically right expression ``a`` by expression ``b`` potentially setting flags
-		``flags``and returning an expression of ``size`` bytes.
+		``flags`` and returning an expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
 		:param LowLevelILExpr a: LHS expression

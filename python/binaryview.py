@@ -2883,6 +2883,8 @@ class BinaryView(object):
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
+		.. warning: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :func:`remove_user_function` in their scripts.
+
 		:param Function func: a Function object.
 		:rtype: None
 		:Example:
@@ -2915,7 +2917,9 @@ class BinaryView(object):
 
 	def remove_user_function(self, func):
 		"""
-		``remove_user_function`` removes the *user* function ``func`` from the list of functions
+		``remove_user_function`` removes the function ``func`` from the list of functions as a user action.
+
+		.. note:: This API will prevent the function from being re-created if any analysis later triggers that would re-add it, unlike :func:`remove_function`.
 
 		:param Function func: a Function object.
 		:rtype: None

@@ -62,8 +62,8 @@ public:
 	virtual ~XrefItem();
 
 	XrefDirection direction() const { return m_direction; }
-	FunctionRef func() const { return m_func; }
-	ArchitectureRef arch() const { return m_arch; }
+	const FunctionRef& func() const { return m_func; }
+	const ArchitectureRef& arch() const { return m_arch; }
 	uint64_t addr() const { return m_addr; }
 	XrefType type() const { return m_type; }
 	int size() const { return m_size; }
@@ -387,6 +387,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget: public QWidget, public DockContextH
 	QLineEdit* m_lineEdit;
 	ExpandableGroup* m_group;
 
+	bool m_curRefTargetValid = false;
 	uint64_t m_curRefTarget = 0;
 	uint64_t m_curRefTargetEnd = 0;
 	uint64_t m_newRefTarget = 0;

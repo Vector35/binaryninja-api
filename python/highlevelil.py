@@ -496,39 +496,39 @@ class HighLevelILInstruction(object):
 		return HighLevelILInstruction(self._function.non_ssa_form,
 			core.BNGetHighLevelILNonSSAExprIndex(self._function.handle, self._expr_index), self._as_ast)
 
-	@property
-	def medium_level_il(self):
-		"""Medium level IL form of this expression"""
-		expr = self._function.get_medium_level_il_expr_index(self._expr_index)
-		if expr is None:
-			return None
-		return mediumlevelil.MediumLevelILInstruction(self._function.medium_level_il.ssa_form, expr)
+	# @property
+	# def medium_level_il(self):
+	# 	"""Medium level IL form of this expression"""
+	# 	expr = self._function.get_medium_level_il_expr_index(self._expr_index)
+	# 	if expr is None:
+	# 		return None
+	# 	return mediumlevelil.MediumLevelILInstruction(self._function.medium_level_il.ssa_form, expr)
 
-	@property
-	def mlil(self):
-		"""Alias for medium_level_il"""
-		return self.medium_level_il
+	# @property
+	# def mlil(self):
+	# 	"""Alias for medium_level_il"""
+	# 	return self.medium_level_il
 
 	@property
 	def il_basic_block(self):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
 		return HighLevelILBasicBlock(self._function.source_function.view, core.BNGetHighLevelILBasicBlockForInstruction(self._function.handle, self._instr_index), self._function)
 
-	@property
-	def value(self):
-		"""Value of expression if constant or a known value (read-only)"""
-		mlil = self.mlil
-		if mlil is None:
-			return function.RegisterValue()
-		return mlil.value
+	# @property
+	# def value(self):
+	# 	"""Value of expression if constant or a known value (read-only)"""
+	# 	mlil = self.mlil
+	# 	if mlil is None:
+	# 		return function.RegisterValue()
+	# 	return mlil.value
 
-	@property
-	def possible_values(self):
-		"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
-		mlil = self.mlil
-		if mlil is None:
-			return function.PossibleValueSet()
-		return mlil.possible_values
+	# @property
+	# def possible_values(self):
+	# 	"""Possible values of expression using path-sensitive static data flow analysis (read-only)"""
+	# 	mlil = self.mlil
+	# 	if mlil is None:
+	# 		return function.PossibleValueSet()
+	# 	return mlil.possible_values
 
 	@property
 	def expr_type(self):
@@ -872,17 +872,17 @@ class HighLevelILFunction(object):
 		"""Alias for medium_level_il"""
 		return self.medium_level_il
 
-	def get_medium_level_il_expr_index(self, expr):
-		medium_il = self.medium_level_il
-		if medium_il is None:
-			return None
-		medium_il = medium_il.ssa_form
-		if medium_il is None:
-			return None
-		result = core.BNGetMediumLevelILExprIndexFromHighLevelIL(self.handle, expr)
-		if result >= core.BNGetMediumLevelILExprCount(medium_il.handle):
-			return None
-		return result
+	# def get_medium_level_il_expr_index(self, expr):
+	# 	medium_il = self.medium_level_il
+	# 	if medium_il is None:
+	# 		return None
+	# 	medium_il = medium_il.ssa_form
+	# 	if medium_il is None:
+	# 		return None
+	# 	result = core.BNGetMediumLevelILExprIndexFromHighLevelIL(self.handle, expr)
+	# 	if result >= core.BNGetMediumLevelILExprCount(medium_il.handle):
+	# 		return None
+	# 	return result
 
 	def get_label(self, label_idx):
 		result = core.BNGetHighLevelILExprIndexForLabel(self.handle, label_idx)

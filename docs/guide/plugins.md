@@ -57,7 +57,7 @@ You can manually install a plugin either by adding a folder which contains it (t
 
 Note, if manually cloning the [api repository](https://github.com/Vector35/binaryninja-api), make sure to:
 
-```
+``` text
 git submodule update --init --recursive
 ```
 
@@ -67,7 +67,7 @@ after cloning or else the submodules will not actually be downloaded.
 
 Binary Ninja now offers a [PluginManager API] which can simplify the process of finding and installing plugins. From the console:
 
-```
+``` text
 >>> mgr = RepositoryManager()
 >>> dir(mgr)
 ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getitem__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'add_repository', 'check_for_updates', 'default_repository', 'handle', 'plugins', 'repositories']
@@ -92,7 +92,7 @@ Then just restart, and your plugin will be loaded.
 
 Because Windows ships with an embedded version of Python, if you want to install plugins inside that Python, you'll need to either adjust your `sys.path` to include the locations for the other libraries (making sure they're compatible with the built-in version), or else install them directly in the environment via:
 
-```
+``` py
 import pip
 pip.main(['install', '--quiet', 'packagename'])
 ```
@@ -105,7 +105,7 @@ Binary Ninja can also switch to a different installed version of Python using th
 
 Troubleshooting many Binary Ninja problems is helped by enabling debug logs and logging the output to a file. Just launch Binary Ninja with 
 
-```
+``` text
 /Applications/Binary\ Ninja.app/Contents/MacOS/binaryninja -d -l /tmp/bnlog.txt
 ```
 

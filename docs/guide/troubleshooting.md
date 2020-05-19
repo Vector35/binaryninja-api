@@ -10,13 +10,13 @@
 ## Bug Reproduction
 Running Binary Ninja with debug logging will make your bug report more useful.
 
-```
+``` bash
 ./binaryninja --debug --stderr-log
 ```
 
 Alternatively, it might be easier to save debug logs to a file instead:
 
-```
+``` bash
 ./binaryninja -d -l logfile.txt
 ```
 
@@ -69,7 +69,7 @@ If you're using Windows virtual machines within virtualbox, you may have trouble
 
 You may also manually create a `settings.json` file in your [user folder](../getting-started.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
 
-```
+``` js
 {
 	"updates" :
 	{
@@ -87,7 +87,7 @@ If you're running Catlina MacOS with the Python 3 installed by XCode and wish to
 1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
 1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
 
-```
+``` js
 {
 	"downloadClient" :
 	{
@@ -104,7 +104,7 @@ If you're running Catlina MacOS with the Python 3 installed by XCode and wish to
 
 While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
 
-```
+``` bash
 DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/MacOS" /Applications/Binary\ Ninja.app/Contents/MacOS/binaryninja
 ```
 
@@ -114,13 +114,13 @@ Or second, modify the binary itself using the [install_name_tool](https://blogs.
 
 One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an erorr while attempting to download updates using the python provider. One of the following may fix this:
 
-```
+``` bash
 pip install --upgrade certifi
 ```
 
 or:
 
-```
+``` bash
 open /Applications/Python\ 3.6/Install\ Certificates.command
 ```
 
@@ -132,7 +132,7 @@ Given the diversity of Linux distributions, some work-arounds are required to ru
 
 Debian requires one package be manually installed to support the emoji icons used in the Tag system:
 
-```
+``` bash
 apt install fonts-noto-color-emoji
 ```
 
@@ -140,7 +140,7 @@ apt install fonts-noto-color-emoji
 
 If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requirements (for at least 14.04 LTS):
 
-```
+``` bash
 apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 libnspr4 libsm6
 ```
 
@@ -152,7 +152,7 @@ apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 l
 
 To run Binary Ninja in a KDE based environment, set the `QT_PLUGIN_PATH` to the `QT` sub-folder:
 
-```
+``` bash
 cd ~/binaryninja
 QT_PLUGIN_PATH=./qt ./binaryninja
 ```
@@ -161,7 +161,7 @@ QT_PLUGIN_PATH=./qt ./binaryninja
 
 Here's a customer-provided nix derivation file for the Binary Ninja demo. Note that you'll likely want to update the SHA256 field with the latest value available [here](https://binary.ninja/js/hashes.js).  Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
 
-```
+``` js
 { stdenv, autoPatchelfHook, makeWrapper, fetchurl, unzip, libGL, glib, fontconfig, xlibs, dbus, xkeyboard_config }:
 stdenv.mkDerivation rec {
   name = "binary-ninja-demo";

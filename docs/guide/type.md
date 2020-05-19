@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do some reverse engineering on these binaries, we learn that this is actually a linked list and that the structures should look like:
 
-```C
+``` C
 struct Page
 {
     int num;
@@ -133,7 +133,7 @@ struct Page
 ```
 
 and:
-```C
+``` C
 struct Tape
 {
     int id;
@@ -174,7 +174,7 @@ The shortcuts for editing existing elements are:
 
 Structs support the attribute `__packed` to indicate that there is no padding. Additionally, function prototypes support the following keywords to indicate their calling convention or other features:
 
-```
+``` text
 __cdecl
 __stdcall
 __fastcall
@@ -192,7 +192,7 @@ Once you've created your structures, you can apply them to your disassembly. Sim
 
 #### Examples 
 
-```C
+``` C
 enum _flags
 {
     F_X = 0x1,
@@ -201,7 +201,7 @@ enum _flags
 };
 ```
 
-```C
+``` C
 struct Header __packed
 {
     char *name;
@@ -224,7 +224,7 @@ Let's follow the most basic workflow: making a new type, inserting it into a Bin
 
 There are two main ways to create a type with the API. The first is to use [one of](https://api.binary.ninja/search.html?q=parse_type&check_keywords=yes&area=default#) our APIs that parse a type string and return a type object. For a simple, single type, [parse_type_string](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_type_string) will return a tuple of the [Type](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and the [QualifiedName](https://api.binary.ninja/binaryninja.types.QualifiedName.html#binaryninja.types.QualifiedName):
 
-```py
+``` py
 >>> bv.parse_type_string("int foo")
 (<type: int32_t>, 'foo')
 >>>
@@ -232,7 +232,7 @@ There are two main ways to create a type with the API. The first is to use [one 
 
 For more complicated types that are already in C syntax, you may want to take advantage of the [parse_types_*](https://api.binary.ninja/search.html?q=parse_types&check_keywords=yes&area=default) APIs. 
 
-```py
+``` py
 >>> bv.platform.parse_types_from_source('''
 enum colors {blue, green, brown};
 
@@ -254,7 +254,7 @@ NOTE: While they have similar names, be aware that the parse_types APIs live off
 
 Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easily composed to create simple type objects or added with [Structures](https://api.binary.ninja/binaryninja.types.Structure.html#binaryninja.types.Structure):
 
-```py
+``` py
 >>> myar = Type.array(Type.char(), 20)
 >>> print(repr(myar))
 <type: char [20]>
@@ -262,7 +262,7 @@ Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easi
 
 This is useful for creating structures that are not easily created in C syntax, such as sparse structures with only some members defined:
 
-```py
+``` py
 >>> s = types.Structure()
 >>> s
 <struct: size 0x0>
@@ -276,7 +276,7 @@ This is useful for creating structures that are not easily created in C syntax, 
 Next, we're going to take the optional step of inserting our type into the current BinaryView with the [define_user_type](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_user_type) API:
 
 
-```py
+``` py
 >>> bv.define_user_type("myString", myar)
 ```
 
@@ -290,7 +290,7 @@ This makes the type available to the user to apply more easily and is appropriat
 
 Of course, having the type available doesn't actually apply it to anything in the binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string (like the one at `0x8049f34`) and create a data variable using our new type:
 
-```py
+``` py
 >>> bv.define_user_data_var(0x8049f34, bv.types["myString"])
 ```
 And now we can see that the string was indeed applied to our location:
@@ -299,7 +299,7 @@ And now we can see that the string was indeed applied to our location:
 
 Of course, we could have just directly applied our type without inserting it into the types available in the binary. For example:
 
-```py
+``` py
 >>> bv.define_user_data_var(0x8049f34, Type.array(Type.char(), 20))
 ```
 
@@ -311,13 +311,13 @@ NOTE: There also exists the [`define_data_var`](https://api.binary.ninja/binaryn
 
 To remove a type from the view:
 
-```py
+``` py
 >>> bv.undefine_user_type('person')
 ```
 
 Or you can remove a type applied to memory:
 
-```py
+``` py
 >>> bv.undefine_user_data_var(0x8049f34)
 ```
 
@@ -326,7 +326,7 @@ Or you can remove a type applied to memory:
 
 Here's a snippet to take an existing function, and set the confidence of all the parameter types to 100%:
 
-```py
+``` py
 old = current_function.function_type
 new_parameters = []
 for vars, params in zip(current_function.parameter_vars, old.parameters):
@@ -355,7 +355,7 @@ You can also trigger the signature matcher to run from the menu `Tools > Run Ana
 
 Once the signature matcher runs, it will print a brief report to the console detailing how many functions it matched and will rename matched functions. For example:
 
-```txt
+``` text
 1 functions matched total, 0 name-only matches, 0 thunks resolved, 33 functions skipped because they were too small
 ```
 
@@ -367,7 +367,7 @@ For headless users, you can generate signature libraries by using the sigkit API
 
 If you are accessing the sigkit API through the Binary Ninja GUI and you've installed the sigkit plugin through the plugin manager, you will need to import sigkit under a different name:
 
-```python
+``` python
 import Vector35_sigkit as sigkit
 ```
 
@@ -399,7 +399,7 @@ Some binaries helpfully have symbol information in them which makes reverse engi
 
 That's it! From an API perspective, there are some helper functions to make the process easier. For example, to rename a function:
 
-```py
+``` py
 >>> current_function.name
 'main'
 >>> current_function.name = "newName"
@@ -409,7 +409,7 @@ That's it! From an API perspective, there are some helper functions to make the 
 
 Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied:
 
-```py
+``` py
 >>> mysym = Symbol(SymbolType.FunctionSymbol, here, "myVariableName")
 >>> mysym
 <SymbolType.FunctionSymbol: "myVariableName" @ 0x80498d0>

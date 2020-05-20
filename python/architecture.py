@@ -2776,7 +2776,7 @@ class ReferenceSource(object):
 		return self.address <= other.address
 
 	def __hash__(self):
-		hash((self._function, self._arch, self._address))
+		return hash((self._function, self._arch, self._address))
 
 	@property
 	def function(self):

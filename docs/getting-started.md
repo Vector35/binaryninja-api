@@ -368,9 +368,14 @@ Here's a list of all settings currently available from the UI:
 |analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
 |analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
 |analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
+|arch|M16C RAM Size|Specify the amount of address space allocated for internal RAM.|`number`|`31`|<a id='arch.m16c.ramSize'>arch.m16c.ramSize</a>|
+|arch|M16C Disassembly Suffix|Whether or not to display the :G/:Q/:S/:Z suffix.|`boolean`|`True`|<a id='arch.m16c.showSuffix'>arch.m16c.showSuffix</a>|
 |arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
 |arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
 |arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
+|bnil-graph|Show Common ILs|Show common forms (non-SSA, non-mapped) in the output.|`boolean`|`True`|<a id='bnil-graph.showCommon'>bnil-graph.showCommon</a>|
+|bnil-graph|Include MMLIL|Show the MappedMediumLevelIL form in the output.|`boolean`|`False`|<a id='bnil-graph.showMapped'>bnil-graph.showMapped</a>|
+|bnil-graph|Include SSA|Include SSA forms in the output.|`boolean`|`True`|<a id='bnil-graph.showSSA'>bnil-graph.showSSA</a>|
 |downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`||<a id='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
 |downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`PythonDownloadProvider`|<a id='downloadClient.providerName'>downloadClient.providerName</a>|
 |pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|<a id='pdb.autoDownload'>pdb.autoDownload</a>|
@@ -396,8 +401,9 @@ Here's a list of all settings currently available from the UI:
 |ui|Font Name|Font family selection.|`string`|`Source Code Pro`|<a id='ui.font.name'>ui.font.name</a>|
 |ui|Font Size|Font point size selection.|`number`|`12`|<a id='ui.font.size'>ui.font.size</a>|
 |ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|<a id='ui.font.spacing'>ui.font.spacing</a>|
-|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL']`|<a id='ui.graph.carousel'>ui.graph.carousel</a>|
+|ui|Graph Carousel|Graphs and order of graphs to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL', 'HighLevelIL']`|<a id='ui.graph.carousel'>ui.graph.carousel</a>|
 |ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a id='ui.graph.default'>ui.graph.default</a>|
+|ui|Perfer Disassembly Graph|Prefer disassembly graph over linear view on startup.|`boolean`|`False`|<a id='ui.graph.preferred'>ui.graph.preferred</a>|
 |ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
 |ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a id='ui.log.minLevel'>ui.log.minLevel</a>|
 |ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|<a id='ui.manualTooltip'>ui.manualTooltip</a>|
@@ -405,7 +411,9 @@ Here's a list of all settings currently available from the UI:
 |ui|Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI|`string`|`Python`|<a id='ui.scriptingProvider'>ui.scriptingProvider</a>|
 |ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
 |ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a id='ui.theme'>ui.theme</a>|
+|ui|Linear View Carousel|Views and order of views to display for 'i' keystroke|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL', 'HighLevelIL']`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
 |ui|Gutter Width|Disassembly view gutter and tags width, in characters.|`number`|`5`|<a id='ui.view.disassembly.gutterWidth'>ui.view.disassembly.gutterWidth</a>|
+|ui|Default Linear View Type|Default linear view type to display on startup.|`string`|`HighLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
 |ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
 |updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a id='updates.activeContent'>updates.activeContent</a>|
 |updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|<a id='updates.channelPreferences'>updates.channelPreferences</a>|

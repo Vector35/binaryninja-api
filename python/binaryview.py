@@ -4936,12 +4936,12 @@ class BinaryView(object):
 		:param str data: data to search for
 		:param FindFlag flags: (optional) defaults to case-insensitive data search
 
-			====================  ============================
-			FindFlag              Description
-			====================  ============================
-			FindCaseSensitive     Case-sensitive search
-			FindCaseInsensitive   Case-insensitive search
-			===================== ============================
+			==================== ============================
+			FindFlag             Description
+			==================== ============================
+			FindCaseSensitive    Case-sensitive search
+			FindCaseInsensitive  Case-insensitive search
+			==================== ============================
 		"""
 		buf = databuffer.DataBuffer(str(data))
 		result = ctypes.c_ulonglong()
@@ -4959,12 +4959,12 @@ class BinaryView(object):
 		:param str text: text to search for
 		:param FindFlag flags: (optional) defaults to case-insensitive data search
 
-			====================  ============================
-			FindFlag              Description
-			====================  ============================
-			FindCaseSensitive     Case-sensitive search
-			FindCaseInsensitive   Case-insensitive search
-			===================== ============================
+			==================== ============================
+			FindFlag             Description
+			==================== ============================
+			FindCaseSensitive    Case-sensitive search
+			FindCaseInsensitive  Case-insensitive search
+			==================== ============================
 		"""
 		if not isinstance(text, str):
 			raise TypeError("text parameter is not str type")

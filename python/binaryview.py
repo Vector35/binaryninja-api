@@ -755,7 +755,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@classmethod
 	def get_view_of_file(cls, filename, update_analysis=True, progress_func=None):
 		"""
-		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType`
+		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view matches
 
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``

@@ -255,3 +255,27 @@ def get_memory_usage_info():
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
 
+
+class open_view(object):
+	"""
+	Context Manager for BinaryView objects
+
+	:Example:
+		>>> from binaryninja import *
+		>>> with open_view("/bin/ls") as bv:
+		...     print(len(bv.functions))
+		...
+		128
+
+	"""
+	def __init__(self, *args, **kwargs):
+		self.args = args
+		self.kwargs = kwargs
+
+	def __enter__(self):
+		self.view = BinaryViewType.get_view_of_file(*self.args, **self.kwargs)
+		return self.view
+
+	def __exit__(self, type, value, traceback):
+		if self.view is not None:
+			self.view.file.close()

@@ -1323,6 +1323,12 @@ class BinaryView(object):
 		self._notifications = {}
 		self._next_address = None  # Do NOT try to access view before init() is called, use placeholder
 
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.file.close()
+
 	def __del__(self):
 		for i in self.notifications.values():
 			i._unregister()

@@ -118,15 +118,11 @@ uint64_t TriageView::getCurrentOffset()
 }
 
 
-void TriageView::getSelectionOffsets(uint64_t& begin, uint64_t& end)
+BNAddressRange TriageView::getSelectionOffsets()
 {
 	if (m_byteView)
-	{
-		m_byteView->getSelectionOffsets(begin, end);
-		return;
-	}
-	begin = m_currentOffset;
-	end = m_currentOffset;
+		return m_byteView->getSelectionOffsets();
+	return { m_currentOffset, m_currentOffset };
 }
 
 

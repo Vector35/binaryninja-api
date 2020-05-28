@@ -82,7 +82,7 @@ public:
 	virtual BinaryViewRef getData() override;
 	virtual QFont getFont() override;
 	virtual uint64_t getCurrentOffset() override;
-	virtual void getSelectionOffsets(uint64_t& begin, uint64_t& end) override;
+	virtual BNAddressRange getSelectionOffsets() override;
 	virtual bool navigate(uint64_t addr) override;
 	virtual void updateFonts() override;
 	virtual void selectAll();

@@ -118,8 +118,8 @@ public:
 
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
-	virtual void getSelectionOffsets(uint64_t& begin, uint64_t& end) override;
-	virtual void getSelectionForInfo(uint64_t& begin, uint64_t& end) override;
+	virtual BNAddressRange getSelectionOffsets() override;
+	virtual BNAddressRange getSelectionForInfo() override;
 	virtual FunctionRef getCurrentFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;

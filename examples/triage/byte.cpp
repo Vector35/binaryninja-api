@@ -145,16 +145,17 @@ uint64_t ByteView::getCurrentOffset()
 }
 
 
-void ByteView::getSelectionOffsets(uint64_t& start, uint64_t& end)
+BNAddressRange ByteView::getSelectionOffsets()
 {
-	start = m_selectionStartAddr;
-	end = m_cursorAddr;
+	uint64_t start = m_selectionStartAddr;
+	uint64_t end = m_cursorAddr;
 	if (end < start)
 	{
 		uint64_t t = start;
 		start = end;
 		end = t;
 	}
+	return { start, end };
 }
 
 
@@ -580,9 +581,8 @@ void ByteView::paintEvent(QPaintEvent* event)
 
 	// Compute selection range
 	bool selection = false;
-	uint64_t selStart, selEnd;
-	getSelectionOffsets(selStart, selEnd);
-	if (selStart != selEnd)
+	BNAddressRange selectionRange = getSelectionOffsets();
+	if (selectionRange.start != selectionRange.end)
 		selection = true;
 
 	// Draw selection
@@ -596,18 +596,18 @@ void ByteView::paintEvent(QPaintEvent* event)
 		int endX = 0;
 		for (size_t i = 0; i < m_lines.size(); i++)
 		{
-			if (selStart >= m_lines[i].address)
+			if (selectionRange.start >= m_lines[i].address)
 			{
 				startY = (int)(i - m_topLine);
-				startX = (int)(selStart - m_lines[i].address);
+				startX = (int)(selectionRange.start - m_lines[i].address);
 				if (startX > (int)m_cols)
 					startX = (int)m_cols;
 				startValid = true;
 			}
-			if (selEnd >= m_lines[i].address)
+			if (selectionRange.end >= m_lines[i].address)
 			{
 				endY = (int)(i - m_topLine);
-				endX = (int)(selEnd - m_lines[i].address);
+				endX = (int)(selectionRange.end - m_lines[i].address);
 				if (endX > (int)m_cols)
 					endX = (int)m_cols;
 				endValid = true;

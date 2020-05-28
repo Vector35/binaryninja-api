@@ -70,8 +70,8 @@ public:
 
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;
-	virtual void getSelectionOffsets(uint64_t& begin, uint64_t& end);
-	virtual void getSelectionForInfo(uint64_t& begin, uint64_t& end);
+	virtual BNAddressRange getSelectionOffsets();
+	virtual BNAddressRange getSelectionForInfo();
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);
@@ -202,7 +202,7 @@ public:
 	QString getCurrentView();
 	QString getCurrentDataType();
 	uint64_t getCurrentOffset();
-	void getSelectionOffsets(uint64_t& begin, uint64_t& end);
+	BNAddressRange getSelectionOffsets();
 
 	View* getCurrentViewInterface() const { return View::getViewFromWidget(m_view); }
 	QWidget* getCurrentWidget() const { return m_view; }

@@ -3587,7 +3587,7 @@ class BinaryView(object):
 		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
 
-	def define_imported_function(self, import_addr_sym, func):
+	def define_imported_function(self, import_addr_sym, func, type=None):
 		"""
 		``define_imported_function`` defines an imported Function ``func`` with a ImportedFunctionSymbol type.
 
@@ -3595,7 +3595,7 @@ class BinaryView(object):
 		:param Function func: A Function object to define as an imported function
 		:rtype: None
 		"""
-		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle)
+		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle, None if type is None else type.handle)
 
 	def create_tag_type(self, name, icon):
 		"""

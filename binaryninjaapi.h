@@ -1580,7 +1580,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void DefineUserSymbol(Ref<Symbol> sym);
 		void UndefineUserSymbol(Ref<Symbol> sym);
 
-		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func);
+		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type = nullptr);
 
 		void AddTagType(Ref<TagType> tagType);
 		void RemoveTagType(Ref<TagType> tagType);
@@ -3027,7 +3027,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
-		void ApplyImportedTypes(Symbol* sym);
+		void ApplyImportedTypes(Symbol* sym, Ref<Type> type = nullptr);
 		void ApplyAutoDiscoveredType(Type* type);
 
 		Ref<FlowGraph> CreateFunctionGraph(BNFunctionGraphType type, DisassemblySettings* settings = nullptr);

@@ -2034,9 +2034,9 @@ void BinaryView::UndefineUserSymbol(Ref<Symbol> sym)
 }
 
 
-void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func)
+void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type)
 {
-	BNDefineImportedFunction(m_object, importAddressSym->GetObject(), func->GetObject());
+	BNDefineImportedFunction(m_object, importAddressSym->GetObject(), func->GetObject(), type ? type->GetObject() : nullptr);
 }
 
 

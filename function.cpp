@@ -869,9 +869,9 @@ void Function::SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobb
 }
 
 
-void Function::ApplyImportedTypes(Symbol* sym)
+void Function::ApplyImportedTypes(Symbol* sym, Ref<Type> type)
 {
-	BNApplyImportedTypes(m_object, sym->GetObject());
+	BNApplyImportedTypes(m_object, sym->GetObject(), type ? type->GetObject() : nullptr);
 }
 
 

@@ -1960,8 +1960,8 @@ class Function(object):
 			settings_obj = None
 		return binaryninja.flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
-	def apply_imported_types(self, sym):
-		core.BNApplyImportedTypes(self.handle, sym.handle)
+	def apply_imported_types(self, sym, type=None):
+		core.BNApplyImportedTypes(self.handle, sym.handle, None if type is None else type.handle)
 
 	def apply_auto_discovered_type(self, func_type):
 		core.BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle)

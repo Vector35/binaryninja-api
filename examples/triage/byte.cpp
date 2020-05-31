@@ -692,9 +692,10 @@ void ByteView::paintEvent(QPaintEvent* event)
 
 void ByteView::wheelEvent(QWheelEvent* event)
 {
-	if (event->orientation() == Qt::Horizontal)
+	if (event->angleDelta().x()) // ignore horizontal scrolling
 		return;
-	m_wheelDelta -= event->delta();
+
+	m_wheelDelta -= event->angleDelta().y();
 	if ((m_wheelDelta <= -40) || (m_wheelDelta >= 40))
 	{
 		int lines = m_wheelDelta / 40;

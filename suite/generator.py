@@ -21,6 +21,7 @@ api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), {4})
 sys.path.append(api_suite_path)
 import testcommon
 import api_test
+import rebasing_test
 
 global verbose
 verbose = False
@@ -126,6 +127,7 @@ if __name__ == "__main__":
                 api_only = True
 
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
+    test_suite = unittest.defaultTestLoader.loadTestsFromModule(rebasing_test)
     if not api_only:
         test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
     runner = unittest.TextTestRunner(verbosity=2)
@@ -294,7 +296,7 @@ def generate(test_store, outdir, exclude_binaries):
         name = oraclefile_rel[len(test_store):].replace(os.path.sep, "_").replace(".", "_")[1:]
         if name in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
             test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, imageBase=0xf00000)
-            binary_oracle = OracleTestFile(oraclefile + "_rebasing")
+            binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel) + "_rebasing")
             for method in test_data.methods():
                 binary_oracle.add_entry(test_data, method)
             binary_oracle.close()

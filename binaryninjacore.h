@@ -546,6 +546,7 @@ extern "C"
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,
 		HighLevelILLinearDisassembly = 65,
+		WaitForIL = 66,
 
 		// Debugging options
 		ShowFlagUsage = 128

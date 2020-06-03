@@ -5017,18 +5017,18 @@ class BinaryView(object):
 
 	def rebase(self, address, progress_func = None):
 		"""
-		``rebase`` rebase the existing BinaryView into a new BinaryView at the specified virtual address
+		``rebase`` rebase the existing :py:class:`BinaryView` into a new :py:class:`BinaryView` at the specified virtual address
 
 		.. note:: This method should not be called from the UI and is intended for headless operation only.
 
-		:param int address: virtual address of the start of the binary view
-		:return: the new BinaryView object or None on failure
-		:rtype: BinaryView or None
+		:param int address: virtual address of the start of the :py:class:`BinaryView`
+		:return: the new :py:class:`BinaryView` object or ``None`` on failure
+		:rtype: :py:class:`BinaryView` or ``None``
 		"""
 		result = False
 		if core.BNIsUIEnabled():
 			log.log_warn("The BinaryView.rebase API is for headless operation only.")
-			return False
+			return None
 		if progress_func is None:
 			result = core.BNRebase(self.handle, address)
 		else:

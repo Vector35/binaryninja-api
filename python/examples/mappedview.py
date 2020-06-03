@@ -23,7 +23,7 @@
 # by the UI in the Open With Options dialog or headless when opening a
 # file with options.
 
-from binaryninja import log
+from binaryninja.log import log_error
 from binaryninja import _binaryninjacore as core
 from binaryninja.architecture import Architecture
 from binaryninja.binaryview import BinaryView
@@ -31,6 +31,7 @@ from binaryninja.binaryview import BinaryViewType
 from binaryninja.enums import SegmentFlag
 from binaryninja import Settings
 import json
+import traceback
 
 use_default_loader_settings = True
 
@@ -58,7 +59,7 @@ class MappedView(BinaryView):
 		load_settings = None
 		if not use_default_loader_settings:
 			# Create a new named Settings container for the load settings.
-			Settings("mapped_load_settings")
+			load_settings = Settings("mapped_load_settings")
 		else:
 			# Optionally, perform light-weight parsing of the 'Raw' BinaryView to extract required information for load settings generation.
 			# This allows finer control of the settings provided as well as their default values.

@@ -797,7 +797,10 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def get_view_of_file_with_options(cls, filename, update_analysis=True, progress_func=None, options={}):
 		"""
 		``get_view_of_file_with_options`` opens, generates default load options (which are overridable), and returns the first available \
-		:py:class:`BinaryView`, excluding any ``Raw`` :py:class:`BinaryViewType`
+		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
+		the :py:class:`BinaryView` with the specified load options. The ``Mapped`` view type attempts to auto-detect the architecture of the \
+		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
+		initialize and returns ``None``.
 
 		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. This is because \
 		:py:class:`BinaryViewType`s are in control of generating load options, this method allows an alternative default way to open a file. For \
@@ -808,7 +811,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
-		:return: returns a :py:class:`BinaryView` object for the given filename
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
 		:rtype: :py:class:`BinaryView` or ``None``
 
 		:Example:

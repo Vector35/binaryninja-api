@@ -14,12 +14,12 @@ GenericExportsModel::GenericExportsModel(BinaryViewRef data)
 	m_sortOrder = Qt::AscendingOrder;
 	for (auto& sym: data->GetSymbolsOfType(FunctionSymbol))
 	{
-		if (sym->GetBinding() == GlobalBinding)
+		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
 			m_allEntries.push_back(sym);
 	}
 	for (auto& sym: data->GetSymbolsOfType(DataSymbol))
 	{
-		if (sym->GetBinding() == GlobalBinding)
+		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
 			m_allEntries.push_back(sym);
 	}
 	if (data->GetTypeName() == "PE")

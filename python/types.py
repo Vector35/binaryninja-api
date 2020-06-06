@@ -875,7 +875,7 @@ class Type(object):
 		return core.BNGetAutoDemangledTypeIdSource()
 
 	def with_confidence(self, confidence):
-		return Type(handle = core.BNNewTypeReference(self._handle), platform = self._platform, confidence = confidence)
+		return Type(handle = core.BNNewTypeReference(self.handle), platform = self._platform, confidence = confidence)
 
 	@property
 	def confidence(self):

@@ -112,24 +112,37 @@ class MappedView(BinaryView):
 		try:
 			load_settings = self.get_load_settings(self.name)
 			if load_settings is None:
-				self.arch = Architecture['x86']
-				self.platform = Architecture['x86'].standalone_platform
-				self.add_auto_segment(0, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable)
-				return True
+				if self.parse_only is True:
+					self.arch = Architecture['x86']
+					self.platform = Architecture['x86'].standalone_platform
+					self.add_auto_segment(0, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable)
+					return True
+				else:
+					# Note: If there are no load settings and this is not a parse_only view, it's possible to call get_load_settings_for_data directly.
+					# This allows us to generate default load options for the BinaryView. This step is not required but can be useful.
+					load_settings = self.__class__.get_load_settings_for_data(self.parent_view)
+
 			arch = load_settings.get_string("loader.architecture", self)
 			self.arch = Architecture[arch]
 			self.platform = Architecture[arch].standalone_platform
 			self.load_address = load_settings.get_integer("loader.imageBase", self)
 			self.add_auto_segment(self.load_address, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
-			entry_point = load_settings.get_integer("loader.entryPoint", self)
-			self.add_entry_point(self.load_address + entry_point)
+			if load_settings.contains("loader.entryPoint"):
+				self.entry_point_offset = load_settings.get_integer("loader.entryPoint", self)
+				self.add_entry_point(self.load_address + self.entry_point_offset)
+
+			# Note: This MappedView (Python) BinaryView implementation is incomplete. It ignores platform, section, and segment settings.
+			# It's preferred that values saved in the settings system be imageBase agnostic.
 			return True
 		except:
 			log_error(traceback.format_exc())
 			return False
 
 	def perform_get_entry_point(self):
-		return self.load_address
+		if hasattr(self, 'entry_point_offset'):
+			return self.load_address + self.entry_point_offset
+		else:
+			return 0
 
 	def perform_is_executable(self):
 		return True

@@ -330,7 +330,7 @@ Here's a snippet to take an existing function, and set the confidence of all the
 old = current_function.function_type
 new_parameters = []
 for vars, params in zip(current_function.parameter_vars, old.parameters):
-    new_type = vars
+    new_type = vars.type
     new_type.confidence = 256 #max-confidence
     new_parameters.append(FunctionParameter(new_type, params.name, params.location))
 

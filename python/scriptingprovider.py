@@ -505,6 +505,30 @@ class _PythonScriptingInstanceInput(object):
 			return result
 
 
+class BlacklistedDict(dict):
+
+	def __init__(self, blacklist, *args):
+		super().__init__(*args)
+		self.__blacklist = set(blacklist)
+		self._blacklist_enabled = True
+
+	def __setitem__(self, k, v):
+		if self.blacklist_enabled and k in self.__blacklist:
+			log.log_warn('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
+		super().__setitem__(k, v)
+
+	def enable_blacklist(self, enabled):
+		self.__enable_blacklist = enabled
+
+	@property
+	def blacklist_enabled(self):
+		return self._blacklist_enabled
+
+	@blacklist_enabled.setter
+	def blacklist_enabled(self, value):
+		self._blacklist_enabled = value
+
+
 class PythonScriptingInstance(ScriptingInstance):
 	_interpreter = threading.local()
 
@@ -512,7 +536,9 @@ class PythonScriptingInstance(ScriptingInstance):
 		def __init__(self, instance):
 			super(PythonScriptingInstance.InterpreterThread, self).__init__()
 			self.instance = instance
-			self.locals = {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
+			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programatically)
+			blacklisted_vars = {"current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil", "current_mlil", "current_hlil"}
+			self.locals = BlacklistedDict(blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]})
 			self.interpreter = code.InteractiveConsole(self.locals)
 			self.event = threading.Event()
 			self.daemon = True
@@ -619,6 +645,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
 
+			self.locals.blacklist_enabled = False
 			self.locals["current_view"] = self.active_view
 			self.locals["bv"] = self.active_view
 			self.locals["current_function"] = self.active_func
@@ -634,6 +661,7 @@ class PythonScriptingInstance(ScriptingInstance):
 				self.locals["current_llil"] = self.active_func.llil
 				self.locals["current_mlil"] = self.active_func.mlil
 				self.locals["current_hlil"] = self.active_func.hlil
+			self.locals.blacklist_enabled = True
 
 
 		def get_selected_data(self):

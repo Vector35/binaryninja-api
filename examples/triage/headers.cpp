@@ -112,13 +112,13 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	uint64_t machineValue = GetValueOfStructMember(data, "COFF_Header", peOffset, "machine");
 	QString machineName = GetNameOfEnumerationMember(data, "coff_machine", machineValue);
 	if (machineName.startsWith("IMAGE_FILE_MACHINE_"))
-		machineName = machineName.mid(strlen("IMAGE_FILE_MACHINE_"));
+		machineName = machineName.mid((int)strlen("IMAGE_FILE_MACHINE_"));
 	AddField("Machine", machineName);
 
 	uint64_t subsysValue = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "subsystem");
 	QString subsysName = GetNameOfEnumerationMember(data, "pe_subsystem", subsysValue);
 	if (subsysName.startsWith("IMAGE_SUBSYSTEM_"))
-		subsysName = subsysName.mid(strlen("IMAGE_SUBSYSTEM_"));
+		subsysName = subsysName.mid((int)strlen("IMAGE_SUBSYSTEM_"));
 	AddField("Subsystem", subsysName);
 
 	uint64_t secs = GetValueOfStructMember(data, "COFF_Header", peOffset, "timeDateStamp");
@@ -204,7 +204,7 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 			if (coffCharValue & member.value)
 			{
 				if (QString::fromStdString(member.name).startsWith("IMAGE_FILE_"))
-					coffCharValues.push_back(QString::fromStdString(member.name).mid(strlen("IMAGE_FILE_")));
+					coffCharValues.push_back(QString::fromStdString(member.name).mid((int)strlen("IMAGE_FILE_")));
 				else
 					coffCharValues.push_back(QString::fromStdString(member.name));
 			}
@@ -223,7 +223,7 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 			if (dllCharValue & member.value)
 			{
 				if (QString::fromStdString(member.name).startsWith("IMAGE_DLLCHARACTERISTICS_"))
-					dllCharValues.push_back(QString::fromStdString(member.name).mid(strlen("IMAGE_DLLCHARACTERISTICS_")));
+					dllCharValues.push_back(QString::fromStdString(member.name).mid((int)strlen("IMAGE_DLLCHARACTERISTICS_")));
 				else
 					dllCharValues.push_back(QString::fromStdString(member.name));
 			}
@@ -324,6 +324,6 @@ HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header): QWidget(pare
 	}
 	for (col = 1; col < (int)header.GetColumns(); col++)
 		layout->setColumnMinimumWidth(col * 3 - 1, UIContext::getScaledWindowSize(20, 20).width());
-	layout->setColumnStretch(header.GetColumns() * 3 - 1, 1);
+	layout->setColumnStretch((int)header.GetColumns() * 3 - 1, 1);
 	setLayout(layout);
 }

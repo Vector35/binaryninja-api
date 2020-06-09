@@ -714,7 +714,7 @@ void Segment::SetDataLength(uint64_t dataLength)
 }
 
 
-void Segment::SetFlags(uint64_t flags)
+void Segment::SetFlags(uint32_t flags)
 {
 	BNSegmentSetFlags(m_object, flags);
 }

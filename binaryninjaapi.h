@@ -1335,7 +1335,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetLength(uint64_t length);
 		void SetDataOffset(uint64_t dataOffset);
 		void SetDataLength(uint64_t dataLength);
-		void SetFlags(uint64_t flags);
+		void SetFlags(uint32_t flags);
 	};
 
 	class Section: public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
@@ -3428,9 +3428,9 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagBit(size_t size, uint32_t flag, uint32_t bitIndex,
+		ExprId FlagBit(size_t size, uint32_t flag, size_t bitIndex,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagBitSSA(size_t size, const SSAFlag& flag, uint32_t bitIndex,
+		ExprId FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
@@ -3540,7 +3540,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
 			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Trap(uint32_t num, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Trap(int64_t num, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
@@ -3600,7 +3600,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
 			BNRegisterOrConstant* operands, size_t operandCount);
 
-		ExprId Operand(uint32_t n, ExprId expr);
+		ExprId Operand(size_t n, ExprId expr);
 
 		BNLowLevelILInstruction GetRawExpr(size_t i) const;
 		LowLevelILInstruction operator[](size_t i);

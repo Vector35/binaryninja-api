@@ -346,9 +346,9 @@ ExprId LowLevelILFunction::GetExprForRegisterOrConstantOperation(BNLowLevelILOpe
 }
 
 
-ExprId LowLevelILFunction::Operand(uint32_t n, ExprId expr)
+ExprId LowLevelILFunction::Operand(size_t n, ExprId expr)
 {
-	BNLowLevelILSetExprSourceOperand(m_object, expr, n);
+	BNLowLevelILSetExprSourceOperand(m_object, expr, (uint32_t)n);
 	return expr;
 }
 

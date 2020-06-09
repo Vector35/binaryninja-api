@@ -105,7 +105,7 @@ public:
 	XrefFunctionHeader();
 	XrefFunctionHeader(FunctionRef func, XrefHeader* parent, XrefItem* child);
 	XrefFunctionHeader(const XrefFunctionHeader& header);
-	virtual int childCount() const override { return m_refs.size(); }
+	virtual int childCount() const override { return (int)m_refs.size(); }
 	virtual uint64_t addr() const { return m_func->GetStart(); }
 	virtual void appendChild(XrefItem* ref) override;
 	virtual int row(const XrefItem* item) const override;
@@ -120,7 +120,7 @@ class XrefCodeReferences: public XrefHeader
 public:
 	XrefCodeReferences(XrefHeader* parent);
 	virtual ~XrefCodeReferences();
-	virtual int childCount() const override { return m_refs.size(); }
+	virtual int childCount() const override { return (int)m_refs.size(); }
 	virtual void appendChild(XrefItem* ref) override;
 	XrefHeader* parentOf(XrefItem* ref) const;
 	virtual int row(const XrefItem* item) const override;
@@ -134,7 +134,7 @@ class XrefDataReferences: public XrefHeader
 public:
 	XrefDataReferences(XrefHeader* parent);
 	virtual ~XrefDataReferences();
-	virtual int childCount() const override { return m_refs.size(); };
+	virtual int childCount() const override { return (int)m_refs.size(); };
 	virtual void appendChild(XrefItem* ref) override;
 	virtual int row(const XrefItem* item) const override;
 	virtual XrefItem* child(int i) const override;
@@ -148,7 +148,7 @@ public:
 	XrefRoot();
 	XrefRoot(XrefRoot&& root);
 	~XrefRoot();
-	virtual int childCount() const override { return m_refs.size(); }
+	virtual int childCount() const override { return (int)m_refs.size(); }
 	void appendChild(XrefItem* ref) override;
 	XrefHeader* parentOf(XrefItem* ref);
 	virtual int row(const XrefItem* item) const override;
@@ -206,7 +206,7 @@ public:
 	virtual QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
-	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override { (void)parent; return m_refs.size(); };
+	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override { (void)parent; return (int)m_refs.size(); };
 	virtual QModelIndex parent(const QModelIndex& i) const override { (void)i; return QModelIndex(); }
 	virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override { (void) parent; return 4;};
 	virtual QVariant headerData(int column, Qt::Orientation orientation, int role) const override;

@@ -3036,13 +3036,13 @@ ExprId LowLevelILFunction::FlagSSA(const SSAFlag& flag, const ILSourceLocation& 
 }
 
 
-ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, uint32_t bitIndex, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_BIT, loc, size, 0, flag, bitIndex);
 }
 
 
-ExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& flag, uint32_t bitIndex,
+ExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex,
 	const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_BIT_SSA, loc, size, 0, flag.flag, flag.version, bitIndex);
@@ -3445,7 +3445,7 @@ ExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 }
 
 
-ExprId LowLevelILFunction::Trap(uint32_t num, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Trap(int64_t num, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_TRAP, loc, 0, 0, num);
 }

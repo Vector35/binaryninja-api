@@ -299,7 +299,7 @@ string BinaryReader::ReadCString(size_t maxSize)
 			result.push_back(cur);
 		}
 	}
-	catch (ReadException& r)
+	catch (ReadException&)
 	{;}
 	return result;
 }

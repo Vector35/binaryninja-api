@@ -265,7 +265,7 @@ void ByteView::adjustSize(int width, int height)
 	m_addrWidth = QString::number(m_data->GetEnd(), 16).size();
 	if (m_addrWidth < 8)
 		m_addrWidth = 8;
-	int cols = ((width - 4) / m_render.getFontWidth()) - (m_addrWidth + 2);
+	int cols = ((width - 4) / m_render.getFontWidth()) - ((int)m_addrWidth + 2);
 	if (cols < 1)
 		cols = 1;
 	if ((size_t)cols != m_cols)
@@ -553,7 +553,7 @@ void ByteView::updateCaret()
 		if (((m_prevCursorAddr >= m_lines[i].address) && (m_prevCursorAddr <= (m_lines[i].address + m_lines[i].length))) ||
 			((m_cursorAddr >= m_lines[i].address) && (m_cursorAddr <= (m_lines[i].address + m_lines[i].length))))
 		{
-			viewport()->update(0, (i - m_topLine) * m_render.getFontHeight(),
+			viewport()->update(0, (int)(i - m_topLine) * m_render.getFontHeight(),
 				viewport()->size().width(), m_render.getFontHeight() + 3);
 		}
 	}

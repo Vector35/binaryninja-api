@@ -508,14 +508,14 @@ class _PythonScriptingInstanceInput(object):
 class BlacklistedDict(dict):
 
 	def __init__(self, blacklist, *args):
-		super().__init__(*args)
+		super(BlacklistedDict, self).__init__(*args)
 		self.__blacklist = set(blacklist)
 		self._blacklist_enabled = True
 
 	def __setitem__(self, k, v):
 		if self.blacklist_enabled and k in self.__blacklist:
 			log.log_warn('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
-		super().__setitem__(k, v)
+		super(BlacklistedDict, self).__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):
 		self.__enable_blacklist = enabled

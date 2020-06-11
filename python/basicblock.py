@@ -151,7 +151,7 @@ class BasicBlock(object):
 
 	def __iter__(self):
 		if self._instStarts is None:
-			# don't and instruction start cache the object is likely ephemeral
+			# don't add instruction start cache--the object is likely ephemeral
 			idx = self.start
 			while idx < self.end:
 				data = self._view.read(idx, min(self.arch.max_instr_length, self.end - idx))

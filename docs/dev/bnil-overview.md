@@ -32,10 +32,19 @@ Besides the typical `&&` bitwise operators, BNIL makes use of `sx` and `zx` to i
 Expressions in BNIL can have one of the following suffixes to indicate a size:
 
 ```
-.q -- Qword (64 bits)
-.d -- Dword (32 bits)
-.w -- Word (16 bits)
-.b -- Byte (8 bits)
+.q -- Qword (8 bytes)
+.d -- Dword (4 bytes)
+.w -- Word (2 bytes)
+.b -- Byte (1 byte)
+```
+
+Note that floating point IL instructions have their own possible size suffixes:
+
+```
+.h -- Half (2 bytes)
+.s -- Single (4 bytes)
+.d -- Double (8 bytes)
+.t -- Ten (10 bytes)
 ```
 
 ### Variable Offsets

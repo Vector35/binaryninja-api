@@ -5382,7 +5382,7 @@ class BinaryView(object):
 		offset = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		if not core.BNParseExpression(self.handle, expression, offset, here, errors):
-			error_str = errors.value
+			error_str = errors.value.decode("utf-8")
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise ValueError(error_str)
 		return offset.value

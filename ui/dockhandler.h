@@ -105,7 +105,7 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 
 	friend class DockContextHandler;
 	std::map<QWidget*, DockContextHandler*> m_contexts;
-	std::map<QString, std::function<QWidget*(const QString&, ViewFrame*, BinaryViewRef)>> m_widgetFactories;
+	std::map<QString, std::pair<QString, std::function<QWidget*(const QString&, ViewFrame*, BinaryViewRef)>>> m_widgetFactories;
 	DockContextHandler* getDockContextHandler(QWidget* widget);
 	bool addDockWidget(const QString& name, QWidget* widget, Qt::DockWidgetArea area, Qt::Orientation orientation, bool defaultVisibility);
 

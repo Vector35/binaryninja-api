@@ -411,7 +411,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
 			len(include_dirs), auto_type_source)
-		error_str = errors.value
+		error_str = errors.value.decode("utf-8")
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
 			raise SyntaxError(error_str)
@@ -460,7 +460,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
 			len(include_dirs), auto_type_source)
-		error_str = errors.value
+		error_str = errors.value.decode("utf-8")
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
 			raise SyntaxError(error_str)

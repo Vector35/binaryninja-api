@@ -430,6 +430,7 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
+	delete[] includeDirList;
 	if (!ok)
 		return false;
 
@@ -441,14 +442,13 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 	for (size_t i = 0; i < result.variableCount; i++)
 	{
 		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
-		types[name] = new Type(BNNewTypeReference(result.variables[i].type));
+		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
 	}
 	for (size_t i = 0; i < result.functionCount; i++)
 	{
 		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
-		types[name] = new Type(BNNewTypeReference(result.functions[i].type));
+		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
 	}
-	delete[] includeDirList;
 	BNFreeTypeParserResult(&result);
 	return true;
 }
@@ -473,6 +473,7 @@ bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedNam
 		includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
+	delete[] includeDirList;
 	if (!ok)
 		return false;
 

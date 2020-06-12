@@ -2466,26 +2466,38 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 }
 
 
-bool BinaryView::ParseTypeString(const string& text, std::map<QualifiedName, Ref<Type>>& result, string& errors)
+bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Type>>& types,
+	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors)
 {
-	BNQualifiedNameAndType* nt;
+	BNTypeParserResult result;
 	char* errorStr;
-	size_t count;
 
-	if (!BNParseTypesString(m_object, text.c_str(), &nt, &count, &errorStr))
-	{
-		errors = errorStr;
-		BNFreeString(errorStr);
+	types.clear();
+	variables.clear();
+	functions.clear();
+
+	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr);
+	errors = errorStr;
+	BNFreeString(errorStr);
+	if (!ok)
 		return false;
-	}
 
-	for(size_t i = 0; i < count; i++)
+	for (size_t i = 0; i < result.typeCount; i++)
 	{
-		result[QualifiedName::FromAPIObject(&nt[i].name)] = new Type(BNNewTypeReference(nt[i].type));
+		QualifiedName name = QualifiedName::FromAPIObject(&result.types[i].name);
+		types[name] = new Type(BNNewTypeReference(result.types[i].type));
 	}
-	BNFreeQualifiedNameAndTypeArray(nt, count);
-
-	errors = "";
+	for (size_t i = 0; i < result.variableCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.variables[i].name);
+		variables[name] = new Type(BNNewTypeReference(result.variables[i].type));
+	}
+	for (size_t i = 0; i < result.functionCount; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&result.functions[i].name);
+		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
+	}
+	BNFreeTypeParserResult(&result);
 	return true;
 }
 

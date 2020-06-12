@@ -4579,9 +4579,10 @@ class BinaryView(object):
 
 	def parse_type_string(self, text):
 		"""
-		``parse_type_string`` converts `C-style` string into a :py:Class:`Type`.
+		``parse_type_string`` parses string containing C into a single type :py:Class:`Type`.
+		In contrast to the :py:'platform
 
-		:param str text: `C-style` string of type to create
+		:param str text: C source code string of type to create
 		:return: A tuple of a :py:Class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
@@ -4590,18 +4591,59 @@ class BinaryView(object):
 			(<type: int32_t>, 'foo')
 			>>>
 		"""
-		if not isinstance(text, str):
-			raise AttributeError("Text must be a string")
+		if not (isinstance(text, str) or isinstance(text, unicode)):
+			raise AttributeError("Source must be a string")
 		result = core.BNQualifiedNameAndType()
 		errors = ctypes.c_char_p()
 		if not core.BNParseTypeString(self.handle, text, result, errors):
-			error_str = errors.value
+			error_str = errors.value.decode("utf-8")
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError(error_str)
 		type_obj = types.Type(core.BNNewTypeReference(result.type), platform = self.platform)
 		name = types.QualifiedName._from_core_struct(result.name)
 		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
+
+	def parse_types_from_string(self, text):
+		"""
+		``parse_types_from_string`` parses string containing C into a :py:Class:`TypeParserResult` objects. This API
+		unlike the :py:Function:`platform.Platform.parse_types_from_source` allows the reference of types already defined
+		in the BinaryView.
+
+		:param str text: C source code string of types, variables, and function types, to create
+		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: TypeParserResult
+		:Example:
+
+			>>> bv.parse_types_from_string('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
+			({types: {'bas': <type: struct bas>}, variables: {'foo': <type: int32_t>}, functions:{'bar':
+			<type: int32_t(int32_t x)>}}, '')
+			>>>
+		"""
+		if not (isinstance(text, str) or isinstance(text, unicode)):
+			raise AttributeError("Source must be a string")
+
+		parse = core.BNTypeParserResult()
+		errors = ctypes.c_char_p()
+		if not core.BNParseTypesString(self.handle, text, parse, errors):
+			error_str = errors.value.decode("utf-8")
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise SyntaxError(error_str)
+
+		type_dict = {}
+		variables = {}
+		functions = {}
+		for i in range(0, parse.typeCount):
+			name = types.QualifiedName._from_core_struct(parse.types[i].name)
+			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self.platform)
+		for i in range(0, parse.variableCount):
+			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self.platform)
+		for i in range(0, parse.functionCount):
+			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self.platform)
+		core.BNFreeTypeParserResult(parse)
+		return types.TypeParserResult(type_dict, variables, functions)
 
 	def get_type_by_name(self, name):
 		"""

@@ -134,8 +134,6 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	std::string m_navigationMode = "";
 
-	void adjustSize(int width, int height);
-
 	void setTopToAddress(uint64_t addr);
 	void setTopToOrderingIndex(uint64_t idx);
 	void refreshLines(size_t lineOffset = 0, bool refreshUIContext = true);
@@ -186,6 +184,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	BNAnalysisWarningActionType getAnalysisWarningActionAtPos(const LinearViewLine& line, int x);
 
 private Q_SLOTS:
+	void adjustSize(int width, int height);
 	void viewInHexEditor();
 	void viewInGraph();
 	void viewInTypesView(std::string typeName = "");
@@ -250,6 +249,9 @@ private Q_SLOTS:
 
 	void setStackAdjustment();
 	void setCallTypeAdjustment();
+
+Q_SIGNALS:
+	void notifyResizeEvent(int width, int height);
 
 public:
 	explicit LinearView(BinaryViewRef data, ViewFrame* view);

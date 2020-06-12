@@ -168,12 +168,48 @@ class DownloadProvider(with_metaclass(_DownloadProviderMetaclass, object)):
 		return DownloadInstance(self, handle = result)
 
 
-if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
-	try:
-		from urllib.request import urlopen, build_opener, install_opener, ProxyHandler
-		from urllib.error import URLError
-	except ImportError:
-		from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError
+_loaded = False
+
+try:
+	import requests
+	if sys.platform != "win32":
+		try:
+			from requests import pyopenssl
+		except:
+			pass
+	elif core.BNIsUIEnabled():
+		try:
+			# since requests will use urllib behind the scenes, which will use
+			# the openssl statically linked into _ssl.pyd, the first connection made
+			# will attempt to walk the entire process heap on windows using Heap32First
+			# and Heap32Next, which is O(n^2) in heap allocations. by doing this now,
+			# earlier and before threads are started, hopefully we dodge some of the impact.
+			# this should also help with some issues where when Heap32First fails to walk the
+			# heap and causes an exception, and because openssl 1.0.2q's RAND_poll implementation
+			# wraps this all in a __try block and silently eats said exception, when the windows
+			# segment heap is explicitly turned on this leaves the heap in a locked state resulting
+			# in process deadlock as other threads attempt to allocate or free memory.
+			#
+			# as an additional *delightful* addendum, it turns out that when the windows segment
+			# heap is manually flipped on, Heap32First/Heap32Next being called while another
+			# thread is interacting with the allocator can deadlock (or outright crash) the entire
+			# process.
+			#
+			# considering that this can be reproduced in a 60 line C file that mallocs/frees in a loop
+			# while another thread just runs the toolhelp example code from msdn, this is probably
+			# a windows bug. if it's not, then it's an openssl bug. ugh.
+			#
+			# radioactive superfund site workaround follows:
+			# RAND_status should cause the broken openssl code to run before too many threads are
+			# started in the UI case. this drastically reduces the repro rate in the interim. it still
+			# happens occasionally; threads spawned by the intel graphics drivers seem to still get hit here,
+			# but only ~1/2 the time. on machines i've interacted with personally, this drops repro rate to 0%.
+			#
+			# TODO FIXME remove asap when windows patch/hotfix (hopefully) gets released
+			import _ssl
+			_ssl.RAND_status()
+		except:
+			pass
 
 	class PythonDownloadInstance(DownloadInstance):
 		def __init__(self, provider):
@@ -186,34 +222,29 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 			try:
 				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
 				if proxy_setting:
-					opener = build_opener(ProxyHandler({'https': proxy_setting}))
-					install_opener(opener)
+					proxies = {"https": proxy_setting}
+				else:
+					proxies = None
 
-				r = urlopen(pyNativeStr(url))
-				total_size = int(r.headers.get('content-length', 0))
-				bytes_sent = 0
-				while True:
-					data = r.read(4096)
-					if not data:
-						break
-					raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
-					bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
-					if bytes_wrote != len(raw_bytes):
-						core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
-						return -1
-					bytes_sent = bytes_sent + bytes_wrote
-					continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
-					if continue_download is False:
-						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
-						return -1
-
-				if not bytes_sent:
-					core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
+				r = requests.get(pyNativeStr(url), proxies=proxies)
+				if not r.ok:
+					core.BNSetErrorForDownloadInstance(self.handle, "Received error from server")
 					return -1
-
-			except URLError as e:
+				data = r.content
+				if len(data) == 0:
+					core.BNSetErrorForDownloadInstance(self.handle, "No data received from server!")
+					return -1
+				raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+				bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+				if bytes_wrote != len(raw_bytes):
+					core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+					return -1
+				continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_wrote, bytes_wrote)
+				if continue_download is False:
+					core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+					return -1
+			except requests.RequestException as e:
 				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-				log.log_error(str(e))
 				return -1
 			except:
 				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
@@ -227,44 +258,17 @@ if (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 		instance_class = PythonDownloadInstance
 
 	PythonDownloadProvider().register()
-else:
+	_loaded = True
+except ImportError:
+	pass
+
+if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 	try:
-		import requests
-		if sys.platform != "win32":
-			from requests import pyopenssl
-		elif core.BNIsUIEnabled():
-			try:
-				# since requests will use urllib behind the scenes, which will use
-				# the openssl statically linked into _ssl.pyd, the first connection made
-				# will attempt to walk the entire process heap on windows using Heap32First
-				# and Heap32Next, which is O(n^2) in heap allocations. by doing this now,
-				# earlier and before threads are started, hopefully we dodge some of the impact.
-				# this should also help with some issues where when Heap32First fails to walk the
-				# heap and causes an exception, and because openssl 1.0.2q's RAND_poll implementation
-				# wraps this all in a __try block and silently eats said exception, when the windows
-				# segment heap is explicitly turned on this leaves the heap in a locked state resulting
-				# in process deadlock as other threads attempt to allocate or free memory.
-				#
-				# as an additional *delightful* addendum, it turns out that when the windows segment
-				# heap is manually flipped on, Heap32First/Heap32Next being called while another
-				# thread is interacting with the allocator can deadlock (or outright crash) the entire
-				# process.
-				#
-				# considering that this can be reproduced in a 60 line C file that mallocs/frees in a loop
-				# while another thread just runs the toolhelp example code from msdn, this is probably
-				# a windows bug. if it's not, then it's an openssl bug. ugh.
-				#
-				# radioactive superfund site workaround follows:
-				# RAND_status should cause the broken openssl code to run before too many threads are
-				# started in the UI case. this drastically reduces the repro rate in the interim. it still
-				# happens occasionally; threads spawned by the intel graphics drivers seem to still get hit here,
-				# but only ~1/2 the time. on machines i've interacted with personally, this drops repro rate to 0%.
-				#
-				# TODO FIXME remove asap when windows patch/hotfix (hopefully) gets released
-				import _ssl
-				_ssl.RAND_status()
-			except:
-				pass
+		try:
+			from urllib.request import urlopen, build_opener, install_opener, ProxyHandler
+			from urllib.error import URLError
+		except ImportError:
+			from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError
 
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):
@@ -277,29 +281,34 @@ else:
 				try:
 					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
 					if proxy_setting:
-						proxies = {"https": proxy_setting}
-					else:
-						proxies = None
+						opener = build_opener(ProxyHandler({'https': proxy_setting}))
+						install_opener(opener)
 
-					r = requests.get(pyNativeStr(url), proxies=proxies)
-					if not r.ok:
-						core.BNSetErrorForDownloadInstance(self.handle, "Received error from server")
+					r = urlopen(pyNativeStr(url))
+					total_size = int(r.headers.get('content-length', 0))
+					bytes_sent = 0
+					while True:
+						data = r.read(4096)
+						if not data:
+							break
+						raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+						bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+						if bytes_wrote != len(raw_bytes):
+							core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+							return -1
+						bytes_sent = bytes_sent + bytes_wrote
+						continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
+						if continue_download is False:
+							core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+							return -1
+
+					if not bytes_sent:
+						core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
 						return -1
-					data = r.content
-					if len(data) == 0:
-						core.BNSetErrorForDownloadInstance(self.handle, "No data received from server!")
-						return -1
-					raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
-					bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
-					if bytes_wrote != len(raw_bytes):
-						core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
-						return -1
-					continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_wrote, bytes_wrote)
-					if continue_download is False:
-						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
-						return -1
-				except requests.RequestException as e:
+
+				except URLError as e:
 					core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+					log.log_error(str(e))
 					return -1
 				except:
 					core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
@@ -313,15 +322,18 @@ else:
 			instance_class = PythonDownloadInstance
 
 		PythonDownloadProvider().register()
+		_loaded = True
 	except ImportError:
-		if sys.platform == "win32":
-			log.log_error("The pip requests package is required for network connectivity!")
-			log.log_error("Please install the requests package into the selected Python environment:")
-			log.log_error("  python -m pip install requests")
-		else:
-			log.log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
-			log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
-			log.log_error("  sudo apt install python-pip")
-			log.log_error("  python -m pip install pip --upgrade --user")
-			log.log_error("  python -m pip install requests[security] --upgrade --user")
+		pass
 
+if not _loaded:
+	if sys.platform == "win32":
+		log.log_error("The pip requests package is required for network connectivity!")
+		log.log_error("Please install the requests package into the selected Python environment:")
+		log.log_error("  python -m pip install requests")
+	else:
+		log.log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
+		log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
+		log.log_error("  sudo apt install python-pip")
+		log.log_error("  python -m pip install pip --upgrade --user")
+		log.log_error("  python -m pip install requests[security] --upgrade --user")

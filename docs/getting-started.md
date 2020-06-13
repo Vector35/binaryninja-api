@@ -90,9 +90,9 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 ### Navigating
 
 
-![navigation >](img/navigation.png "Navigation") <br>
-Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jmp edges, etc, can all be double-clicked to navigate. Additionally, The `g` hot key can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (funciton names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
-<br><br><br><br>
+![navigation >](img/navigation.png "Navigation")
+Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges, etc, can all be double-clicked to navigate. Additionally, The `g` hot key can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
+
 ### Switching Views
 ![graph view >](img/view-choices.png "Different Views")
 
@@ -102,9 +102,9 @@ Switching views happens multiple ways. In some instances, it is automatic (click
 
 ![command palette](img/command-palette.png "Command Palette")
 
-One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html), and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitve action system that all actions, plugins, and hotekys in the system are routed through.
+One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html), and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitive action system that all actions, plugins, and hotkeys in the system are routed through.
 
-To trigger it, simply use the `[CMD/CTRL] p` hot key. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine whether the action should be available.
+To trigger it, simply use the `[CMD/CTRL] p` hot key. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine when the action should be available.
 
 ### Custom Hotkeys
 
@@ -135,7 +135,7 @@ Note
  - `e` : Edits an instruction (by modifying the original binary -- currently only enabled for x86, and x64)
  - `x` : Focuses the cross-reference pane
  - `;` : Adds a comment
- - `i` : Cycles between disassembly, low-level il, and medium-level il in graph view
+ - `i` : Cycles between disassembly, LLIL, MLIL and HLIL in graph view
  - `t` : Switch to type view
  - `y` : Change type
  - `a` : Change the data type to an ASCII string
@@ -195,9 +195,17 @@ Current options include:
         - Show IL flag usage (if showing Lifted IL)
     - Low Level IL
         - Show basic block register state (if showing Low Level IL)
+    - Medium Level IL
+        - Show basic block register state (if showing Medium IL)
+    - High Level IL
+        - Show basic block register state (if showing High IL)
 - Linear
     - Show address
+    - Show call parameter names
     - Show opcode bytes
+    - Show register set highlighting
+    - Show variable types
+        - List default register types
 
 ![hex >](img/hex.png "hex view")
 
@@ -212,7 +220,7 @@ The hexadecimal view is useful for view raw binary files that may or may not eve
 
 ![Cross Reference Tree <](img/cross-reference-tree.png "xrefs tree")
 
-The xrefs view in the lower-left shows all cross-references to the currently selected address or address range. Additionally this pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data or code. To be explicit:
+The Cross References view in the lower-left shows all cross-references to the currently selected address or address range. Additionally this pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data or code. To be explicit:
 
 * Incoming-Data References - The reference is a data variable pointing to this location.
 * Incoming-Code References - The reference is a pointer in code pointing to this location.
@@ -236,7 +244,7 @@ The first of the two drop down boxes allows the selection of incoming, outgoing,
 
 #### Cross-Reference Pinning
 
-By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevent references.  Sometimes users would rather have the current references stick around so they can be used as a sort of worklist. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox. This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Focus Pinned Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pinned Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session. 
+By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Focus Pinned Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pinned Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session.
 
 
 #### Cross-Reference Hotkeys
@@ -252,7 +260,7 @@ The following are only available when the cross-references pane is in focus:
 * `[ESC]` - Clear the search dialog
 * `[CMD/CTRL] a` - Select all cross-references
 * `[ARROW UP/DOWN]` - Select (but don't navigate) next/previous cross-reference
-* `[ENTER]` - Navigate to the selected refereence
+* `[ENTER]` - Navigate to the selected reference
 
 
 ### Linear View
@@ -261,7 +269,7 @@ The following are only available when the cross-references pane is in focus:
 
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
-Linear view is most commonly used for identifying and adding type information for unknown data. To this end,
+Linear view is most commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the `Options` menu in the lower right. Many other [option](#view-options) are also available.
 
 ### Function List
 
@@ -504,4 +512,4 @@ Currently, Unicode support for Big Endian strings is very limited. Also, UTF-16 
 
 ## Getting Support
 
-Vector 35 offers a number of ways to get Binary Ninja [support](https://binary.ninja/support/).
+Vector 35 offers a number of ways to receive [support](https://binary.ninja/support/).

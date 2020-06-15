@@ -3711,17 +3711,17 @@ class BinaryView(object):
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	def get_data_tags_in_range(self, range):
+	def get_data_tags_in_range(self, address_range):
 		"""
 		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
 		Range is inclusive at the start, exclusive at the end.
 
-		:param AddressRange range: Address range from which to get tags
+		:param AddressRange address_range: Address range from which to get tags
 		:return: A list of data Tags
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTagsInRange(self.handle, range.start, range.end, count)
+		tags = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
 		result = []
 		for i in range(0, count.value):
 			result.append(Tag(core.BNNewTagReference(tags[i])))

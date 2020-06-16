@@ -54,6 +54,11 @@ def fixSet(string):
         return string
 
 
+def fixStrRepr(string):
+    # Python 2 and Python 3 represent Unicode character reprs differently
+    return string.replace(b"\xe2\x80\xa6".decode("utf8"), "\\xe2\\x80\\xa6")
+
+
 def get_file_list(test_store_rel):
     test_store = os.path.join(os.path.dirname(__file__), test_store_rel)
     all_files = []
@@ -199,7 +204,7 @@ class BinaryViewTestBuilder(Builder):
                             prefixList.append(str(contents))
                         else:
                             prefixList.append(i)
-                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands: {}".format(func.start, ins.address, str(prefixList)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands: {}".format(func.start, ins.address, fixStrRepr(str(prefixList))))
 
                     postfixList = []
                     for i in ins.postfix_operands:
@@ -210,7 +215,7 @@ class BinaryViewTestBuilder(Builder):
                             postfixList.append(str(contents))
                         else:
                             postfixList.append(i)
-                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands: {}".format(func.start, ins.address, str(postfixList)))
+                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands: {}".format(func.start, ins.address, fixStrRepr(str(postfixList))))
 
                     retinfo.append("Function: {:x} Instruction: {:x} SSA form: {}".format(func.start, ins.address, str(ins.ssa_form)))
                     retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
@@ -264,7 +269,7 @@ class BinaryViewTestBuilder(Builder):
                             prefixList.append(str(contents))
                         else:
                             prefixList.append(str(i))
-                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands:  {}".format(func.start, ins.address, str(sorted(prefixList))))
+                    retinfo.append("Function: {:x} Instruction: {:x} Prefix operands:  {}".format(func.start, ins.address, fixStrRepr(str(sorted(prefixList)))))
                     postfixList = []
                     for i in ins.postfix_operands:
                         if isinstance(i, float) and 'e' in str(i):
@@ -279,7 +284,7 @@ class BinaryViewTestBuilder(Builder):
                         else:
                             postfixList.append(str(i))
 
-                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands:  {}".format(func.start, ins.address, str(sorted(postfixList))))
+                    retinfo.append("Function: {:x} Instruction: {:x} Postfix operands:  {}".format(func.start, ins.address, fixStrRepr(str(sorted(postfixList)))))
                     retinfo.append("Function: {:x} Instruction: {:x} SSA form:  {}".format(func.start, ins.address, str(ins.ssa_form)))
                     retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
         return fixOutput(retinfo)

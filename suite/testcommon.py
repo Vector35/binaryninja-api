@@ -650,11 +650,11 @@ class TestBuilder(Builder):
         file_name = self.unpackage_file("helloworld")
         try:
             bin_info_path = os.path.join(os.path.dirname(__file__), '..', 'python', 'examples', 'bin_info.py')
-            if sys.platform == "linux" or sys.platform == "linux2":
-                python_bin = "python2"
+            if sys.platform == "win32":
+                python_bin = ["py", "-3"]
             else:
-                python_bin = "python"
-            result = subprocess.Popen([python_bin, bin_info_path, file_name], stdout=subprocess.PIPE).communicate()[0]
+                python_bin = ["python3"]
+            result = subprocess.Popen(python_bin + [bin_info_path, file_name], stdout=subprocess.PIPE).communicate()[0]
             # normalize line endings and path sep
             return [line for line in result.replace(b"\\", b"/").replace(b"\r\n", b"\n").decode("charmap").split("\n")]
         finally:

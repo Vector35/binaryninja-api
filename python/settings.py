@@ -208,10 +208,10 @@ class Settings(object):
 			view = view.handle
 		return core.BNSettingsReset(self.handle, key, view, scope)
 
-	def reset_all(self, view = None, scope = SettingsScope.SettingsAutoScope):
+	def reset_all(self, view = None, scope = SettingsScope.SettingsAutoScope, schema_only = True):
 		if view is not None:
 			view = view.handle
-		return core.BNSettingsResetAll(self.handle, view, scope)
+		return core.BNSettingsResetAll(self.handle, view, scope, schema_only)
 
 	def get_bool(self, key, view = None):
 		if view is not None:

@@ -193,9 +193,9 @@ bool Settings::Reset(const string& key, Ref<BinaryView> view, BNSettingsScope sc
 }
 
 
-bool Settings::ResetAll(Ref<BinaryView> view, BNSettingsScope scope)
+bool Settings::ResetAll(Ref<BinaryView> view, BNSettingsScope scope, bool schemaOnly)
 {
-	return BNSettingsResetAll(m_object, view ? view->GetObject() : nullptr, scope);
+	return BNSettingsResetAll(m_object, view ? view->GetObject() : nullptr, scope, schemaOnly);
 }
 
 

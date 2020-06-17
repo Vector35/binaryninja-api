@@ -1093,7 +1093,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			ctypes.memmove(buf, data, len(data))
 			core.BNSetDataBufferContents(result, buf, len(data))
 			return True
-		except ValueError as e:  # Overriden `assemble` functions should raise a ValueError if the input was invalid (with a reasonable error message)
+		except ValueError as e:  # Overridden `assemble` functions should raise a ValueError if the input was invalid (with a reasonable error message)
 			log.log_error(traceback.format_exc())
 			errors[0] = core.BNAllocString(str(e))
 			return False

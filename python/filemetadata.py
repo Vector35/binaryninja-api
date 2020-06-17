@@ -280,7 +280,7 @@ class FileMetadata(object):
 
 	def undo(self):
 		"""
-		``undo`` undo the last commited action in the undo database.
+		``undo`` undo the last committed action in the undo database.
 
 		:rtype: None
 		:Example:
@@ -305,7 +305,7 @@ class FileMetadata(object):
 
 	def redo(self):
 		"""
-		``redo`` redo the last commited action in the undo database.
+		``redo`` redo the last committed action in the undo database.
 
 		:rtype: None
 		:Example:

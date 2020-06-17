@@ -412,7 +412,7 @@ class Type(object):
 
 	@property
 	def signed(self):
-		"""Wether type is signed (read-only)"""
+		"""Whether type is signed (read-only)"""
 		if self._mutable:
 			result = core.BNIsTypeBuilderSigned(self._handle)
 		else:

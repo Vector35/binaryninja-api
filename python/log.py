@@ -44,7 +44,7 @@ def log(level, text):
 		============ ======== =======================================================================
 		LogLevelName LogLevel  Description
 		============ ======== =======================================================================
-		DebugLog        0     Logs debuging information messages to the console.
+		DebugLog        0     Logs debugging information messages to the console.
 		InfoLog         1     Logs general information messages to the console.
 		WarningLog      2     Logs message to console with **Warning** icon.
 		ErrorLog        3     Logs message to console with **Error** icon, focusing the error console.

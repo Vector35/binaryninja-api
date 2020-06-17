@@ -536,7 +536,7 @@ class PythonScriptingInstance(ScriptingInstance):
 		def __init__(self, instance):
 			super(PythonScriptingInstance.InterpreterThread, self).__init__()
 			self.instance = instance
-			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programatically)
+			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programmatically)
 			blacklisted_vars = {"current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil", "current_mlil", "current_hlil"}
 			self.locals = BlacklistedDict(blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]})
 			self.interpreter = code.InteractiveConsole(self.locals)

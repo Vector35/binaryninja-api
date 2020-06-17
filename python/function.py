@@ -1716,7 +1716,7 @@ class Function(object):
 
 	def remove_user_code_ref(self, from_addr, to_addr, from_arch=None):
 		"""
-		``remove_user_code_ref`` reomves a user-defined cross-reference.
+		``remove_user_code_ref`` removes a user-defined cross-reference.
 		If the given address is not contained within this function, or if there is no
 		such user-defined cross-reference, no action is performed.
 
@@ -2881,7 +2881,7 @@ class InstructionTextToken(object):
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
-	The below table is provided for ducmentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are addded by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
+	The below table is provided for ducmentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
 	
 	Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended), or additionally, applying color schemes appropriately.
 
@@ -2913,7 +2913,7 @@ class InstructionTextToken(object):
 		NameSpaceSeparatorToken    **Not emitted by architectures**
 		NameSpaceToken             **Not emitted by architectures**
 		OpcodeToken                **Not emitted by architectures**
-		OperandSeparatorToken      The comma or delimeter that separates tokens
+		OperandSeparatorToken      The comma or delimiter that separates tokens
 		PossibleAddressToken       Integers that are likely addresses
 		RegisterToken              Registers
 		StringToken                **Not emitted by architectures**

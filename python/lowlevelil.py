@@ -1923,7 +1923,7 @@ class LowLevelILFunction(object):
 
 	def arith_shift_right(self, size, a, b, flags=None):
 		"""
-		``arith_shift_right`` shifts arithmatic right expression ``a`` by expression ``b``  potentially setting flags
+		``arith_shift_right`` shifts arithmetic right expression ``a`` by expression ``b``  potentially setting flags
 		``flags`` and returning an expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes

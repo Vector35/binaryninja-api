@@ -114,7 +114,7 @@ class PluginManagerLoadPluginCallback(object):
 				raise ValueError("Plugin API name is not " + _plugin_api_name)
 
 			if not force and core.core_platform not in plugin.install_platforms:
-				raise ValueError("Current platform {} ins't in list of valid platforms for this plugin {}".format(
+				raise ValueError("Current platform {} isn't in list of valid platforms for this plugin {}".format(
 					core.core_platform, plugin.install_platforms))
 			if not plugin.installed:
 				plugin.installed = True

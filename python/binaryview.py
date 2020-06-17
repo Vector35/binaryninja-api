@@ -5574,7 +5574,7 @@ class BinaryReader(object):
 
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
-		:Exmaple:
+		:Example:
 
 			>>> br.seek(0x100000000)
 			>>> hex(br.read16le())

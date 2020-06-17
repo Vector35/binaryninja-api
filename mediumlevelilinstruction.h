@@ -137,8 +137,7 @@ namespace std
 #else
 		typedef BinaryNinja::SSAVariable argument_type;
 #endif
-		typedef std::hash<uint64_t>::result_type result_type;
-		result_type operator()(argument_type const& value) const
+		size_t operator()(argument_type const& value) const
 		{
 			return std::hash<uint64_t>()(((uint64_t)value.var.ToIdentifier()) ^ ((uint64_t)value.version << 40));
 		}

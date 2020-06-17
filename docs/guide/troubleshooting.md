@@ -41,18 +41,21 @@ Next, if running a python plugin, make sure the python requirements are met by y
 - If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
 - If you need to change the email address on your license, contact [support].
 
-## Platforms
+## Running as Root
 
-The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
+Binary Ninja will refuse to run as root on Linux and MacOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](/getting-started/#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
 
 ## API
 
  - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 2.7, or 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
 
-
 ## Database Issues
 
  - BNDBs may grow in size after repeated saving/loading. While a future update to Binary Ninja will implement this optimization internally, this [unofficial script] may be useful for shrinking the size of a BNDB. Please ensure you backup your database prior to trying that script as it is not an officially supported operation.
+
+## Platforms
+
+The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
 
 ### Windows
 
@@ -112,7 +115,7 @@ Or second, modify the binary itself using the [install_name_tool](https://blogs.
 
 #### Non-brew installed Python 3
 
-One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an erorr while attempting to download updates using the python provider. One of the following may fix this:
+One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an error while attempting to download updates using the python provider. One of the following may fix this:
 
 ``` bash
 pip install --upgrade certifi

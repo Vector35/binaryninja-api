@@ -153,7 +153,7 @@ Note
 
 The default view in Binary Ninja when opening a binary is a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
 
-![graph view context >](img/graphcontext.png "Graph View Contet Menu")
+![graph view context >](img/graphcontext.png "Graph View Context Menu")
 
 Features of the graph view include:
 
@@ -448,7 +448,7 @@ Here's a list of all settings currently available from the UI:
 | | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.graph.default'>ui.graph.default</a>|
 | | | |`enum`|`HighLevelIL`|<a id='ui.graph.default'>ui.graph.default</a>|
 | | | |`enum`|`HighLevelILSSAForm`|<a id='ui.graph.default'>ui.graph.default</a>|
-|ui|Perfer Disassembly Graph|Prefer disassembly graph over linear view on startup.|`boolean`|`False`|<a id='ui.graph.preferred'>ui.graph.preferred</a>|
+|ui|Prefer Disassembly Graph|Prefer disassembly graph over linear view on startup.|`boolean`|`False`|<a id='ui.graph.preferred'>ui.graph.preferred</a>|
 |ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
 |ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a id='ui.log.minLevel'>ui.log.minLevel</a>|
 | | |  enum: Display Debug, Info, Warning, Error, and Alert messages to log console.|`enum`|`DebugLog`|<a id='ui.log.minLevel'>ui.log.minLevel</a>|

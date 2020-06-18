@@ -548,12 +548,25 @@ class Type(object):
 
 	@property
 	def can_return(self):
-		"""Whether type can return (read-only)"""
+		"""Whether type can return"""
 		if self._mutable:
 			result = core.BNFunctionTypeBuilderCanReturn(self._handle)
 		else:
 			result = core.BNFunctionTypeCanReturn(self._handle)
 		return BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@can_return.setter
+	def can_return(self, value):
+		"""Whether type can return (read-only)"""
+		if not self._mutable:
+			raise AttributeError("Finalized Type object is immutable, use mutable_copy()")
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = max_confidence
+		core.BNSetFunctionTypeBuilderCanReturn(self._handle, bc)
 
 	@property
 	def structure(self):

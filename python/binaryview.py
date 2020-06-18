@@ -5960,10 +5960,11 @@ class BinaryWriter(object):
 		core.BNSeekBinaryWriterRelative(self.handle, offset)
 
 class StructuredDataValue(object):
-	def __init__(self, type, address, value):
+	def __init__(self, type, address, value, endian):
 		self._type = type
 		self._address = address
 		self._value = value
+		self._endian = endian
 
 	def __str__(self):
 		decode_str = "{}B".format(self._type.width)
@@ -5974,13 +5975,25 @@ class StructuredDataValue(object):
 
 	def __int__(self):
 		if self._type.width == 1:
-			code = "B"
+			if self._endian == Endianness.LittleEndian:
+				code = "<B"
+			else:
+				code = ">B"
 		elif self._type.width == 2:
-			code = "H"
+			if self._endian == Endianness.LittleEndian:
+				code = "<H"
+			else:
+				code = ">H"
 		elif self._type.width == 4:
-			code = "I"
+			if self._endian == Endianness.LittleEndian:
+				code = "<I"
+			else:
+				code = ">I"
 		elif self._type.width == 8:
-			code = "Q"
+			if self._endian == Endianness.LittleEndian:
+				code = "<Q"
+			else:
+				code = ">Q"
 		else:
 			raise Exception("Could not convert to integer with width {}".format(self._type.width))
 
@@ -6041,6 +6054,7 @@ class StructuredDataView(object):
 		self._structure_name = structure_name
 		self._address = address
 		self._members = OrderedDict()
+		self._endian = bv.arch.endianness
 
 		self._lookup_structure()
 		self._define_members()
@@ -6069,7 +6083,7 @@ class StructuredDataView(object):
 		width = ty.width
 
 		value = self._bv.read(self._address + offset, width)
-		return StructuredDataValue(ty, self._address + offset, value)
+		return StructuredDataValue(ty, self._address + offset, value, self._endian)
 
 	def __str__(self):
 		rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)

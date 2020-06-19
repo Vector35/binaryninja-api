@@ -2429,9 +2429,9 @@ class Function(object):
 	@property
 	def call_sites(self):
 		"""
-		``call_sites`` returns a list of possible call sites.
+		``call_sites`` returns a list of possible call sites contained in this function.
 		This includes ordinary calls, tail calls, and indirect jumps. Not all of the returned call sites
-		may be true call sites; some may simply be unresolved indirect jumps.
+		are necessarily true call sites; some may simply be unresolved indirect jumps, for example.
 
 		:return: List of References that represent the sources of possible calls in this function
 		:rtype: list(ReferenceSource)
@@ -2455,6 +2455,13 @@ class Function(object):
 
 	@property
 	def callees(self):
+		"""
+		``callees`` returns a list of functions that this function calls
+		This does not include the address of those calls, rather just the function objects themselves. Use :py:meth:`call_sites` to identify the location of these calls.
+
+		:return: List of Functions that this function calls
+		:rtype: list(Function)
+		"""
 		called = []
 		for callee_addr in self.callee_addresses:
 			func = self.view.get_function_at(callee_addr, self.platform)
@@ -2464,6 +2471,13 @@ class Function(object):
 
 	@property
 	def callee_addresses(self):
+		"""
+		``callee_addressses`` returns a list of start addresses for functions that call this function.
+		Does not point to the actual address where the call occurs, just the start of the function that contains the reference.
+
+		:return: List of start addresess for Functions that call this function
+		:rtype: list(int)
+		"""
 		result = []
 		for ref in self.call_sites:
 			result.extend(self.view.get_callees(ref.address, ref.function, ref.arch))
@@ -2471,6 +2485,13 @@ class Function(object):
 
 	@property
 	def callers(self):
+		"""
+		``callers`` returns a list of functions that call this function
+		Does not point to the actual address where the call occurs, just the start of the function that contains the call.
+
+		:return: List of start addresess for Functions that call this function
+		:rtype: list(int)
+		"""
 		functions = []
 		for ref in self.view.get_code_refs(self.start):
 			if ref.function is not None:

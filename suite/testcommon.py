@@ -405,7 +405,7 @@ class BinaryViewTestBuilder(Builder):
         """BinaryView produced different results"""
         retinfo = []
 
-        for type in self.bv.types.items():
+        for type in sorted([str(i) for i in self.bv.types.items()]):
             retinfo.append("BV Type: " + str(type))
         for segment in sorted([str(i) for i in self.bv.segments]):
             retinfo.append("BV segment: " + str(segment))

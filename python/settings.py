@@ -200,6 +200,16 @@ class Settings(object):
 	def serialize_schema(self):
 		return core.BNSettingsSerializeSchema(self.handle)
 
+	def deserialize_settings(self, contents, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		return core.BNDeserializeSettings(self.handle, contents, view, scope)
+
+	def serialize_settings(self, view = None, scope = SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		return core.BNSerializeSettings(self.handle, view, scope)
+
 	def copy_values_from(self, source, scope = SettingsScope.SettingsAutoScope):
 		return core.BNSettingsCopyValuesFrom(self.handle, source.handle, scope)
 

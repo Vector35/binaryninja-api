@@ -119,7 +119,7 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
-		assert s2.copy_values_from(settings), "test_settings_types failed"
+		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope)), "test_settings_types failed"
 		assert s2.get_bool("testGroup.boolSetting") == False, "test_settings_types failed"
 		assert s2.get_double("testGroup.doubleSetting") == 700, "test_settings_types failed"
 		assert s2.get_integer("testGroup.integerSetting") == 700, "test_settings_types failed"

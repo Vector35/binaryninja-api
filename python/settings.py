@@ -210,9 +210,6 @@ class Settings(object):
 			view = view.handle
 		return core.BNSerializeSettings(self.handle, view, scope)
 
-	def copy_values_from(self, source, scope = SettingsScope.SettingsAutoScope):
-		return core.BNSettingsCopyValuesFrom(self.handle, source.handle, scope)
-
 	def reset(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle

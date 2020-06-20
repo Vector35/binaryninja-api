@@ -5070,7 +5070,6 @@ __attribute__ ((format (printf, 1, 2)))
 		bool DeserializeSettings(const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
-		bool CopyValuesFrom(Ref<Settings> source, BNSettingsScope scope = SettingsAutoScope);
 		bool Reset(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool ResetAll(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
 

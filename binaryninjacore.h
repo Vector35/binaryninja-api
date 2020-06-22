@@ -2262,6 +2262,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
+	BINARYNINJACOREAPI bool BNIsShutdownRequested(void);
 
 	BINARYNINJACOREAPI char* BNGetVersionString(void);
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);

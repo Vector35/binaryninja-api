@@ -41,10 +41,11 @@ protected:
 	Menu m_menu;
 	ContextMenuManager m_contextMenuManager;
 	QTimer* m_timer;
+	bool m_activeOnHover = true;
 
 public:
 	MenuHelper() { }
-	MenuHelper(QWidget* parent);
+	MenuHelper(QWidget* parent, bool activeOnHover = true);
 
 	void setBackgroundColorRole(QPalette::ColorRole role = QPalette::Highlight);
 	void setForegroundColorRole(QPalette::ColorRole role = QPalette::WindowText);

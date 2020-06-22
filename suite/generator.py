@@ -25,7 +25,7 @@ import zipfile
 import difflib
 from collections import Counter
 
-api_suite_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), {4})
+api_suite_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), {4}))
 sys.path.append(api_suite_path)
 import testcommon
 import api_test

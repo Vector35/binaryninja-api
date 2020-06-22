@@ -119,12 +119,12 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
-		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope)), "test_settings_types failed"
-		assert s2.get_bool("testGroup.boolSetting") == False, "test_settings_types failed"
-		assert s2.get_double("testGroup.doubleSetting") == 700, "test_settings_types failed"
-		assert s2.get_integer("testGroup.integerSetting") == 700, "test_settings_types failed"
-		assert s2.get_string("testGroup.stringSetting") == "value_user", "test_settings_types failed"
-		assert s2.get_string_list("testGroup.stringListSetting") == ["value3", "value4"], "test_settings_types failed"
+		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope), raw_view, SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert s2.get_bool("testGroup.boolSetting", raw_view) == False, "test_settings_types failed"
+		assert s2.get_double("testGroup.doubleSetting", raw_view) == 700, "test_settings_types failed"
+		assert s2.get_integer("testGroup.integerSetting", raw_view) == 700, "test_settings_types failed"
+		assert s2.get_string("testGroup.stringSetting", raw_view) == "value_user", "test_settings_types failed"
+		assert s2.get_string_list("testGroup.stringListSetting", raw_view) == ["value3", "value4"], "test_settings_types failed"
 
 		assert s2.reset_all(), "test_settings_types failed"
 		assert s2.get_bool("testGroup.boolSetting") == True, "test_settings_types failed"

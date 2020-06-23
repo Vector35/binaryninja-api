@@ -1,9 +1,9 @@
 [submodule "examples/x86_extension/src/asmx86"]
 	path = examples/x86_extension/src/asmx86
-	url = https://github.com/Vector35/asmx86.git
+	url = git@github.com:Vector35/asmx86.git
 [submodule "suite/binaries"]
 	path = suite/binaries
-	url = https://github.com/Vector35/BinaryTestCases.git
+	url = git@github.com:Vector35/BinaryTestCases.git
 [submodule "sphinx_rtd_theme"]
 	path = sphinx_rtd_theme
-	url = https://github.com/Vector35/sphinx_rtd_theme.git
+	url = git@github.com:Vector35/sphinx_rtd_theme.git

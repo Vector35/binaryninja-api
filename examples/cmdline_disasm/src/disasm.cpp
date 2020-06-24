@@ -102,6 +102,10 @@ int main(int ac, char **av)
 	cleanup:
 	if(ttResult)
 		BNFreeInstructionText(ttResult, ttCount);
+
+	// Shutting down is required to allow for clean exit of the core
+	BNShutdown();
+
 	return rc;
 }
 

@@ -116,5 +116,8 @@ int main(int argc, char *argv[])
             break;
     }
 
+    // Shutting down is required to allow for clean exit of the core
+    BNShutdown();
+
     return 0;
 }

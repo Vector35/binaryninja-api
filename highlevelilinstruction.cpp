@@ -20,6 +20,7 @@
 
 #ifdef BINARYNINJACORE_LIBRARY
 #include "highlevelilfunction.h"
+#include "highlevelilssafunction.h"
 #include "mediumlevelilfunction.h"
 #include "mediumlevelilssafunction.h"
 using namespace BinaryNinjaCore;
@@ -845,6 +846,38 @@ PossibleValueSet HighLevelILInstructionBase::GetPossibleValues(const set<BNDataF
 Confidence<Ref<Type>> HighLevelILInstructionBase::GetType() const
 {
 	return function->GetExprType(exprIndex);
+}
+
+
+size_t HighLevelILInstructionBase::GetSSAExprIndex() const
+{
+	return function->GetSSAExprIndex(exprIndex);
+}
+
+
+size_t HighLevelILInstructionBase::GetNonSSAExprIndex() const
+{
+	return function->GetNonSSAExprIndex(exprIndex);
+}
+
+
+HighLevelILInstruction HighLevelILInstructionBase::GetSSAForm() const
+{
+	Ref<HighLevelILFunction> ssa = function->GetSSAForm().GetPtr();
+	if (!ssa)
+		return *this;
+	size_t expr = GetSSAExprIndex();
+	return ssa->GetExpr(expr);
+}
+
+
+HighLevelILInstruction HighLevelILInstructionBase::GetNonSSAForm() const
+{
+	Ref<HighLevelILFunction> nonSsa = function->GetNonSSAForm();
+	if (!nonSsa)
+		return *this;
+	size_t expr = GetNonSSAExprIndex();
+	return nonSsa->GetExpr(expr);
 }
 
 

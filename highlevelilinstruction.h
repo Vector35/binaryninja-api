@@ -318,6 +318,12 @@ namespace BinaryNinja
 			_STD_SET<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
+		size_t GetSSAExprIndex() const;
+		size_t GetNonSSAExprIndex() const;
+
+		HighLevelILInstruction GetSSAForm() const;
+		HighLevelILInstruction GetNonSSAForm() const;
+
 		size_t GetMediumLevelILExprIndex() const;
 		bool HasMediumLevelIL() const;
 		MediumLevelILInstruction GetMediumLevelIL() const;

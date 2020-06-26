@@ -48,6 +48,7 @@ typedef BinaryNinja::Ref<BinaryNinja::Function> FunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> LowLevelILFunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::MainThreadAction> MainThreadActionRef;
 typedef BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> MediumLevelILFunctionRef;
+typedef BinaryNinja::Ref<BinaryNinja::HighLevelILFunction> HighLevelILFunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Platform> PlatformRef;
 typedef BinaryNinja::Ref<BinaryNinja::ReportCollection> ReportCollectionRef;
 typedef BinaryNinja::Ref<BinaryNinja::ScriptingInstance> ScriptingInstanceRef;

@@ -18,7 +18,8 @@ bool BINARYNINJAUIAPI askForNewType(QWidget* parent, BinaryViewRef data, Functio
 	TypeRef& type, BinaryNinja::QualifiedName& name);
 bool BINARYNINJAUIAPI inputNewType(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
 	uint64_t currentAddr, HighlightTokenState& highlight);
-bool BINARYNINJAUIAPI createInferredMember(QWidget* parent, BinaryViewRef data, HighlightTokenState& highlight, FunctionRef func);
+bool BINARYNINJAUIAPI createInferredMember(QWidget* parent, BinaryViewRef data, HighlightTokenState& highlight,
+	FunctionRef func, BNFunctionGraphType type);
 
 bool BINARYNINJAUIAPI overwriteCode(BinaryViewRef data, ArchitectureRef arch,
 	uint64_t addr, size_t len, const BinaryNinja::DataBuffer& buffer);

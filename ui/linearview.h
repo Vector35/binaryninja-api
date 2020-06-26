@@ -222,7 +222,7 @@ private Q_SLOTS:
 	void makePtr();
 	void makeString();
 	void changeType();
-	void createStructOrinferStructureType();
+	void createStructOrInferStructureType();
 	void createArray();
 	void createStruct();
 	void createNewTypes();

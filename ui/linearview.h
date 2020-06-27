@@ -156,14 +156,15 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void ensureLineVisible(size_t line);
 
 	TypeRef createStructure(BinaryNinja::QualifiedName& name, uint64_t size);
-	StructureRef defineInnerType(TypeRef type, TypeRef baseType, uint64_t offset, uint64_t size);
-	StructureRef defineInnerPointer(TypeRef type, ArchitectureRef arch, uint64_t baseAddress, uint64_t offset, uint64_t size);
-	StructureRef defineInnerStruct(TypeRef type, uint64_t offset, uint64_t size);
-	StructureRef defineInnerArray(TypeRef type, uint64_t offset, uint64_t size);
-	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size);
-	StructureRef defineInnerUnknownType(QWidget* parent, TypeRef type, uint64_t offset, uint64_t size);
-	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size);
-	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size);
+	StructureRef defineInnerType(TypeRef type, TypeRef baseType, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerPointer(TypeRef type, ArchitectureRef arch, uint64_t baseAddress,
+		uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerStruct(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerArray(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerUnknownType(QWidget* parent, TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
+	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
 	std::string getVariableName(uint64_t addr);
 
@@ -182,6 +183,9 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	uint64_t getTokenAddress();
 
 	BNAnalysisWarningActionType getAnalysisWarningActionAtPos(const LinearViewLine& line, int x);
+
+	void getCurrentOffsetByTypeInternal(TypeRef resType, uint64_t baseAddr, uint64_t& begin, uint64_t& end,
+		bool singleLine, std::set<TypeRef>& seen);
 
 private Q_SLOTS:
 	void adjustSize(int width, int height);

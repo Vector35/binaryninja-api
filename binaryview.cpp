@@ -2470,15 +2470,18 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors)
 {
 	BNTypeParserResult result;
-	char* errorStr;
+	char* errorStr = nullptr;
 
 	types.clear();
 	variables.clear();
 	functions.clear();
 
 	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr);
-	errors = errorStr;
-	BNFreeString(errorStr);
+	if (errorStr)
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+	}
 	if (!ok)
 		return false;
 

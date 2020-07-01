@@ -944,6 +944,14 @@ class Segment(object):
 		return core.BNSegmentGetStart(self.handle)
 
 	@property
+	def length(self):
+		return len(self)
+
+	@length.setter
+	def length(self, length):
+		core.BNSegmentSetLength(self.handle, length)
+
+	@property
 	def end(self):
 		return core.BNSegmentGetEnd(self.handle)
 
@@ -951,21 +959,56 @@ class Segment(object):
 	def executable(self):
 		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentExecutable) != 0
 
+	@executable.setter
+	def executable(self, executable):
+		flags = core.BNSegmentGetFlags(self.handle)
+		if executable:
+			flags |= SegmentFlag.SegmentExecutable
+		else:
+			flags &= ~SegmentFlag.SegmentExecutable
+		core.BNSegmentSetFlags(self.handle, flags)
+
 	@property
 	def writable(self):
 		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentWritable) != 0
+
+	@writable.setter
+	def writable(self, writable):
+		flags = core.BNSegmentGetFlags(self.handle)
+		if writable:
+			flags |= SegmentFlag.SegmentWritable
+		else:
+			flags &= ~SegmentFlag.SegmentWritable
+		core.BNSegmentSetFlags(self.handle, flags)
 
 	@property
 	def readable(self):
 		return (core.BNSegmentGetFlags(self.handle) & SegmentFlag.SegmentReadable) != 0
 
+	@readable.setter
+	def readable(self, readable):
+		flags = core.BNSegmentGetFlags(self.handle)
+		if readable:
+			flags |= SegmentFlag.SegmentReadable
+		else:
+			flags &= ~SegmentFlag.SegmentReadable
+		core.BNSegmentSetFlags(self.handle, flags)
+
 	@property
 	def data_length(self):
 		return core.BNSegmentGetDataLength(self.handle)
 
+	@data_length.setter
+	def data_length(self, length):
+		core.BNSegmentSetDataLength(self.handle, length)
+
 	@property
 	def data_offset(self):
 		return core.BNSegmentGetDataOffset(self.handle)
+
+	@data_offset.setter
+	def data_offset(self, offset):
+		core.BNSegmentSetDataOffset(self.handle, offset)
 
 	@property
 	def data_end(self):

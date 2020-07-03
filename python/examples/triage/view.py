@@ -17,6 +17,7 @@ class TriageView(QScrollArea, View):
 	def __init__(self, parent, data):
 		QScrollArea.__init__(self, parent)
 		View.__init__(self)
+		View.setBinaryDataNavigable(self, True)
 		self.setupView(self)
 		self.data = data
 		self.currentOffset = 0
@@ -99,7 +100,6 @@ class TriageView(QScrollArea, View):
 			layout.addStretch(1)
 		else:
 			self.byteView = byte.ByteView(self, self.data)
-			View.setBinaryDataNavigable(self, True)
 			layout.addWidget(self.byteView, 1)
 
 		container.setLayout(layout)

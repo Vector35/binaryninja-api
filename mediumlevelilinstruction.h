@@ -403,7 +403,7 @@ namespace BinaryNinja
 		void UpdateRawOperand(size_t operandIndex, ExprId value);
 		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const _STD_VECTOR<SSAVariable>& vars);
 		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<MediumLevelILInstruction>& exprs);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<size_t>& exprs);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<ExprId>& exprs);
 
 		RegisterValue GetValue() const;
 		PossibleValueSet GetPossibleValues(const _STD_SET<BNDataFlowQueryOption>& options =

@@ -123,7 +123,7 @@ ExprId MediumLevelILFunction::AddExprWithLocation(BNMediumLevelILOperation opera
 }
 
 
-ExprId MediumLevelILFunction::AddInstruction(size_t expr)
+ExprId MediumLevelILFunction::AddInstruction(ExprId expr)
 {
 	return BNMediumLevelILAddInstruction(m_object, expr);
 }

@@ -311,7 +311,7 @@ namespace BinaryNinja
 		void UpdateRawOperandAsInteger(size_t operandIndex, uint64_t value);
 		void UpdateRawOperandAsSSAVariableList(size_t operandIndex, const _STD_VECTOR<SSAVariable>& vars);
 		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<HighLevelILInstruction>& exprs);
-		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<size_t>& exprs);
+		void UpdateRawOperandAsExprList(size_t operandIndex, const _STD_VECTOR<ExprId>& exprs);
 
 		RegisterValue GetValue() const;
 		PossibleValueSet GetPossibleValues(const _STD_SET<BNDataFlowQueryOption>& options =

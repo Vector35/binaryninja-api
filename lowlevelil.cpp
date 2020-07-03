@@ -142,7 +142,7 @@ ExprId LowLevelILFunction::AddExprWithLocation(BNLowLevelILOperation operation, 
 }
 
 
-ExprId LowLevelILFunction::AddInstruction(size_t expr)
+ExprId LowLevelILFunction::AddInstruction(ExprId expr)
 {
 	return BNLowLevelILAddInstruction(m_object, expr);
 }

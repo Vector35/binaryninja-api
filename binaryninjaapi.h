@@ -2007,7 +2007,28 @@ __attribute__ ((format (printf, 1, 2)))
 	class CallingConvention;
 	class RelocationHandler;
 
-	// typedef size_t ExprId;
+    class ExprId
+    {
+    public:
+        size_t m_value;
+        inline ExprId(size_t value): m_value(value)  {}
+        inline ExprId(): m_value(0) {}
+        inline ~ExprId() {}
+
+        // inline operator size_t() const {return m_value;}
+        inline operator BNExprId() const {return m_value;}
+        
+        inline bool operator == (const ExprId& rhs) const  {return m_value == rhs.m_value;}
+        inline bool operator == (const size_t& rhs) const  {return m_value == rhs;}
+
+        inline bool operator != (const ExprId& rhs)  {return m_value != rhs.m_value;}
+        inline bool operator != (const size_t& rhs)  {return m_value != rhs;}
+
+        // make std::set, std::map, etc happy
+        inline bool operator <  (const ExprId& rhs)  {return m_value <  rhs.m_value;}
+        inline bool operator <  (const size_t& rhs)  {return m_value <  rhs;}
+
+    };
 
 	/*!
 		The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
@@ -2055,11 +2076,11 @@ __attribute__ ((format (printf, 1, 2)))
 		static void FreeFlagConditionsForSemanticFlagGroupCallback(void* ctxt, BNFlagConditionForSemanticClass* conditions);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
 		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
-		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+		static BNExprId GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
-		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
+		static BNExprId GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
 			uint32_t semClass, BNLowLevelILFunction* il);
-		static size_t GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
+		static BNExprId GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
 		static uint32_t GetStackPointerRegisterCallback(void* ctxt);

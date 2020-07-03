@@ -1045,7 +1045,7 @@ extern "C"
 	{
 		bool resolved;
 		size_t ref;
-		size_t operand;
+		BNExprId operand;
 	};
 
 	enum BNVariableSourceType
@@ -3007,7 +3007,7 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t addr, size_t len, BNDisassemblyTextLine* inLines, size_t inCount, size_t* outCount, const char* indentSpaces);
 	BINARYNINJACOREAPI void BNResetDisassemblyTextRendererDeduplicatedComments(BNDisassemblyTextRenderer* renderer);
 	BINARYNINJACOREAPI bool BNGetDisassemblyTextRendererSymbolTokens(BNDisassemblyTextRenderer* renderer, uint64_t addr,
-		size_t size, size_t operand, BNInstructionTextToken** result, size_t* count);
+		size_t size, BNExprId operand, BNInstructionTextToken** result, size_t* count);
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetDisassemblyTextRendererStackVariableReferenceTokens(
 		BNDisassemblyTextRenderer* renderer, BNStackVariableReference* ref, size_t* count);
 	BINARYNINJACOREAPI bool BNIsIntegerToken(BNInstructionTextTokenType type);
@@ -3109,9 +3109,9 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t addr, size_t* count);
 
 	BINARYNINJACOREAPI BNIntegerDisplayType BNGetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
-		uint64_t instrAddr, uint64_t value, size_t operand);
+		uint64_t instrAddr, uint64_t value, BNExprId operand);
 	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch,
-		uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
+		uint64_t instrAddr, uint64_t value, BNExprId operand, BNIntegerDisplayType type);
 
 	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
 	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);

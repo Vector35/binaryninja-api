@@ -464,7 +464,7 @@ uint32_t Architecture::GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint
 }
 
 
-size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+BNExprId Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -473,7 +473,7 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
 }
 
 
-size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass,
+BNExprId Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass,
 	BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
@@ -482,7 +482,7 @@ size_t Architecture::GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelIL
 }
 
 
-size_t Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il)
+BNExprId Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
@@ -983,7 +983,7 @@ uint32_t Architecture::GetSemanticClassForFlagWriteType(uint32_t)
 }
 
 
-size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+ExprId Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
 	BNFlagRole role = GetFlagRole(flag, GetSemanticClassForFlagWriteType(flagWriteType));
@@ -992,7 +992,7 @@ size_t Architecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t siz
 }
 
 
-size_t Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
+ExprId Architecture::GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
 	BNRegisterOrConstant* operands, size_t operandCount,LowLevelILFunction& il)
 {
 	return BNGetDefaultArchitectureFlagWriteLowLevelIL(m_object, op, size, role, operands,
@@ -1619,7 +1619,7 @@ uint32_t CoreArchitecture::GetSemanticClassForFlagWriteType(uint32_t writeType)
 }
 
 
-size_t CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
+ExprId CoreArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
 {
 	return BNGetArchitectureFlagWriteLowLevelIL(m_object, op, size, flagWriteType, flag, operands,

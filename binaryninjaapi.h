@@ -2007,7 +2007,7 @@ __attribute__ ((format (printf, 1, 2)))
 	class CallingConvention;
 	class RelocationHandler;
 
-	typedef size_t ExprId;
+	// typedef size_t ExprId;
 
 	/*!
 		The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,

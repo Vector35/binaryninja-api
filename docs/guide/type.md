@@ -307,6 +307,8 @@ If we want to name the variable there, see the section below on working with [sy
 
 NOTE: There also exists the [`define_data_var`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_data_var) API, however that will create an AUTO data variable. Auto-APIs are intended for code which is expected to be run every-time a binary is opened. Thus, they're not saved to the analysis database since they will generally be generated on load. Keep that in mind when you see multiple APIs that have both `_auto_` and `_user_` variants.
 
+Alternatively, if you wanted to add or change the type of a function, function objects have a `[.function_type](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.function_type)` property that can take either a type object or a string.
+
 ### Deleting
 
 To remove a type from the view:

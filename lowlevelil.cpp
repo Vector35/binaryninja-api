@@ -171,11 +171,11 @@ void LowLevelILFunction::MarkLabel(BNLowLevelILLabel& label)
 }
 
 
-vector<uint64_t> LowLevelILFunction::GetOperandList(ExprId expr, size_t listOperand)
+vector<ExprId> LowLevelILFunction::GetOperandList(ExprId expr, ExprId listOperand)
 {
 	size_t count;
 	uint64_t* operands = BNLowLevelILGetOperandList(m_object, expr, listOperand, &count);
-	vector<uint64_t> result;
+	vector<ExprId> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
@@ -212,7 +212,7 @@ ExprId LowLevelILFunction::AddOperandList(const vector<ExprId> operands)
 }
 
 
-ExprId LowLevelILFunction::AddIndexList(const vector<size_t> operands)
+ExprId LowLevelILFunction::AddIndexList(const vector<ExprId> operands)
 {
 	uint64_t* operandList = new uint64_t[operands.size()];
 	for (size_t i = 0; i < operands.size(); i++)
@@ -512,25 +512,25 @@ Ref<LowLevelILFunction> LowLevelILFunction::GetNonSSAForm() const
 }
 
 
-size_t LowLevelILFunction::GetSSAInstructionIndex(size_t instr) const
+size_t LowLevelILFunction::GetSSAInstructionIndex(ExprId instr) const
 {
 	return BNGetLowLevelILSSAInstructionIndex(m_object, instr);
 }
 
 
-size_t LowLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
+size_t LowLevelILFunction::GetNonSSAInstructionIndex(ExprId instr) const
 {
 	return BNGetLowLevelILNonSSAInstructionIndex(m_object, instr);
 }
 
 
-size_t LowLevelILFunction::GetSSAExprIndex(size_t expr) const
+size_t LowLevelILFunction::GetSSAExprIndex(ExprId expr) const
 {
 	return BNGetLowLevelILSSAExprIndex(m_object, expr);
 }
 
 
-size_t LowLevelILFunction::GetNonSSAExprIndex(size_t expr) const
+size_t LowLevelILFunction::GetNonSSAExprIndex(ExprId expr) const
 {
 	return BNGetLowLevelILNonSSAExprIndex(m_object, expr);
 }
@@ -610,7 +610,7 @@ RegisterValue LowLevelILFunction::GetSSAFlagValue(const SSAFlag& flag)
 }
 
 
-RegisterValue LowLevelILFunction::GetExprValue(size_t expr)
+RegisterValue LowLevelILFunction::GetExprValue(ExprId expr)
 {
 	BNRegisterValue value = BNGetLowLevelILExprValue(m_object, expr);
 	return RegisterValue::FromAPIObject(value);
@@ -623,7 +623,7 @@ RegisterValue LowLevelILFunction::GetExprValue(const LowLevelILInstruction& expr
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleExprValues(size_t expr, const set<BNDataFlowQueryOption>& options)
+PossibleValueSet LowLevelILFunction::GetPossibleExprValues(ExprId expr, const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
 	size_t idx = 0;
@@ -642,21 +642,21 @@ PossibleValueSet LowLevelILFunction::GetPossibleExprValues(const LowLevelILInstr
 }
 
 
-RegisterValue LowLevelILFunction::GetRegisterValueAtInstruction(uint32_t reg, size_t instr)
+RegisterValue LowLevelILFunction::GetRegisterValueAtInstruction(uint32_t reg, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILRegisterValueAtInstruction(m_object, reg, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg, size_t instr)
+RegisterValue LowLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILRegisterValueAfterInstruction(m_object, reg, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint32_t reg, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -670,7 +670,7 @@ PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAtInstruction(uint
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(uint32_t reg, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -684,21 +684,21 @@ PossibleValueSet LowLevelILFunction::GetPossibleRegisterValuesAfterInstruction(u
 }
 
 
-RegisterValue LowLevelILFunction::GetFlagValueAtInstruction(uint32_t flag, size_t instr)
+RegisterValue LowLevelILFunction::GetFlagValueAtInstruction(uint32_t flag, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILFlagValueAtInstruction(m_object, flag, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, size_t instr)
+RegisterValue LowLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILFlagValueAfterInstruction(m_object, flag, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t flag, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -712,7 +712,7 @@ PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAtInstruction(uint32_t
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint32_t flag, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -726,21 +726,21 @@ PossibleValueSet LowLevelILFunction::GetPossibleFlagValuesAfterInstruction(uint3
 }
 
 
-RegisterValue LowLevelILFunction::GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
+RegisterValue LowLevelILFunction::GetStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILStackContentsAtInstruction(m_object, offset, len, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-RegisterValue LowLevelILFunction::GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
+RegisterValue LowLevelILFunction::GetStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr)
 {
 	BNRegisterValue value = BNGetLowLevelILStackContentsAfterInstruction(m_object, offset, len, instr);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -754,7 +754,7 @@ PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAtInstruction(int32
 }
 
 
-PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+PossibleValueSet LowLevelILFunction::GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr,
 	const set<BNDataFlowQueryOption>& options)
 {
 	BNDataFlowQueryOption* optionArray = new BNDataFlowQueryOption[options.size()];
@@ -786,25 +786,25 @@ Ref<MediumLevelILFunction> LowLevelILFunction::GetMappedMediumLevelIL() const
 }
 
 
-size_t LowLevelILFunction::GetMediumLevelILInstructionIndex(size_t instr) const
+size_t LowLevelILFunction::GetMediumLevelILInstructionIndex(ExprId instr) const
 {
 	return BNGetMediumLevelILInstructionIndex(m_object, instr);
 }
 
 
-size_t LowLevelILFunction::GetMediumLevelILExprIndex(size_t expr) const
+size_t LowLevelILFunction::GetMediumLevelILExprIndex(ExprId expr) const
 {
 	return BNGetMediumLevelILExprIndex(m_object, expr);
 }
 
 
-size_t LowLevelILFunction::GetMappedMediumLevelILInstructionIndex(size_t instr) const
+size_t LowLevelILFunction::GetMappedMediumLevelILInstructionIndex(ExprId instr) const
 {
 	return BNGetMappedMediumLevelILInstructionIndex(m_object, instr);
 }
 
 
-size_t LowLevelILFunction::GetMappedMediumLevelILExprIndex(size_t expr) const
+size_t LowLevelILFunction::GetMappedMediumLevelILExprIndex(ExprId expr) const
 {
 	return BNGetMappedMediumLevelILExprIndex(m_object, expr);
 }

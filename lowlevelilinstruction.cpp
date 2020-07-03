@@ -734,9 +734,17 @@ size_t LowLevelILIndexList::operator[](size_t i) const
 }
 
 
-LowLevelILIndexList::operator vector<size_t>() const
+// LowLevelILIndexList::operator vector<size_t>() const
+// {
+// 	vector<size_t> result;
+// 	for (auto i : *this)
+// 		result.push_back(i);
+// 	return result;
+// }
+
+LowLevelILIndexList::operator vector<ExprId>() const
 {
-	vector<size_t> result;
+	vector<ExprId> result;
 	for (auto i : *this)
 		result.push_back(i);
 	return result;
@@ -3266,7 +3274,7 @@ ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
 ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, int64_t adjust,
 	const map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
 {
-	vector<size_t> list;
+	vector<ExprId> list;
 	for (auto& i : regStackAdjust)
 	{
 		list.push_back(i.first);
@@ -3493,7 +3501,7 @@ ExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& s
 }
 
 
-ExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<size_t>& sources, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<ExprId>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_MEM_PHI, loc, 0, 0, dest, sources.size(), AddIndexList(sources));
 }

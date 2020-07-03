@@ -2991,14 +2991,14 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
-		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
-		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
+		ExprId GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
+		std::vector<ExprId> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
 		RegisterValue GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
 		RegisterValue GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i);
-		RegisterValue GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i);
+		RegisterValue GetParameterValueAtLowLevelILInstruction(ExprId instr, Type* functionType, size_t i);
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
@@ -3006,9 +3006,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
-		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
-		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
-		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
+		ExprId GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
+		std::set<ExprId> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
+		std::set<ExprId> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
 		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
@@ -3099,8 +3099,8 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 
 		BNIntegerDisplayType GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
-			size_t operand);
-		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
+			ExprId operand);
+		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, ExprId operand,
 			BNIntegerDisplayType type);
 
 		BNHighlightColor GetInstructionHighlight(Architecture* arch, uint64_t addr);
@@ -3572,7 +3572,7 @@ __attribute__ ((format (printf, 1, 2)))
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagPhi(const SSAFlag& dest, const std::vector<SSAFlag>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemoryPhi(size_t dest, const std::vector<size_t>& sources,
+		ExprId MemoryPhi(size_t dest, const std::vector<ExprId>& sources,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
 			const ILSourceLocation& loc = ILSourceLocation());
@@ -3606,10 +3606,10 @@ __attribute__ ((format (printf, 1, 2)))
 			const ILSourceLocation& loc = ILSourceLocation());
 		void MarkLabel(BNLowLevelILLabel& label);
 
-		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		std::vector<ExprId> GetOperandList(ExprId i, ExprId listOperand);
 		ExprId AddLabelMap(const std::map<uint64_t, BNLowLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
-		ExprId AddIndexList(const std::vector<size_t> operands);
+		ExprId AddIndexList(const std::vector<ExprId> operands);
 		ExprId AddRegisterOrFlagList(const std::vector<RegisterOrFlag>& regs);
 		ExprId AddSSARegisterList(const std::vector<SSARegister>& regs);
 		ExprId AddSSARegisterStackList(const std::vector<SSARegisterStack>& regStacks);
@@ -3653,10 +3653,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<LowLevelILFunction> GetSSAForm() const;
 		Ref<LowLevelILFunction> GetNonSSAForm() const;
-		size_t GetSSAInstructionIndex(size_t instr) const;
-		size_t GetNonSSAInstructionIndex(size_t instr) const;
-		size_t GetSSAExprIndex(size_t instr) const;
-		size_t GetNonSSAExprIndex(size_t instr) const;
+		size_t GetSSAInstructionIndex(ExprId instr) const;
+		size_t GetNonSSAInstructionIndex(ExprId instr) const;
+		size_t GetSSAExprIndex(ExprId instr) const;
+		size_t GetNonSSAExprIndex(ExprId instr) const;
 
 		size_t GetSSARegisterDefinition(const SSARegister& reg) const;
 		size_t GetSSAFlagDefinition(const SSAFlag& flag) const;
@@ -3668,38 +3668,38 @@ __attribute__ ((format (printf, 1, 2)))
 		RegisterValue GetSSARegisterValue(const SSARegister& reg);
 		RegisterValue GetSSAFlagValue(const SSAFlag& flag);
 
-		RegisterValue GetExprValue(size_t expr);
+		RegisterValue GetExprValue(ExprId expr);
 		RegisterValue GetExprValue(const LowLevelILInstruction& expr);
-		PossibleValueSet GetPossibleExprValues(size_t expr,
+		PossibleValueSet GetPossibleExprValues(ExprId expr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
-		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, ExprId instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, ExprId instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, ExprId instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, ExprId instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
-		size_t GetMediumLevelILInstructionIndex(size_t instr) const;
-		size_t GetMediumLevelILExprIndex(size_t expr) const;
-		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
-		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
+		size_t GetMediumLevelILInstructionIndex(ExprId instr) const;
+		size_t GetMediumLevelILExprIndex(ExprId expr) const;
+		size_t GetMappedMediumLevelILInstructionIndex(ExprId instr) const;
+		size_t GetMappedMediumLevelILExprIndex(ExprId expr) const;
 
 		static bool IsConstantType(BNLowLevelILOperation type) { return type == LLIL_CONST || type == LLIL_CONST_PTR || type == LLIL_EXTERN_PTR; }
 
@@ -3949,7 +3949,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		ExprId AddInstruction(ExprId expr);
 
-		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		std::vector<ExprId> GetOperandList(ExprId i, size_t listOperand);
 		ExprId AddLabelMap(const std::map<uint64_t, BNMediumLevelILLabel*>& labels);
 		ExprId AddOperandList(const std::vector<ExprId> operands);
 		ExprId AddIndexList(const std::vector<size_t>& operands);
@@ -3987,10 +3987,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<MediumLevelILFunction> GetSSAForm() const;
 		Ref<MediumLevelILFunction> GetNonSSAForm() const;
-		size_t GetSSAInstructionIndex(size_t instr) const;
-		size_t GetNonSSAInstructionIndex(size_t instr) const;
-		size_t GetSSAExprIndex(size_t instr) const;
-		size_t GetNonSSAExprIndex(size_t instr) const;
+		size_t GetSSAInstructionIndex(ExprId instr) const;
+		size_t GetNonSSAInstructionIndex(ExprId instr) const;
+		size_t GetSSAExprIndex(ExprId instr) const;
+		size_t GetNonSSAExprIndex(ExprId instr) const;
 
 		size_t GetSSAVarDefinition(const SSAVariable& var) const;
 		size_t GetSSAMemoryDefinition(size_t version) const;
@@ -3998,52 +3998,52 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 		bool IsSSAVarLive(const SSAVariable& var) const;
 
-		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
-		std::set<size_t> GetVariableUses(const Variable& var) const;
+		std::set<ExprId> GetVariableDefinitions(const Variable& var) const;
+		std::set<ExprId> GetVariableUses(const Variable& var) const;
 
 		RegisterValue GetSSAVarValue(const SSAVariable& var);
-		RegisterValue GetExprValue(size_t expr);
+		RegisterValue GetExprValue(ExprId expr);
 		RegisterValue GetExprValue(const MediumLevelILInstruction& expr);
-		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr,
+		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleExprValues(size_t expr,
+		PossibleValueSet GetPossibleExprValues(ExprId expr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
-		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
-		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
-		Variable GetVariableForRegisterAtInstruction(uint32_t reg, size_t instr) const;
-		Variable GetVariableForFlagAtInstruction(uint32_t flag, size_t instr) const;
-		Variable GetVariableForStackLocationAtInstruction(int64_t offset, size_t instr) const;
+		ExprId GetSSAVarVersionAtInstruction(const Variable& var, ExprId instr) const;
+		ExprId GetSSAMemoryVersionAtInstruction(ExprId instr) const;
+		Variable GetVariableForRegisterAtInstruction(uint32_t reg, ExprId instr) const;
+		Variable GetVariableForFlagAtInstruction(uint32_t flag, ExprId instr) const;
+		Variable GetVariableForStackLocationAtInstruction(int64_t offset, ExprId instr) const;
 
-		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
-		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
-		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
+		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, ExprId instr);
+		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, ExprId instr);
+		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
+		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
-		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
-		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
+		RegisterValue GetFlagValueAtInstruction(uint32_t flag, ExprId instr);
+		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, ExprId instr);
+		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
+		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
-		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
-		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
+		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr);
+		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr);
+		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
+		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, ExprId instr,
 			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
-		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
-		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;
+		BNILBranchDependence GetBranchDependenceAtInstruction(ExprId curInstr, ExprId branchInstr) const;
+		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(ExprId instr) const;
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
-		size_t GetLowLevelILInstructionIndex(size_t instr) const;
-		size_t GetLowLevelILExprIndex(size_t expr) const;
+		size_t GetLowLevelILInstructionIndex(ExprId instr) const;
+		size_t GetLowLevelILExprIndex(ExprId expr) const;
 
-		Confidence<Ref<Type>> GetExprType(size_t expr);
+		Confidence<Ref<Type>> GetExprType(ExprId expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
 
 		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
@@ -4257,7 +4257,7 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
-		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
+		std::vector<ExprId> GetOperandList(ExprId i, size_t listOperand);
 		ExprId AddOperandList(const std::vector<ExprId>& operands);
 		ExprId AddIndexList(const std::vector<size_t>& operands);
 		ExprId AddSSAVariableList(const std::vector<SSAVariable>& vars);
@@ -4268,7 +4268,7 @@ __attribute__ ((format (printf, 1, 2)))
 		HighLevelILInstruction GetInstruction(size_t i);
 		HighLevelILInstruction GetExpr(size_t i, bool asFullAst = true);
 		size_t GetIndexForInstruction(size_t i) const;
-		size_t GetInstructionForExpr(size_t expr) const;
+		size_t GetInstructionForExpr(ExprId expr) const;
 		size_t GetInstructionCount() const;
 		size_t GetExprCount() const;
 
@@ -4277,10 +4277,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<HighLevelILFunction> GetSSAForm() const;
 		Ref<HighLevelILFunction> GetNonSSAForm() const;
-		size_t GetSSAInstructionIndex(size_t instr) const;
-		size_t GetNonSSAInstructionIndex(size_t instr) const;
-		size_t GetSSAExprIndex(size_t instr) const;
-		size_t GetNonSSAExprIndex(size_t instr) const;
+		size_t GetSSAInstructionIndex(ExprId instr) const;
+		size_t GetNonSSAInstructionIndex(ExprId instr) const;
+		size_t GetSSAExprIndex(ExprId instr) const;
+		size_t GetNonSSAExprIndex(ExprId instr) const;
 
 		size_t GetSSAVarDefinition(const SSAVariable& var) const;
 		size_t GetSSAMemoryDefinition(size_t version) const;
@@ -4288,13 +4288,13 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<size_t> GetSSAMemoryUses(size_t version) const;
 		bool IsSSAVarLive(const SSAVariable& var) const;
 
-		std::set<size_t> GetVariableDefinitions(const Variable& var) const;
-		std::set<size_t> GetVariableUses(const Variable& var) const;
-		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
-		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
+		std::set<ExprId> GetVariableDefinitions(const Variable& var) const;
+		std::set<ExprId> GetVariableUses(const Variable& var) const;
+		size_t GetSSAVarVersionAtInstruction(const Variable& var, ExprId instr) const;
+		size_t GetSSAMemoryVersionAtInstruction(ExprId instr) const;
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
-		size_t GetMediumLevelILExprIndex(size_t expr) const;
+		size_t GetMediumLevelILExprIndex(ExprId expr) const;
 
 		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
 		void ReplaceExpr(size_t expr, size_t newExpr);

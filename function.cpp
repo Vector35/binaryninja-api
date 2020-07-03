@@ -299,18 +299,18 @@ Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
 }
 
 
-size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
+ExprId Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
 }
 
 
-vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
+vector<ExprId> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
 	size_t* exits = BNGetLowLevelILExitsForInstruction(m_object, arch->GetObject(), addr, &count);
 
-	vector<size_t> result;
+	vector<ExprId> result;
 	result.insert(result.end(), exits, &exits[count]);
 
 	BNFreeILInstructionList(exits);
@@ -395,7 +395,7 @@ RegisterValue Function::GetParameterValueAtInstruction(Architecture* arch, uint6
 }
 
 
-RegisterValue Function::GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i)
+RegisterValue Function::GetParameterValueAtLowLevelILInstruction(ExprId instr, Type* functionType, size_t i)
 {
 	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(m_object, instr,
 		functionType ? functionType->GetObject() : nullptr, i);
@@ -479,30 +479,30 @@ Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
 }
 
 
-size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
+ExprId Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
 {
 	return BNGetLiftedILForInstruction(m_object, arch->GetObject(), addr);
 }
 
 
-set<size_t> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
+set<ExprId> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
 {
 	size_t count;
 	size_t* instrs = BNGetLiftedILFlagUsesForDefinition(m_object, i, flag, &count);
 
-	set<size_t> result;
+	set<ExprId> result;
 	result.insert(&instrs[0], &instrs[count]);
 	BNFreeILInstructionList(instrs);
 	return result;
 }
 
 
-set<size_t> Function::GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag)
+set<ExprId> Function::GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag)
 {
 	size_t count;
 	size_t* instrs = BNGetLiftedILFlagDefinitionsForUse(m_object, i, flag, &count);
 
-	set<size_t> result;
+	set<ExprId> result;
 	result.insert(&instrs[0], &instrs[count]);
 	BNFreeILInstructionList(instrs);
 	return result;
@@ -1236,13 +1236,13 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 
 
 BNIntegerDisplayType Function::GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
-	size_t operand)
+	ExprId operand)
 {
 	return BNGetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand);
 }
 
 
-void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
+void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, ExprId operand,
 	BNIntegerDisplayType type)
 {
 	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);

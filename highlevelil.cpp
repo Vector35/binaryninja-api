@@ -111,11 +111,11 @@ ExprId HighLevelILFunction::AddExprWithLocation(BNHighLevelILOperation operation
 }
 
 
-vector<uint64_t> HighLevelILFunction::GetOperandList(ExprId expr, size_t listOperand)
+vector<ExprId> HighLevelILFunction::GetOperandList(ExprId expr, size_t listOperand)
 {
 	size_t count;
 	uint64_t* operands = BNHighLevelILGetOperandList(m_object, expr, listOperand, &count);
-	vector<uint64_t> result;
+	vector<ExprId> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(operands[i]);
@@ -199,7 +199,7 @@ size_t HighLevelILFunction::GetIndexForInstruction(size_t i) const
 }
 
 
-size_t HighLevelILFunction::GetInstructionForExpr(size_t expr) const
+size_t HighLevelILFunction::GetInstructionForExpr(ExprId expr) const
 {
 	return BNGetHighLevelILInstructionForExpr(m_object, expr);
 }
@@ -259,25 +259,25 @@ Ref<HighLevelILFunction> HighLevelILFunction::GetNonSSAForm() const
 }
 
 
-size_t HighLevelILFunction::GetSSAInstructionIndex(size_t instr) const
+size_t HighLevelILFunction::GetSSAInstructionIndex(ExprId instr) const
 {
 	return BNGetHighLevelILSSAInstructionIndex(m_object, instr);
 }
 
 
-size_t HighLevelILFunction::GetNonSSAInstructionIndex(size_t instr) const
+size_t HighLevelILFunction::GetNonSSAInstructionIndex(ExprId instr) const
 {
 	return BNGetHighLevelILNonSSAInstructionIndex(m_object, instr);
 }
 
 
-size_t HighLevelILFunction::GetSSAExprIndex(size_t expr) const
+size_t HighLevelILFunction::GetSSAExprIndex(ExprId expr) const
 {
 	return BNGetHighLevelILSSAExprIndex(m_object, expr);
 }
 
 
-size_t HighLevelILFunction::GetNonSSAExprIndex(size_t expr) const
+size_t HighLevelILFunction::GetNonSSAExprIndex(ExprId expr) const
 {
 	return BNGetHighLevelILNonSSAExprIndex(m_object, expr);
 }
@@ -329,12 +329,12 @@ bool HighLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
 }
 
 
-set<size_t> HighLevelILFunction::GetVariableDefinitions(const Variable& var) const
+set<ExprId> HighLevelILFunction::GetVariableDefinitions(const Variable& var) const
 {
 	size_t count;
 	size_t* instrs = BNGetHighLevelILVariableDefinitions(m_object, &var, &count);
 
-	set<size_t> result;
+	set<ExprId> result;
 	for (size_t i = 0; i < count; i++)
 		result.insert(instrs[i]);
 
@@ -343,12 +343,12 @@ set<size_t> HighLevelILFunction::GetVariableDefinitions(const Variable& var) con
 }
 
 
-set<size_t> HighLevelILFunction::GetVariableUses(const Variable& var) const
+set<ExprId> HighLevelILFunction::GetVariableUses(const Variable& var) const
 {
 	size_t count;
 	size_t* instrs = BNGetHighLevelILVariableUses(m_object, &var, &count);
 
-	set<size_t> result;
+	set<ExprId> result;
 	for (size_t i = 0; i < count; i++)
 		result.insert(instrs[i]);
 
@@ -357,13 +357,13 @@ set<size_t> HighLevelILFunction::GetVariableUses(const Variable& var) const
 }
 
 
-size_t HighLevelILFunction::GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const
+size_t HighLevelILFunction::GetSSAVarVersionAtInstruction(const Variable& var, ExprId instr) const
 {
 	return BNGetHighLevelILSSAVarVersionAtILInstruction(m_object, &var, instr);
 }
 
 
-size_t HighLevelILFunction::GetSSAMemoryVersionAtInstruction(size_t instr) const
+size_t HighLevelILFunction::GetSSAMemoryVersionAtInstruction(ExprId instr) const
 {
 	return BNGetHighLevelILSSAMemoryVersionAtILInstruction(m_object, instr);
 }
@@ -378,7 +378,7 @@ Ref<MediumLevelILFunction> HighLevelILFunction::GetMediumLevelIL() const
 }
 
 
-size_t HighLevelILFunction::GetMediumLevelILExprIndex(size_t expr) const
+size_t HighLevelILFunction::GetMediumLevelILExprIndex(ExprId expr) const
 {
 	return BNGetMediumLevelILExprIndexFromHighLevelIL(m_object, expr);
 }

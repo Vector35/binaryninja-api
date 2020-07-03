@@ -395,7 +395,8 @@ namespace BinaryNinja
 		size_t size() const;
 		size_t operator[](size_t i) const;
 
-		operator _STD_VECTOR<size_t>() const;
+		// operator _STD_VECTOR<size_t>() const;
+		operator _STD_VECTOR<ExprId>() const;
 	};
 
 	class LowLevelILIndexMap

@@ -2238,8 +2238,8 @@ extern "C"
 		SettingsAutoScope = 1,
 		SettingsDefaultScope = 2,
 		SettingsUserScope = 4,
-		SettingsWorkspaceScope = 8,
-		SettingsContextScope = 0x10
+		SettingsProjectScope = 8,
+		SettingsResourceScope = 0x10
 	};
 
 	enum BNLinearViewObjectIdentifierType

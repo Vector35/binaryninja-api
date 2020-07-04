@@ -55,9 +55,9 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : "value", "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
 		assert not settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
 		assert settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : ["value1", "value2"], "type" : "array", "id" : "stringListSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.ignoreContextBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["Context"]}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.ignoreUserBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["User"]}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.readOnlyBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["Context", "User"]}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.ignoreResourceBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope"]}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.ignoreUserBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsUserScope"]}'), "test_settings_types failed"
+		assert settings.register_setting("testGroup.readOnlyBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope", "SettingsUserScope"]}'), "test_settings_types failed"
 
 		assert settings.contains("testGroup.boolSetting"), "test_settings_types failed"
 		assert settings.contains("testGroup.doubleSetting"), "test_settings_types failed"
@@ -96,15 +96,15 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsUserScope)[0] == ["value3", "value4"], "test_settings_types failed"
 
 		raw_view = BinaryView.new(b'0x55')
-		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsDefaultScope), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.ignoreContextBoolSetting", False, raw_view, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
-		assert settings.set_bool("testGroup.ignoreContextBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsDefaultScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
+		assert settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
 		assert not settings.set_bool("testGroup.ignoreUserBoolSetting", False), "test_settings_types failed"
 		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view), "test_settings_types failed"
-		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
 		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
 		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
 
 		s2 = Settings("test2")
@@ -119,7 +119,7 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
-		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope), raw_view, SettingsScope.SettingsContextScope), "test_settings_types failed"
+		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope), raw_view, SettingsScope.SettingsResourceScope), "test_settings_types failed"
 		assert s2.get_bool("testGroup.boolSetting", raw_view) == False, "test_settings_types failed"
 		assert s2.get_double("testGroup.doubleSetting", raw_view) == 700, "test_settings_types failed"
 		assert s2.get_integer("testGroup.integerSetting", raw_view) == 700, "test_settings_types failed"
@@ -134,19 +134,19 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
 		s3 = Settings("test3")
-		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsContextScope)
-		assert not s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsResourceScope)
+		assert not s3.contains("testGroup.ignoreResourceBoolSetting"), "test_settings_types failed"
 		assert s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
 		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
 
 		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsUserScope, False)
-		assert s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert s3.contains("testGroup.ignoreResourceBoolSetting"), "test_settings_types failed"
 		assert not s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
 		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
 
 		assert s3.deserialize_schema(test_schema, SettingsScope.SettingsUserScope, False)
-		assert s3.deserialize_schema(s3.serialize_schema(), SettingsScope.SettingsContextScope, False)
-		assert not s3.contains("testGroup.ignoreContextBoolSetting"), "test_settings_types failed"
+		assert s3.deserialize_schema(s3.serialize_schema(), SettingsScope.SettingsResourceScope, False)
+		assert not s3.contains("testGroup.ignoreResourceBoolSetting"), "test_settings_types failed"
 		assert not s3.contains("testGroup.ignoreUserBoolSetting"), "test_settings_types failed"
 		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
 

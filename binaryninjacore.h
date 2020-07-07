@@ -257,6 +257,8 @@ extern "C"
 		StructureHexDumpTextToken = 27,
 		GotoLabelToken = 28,
 		CommentToken = 29,
+		PossibleValueToken = 30,
+		PossibleValueTypeToken = 31,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -3367,6 +3369,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeAnalysisPerformanceInfo(BNPerformanceInfo* info, size_t count);
 
 	BINARYNINJACOREAPI BNFlowGraph* BNGetUnresolvedStackAdjustmentGraph(BNFunction* func);
+
+	BINARYNINJACOREAPI void BNSetVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite, const BNPossibleValueSet* value);
+	BINARYNINJACOREAPI void BNClearInformedVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI void BNClearInformedVariableValues(BNFunction* func);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 

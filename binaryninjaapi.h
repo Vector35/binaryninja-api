@@ -2938,13 +2938,16 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<BNValueRange> ranges;
 		std::set<int64_t> valueSet;
 		std::vector<LookupTableEntry> table;
+		size_t count;
 
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
+		BNPossibleValueSet ToAPIObject();
 	};
 
 	class FlowGraph;
 	class MediumLevelILFunction;
 	class HighLevelILFunction;
+	struct SSAVariable;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
@@ -3159,6 +3162,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetAnalysisSkipOverride(BNFunctionAnalysisSkipOverride skip);
 
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
+
+		void SetVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value);
+		void ClearInformedVariableValue(const Variable& var, uint64_t defAddr);
+		void ClearInformedVariableValues();
 
 		void RequestDebugReport(const std::string& name);
 
@@ -3702,7 +3709,6 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 	struct MediumLevelILInstruction;
-	struct SSAVariable;
 
 	class MediumLevelILFunction: public CoreRefCountObject<BNMediumLevelILFunction,
 		BNNewMediumLevelILFunctionReference, BNFreeMediumLevelILFunction>

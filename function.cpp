@@ -19,6 +19,8 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "mediumlevelilinstruction.h"
+#include <cstring>
 
 using namespace BinaryNinja;
 using namespace std;
@@ -354,7 +356,64 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 		for (size_t i = 0; i < value.count; i++)
 			result.valueSet.insert(value.valueSet[i]);
 	}
+
+	result.count = value.count;
 	BNFreePossibleValueSet(&value);
+	return result;
+}
+
+
+BNPossibleValueSet PossibleValueSet::ToAPIObject ()
+{
+	BNPossibleValueSet result;
+	result.state = state;
+	result.value = value;
+	result.offset = offset;
+	result.count = 0;
+
+	if ((state == SignedRangeValue) || (state == UnsignedRangeValue))
+	{
+		result.ranges = new BNValueRange[ranges.size()];
+		result.count = ranges.size();
+		for (size_t i = 0; i < ranges.size(); i++)
+			result.ranges[i] = ranges[i];
+	}
+	else
+	{
+		result.ranges = nullptr;
+	}
+
+	if (state == LookupTableValue)
+	{
+		result.table = new BNLookupTableEntry[table.size()];
+		result.count = table.size();
+		for (size_t i = 0; i < table.size(); i++)
+		{
+			result.table[i].fromValues = new int64_t[table[i].fromValues.size()];
+			memcpy(result.table[i].fromValues, &table[i].fromValues[0], sizeof(int64_t) *
+				table[i].fromValues.size());
+			result.table[i].fromCount = table[i].fromValues.size();
+			result.table[i].toValue = table[i].toValue;
+		}
+	}
+	else
+	{
+		result.table = nullptr;
+	}
+
+	if ((state == InSetOfValues) || (state == NotInSetOfValues))
+	{
+		result.valueSet = new int64_t[valueSet.size()];
+		result.count = valueSet.size();
+		size_t i = 0;
+		for (auto j : valueSet)
+			result.valueSet[i++] = j;
+	}
+	else
+	{
+		result.valueSet = nullptr;
+	}
+
 	return result;
 }
 
@@ -1709,6 +1768,83 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 	if (!graph)
 		return nullptr;
 	return new CoreFlowGraph(graph);
+}
+
+
+void Function::SetVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value)
+{
+	auto mlil = GetMediumLevelIL();
+	auto varDefs = mlil->GetVariableDefinitions(var);
+	if (varDefs.size() == 0)
+	{
+		LogError("Could not get definition for Variable");
+		return;
+	} 
+	bool found = false;
+	for (const auto& site : varDefs)
+	{
+		if (site == defAddr)
+		{
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+	{
+		LogError("Could not find definition for variable at given address");
+	}
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = GetArchitecture()->m_object;
+	defSite.address = defAddr;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	auto valueObj = value.ToAPIObject();
+
+	BNSetVariableValue(m_object, &var_data, &defSite, &valueObj);
+}
+
+
+void Function::ClearInformedVariableValue(const Variable& var, uint64_t defAddr)
+{
+	auto mlil = GetMediumLevelIL();
+	auto varDefs = mlil->GetVariableDefinitions(var);
+	if (varDefs.size() == 0)
+	{
+		LogError("Could not get definition for Variable");
+	} 
+	bool found = false;
+	for (auto site : varDefs)
+	{
+		if (site == defAddr)
+		{
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+	{
+		LogError("Could not find definition for variable at given address");
+	}
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = GetArchitecture()->m_object;
+	defSite.address = defAddr;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNClearInformedVariableValue(m_object, &var_data, &defSite);
+}
+
+
+void Function::ClearInformedVariableValues() 
+{
+	BNClearInformedVariableValues(m_object);
 }
 
 

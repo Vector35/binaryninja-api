@@ -346,6 +346,7 @@ class PossibleValueSet(object):
 			self._values = set()
 			for i in range(0, value.count):
 				self._values.add(value.valueSet[i])
+		self._count = value.count
 
 	def __repr__(self):
 		if self._type == RegisterValueType.EntryValue:
@@ -382,6 +383,63 @@ class PossibleValueSet(object):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return not (self == other)
+
+	def _to_api_object(self):
+		result = core.BNPossibleValueSet()
+		result.state = RegisterValueType(self.type)
+		if self.type == RegisterValueType.UndeterminedValue:
+			return result
+		elif self.type == RegisterValueType.ConstantValue:
+			result.value = self.value
+		elif self.type == RegisterValueType.ConstantPointerValue:
+			result.value = self.value
+		elif self.type == RegisterValueType.StackFrameOffset:
+			result.offset = self.value
+		elif self.type == RegisterValueType.SignedRangeValue:
+			result.offst = self.value
+			result.ranges = (core.BNValueRange * self.count)()
+			for i in range(0, self.count):
+				start = self.ranges[i].start
+				end = self.ranges[i].end
+				if start & (1 << 63):
+					start |= ~((1 << 63) - 1)
+				if end & (1 << 63):
+					end |= ~((1 << 63) - 1)
+				value_range = core.BNValueRange()
+				value_range.start = start
+				value_range.end = end
+				value_range.step = self.ranges[i].step
+				result.ranges[i] = value_range
+			result.count = self.count
+		elif self.type == RegisterValueType.UnsignedRangeValue:
+			result.offset = self.value
+			result.ranges = (core.BNValueRange * self.count)()
+			for i in range(0, self.count):
+				value_range = core.BNValueRange()
+				value_range.start = self.ranges[i].start
+				value_range.end = self.ranges[i].end
+				value_range.step = self.ranges[i].step
+				result.ranges[i] = value_range
+			result.count = self.count
+		elif self.type == RegisterValueType.LookupTableValue:
+			result.table = []
+			result.mapping = {}
+			for i in range(self.count):
+				from_list = []
+				for j in range(0, self.table[i].fromCount):
+					from_list.append(self.table[i].fromValues[j])
+					result.mapping[self.table[i].fromValues[j]] = result.table[i].toValue
+				result.table.append(LookupTableEntry(from_list, result.table[i].toValue))
+			result.count = self.count
+		elif (self.type == RegisterValueType.InSetOfValues) or (self.type == RegisterValueType.NotInSetOfValues):
+			values = (ctypes.c_long * self.count)()
+			i = 0
+			for value in self.values:
+				values[i] = value
+				i += 1
+			result.valueSet = ctypes.cast(values, ctypes.POINTER(ctypes.c_long))
+			result.count = self.count
+		return result
 
 	@property
 	def type(self):
@@ -462,6 +520,83 @@ class PossibleValueSet(object):
 	def values(self, value):
 		""" """
 		self._values = value
+
+	@property
+	def count(self):
+		""" """
+		return self._count
+
+	@count.setter
+	def count(self, value):
+		self._count = value
+
+	@classmethod
+	def undetermined(self):
+		return PossibleValueSet()
+
+	@classmethod
+	def constant(self, value):
+		""" """
+		result = PossibleValueSet()
+		result.type = RegisterValueType.ConstantValue
+		result.value = value
+		return result
+
+	@classmethod
+	def constant_ptr(self, value):
+		result = PossibleValueSet()
+		result.type = RegisterValueType.ConstantPointerValue
+		result.value = value
+		return result
+
+	@classmethod
+	def stack_frame_offset(self, offset):
+		result = PossibleValueSet()
+		result.type = RegisterValueType.StackFrameOffset
+		result.value = value
+		return result
+
+	@classmethod
+	def signed_range_value(self, ranges):
+		result = PossibleValueSet()
+		result.value = 0
+		result.type = RegisterValueType.SignedRangeValue
+		result.ranges = ranges
+		result.count = len(ranges)
+		return result
+
+	@classmethod
+	def unsigned_range_value(self, ranges):
+		result = PossibleValueSet()
+		result.value = 0
+		result.type = RegisterValueType.UnsignedRangeValue
+		result.ranges = ranges
+		result.count = len(ranges)
+		return result
+
+	@classmethod
+	def in_set_of_values(self, values):
+		result = PossibleValueSet()
+		result.type = RegisterValueType.InSetOfValues
+		result.values = set(values)
+		result.count = len(values)
+		return result
+
+	@classmethod 
+	def not_in_set_of_values(self, values):
+		result = PossibleValueSet()
+		result.type = RegisterValueType.NotInSetOfValues
+		result.values = set(values)
+		result.count = len(values)
+		return result
+
+	@classmethod
+	def lookup_table_value(self, lookup_table, mapping):
+		result = PossibleValueSet()
+		result.type = RegisterValueType.LookupTableValue
+		result.table = lookup_table
+		result.mapping = mapping
+		return result
 
 
 class StackVariableReference(object):
@@ -2421,6 +2556,51 @@ class Function(object):
 		if arch is None:
 			arch = self.arch
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
+
+	def set_var_value(self, var, def_addr, value):
+		var_defs = self.mlil.get_var_definitions(var)
+		if var_defs is None:
+			raise ValueError("Could not get definition for Variable")
+		found = False
+		for site in var_defs:
+			if site.address == def_addr:
+				found = True
+				break
+		if not found:
+			raise ValueError("No definition for Variable found at given address")
+		def_site = core.BNArchitectureAndAddress()
+		def_site.arch = self.arch.handle
+		def_site.address = def_addr
+
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		core.BNSetVariableValue(self.handle, var_data, def_site, value._to_api_object())
+
+	def clear_informed_var_value(self, var, def_addr):
+		var_defs = self.mlil.get_var_definitions(var)
+		if var_defs is None:
+			raise ValueError("Could not get definition for Variable")
+		found = False
+		for site in var_defs:
+			if site.address == def_addr:
+				found = True
+				break
+		if not found:
+			raise ValueError("No definition for Variable found at given address")
+		def_site = core.BNArchitectureAndAddress()
+		def_site.arch = self.arch.handle
+		def_site.address = def_addr
+
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index 
+		var_data.storage = var.storage
+		core.BNClearInformedVariableValue(self.handle, var_data, def_site)
+
+	def clear_informed_var_values(self):
+		core.BNClearInformedVariableValues(self.handle)
 
 	def request_debug_report(self, name):
 		core.BNRequestFunctionDebugReport(self.handle, name)

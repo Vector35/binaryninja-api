@@ -39,8 +39,6 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
     - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
-    - [rust] ([rust license] - MIT)
-    - [reqwest] ([reqwest license] - MIT) used for downloading files
 
 * Upvector update library
     - [tomcrypt] ([tomcrypt license] - public domain)
@@ -118,7 +116,3 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [jemalloc license]: https://github.com/jemalloc/jemalloc/blob/master/COPYING
 [libxcb]: https://gitlab.freedesktop.org/xorg/lib/libxcb
 [libxcb license]: https://gitlab.freedesktop.org/xorg/lib/libxcb/-/blob/master/COPYING
-[rust]: https://www.rust-lang.org/
-[rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT
-[reqwest]: https://github.com/seanmonstar/reqwest
-[reqwest license]: https://github.com/seanmonstar/reqwest/blob/master/LICENSE-MIT

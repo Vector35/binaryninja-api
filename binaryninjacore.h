@@ -419,6 +419,8 @@ extern "C"
 		LLIL_UNDEF,
 		LLIL_UNIMPL,
 		LLIL_UNIMPL_MEM,
+		LLIL_GET_BITS,
+		LLIL_SET_REG_BITS,
 
 		// Floating point
 		LLIL_FADD,
@@ -474,7 +476,8 @@ extern "C"
 		LLIL_REG_PHI,
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
-		LLIL_MEM_PHI
+		LLIL_MEM_PHI,
+		LLIL_SET_REG_BITS_SSA
 	};
 
 	enum BNLowLevelILFlagCondition

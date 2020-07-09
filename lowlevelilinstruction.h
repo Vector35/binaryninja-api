@@ -221,7 +221,10 @@ namespace BinaryNinja
 		SourceMemoryVersionsLowLevelOperandUsage,
 		TargetsLowLevelOperandUsage,
 		RegisterStackAdjustmentsLowLevelOperandUsage,
-		OffsetLowLevelOperandUsage
+		OffsetLowLevelOperandUsage,
+		SliceSourceLowLevelOperandUsage,
+		SliceStartLowLevelOperandUsage,
+		SliceSizeLowLevelOperandUsage
 	};
 }
 
@@ -727,6 +730,10 @@ namespace BinaryNinja
 
 		// Templated accessors for instruction operands, use these for efficient access to a known instruction
 		template <BNLowLevelILOperation N> LowLevelILInstruction GetSourceExpr() const { return As<N>().GetSourceExpr(); }
+		template <BNLowLevelILOperation N> LowLevelILInstruction GetSliceValueExpr() const { return As<N>().GetSliceValueExpr(); }
+		template <BNLowLevelILOperation N> LowLevelILInstruction GetSliceStart() const { return As<N>().GetSliceStart(); }
+		template <BNLowLevelILOperation N> LowLevelILInstruction GetSliceSize() const { return As<N>().GetSliceSize(); }
+		template <BNLowLevelILOperation N> LowLevelILInstruction GetSliceSourceValue() const { return As<N>().GetSliceSourceValue(); }
 		template <BNLowLevelILOperation N> uint32_t GetSourceRegister() const { return As<N>().GetSourceRegister(); }
 		template <BNLowLevelILOperation N> uint32_t GetSourceRegisterStack() const { return As<N>().GetSourceRegisterStack(); }
 		template <BNLowLevelILOperation N> uint32_t GetSourceFlag() const { return As<N>().GetSourceFlag(); }
@@ -1272,6 +1279,30 @@ namespace BinaryNinja
 	{
 		size_t GetConstant() const { return GetRawOperandAsIndex(0); }
 		size_t GetOffset() const { return GetRawOperandAsIndex(1); }
+	};
+
+	template <> struct LowLevelILInstructionAccessor<LLIL_GET_BITS>: public LowLevelILInstructionBase
+	{
+		LowLevelILInstruction GetSliceValueExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetSliceStart() const { return GetRawOperandAsExpr(1); }
+		LowLevelILInstruction GetSliceSize() const { return GetRawOperandAsExpr(2); }
+	};
+
+	template <> struct LowLevelILInstructionAccessor<LLIL_SET_REG_BITS>: public LowLevelILInstructionBase
+	{
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(0); }
+		LowLevelILInstruction GetSliceStart() const { return GetRawOperandAsExpr(1); }
+		LowLevelILInstruction GetSliceSize() const { return GetRawOperandAsExpr(2); }
+		LowLevelILInstruction GetSliceSourceValue() const { return GetRawOperandAsExpr(3); }
+	};
+
+	template <> struct LowLevelILInstructionAccessor<LLIL_SET_REG_BITS_SSA>: public LowLevelILInstructionBase
+	{
+		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0);	}
+		LowLevelILInstruction GetSliceStart() const { return GetRawOperandAsExprList(2)[0]; }
+		LowLevelILInstruction GetSliceSize() const { return GetRawOperandAsExprList(2)[1]; }
+		LowLevelILInstruction GetSliceSourceValue() const { return GetRawOperandAsExprList(2)[2]; }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
 	};
 
 	template <> struct LowLevelILInstructionAccessor<LLIL_NOP>: public LowLevelILInstructionBase {};

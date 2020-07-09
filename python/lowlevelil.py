@@ -699,6 +699,8 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_UNDEF: [],
 		LowLevelILOperation.LLIL_UNIMPL: [],
 		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
+		LowLevelILOperation.LLIL_GET_BITS: [("src", "expr"), ("slice_start", "expr"), ("slice_size", "expr")],
+		LowLevelILOperation.LLIL_SET_REG_BITS: [("dest", "reg"), ("slice_start", "expr"), ("slice_size", "expr"), ("src", "expr")],
 		LowLevelILOperation.LLIL_FADD: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FSUB: [("left", "expr"), ("right", "expr")],
 		LowLevelILOperation.LLIL_FMUL: [("left", "expr"), ("right", "expr")],
@@ -749,7 +751,8 @@ class LowLevelILInstruction(object):
 		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
 		LowLevelILOperation.LLIL_REG_STACK_PHI: [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
 		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
-		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
+		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")],
+		LowLevelILOperation.LLIL_SET_REG_BITS_SSA: [("dest", "reg_ssa"), ("slice_start", "expr"), ("slice_size", "expr"), ("src", "expr")],
 	}
 
 	def __init__(self, func, expr_index, instr_index=None):

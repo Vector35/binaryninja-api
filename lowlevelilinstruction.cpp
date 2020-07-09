@@ -244,7 +244,13 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>>
 		{LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 		{LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-		{LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}}
+		{LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_GET_BITS, {SliceSourceLowLevelOperandUsage, SliceStartLowLevelOperandUsage,
+								SliceSizeLowLevelOperandUsage}},
+		{LLIL_SET_REG_BITS, {SliceStartLowLevelOperandUsage,
+								SliceSizeLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+		{LLIL_SET_REG_BITS_SSA, {SliceStartLowLevelOperandUsage,
+								SliceSizeLowLevelOperandUsage, RightExprLowLevelOperandUsage}}
 	};
 
 
@@ -1996,6 +2002,21 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		for (auto& i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
+	case LLIL_GET_BITS:
+		GetSliceValueExpr<LLIL_GET_BITS>().VisitExprs(func);
+		GetSliceStart<LLIL_GET_BITS>().VisitExprs(func);
+		GetSliceSize<LLIL_GET_BITS>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_BITS:
+		GetSliceStart<LLIL_SET_REG_BITS>().VisitExprs(func);
+		GetSliceSize<LLIL_SET_REG_BITS>().VisitExprs(func);
+		GetSliceSourceValue<LLIL_SET_REG_BITS>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_BITS_SSA:
+		GetSliceStart<LLIL_SET_REG_BITS_SSA>().VisitExprs(func);
+		GetSliceSize<LLIL_SET_REG_BITS_SSA>().VisitExprs(func);
+		GetSliceSourceValue<LLIL_SET_REG_BITS_SSA>().VisitExprs(func);
+		break;
 	default:
 		break;
 	}
@@ -2292,6 +2313,26 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetOutputSSARegisterOrFlagList<LLIL_INTRINSIC_SSA>(), GetIntrinsic<LLIL_INTRINSIC_SSA>(),
 			params, *this);
+	case LLIL_GET_BITS:
+		return dest->GetBits(size,
+								subExprHandler(GetSliceValueExpr<LLIL_GET_BITS>()),
+								subExprHandler(GetSliceStart<LLIL_GET_BITS>()),
+								subExprHandler(GetSliceSize<LLIL_GET_BITS>())
+							);
+	case LLIL_SET_REG_BITS:
+		return dest->SetRegBits(size,
+								GetDestRegister<LLIL_SET_REG_BITS>(),
+								subExprHandler(GetSliceStart<LLIL_SET_REG_BITS>()),
+								subExprHandler(GetSliceSize<LLIL_SET_REG_BITS>()),
+								subExprHandler(GetSliceSourceValue<LLIL_SET_REG_BITS>())
+							);
+	case LLIL_SET_REG_BITS_SSA:
+		return dest->SetRegBitsSSA(size,
+								GetDestSSARegister<LLIL_SET_REG_BITS_SSA>(),
+								subExprHandler(GetSliceStart<LLIL_SET_REG_BITS_SSA>()),
+								subExprHandler(GetSliceSize<LLIL_SET_REG_BITS_SSA>()),
+								subExprHandler(GetSliceSourceValue<LLIL_SET_REG_BITS_SSA>())
+							);
 	default:
 		throw LowLevelILInstructionAccessException();
 	}
@@ -3628,4 +3669,27 @@ ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, 
 ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, a, b);
+}
+
+
+ExprId LowLevelILFunction::GetBits(size_t exprSize, ExprId a, ExprId start, ExprId sliceSize, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_GET_BITS, loc, exprSize, 0, a, start, sliceSize);
+}
+
+ExprId LowLevelILFunction::SetRegBits(size_t exprSize, uint32_t reg, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_BITS, loc, exprSize, 0, reg, start, sliceSize, value);
+}
+
+ExprId LowLevelILFunction::SetRegBitsSSA(size_t exprSize, SSARegister reg, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc)
+{
+	// SetRegBitsSSA originally needs to pass five parameters, which does not fit into the AddExprWithLocation()
+	// as a workaround, I pass the latter three parameters as a operand list
+	// they will need to be unpacked before usage
+	// See code in /api/lowlevelilinstruction.h:
+	// template <> struct LowLevelILInstructionAccessor<LLIL_SET_REG_BITS_SSA>: public LowLevelILInstructionBase
+	// for details
+	const vector<ExprId>& operands = {start, sliceSize, value};
+	return AddExprWithLocation(LLIL_SET_REG_BITS_SSA, loc, exprSize, 0, reg.reg, reg.version, 3, AddOperandList(operands));
 }

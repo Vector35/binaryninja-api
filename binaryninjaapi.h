@@ -3580,6 +3580,10 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
+		ExprId GetBits(size_t exprSize, ExprId a, ExprId start, ExprId sliceSize, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegBits(size_t exprSize, uint32_t reg, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegBitsSSA(size_t exprSize, SSARegister reg, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f,
 			const ILSourceLocation& loc = ILSourceLocation());

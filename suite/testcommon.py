@@ -6,10 +6,10 @@ import zipfile
 import inspect
 import binaryninja as binja
 from binaryninja.binaryview import BinaryViewType, BinaryView
-from binaryninja.filemetadata import FileMetadata
+from binaryninja.filemetadata import FileMetadata, SaveSettings
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
-from binaryninja.enums import InstructionTextTokenType
+from binaryninja.enums import InstructionTextTokenType, SaveOption
 import subprocess
 import re
 
@@ -981,41 +981,6 @@ class VerifyBuilder(Builder):
             os.unlink(temp_name)
 
             return functions == bndb_functions and comments == bndb_comments
-        finally:
-            self.delete_package("helloworld")
-
-    def test_verify_clean_save(self):
-        file_name = self.unpackage_file("helloworld")
-        try:
-            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
-
-            bv = binja.BinaryViewType['ELF'].open(file_name)
-            bv.update_analysis_and_wait()
-
-            bv.begin_undo_actions()
-            bv.functions[0].set_comment(bv.functions[0].start, "This is a secret comment")
-            bv.commit_undo_actions()
-
-            bv.begin_undo_actions()
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
-            bv.commit_undo_actions()
-
-            bv.create_database(temp_name, clean=True)
-            bv.file.close()
-            del bv
-
-            bv = binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF')
-            bv.update_analysis_and_wait()
-
-            bv.undo()
-
-            comment = bv.functions[0].get_comment_at(bv.functions[0].start)
-
-            bv.file.close()
-            del bv
-            os.unlink(temp_name)
-
-            return comment == "Function start!"
         finally:
             self.delete_package("helloworld")
 

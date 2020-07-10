@@ -151,6 +151,7 @@ extern "C"
 	struct BNPlatform;
 	struct BNAnalysisCompletionEvent;
 	struct BNDisassemblySettings;
+	struct BNSaveSettings;
 	struct BNScriptingProvider;
 	struct BNScriptingInstance;
 	struct BNMainThreadAction;
@@ -2003,6 +2004,12 @@ extern "C"
 		BNMetadata** values;
 	};
 
+	enum BNSaveOption
+	{
+		RemoveUndoData,
+		TrimSnapshots,
+	};
+
 	enum BNMessageBoxIcon
 	{
 		InformationIcon,
@@ -2385,6 +2392,16 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNDataBuffer* BNZlibCompress(BNDataBuffer* buf);
 	BINARYNINJACOREAPI BNDataBuffer* BNZlibDecompress(BNDataBuffer* buf);
 
+	// Save settings
+	BINARYNINJACOREAPI BNSaveSettings* BNCreateSaveSettings(void);
+	BINARYNINJACOREAPI BNSaveSettings* BNNewSaveSettingsReference(BNSaveSettings* settings);
+	BINARYNINJACOREAPI void BNFreeSaveSettings(BNSaveSettings* settings);
+
+	BINARYNINJACOREAPI bool BNIsSaveSettingsOptionSet(BNSaveSettings* settings,
+		BNSaveOption option);
+	BINARYNINJACOREAPI void BNSetSaveSettingsOption(BNSaveSettings* settings,
+		BNSaveOption option, bool state);
+
 	// File metadata object
 	BINARYNINJACOREAPI BNFileMetadata* BNCreateFileMetadata(void);
 	BINARYNINJACOREAPI BNFileMetadata* BNNewFileReference(BNFileMetadata* file);
@@ -2397,16 +2414,16 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNMarkFileSaved(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI bool BNIsBackedByDatabase(BNFileMetadata* file);
-	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path, bool clean);
+	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNCreateDatabaseWithProgress(BNBinaryView* data, const char* path,
-		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), bool clean);
+		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabase(BNFileMetadata* file, const char* path);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
 		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNBinaryView* BNOpenDatabaseForConfiguration(BNFileMetadata* file, const char* path);
-	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, bool clean);
+	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
-		void (*progress)(void* ctxt, size_t progress, size_t total), bool clean);
+		void (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(BNBinaryView* data, uint64_t address, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));

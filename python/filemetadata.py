@@ -27,6 +27,7 @@ import binaryninja
 from binaryninja import _binaryninjacore as core
 from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
 from binaryninja import log
+from binaryninja.enums import SaveOption
 
 class NavigationHandler(object):
 	def _register(self, handle):
@@ -58,6 +59,27 @@ class NavigationHandler(object):
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+
+class SaveSettings(object):
+	def __init__(self, handle = None):
+		if handle is None:
+			self.handle = core.BNCreateSaveSettings()
+		else:
+			self.handle = handle
+
+	def __del__(self):
+		core.BNFreeSaveSettings(self.handle)
+
+	def is_option_set(self, option):
+		if isinstance(option, str):
+			option = SaveOption[option]
+		return core.BNIsSaveSettingsOptionSet(self.handle, option)
+
+	def set_option(self, option, state = True):
+		if isinstance(option, str):
+			option = SaveOption[option]
+		core.BNSetSaveSettingsOption(self.handle, option, state)
 
 
 class _FileMetadataAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -331,13 +353,13 @@ class FileMetadata(object):
 	def navigate(self, view, offset):
 		return core.BNNavigate(self.handle, str(view), offset)
 
-	def create_database(self, filename, progress_func = None, clean = False):
+	def create_database(self, filename, progress_func = None, settings = None):
 		if progress_func is None:
-			return core.BNCreateDatabase(self.raw.handle, str(filename), clean)
+			return core.BNCreateDatabase(self.raw.handle, str(filename), settings)
 		else:
 			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)), clean)
+					lambda ctxt, cur, total: progress_func(cur, total)), settings)
 
 	def open_existing_database(self, filename, progress_func = None):
 		if progress_func is None:
@@ -356,13 +378,13 @@ class FileMetadata(object):
 			return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
-	def save_auto_snapshot(self, progress_func = None, clean = False):
+	def save_auto_snapshot(self, progress_func = None, settings = None):
 		if progress_func is None:
-			return core.BNSaveAutoSnapshot(self.raw.handle, clean)
+			return core.BNSaveAutoSnapshot(self.raw.handle, settings)
 		else:
 			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)), clean)
+					lambda ctxt, cur, total: progress_func(cur, total)), settings)
 
 	def merge_user_analysis(self, path, progress_func = None):
 		return core.BNMergeUserAnalysis(self.handle, str(path), None,

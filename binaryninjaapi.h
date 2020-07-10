@@ -874,6 +874,17 @@ __attribute__ ((format (printf, 1, 2)))
 		MergeResult(const BNMergeResult& result);
 	};
 
+	class SaveSettings: public CoreRefCountObject<BNSaveSettings,
+		BNNewSaveSettingsReference, BNFreeSaveSettings>
+	{
+	public:
+		SaveSettings();
+		SaveSettings(BNSaveSettings* settings);
+
+		bool IsOptionSet(BNSaveOption option) const;
+		void SetOption(BNSaveOption option, bool state = true);
+	};
+
 	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
 	{
 	public:
@@ -897,16 +908,16 @@ __attribute__ ((format (printf, 1, 2)))
 		void MarkFileSaved();
 
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& name, BinaryView* data, bool clean = false);
+		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
 			const std::function<void(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
-		bool SaveAutoSnapshot(BinaryView* data, bool clean = false);
+		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
 		bool SaveAutoSnapshot(BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
@@ -1450,11 +1461,11 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsModified() const;
 		bool IsAnalysisChanged() const;
 		bool IsBackedByDatabase() const;
-		bool CreateDatabase(const std::string& path, bool clean = false);
+		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
 		bool CreateDatabase(const std::string& path,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
-		bool SaveAutoSnapshot(bool clean = false);
-		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback, bool clean = false);
+			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
+		bool SaveAutoSnapshot(Ref<SaveSettings> settings = new SaveSettings());
+		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);

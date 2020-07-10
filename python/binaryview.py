@@ -32,7 +32,7 @@ from collections import OrderedDict
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag, TypeClass)
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag, TypeClass, SaveOption)
 import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
 from binaryninja import log
@@ -2480,30 +2480,30 @@ class BinaryView(object):
 		"""
 		return False
 
-	def create_database(self, filename, progress_func=None, clean=False):
+	def create_database(self, filename, progress_func=None, settings=None):
 		"""
 		``create_database`` writes the current database (.bndb) file out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callback progress_func: optional function to be called with the current progress and total count.
-		:param bool clean: optional argument to determine if undo data is saved in the database.
+		:param SaveSettings settings: optional argument for special save options.
 		:return: true on success, false on failure
 		:rtype: bool
 		"""
-		return self._file.create_database(filename, progress_func, clean)
+		return self._file.create_database(filename, progress_func, settings)
 
-	def save_auto_snapshot(self, progress_func=None, clean=False):
+	def save_auto_snapshot(self, progress_func=None, settings=None):
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
 		.. note:: :py:meth:`create_database` should have been called prior to executing this method
 
 		:param callback progress_func: optional function to be called with the current progress and total count.
-		:param bool clean: optional argument to determine if undo data is saved in the database.
+		:param SaveSettings settings: optional argument for special save options.
 		:return: True if it successfully saved the snapshot, False otherwise
 		:rtype: bool
 		"""
-		return self._file.save_auto_snapshot(progress_func, clean)
+		return self._file.save_auto_snapshot(progress_func, settings)
 
 	def get_view_of_type(self, name):
 		"""

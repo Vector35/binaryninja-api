@@ -163,18 +163,18 @@ bool FileMetadata::IsBackedByDatabase() const
 }
 
 
-bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, bool clean)
+bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<SaveSettings> settings)
 {
-	return BNCreateDatabase(data->GetObject(), name.c_str(), clean);
+	return BNCreateDatabase(data->GetObject(), name.c_str(), settings ? settings->GetObject() : nullptr);
 }
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
+	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, clean);
+	return BNCreateDatabaseWithProgress(data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -208,18 +208,18 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 }
 
 
-bool FileMetadata::SaveAutoSnapshot(BinaryView* data, bool clean)
+bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings)
 {
-	return BNSaveAutoSnapshot(data->GetObject(), clean);
+	return BNSaveAutoSnapshot(data->GetObject(), settings ? settings->GetObject() : nullptr);
 }
 
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
+	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback, clean);
+	return BNSaveAutoSnapshotWithProgress(data->GetObject(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -347,4 +347,28 @@ Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
 	if (!view)
 		return nullptr;
 	return new BinaryView(view);
+}
+
+
+SaveSettings::SaveSettings()
+{
+	m_object = BNCreateSaveSettings();
+}
+
+
+SaveSettings::SaveSettings(BNSaveSettings* settings)
+{
+	m_object = settings;
+}
+
+
+bool SaveSettings::IsOptionSet(BNSaveOption option) const
+{
+	return BNIsSaveSettingsOptionSet(m_object, option);
+}
+
+
+void SaveSettings::SetOption(BNSaveOption option, bool state)
+{
+	BNSetSaveSettingsOption(m_object, option, state);
 }

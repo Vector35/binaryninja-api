@@ -51,6 +51,7 @@ typedef BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> MediumLevelILFuncti
 typedef BinaryNinja::Ref<BinaryNinja::HighLevelILFunction> HighLevelILFunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Platform> PlatformRef;
 typedef BinaryNinja::Ref<BinaryNinja::ReportCollection> ReportCollectionRef;
+typedef BinaryNinja::Ref<BinaryNinja::SaveSettings> SaveSettingsRef;
 typedef BinaryNinja::Ref<BinaryNinja::ScriptingInstance> ScriptingInstanceRef;
 typedef BinaryNinja::Ref<BinaryNinja::ScriptingProvider> ScriptingProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Section> SectionRef;

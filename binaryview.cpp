@@ -1126,34 +1126,34 @@ bool BinaryView::IsBackedByDatabase() const
 }
 
 
-bool BinaryView::CreateDatabase(const string& path, bool clean)
+bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path, clean);
-	return m_file->CreateDatabase(path, this, clean);
+		return parent->CreateDatabase(path, settings);
+	return m_file->CreateDatabase(path, this, settings);
 }
 
 
 bool BinaryView::CreateDatabase(const string& path,
-	const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
+	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
 	if (parent)
-		return parent->CreateDatabase(path, clean);
-	return m_file->CreateDatabase(path, this, progressCallback, clean);
+		return parent->CreateDatabase(path, settings);
+	return m_file->CreateDatabase(path, this, progressCallback, settings);
 }
 
 
-bool BinaryView::SaveAutoSnapshot(bool clean)
+bool BinaryView::SaveAutoSnapshot(Ref<SaveSettings> settings)
 {
-	return m_file->SaveAutoSnapshot(this, clean);
+	return m_file->SaveAutoSnapshot(this, settings);
 }
 
 
-bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback, bool clean)
+bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
-	return m_file->SaveAutoSnapshot(this, progressCallback, clean);
+	return m_file->SaveAutoSnapshot(this, progressCallback, settings);
 }
 
 

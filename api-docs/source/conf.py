@@ -22,9 +22,15 @@ import platform
 import inspect
 
 if (platform.system() == "Darwin"):
-	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "binaryninja.app", "Contents", "Resources", "python")
+	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "build", "out", "binaryninja.app", "Contents", "Resources", "python")
 else:
-	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "ui", "python")
+	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "build", "out", "python")
+
+if not os.path.exists(bnpath):
+	if (platform.system() == "Darwin"):
+		bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "out", "binaryninja.app", "Contents", "Resources", "python")
+	else:
+		bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "out", "python")
 
 sys.path.insert(0, bnpath)
 import binaryninja

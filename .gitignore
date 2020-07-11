@@ -57,3 +57,5 @@ examples/triage/moc_predefs.h.cbt
 examples/triage/triage.dll
 examples/triage/triage.lib
 *.opt
+Makefile
+!api-docs/Makefile

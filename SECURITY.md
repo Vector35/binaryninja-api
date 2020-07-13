@@ -12,7 +12,7 @@ Please contact security@vector35.com (using the below [GPG key](#gpg-key) if des
 
  - code execution merely by opening an executable file for analysis
  - https://binary.ninja/ or any subdomains
- - vulnerabilities in the master update server or update process (unencrypted update files is NOT a security vulnerability as files are dditionally verified with a signing key)
+ - vulnerabilities in the master update server or update process (unencrypted update files is NOT a security vulnerability as files are additionally verified with a signing key)
  - vulnerabilities in https://cloud.binary.ninja/
  - any vulnerability that leaks sensitive customer information (customer email addresses, serial numbers. etc)
   

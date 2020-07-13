@@ -45,6 +45,16 @@ Note that floating point IL instructions have their own possible size suffixes:
 .s -- Single (4 bytes)
 .d -- Double (8 bytes)
 .t -- Ten (10 bytes)
+.o -- Oword (16 bytes)
+```
+
+Additionally, floating point IL operations are indicated with a prefixed `f`, like:
+
+```
+f* -- Floating-point multiplication
+f/ -- Floating-point division
+f+ -- Floating-point addition
+f- -- Floating-point subtraction
 ```
 
 ### Variable Offsets

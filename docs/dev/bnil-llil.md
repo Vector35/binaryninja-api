@@ -90,12 +90,7 @@ For the above instruction, we have a few operations we can perform:
 >>> hex(instr.address)
 '0x40084aL'
 ```
-* **dest** - returns the destination operand
 
-```
->>> instr.dest
-'rsp'
-```
 * **function** - returns the containing function
 
 ```

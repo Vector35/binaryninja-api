@@ -76,6 +76,8 @@ GenericHeaders::GenericHeaders(BinaryViewRef data)
 		AddField("Platform", QString::fromStdString(data->GetDefaultPlatform()->GetName()));
 	if (data->IsValidOffset(data->GetEntryPoint()))
 		AddField("Entry Point", QString("0x") + QString::number(data->GetEntryPoint(), 16), CodeHeaderField);
+	if (data->IsValidOffset(data->GetStart()))
+		AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
 }
 
 

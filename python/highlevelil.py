@@ -351,6 +351,26 @@ class HighLevelILInstruction(object):
 			return NotImplemented
 		return not (self == other)
 
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other._function and self._expr_index < other._expr_index
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other._function and self._expr_index <= other._expr_index
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other._function and self._expr_index > other._expr_index
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self._function == other._function and self._expr_index >= other._expr_index
+
 	def __hash__(self):
 		return hash((self._function, self._expr_index))
 

@@ -354,6 +354,9 @@ class FileMetadata(object):
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(self, filename, progress_func = None, settings = None):
+		if settings is not None:
+			settings = settings.handle
+
 		if progress_func is None:
 			return core.BNCreateDatabase(self.raw.handle, str(filename), settings)
 		else:

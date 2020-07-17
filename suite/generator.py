@@ -27,12 +27,10 @@ from collections import Counter
 
 api_suite_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), {4}))
 sys.path.append(api_suite_path)
+import config
 import testcommon
 import api_test
 import rebasing_test
-
-global verbose
-verbose = False
 
 
 class TestBinaryNinjaAPI(unittest.TestCase):
@@ -78,10 +76,10 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         stringDiffList = stringDiff.split(\'\\n\')
 
         if len(stringDiffList) > 10:
-            if not verbose:
+            if not config.verbose:
                 stringDiff = \'\\n\'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList[:10])
                 stringDiff += \'\\n\\n### And ' + str(len(stringDiffList)) + " more lines, use '-v' to show ###"
-        elif not verbose:
+        elif not config.verbose:
             stringDiff = \'\\n\'.join(line if len(line) <= 100 else line[:100] + "...and " + str(len(line) - 100) + " more characters" for line in stringDiffList)
         stringDiff = \'\\n\\n\' + firstText + stringDiff
         return (equality, stringDiff)
@@ -130,13 +128,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if sys.argv[i] == '-v' or sys.argv[i] == '-V' or sys.argv[i] == '--verbose':
-                verbose = True
+                config.verbose = True
             elif sys.argv[i] == '--api-only':
-                api_only = True
+                config.api_only = True
 
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(rebasing_test)
-    if not api_only:
+    if not config.api_only:
         test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(test_suite)

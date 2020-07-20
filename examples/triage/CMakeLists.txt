@@ -24,5 +24,6 @@ set_target_properties(triage PROPERTIES
 if(BN_INTERNAL_BUILD)
 	ui_plugin_rpath(triage)
 	set_target_properties(triage PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
+		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 endif()

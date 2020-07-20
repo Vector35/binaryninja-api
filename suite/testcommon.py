@@ -953,15 +953,18 @@ class VerifyBuilder(Builder):
 
             bv.begin_undo_actions()
             bv.functions[0].set_comment(bv.functions[0].start, "Function start")
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
-            bv.commit_undo_actions()
-
-            bv.begin_undo_actions()
-            bv.add_function(bv.functions[0].start + 4)
             bv.commit_undo_actions()
 
             comments = self.get_comments(bv)
             functions = self.get_functions(bv)
+
+            bv.begin_undo_actions()
+            bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
+            bv.commit_undo_actions()
+
+            bv.begin_undo_actions()
+            bv.create_user_function(bv.start)
+            bv.commit_undo_actions()
 
             bv.create_database(temp_name)
             bv.file.close()

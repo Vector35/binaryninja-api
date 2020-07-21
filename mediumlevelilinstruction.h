@@ -120,7 +120,10 @@ namespace BinaryNinja
 		ParameterVariablesMediumLevelOperandUsage,
 		ParameterSSAVariablesMediumLevelOperandUsage,
 		ParameterSSAMemoryVersionMediumLevelOperandUsage,
-		SourceSSAVariablesMediumLevelOperandUsages
+		SourceSSAVariablesMediumLevelOperandUsages,
+		SliceSourceMediumLevelOperandUsage,
+		SliceStartMediumLevelOperandUsage,
+		SliceSizeMediumLevelOperandUsage
 	};
 }
 
@@ -511,6 +514,10 @@ namespace BinaryNinja
 
 		// Templated accessors for instruction operands, use these for efficient access to a known instruction
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetSourceExpr() const { return As<N>().GetSourceExpr(); }
+		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetSliceValueExpr() const { return As<N>().GetSliceValueExpr(); }
+		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetSliceStart() const { return As<N>().GetSliceStart(); }
+		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetSliceSize() const { return As<N>().GetSliceSize(); }
+		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetSliceSourceValue() const { return As<N>().GetSliceSourceValue(); }
 		template <BNMediumLevelILOperation N> Variable GetSourceVariable() const { return As<N>().GetSourceVariable(); }
 		template <BNMediumLevelILOperation N> SSAVariable GetSourceSSAVariable() const { return As<N>().GetSourceSSAVariable(); }
 		template <BNMediumLevelILOperation N> MediumLevelILInstruction GetDestExpr() const { return As<N>().GetDestExpr(); }
@@ -1038,6 +1045,30 @@ namespace BinaryNinja
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
 		int64_t GetOffset() const { return GetRawOperandAsInteger(1); }
+	};
+
+	template <> struct MediumLevelILInstructionAccessor<MLIL_GET_BITS>: public MediumLevelILInstructionBase
+	{
+		MediumLevelILInstruction GetSliceValueExpr() const { return GetRawOperandAsExpr(0); }
+		MediumLevelILInstruction GetSliceStart() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILInstruction GetSliceSize() const { return GetRawOperandAsExpr(2); }
+	};
+
+	template <> struct MediumLevelILInstructionAccessor<MLIL_SET_VAR_BITS>: public MediumLevelILInstructionBase
+	{
+		Variable GetDestVariable() const { return GetRawOperandAsVariable(0); }
+		MediumLevelILInstruction GetSliceStart() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILInstruction GetSliceSize() const { return GetRawOperandAsExpr(2); }
+		MediumLevelILInstruction GetSliceSourceValue() const { return GetRawOperandAsExpr(3); }
+	};
+
+	template <> struct MediumLevelILInstructionAccessor<MLIL_SET_VAR_BITS_SSA>: public MediumLevelILInstructionBase
+	{
+		SSAVariable GetDestSSAVariable() const { return GetRawOperandAsSSAVariable(0);	}
+		MediumLevelILInstruction GetSliceStart() const { return GetRawOperandAsExpr(1); }
+		MediumLevelILInstruction GetSliceSize() const { return GetRawOperandAsExpr(2); }
+		MediumLevelILInstruction GetSliceSourceValue() const { return GetRawOperandAsExpr(3); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
 	};
 
 	template <> struct MediumLevelILInstructionAccessor<MLIL_NOP>: public MediumLevelILInstructionBase {};

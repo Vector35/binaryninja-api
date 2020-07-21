@@ -978,6 +978,8 @@ extern "C"
 		MLIL_UNDEF,
 		MLIL_UNIMPL,
 		MLIL_UNIMPL_MEM,
+		MLIL_GET_BITS,
+		MLIL_SET_VAR_BITS,
 
 		// Floating point
 		MLIL_FADD,
@@ -1029,7 +1031,8 @@ extern "C"
 		MLIL_INTRINSIC_SSA,
 		MLIL_FREE_VAR_SLOT_SSA,
 		MLIL_VAR_PHI,
-		MLIL_MEM_PHI
+		MLIL_MEM_PHI,
+		MLIL_SET_VAR_BITS_SSA
 	};
 
 	struct BNMediumLevelILInstruction

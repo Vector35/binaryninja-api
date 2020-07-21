@@ -243,7 +243,14 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
 		{MLIL_FCMP_GE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_GT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 		{MLIL_FCMP_O, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-		{MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}}
+		{MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+		{MLIL_GET_BITS, {SliceSourceMediumLevelOperandUsage, SliceStartMediumLevelOperandUsage,
+								SliceSizeMediumLevelOperandUsage}},
+		{MLIL_SET_VAR_BITS, {SliceStartMediumLevelOperandUsage,
+								SliceSizeMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+		{MLIL_SET_VAR_BITS_SSA, {SliceStartMediumLevelOperandUsage,
+								SliceSizeMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}}
+	
 	};
 
 
@@ -1482,6 +1489,21 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		for (auto& i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
+	case MLIL_GET_BITS:
+		GetSliceValueExpr<MLIL_GET_BITS>().VisitExprs(func);
+		GetSliceStart<MLIL_GET_BITS>().VisitExprs(func);
+		GetSliceSize<MLIL_GET_BITS>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_BITS:
+		GetSliceStart<MLIL_SET_VAR_BITS>().VisitExprs(func);
+		GetSliceSize<MLIL_SET_VAR_BITS>().VisitExprs(func);
+		GetSliceSourceValue<MLIL_SET_VAR_BITS>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_BITS_SSA:
+		GetSliceStart<MLIL_SET_VAR_BITS_SSA>().VisitExprs(func);
+		GetSliceSize<MLIL_SET_VAR_BITS_SSA>().VisitExprs(func);
+		GetSliceSourceValue<MLIL_SET_VAR_BITS_SSA>().VisitExprs(func);
+		break;
 	default:
 		break;
 	}
@@ -1797,6 +1819,26 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->Undefined(*this);
 	case MLIL_UNIMPL:
 		return dest->Unimplemented(*this);
+	case MLIL_GET_BITS:
+		return dest->GetBits(size,
+								subExprHandler(GetSliceValueExpr<MLIL_GET_BITS>()),
+								subExprHandler(GetSliceStart<MLIL_GET_BITS>()),
+								subExprHandler(GetSliceSize<MLIL_GET_BITS>())
+							);
+	case MLIL_SET_VAR_BITS:
+		return dest->SetVarBits(size,
+								GetDestVariable<MLIL_SET_VAR_BITS>(),
+								subExprHandler(GetSliceStart<MLIL_SET_VAR_BITS>()),
+								subExprHandler(GetSliceSize<MLIL_SET_VAR_BITS>()),
+								subExprHandler(GetSliceSourceValue<MLIL_SET_VAR_BITS>())
+							);
+	case MLIL_SET_VAR_BITS_SSA:
+		return dest->SetVarBitsSSA(size,
+								GetDestSSAVariable<MLIL_SET_VAR_BITS_SSA>(),
+								subExprHandler(GetSliceStart<MLIL_SET_VAR_BITS_SSA>()),
+								subExprHandler(GetSliceSize<MLIL_SET_VAR_BITS_SSA>()),
+								subExprHandler(GetSliceSourceValue<MLIL_SET_VAR_BITS_SSA>())
+							);
 	default:
 		throw MediumLevelILInstructionAccessException();
 	}
@@ -3016,4 +3058,20 @@ ExprId MediumLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId 
 ExprId MediumLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_FCMP_UO, loc, size, a, b);
+}
+
+ExprId MediumLevelILFunction::GetBits(size_t exprSize, ExprId a, ExprId start, ExprId sliceSize, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_GET_BITS, loc, exprSize, a, start, sliceSize);
+}
+
+ExprId MediumLevelILFunction::SetVarBits(size_t exprSize, const Variable& var, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SET_VAR_BITS, loc, exprSize, var.ToIdentifier(), start, sliceSize, value);
+}
+
+ExprId MediumLevelILFunction::SetVarBitsSSA(size_t exprSize, const SSAVariable& var, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc)
+{
+	const vector<ExprId>& operands = {start, sliceSize, value};
+	return AddExprWithLocation(MLIL_SET_VAR_BITS_SSA, loc, exprSize, var.var.ToIdentifier(), var.version, start, sliceSize, value);
 }

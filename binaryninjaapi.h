@@ -3925,6 +3925,10 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
+		ExprId GetBits(size_t exprSize, ExprId a, ExprId start, ExprId sliceSize, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVarBits(size_t exprSize, const Variable& var, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVarBitsSSA(size_t exprSize, const SSAVariable& var, ExprId start, ExprId sliceSize, ExprId value, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f,
 			const ILSourceLocation& loc = ILSourceLocation());

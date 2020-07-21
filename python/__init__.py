@@ -164,6 +164,8 @@ def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
 		core.BNInitCorePlugins()
+		if not core_ui_enabled() and sys.stderr.isatty():
+			log_to_stderr(LogLevel.InfoLog)
 		if not os.environ.get('BN_DISABLE_USER_PLUGINS'):
 			core.BNInitUserPlugins()
 		core.BNInitRepoPlugins()

@@ -344,12 +344,32 @@ class HighLevelILInstruction(object):
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self._function, self._expr_index) == (other._function, other._expr_index)
+		return core.BNHighLevelILExprEqual(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return not (self == other)
+		return not core.BNHighLevelILExprEqual(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return core.BNHighLevelILExprLessThan(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not core.BNHighLevelILExprLessThan(other._function.handle, other._expr_index, self._function.handle, self._expr_index)
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return core.BNHighLevelILExprLessThan(other._function.handle, other._expr_index, self._function.handle, self._expr_index)
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not core.BNHighLevelILExprLessThan(self._function.handle, self._expr_index, other._function, other._expr_index)
 
 	def __hash__(self):
 		return hash((self._function, self._expr_index))

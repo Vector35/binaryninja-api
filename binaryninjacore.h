@@ -3839,6 +3839,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI size_t BNGetHighLevelILExprIndexForLabel(BNHighLevelILFunction* func, uint64_t label);
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILUsesForLabel(BNHighLevelILFunction* func, uint64_t label, size_t* count);
 
+	BINARYNINJACOREAPI bool BNHighLevelILExprLessThan(BNHighLevelILFunction* leftFunc, size_t leftExpr,
+		BNHighLevelILFunction* rightFunc, size_t rightExpr);
+	BINARYNINJACOREAPI bool BNHighLevelILExprEqual(BNHighLevelILFunction* leftFunc, size_t leftExpr,
+		BNHighLevelILFunction* rightFunc, size_t rightExpr);
+
 	// Type Libraries
 	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibrary(BNArchitecture* arch, const char* name);
 	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibraryReference(BNTypeLibrary* lib);

@@ -70,6 +70,7 @@ enum ThemeColor
 	NameSpaceColor,
 	NameSpaceSeparatorColor,
 	GotoLabelColor,
+	CommentColor,
 
 	// Script console colors
 	ScriptConsoleOutputColor,

@@ -2941,6 +2941,7 @@ class InstructionTextToken(object):
 		StructOffsetToken          **Not emitted by architectures**
 		TagToken                   **Not emitted by architectures**
 		TextToken                  Used for anything not of another type.
+		CommentToken               Comments
 		TypeNameToken              **Not emitted by architectures**
 		========================== ============================================
 

@@ -256,6 +256,7 @@ extern "C"
 		StructOffsetByteValueToken = 26,
 		StructureHexDumpTextToken = 27,
 		GotoLabelToken = 28,
+		CommentToken = 29,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,

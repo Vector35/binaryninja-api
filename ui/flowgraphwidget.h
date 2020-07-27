@@ -316,6 +316,8 @@ private Q_SLOTS:
 	void displayAsUnsignedHexadecimal();
 	void displayAsCharacterConstant();
 	void displayAsPointer();
+	void displayAsFloat();
+	void displayAsDouble();
 
 	void makePtr();
 	void makeString();

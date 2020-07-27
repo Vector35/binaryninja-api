@@ -141,7 +141,9 @@ enum IntegerDisplayType
 	SignedHexadecimalDisplayType,
 	UnsignedHexadecimalDisplayType,
 	CharacterConstantDisplayType,
-	PointerDisplayType
+	PointerDisplayType,
+	FloatDisplayType,
+	DoubleDisplayType
 };
 ``` 
 

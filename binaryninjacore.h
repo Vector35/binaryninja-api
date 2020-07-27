@@ -734,7 +734,9 @@ extern "C"
 		SignedHexadecimalDisplayType,
 		UnsignedHexadecimalDisplayType,
 		CharacterConstantDisplayType,
-		PointerDisplayType
+		PointerDisplayType,
+		FloatDisplayType,
+		DoubleDisplayType
 	};
 
 	enum BNFlowGraphOption

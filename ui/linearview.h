@@ -243,6 +243,8 @@ private Q_SLOTS:
 	void displayAsUnsignedHexadecimal();
 	void displayAsCharacterConstant();
 	void displayAsPointer();
+	void displayAsFloat();
+	void displayAsDouble();
 
 	void setInstructionHighlight(BNHighlightColor color);
 	void setBlockHighlight(BNHighlightColor color);

@@ -1305,11 +1305,14 @@ class LowLevelILFunction(object):
 			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __repr__(self):
-		arch = self.source_function.arch
-		if arch:
+		source_function = getattr(self, "source_function", None)
+		arch = getattr(source_function, "arch", None)
+		if arch and source_function:
 			return "<llil func: %s@%#x>" % (arch.name, self.source_function.start)
-		else:
+		elif source_function:
 			return "<llil func: %#x>" % self.source_function.start
+		else:
+			return "<llil func: anonymous>"
 
 	def __len__(self):
 		return int(core.BNGetLowLevelILInstructionCount(self.handle))

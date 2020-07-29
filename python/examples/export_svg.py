@@ -8,12 +8,13 @@ from urllib.request import pathname2url
 
 from binaryninja.interaction import get_save_filename_input, show_message_box, TextLineField, ChoiceField, SaveFileNameField, get_form_input
 from binaryninja.settings import Settings
-from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon, MessageBoxButtonResult, InstructionTextTokenType, BranchType
+from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon, MessageBoxButtonResult, InstructionTextTokenType, BranchType, DisassemblyOption, FunctionGraphType
+from binaryninja.function import DisassemblySettings
 from binaryninja.plugin import PluginCommand
-from binaryninja.log import log_error
 
 colors = {'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237], 'lightCyan': [
-    176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74]}
+    176, 221, 228], 'orange': [237, 189, 129], 'yellow': [237, 223, 179], 'magenta': [218, 196, 209], 'none': [74, 74, 74],
+    'disabled': [144, 144, 144]}
 
 escape_table = {
     "'": "&#39;",
@@ -49,20 +50,23 @@ def save_svg(bv, function):
     modeChoices = ["Graph"]
     modeChoiceField = ChoiceField("Mode", modeChoices)
     if Settings().get_bool('ui.debugMode'):
-        formChoices = ["Assembly", "LLIL", "LLIL SSA", "MLIL", "MLIL SSA", "HLIL", "HLIL SSA"]
+        formChoices = ["Assembly", "Lifted IL", "LLIL", "LLIL SSA", "Mapped Medium", "Mapped Medium SSA", "MLIL", "MLIL SSA", "HLIL", "HLIL SSA"]
         formChoiceField = ChoiceField("Form", formChoices)
     else:
         formChoices = ["Assembly", "LLIL", "MLIL", "HLIL"]
         formChoiceField = ChoiceField("Form", formChoices)
 
+    showOpcodes = ChoiceField("Show Opcodes", ["Yes", "No"])
+    showAddresses = ChoiceField("Show Addresses", ["Yes", "No"])
+
     saveFileChoices = SaveFileNameField("Output file", 'HTML files (*.html)', str(filename))
-    if not get_form_input([f'Current Function: {offset}', functionChoice, formChoiceField, modeChoiceField, saveFileChoices], "SVG Export") or saveFileChoices.result is None:
+    if not get_form_input([f'Current Function: {offset}', functionChoice, formChoiceField, modeChoiceField, showOpcodes, showAddresses, saveFileChoices], "SVG Export") or saveFileChoices.result is None:
         return
     if saveFileChoices.result == '':
         outputfile = filename
     else:
         outputfile = saveFileChoices.result
-    content = render_svg(function, offset, modeChoices[modeChoiceField.result], formChoices[formChoiceField.result], origname)
+    content = render_svg(function, offset, modeChoices[modeChoiceField.result], formChoices[formChoiceField.result], showOpcodes.result == 0, showAddresses.result == 0, origname)
     output = open(outputfile, 'w')
     output.write(content)
     output.close()
@@ -88,23 +92,33 @@ def instruction_data_flow(function, address):
     return 'Opcode: {bytes}'.format(bytes=padded)
 
 
-def render_svg(function, offset, mode, form, origname):
-    if form == "Assembly":
-        graph = function.create_graph()
-    elif form == "LLIL":
-        graph = function.llil.create_graph()
+def render_svg(function, offset, mode, form, showOpcodes, showAddresses, origname):
+    settings = DisassemblySettings()
+    if showOpcodes:
+        settings.set_option(DisassemblyOption.ShowOpcode, True)
+    if showAddresses:
+        settings.set_option(DisassemblyOption.ShowAddress, True)
+    if form == "LLIL":
+        graph_type = FunctionGraphType.LowLevelILFunctionGraph
     elif form == "LLIL SSA":
-        graph = function.llil.ssa_form.create_graph()
+        graph_type = FunctionGraphType.LowLevelILSSAFormFunctionGraph
+    elif form == "Lifted IL":
+        graph_type = FunctionGraphType.LiftedILFunctionGraph
+    elif form == "Mapped Medium":
+        graph_type = FunctionGraphType.MappedMediumLevelILFunctionGraph
+    elif form == "Mapped Medium SSA":
+        graph_type = FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph
     elif form == "MLIL":
-        graph = function.mlil.create_graph()
+        graph_type = FunctionGraphType.MediumLevelILFunctionGraph
     elif form == "MLIL SSA":
-        graph = function.mlil.ssa_form.create_graph()
+        graph_type = FunctionGraphType.MediumLevelILSSAFormFunctionGraph
     elif form == "HLIL":
-        graph = function.hlil.create_graph()
+        graph_type = FunctionGraphType.HighLevelILFunctionGraph
     elif form == "HLIL SSA":
-        graph = function.hlil.ssa_form.create_graph()
+        graph_type = FunctionGraphType.HighLevelILSSAFormFunctionGraph
     else:
-        log_error(f"Invalid form selection: {form}")
+        graph_type = FunctionGraphType.NormalFunctionGraph
+    graph = function.create_graph(graph_type=graph_type, settings=settings)
     graph.layout_and_wait()
     heightconst = 15
     ratio = 0.48
@@ -169,7 +183,7 @@ def render_svg(function, offset, mode, form, origname):
 			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {
 				fill: rgb(224, 224, 224);
 			}
-			.PossibleAddressToken, .IntegerToken {
+			.CodeRelativeAddressToken, .PossibleAddressToken, .IntegerToken, .AddressDisplayToken {
 				fill: rgb(162, 217, 175);
 			}
 			.RegisterToken {
@@ -178,11 +192,14 @@ def render_svg(function, offset, mode, form, origname):
 			.AnnotationToken {
 				fill: rgb(218, 196, 209);
 			}
-			.ImportToken {
+			.IndirectImportToken, .ImportToken {
 				fill: rgb(237, 189, 129);
 			}
-			.StackVariableToken {
+			.LocalVariableToken, .StackVariableToken {
 				fill: rgb(193, 220, 199);
+			}
+			.OpcodeToken {
+				fill: rgb(144, 144, 144);
 			}
 		</style>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>

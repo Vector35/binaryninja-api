@@ -36,10 +36,12 @@ class DataBuffer(object):
 			self.handle = core.BNCreateDataBuffer(None, contents)
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
-		else:
+		elif isinstance(contents, str) or isinstance(contents, bytes):
 			if bytes != str and isinstance(contents, str):
 				contents = contents.encode('charmap')
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
+		else:
+			raise TypeError("DataBuffer contents must be bytes or str")
 
 	def __del__(self):
 		core.BNFreeDataBuffer(self.handle)

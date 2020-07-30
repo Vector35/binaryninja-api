@@ -2652,13 +2652,9 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
-		if not isinstance(data, bytes):
-			if isinstance(data, str):
-				buf = databuffer.DataBuffer(data.encode())
-			else:
-				raise TypeError("Must be bytes or str")
-		else:
-			buf = databuffer.DataBuffer(data)
+		if isinstance(data, int) or isinstance(data, numbers.Integral):
+			raise TypeError("Data must be bytes-like or DataBuffer, not numeric")
+		buf = databuffer.DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
 	def insert(self, addr, data):
@@ -2676,8 +2672,8 @@ class BinaryView(object):
 			>>> bv.read(0,8)
 			'BBBBAAAA'
 		"""
-		if not isinstance(data, bytes):
-			raise TypeError("Must be bytes")
+		if isinstance(data, int) or isinstance(data, numbers.Integral):
+			raise TypeError("Data must be bytes-like or DataBuffer, not numeric")
 		buf = databuffer.DataBuffer(data)
 		return core.BNInsertViewBuffer(self.handle, addr, buf.handle)
 
@@ -4994,7 +4990,9 @@ class BinaryView(object):
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
 		"""
-		buf = databuffer.DataBuffer(str(data))
+		if isinstance(data, int) or isinstance(data, numbers.Integral):
+			raise TypeError("Data must be bytes-like or DataBuffer, not numeric")
+		buf = databuffer.DataBuffer(data)
 		result = ctypes.c_ulonglong()
 		if not core.BNFindNextData(self.handle, start, buf.handle, result, flags):
 			return None

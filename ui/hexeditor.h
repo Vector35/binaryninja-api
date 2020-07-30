@@ -36,7 +36,7 @@ public:
 	virtual void selectNone();
 
 	void setSelectionRange(uint64_t begin, uint64_t end);
-	void setSelectionOffsets(BNAddressRange range);
+	virtual void setSelectionOffsets(BNAddressRange range) override;
 
 	virtual void updateFonts() override;
 

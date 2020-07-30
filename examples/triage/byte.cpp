@@ -158,6 +158,12 @@ BNAddressRange ByteView::getSelectionOffsets()
 	return { start, end };
 }
 
+void ByteView::setSelectionOffsets(BNAddressRange range)
+{
+	navigate(range.start);
+	m_selectionStartAddr = range.start;
+	m_cursorAddr = range.end;
+}
 
 void ByteView::updateRanges()
 {

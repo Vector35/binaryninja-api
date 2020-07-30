@@ -96,6 +96,7 @@ public:
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
 	virtual BNAddressRange getSelectionOffsets() override;
+	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t offset) override;
 
 	virtual void updateFonts() override;

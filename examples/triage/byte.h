@@ -83,6 +83,7 @@ public:
 	virtual QFont getFont() override;
 	virtual uint64_t getCurrentOffset() override;
 	virtual BNAddressRange getSelectionOffsets() override;
+	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t addr) override;
 	virtual void updateFonts() override;
 	virtual void selectAll();

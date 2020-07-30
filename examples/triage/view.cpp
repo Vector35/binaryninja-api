@@ -125,6 +125,12 @@ BNAddressRange TriageView::getSelectionOffsets()
 	return { m_currentOffset, m_currentOffset };
 }
 
+void TriageView::setSelectionOffsets(BNAddressRange range)
+{
+	// for subclass of View who does not have a meaningful setSelectionOffsets() behavior,
+	// we navigate to the start of the selection range
+	navigate(range.start);
+}
 
 void TriageView::setCurrentOffset(uint64_t offset)
 {

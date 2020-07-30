@@ -72,7 +72,7 @@ public:
 	virtual uint64_t getCurrentOffset() = 0;
 	virtual BNAddressRange getSelectionOffsets();
 	virtual BNAddressRange getSelectionForInfo();
-	virtual void setSelectionOffsets(BNAddressRange range);
+	virtual void setSelectionOffsets(BNAddressRange range) = 0;
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);

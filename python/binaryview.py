@@ -845,9 +845,15 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		default_settings = settings.Settings(bvt.name + "_settings")
 		default_settings.deserialize_schema(settings.Settings().serialize_schema())
 		default_settings.set_resource_id(bvt.name)
-		load_settings = bvt.get_load_settings_for_data(view)
+
+		load_settings = None
+		if isDatabase:
+			load_settings = view.get_load_settings(bvt.name)
+		if load_settings is None:
+			load_settings = bvt.get_load_settings_for_data(view)
 		load_settings.set_resource_id(bvt.name)
 		view.set_load_settings(bvt.name, load_settings)
+
 		for key, value in options.items():
 			if load_settings.contains(key):
 				if not load_settings.set_json(key, json.dumps(value), view):
@@ -858,7 +864,11 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			else:
 				raise NotImplementedError("Setting: {} not available!".format(key))
 
-		bv = bvt.create(view)
+		if isDatabase:
+			view = view.file.open_existing_database(filename, progress_func)
+			bv = view.get_view_of_type(bvt.name)
+		else:
+			bv = bvt.create(view)
 
 		if bv is not None and update_analysis:
 			bv.update_analysis_and_wait()

@@ -4221,7 +4221,7 @@ class BinaryView(object):
 		br.seek(addr)
 		length = 0
 		c = br.read8()
-		while c > 0 and c <= 0x7f:
+		while c is not None and c > 0 and c <= 0x7f:
 			if length == max_length:
 				break
 			length += 1

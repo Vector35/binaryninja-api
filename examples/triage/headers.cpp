@@ -127,6 +127,8 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	QDateTime t = QDateTime::fromSecsSinceEpoch(secs);
 	AddField("Timestamp", t.toString());
 
+	AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
+
 	uint64_t base = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "imageBase");
 	AddField("Image Base", QString("0x") + QString::number(base, 16), AddressHeaderField);
 

@@ -1030,3 +1030,47 @@ class VerifyBuilder(Builder):
             return ok
         finally:
             self.delete_package("helloworld")
+
+    def test_univeral_loader(self):
+        """Universal Mach-O Loader Tests"""
+        file_name = self.unpackage_file("fat_macho_9arch")
+        save_setting_value = binja.Settings().get_string_list("files.universal.architecturePreference")
+        binja.Settings().reset("files.universal.architecturePreference")
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86")
+            assert(bv.start == 0x1000)
+            load_setting_keys = bv.get_load_settings("Mach-O")
+            assert(load_setting_keys is not None)
+            assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
+            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x1000)
+            bv.file.close()
+
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "aarch64")
+            assert(bv.start == 0x100000000)
+            load_setting_keys = bv.get_load_settings("Mach-O")
+            assert(load_setting_keys is not None)
+            assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
+            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x4c000)
+            bv.file.close()
+
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
+            bv = binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000})
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86_64")
+            assert(bv.start == 0xfffffff0000)
+            load_setting_keys = bv.get_load_settings("Mach-O")
+            assert(load_setting_keys is not None)
+            assert(len(bv.get_load_settings("Mach-O").keys()) == 8)
+            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x8000)
+            bv.file.close()
+
+            binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
+            return True
+        finally:
+            binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
+            self.delete_package("fat_macho_9arch")

@@ -29,6 +29,7 @@ class BINARYNINJAUIAPI ScriptingCompletionModel: public QAbstractListModel
 {
 	Q_OBJECT
 	std::vector<std::string> m_completions;
+	bool m_searching;
 
 public:
 	ScriptingCompletionModel(QWidget* parent);
@@ -39,7 +40,7 @@ public:
 	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
-	void setModelData(const std::vector<std::string>& completions);
+	void setModelData(const std::vector<std::string>& completions, bool searching);
 };
 
 class BINARYNINJAUIAPI ScriptingCompletionPopup: public QDialog
@@ -51,7 +52,7 @@ class BINARYNINJAUIAPI ScriptingCompletionPopup: public QDialog
 
 public:
 	ScriptingCompletionPopup(QWidget* parent);
-	void showWithData(QPoint pt, int cursorSize, const std::vector<std::string>& completions);
+	void showWithData(QPoint pt, int cursorSize, const std::vector<std::string>& completions, bool searching = false);
 	bool handleKeyEvent(QKeyEvent* event);
 
 private Q_SLOTS:
@@ -183,4 +184,5 @@ public:
 
 	void moveUpInHistory();
 	void moveDownInHistory();
+	std::vector<std::string> reverseSearch(const QString& text);
 };

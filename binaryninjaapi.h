@@ -2909,6 +2909,24 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Architecture> arch;
 		uint64_t address;
 
+		ArchAndAddr& operator=(const ArchAndAddr& a)
+		{
+		    arch = a.arch;
+		    address = a.address;
+		    return *this;
+		}
+		bool operator==(const ArchAndAddr& a) const
+		{
+		    return (arch == a.arch) && (address == a.address);
+		}
+		bool operator<(const ArchAndAddr& a) const
+		{
+		    if (arch < a.arch)
+			return true;
+		    if (arch > a.arch)
+			return false;
+		    return address < a.address;
+		}
 		ArchAndAddr(): arch(nullptr), address(0) {}
 		ArchAndAddr(Architecture* a, uint64_t addr): arch(a), address(addr) {}
 	};
@@ -3163,9 +3181,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<FlowGraph> GetUnresolvedStackAdjustmentGraph();
 
-		void SetVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value);
-		void ClearInformedVariableValue(const Variable& var, uint64_t defAddr);
-		void ClearInformedVariableValues();
+		void SetUserVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value);
+		void ClearUserVariableValue(const Variable& var, uint64_t defAddr);
+		std::map<Variable, std::map<ArchAndAddr, PossibleValueSet>> GetAllUserVariableValues();
+		void ClearAllUserVariableValues();
 
 		void RequestDebugReport(const std::string& name);
 

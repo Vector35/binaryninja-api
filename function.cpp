@@ -1771,7 +1771,7 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 }
 
 
-void Function::SetVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value)
+void Function::SetUserVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value)
 {
 	auto mlil = GetMediumLevelIL();
 	auto varDefs = mlil->GetVariableDefinitions(var);
@@ -1804,11 +1804,11 @@ void Function::SetVariableValue(const Variable& var, uint64_t defAddr, PossibleV
 
 	auto valueObj = value.ToAPIObject();
 
-	BNSetVariableValue(m_object, &var_data, &defSite, &valueObj);
+	BNSetUserVariableValue(m_object, &var_data, &defSite, &valueObj);
 }
 
 
-void Function::ClearInformedVariableValue(const Variable& var, uint64_t defAddr)
+void Function::ClearUserVariableValue(const Variable& var, uint64_t defAddr)
 {
 	auto mlil = GetMediumLevelIL();
 	auto varDefs = mlil->GetVariableDefinitions(var);
@@ -1838,13 +1838,41 @@ void Function::ClearInformedVariableValue(const Variable& var, uint64_t defAddr)
 	var_data.index = var.index;
 	var_data.storage = var.storage;
 
-	BNClearInformedVariableValue(m_object, &var_data, &defSite);
+	BNClearUserVariableValue(m_object, &var_data, &defSite);
 }
 
 
-void Function::ClearInformedVariableValues() 
+map<Variable, map<ArchAndAddr, PossibleValueSet>> Function::GetAllUserVariableValues()
 {
-	BNClearInformedVariableValues(m_object);
+	size_t count;
+	map<Variable, map<ArchAndAddr, PossibleValueSet>> result;
+	BNUserVariableValue* var_values = BNGetAllUserVariableValues(m_object, &count);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		Variable var(var_values[i].var);
+		Architecture* arch = new CoreArchitecture(var_values[i].defSite.arch);
+		uint64_t address = var_values[i].defSite.address;
+		ArchAndAddr defSite(arch, address);
+		PossibleValueSet value = PossibleValueSet::FromAPIObject(var_values[i].value);
+		result[var][defSite] = value;
+	}
+
+	BNFreeUserVariableValues(var_values);
+	return result;
+}
+
+
+void Function::ClearAllUserVariableValues()
+{
+	const map<Variable, map<ArchAndAddr, PossibleValueSet>>& allValues = GetAllUserVariableValues();
+	for (auto& valuePair : allValues)
+	{
+		for (auto& valMap : valuePair.second)
+		{
+			ClearUserVariableValue(valuePair.first, valMap.first.address);
+		}
+	}
 }
 
 

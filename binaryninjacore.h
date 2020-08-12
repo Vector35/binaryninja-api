@@ -881,6 +881,7 @@ extern "C"
 		size_t count;
 	};
 
+
 	struct BNRegisterOrConstant
 	{
 		bool constant;
@@ -1864,6 +1865,13 @@ extern "C"
 	{
 		BNArchitecture* arch;
 		uint64_t address;
+	};
+
+	struct BNUserVariableValue
+	{
+		BNVariable var;
+		BNArchitectureAndAddress defSite;
+		BNPossibleValueSet value;
 	};
 
 	enum BNAnalysisState
@@ -3370,9 +3378,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI BNFlowGraph* BNGetUnresolvedStackAdjustmentGraph(BNFunction* func);
 
-	BINARYNINJACOREAPI void BNSetVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite, const BNPossibleValueSet* value);
-	BINARYNINJACOREAPI void BNClearInformedVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
-	BINARYNINJACOREAPI void BNClearInformedVariableValues(BNFunction* func);
+	BINARYNINJACOREAPI void BNSetUserVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite, const BNPossibleValueSet* value);
+	BINARYNINJACOREAPI void BNClearUserVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
+	BINARYNINJACOREAPI BNUserVariableValue* BNGetAllUserVariableValues(BNFunction *func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeUserVariableValues(BNUserVariableValue* result);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
 

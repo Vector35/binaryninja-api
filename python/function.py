@@ -396,7 +396,7 @@ class PossibleValueSet(object):
 		elif self.type == RegisterValueType.StackFrameOffset:
 			result.offset = self.value
 		elif self.type == RegisterValueType.SignedRangeValue:
-			result.offst = self.value
+			result.offset = self.value
 			result.ranges = (core.BNValueRange * self.count)()
 			for i in range(0, self.count):
 				start = self.ranges[i].start
@@ -440,7 +440,7 @@ class PossibleValueSet(object):
 			result.valueSet = ctypes.cast(values, ctypes.POINTER(ctypes.c_long))
 			result.count = self.count
 		return result
-
+	
 	@property
 	def type(self):
 		""" """
@@ -598,6 +598,21 @@ class PossibleValueSet(object):
 		result.mapping = mapping
 		return result
 
+class ArchAndAddr(object):
+	def __init__(self, arch = None, addr = 0):
+		self._arch = binaryninja.architecture.CoreArchitecture(arch)
+		self._addr = addr
+
+	def __repr__(self):
+		return "archandaddr <%s @ %#x>" % (self._arch.name, self._addr)
+
+	@property
+	def arch(self):
+		return self._arch
+
+	@property
+	def addr(self):
+		return self._addr
 
 class StackVariableReference(object):
 	def __init__(self, src_operand, t, name, var, ref_ofs, size):
@@ -853,6 +868,15 @@ class ConstantReference(object):
 	def intermediate(self, value):
 		self._intermediate = value
 
+
+class UserVariableValueInfo(object):
+	def __init__(self, var, def_site, value):
+		self.var = var
+		self.def_site = def_site
+		self.value = value
+
+	def __repr__(self):
+		return "<user value for %s @ %s:%#x -> %s>" % (self.var, self.def_site.arch.name, self.def_site.addr, self.value)
 
 
 class IndirectBranchInfo(object):
@@ -2557,7 +2581,7 @@ class Function(object):
 			arch = self.arch
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
 
-	def set_var_value(self, var, def_addr, value):
+	def set_user_var_value(self, var, def_addr, value):
 		var_defs = self.mlil.get_var_definitions(var)
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
@@ -2576,9 +2600,9 @@ class Function(object):
 		var_data.type = var.source_type
 		var_data.index = var.index
 		var_data.storage = var.storage
-		core.BNSetVariableValue(self.handle, var_data, def_site, value._to_api_object())
+		core.BNSetUserVariableValue(self.handle, var_data, def_site, value._to_api_object())
 
-	def clear_informed_var_value(self, var, def_addr):
+	def clear_user_var_value(self, var, def_addr):
 		var_defs = self.mlil.get_var_definitions(var)
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
@@ -2597,10 +2621,28 @@ class Function(object):
 		var_data.type = var.source_type
 		var_data.index = var.index 
 		var_data.storage = var.storage
-		core.BNClearInformedVariableValue(self.handle, var_data, def_site)
+		core.BNClearUserVariableValue(self.handle, var_data, def_site)
 
-	def clear_informed_var_values(self):
-		core.BNClearInformedVariableValues(self.handle)
+	def get_all_user_var_values(self):
+		count = ctypes.c_ulonglong(0)
+		var_values = core.BNGetAllUserVariableValues(self.handle, count)
+		result = {}
+		i = 0
+		for i in range(count.value):
+			var_val = var_values[i]
+			var = Variable(self, var_val.var.type, var_val.var.index, var_val.var.storage)
+			if var not in result:
+				result[var] = {}
+			def_site = ArchAndAddr(var_val.defSite.arch, var_val.defSite.address)
+			result[var][def_site] = PossibleValueSet(def_site.arch, var_val.value)
+		core.BNFreeUserVariableValues(var_values)
+		return result
+
+	def clear_all_user_var_values(self):
+		all_values = self.get_all_user_var_values()
+		for var in all_values:
+			for def_site in all_values[var]:
+				self.clear_user_var_value(var, def_site.addr)
 
 	def request_debug_report(self, name):
 		core.BNRequestFunctionDebugReport(self.handle, name)
@@ -3274,6 +3316,7 @@ class InstructionTextToken(object):
 	@property
 	def width(self):
 		return self._width
+
 
 
 class DisassemblyTextRenderer(object):

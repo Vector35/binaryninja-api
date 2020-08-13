@@ -1583,6 +1583,13 @@ class BinaryView(object):
 				yield il_block
 
 	@property
+	def hlil_basic_blocks(self):
+		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
+		for func in self:
+			for il_block in func.hlil.basic_blocks:
+				yield il_block
+
+	@property
 	def instructions(self):
 		"""A generator of instruction tokens and their start addresses"""
 		for block in self.basic_blocks:
@@ -1602,6 +1609,13 @@ class BinaryView(object):
 	def mlil_instructions(self):
 		"""A generator of mlil instructions"""
 		for block in self.mlil_basic_blocks:
+			for i in block:
+				yield i
+
+	@property
+	def hlil_instructions(self):
+		"""A generator of mlil instructions"""
+		for block in self.hlil_basic_blocks:
 			for i in block:
 				yield i
 

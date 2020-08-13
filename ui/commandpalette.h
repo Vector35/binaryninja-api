@@ -39,6 +39,9 @@ class BINARYNINJAUIAPI CommandListModel: public QAbstractItemModel
 	std::vector<CommandListItem> m_items;
 	std::vector<CommandListItem> m_allItems;
 
+	std::vector<QString> m_recentItems;
+	size_t m_maxRecentItems;
+
 	bool isFilterMatch(const QString& name, const QString& filter);
 	int getFilterMatchScore(const QString& name, const QString& filter);
 
@@ -54,6 +57,8 @@ public:
 
 	QString getActionForItem(int row);
 	void setFilterText(const QString& text);
+	size_t getRecentPosition(const QString& name) const;
+	void addRecentItem(const QString& name);
 };
 
 class BINARYNINJAUIAPI CommandList: public QListView
@@ -72,6 +77,7 @@ public:
 	QString getActionForItem(int row);
 
 	QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const;
+	void addRecentItem(const QString& name);
 
 protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;

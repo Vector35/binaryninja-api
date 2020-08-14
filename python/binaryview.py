@@ -1614,7 +1614,7 @@ class BinaryView(object):
 
 	@property
 	def hlil_instructions(self):
-		"""A generator of mlil instructions"""
+		"""A generator of hlil instructions"""
 		for block in self.hlil_basic_blocks:
 			for i in block:
 				yield i

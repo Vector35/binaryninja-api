@@ -261,6 +261,7 @@ extern "C"
 		PossibleValueToken = 30,
 		PossibleValueTypeToken = 31,
 		ArrayIndexToken = 32,
+		IndentationToken = 33,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,

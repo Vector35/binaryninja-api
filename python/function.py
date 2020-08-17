@@ -297,6 +297,11 @@ class ValueRange(object):
 
 
 class PossibleValueSet(object):
+	"""
+	`class PossibleValueSet` PossibleValueSet is used to define possible values
+	that a variable can take. It contains methods to instantiate different
+	value sets such as Constant, Signed/Unsigned Ranges, etc.
+	"""
 	def __init__(self, arch = None, value = None):
 		if value is None:
 			self._type = RegisterValueType.UndeterminedValue
@@ -532,11 +537,22 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def undetermined(self):
+		"""
+		Create a PossibleValueSet object of type UndeterminedValue.
+
+		:return: PossibleValueSet object of type UndeterminedValue
+		:rtype: PossibleValueSet
+		"""
 		return PossibleValueSet()
 
 	@classmethod
 	def constant(self, value):
-		""" """
+		""" 
+		Create a constant valued PossibleValueSet object.
+
+		:param int value: Integer value of the constant
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.ConstantValue
 		result.value = value
@@ -544,6 +560,12 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def constant_ptr(self, value):
+		""" 
+		Create constant pointer valued PossibleValueSet object.
+
+		:param int value: Integer value of the constant pointer
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.ConstantPointerValue
 		result.value = value
@@ -551,6 +573,12 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def stack_frame_offset(self, offset):
+		""" 
+		Create a PossibleValueSet object for a stack frame offset.
+
+		:param int value: Integer value of the offset
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.StackFrameOffset
 		result.value = value
@@ -558,6 +586,12 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def signed_range_value(self, ranges):
+		"""
+		Create a PossibleValueSet object for a signed range of values.
+
+		:param list(ValueRange) ranges: List of ValueRanges
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.value = 0
 		result.type = RegisterValueType.SignedRangeValue
@@ -567,6 +601,12 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def unsigned_range_value(self, ranges):
+		"""
+		Create a PossibleValueSet object for a unsigned signed range of values.
+
+		:param list(ValueRange) ranges: List of ValueRanges
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.value = 0
 		result.type = RegisterValueType.UnsignedRangeValue
@@ -576,6 +616,12 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def in_set_of_values(self, values):
+		"""
+		Create a PossibleValueSet object for a value in a set of values.
+
+		:param list(int) values: List of integer values
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.InSetOfValues
 		result.values = set(values)
@@ -584,6 +630,12 @@ class PossibleValueSet(object):
 
 	@classmethod 
 	def not_in_set_of_values(self, values):
+		"""
+		Create a PossibleValueSet object for a value NOT in a set of values.
+
+		:param list(int) values: List of integer values
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.NotInSetOfValues
 		result.values = set(values)
@@ -592,6 +644,14 @@ class PossibleValueSet(object):
 
 	@classmethod
 	def lookup_table_value(self, lookup_table, mapping):
+		"""
+		Create a PossibleValueSet object for a value which is a member of a 
+		lookuptable.
+
+		:param list(LookupTableEntry) lookup_table: List of table entries
+		:param dict of (int, int) mapping: Mapping used for resolution
+		:rtype: PossibleValueSet
+		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.LookupTableValue
 		result.table = lookup_table
@@ -2582,6 +2642,27 @@ class Function(object):
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
 
 	def set_user_var_value(self, var, def_addr, value):
+		"""
+		`set_user_var_value` allows the user to specify a PossibleValueSet value for a (MLIL) variable at its
+		definition site. 
+
+		..warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow
+		to compute and propagate values which depend on the current variable. This implies that branch conditions
+		whose values can be determined statically will be computed, leading to potential branch elimination at
+		the HLIL layer.
+
+		:param Variable var: Variable for which the value is to be set
+		:param int def_addr: Address of the definition site of the variable
+		:param PossibleValueSet value: Informed value of the variable
+		:rtype: None
+
+		:Example:
+
+			>>> var = current_mlil[0].operands[0]
+			>>> def_site = 0x40108d
+			>>> value = PossibleValueSet.constant(5)
+			>>> current_function.set_user_var_value(var, def_site, value)
+		"""
 		var_defs = self.mlil.get_var_definitions(var)
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
@@ -2603,6 +2684,13 @@ class Function(object):
 		core.BNSetUserVariableValue(self.handle, var_data, def_site, value._to_api_object())
 
 	def clear_user_var_value(self, var, def_addr):
+		"""
+		Clears a perviously informed user variable value.
+
+		:param Variable var: Variable for which the value was informed
+		:param int def_addr: Address of the definition site of the variable
+		:rtype: None
+		"""
 		var_defs = self.mlil.get_var_definitions(var)
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
@@ -2624,6 +2712,12 @@ class Function(object):
 		core.BNClearUserVariableValue(self.handle, var_data, def_site)
 
 	def get_all_user_var_values(self):
+		"""
+		Returns a map of current defined user variable values.
+
+		:returns: Map of user current defined user variable values and their definition sites.
+		:type: dict of (Variable, dict of (ArchAndAddr, PossibleValueSet))
+		"""
 		count = ctypes.c_ulonglong(0)
 		var_values = core.BNGetAllUserVariableValues(self.handle, count)
 		result = {}
@@ -2639,6 +2733,11 @@ class Function(object):
 		return result
 
 	def clear_all_user_var_values(self):
+		"""
+		Clear all user defined variable values.
+
+		:rtype: None
+		"""
 		all_values = self.get_all_user_var_values()
 		for var in all_values:
 			for def_site in all_values[var]:

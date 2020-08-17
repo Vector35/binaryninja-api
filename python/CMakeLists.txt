@@ -25,9 +25,10 @@ if(BN_INTERNAL_BUILD)
 			COMMAND ${CMAKE_COMMAND} -E copy ${BN_CORE_OUTPUT_DIR}/binaryninjacore.dll ${PROJECT_BINARY_DIR}/)
 	endif()
 
-	file(MAKE_DIRECTORY ${BN_RESOURCE_DIR}/python/binaryninja)
-	add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
+	add_custom_command(TARGET generator POST_BUILD
+		BYPRODUCTS ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		DEPENDS ${PYTHON_SOURCES} ${PROJECT_SOURCE_DIR}/../binaryninjacore.h $<TARGET_FILE:generator>
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${BN_RESOURCE_DIR}/python/binaryninja/
 		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:generator> ${PROJECT_SOURCE_DIR}/../binaryninjacore.h ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_SOURCES} ${BN_RESOURCE_DIR}/python/binaryninja/
 		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${BN_RESOURCE_DIR}/python/binaryninja/

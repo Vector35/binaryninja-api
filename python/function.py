@@ -591,6 +591,12 @@ class PossibleValueSet(object):
 
 		:param list(ValueRange) ranges: List of ValueRanges
 		:rtype: PossibleValueSet
+		:Example:
+			
+			>>> v_1 = ValueRange(-5, -1, 1)
+			>>> v_2 = ValueRange(7, 10, 1)
+			>>> val = PossibleValueSet.signed_range_value([v_1, v_2])
+			<signed ranges: [<range: -0x5 to -0x1>, <range: 0x7 to 0xa>]>
 		"""
 		result = PossibleValueSet()
 		result.value = 0
@@ -606,6 +612,12 @@ class PossibleValueSet(object):
 
 		:param list(ValueRange) ranges: List of ValueRanges
 		:rtype: PossibleValueSet
+		:Example:
+
+			>>> v_1 = ValueRange(0, 5, 1)
+			>>> v_2 = ValueRange(7, 10, 1)
+			>>> val = PossibleValueSet.unsigned_range_value([v_1, v_2])
+			<unsigned ranges: [<range: 0x0 to 0x5>, <range: 0x7 to 0xa>]>
 		"""
 		result = PossibleValueSet()
 		result.value = 0
@@ -2643,7 +2655,7 @@ class Function(object):
 
 	def set_user_var_value(self, var, def_addr, value):
 		"""
-		`set_user_var_value` allows the user to specify a PossibleValueSet value for a (MLIL) variable at its
+		`set_user_var_value` allows the user to specify a PossibleValueSet value for an MLIL variable at its
 		definition site. 
 
 		..warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow
@@ -2685,7 +2697,7 @@ class Function(object):
 
 	def clear_user_var_value(self, var, def_addr):
 		"""
-		Clears a perviously informed user variable value.
+		Clears a previously defined user variable value.
 
 		:param Variable var: Variable for which the value was informed
 		:param int def_addr: Address of the definition site of the variable

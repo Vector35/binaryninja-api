@@ -4677,6 +4677,50 @@ class BinaryView(object):
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
+	def parse_possiblevalueset_string(self, value, state, here=0):
+		r"""
+		Evaluates a string representation of a PossibleValueSet into an instance of the ``PossibleValueSet`` value.
+
+		.. note:: Values are evaluated based on the rules as specified for :py:meth:`parse_expression` API. This implies that a ``ConstantValue [0x4000].d`` can be provided given that 4 bytes can be read at ``0x4000``. All constants are considered to be in hexadecimal form by default.
+
+		The parser uses the following rules:
+			- ConstantValue - ``<value>``
+			- ConstantPointerValue - ``<value>``
+			- StackFrameOffset - ``<value>``
+			- SignedRangeValue - ``<value>:<value>:<value>{,<value>:<value>:<value>}*`` (Multiple ValueRanges can be provided by separating them by commas)
+			- UnsignedRangeValue - ``<value>:<value>:<value>{,<value>:<value>:<value>}*`` (Multiple ValueRanges can be provided by separating them by commas)
+			- InSetOfValues - ``<value>{,<value>}*``
+			- NotInSetOfValues - ``<value>{,<value>}*``
+
+		:param str value: PossibleValueSet value to be parsed
+		:param RegisterValueType state: State for which the value is to be parsed
+		:param int here: (optional) Base address for relative expressions, defaults to zero
+		:rtype: PossibleValueSet
+		:Example:
+
+			>>> psv_c = bv.parse_possiblevalueset_string("400", RegisterValueType.ConstantValue)
+			>>> psv_c
+			<const 0x400>
+			>>> psv_ur = bv.parse_possiblevalueset_string("1:10:1", RegisterValueType.UnsignedRangeValue)
+			>>> psv_ur
+			<unsigned ranges: [<range: 0x1 to 0x10>]>
+			>>> psv_is = bv.parse_possiblevalueset_string("1,2,3", RegisterValueType.InSetOfValues)
+			>>> psv_is
+			<in set([0x1, 0x2, 0x3])>
+			>>>
+		"""
+		result = core.BNPossibleValueSet();
+		errors = ctypes.c_char_p();
+		if not core.BNParsePossibleValueSetString(self.handle, value, state, result, here, errors):
+			if errors:
+				error_str = errors.value.decode("utf-8")
+			else:
+				error_str = "Error parsing specified PossibleValueSet"
+			core.BNFreePossibleValueSet(result)
+			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			raise ValueError(error_str)
+		return function.PossibleValueSet(self.arch, result)
+
 	def get_type_by_name(self, name):
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``

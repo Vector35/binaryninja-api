@@ -197,6 +197,8 @@ private Q_SLOTS:
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
 	void undefineName();
+	void setUserVariableValue();
+	void clearUserVariableValue();
 	void createFunc();
 	void createFuncWithPlatform(PlatformRef platform);
 	void defineFuncName();

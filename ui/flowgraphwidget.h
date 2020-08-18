@@ -284,6 +284,8 @@ private Q_SLOTS:
 	void followPointer();
 	void defineName();
 	void undefineName();
+	void setUserVariableValue();
+	void clearUserVariableValue();
 	void defineFuncName();
 	void undefineFunc();
 	void createFunc();

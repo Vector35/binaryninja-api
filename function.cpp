@@ -1773,17 +1773,18 @@ Ref<FlowGraph> Function::GetUnresolvedStackAdjustmentGraph()
 
 void Function::SetUserVariableValue(const Variable& var, uint64_t defAddr, PossibleValueSet& value)
 {
-	auto mlil = GetMediumLevelIL();
-	auto varDefs = mlil->GetVariableDefinitions(var);
+	Ref<MediumLevelILFunction> mlil = GetMediumLevelIL();
+	const set<size_t>& varDefs = mlil->GetVariableDefinitions(var);
 	if (varDefs.size() == 0)
 	{
 		LogError("Could not get definition for Variable");
 		return;
 	} 
 	bool found = false;
-	for (const auto& site : varDefs)
+	for (auto& site : varDefs)
 	{
-		if (site == defAddr)
+		const MediumLevelILInstruction& instr = mlil->GetInstruction(site);
+		if (instr.address == defAddr)
 		{
 			found = true;
 			break;
@@ -1810,16 +1811,18 @@ void Function::SetUserVariableValue(const Variable& var, uint64_t defAddr, Possi
 
 void Function::ClearUserVariableValue(const Variable& var, uint64_t defAddr)
 {
-	auto mlil = GetMediumLevelIL();
-	auto varDefs = mlil->GetVariableDefinitions(var);
+	Ref<MediumLevelILFunction> mlil = GetMediumLevelIL();
+	const set<size_t>& varDefs = mlil->GetVariableDefinitions(var);
 	if (varDefs.size() == 0)
 	{
 		LogError("Could not get definition for Variable");
+		return;
 	} 
 	bool found = false;
-	for (auto site : varDefs)
+	for (auto& site : varDefs)
 	{
-		if (site == defAddr)
+		const MediumLevelILInstruction& instr = mlil->GetInstruction(site);
+		if (instr.address == defAddr)
 		{
 			found = true;
 			break;

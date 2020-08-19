@@ -2506,13 +2506,17 @@ class BinaryView(object):
 
 	def create_database(self, filename, progress_func=None, settings=None):
 		"""
-		``create_database`` writes the current database (.bndb) file out to the specified file.
+		``create_database`` writes the current database (.bndb) out to the specified file.
 
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callback progress_func: optional function to be called with the current progress and total count.
 		:param SaveSettings settings: optional argument for special save options.
 		:return: true on success, false on failure
 		:rtype: bool
+		:Example:
+			>>> settings = SaveSettings()
+			>>> bv.create_database(f"{bv.file.filename}.bndb", None, settings)
+			True
 		"""
 		return self._file.create_database(filename, progress_func, settings)
 

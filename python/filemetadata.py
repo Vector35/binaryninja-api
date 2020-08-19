@@ -62,6 +62,10 @@ class NavigationHandler(object):
 
 
 class SaveSettings(object):
+	"""
+	``class SaveSettings`` is used to specify actions and options that apply to saving a database (.bndb).
+	"""
+
 	def __init__(self, handle = None):
 		if handle is None:
 			self.handle = core.BNCreateSaveSettings()
@@ -77,6 +81,15 @@ class SaveSettings(object):
 		return core.BNIsSaveSettingsOptionSet(self.handle, option)
 
 	def set_option(self, option, state = True):
+		"""
+		Set a SaveOption in this instance.
+
+		:param SaveOption option: Option to set.
+		:param bool state: State to assign. Defaults to True.
+		:Example:
+			>>> settings = SaveSettings()
+			>>> settings.set_option(SaveOption.TrimSnapshots)
+		"""
 		if isinstance(option, str):
 			option = SaveOption[option]
 		core.BNSetSaveSettingsOption(self.handle, option, state)
@@ -354,6 +367,19 @@ class FileMetadata(object):
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(self, filename, progress_func = None, settings = None):
+		"""
+		``create_database`` writes the current database (.bndb) out to the specified file.
+
+		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
+		:param callback progress_func: optional function to be called with the current progress and total count.
+		:param SaveSettings settings: optional argument for special save options.
+		:return: true on success, false on failure
+		:rtype: bool
+		:Example:
+			>>> settings = SaveSettings()
+			>>> bv.file.create_database(f"{bv.file.filename}.bndb", None, settings)
+			True
+		"""
 		if settings is not None:
 			settings = settings.handle
 

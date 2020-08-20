@@ -72,6 +72,7 @@ private:
 	ScriptingConsole* m_console;
 	int m_charHeight;
 	bool m_continuation;
+	bool m_searching;
 	CompletionCallback m_completionCallback;
 	ScriptingCompletionPopup* m_popup;
 

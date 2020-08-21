@@ -21,8 +21,14 @@
 
 import abc
 import ctypes
+from json import loads, dumps
 import sys
 import traceback
+
+if sys.version_info >= (3, 0, 0):
+	from urllib.parse import urlencode
+else:
+	from urllib import urlencode
 
 # Binary Ninja Components
 import binaryninja._binaryninjacore as core
@@ -38,15 +44,33 @@ from binaryninja import pyNativeStr
 from binaryninja import range
 
 
+def to_bytes(field):
+	if type(field) == bytes:
+		return field
+	if type(field) == str:
+		return field.encode()
+	return str(field).encode()
+
+
 class DownloadInstance(object):
 	_registered_instances = []
 	_response = b""
+	_data = b""
+
+	class Response:
+		def __init__(self, status_code, headers, content):
+			self.status_code = status_code
+			self.headers = headers
+			self.content = content
+
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNDownloadInstanceCallbacks()
 			self._cb.context = 0
 			self._cb.destroyInstance = self._cb.destroyInstance.__class__(self._destroy_instance)
 			self._cb.performRequest = self._cb.performRequest.__class__(self._perform_request)
+			self._cb.performCustomRequest = self._cb.performCustomRequest.__class__(self._perform_custom_request)
+			self._cb.freeResponse = self._cb.freeResponse.__class__(self._free_response)
 			self.handle = core.BNInitDownloadInstance(provider.handle, self._cb)
 			self.__class__._registered_instances.append(self)
 		else:
@@ -72,13 +96,80 @@ class DownloadInstance(object):
 			log.log_error(traceback.format_exc())
 			return -1
 
+	def _perform_custom_request(self, ctxt, method, url, header_count, header_keys, header_values, response):
+		# Cast response to an array of length 1 so ctypes can write to the pointer
+		# out_response = ((BNDownloadInstanceResponse*)[1])response
+		out_response = (ctypes.POINTER(core.BNDownloadInstanceResponse) * 1).from_address(ctypes.addressof(response.contents))
+		try:
+			# Extract headers
+			keys_ptr = ctypes.cast(header_keys, ctypes.POINTER(ctypes.c_char_p))
+			values_ptr = ctypes.cast(header_values, ctypes.POINTER(ctypes.c_char_p))
+			header_key_array = (ctypes.c_char_p * header_count).from_address(ctypes.addressof(keys_ptr.contents))
+			header_value_array = (ctypes.c_char_p * header_count).from_address(ctypes.addressof(values_ptr.contents))
+			headers = {}
+			for i in range(header_count):
+				headers[header_key_array[i]] = header_value_array[i]
+
+			# Read all data
+			data = b''
+			while True:
+				read_buffer = ctypes.create_string_buffer(0x1000)
+				read_len = core.BNReadDataForDownloadInstance(self.handle, ctypes.cast(read_buffer, ctypes.POINTER(ctypes.c_uint8)), 0x1000)
+				if read_len == 0:
+					break
+				data += read_buffer[:read_len]
+
+			py_response = self.perform_custom_request(method, url, headers, data)
+			if py_response is not None:
+				# Assign to an instance variable so the memory stays live until the request is done
+				self.bn_response = core.BNDownloadInstanceResponse()
+				self.bn_response.statusCode = py_response.status_code
+				self.bn_response.headerCount = len(py_response.headers)
+				self.bn_response.headerKeys = (ctypes.c_char_p * len(py_response.headers))()
+				self.bn_response.headerValues = (ctypes.c_char_p * len(py_response.headers))()
+				for i, (key, value) in enumerate(py_response.headers.items()):
+					self.bn_response.headerKeys[i] = core.BNAllocString(pyNativeStr(key))
+					self.bn_response.headerValues[i] = core.BNAllocString(pyNativeStr(value))
+
+				out_response[0] = ctypes.pointer(self.bn_response)
+			else:
+				out_response[0] = None
+			return 0 if py_response is not None else -1
+		except:
+			out_response[0] = None
+			log.log_error(traceback.format_exc())
+			return -1
+
+	def _free_response(self, ctxt, response):
+		del self.bn_response
+
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def perform_request(self, ctxt, url):
+	def perform_request(self, url):
 		raise NotImplementedError
+
+	@abc.abstractmethod
+	def perform_custom_request(self, method, url, headers, data):
+		raise NotImplementedError
+
+	def _read_callback(self, data, len_, ctxt):
+		try:
+			bytes_len = len_
+			if bytes_len > len(self._data):
+				bytes_len = len(self._data)
+
+			c = ctypes.cast(data, ctypes.POINTER(ctypes.c_char))
+			writeable_data = (ctypes.c_char * len_).from_address(ctypes.addressof(c.contents))
+			writeable_data[:bytes_len] = self._data[:bytes_len]
+			self._data = self._data[bytes_len:]
+
+			return bytes_len
+		except:
+			log.log_error(traceback.format_exc())
+			return 0
 
 	def _write_callback(self, data, len, ctxt):
 		try:
@@ -87,6 +178,7 @@ class DownloadInstance(object):
 			return len
 		except:
 			log.log_error(traceback.format_exc())
+			return 0
 
 	def get_response(self, url):
 		callbacks = core.BNDownloadInstanceOutputCallbacks()
@@ -96,6 +188,65 @@ class DownloadInstance(object):
 		self._response = b""
 		result = core.BNPerformDownloadRequest(self.handle, url, callbacks)
 		return (result, self._response)
+
+	def request(self, method, url, headers=None, data=None, json=None):
+		if headers is None:
+			headers = {}
+		if data is None and json is None:
+			data = b''
+		elif data is None and json is not None:
+			data = to_bytes(dumps(json))
+			if "Content-Type" not in headers:
+				headers["Content-Type"] = "application/json"
+		elif data is not None and json is None:
+			if type(data) == dict:
+				# Urlencode data as a form body
+				data = to_bytes(urlencode(data))
+				if "Content-Type" not in headers:
+					headers["Content-Type"] = "application/x-www-form-urlencoded"
+			else:
+				assert(type(data) == bytes)
+
+		self._data = data
+		if len(data) > 0 and "Content-Length" not in headers:
+			headers["Content-Length"] = len(data)
+		if "Content-Type" not in headers:
+			headers["Content-Type"] = "application/octet-stream"
+
+		callbacks = core.BNDownloadInstanceInputOutputCallbacks()
+		callbacks.readCallback = callbacks.readCallback.__class__(self._read_callback)
+		callbacks.writeCallback = callbacks.writeCallback.__class__(self._write_callback)
+		callbacks.readContext = 0
+		callbacks.writeContext = 0
+		callbacks.progressContext = 0
+		self._response = b""
+		header_keys = (ctypes.c_char_p * len(headers))()
+		header_values = (ctypes.c_char_p * len(headers))()
+		for (i, item) in enumerate(headers.items()):
+			key, value = item
+			header_keys[i] = to_bytes(key)
+			header_values[i] = to_bytes(value)
+
+		response = ctypes.POINTER(core.BNDownloadInstanceResponse)()
+		result = core.BNPerformCustomRequest(self.handle, method, url, len(headers), header_keys, header_values, response, callbacks)
+
+		if result != 0:
+			return None
+
+		response_headers = {}
+		for i in range(response.contents.headerCount):
+			response_headers[response.contents.headerKeys[i]] = response.contents.headerValues[i]
+
+		return DownloadInstance.Response(response.contents.statusCode, response_headers, self._response)
+
+	def get(self, url, headers=None):
+		return self.request("GET", url, headers)
+
+	def post(self, url, headers=None, data=None, json=None):
+		return self.request("POST", url, headers, data, json)
+
+	def put(self, url, headers=None, data=None, json=None):
+		return self.request("POST", url, headers, data, json)
 
 class _DownloadProviderMetaclass(type):
 	@property
@@ -253,6 +404,38 @@ try:
 
 			return 0
 
+		def perform_custom_request(self, method, url, headers, data):
+			try:
+				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+				if proxy_setting:
+					proxies = {"https": proxy_setting}
+				else:
+					proxies = None
+
+				r = requests.request(pyNativeStr(method), pyNativeStr(url), headers=headers, data=data, proxies=proxies)
+				response = r.content
+				if len(response) == 0:
+					core.BNSetErrorForDownloadInstance(self.handle, "No data received from server!")
+					return None
+				raw_bytes = (ctypes.c_ubyte * len(response)).from_buffer_copy(response)
+				bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+				if bytes_wrote != len(raw_bytes):
+					core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+					return None
+				continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_wrote, bytes_wrote)
+				if continue_download is False:
+					core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+					return None
+
+				return DownloadInstance.Response(r.status_code, r.headers, None)
+			except requests.RequestException as e:
+				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+				return None
+			except:
+				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
+				log.log_error(traceback.format_exc())
+				return None
+
 	class PythonDownloadProvider(DownloadProvider):
 		name = "PythonDownloadProvider"
 		instance_class = PythonDownloadInstance
@@ -265,10 +448,10 @@ except ImportError:
 if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
 	try:
 		try:
-			from urllib.request import urlopen, build_opener, install_opener, ProxyHandler
-			from urllib.error import URLError
+			from urllib.request import urlopen, build_opener, install_opener, ProxyHandler, Request
+			from urllib.error import URLError, HTTPError
 		except ImportError:
-			from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError
+			from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError, HTTPError, Request
 
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):
@@ -316,6 +499,74 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 					return -1
 
 				return 0
+
+			class CustomRequest(Request):
+				"""
+				urllib2 (python2) does not have a parameter for custom request methods
+				So this is a shim class to deal with that
+				"""
+
+				def __init__(self, *args, **kwargs):
+					if "method" in kwargs:
+						self._method = kwargs["method"]
+						# Need to remove from kwargs or python2 will complain about the unused arg
+						del kwargs["method"]
+					else:
+						self._method = None
+
+					Request.__init__(self, *args, **kwargs)
+
+				def get_method(self, *args, **kwargs):
+					if self._method is not None:
+						return self._method
+					return Request.get_method(self, *args, **kwargs)
+
+			def perform_custom_request(self, method, url, headers, data):
+				result = None
+				try:
+					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+					if proxy_setting:
+						opener = build_opener(ProxyHandler({'https': proxy_setting}))
+						install_opener(opener)
+
+					if b"Content-Length" in headers:
+						del headers[b"Content-Length"]
+
+					req = PythonDownloadInstance.CustomRequest(pyNativeStr(url), data=data, headers=headers, method=pyNativeStr(method))
+					result = urlopen(req)
+				except HTTPError as he:
+					result = he
+				except URLError as e:
+					core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+					log.log_error(str(e))
+					return None
+				except:
+					core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
+					log.log_error(traceback.format_exc())
+					return None
+
+				total_size = int(result.headers.get('content-length', 0))
+				bytes_sent = 0
+				while True:
+					data = result.read(4096)
+					if not data:
+						break
+					raw_bytes = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+					bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
+					if bytes_wrote != len(raw_bytes):
+						core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
+						return None
+					bytes_sent = bytes_sent + bytes_wrote
+					continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
+					if continue_download is False:
+						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
+						return None
+
+				if not bytes_sent:
+					core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
+					return None
+
+				return DownloadInstance.Response(result.getcode(), result.headers, None)
 
 		class PythonDownloadProvider(DownloadProvider):
 			name = "PythonDownloadProvider"

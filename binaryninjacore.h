@@ -1932,6 +1932,24 @@ extern "C"
 		size_t advancedAnalysisCacheSize;
 	};
 
+	struct BNDownloadInstanceResponse
+	{
+		uint16_t statusCode;
+		uint64_t headerCount;
+		char** headerKeys;
+		char** headerValues;
+	};
+
+	struct BNDownloadInstanceInputOutputCallbacks
+	{
+		uint64_t (*readCallback)(uint8_t* data, uint64_t len, void* ctxt);
+		void* readContext;
+		uint64_t (*writeCallback)(uint8_t* data, uint64_t len, void* ctxt);
+		void* writeContext;
+		bool (*progressCallback)(void* ctxt, uint64_t progress, uint64_t total);
+		void* progressContext;
+	};
+
 	struct BNDownloadInstanceOutputCallbacks
 	{
 		uint64_t (*writeCallback)(uint8_t* data, uint64_t len, void* ctxt);
@@ -1945,6 +1963,8 @@ extern "C"
 		void* context;
 		void (*destroyInstance)(void* ctxt);
 		int (*performRequest)(void* ctxt, const char* url);
+		int (*performCustomRequest)(void* ctxt, const char* method, const char* url, uint64_t headerCount, const char* const* headerKeys, const char* const* headerValues, BNDownloadInstanceResponse** response);
+		void (*freeResponse)(void* ctxt, BNDownloadInstanceResponse* response);
 	};
 
 	struct BNDownloadProviderCallbacks
@@ -4329,7 +4349,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNDownloadInstance* BNInitDownloadInstance(BNDownloadProvider* provider, BNDownloadInstanceCallbacks* callbacks);
 	BINARYNINJACOREAPI BNDownloadInstance* BNNewDownloadInstanceReference(BNDownloadInstance* instance);
 	BINARYNINJACOREAPI void BNFreeDownloadInstance(BNDownloadInstance* instance);
+	BINARYNINJACOREAPI void BNFreeDownloadInstanceResponse(BNDownloadInstanceResponse* response);
 	BINARYNINJACOREAPI int BNPerformDownloadRequest(BNDownloadInstance* instance, const char* url, BNDownloadInstanceOutputCallbacks* callbacks);
+	BINARYNINJACOREAPI int BNPerformCustomRequest(BNDownloadInstance* instance, const char* method, const char* url, uint64_t headerCount, const char* const* headerKeys, const char* const* headerValues, BNDownloadInstanceResponse** response, BNDownloadInstanceInputOutputCallbacks* callbacks);
+	BINARYNINJACOREAPI uint64_t BNReadDataForDownloadInstance(BNDownloadInstance* instance, uint8_t* data, uint64_t len);
 	BINARYNINJACOREAPI uint64_t BNWriteDataForDownloadInstance(BNDownloadInstance* instance, uint8_t* data, uint64_t len);
 	BINARYNINJACOREAPI bool BNNotifyProgressForDownloadInstance(BNDownloadInstance* instance, uint64_t progress, uint64_t total);
 	BINARYNINJACOREAPI char* BNGetErrorForDownloadInstance(BNDownloadInstance* instance);

@@ -874,7 +874,14 @@ class Variable(object):
 
 	@name.setter
 	def name(self, value):
-		self._name = value
+		if self._function is None:
+			self._name = value
+		elif value is not None:
+			self._function.create_user_var(self, self._type, value)
+			self._name = value
+		else:
+			self._function.delete_user_var(self)
+			# TODO: Reset to default name!
 
 	@property
 	def type(self):

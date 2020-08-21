@@ -876,12 +876,14 @@ class Variable(object):
 	def name(self, value):
 		if self._function is None:
 			self._name = value
-		elif value is not None:
+		elif value:
 			self._function.create_user_var(self, self._type, value)
 			self._name = value
 		else:
-			self._function.delete_user_var(self)
-			# TODO: Reset to default name!
+			self._function.create_user_var(self, self._type, "")
+			self._function.view.update_analysis_and_wait()
+			var = core.BNFromVariableIdentifier(self._identifier)
+			self._name = core.BNGetVariableName(self._function.handle, var)
 
 	@property
 	def type(self):

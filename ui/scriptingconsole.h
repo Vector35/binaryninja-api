@@ -73,6 +73,7 @@ private:
 	int m_charHeight;
 	bool m_continuation;
 	bool m_searching;
+	bool m_searchError;
 	CompletionCallback m_completionCallback;
 	ScriptingCompletionPopup* m_popup;
 

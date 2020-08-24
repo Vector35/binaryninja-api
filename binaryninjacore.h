@@ -637,6 +637,7 @@ extern "C"
 		OperatorEqualNameType,
 		OperatorNotEqualNameType,
 		OperatorArrayNameType,
+		OperatorDotNameType,
 		OperatorArrowNameType,
 		OperatorStarNameType,
 		OperatorIncrementNameType,

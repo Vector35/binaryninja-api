@@ -106,7 +106,7 @@ public:
 
 	virtual void writeData(const BinaryNinja::DataBuffer& data);
 
-	virtual bool canDisplayAs(const UIActionContext& context);
+	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType);
 	virtual void displayAs(const UIActionContext& context, BNIntegerDisplayType type);
 
 	virtual HistoryEntry* getHistoryEntry();

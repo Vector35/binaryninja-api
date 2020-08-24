@@ -308,19 +308,6 @@ private Q_SLOTS:
 	void skipAndReturnZero();
 	void skipAndReturnValue();
 
-	void displayAsDefault();
-	void displayAsBinary();
-	void displayAsSignedOctal();
-	void displayAsUnsignedOctal();
-	void displayAsSignedDecimal();
-	void displayAsUnsignedDecimal();
-	void displayAsSignedHexadecimal();
-	void displayAsUnsignedHexadecimal();
-	void displayAsCharacterConstant();
-	void displayAsPointer();
-	void displayAsFloat();
-	void displayAsDouble();
-
 	void makePtr();
 	void makeString();
 

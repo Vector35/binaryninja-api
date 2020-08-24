@@ -192,7 +192,7 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 			.AnnotationToken {
 				fill: rgb(218, 196, 209);
 			}
-			.IndirectImportToken, .ImportToken {
+			.IndirectImportToken, .ImportToken, .ExternalSymbolToken {
 				fill: rgb(237, 189, 129);
 			}
 			.LocalVariableToken, .StackVariableToken {

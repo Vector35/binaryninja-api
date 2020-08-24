@@ -230,25 +230,13 @@ private Q_SLOTS:
 	void makeString();
 	void changeType();
 	void undefineVariable();
+	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();
 	void createArray();
 	void createStruct();
 	void createNewTypes();
 
 	size_t getStringLength(uint64_t startAddr);
-
-	void displayAsDefault();
-	void displayAsBinary();
-	void displayAsSignedOctal();
-	void displayAsUnsignedOctal();
-	void displayAsSignedDecimal();
-	void displayAsUnsignedDecimal();
-	void displayAsSignedHexadecimal();
-	void displayAsUnsignedHexadecimal();
-	void displayAsCharacterConstant();
-	void displayAsPointer();
-	void displayAsFloat();
-	void displayAsDouble();
 
 	void setInstructionHighlight(BNHighlightColor color);
 	void setBlockHighlight(BNHighlightColor color);
@@ -273,6 +261,7 @@ public:
 	virtual BinaryViewRef getData() override { return m_data; }
 	void getCurrentOffsetByType(TypeRef resType, uint64_t baseAddr, uint64_t& begin, uint64_t& end, bool singleLine);
 	virtual uint64_t getCurrentOffset() override;
+	virtual UIActionContext actionContext() override;
 	virtual BNAddressRange getSelectionOffsets() override;
 	virtual BNAddressRange getSelectionForInfo() override;
 	virtual void setSelectionOffsets(BNAddressRange range) override;

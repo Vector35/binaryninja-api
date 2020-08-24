@@ -145,6 +145,10 @@ vector<LinearDisassemblyLine> LinearViewObject::GetLines(LinearViewObject* prev,
 		line.contents.highlight = lines[i].contents.highlight;
 		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
 		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
+		line.contents.typeInfo.hasTypeInfo = lines[i].contents.typeInfo.hasTypeInfo;
+		line.contents.typeInfo.fieldIndex = lines[i].contents.typeInfo.fieldIndex;
+		line.contents.typeInfo.parentType = lines[i].contents.typeInfo.parentType ?
+			new Type(BNNewTypeReference(lines[i].contents.typeInfo.parentType)) : nullptr;
 		result.push_back(line);
 	}
 

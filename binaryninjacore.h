@@ -259,6 +259,7 @@ extern "C"
 		CommentToken = 29,
 		PossibleValueToken = 30,
 		PossibleValueTypeToken = 31,
+		ArrayIndexToken = 32,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -1546,6 +1547,13 @@ extern "C"
 		uint8_t mix, r, g, b, alpha;
 	};
 
+	struct BNDisassemblyTextLineTypeInfo
+	{
+		bool hasTypeInfo;
+		BNType* parentType;
+		size_t fieldIndex;
+	};
+
 	struct BNDisassemblyTextLine
 	{
 		uint64_t addr;
@@ -1555,6 +1563,7 @@ extern "C"
 		BNHighlightColor highlight;
 		BNTag** tags;
 		size_t tagCount;
+		BNDisassemblyTextLineTypeInfo typeInfo;
 	};
 
 	struct BNLinearDisassemblyLine
@@ -3027,7 +3036,8 @@ __attribute__ ((format (printf, 1, 2)))
 		BNDisassemblySettings* settings, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDisassemblyTextLines(BNDisassemblyTextLine* lines, size_t count);
 
-	BINARYNINJACOREAPI char* BNGetDisplayStringForInteger(BNBinaryView* binaryView, BNIntegerDisplayType type, uint64_t value, size_t inputWidth);
+	BINARYNINJACOREAPI char* BNGetDisplayStringForInteger(BNBinaryView* binaryView, BNIntegerDisplayType type,
+		uint64_t value, size_t inputWidth, bool isSigned);
 	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateDisassemblyTextRenderer(BNFunction* func,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNDisassemblyTextRenderer* BNCreateLowLevelILDisassemblyTextRenderer(BNLowLevelILFunction* func,
@@ -3996,6 +4006,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeClass(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeWidth(BNType* type);
 	BINARYNINJACOREAPI size_t BNGetTypeAlignment(BNType* type);
+	BINARYNINJACOREAPI BNIntegerDisplayType BNGetIntegerTypeDisplayType(BNType* type);
+	BINARYNINJACOREAPI void BNSetIntegerTypeDisplayType(BNTypeBuilder* type, BNIntegerDisplayType displayType);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeSigned(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeConst(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeVolatile(BNType* type);

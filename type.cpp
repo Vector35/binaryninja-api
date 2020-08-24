@@ -831,6 +831,10 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	return type;
 }
 
+BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
+{
+	return BNGetIntegerTypeDisplayType(m_object);
+}
 
 string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
@@ -1052,6 +1056,10 @@ Confidence<bool> TypeBuilder::IsConst() const
 	return Confidence<bool>(result.value, result.confidence);
 }
 
+void TypeBuilder::SetIntegerTypeDisplayType(BNIntegerDisplayType displayType)
+{
+	BNSetIntegerTypeDisplayType(m_object, displayType);
+}
 
 Confidence<BNMemberScope> TypeBuilder::GetScope() const
 {

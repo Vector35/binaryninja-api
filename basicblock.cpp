@@ -96,6 +96,9 @@ DisassemblyTextLine::DisassemblyTextLine()
 	highlight.g = 0;
 	highlight.b = 0;
 	highlight.alpha = 0;
+	typeInfo.hasTypeInfo = false;
+	typeInfo.fieldIndex = -1;
+	typeInfo.parentType = nullptr;
 }
 
 

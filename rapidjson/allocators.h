@@ -64,19 +64,19 @@ public:
     static const bool kNeedFree = true;
     void* Malloc(size_t size) { 
         if (size) //  behavior of malloc(0) is implementation defined.
-            return std::malloc(size);
+            return je_malloc(size);
         else
             return NULL; // standardize to returning NULL.
     }
     void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
         (void)originalSize;
         if (newSize == 0) {
-            std::free(originalPtr);
+            je_free(originalPtr);
             return NULL;
         }
-        return std::realloc(originalPtr, newSize);
+        return je_realloc(originalPtr, newSize);
     }
-    static void Free(void *ptr) { std::free(ptr); }
+    static void Free(void *ptr) { je_free(ptr); }
 };
 
 ///////////////////////////////////////////////////////////////////////////////

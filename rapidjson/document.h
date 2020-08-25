@@ -536,7 +536,7 @@ template <bool, typename> class GenericObject;
     \tparam Encoding    Encoding of the value. (Even non-string values need to have the same encoding in a document)
     \tparam Allocator   Allocator type for allocating memory of object, array and string.
 */
-template <typename Encoding, typename Allocator = MemoryPoolAllocator<> > 
+template <typename Encoding, typename Allocator = CrtAllocator >
 class GenericValue {
 public:
     //! Name-value pair in an object.
@@ -1206,6 +1206,11 @@ public:
         return *this;
     }
 
+    GenericValue& AddMember(GenericValue& name, BinaryNinjaCore::string& value, Allocator& allocator) {
+        GenericValue v(value.data(), allocator);
+        return AddMember(name, v, allocator);
+    }
+
     //! Add a constant string value as member (name-value pair) to the object.
     /*! \param name A string value as name of member.
         \param value constant string reference as value of member.
@@ -1544,6 +1549,11 @@ public:
             Reserve(data_.a.capacity == 0 ? kDefaultArrayCapacity : (data_.a.capacity + (data_.a.capacity + 1) / 2), allocator);
         GetElementsPointer()[data_.a.size++].RawAssign(value);
         return *this;
+    }
+
+    GenericValue& PushBack(BinaryNinjaCore::string value, Allocator& allocator) {
+        GenericValue v(value.c_str(), allocator);
+        return PushBack(v, allocator);
     }
 
 #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
@@ -2020,7 +2030,7 @@ typedef GenericValue<UTF8<> > Value;
     \tparam StackAllocator Allocator for allocating memory for stack during parsing.
     \warning Although GenericDocument inherits from GenericValue, the API does \b not provide any virtual functions, especially no virtual destructor.  To avoid memory leaks, do not \c delete a GenericDocument object via a pointer to a GenericValue.
 */
-template <typename Encoding, typename Allocator = MemoryPoolAllocator<>, typename StackAllocator = CrtAllocator>
+template <typename Encoding, typename Allocator = CrtAllocator, typename StackAllocator = CrtAllocator>
 class GenericDocument : public GenericValue<Encoding, Allocator> {
 public:
     typedef typename Encoding::Ch Ch;                       //!< Character type derived from Encoding.

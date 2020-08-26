@@ -46,6 +46,7 @@ public:
 
 	BinaryViewRef getRawData() const { return m_rawData; }
 	QString getFilename() const { return m_filename; }
+	void setFilename(QString newName) {m_filename = newName;}
 	ViewFrame* getCurrentViewFrame() const { return m_currentViewFrame; }
 
 	bool isValidSaveFilename() const { return m_isValidSaveFilename; }

@@ -114,7 +114,7 @@ class FlowGraphNode(object):
 
 	@property
 	def basic_block(self):
-		"""Basic block associated with this part of the flow graph"""
+		"""Basic block associated with this part of the flow graph (well not automatically cause the node to render as a native basic block)"""
 		block = core.BNGetFlowGraphBasicBlock(self.handle)
 		if not block:
 			return None

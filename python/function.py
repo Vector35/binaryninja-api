@@ -880,7 +880,10 @@ class Variable(object):
 			self._function.create_user_var(self, self._type, value)
 			self._name = value
 		else:
+			# Name will be reassigned by analysis on the next analysis update
+			# This Variable object is will not be updated
 			self._function.create_user_var(self, self._type, "")
+			self._name = None
 
 	@property
 	def type(self):

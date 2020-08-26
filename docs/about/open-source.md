@@ -32,6 +32,9 @@ The previous tools are used in the generation of our documentation, but are not 
     - [zlib] ([zlib license] - zlib license)
     - [rapidjson] ([rapidjson license] - MIT)
     - [jemalloc] ([jemalloc license] - 2-clause BSD)
+    - [Rust] ([Rust license] - MIT)
+    - [curl-rust] ([curl-rust license] - MIT)
+    - [curl] ([curl license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -113,3 +116,9 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [jemalloc license]: https://github.com/jemalloc/jemalloc/blob/master/COPYING
 [libxcb]: https://gitlab.freedesktop.org/xorg/lib/libxcb
 [libxcb license]: https://gitlab.freedesktop.org/xorg/lib/libxcb/-/blob/master/COPYING
+[Rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT
+[Rust]: https://www.rust-lang.org/
+[curl-rust license]: https://github.com/alexcrichton/curl-rust/blob/master/LICENSE
+[curl-rust]: https://github.com/alexcrichton/curl-rust
+[curl license]: https://github.com/curl/curl/blob/master/COPYING
+[curl]: https://github.com/curl/curl

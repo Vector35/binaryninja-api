@@ -226,6 +226,7 @@ private Q_SLOTS:
 	void makePtr();
 	void makeString();
 	void changeType();
+	void undefineVariable();
 	void createStructOrInferStructureType();
 	void createArray();
 	void createStruct();

@@ -301,7 +301,7 @@ def generate(test_store, outdir, exclude_binaries):
         # Generate oracle data for rebasing tests
         name = oraclefile_rel[len(test_store):].replace(os.path.sep, "_").replace(".", "_")[1:]
         if name in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
-            test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, imageBase=0xf00000)
+            test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, options={'loader.imageBase' : 0xf00000})
             binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel) + "_rebasing")
             for method in test_data.methods():
                 binary_oracle.add_entry(test_data, method)

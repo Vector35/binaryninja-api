@@ -1659,9 +1659,11 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
 
-		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors);
+		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
+			const std::set<QualifiedName>& typesAllowRedefinition = {});
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions, std::string& errors);
+			std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+			const std::set<QualifiedName>& typesAllowRedefinition = {});
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
 		std::vector<QualifiedName> GetTypeNames(const std::string& matching="");

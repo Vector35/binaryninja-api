@@ -140,7 +140,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	void goToAddress(bool selecting);
 
 	void moveCursorToMouse(QMouseEvent* event, bool selecting);
-	void createNewTypes(const QString& definition = "");
+	void createNewTypes(const QString& definition = "", const std::set<BinaryNinja::QualifiedName>& typesAllowRedefinition = {});
 	void bindActions();
 
 	void checkForValidSelection();

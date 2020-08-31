@@ -1735,6 +1735,12 @@ extern "C"
 		size_t typeCount, variableCount, functionCount;
 	};
 
+	struct BNQualifiedNameList
+	{
+		BNQualifiedName* names;
+		size_t count;
+	};
+
 	enum BNUpdateResult
 	{
 		UpdateFailed = 0,
@@ -3262,8 +3268,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text,
-		BNQualifiedNameAndType* result, char** errors);
-	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, BNTypeParserResult* result, char** errors);
+		BNQualifiedNameAndType* result, char** errors, BNQualifiedNameList* typesAllowRedefinition);
+	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, BNTypeParserResult* result,
+		char** errors, BNQualifiedNameList typesAllowRedefinition);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndTypeArray(BNQualifiedNameAndType* obj, size_t count);
 

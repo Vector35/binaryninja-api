@@ -14,9 +14,11 @@ class BINARYNINJAUIAPI CreateTypeDialog: public QDialog
 
 	BinaryViewRef m_data;
 	std::map<BinaryNinja::QualifiedName, TypeRef> m_results;
+	std::set<BinaryNinja::QualifiedName> m_typesAllowRedefinition;
 
 public:
-	CreateTypeDialog(QWidget* parent, BinaryViewRef data, const QString& title, const QString& definition);
+	CreateTypeDialog(QWidget* parent, BinaryViewRef data, const QString& title,
+		const QString& definition, const std::set<BinaryNinja::QualifiedName>& typesAllowRedefinition = {});
 	std::map<BinaryNinja::QualifiedName, TypeRef>  getResults() { return m_results; }
 
 private Q_SLOTS:

@@ -2446,15 +2446,27 @@ uint64_t BinaryView::GetPreviousDataVariableStartBeforeAddress(uint64_t addr)
 }
 
 
-bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& result, string& errors)
+bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& result, string& errors,
+	const std::set<QualifiedName>& typesAllowRedefinition)
 {
 	BNQualifiedNameAndType nt;
 	char* errorStr;
 
-	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr))
+	BNQualifiedNameList typesList;
+	typesList.count = typesAllowRedefinition.size();
+	typesList.names = new BNQualifiedName[typesList.count];
+	size_t i = 0;
+	for(auto& type : typesAllowRedefinition)
+	{
+		typesList.names[i] = type.GetAPIObject();
+		i ++;
+	}
+
+	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr, &typesList))
 	{
 		errors = errorStr;
 		BNFreeString(errorStr);
+		delete[] typesList.names;
 		return false;
 	}
 
@@ -2462,12 +2474,14 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 	result.type = new Type(BNNewTypeReference(nt.type));
 	errors = "";
 	BNFreeQualifiedNameAndType(&nt);
+	delete[] typesList.names;
 	return true;
 }
 
 
 bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Type>>& types,
-	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors)
+	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
+	const std::set<QualifiedName>& typesAllowRedefinition)
 {
 	BNTypeParserResult result;
 	char* errorStr = nullptr;
@@ -2476,7 +2490,17 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr);
+	BNQualifiedNameList typesList;
+	typesList.count = typesAllowRedefinition.size();
+	typesList.names = new BNQualifiedName[typesList.count];
+	size_t i = 0;
+	for(auto& type : typesAllowRedefinition)
+	{
+		typesList.names[i] = type.GetAPIObject();
+		i ++;
+	}
+
+	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr, typesList);
 	if (errorStr)
 	{
 		errors = errorStr;

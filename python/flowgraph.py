@@ -24,7 +24,8 @@ import traceback
 
 # Binary Ninja components
 import binaryninja
-from binaryninja.enums import (BranchType, InstructionTextTokenType, HighlightStandardColor, FlowGraphOption)
+from binaryninja.enums import (BranchType, InstructionTextTokenType, HighlightStandardColor, FlowGraphOption,
+	EdgePenStyle, ThemeColor)
 from binaryninja import _binaryninjacore as core
 from binaryninja import function
 from binaryninja import binaryview
@@ -40,16 +41,34 @@ from binaryninja import range
 
 
 class FlowGraphEdge(object):
-	def __init__(self, branch_type, source, target, points, back_edge):
+	def __init__(self, branch_type, source, target, points, back_edge, style):
 		self.type = BranchType(branch_type)
 		self.source = source
 		self.target = target
 		self.points = points
 		self.back_edge = back_edge
+		self.style = style
 
 	def __repr__(self):
 		return "<%s: %s>" % (self.type.name, repr(self.target))
 
+
+class EdgeStyle(object):
+	def __init__(self, style=None, width=None, theme_color=None):
+		self.style = style if style is not None else EdgePenStyle.SolidLine
+		self.width = width if width is not None else 0
+		self.color = theme_color if theme_color is not None else ThemeColor.AddressColor
+
+	def _get_core_struct(self):
+		result = core.BNEdgeStyle()
+		result.style = self.style
+		result.width = self.width
+		result.color = self.color
+		return result
+
+	@classmethod
+	def from_core_struct(cls, edge_style):
+		return EdgeStyle(edge_style.style, edge_style.width, edge_style.color)
 
 class FlowGraphNode(object):
 	def __init__(self, graph = None, handle = None):
@@ -228,7 +247,7 @@ class FlowGraphNode(object):
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge))
+			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style)))
 		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
 		return result
 
@@ -246,7 +265,7 @@ class FlowGraphNode(object):
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge))
+			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style)))
 		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
 		return result
 
@@ -271,16 +290,23 @@ class FlowGraphNode(object):
 			color = highlight.HighlightColor(color)
 		core.BNSetFlowGraphNodeHighlight(self.handle, color._get_core_struct())
 
-	def add_outgoing_edge(self, edge_type, target):
+	def add_outgoing_edge(self, edge_type, target, style=None):
 		"""
 		``add_outgoing_edge`` connects two flow graph nodes with an edge.
 
 		:param BranchType edge_type: Type of edge to add
 		:param FlowGraphNode target: Target node object
+		:param EdgeStyle style: (optional) Styling for graph edge Branch Type must be set to UserDefinedBranch
 		"""
 		if not target.is_valid_for_graph(self._graph):
 			raise ValueError("Target of edge has not been added to the owning graph")
-		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle)
+
+		if style is None:
+			style = EdgeStyle()
+		elif not isinstance(style, EdgeStyle):
+			raise AttributeError("style must be of type EdgeStyle")
+
+		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle, style._get_core_struct())
 
 	def is_valid_for_graph(self, graph):
 		return core.BNIsNodeValidForFlowGraph(graph.handle, self.handle)
@@ -338,7 +364,8 @@ class FlowGraph(object):
 		1
 		>>> graph.append(node_c)
 		2
-		>>> node_a.add_outgoing_edge(BranchType.UnconditionalBranch, node_b)
+		>>> edge = EdgeStyle(EdgePenStyle.DashDotDotLine, 2, ThemeColor.AddressColor)
+		>>> node_a.add_outgoing_edge(BranchType.UserDefinedBranch, node_b, edge)
 		>>> node_a.add_outgoing_edge(BranchType.UnconditionalBranch, node_c)
 		>>> show_graph_report("Custom Graph", graph)
 

@@ -4,8 +4,8 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtGui import QImage, QColor, QPainter
 from PySide2.QtCore import Qt, QSize, QTimer
 import binaryninjaui
-from binaryninjaui import ViewFrame, ThemeColor, UIContext
-
+from binaryninjaui import ViewFrame, UIContext
+from binaryninja.enums import ThemeColor
 
 class EntropyThread(threading.Thread):
 	def __init__(self, data, image, block_size):

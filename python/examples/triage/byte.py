@@ -5,8 +5,8 @@ from PySide2.QtWidgets import QAbstractScrollArea, QAbstractSlider
 from PySide2.QtGui import QPainter, QPalette, QFont
 from PySide2.QtCore import Qt, QTimer, QRect
 import binaryninjaui
-from binaryninjaui import View, ViewType, RenderContext, UIContext, ThemeColor, UIAction
-from binaryninja.enums import LinearDisassemblyLineType
+from binaryninjaui import View, ViewType, RenderContext, UIContext, UIAction
+from binaryninja.enums import LinearDisassemblyLineType, ThemeColor
 from binaryninja.binaryview import AddressRange
 
 

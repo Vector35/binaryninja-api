@@ -1,7 +1,8 @@
 import time
 from binaryninja.binaryview import StructuredDataView
 import binaryninjaui
-from binaryninjaui import ThemeColor, ViewFrame, UIContext
+from binaryninjaui import ViewFrame, UIContext
+from binaryninja.enums import ThemeColor
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout
 from PySide2.QtGui import QPalette
 

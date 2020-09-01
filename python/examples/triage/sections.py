@@ -3,7 +3,8 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QHBoxLayout
 from binaryninja.enums import SectionSemantics
 import binaryninjaui
-from binaryninjaui import ThemeColor, ViewFrame, UIContext
+from binaryninjaui import ViewFrame, UIContext
+from binaryninja.enums import ThemeColor
 from . import headers
 
 

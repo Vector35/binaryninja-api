@@ -17,92 +17,6 @@ public:
 		const QWidget* widget) const override;
 };
 
-enum ThemeColor
-{
-	// Hex dump colors
-	AddressColor,
-	ModifiedColor,
-	InsertedColor,
-	NotPresentColor,
-	SelectionColor,
-	OutlineColor,
-	BackgroundHighlightDarkColor,
-	BackgroundHighlightLightColor,
-	BoldBackgroundHighlightDarkColor,
-	BoldBackgroundHighlightLightColor,
-	AlphanumericHighlightColor,
-	PrintableHighlightColor,
-
-	// Graph colors
-	GraphBackgroundDarkColor,
-	GraphBackgroundLightColor,
-	GraphNodeDarkColor,
-	GraphNodeLightColor,
-	GraphNodeOutlineColor,
-	TrueBranchColor,
-	FalseBranchColor,
-	UnconditionalBranchColor,
-	AltTrueBranchColor,
-	AltFalseBranchColor,
-	AltUnconditionalBranchColor,
-
-	// Disassembly colors
-	RegisterColor,
-	NumberColor,
-	CodeSymbolColor,
-	DataSymbolColor,
-	StackVariableColor,
-	ImportColor,
-	InstructionHighlightColor,
-	TokenHighlightColor,
-	TokenSelectionColor,
-	AnnotationColor,
-	OpcodeColor,
-	LinearDisassemblyFunctionHeaderColor,
-	LinearDisassemblyBlockColor,
-	LinearDisassemblyNoteColor,
-	LinearDisassemblySeparatorColor,
-	StringColor,
-	TypeNameColor,
-	FieldNameColor,
-	KeywordColor,
-	UncertainColor,
-	NameSpaceColor,
-	NameSpaceSeparatorColor,
-	GotoLabelColor,
-	CommentColor,
-
-	// Script console colors
-	ScriptConsoleOutputColor,
-	ScriptConsoleErrorColor,
-	ScriptConsoleEchoColor,
-
-	// Highlighting colors
-	BlueStandardHighlightColor,
-	GreenStandardHighlightColor,
-	CyanStandardHighlightColor,
-	RedStandardHighlightColor,
-	MagentaStandardHighlightColor,
-	YellowStandardHighlightColor,
-	OrangeStandardHighlightColor,
-	WhiteStandardHighlightColor,
-	BlackStandardHighlightColor,
-
-	// MiniGraph
-	MiniGraphOverlayColor,
-
-	// FeatureMap
-	FeatureMapBaseColor,
-	FeatureMapNavLineColor,
-	FeatureMapNavHighlightColor,
-	FeatureMapDataVariableColor,
-	FeatureMapAsciiStringColor,
-	FeatureMapUnicodeStringColor,
-	FeatureMapFunctionColor,
-	FeatureMapImportColor,
-	FeatureMapExternColor,
-	FeatureMapLibraryColor
-};
 
 void BINARYNINJAUIAPI initThemes();
 void BINARYNINJAUIAPI resetUserThemes();
@@ -114,7 +28,7 @@ void BINARYNINJAUIAPI setActiveTheme(const QString& name, bool saveToSettings = 
 bool BINARYNINJAUIAPI isColorBlindMode();
 void BINARYNINJAUIAPI setColorBlindMode(bool active);
 
-QColor BINARYNINJAUIAPI getThemeColor(ThemeColor color);
+QColor BINARYNINJAUIAPI getThemeColor(BNThemeColor color);
 QColor BINARYNINJAUIAPI getTokenColor(QWidget* widget, BNInstructionTextTokenType token);
 
 QColor BINARYNINJAUIAPI avgColor(QColor a, QColor b);

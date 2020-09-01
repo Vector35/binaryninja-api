@@ -222,7 +222,8 @@ extern "C"
 		SystemCall = 5,
 		IndirectBranch = 6,
 		ExceptionBranch = 7,
-		UnresolvedBranch = 127
+		UnresolvedBranch = 127,
+		UserDefinedBranch = 128
 	};
 
 	enum BNInstructionTextTokenType
@@ -1509,6 +1510,111 @@ extern "C"
 		float y;
 	};
 
+	enum BNThemeColor
+	{
+		// Hex dump colors
+		AddressColor,
+		ModifiedColor,
+		InsertedColor,
+		NotPresentColor,
+		SelectionColor,
+		OutlineColor,
+		BackgroundHighlightDarkColor,
+		BackgroundHighlightLightColor,
+		BoldBackgroundHighlightDarkColor,
+		BoldBackgroundHighlightLightColor,
+		AlphanumericHighlightColor,
+		PrintableHighlightColor,
+
+		// Graph colors
+		GraphBackgroundDarkColor,
+		GraphBackgroundLightColor,
+		GraphNodeDarkColor,
+		GraphNodeLightColor,
+		GraphNodeOutlineColor,
+		TrueBranchColor,
+		FalseBranchColor,
+		UnconditionalBranchColor,
+		AltTrueBranchColor,
+		AltFalseBranchColor,
+		AltUnconditionalBranchColor,
+
+		// Disassembly colors
+		RegisterColor,
+		NumberColor,
+		CodeSymbolColor,
+		DataSymbolColor,
+		StackVariableColor,
+		ImportColor,
+		InstructionHighlightColor,
+		TokenHighlightColor,
+		TokenSelectionColor,
+		AnnotationColor,
+		OpcodeColor,
+		LinearDisassemblyFunctionHeaderColor,
+		LinearDisassemblyBlockColor,
+		LinearDisassemblyNoteColor,
+		LinearDisassemblySeparatorColor,
+		StringColor,
+		TypeNameColor,
+		FieldNameColor,
+		KeywordColor,
+		UncertainColor,
+		NameSpaceColor,
+		NameSpaceSeparatorColor,
+		GotoLabelColor,
+		CommentColor,
+
+		// Script console colors
+		ScriptConsoleOutputColor,
+		ScriptConsoleErrorColor,
+		ScriptConsoleEchoColor,
+
+		// Highlighting colors
+		BlueStandardHighlightColor,
+		GreenStandardHighlightColor,
+		CyanStandardHighlightColor,
+		RedStandardHighlightColor,
+		MagentaStandardHighlightColor,
+		YellowStandardHighlightColor,
+		OrangeStandardHighlightColor,
+		WhiteStandardHighlightColor,
+		BlackStandardHighlightColor,
+
+		// MiniGraph
+		MiniGraphOverlayColor,
+
+		// FeatureMap
+		FeatureMapBaseColor,
+		FeatureMapNavLineColor,
+		FeatureMapNavHighlightColor,
+		FeatureMapDataVariableColor,
+		FeatureMapAsciiStringColor,
+		FeatureMapUnicodeStringColor,
+		FeatureMapFunctionColor,
+		FeatureMapImportColor,
+		FeatureMapExternColor,
+		FeatureMapLibraryColor
+	};
+
+	// The following edge styles map to QT's Qt::PenStyle enumeration
+	enum BNEdgePenStyle
+	{
+		NoPen = 0,          // no line at all.
+		SolidLine = 1,      // A plain line (default)
+		DashLine = 2,       // Dashes separated by a few pixels.
+		DotLine = 3,        // Dots separated by a few pixels.
+		DashDotLine = 4,    // Alternate dots and dashes.
+		DashDotDotLine = 5, // One dash, two dots, one dash, two dots.
+	};
+
+	struct BNEdgeStyle
+	{
+		BNEdgePenStyle style;
+		size_t width;
+		BNThemeColor color;
+	};
+
 	struct BNFlowGraphEdge
 	{
 		BNBranchType type;
@@ -1516,6 +1622,7 @@ extern "C"
 		BNPoint* points;
 		size_t pointCount;
 		bool backEdge;
+		BNEdgeStyle style;
 	};
 
 	enum BNHighlightColorStyle
@@ -3510,7 +3617,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNFlowGraphEdge* BNGetFlowGraphNodeOutgoingEdges(BNFlowGraphNode* node, size_t* count);
 	BINARYNINJACOREAPI BNFlowGraphEdge* BNGetFlowGraphNodeIncomingEdges(BNFlowGraphNode* node, size_t* count);
 	BINARYNINJACOREAPI void BNFreeFlowGraphNodeEdgeList(BNFlowGraphEdge* edges, size_t count);
-	BINARYNINJACOREAPI void BNAddFlowGraphNodeOutgoingEdge(BNFlowGraphNode* node, BNBranchType type, BNFlowGraphNode* target);
+	BINARYNINJACOREAPI void BNAddFlowGraphNodeOutgoingEdge(BNFlowGraphNode* node, BNBranchType type, BNFlowGraphNode* target, BNEdgeStyle edgeStyle);
 
 	BINARYNINJACOREAPI BNHighlightColor BNGetFlowGraphNodeHighlight(BNFlowGraphNode* node);
 	BINARYNINJACOREAPI void BNSetFlowGraphNodeHighlight(BNFlowGraphNode* node, BNHighlightColor color);

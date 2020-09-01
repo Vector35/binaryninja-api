@@ -3230,6 +3230,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<FlowGraphNode> target;
 		std::vector<BNPoint> points;
 		bool backEdge;
+		BNEdgeStyle style;
 	};
 
 	class FlowGraphNode: public CoreRefCountObject<BNFlowGraphNode,
@@ -3255,7 +3256,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetLines(const std::vector<DisassemblyTextLine>& lines);
 		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
 		const std::vector<FlowGraphEdge>& GetIncomingEdges();
-		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target);
+		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target, BNEdgeStyle edgeStyle = BNEdgeStyle());
 
 		BNHighlightColor GetHighlight() const;
 		void SetHighlight(const BNHighlightColor& color);

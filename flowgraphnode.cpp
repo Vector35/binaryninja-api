@@ -155,6 +155,9 @@ const vector<FlowGraphEdge>& FlowGraphNode::GetOutgoingEdges()
 		edge.target = edges[i].target ? new FlowGraphNode(BNNewFlowGraphNodeReference(edges[i].target)) : nullptr;
 		edge.points.insert(edge.points.begin(), &edges[i].points[0], &edges[i].points[edges[i].pointCount]);
 		edge.backEdge = edges[i].backEdge;
+		edge.style.color = edges[i].style.color;
+		edge.style.width = edges[i].style.width;
+		edge.style.style = edges[i].style.style;
 		result.push_back(edge);
 	}
 
@@ -192,9 +195,9 @@ const vector<FlowGraphEdge>& FlowGraphNode::GetIncomingEdges()
 }
 
 
-void FlowGraphNode::AddOutgoingEdge(BNBranchType type, FlowGraphNode* target)
+void FlowGraphNode::AddOutgoingEdge(BNBranchType type, FlowGraphNode* target, BNEdgeStyle edgeStyle)
 {
-	BNAddFlowGraphNodeOutgoingEdge(m_object, type, target->GetObject());
+	BNAddFlowGraphNodeOutgoingEdge(m_object, type, target->GetObject(), edgeStyle);
 	m_cachedEdges.clear();
 	m_cachedEdgesValid = false;
 }

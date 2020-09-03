@@ -1037,6 +1037,7 @@ class VerifyBuilder(Builder):
         save_setting_value = binja.Settings().get_string_list("files.universal.architecturePreference")
         binja.Settings().reset("files.universal.architecturePreference")
         try:
+            # test with default arch preference
             bv = binja.BinaryViewType.get_view_of_file(file_name)
             assert(bv.view_type == "Mach-O")
             assert(bv.arch.name == "x86")
@@ -1045,8 +1046,66 @@ class VerifyBuilder(Builder):
             assert(load_setting_keys is not None)
             assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
             assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x1000)
-            bv.file.close()
 
+            # save temp bndb for round trip testing
+            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+            comments = self.get_comments(bv)
+            functions = self.get_functions(bv)
+            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+            bv.create_database(temp_name)
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file open path
+            binja.Settings().reset("files.universal.architecturePreference")
+            bv = BinaryViewType.get_view_of_file(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86")
+            assert(bv.start == 0x1000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file_with_options open path
+            binja.Settings().reset("files.universal.architecturePreference")
+            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86")
+            assert(bv.start == 0x1000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file open path (modified architecture preference)
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
+            bv = BinaryViewType.get_view_of_file(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86")
+            assert(bv.start == 0x1000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file_with_options open path (modified architecture preference)
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
+            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "x86")
+            assert(bv.start == 0x1000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+            os.unlink(temp_name)
+
+            # test with overridden arch preference
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
             bv = binja.BinaryViewType.get_view_of_file(file_name)
             assert(bv.view_type == "Mach-O")
@@ -1056,7 +1115,63 @@ class VerifyBuilder(Builder):
             assert(load_setting_keys is not None)
             assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
             assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x4c000)
+
+            # save temp bndb for round trip testing
+            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+            comments = self.get_comments(bv)
+            functions = self.get_functions(bv)
+            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+            bv.create_database(temp_name)
             bv.file.close()
+
+            # test get_view_of_file open path
+            binja.Settings().reset("files.universal.architecturePreference")
+            bv = BinaryViewType.get_view_of_file(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "aarch64")
+            assert(bv.start == 0x100000000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file_with_options open path
+            binja.Settings().reset("files.universal.architecturePreference")
+            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "aarch64")
+            assert(bv.start == 0x100000000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file open path (modified architecture preference)
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86"])
+            bv = BinaryViewType.get_view_of_file(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "aarch64")
+            assert(bv.start == 0x100000000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+
+            # test get_view_of_file_with_options open path (modified architecture preference)
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
+            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
+            assert(bv.view_type == "Mach-O")
+            assert(bv.arch.name == "aarch64")
+            assert(bv.start == 0x100000000)
+            bndb_functions = self.get_functions(bv)
+            bndb_comments = self.get_comments(bv)
+            assert([str(functions == bndb_functions and comments == bndb_comments)])
+            bv.file.close()
+            del bv
+            os.unlink(temp_name)
 
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
             bv = binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000})

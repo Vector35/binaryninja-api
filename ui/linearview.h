@@ -198,6 +198,7 @@ private Q_SLOTS:
 	void defineName();
 	void undefineName();
 	void createFunc();
+	void createFuncWithPlatform(PlatformRef platform);
 	void defineFuncName();
 	void undefineFunc();
 	void reanalyze();

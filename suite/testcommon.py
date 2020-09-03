@@ -883,6 +883,56 @@ class VerifyBuilder(Builder):
     def get_comments(self, bv):
         return bv.functions[0].comments
 
+    def test_possiblevalueset_parse(self):
+        """ Failed to parse PossibleValueSet from string"""
+        file_name = self.unpackage_file("helloworld")
+        try:
+            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            # ConstantValue
+            lhs = bv.parse_possiblevalueset_string("0", binja.RegisterValueType.ConstantValue) 
+            rhs = binja.PossibleValueSet.constant(0)
+            assert lhs == rhs
+            lhs = bv.parse_possiblevalueset_string("$here + 2", binja.RegisterValueType.ConstantValue, 0x2000)
+            rhs = binja.PossibleValueSet.constant(0x2000 + 2)
+            assert lhs == rhs
+            # ConstantPointerValue
+            lhs = bv.parse_possiblevalueset_string("0x8000", binja.RegisterValueType.ConstantPointerValue)
+            rhs = binja.PossibleValueSet.constant_ptr(0x8000)
+            assert lhs == rhs
+            # StackFrameOffset
+            lhs = bv.parse_possiblevalueset_string("16", binja.RegisterValueType.StackFrameOffset)
+            rhs = binja.PossibleValueSet.stack_frame_offset(0x16)
+            assert lhs == rhs
+            # SignedRangeValue
+            lhs = bv.parse_possiblevalueset_string("-10:0:2", binja.RegisterValueType.SignedRangeValue)
+            rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2)])
+            assert lhs == rhs
+            lhs = bv.parse_possiblevalueset_string("-10:0:2,2:5:1", binja.RegisterValueType.SignedRangeValue)
+            rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2), binja.ValueRange(2, 5, 1)])
+            assert lhs == rhs
+            # UnsignedRangeValue
+            lhs = bv.parse_possiblevalueset_string("1:10:1", binja.RegisterValueType.UnsignedRangeValue)
+            rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1)])
+            assert lhs == rhs
+            lhs = bv.parse_possiblevalueset_string("1:10:1, 2:20:2", binja.RegisterValueType.UnsignedRangeValue)
+            rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1), binja.ValueRange(2, 0x20, 2)])
+            assert lhs == rhs
+            # InSetOfValues
+            lhs = bv.parse_possiblevalueset_string("1,2,3,3,4", binja.RegisterValueType.InSetOfValues)
+            rhs = binja.PossibleValueSet.in_set_of_values([1,2,3,4])
+            assert lhs == rhs
+            # NotInSetOfValues
+            lhs = bv.parse_possiblevalueset_string("1,2,3,4,4", binja.RegisterValueType.NotInSetOfValues)
+            rhs = binja.PossibleValueSet.not_in_set_of_values([1,2,3,4])
+            assert lhs == rhs
+            # UndeterminedValue
+            lhs = bv.parse_possiblevalueset_string("", binja.RegisterValueType.UndeterminedValue)
+            rhs = binja.PossibleValueSet.undetermined()
+            assert lhs == rhs
+            return True
+        finally:
+            self.delete_package("helloworld")
+
     def test_expression_parse(self):
         file_name = self.unpackage_file("helloworld")
         try:
@@ -1205,3 +1255,168 @@ class VerifyBuilder(Builder):
         finally:
             binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
             self.delete_package("fat_macho_9arch")
+
+    def test_user_informed_dataflow(self):
+        """User-informed dataflow tests"""
+        file_name = self.unpackage_file("helloworld")
+        try:
+            with binja.BinaryViewType['ELF'].open(file_name) as bv:
+                bv.update_analysis_and_wait()
+                func = bv.get_function_at(0x00008440)
+
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                assert(len(ins.vars_read) == 1)
+                var = ins.vars_read[0]
+                defs = func.mlil.get_var_definitions(var)
+                assert(len(defs) == 1)
+                def_site = defs[0].address
+
+                # Set variable value to 0
+                bv.begin_undo_actions()
+                func.set_user_var_value(var, def_site, binja.PossibleValueSet.constant(0))
+                bv.commit_undo_actions()
+                bv.update_analysis_and_wait()
+
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                # test if condition value is updated to true
+                assert(ins.condition.value == True)
+                # test if register value is updated to 0
+                assert(ins.get_reg_value_after('r3') == 0)
+                # test if branch is eliminated in hlil
+                for hlil_ins in func.hlil.instructions:
+                    assert(hlil_ins.operation != binja.HighLevelILOperation.HLIL_IF)
+
+                # test undo action
+                bv.undo()
+                bv.update_analysis_and_wait()
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                # test if condition value is updated to undetermined
+                assert(ins.condition.value.type == binja.RegisterValueType.UndeterminedValue)
+                # test if register value is updated to undetermined
+                assert(ins.get_reg_value_after('r3').type == binja.RegisterValueType.EntryValue)
+                # test if branch is restored in hlil
+                found = False
+                for hlil_ins in func.hlil.instructions:
+                    if hlil_ins.operation == binja.HighLevelILOperation.HLIL_IF:
+                        found = True
+                assert(found)
+
+                # test redo action
+                bv.redo()
+                bv.update_analysis_and_wait()
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                # test if condition value is updated to true
+                assert(ins.condition.value == True)
+                # test if register value is updated to 0
+                assert(ins.get_reg_value_after('r3') == 0)
+                # test if branch is eliminated in hlil
+                for hlil_ins in func.hlil.instructions:
+                    assert(hlil_ins.operation != binja.HighLevelILOperation.HLIL_IF)
+
+                # test bndb round trip
+                temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+                bv.create_database(temp_name)
+                bv.file.close()
+
+            with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:
+                bv.update_analysis_and_wait()
+                func = bv.get_function_at(0x00008440)
+
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                # test if condition value is updated to true
+                assert(ins.condition.value == True)
+                # test if register value is updated to 0
+                assert(ins.get_reg_value_after('r3') == 0)
+                # test if branch is eliminated in hlil
+                for hlil_ins in func.hlil.instructions:
+                    assert(hlil_ins.operation != binja.HighLevelILOperation.HLIL_IF)
+
+                # test undo after round trip
+                bv.undo()
+                bv.update_analysis_and_wait()
+                ins_idx = func.mlil.get_instruction_start(0x845c)
+                ins = func.mlil[ins_idx]
+                assert(ins.operation == binja.MediumLevelILOperation.MLIL_IF)
+                # test if condition value is updated to undetermined
+                assert(ins.condition.value.type == binja.RegisterValueType.UndeterminedValue)
+                # test if register value is updated to undetermined
+                assert(ins.get_reg_value_after('r3').type == binja.RegisterValueType.EntryValue)
+                # test if branch is restored in hlil
+                found = False
+                for hlil_ins in func.hlil.instructions:
+                    if hlil_ins.operation == binja.HighLevelILOperation.HLIL_IF:
+                        found = True
+                assert(found)
+
+                bv.file.close()
+
+            os.unlink(temp_name)
+            # Check retrieval of user variable values
+            return True
+        finally:
+            self.delete_package("helloworld")
+
+    def test_possiblevalueset_ser_and_deser(self):
+        """PossibleValueSet serialization and deserialization"""
+        def test_helper(value):
+            file_name = self.unpackage_file("helloworld")
+            try:
+                with binja.BinaryViewType['ELF'].open(file_name) as bv:
+                    bv.update_analysis_and_wait()
+                    func = bv.get_function_at(0x00008440)
+
+                    ins_idx = func.mlil.get_instruction_start(0x845c)
+                    ins = func.mlil[ins_idx]
+
+                    var = ins.vars_read[0]
+                    defs = func.mlil.get_var_definitions(var)
+                    def_site = defs[0].address
+
+                    func.set_user_var_value(var, def_site, value)
+                    bv.update_analysis_and_wait()
+
+                    def_ins_idx = func.mlil.get_instruction_start(def_site)
+                    def_ins = func.mlil[def_ins_idx]
+
+                    assert(def_ins.get_possible_reg_values_after('r3') == value)
+
+                    temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+                    bv.create_database(temp_name)
+                    bv.file.close()
+
+                with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:
+                    bv.update_analysis_and_wait()
+                    func = bv.get_function_at(0x00008440)
+
+                    ins_idx = func.mlil.get_instruction_start(0x845c)
+                    ins = func.mlil[ins_idx]
+
+                    def_ins_idx = func.mlil.get_instruction_start(def_site)
+                    def_ins = func.mlil[def_ins_idx]
+
+                    assert(def_ins.get_possible_reg_values_after('r3') == value)
+                    bv.file.close()
+
+                os.unlink(temp_name)
+                return True
+
+            finally:
+                self.delete_package("helloworld")
+
+        assert(test_helper(binja.PossibleValueSet.constant(0)))
+        assert(test_helper(binja.PossibleValueSet.constant_ptr(0x8000)))
+        assert(test_helper(binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 10, 2)])))
+        # assert(test_helper(binja.PossibleValueSet.signed_range_value([binja.ValueRange(-10, 0, 2)])))
+        assert(test_helper(binja.PossibleValueSet.in_set_of_values([1,2,3,4])))
+        assert(test_helper(binja.PossibleValueSet.not_in_set_of_values([1,2,3,4])))
+        return True

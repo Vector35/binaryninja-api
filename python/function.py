@@ -263,8 +263,11 @@ class ValueRange(object):
 			return "<range: %#x to %#x>" % (self.start, self.end)
 		return "<range: %#x to %#x, step %#x>" % (self.start, self.end, self.step)
 
-
-
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start == other.start and self.end == other.end and self.step == other.step
+		
 	@property
 	def start(self):
 		""" """
@@ -361,7 +364,7 @@ class PossibleValueSet(object):
 		if self._type == RegisterValueType.ConstantPointerValue:
 			return "<const ptr %#x>" % self.value
 		if self._type == RegisterValueType.StackFrameOffset:
-			return "<stack frame offset %#x>" % self.offset
+			return "<stack frame offset %#x>" % self._offset
 		if self._type == RegisterValueType.SignedRangeValue:
 			return "<signed ranges: %s>" % repr(self.ranges)
 		if self._type == RegisterValueType.UnsignedRangeValue:
@@ -377,10 +380,18 @@ class PossibleValueSet(object):
 		return "<undetermined>"
 
 	def __eq__(self, other):
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and isinstance(other, numbers.Integral):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, numbers.Integral):
 			return self.value == other
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantValue] and hasattr(other, 'type') and other.type == self.type:
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and hasattr(other, 'type') and other.type == self.type:
 			return self.value == other.value
+		elif self.type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self.type:
+			return self.offset == other.offset
+		elif self.type in [RegisterValueType.SignedRangeValue, RegisterValueType.UnsignedRangeValue] and hasattr(other, 'type') and other.type == self.type:
+			return self.ranges == other.ranges
+		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues] and hasattr(other, 'type') and other.type == self.type:
+			return self.values == other.values
+		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, 'type'):
+			return self.type == other.type
 		else:
 			return self == other
 
@@ -581,7 +592,7 @@ class PossibleValueSet(object):
 		"""
 		result = PossibleValueSet()
 		result.type = RegisterValueType.StackFrameOffset
-		result.value = value
+		result.offset = offset
 		return result
 
 	@classmethod

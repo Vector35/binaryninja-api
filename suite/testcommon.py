@@ -2,6 +2,7 @@ import tempfile
 import pickle
 import os
 import sys
+import time
 import zipfile
 import inspect
 import binaryninja as binja
@@ -1172,7 +1173,14 @@ class VerifyBuilder(Builder):
             assert([str(functions == bndb_functions and comments == bndb_comments)])
             bv.file.close()
             del bv
-            os.unlink(temp_name)
+            for i in range(5):
+                try:
+                    time.sleep(1)
+                    os.unlink(temp_name)
+                    break
+                except OSError:
+                    print("Failed to remove file {}".format(temp_name))
+                    continue
 
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
             bv = binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000})

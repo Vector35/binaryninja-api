@@ -1123,6 +1123,7 @@ class VerifyBuilder(Builder):
             temp_name = next(tempfile._get_candidate_names()) + ".bndb"
             bv.create_database(temp_name)
             bv.file.close()
+            del bv
 
             # test get_view_of_file open path
             binja.Settings().reset("files.universal.architecturePreference")

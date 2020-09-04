@@ -7,10 +7,7 @@ list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/_binaryninjacore.py)
 list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enums.py)
 
 add_executable(generator
-	${PROJECT_SOURCE_DIR}/generator.cpp
-	${PYTHON_SOURCES}
-	${PROJECT_SOURCE_DIR}/_binaryninjacore.py
-	${PROJECT_SOURCE_DIR}/enums.py)
+	${PROJECT_SOURCE_DIR}/generator.cpp)
 target_link_libraries(generator binaryninjaapi)
 
 set_target_properties(generator PROPERTIES
@@ -25,9 +22,10 @@ if(BN_INTERNAL_BUILD)
 			COMMAND ${CMAKE_COMMAND} -E copy ${BN_CORE_OUTPUT_DIR}/binaryninjacore.dll ${PROJECT_BINARY_DIR}/)
 	endif()
 
-	add_custom_command(TARGET generator POST_BUILD
+	add_custom_target(generator_copy ALL
 		BYPRODUCTS ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		DEPENDS ${PYTHON_SOURCES} ${PROJECT_SOURCE_DIR}/../binaryninjacore.h $<TARGET_FILE:generator>
+		COMMAND ${CMAKE_COMMAND} -E echo "Copying Python Sources"
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${BN_RESOURCE_DIR}/python/binaryninja/
 		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:generator> ${PROJECT_SOURCE_DIR}/../binaryninjacore.h ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_SOURCES} ${BN_RESOURCE_DIR}/python/binaryninja/

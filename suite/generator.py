@@ -95,7 +95,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             self.oracle_test_data = pickle.load(open(pickle_path, "rb"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
-    def run_binary_test(self, testfile):
+    def run_binary_test(self, testfile, options=None):
         testname = None
         with zipfile.ZipFile(os.path.join(api_suite_path, testfile), "r") as zf:
             testname = zf.namelist()[0]
@@ -109,7 +109,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         except TypeError:
             binary_oracle = pickle.load(open(pickle_path, "rb"))
 
-        test_builder = testcommon.BinaryViewTestBuilder(testname)
+        test_builder = testcommon.BinaryViewTestBuilder(testname, options)
         for method in test_builder.methods():
             test = getattr(test_builder, method)()
             oracle = binary_oracle[method]
@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
 binary_test_string = """
     def test_binary__{0}(self):
-        self.run_binary_test('{1}')
+        self.run_binary_test('{1}', options={2})
 """
 
 test_string = """
@@ -176,6 +176,9 @@ class OracleTestFile:
 
 
 class UnitTestFile:
+    binary_test_options = {}
+    binary_test_options['binaries/test_corpus/pe_thumb'] = {'analysis.experimental.alternateTypePropagation' : True}
+
     def __init__(self, filename, outdir, test_store):
         self.filename = filename
         self.test_store = test_store
@@ -204,7 +207,7 @@ class UnitTestFile:
         name = binary[len(test_store):].replace(os.path.sep, "_").replace(".", "_")
         if os.name == 'nt':
             binary = binary.replace(os.sep, '/')
-        self.binary_tests += binary_test_string.format(name, binary + ".zip")
+        self.binary_tests += binary_test_string.format(name, binary + ".zip", UnitTestFile.binary_test_options.get(binary, None))
 
 
 quiet = False
@@ -291,7 +294,7 @@ def generate(test_store, outdir, exclude_binaries):
         binary_start_time = time.time()
         if exclude_binaries:
             continue
-        test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel)
+        test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, UnitTestFile.binary_test_options.get(oraclefile_rel, None))
         binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel))
         for method in test_data.methods():
             binary_oracle.add_entry(test_data, method)

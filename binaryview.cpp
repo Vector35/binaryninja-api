@@ -2500,7 +2500,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 		i ++;
 	}
 
-	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr, typesList);
+	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr, &typesList);
 	if (errorStr)
 	{
 		errors = errorStr;

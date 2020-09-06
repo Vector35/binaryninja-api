@@ -4655,7 +4655,9 @@ class BinaryView(object):
 
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		if not core.BNParseTypesString(self.handle, text, parse, errors):
+		type_list = core.BNQualifiedNameList()
+		type_list.count = 0
+		if not core.BNParseTypesString(self.handle, text, parse, errors, type_list):
 			error_str = errors.value.decode("utf-8")
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise SyntaxError(error_str)

@@ -3270,7 +3270,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text,
 		BNQualifiedNameAndType* result, char** errors, BNQualifiedNameList* typesAllowRedefinition);
 	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, BNTypeParserResult* result,
-		char** errors, BNQualifiedNameList typesAllowRedefinition);
+		char** errors, BNQualifiedNameList* typesAllowRedefinition);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndTypeArray(BNQualifiedNameAndType* obj, size_t count);
 

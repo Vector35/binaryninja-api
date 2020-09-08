@@ -323,7 +323,7 @@ The parameter list can be accessed through the ``params`` property:
 * ``MLIL_XOR`` - Bitwise XOR ``left`` expression with the ``right`` expression
 * ``MLIL_LSL`` - Logical shift left the ``left`` expression by the number of bits stored in the ``right`` expression
 * ``MLIL_LSR`` - Logical shift right the ``left`` expression by the number of bits stored in the ``right`` expression
-* ``MLIL_ASR`` - Arithmetic shift left the ``left`` expression by the number of bits stored in the ``right`` expression
+* ``MLIL_ASR`` - Arithmetic shift right the ``left`` expression by the number of bits stored in the ``right`` expression
 * ``MLIL_ROL`` - Rotate left the ``left`` expression by the number of bits stored in the ``right`` expression
 * ``MLIL_RLC`` - Rotate left with carry the ``left`` expression and the ``carry`` expression by the number of bits stored in the ``right`` expression
 * ``MLIL_ROR`` - Rotate right the ``left`` expression by the number of bits stored in the ``right`` expression

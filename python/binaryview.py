@@ -2680,7 +2680,7 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
-		if not isinstance(data, bytes):
+		if not (isinstance(data, bytes) or isinstance(data, bytearray)):
 			if isinstance(data, str):
 				buf = databuffer.DataBuffer(data.encode())
 			else:

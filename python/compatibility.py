@@ -83,6 +83,8 @@ def with_metaclass(meta, *bases):
 def cstr(arg):
   if isinstance(arg, bytes) or arg is None:
     return arg
+  elif isinstance(arg, bytearray):
+    return bytes(arg)
   else:
     try:
       return arg.encode('charmap')

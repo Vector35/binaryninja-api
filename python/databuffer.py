@@ -39,6 +39,9 @@ class DataBuffer(object):
 		else:
 			if bytes != str and isinstance(contents, str):
 				contents = contents.encode('charmap')
+			else:
+				if isinstance(contents, bytearray):
+					contents = bytes(contents)
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):

@@ -450,12 +450,12 @@ class PossibleValueSet(object):
 				result.table.append(LookupTableEntry(from_list, result.table[i].toValue))
 			result.count = self.count
 		elif (self.type == RegisterValueType.InSetOfValues) or (self.type == RegisterValueType.NotInSetOfValues):
-			values = (ctypes.c_long * self.count)()
+			values = (ctypes.c_longlong * self.count)()
 			i = 0
 			for value in self.values:
 				values[i] = value
 				i += 1
-			result.valueSet = ctypes.cast(values, ctypes.POINTER(ctypes.c_long))
+			result.valueSet = ctypes.cast(values, ctypes.POINTER(ctypes.c_longlong))
 			result.count = self.count
 		return result
 	

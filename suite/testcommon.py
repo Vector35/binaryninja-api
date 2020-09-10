@@ -1323,7 +1323,6 @@ class VerifyBuilder(Builder):
                 # test bndb round trip
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                 bv.create_database(temp_name)
-                bv.file.close()
 
             with binja.open_view(temp_name) as bv:
                 func = bv.get_function_at(0x00008440)
@@ -1356,10 +1355,14 @@ class VerifyBuilder(Builder):
                         found = True
                 assert(found)
 
-                bv.file.close()
-
-            os.unlink(temp_name)
-            # Check retrieval of user variable values
+            for i in range(5):
+                try:
+                    time.sleep(1)
+                    os.unlink(temp_name)
+                    break
+                except OSError:
+                    print("Failed to remove file {}".format(temp_name))
+                    continue
             return True
         finally:
             self.delete_package("helloworld")
@@ -1401,9 +1404,15 @@ class VerifyBuilder(Builder):
 
                     assert(def_ins.get_possible_reg_values_after('r3') == value)
 
-                os.unlink(temp_name)
+                for i in range(5):
+                    try:
+                        time.sleep(1)
+                        os.unlink(temp_name)
+                        break
+                    except OSError:
+                        print("Failed to remove file {}".format(temp_name))
+                        continue
                 return True
-
             finally:
                 self.delete_package("helloworld")
 

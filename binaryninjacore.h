@@ -4863,6 +4863,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNMemoryUsageInfo* BNGetMemoryUsageInfo(size_t* count);
 	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
 
+	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(size_t addr);
+
 #ifdef __cplusplus
 }
 #endif

@@ -887,48 +887,48 @@ class VerifyBuilder(Builder):
         """ Failed to parse PossibleValueSet from string"""
         file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            # ConstantValue
-            lhs = bv.parse_possiblevalueset_string("0", binja.RegisterValueType.ConstantValue) 
-            rhs = binja.PossibleValueSet.constant(0)
-            assert lhs == rhs
-            lhs = bv.parse_possiblevalueset_string("$here + 2", binja.RegisterValueType.ConstantValue, 0x2000)
-            rhs = binja.PossibleValueSet.constant(0x2000 + 2)
-            assert lhs == rhs
-            # ConstantPointerValue
-            lhs = bv.parse_possiblevalueset_string("0x8000", binja.RegisterValueType.ConstantPointerValue)
-            rhs = binja.PossibleValueSet.constant_ptr(0x8000)
-            assert lhs == rhs
-            # StackFrameOffset
-            lhs = bv.parse_possiblevalueset_string("16", binja.RegisterValueType.StackFrameOffset)
-            rhs = binja.PossibleValueSet.stack_frame_offset(0x16)
-            assert lhs == rhs
-            # SignedRangeValue
-            lhs = bv.parse_possiblevalueset_string("-10:0:2", binja.RegisterValueType.SignedRangeValue)
-            rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2)])
-            assert lhs == rhs
-            lhs = bv.parse_possiblevalueset_string("-10:0:2,2:5:1", binja.RegisterValueType.SignedRangeValue)
-            rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2), binja.ValueRange(2, 5, 1)])
-            assert lhs == rhs
-            # UnsignedRangeValue
-            lhs = bv.parse_possiblevalueset_string("1:10:1", binja.RegisterValueType.UnsignedRangeValue)
-            rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1)])
-            assert lhs == rhs
-            lhs = bv.parse_possiblevalueset_string("1:10:1, 2:20:2", binja.RegisterValueType.UnsignedRangeValue)
-            rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1), binja.ValueRange(2, 0x20, 2)])
-            assert lhs == rhs
-            # InSetOfValues
-            lhs = bv.parse_possiblevalueset_string("1,2,3,3,4", binja.RegisterValueType.InSetOfValues)
-            rhs = binja.PossibleValueSet.in_set_of_values([1,2,3,4])
-            assert lhs == rhs
-            # NotInSetOfValues
-            lhs = bv.parse_possiblevalueset_string("1,2,3,4,4", binja.RegisterValueType.NotInSetOfValues)
-            rhs = binja.PossibleValueSet.not_in_set_of_values([1,2,3,4])
-            assert lhs == rhs
-            # UndeterminedValue
-            lhs = bv.parse_possiblevalueset_string("", binja.RegisterValueType.UndeterminedValue)
-            rhs = binja.PossibleValueSet.undetermined()
-            assert lhs == rhs
+            with binja.open_view(file_name) as bv:
+                # ConstantValue
+                lhs = bv.parse_possiblevalueset("0", binja.RegisterValueType.ConstantValue) 
+                rhs = binja.PossibleValueSet.constant(0)
+                assert lhs == rhs
+                lhs = bv.parse_possiblevalueset("$here + 2", binja.RegisterValueType.ConstantValue, 0x2000)
+                rhs = binja.PossibleValueSet.constant(0x2000 + 2)
+                assert lhs == rhs
+                # ConstantPointerValue
+                lhs = bv.parse_possiblevalueset("0x8000", binja.RegisterValueType.ConstantPointerValue)
+                rhs = binja.PossibleValueSet.constant_ptr(0x8000)
+                assert lhs == rhs
+                # StackFrameOffset
+                lhs = bv.parse_possiblevalueset("16", binja.RegisterValueType.StackFrameOffset)
+                rhs = binja.PossibleValueSet.stack_frame_offset(0x16)
+                assert lhs == rhs
+                # SignedRangeValue
+                lhs = bv.parse_possiblevalueset("-10:0:2", binja.RegisterValueType.SignedRangeValue)
+                rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2)])
+                assert lhs == rhs
+                lhs = bv.parse_possiblevalueset("-10:0:2,2:5:1", binja.RegisterValueType.SignedRangeValue)
+                rhs = binja.PossibleValueSet.signed_range_value([binja.ValueRange(-0x10, 0, 2), binja.ValueRange(2, 5, 1)])
+                assert lhs == rhs
+                # UnsignedRangeValue
+                lhs = bv.parse_possiblevalueset("1:10:1", binja.RegisterValueType.UnsignedRangeValue)
+                rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1)])
+                assert lhs == rhs
+                lhs = bv.parse_possiblevalueset("1:10:1, 2:20:2", binja.RegisterValueType.UnsignedRangeValue)
+                rhs = binja.PossibleValueSet.unsigned_range_value([binja.ValueRange(1, 0x10, 1), binja.ValueRange(2, 0x20, 2)])
+                assert lhs == rhs
+                # InSetOfValues
+                lhs = bv.parse_possiblevalueset("1,2,3,3,4", binja.RegisterValueType.InSetOfValues)
+                rhs = binja.PossibleValueSet.in_set_of_values([1,2,3,4])
+                assert lhs == rhs
+                # NotInSetOfValues
+                lhs = bv.parse_possiblevalueset("1,2,3,4,4", binja.RegisterValueType.NotInSetOfValues)
+                rhs = binja.PossibleValueSet.not_in_set_of_values([1,2,3,4])
+                assert lhs == rhs
+                # UndeterminedValue
+                lhs = bv.parse_possiblevalueset("", binja.RegisterValueType.UndeterminedValue)
+                rhs = binja.PossibleValueSet.undetermined()
+                assert lhs == rhs
             return True
         finally:
             self.delete_package("helloworld")
@@ -1260,8 +1260,7 @@ class VerifyBuilder(Builder):
         """User-informed dataflow tests"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType['ELF'].open(file_name) as bv:
-                bv.update_analysis_and_wait()
+            with binja.open_view(file_name) as bv:
                 func = bv.get_function_at(0x00008440)
 
                 ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -1326,8 +1325,7 @@ class VerifyBuilder(Builder):
                 bv.create_database(temp_name)
                 bv.file.close()
 
-            with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:
-                bv.update_analysis_and_wait()
+            with binja.open_view(temp_name) as bv:
                 func = bv.get_function_at(0x00008440)
 
                 ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -1371,8 +1369,7 @@ class VerifyBuilder(Builder):
         def test_helper(value):
             file_name = self.unpackage_file("helloworld")
             try:
-                with binja.BinaryViewType['ELF'].open(file_name) as bv:
-                    bv.update_analysis_and_wait()
+                with binja.open_view(file_name) as bv:
                     func = bv.get_function_at(0x00008440)
 
                     ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -1392,10 +1389,8 @@ class VerifyBuilder(Builder):
 
                     temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                     bv.create_database(temp_name)
-                    bv.file.close()
 
-                with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:
-                    bv.update_analysis_and_wait()
+                with binja.open_view(temp_name) as bv:
                     func = bv.get_function_at(0x00008440)
 
                     ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -1405,7 +1400,6 @@ class VerifyBuilder(Builder):
                     def_ins = func.mlil[def_ins_idx]
 
                     assert(def_ins.get_possible_reg_values_after('r3') == value)
-                    bv.file.close()
 
                 os.unlink(temp_name)
                 return True

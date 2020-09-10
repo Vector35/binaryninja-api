@@ -4677,7 +4677,7 @@ class BinaryView(object):
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_possiblevalueset_string(self, value, state, here=0):
+	def parse_possiblevalueset(self, value, state, here=0):
 		r"""
 		Evaluates a string representation of a PossibleValueSet into an instance of the ``PossibleValueSet`` value.
 
@@ -4698,20 +4698,20 @@ class BinaryView(object):
 		:rtype: PossibleValueSet
 		:Example:
 
-			>>> psv_c = bv.parse_possiblevalueset_string("400", RegisterValueType.ConstantValue)
+			>>> psv_c = bv.parse_possiblevalueset("400", RegisterValueType.ConstantValue)
 			>>> psv_c
 			<const 0x400>
-			>>> psv_ur = bv.parse_possiblevalueset_string("1:10:1", RegisterValueType.UnsignedRangeValue)
+			>>> psv_ur = bv.parse_possiblevalueset("1:10:1", RegisterValueType.UnsignedRangeValue)
 			>>> psv_ur
 			<unsigned ranges: [<range: 0x1 to 0x10>]>
-			>>> psv_is = bv.parse_possiblevalueset_string("1,2,3", RegisterValueType.InSetOfValues)
+			>>> psv_is = bv.parse_possiblevalueset("1,2,3", RegisterValueType.InSetOfValues)
 			>>> psv_is
 			<in set([0x1, 0x2, 0x3])>
 			>>>
 		"""
 		result = core.BNPossibleValueSet();
 		errors = ctypes.c_char_p();
-		if not core.BNParsePossibleValueSetString(self.handle, value, state, result, here, errors):
+		if not core.BNParsePossibleValueSet(self.handle, value, state, result, here, errors):
 			if errors:
 				error_str = errors.value.decode("utf-8")
 			else:

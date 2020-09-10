@@ -382,13 +382,15 @@ class PossibleValueSet(object):
 	def __eq__(self, other):
 		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, numbers.Integral):
 			return self.value == other
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and hasattr(other, 'type') and other.type == self.type:
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue]:
 			return self.value == other.value
-		elif self.type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self.type:
+		elif self.type == RegisterValueType.StackFrameOffset:
 			return self.offset == other.offset
-		elif self.type in [RegisterValueType.SignedRangeValue, RegisterValueType.UnsignedRangeValue] and hasattr(other, 'type') and other.type == self.type:
+		elif self.type in [RegisterValueType.SignedRangeValue, RegisterValueType.UnsignedRangeValue]:
 			return self.ranges == other.ranges
-		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues] and hasattr(other, 'type') and other.type == self.type:
+		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues]:
 			return self.values == other.values
 		elif self.type == RegisterValueType.UndeterminedValue and hasattr(other, 'type'):
 			return self.type == other.type

@@ -2310,7 +2310,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetUniqueIdentifierString(void);
 
 	// Plugin initialization
-	BINARYNINJACOREAPI void BNInitCorePlugins(void);
+	BINARYNINJACOREAPI bool BNInitCorePlugins(void);
 	BINARYNINJACOREAPI void BNDisablePlugins(void);
 	BINARYNINJACOREAPI bool BNIsPluginsEnabled(void);
 	BINARYNINJACOREAPI void BNInitUserPlugins(void);
@@ -3390,7 +3390,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNClearUserVariableValue(BNFunction* func, const BNVariable* var, const BNArchitectureAndAddress* defSite);
 	BINARYNINJACOREAPI BNUserVariableValue* BNGetAllUserVariableValues(BNFunction *func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeUserVariableValues(BNUserVariableValue* result);
-	BINARYNINJACOREAPI bool BNParsePossibleValueSet(BNBinaryView* view, const char* valueText, BNRegisterValueType state, 
+	BINARYNINJACOREAPI bool BNParsePossibleValueSet(BNBinaryView* view, const char* valueText, BNRegisterValueType state,
 			BNPossibleValueSet* result, uint64_t here, char** errors);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);

@@ -724,6 +724,42 @@ __attribute__ ((format (printf, 1, 2)))
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
+	/*!
+	    Split a single progress function into equally sized subparts.
+	    This function takes the original progress function and returns a new function whose signature
+	    is the same but whose output is shortened to correspond to the specified subparts.
+
+	    E.g. If subpart = 0 and subpartCount = 3, this returns a function that calls originalFn and has
+	    all of its progress multiplied by 1/3 and 0/3 added.
+
+	    Internally this works by calling originalFn with total = 1000000 and doing math on the current value
+
+	    \param originalFn Original progress function (usually updates a UI)
+	    \param subpart Index of subpart whose function to return, from 0 to (subpartCount - 1)
+	    \param subpartCount Total number of subparts
+	    \return A function that will call originalFn() within a modified progress region
+	 */
+	std::function<bool(size_t, size_t)> SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount);
+
+
+	/*!
+	    Split a single progress function into subparts.
+	    This function takes the original progress function and returns a new function whose signature
+	    is the same but whose output is shortened to correspond to the specified subparts.
+
+	    The length of a subpart is proportional to the sum of all the weights.
+	    E.g. If subpart = 1 and subpartWeights = { 0.25, 0.5, 0.25 }, this will return a function that calls
+	    originalFn and maps its progress to the range [0.25, 0.75]
+
+	    Internally this works by calling originalFn with total = 1000000 and doing math on the current value
+
+	    \param originalFn Original progress function (usually updates a UI)
+	    \param subpart Index of subpart whose function to return, from 0 to (subpartWeights.size() - 1)
+	    \param subpartWeights Weights of subparts, described above
+	    \return A function that will call originalFn() within a modified progress region
+	 */
+	std::function<bool(size_t, size_t)> SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
+
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
@@ -762,6 +798,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 		uint8_t& operator[](size_t offset);
 		const uint8_t& operator[](size_t offset) const;
+
+		bool operator==(const DataBuffer& other) const;
+		bool operator!=(const DataBuffer& other) const;
 
 		std::string ToEscapedString() const;
 		static DataBuffer FromEscapedString(const std::string& src);
@@ -819,6 +858,89 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 	struct InstructionTextToken;
+	struct UndoEntry;
+
+	struct DatabaseException: std::runtime_error
+	{
+		DatabaseException(const std::string& desc): std::runtime_error(desc.c_str()) {}
+	};
+
+	class KeyValueStore: public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
+	{
+	public:
+		KeyValueStore();
+		KeyValueStore(const DataBuffer& buffer);
+		KeyValueStore(BNKeyValueStore* store);
+
+		std::vector<std::string> GetKeys() const;
+
+		bool HasValue(const std::string& name) const;
+		Json::Value GetValue(const std::string& name) const;
+		DataBuffer GetBuffer(const std::string& name) const;
+		void SetValue(const std::string& name, const Json::Value& value);
+		void SetBuffer(const std::string& name, const DataBuffer& value);
+
+		DataBuffer GetSerializedData() const;
+
+		void BeginNamespace(const std::string& name);
+		void EndNamespace();
+
+		bool IsEmpty() const;
+		size_t ValueSize() const;
+		size_t DataSize() const;
+		size_t ValueStorageSize() const;
+		size_t NamespaceSize() const;
+	};
+
+	class Database;
+
+	class Snapshot: public CoreRefCountObject<BNSnapshot, BNNewSnapshotReference, BNFreeSnapshot>
+	{
+	public:
+		Snapshot(BNSnapshot* snapshot);
+
+		Ref<Database> GetDatabase();
+		int64_t GetId();
+		std::string GetName();
+		bool IsAutoSave();
+		Ref<Snapshot> GetFirstParent();
+		std::vector<Ref<Snapshot>> GetParents();
+		std::vector<Ref<Snapshot>> GetChildren();
+		DataBuffer GetFileContents();
+		DataBuffer GetFileContentsHash();
+		std::vector<UndoEntry> GetUndoEntries();
+		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);
+		Ref<KeyValueStore> ReadData();
+		Ref<KeyValueStore> ReadData(const std::function<void(size_t, size_t)>& progress);
+		bool HasAncestor(Ref<Snapshot> other);
+	};
+
+	class FileMetadata;
+
+	class Database: public CoreRefCountObject<BNDatabase, BNNewDatabaseReference, BNFreeDatabase>
+	{
+	public:
+		Database(BNDatabase* database);
+
+		Ref<Snapshot> GetSnapshot(int64_t id);
+		std::vector<Ref<Snapshot>> GetSnapshots();
+		void SetCurrentSnapshot(int64_t id);
+		Ref<Snapshot> GetCurrentSnapshot();
+		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
+		void RemoveSnapshot(int64_t id);
+
+		std::vector<std::string> GetGlobalKeys() const;
+		bool HasGlobal(const std::string& key) const;
+		Json::Value ReadGlobal(const std::string& key) const;
+		void WriteGlobal(const std::string& key, const Json::Value& val);
+		DataBuffer ReadGlobalData(const std::string& key) const;
+		void WriteGlobalData(const std::string& key, const DataBuffer& val);
+
+		Ref<FileMetadata> GetFile();
+
+		Ref<KeyValueStore> ReadAnalysisCache() const;
+		void WriteAnalysisCache(Ref<KeyValueStore> val);
+	};
 
 	struct UndoAction
 	{
@@ -893,6 +1015,11 @@ __attribute__ ((format (printf, 1, 2)))
 		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
 		bool SaveAutoSnapshot(BinaryView* data,
 			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+		void GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+			const std::function<void(size_t, size_t)>& progress);
+		void ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+			const std::function<void(size_t, size_t)>& progress, bool openForConfiguration = false, bool restoreRawView = true);
+		Ref<Database> GetDatabase();
 
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
@@ -908,6 +1035,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<Ref<User>> GetUsers();
 		std::vector<UndoEntry> GetUndoEntries();
+		void ClearUndoEntries();
 
 		bool OpenProject();
 		void CloseProject();

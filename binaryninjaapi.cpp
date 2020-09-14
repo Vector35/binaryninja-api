@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include <numeric>
 
 using namespace BinaryNinja;
 using namespace std;
@@ -385,4 +386,41 @@ map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 		result[info[i].name] = info[i].value;
 	BNFreeMemoryUsageInfo(info, count);
 	return result;
+}
+
+
+std::function<bool(size_t, size_t)>
+BinaryNinja::SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount)
+{
+	return SplitProgress(originalFn, subpart, std::vector<double>(subpartCount, 1.0 / (double)subpartCount));
+}
+
+
+std::function<bool(size_t, size_t)>
+BinaryNinja::SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights)
+{
+	if (!originalFn)
+		return [](size_t, size_t){ return true; };
+
+	// Normalize weights
+	double weightSum = std::accumulate(subpartWeights.begin(), subpartWeights.end(), 0.0);
+	if (weightSum < 0.0001f)
+		return [](size_t, size_t){ return true; };
+	// Keep a running count of weights for the start
+	std::vector<double> subpartStarts;
+	double start = 0.0;
+	for (auto i = 0; i < subpartWeights.size(); ++i)
+	{
+		subpartStarts.push_back(start);
+		subpartWeights[i] /= weightSum;
+		start += subpartWeights[i];
+	}
+
+	return [=](size_t current, size_t max) {
+		// Just use a large number for easy divisibility
+		size_t steps = 1000000;
+		double subpartSize = steps * subpartWeights[subpart];
+		double subpartProgress = ((double)current / (double)max) * subpartSize;
+		return originalFn(subpartStarts[subpart] * steps + subpartProgress, steps);
+	};
 }

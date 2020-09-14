@@ -223,6 +223,33 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
 }
 
 
+void FileMetadata::GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+	const std::function<void(size_t, size_t)>& progress)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progress;
+	BNGetSnapshotData(GetObject(), data->GetObject(), cache->GetObject(), &cb, DatabaseProgressCallback);
+}
+
+
+void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+	const std::function<void(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progress;
+	BNApplySnapshotData(GetObject(), file->GetObject(), data->GetObject(), cache->GetObject(), &cb, DatabaseProgressCallback, openForConfiguration, restoreRawView);
+}
+
+
+Ref<Database> FileMetadata::GetDatabase()
+{
+	BNDatabase* db = BNGetFileMetadataDatabase(m_object);
+	if (db == nullptr)
+		return nullptr;
+	return new Database(db);
+}
+
+
 bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 {
 	return BNRebase(data->GetObject(), address);
@@ -317,6 +344,12 @@ vector<UndoEntry> FileMetadata::GetUndoEntries()
 
 	//BNFreeUndoEntries(entries, count);
 	return result;
+}
+
+
+void FileMetadata::ClearUndoEntries()
+{
+	BNClearUndoEntries(m_object);
 }
 
 

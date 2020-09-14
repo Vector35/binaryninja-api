@@ -89,6 +89,28 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& buf)
 	return *this;
 }
 
+bool DataBuffer::operator==(const DataBuffer& other) const
+{
+	uint8_t* data = (uint8_t*)GetData();
+	uint8_t* otherData = (uint8_t*)other.GetData();
+	if (GetLength() != other.GetLength())
+		return false;
+	if (data == otherData)
+		return true;
+
+	for (size_t i = 0; i < GetLength(); i++)
+	{
+		if (data[i] != otherData[i])
+			return false;
+	}
+	return true;
+}
+
+bool DataBuffer::operator!=(const DataBuffer& other) const
+{
+	return !(*this == other);
+}
+
 void* DataBuffer::GetData()
 {
 	return BNGetDataBufferContents(m_buffer);

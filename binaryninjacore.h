@@ -155,6 +155,9 @@ extern "C"
 	struct BNBinaryViewType;
 	struct BNBinaryReader;
 	struct BNBinaryWriter;
+	struct BNKeyValueStore;
+	struct BNSnapshot;
+	struct BNDatabase;
 	struct BNFileMetadata;
 	struct BNTransform;
 	struct BNArchitecture;
@@ -2684,6 +2687,45 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 		void (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
+	BINARYNINJACOREAPI BNDatabase* BNGetFileMetadataDatabase(BNFileMetadata* file);
+
+	// Key value store
+	BINARYNINJACOREAPI BNKeyValueStore* BNNewKeyValueStoreReference(BNKeyValueStore* store);
+	BINARYNINJACOREAPI void BNFreeKeyValueStore(BNKeyValueStore* store);
+
+	BINARYNINJACOREAPI char** BNGetKeyValueStoreKeys(BNKeyValueStore* store, size_t* count);
+	BINARYNINJACOREAPI bool BNKeyValueStoreHasValue(BNKeyValueStore* store, const char* name);
+	BINARYNINJACOREAPI char* BNGetKeyValueStoreValue(BNKeyValueStore* store, const char* name);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name);
+	BINARYNINJACOREAPI void BNSetKeyValueStoreValue(BNKeyValueStore* store, const char* name, const char* value);
+	BINARYNINJACOREAPI void BNSetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name, const BNDataBuffer* value);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreSerializedData(BNKeyValueStore* store);
+	BINARYNINJACOREAPI void BNBeginKeyValueStoreNamespace(BNKeyValueStore* store, const char* name);
+	BINARYNINJACOREAPI void BNEndKeyValueStoreNamespace(BNKeyValueStore* store);
+	BINARYNINJACOREAPI bool BNIsKeyValueStoreEmpty(BNKeyValueStore* store);
+	BINARYNINJACOREAPI size_t BNGetKeyValueStoreValueSize(BNKeyValueStore* store);
+	BINARYNINJACOREAPI size_t BNGetKeyValueStoreDataSize(BNKeyValueStore* store);
+	BINARYNINJACOREAPI size_t BNGetKeyValueStoreValueStorageSize(BNKeyValueStore* store);
+	BINARYNINJACOREAPI size_t BNGetKeyValueStoreNamespaceSize(BNKeyValueStore* store);
+
+	// Database object
+	BINARYNINJACOREAPI BNDatabase* BNNewDatabaseReference(BNDatabase* database);
+	BINARYNINJACOREAPI void BNFreeDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseCurrentSnapshot(BNDatabase* database);
+	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseSnapshot(BNDatabase* database, int64_t id);
+
+	// Database snapshots
+	BINARYNINJACOREAPI BNSnapshot* BNNewSnapshotReference(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeSnapshot(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI int64_t BNGetSnapshotId(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNSnapshot* BNGetSnapshotParent(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNGetSnapshotName(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNIsSnapshotAutoSave(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotFileContents(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotData(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
+	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(BNBinaryView* data, uint64_t address, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));

@@ -223,6 +223,15 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
 }
 
 
+Ref<Database> FileMetadata::GetDatabase()
+{
+	BNDatabase* db = BNGetFileMetadataDatabase(m_object);
+	if (db == nullptr)
+		return nullptr;
+	return new Database(db);
+}
+
+
 bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 {
 	return BNRebase(data->GetObject(), address);

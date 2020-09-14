@@ -26,6 +26,7 @@ import binaryninja.log as log
 from binaryninja.binaryview import BinaryViewType
 import binaryninja.interaction as interaction
 from binaryninja.plugin import PluginCommand
+from binaryninja import disable_logging
 
 # 2-3 compatibility
 from binaryninja import range
@@ -76,6 +77,7 @@ def display_bininfo(bv):
 
 
 if __name__ == "__main__":
+	disable_logging()
 	print(get_bininfo(None))
 else:
 	PluginCommand.register("Binary Info", "Display basic info about the binary", display_bininfo)

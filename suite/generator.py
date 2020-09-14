@@ -125,12 +125,17 @@ class TestBinaryNinjaAPI(unittest.TestCase):
 
 if __name__ == "__main__":
     api_only = False
+    disable_logging = True
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if sys.argv[i] == '-v' or sys.argv[i] == '-V' or sys.argv[i] == '--verbose':
                 config.verbose = True
             elif sys.argv[i] == '--api-only':
                 config.api_only = True
+            elif sys.argv[i] == '--log':
+                disable_logging = False
+    if disable_logging:
+        testcommon.disable_logging()
 
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(rebasing_test)
@@ -322,6 +327,7 @@ def generate(test_store, outdir, exclude_binaries):
 
 
 def main():
+    testcommon.disable_logging()
     usage = "usage: %prog [-q] [-x] [-o <dir>] [-i <dir>]"
     parser = OptionParser(usage=usage)
     default_output = os.path.relpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "suite"))

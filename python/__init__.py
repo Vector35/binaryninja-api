@@ -177,6 +177,11 @@ def _init_plugins():
 
 _destruct_callbacks = _DestructionCallbackHandler()
 
+def disable_logging():
+	'''Disable logging in headless mode. By default, logging is enabled in headless mode.'''
+	_init_plugins()
+	close_logs()
+
 def bundled_plugin_path():
 	"""
 		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/getting-started.html#binary-path>`_

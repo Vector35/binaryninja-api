@@ -60,6 +60,9 @@ def fixStrRepr(string):
     return string.replace(b"\xe2\x80\xa6".decode("utf8"), "\\xe2\\x80\\xa6")
 
 
+def disable_logging():
+    binja.disable_logging()
+
 def get_file_list(test_store_rel):
     test_store = os.path.join(os.path.dirname(__file__), test_store_rel)
     all_files = []
@@ -889,7 +892,7 @@ class VerifyBuilder(Builder):
         try:
             with binja.open_view(file_name) as bv:
                 # ConstantValue
-                lhs = bv.parse_possiblevalueset("0", binja.RegisterValueType.ConstantValue) 
+                lhs = bv.parse_possiblevalueset("0", binja.RegisterValueType.ConstantValue)
                 rhs = binja.PossibleValueSet.constant(0)
                 assert lhs == rhs
                 lhs = bv.parse_possiblevalueset("$here + 2", binja.RegisterValueType.ConstantValue, 0x2000)

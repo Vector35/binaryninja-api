@@ -193,6 +193,7 @@ private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInGraph();
 	void viewInTypesView(std::string typeName = "");
+	void cycleILView(bool forward);
 	void copyAddressSlot();
 	void goToAddress();
 	void defineNameAtAddr(uint64_t addr);

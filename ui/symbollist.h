@@ -4,6 +4,7 @@
 #include <QtCore/QAbstractItemModel>
 #include <QtCore/QTimer>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QStyledItemDelegate>
 #include <vector>
 #include <deque>
 #include <set>
@@ -18,6 +19,18 @@
 
 class SymbolsView;
 static std::string emptyArch;
+
+class BINARYNINJAUIAPI SymbolListDelegate: public QStyledItemDelegate
+{
+	Q_OBJECT
+	QFont m_font;
+	int m_height, m_charWidth;
+
+public:
+	SymbolListDelegate(QWidget* parent);
+	void updateFonts();
+	virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+};
 
 class BINARYNINJAUIAPI SymbolListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
@@ -276,6 +289,7 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	BinaryViewRef m_data;
 	SymbolsView* m_functionsView;
 	SymbolListModel* m_list;
+	SymbolListDelegate* m_delegate;
 	QTimer* m_updateTimer;
 	bool m_disableScrollToFunction;
 

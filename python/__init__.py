@@ -157,15 +157,18 @@ class _DestructionCallbackHandler(object):
 		Function._unregister(func)
 
 
+_enable_default_log = True
 _plugin_init = False
 
 
 def _init_plugins():
+	global _enable_default_log
 	global _plugin_init
 	if not _plugin_init:
-		result = core.BNInitCorePlugins()
+		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.
+		is_headless = core.BNInitCorePlugins()
 		min_level = Settings().get_string("python.log.minLevel")
-		if result and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
+		if _enable_default_log and is_headless and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
 			log_to_stderr(LogLevel[min_level])
 		if not os.environ.get('BN_DISABLE_USER_PLUGINS'):
 			core.BNInitUserPlugins()
@@ -177,6 +180,13 @@ def _init_plugins():
 
 
 _destruct_callbacks = _DestructionCallbackHandler()
+
+
+def disable_default_log():
+	'''Disable default logging in headless mode for the current session. By default, logging in headless operation is controlled by the 'python.log.minLevel' settings.'''
+	global _enable_default_log
+	_enable_default_log = False
+	close_logs()
 
 def bundled_plugin_path():
 	"""

@@ -164,8 +164,9 @@ def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
 		result = core.BNInitCorePlugins()
-		if result is True and not core_ui_enabled() and sys.stderr.isatty():
-			log_to_stderr(LogLevel.InfoLog)
+		min_level = Settings().get_string("python.log.minLevel")
+		if result and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
+			log_to_stderr(LogLevel[min_level])
 		if not os.environ.get('BN_DISABLE_USER_PLUGINS'):
 			core.BNInitUserPlugins()
 		core.BNInitRepoPlugins()
@@ -176,11 +177,6 @@ def _init_plugins():
 
 
 _destruct_callbacks = _DestructionCallbackHandler()
-
-def disable_logging():
-	'''Disable logging in headless mode. By default, logging is enabled in headless mode.'''
-	_init_plugins()
-	close_logs()
 
 def bundled_plugin_path():
 	"""

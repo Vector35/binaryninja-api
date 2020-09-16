@@ -59,10 +59,6 @@ def fixStrRepr(string):
     # Python 2 and Python 3 represent Unicode character reprs differently
     return string.replace(b"\xe2\x80\xa6".decode("utf8"), "\\xe2\\x80\\xa6")
 
-
-def disable_logging():
-    binja.disable_logging()
-
 def get_file_list(test_store_rel):
     test_store = os.path.join(os.path.dirname(__file__), test_store_rel)
     all_files = []

@@ -2668,7 +2668,7 @@ class BinaryView(object):
 		``write`` writes the bytes in ``data`` to the virtual address ``addr``.
 
 		:param int addr: virtual address to write to.
-		:param str data: data to be written at addr.
+		:param Union[bytes, bytearray, str] data: data to be written at addr.
 		:return: number of bytes written to virtual address ``addr``
 		:rtype: int
 		:Example:
@@ -2680,11 +2680,8 @@ class BinaryView(object):
 			>>> bv.read(0,4)
 			'AAAA'
 		"""
-		if not (isinstance(data, bytes) or isinstance(data, bytearray)):
-			if isinstance(data, str):
-				buf = databuffer.DataBuffer(data.encode())
-			else:
-				raise TypeError("Must be bytes or str")
+		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
+			raise TypeError("Must be bytes, bytearray, or str")
 		else:
 			buf = databuffer.DataBuffer(data)
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
@@ -2694,7 +2691,7 @@ class BinaryView(object):
 		``insert`` inserts the bytes in ``data`` to the virtual address ``addr``.
 
 		:param int addr: virtual address to write to.
-		:param str data: data to be inserted at addr.
+		:param Union[bytes, bytearray, str] data: data to be inserted at addr.
 		:return: number of bytes inserted to virtual address ``addr``
 		:rtype: int
 		:Example:
@@ -2704,9 +2701,10 @@ class BinaryView(object):
 			>>> bv.read(0,8)
 			'BBBBAAAA'
 		"""
-		if not isinstance(data, bytes):
-			raise TypeError("Must be bytes")
-		buf = databuffer.DataBuffer(data)
+		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
+			raise TypeError("Must be bytes, bytearray, or str")
+		else:
+			buf = databuffer.DataBuffer(data)
 		return core.BNInsertViewBuffer(self.handle, addr, buf.handle)
 
 	def remove(self, addr, length):
@@ -5060,7 +5058,7 @@ class BinaryView(object):
 		``find_next_data`` searches for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
-		:param str data: data to search for
+		:param Union[bytes, bytearray, str] data: data to search for
 		:param FindFlag flags: (optional) defaults to case-insensitive data search
 
 			==================== ============================
@@ -5070,7 +5068,10 @@ class BinaryView(object):
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
 		"""
-		buf = databuffer.DataBuffer(str(data))
+		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
+			raise TypeError("Must be bytes, bytearray, or str")
+		else:
+			buf = databuffer.DataBuffer(data)
 		result = ctypes.c_ulonglong()
 		if not core.BNFindNextData(self.handle, start, buf.handle, result, flags):
 			return None

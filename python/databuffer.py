@@ -25,6 +25,7 @@ from binaryninja import _binaryninjacore as core
 
 # 2-3 compatibility
 from binaryninja import pyNativeStr
+from binaryninja import cstr
 import numbers
 
 
@@ -37,11 +38,10 @@ class DataBuffer(object):
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
 		else:
-			if bytes != str and isinstance(contents, str):
-				contents = contents.encode('charmap')
+			if isinstance(contents, bytes) or isinstance(contents, bytearray) or isinstance(contents, str):
+				contents = cstr(contents)
 			else:
-				if isinstance(contents, bytearray):
-					contents = bytes(contents)
+				raise TypeError("DataBuffer contents must be bytes, bytearray, or str")
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):

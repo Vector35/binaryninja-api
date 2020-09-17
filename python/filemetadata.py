@@ -408,6 +408,9 @@ class FileMetadata(object):
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
 	def save_auto_snapshot(self, progress_func = None, settings = None):
+		if settings is not None:
+			settings = settings.handle
+
 		if progress_func is None:
 			return core.BNSaveAutoSnapshot(self.raw.handle, settings)
 		else:

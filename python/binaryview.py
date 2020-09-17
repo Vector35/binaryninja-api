@@ -4346,6 +4346,9 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):
 			return None
+		if var.address < next_data_var_start:
+			if not core.BNGetDataVariableAtAddress(self.handle, var.address + core.BNGetTypeWidth(var.type), var):
+				return None
 		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
 
 	def get_next_data_var_start_after(self, addr):

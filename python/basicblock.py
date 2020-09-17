@@ -495,7 +495,7 @@ class BasicBlock(object):
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 
-		..warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		.. warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
 		"""

@@ -2446,10 +2446,10 @@ class Function(object):
 		"""
 		``set_auto_instr_highlight`` highlights the instruction at the specified address with the supplied color
 
-		..warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		.. warning: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param int addr: virtual address of the instruction to be highlighted
-		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor|highlight.HighlightColor color: Color value to use for highlighting
 		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
 		"""
 		if arch is None:
@@ -2465,7 +2465,7 @@ class Function(object):
 		``set_user_instr_highlight`` highlights the instruction at the specified address with the supplied color
 
 		:param int addr: virtual address of the instruction to be highlighted
-		:param HighlightStandardColor or highlight.HighlightColor color: Color value to use for highlighting
+		:param HighlightStandardColor|highlight.HighlightColor color: Color value to use for highlighting
 		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
 		:Example:
 
@@ -2680,7 +2680,7 @@ class Function(object):
 		`set_user_var_value` allows the user to specify a PossibleValueSet value for an MLIL variable at its
 		definition site. 
 
-		..warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow
+		.. warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow
 		to compute and propagate values which depend on the current variable. This implies that branch conditions
 		whose values can be determined statically will be computed, leading to potential branch elimination at
 		the HLIL layer.

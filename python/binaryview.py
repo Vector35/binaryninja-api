@@ -4340,15 +4340,17 @@ class BinaryView(object):
 			<var 0x1000003c: int32_t>
 			>>>
 		"""
-		next_data_var_start = core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
-		if next_data_var_start == self.end:
-			return None
-		var = core.BNDataVariable()
-		if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):
-			return None
-		if var.address < next_data_var_start:
-			if not core.BNGetDataVariableAtAddress(self.handle, var.address + core.BNGetTypeWidth(var.type), var):
+		while True:
+			next_data_var_start = core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
+			if next_data_var_start == self.end:
 				return None
+			var = core.BNDataVariable()
+			if not core.BNGetDataVariableAtAddress(self.handle, next_data_var_start, var):
+				return None
+			if var.address < next_data_var_start:
+				addr = var.address + core.BNGetTypeWidth(var.type)
+				continue
+			break
 		return DataVariable(var.address, types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
 
 	def get_next_data_var_start_after(self, addr):

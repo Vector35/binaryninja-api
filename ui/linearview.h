@@ -9,6 +9,8 @@
 #include "menus.h"
 #include "statusbarwidget.h"
 #include "uicontext.h"
+#include "instructionedit.h"
+#include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
 #define MAX_STRING_TYPE_LENGTH 1048576
@@ -122,6 +124,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
 	BNFunctionGraphType m_type;
+
+	InstructionEdit* m_instrEdit;
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
@@ -254,6 +258,9 @@ private Q_SLOTS:
 
 	void setStackAdjustment();
 	void setCallTypeAdjustment();
+
+	void editInstruction();
+	void instrEditDoneEvent();
 
 Q_SIGNALS:
 	void notifyResizeEvent(int width, int height);

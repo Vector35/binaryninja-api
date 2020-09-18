@@ -3853,6 +3853,22 @@ class BinaryView(object):
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
+	def can_assemble(self, arch=None):
+		"""
+		``can_assemble`` queries the architecture plugin to determine if the architecture can assemble instructions.
+
+		:return: True if the architecture can assemble, False otherwise
+		:rtype: bool
+		:Example:
+
+			>>> bv.can_assemble()
+			True
+			>>>
+		"""
+		if arch is None:
+			arch = self.arch
+		return core.BNCanAssemble(self.handle, arch.handle)
+
 	def is_never_branch_patch_available(self, addr, arch=None):
 		"""
 		``is_never_branch_patch_available`` queries the architecture plugin to determine if the instruction at the

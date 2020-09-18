@@ -643,6 +643,11 @@ void Architecture::FreeTypeListCallback(void*, BNTypeWithConfidence* types, size
 	delete[] types;
 }
 
+bool Architecture::CanAssembleCallback(void* ctxt)
+{
+	Architecture* arch = (Architecture*)ctxt;
+	return arch->CanAssemble();
+}
 
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
@@ -779,6 +784,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.freeNameAndTypeList = FreeNameAndTypeListCallback;
 	callbacks.getIntrinsicOutputs = GetIntrinsicOutputsCallback;
 	callbacks.freeTypeList = FreeTypeListCallback;
+	callbacks.canAssemble = CanAssembleCallback;
 	callbacks.assemble = AssembleCallback;
 	callbacks.isNeverBranchPatchAvailable = IsNeverBranchPatchAvailableCallback;
 	callbacks.isAlwaysBranchPatchAvailable = IsAlwaysBranchPatchAvailableCallback;
@@ -1145,6 +1151,10 @@ uint32_t Architecture::GetRegisterByName(const string& name)
 	return BNGetArchitectureRegisterByName(m_object, name.c_str());
 }
 
+bool Architecture::CanAssemble()
+{
+	return false;
+}
 
 bool Architecture::Assemble(const std::string&, uint64_t, DataBuffer&, std::string& errors)
 {
@@ -1770,6 +1780,10 @@ vector<Confidence<Ref<Type>>> CoreArchitecture::GetIntrinsicOutputs(uint32_t int
 	return result;
 }
 
+bool CoreArchitecture::CanAssemble()
+{
+	return BNCanArchitectureAssemble(m_object);
+}
 
 bool CoreArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
 {
@@ -2108,6 +2122,10 @@ vector<Confidence<Ref<Type>>> ArchitectureExtension::GetIntrinsicOutputs(uint32_
 	return m_base->GetIntrinsicOutputs(intrinsic);
 }
 
+bool ArchitectureExtension::CanAssemble()
+{
+	return m_base->CanAssemble();
+}
 
 bool ArchitectureExtension::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
 {

@@ -1637,6 +1637,8 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Tag> CreateAutoDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 
+		bool CanAssemble(Architecture* arch);
+
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
@@ -2102,6 +2104,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static BNTypeWithConfidence* GetIntrinsicOutputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
 		static void FreeTypeListCallback(void* ctxt, BNTypeWithConfidence* types, size_t count);
 
+		static bool CanAssembleCallback(void* ctxt);
 		static bool AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors);
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
@@ -2192,6 +2195,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
 		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic);
 
+		virtual bool CanAssemble();
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
 		/*! IsNeverBranchPatchAvailable returns true if the instruction at addr can be patched to never branch.
@@ -2342,6 +2346,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
 		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override;
 
+		virtual bool CanAssemble() override;
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;
@@ -2417,6 +2422,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
 		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override;
 
+		virtual bool CanAssemble() override;
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors) override;
 
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override;

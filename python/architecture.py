@@ -453,6 +453,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		core.BNFreeTypeLibraryList(handles, count.value)
 		return result
 
+	@property
+	def can_assemble(self):
+		"""returns if the architecture can assemble instructions (read-only)"""
+		return core.BNCanArchitectureAssemble(self.handle)
+
 	def _init(self, ctxt, handle):
 		self.handle = handle
 

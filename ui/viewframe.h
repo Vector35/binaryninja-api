@@ -258,6 +258,8 @@ public:
 	static void registerActions();
 
 	static ViewFrame* viewFrameForWidget(QWidget* widget);
+	static bool lineHasInstructionToken(const BinaryNinja::DisassemblyTextLine& line);
+	static QString getDisassemblyText(const std::vector<BinaryNinja::DisassemblyTextLine>& lines);
 
 public Q_SLOTS:
 	virtual void assemble();

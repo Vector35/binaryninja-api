@@ -2284,6 +2284,11 @@ Ref<Tag> BinaryView::CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, cons
 	return tag;
 }
 
+bool BinaryView::CanAssemble(Architecture* arch)
+{
+	return BNCanAssemble(m_object, arch->GetObject());
+
+}
 
 bool BinaryView::IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr)
 {

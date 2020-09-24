@@ -112,6 +112,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	bool m_updateBounds;
 
 	LinearViewCursorPosition m_cursorPosition, m_selectionStartPos;
+	bool m_cursorAscii;
 	bool m_tokenSelection = false;
 	HighlightTokenState m_highlight;
 	uint64_t m_navByRefTarget;

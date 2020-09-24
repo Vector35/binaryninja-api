@@ -9,9 +9,9 @@ class BINARYNINJAUIAPI ClickableLabel: public QLabel
 public:
 	ClickableLabel(QWidget* parent = nullptr, const QString& name = ""): QLabel(parent) { setText(name); }
 
-signals:
+Q_SIGNALS:
 	void clicked();
 
 protected:
-	void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) emit clicked(); }
+	void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) Q_EMIT clicked(); }
 };

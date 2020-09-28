@@ -530,6 +530,16 @@ class HighLevelILInstruction(object):
 		return self.medium_level_il
 
 	@property
+	def low_level_il(self):
+		"""Low level IL form of this expression"""
+		return self.mlil.llil
+
+	@property
+	def llil(self):
+		"""Alias for low_level_il"""
+		return self.low_level_il
+
+	@property
 	def il_basic_block(self):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
 		return HighLevelILBasicBlock(self._function.source_function.view, core.BNGetHighLevelILBasicBlockForInstruction(self._function.handle, self._instr_index), self._function)

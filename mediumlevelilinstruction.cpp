@@ -1268,6 +1268,18 @@ size_t MediumLevelILInstructionBase::GetLowLevelILExprIndex() const
 }
 
 
+size_t MediumLevelILInstructionBase::GetHighLevelILInstructionIndex() const
+{
+	return function->GetHighLevelILInstructionIndex(instructionIndex);
+}
+
+
+size_t MediumLevelILInstructionBase::GetHighLevelILExprIndex() const
+{
+	return function->GetHighLevelILExprIndex(exprIndex);
+}
+
+
 bool MediumLevelILInstructionBase::HasLowLevelIL() const
 {
 	Ref<LowLevelILFunction> func = function->GetLowLevelIL();

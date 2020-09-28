@@ -776,6 +776,27 @@ size_t MediumLevelILFunction::GetLowLevelILExprIndex(size_t expr) const
 }
 
 
+Ref<HighLevelILFunction> MediumLevelILFunction::GetHighLevelIL() const
+{
+	BNHighLevelILFunction* func = BNGetHighLevelILForMediumLevelIL(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
+size_t MediumLevelILFunction::GetHighLevelILInstructionIndex(size_t instr) const
+{
+	return BNGetHighLevelILInstructionIndex(m_object, instr);
+}
+
+
+size_t MediumLevelILFunction::GetHighLevelILExprIndex(size_t expr) const
+{
+	return BNGetHighLevelILExprIndex(m_object, expr);
+}
+
+
 Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(size_t expr)
 {
 	BNTypeWithConfidence result = BNGetMediumLevelILExprType(m_object, expr);

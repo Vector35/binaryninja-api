@@ -1026,6 +1026,15 @@ class LowLevelILInstruction(object):
 		return self.mapped_medium_level_il
 
 	@property
+	def high_level_il(self):
+		"""Gets the high level IL expression corresponding to this expression (may be None for eliminated instructions)"""
+		return self.mlil.hlil
+
+	@property
+	def hlil(self):
+		return self.high_level_il
+
+	@property
 	def value(self):
 		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetLowLevelILExprValue(self._function.handle, self.expr_index)
@@ -2998,6 +3007,24 @@ class LowLevelILFunction(object):
 		if result >= core.BNGetMediumLevelILExprCount(med_il.handle):
 			return None
 		return result
+
+	def get_high_level_il_instruction_index(self, instr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		mlil_instr = self.get_medium_level_il_instruction_index(instr)
+		if mlil_instr is None:
+			return None
+		return med_il.get_high_level_il_instruction_index(mlil_instr)
+
+	def get_high_level_il_expr_index(self, expr):
+		med_il = self.medium_level_il
+		if med_il is None:
+			return None
+		mlil_expr = self.get_medium_level_il_expr_index(expr)
+		if mlil_expr is None:
+			return None
+		return med_il.get_high_level_il_expr_index(mlil_expr)
 
 	def create_graph(self, settings = None):
 		if settings is not None:

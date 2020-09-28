@@ -470,6 +470,19 @@ class MediumLevelILInstruction(object):
 		return self.low_level_il
 
 	@property
+	def high_level_il(self):
+		"""High level IL form of this expression"""
+		expr = self._function.get_high_level_il_expr_index(self._expr_index)
+		if expr is None:
+			return None
+		return binaryninja.highlevelil.HighLevelILInstruction(self._function.high_level_il, expr)
+
+	@property
+	def hlil(self):
+		"""Alias for high_level_il"""
+		return self.high_level_il
+
+	@property
 	def ssa_memory_version(self):
 		"""Version of active memory contents in SSA form for this instruction"""
 		return core.BNGetMediumLevelILSSAMemoryVersionAtILInstruction(self._function.handle, self._instr_index)
@@ -927,6 +940,18 @@ class MediumLevelILFunction(object):
 		"""Alias for low_level_il"""
 		return self.low_level_il
 
+	@property
+	def high_level_il(self):
+		"""High level IL for this medium level IL."""
+		result = core.BNGetHighLevelILForMediumLevelIL(self.handle)
+		if not result:
+			return None
+		return binaryninja.highlevelil.HighLevelILFunction(self._arch, result, self._source_function)
+
+	@property
+	def hlil(self):
+		return self.high_level_il
+
 	def get_instruction_start(self, addr, arch = None):
 		if arch is None:
 			arch = self._arch
@@ -1134,6 +1159,24 @@ class MediumLevelILFunction(object):
 			return None
 		result = core.BNGetLowLevelILExprIndex(self.handle, expr)
 		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
+			return None
+		return result
+
+	def get_high_level_il_instruction_index(self, instr):
+		high_il = self.high_level_il
+		if high_il is None:
+			return None
+		result = core.BNGetHighLevelILInstructionIndex(self.handle, instr)
+		if result >= core.BNGetHighLevelILInstructionCount(high_il.handle):
+			return None
+		return result
+
+	def get_high_level_il_expr_index(self, expr):
+		high_il = self.high_level_il
+		if high_il is None:
+			return None
+		result = core.BNGetHighLevelILExprIndex(self.handle, expr)
+		if result >= core.BNGetHighLevelILExprCount(high_il.handle):
 			return None
 		return result
 

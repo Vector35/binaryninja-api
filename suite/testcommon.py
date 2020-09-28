@@ -452,6 +452,22 @@ class TestBuilder(Builder):
         """BinaryViewType list doesnt match"""
         return ["BinaryViewType: " + x.name for x in binja.BinaryViewType.list]
 
+    def test_deprecated_BinaryViewType(self):
+        """deprecated BinaryViewType list doesnt match"""
+        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "fat_macho_9arch.bndb")
+        if not os.path.exists(file_name):
+            return [""]
+
+        with binja.filemetadata.FileMetadata().open_existing_database(file_name, None) as bv:
+            view_types = []
+            for view_type in bv.available_view_types:
+                if view_type.is_deprecated:
+                    view_types.append('BinaryViewType: %s (deprecated)' % view_type.name)
+                else:
+                    view_types.append('BinaryViewType: %s' % view_type.name)
+
+            return view_types
+
     def test_Architecture_list(self):
         """Architecture list doesnt match"""
         return ["Arch name: " + x.name for x in binja.Architecture.list]
@@ -543,7 +559,7 @@ class TestBuilder(Builder):
             return [""]
 
         retinfo = []
-        file_name = os.path.join(self.test_store, "..", "pwnadventurez.nes")
+        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "pwnadventurez.nes")
         bv = binja.BinaryViewType["NES Bank 0"].open(file_name)
 
         for i in bv.platform.arch.calling_conventions:

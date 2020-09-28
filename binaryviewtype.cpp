@@ -214,6 +214,10 @@ string BinaryViewType::GetLongName()
 	return result;
 }
 
+bool BinaryViewType::IsDeprecated()
+{
+	return BNIsBinaryViewTypeDeprecated(m_object);
+}
 
 CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(type)
 {

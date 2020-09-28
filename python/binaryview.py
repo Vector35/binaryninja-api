@@ -731,6 +731,11 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		"""BinaryView long name (read-only)"""
 		return core.BNGetBinaryViewTypeLongName(self.handle)
 
+	@property
+	def is_deprecated(self):
+		"""returns if the BinaryViewType is deprecated (read-only)"""
+		return core.BNIsBinaryViewTypeDeprecated(self.handle)
+
 	def create(self, data):
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
 		if view is None:

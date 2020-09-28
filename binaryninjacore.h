@@ -2618,6 +2618,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNNavigate(BNFileMetadata* file, const char* view, uint64_t offset);
 
 	BINARYNINJACOREAPI BNBinaryView* BNGetFileViewOfType(BNFileMetadata* file, const char* name);
+	
+	BINARYNINJACOREAPI char** BNGetExistingViews(BNFileMetadata* file, size_t* count);
 
 	// Binary view access
 	BINARYNINJACOREAPI BNBinaryView* BNNewViewReference(BNBinaryView* view);
@@ -2764,6 +2766,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeBinaryViewTypeList(BNBinaryViewType** types);
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeName(BNBinaryViewType* type);
 	BINARYNINJACOREAPI char* BNGetBinaryViewTypeLongName(BNBinaryViewType* type);
+	BINARYNINJACOREAPI bool BNIsBinaryViewTypeDeprecated(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNBinaryView* BNParseBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);

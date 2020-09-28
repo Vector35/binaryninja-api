@@ -940,6 +940,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Navigate(const std::string& view, uint64_t offset);
 
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
+		std::vector<std::string> GetExistingViews() const;
 	};
 
 	class Function;
@@ -1831,6 +1832,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::string GetName();
 		std::string GetLongName();
+
+		bool IsDeprecated();
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
 		virtual BinaryView* Parse(BinaryView* data) = 0;

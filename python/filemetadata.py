@@ -28,6 +28,7 @@ from binaryninja import _binaryninjacore as core
 from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
 from binaryninja import log
 from binaryninja.enums import SaveOption
+from binaryninja import pyNativeStr
 
 class NavigationHandler(object):
 	def _register(self, handle):
@@ -433,3 +434,13 @@ class FileMetadata(object):
 			if view is None:
 				return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+
+	@property
+	def existing_views(self):
+		length = ctypes.c_ulonglong()
+		result = core.BNGetExistingViews(self.handle, ctypes.byref(length))
+		views = []
+		for i in range(length.value):
+			views.append(pyNativeStr(result[i]))
+		core.BNFreeStringList(result, length)
+		return views

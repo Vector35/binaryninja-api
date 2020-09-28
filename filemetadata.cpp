@@ -349,6 +349,19 @@ Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
 	return new BinaryView(view);
 }
 
+std::vector<std::string> FileMetadata::GetExistingViews() const
+{
+	size_t count;
+	char** views = BNGetExistingViews(m_object, &count);
+	vector<string> result;
+	result.reserve(count);
+
+	for (size_t i = 0; i < count; i++)
+		result.push_back(string(views[i]));
+
+	BNFreeStringList(views, count);
+	return result;
+}
 
 SaveSettings::SaveSettings()
 {

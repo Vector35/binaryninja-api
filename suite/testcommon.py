@@ -1541,3 +1541,16 @@ class VerifyBuilder(Builder):
             self.delete_package("helloworld")
             callback_should_run = False
 
+    def test_load_old_database(self):
+        """Load a database produced by Binary Ninja v1.2.1921"""
+        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "binja_v1.2.1921_bin_ls.bndb")
+        if not os.path.exists(file_name):
+            return False
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return False
+            if bv.file.snapshot_data_applied_without_error:
+                return True
+
+        return False

@@ -363,6 +363,12 @@ std::vector<std::string> FileMetadata::GetExistingViews() const
 	return result;
 }
 
+bool FileMetadata::IsSnapshotDataAppliedWithoutError() const
+{
+	return BNIsSnapshotDataAppliedWithoutError(m_object);
+}
+
+
 SaveSettings::SaveSettings()
 {
 	m_object = BNCreateSaveSettings();

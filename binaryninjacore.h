@@ -2637,6 +2637,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI char** BNGetExistingViews(BNFileMetadata* file, size_t* count);
 
+	BINARYNINJACOREAPI bool BNIsSnapshotDataAppliedWithoutError(BNFileMetadata* view);
+
 	// Binary view access
 	BINARYNINJACOREAPI BNBinaryView* BNNewViewReference(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNFreeBinaryView(BNBinaryView* view);

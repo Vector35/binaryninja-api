@@ -263,6 +263,10 @@ class FileMetadata(object):
 		else:
 			return FileMetadata._associated_data[handle.value]
 
+	@property
+	def snapshot_data_applied_without_error(self):
+		return core.BNIsSnapshotDataAppliedWithoutError(self.handle)
+
 	def close(self):
 		"""
 		Closes the underlying file handle. It is recommended that this is done in a

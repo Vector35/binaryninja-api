@@ -532,6 +532,8 @@ class HighLevelILInstruction(object):
 	@property
 	def low_level_il(self):
 		"""Low level IL form of this expression"""
+		if self.mlil is None:
+			return None
 		return self.mlil.llil
 
 	@property

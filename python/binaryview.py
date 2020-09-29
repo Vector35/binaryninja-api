@@ -764,6 +764,9 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		:rtype: :py:class:`BinaryView` or ``None``
 		"""
 		sqlite = b"SQLite format 3"
+		if not isinstance(filename, str):
+			filename = str(filename)
+
 		isDatabase = filename.endswith(".bndb")
 		if isDatabase:
 			f = open(filename, 'rb')

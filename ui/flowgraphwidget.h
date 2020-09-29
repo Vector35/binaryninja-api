@@ -194,6 +194,7 @@ public:
 	void setGraph(FlowGraphRef graph, uint64_t addr);
 	void setGraph(FlowGraphRef graph, FlowGraphHistoryEntry* entry);
 	void setRelatedGraph(FlowGraphRef graph);
+	void setRelatedGraph(FlowGraphRef graph, uint64_t addr);
 	void updateToGraph(FlowGraphRef graph);
 	virtual void updateFonts() override;
 

@@ -5,14 +5,14 @@ import os
 import requests
 import sys
 import urllib
-
+import zipfile
+import logging
 from pathlib import Path
 
 class DownloadException(Exception):
     pass
 
 url='https://master.binary.ninja/headless-download'
-env_lic = 'HEADLESS_LICENSE'
 min_download = 8192
 
 def get_system_license_path() -> Path:
@@ -41,22 +41,7 @@ def get_serial_from_license(path: str) -> str:
 	with open(path) as f:
 		for license in [l for l in json.load(f) if 'Headless' in l['product']]:
 			return license['serial']
-		raise ValueError(f'No "computer" license in {path}')
-
-
-def get_serial_from_environment(env: str='HEADLESS_LICENSE') -> str:
-	"""Extracts the serial number from the license file referenced by the env
-
-	:param env: environment variable containing headless license path, defaults to 'HEADLESS_LICENSE'
-	:type env: str, optional
-	:raises ValueError: When provided envronment variable doesn't exist or license doesn't contain a headless license.
-	:return: the serial number
-	:rtype: str
-	"""
-	if env not in os.environ:
-		raise ValueError(f'Please add an environment variable {env} pointing to your headless Binary Ninja license')
-
-	return get_serial_from_license(os.environ[env])
+		raise ValueError(f'No "Headless" license in {path}')
 
 
 def download_headless(serial: str, output_path: str=None, dev: bool=False) -> str:
@@ -86,28 +71,45 @@ def download_headless(serial: str, output_path: str=None, dev: bool=False) -> st
 		f.write(content.content)
 	return output_path
 
+def install_zip(zippath: str, installpath: str, clean: bool):
+	with zipfile.ZipFile(zippath, 'r') as zip_ref:
+		zip_ref.extractall(installpath)
+	if clean:
+		os.unlink(zippath)
+
+def download_and_install(serial: str=None, downloaddir: str=None, dev: bool=False, clean: bool=False, install: bool=False, installdir: str='/usr/local/bin'):
+	env_lic = 'BN_HEADLESS_LICENSE'
+	if serial is None:
+		if env_lic in os.environ:
+			license_path = os.environ[env_lic]
+		else:
+			license_path = get_system_license_path()
+		serial = get_serial_from_license(license_path)
+
+	download_path = download_headless(serial, downloaddir, dev)
+	logging.info(f"Successfully downloaded to: {download_path}")
+	if install is not None:
+		install_zip(download_path, installdir, clean)
+		logging.info(f"Successfully installed to {installdir}")
+
+
 if __name__ == '__main__':
 	import argparse
 	parser = argparse.ArgumentParser(description='Download a Binary Ninja installer given a headless license')
 	parser.add_argument('--serial', default=None, help='serial number')
-	parser.add_argument('--env', default=False, action='store_true', help='will extract serial from enviroment variable "HEADLESS_LICENSE" if not specfied')
 	parser.add_argument('--dev', default=False, action='store_true', help='download the development branch')
 	parser.add_argument('--output', default=None, help='path to write the file to (defaults to current directory)')
 	parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Don\'t show any output')
+	parser.add_argument('-i', '--install', default=False, action='store_true', help='Install after downloading')
+	parser.add_argument('-d', '--dir', default='/usr/local/bin', help='Install into provided directory used only when \'-i\' is specified')
+	parser.add_argument('-c', '--clean', default=False, action='store_true', help='Delete zip file after installation.')
 	args = parser.parse_args()
 
+	logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+	if args.quiet:
+		logging.disable()
 	try:
-		if args.serial is None:
-			if args.env:
-				args.serial = get_serial_from_environment()
-			else:
-				args.serial = get_serial_from_license(get_system_license_path())
-
-		download_path = download_headless(args.serial, args.output, args.dev)
-		if not args.quiet:
-			print(f"Successfully downloaded to: {download_path}")
-		sys.exit(0)
+		download_and_install(args.serial, args.output, args.dev, args.clean, args.install, args.dir)
 	except Exception as e:
-		if not args.quiet:
-			print(e)
+		logging.critical(e)
 		sys.exit(1)

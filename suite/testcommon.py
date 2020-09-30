@@ -724,32 +724,32 @@ class TestBuilder(Builder):
         """Types produced different result"""
         file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
 
-            preprocessed = binja.preprocess_source("""
-            #ifdef nonexistant
-            int foo = 1;
-            long long foo1 = 1;
-            #else
-            int bar = 2;
-            long long bar1 = 2;
-            #endif
-            """)
-            source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
-            source = str(source) #TODO: remove when PY2 support has ended
-            typelist = bv.platform.parse_types_from_source(source)
-            inttype = binja.Type.int(4)
+                preprocessed = binja.preprocess_source("""
+                #ifdef nonexistant
+                int foo = 1;
+                long long foo1 = 1;
+                #else
+                int bar = 2;
+                long long bar1 = 2;
+                #endif
+                """)
+                source = '\n'.join([i.decode('charmap') for i in preprocessed[0].split(b'\n') if not b'#line' in i and len(i) > 0])
+                source = str(source) #TODO: remove when PY2 support has ended
+                typelist = bv.platform.parse_types_from_source(source)
+                inttype = binja.Type.int(4)
 
-            namedtype = binja.NamedTypeReference()
-            tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
-            retinfo = []
-            for i in range(len(typelist.variables)):
-                for j in typelist.variables.popitem():
-                    retinfo.append("Type: " + str(j))
-            retinfo.append("Named Type: " + str(namedtype))
+                namedtype = binja.NamedTypeReference()
+                tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
+                retinfo = []
+                for i in range(len(typelist.variables)):
+                    for j in typelist.variables.popitem():
+                        retinfo.append("Type: " + str(j))
+                retinfo.append("Named Type: " + str(namedtype))
 
-            retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
-            return retinfo
+                retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
+                return retinfo
         finally:
             self.delete_package("helloworld")
 
@@ -832,23 +832,23 @@ class TestBuilder(Builder):
         """LLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
         try:
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            # reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-            flag_list = ['c', 'p', 'a', 'z', 's', 'o']
-            retinfo = []
-            for func in bv.functions:
-                for bb in func.low_level_il.basic_blocks:
-                    for ins in bb:
-                        retinfo.append("LLIL first stack element: " + str(ins.get_stack_contents(0,1)))
-                        retinfo.append("LLIL second stack element: " + str(ins.get_stack_contents_after(0,1)))
-                        retinfo.append("LLIL possible first stack element: " + str(ins.get_possible_stack_contents(0,1)))
-                        retinfo.append("LLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0,1)))
-                        for flag in flag_list:
-                            retinfo.append("LLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
-                            retinfo.append("LLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
-                            retinfo.append("LLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values(flag))))
-                            retinfo.append("LLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values_after(flag))))
-            return fixOutput(retinfo)
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                # reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+                flag_list = ['c', 'p', 'a', 'z', 's', 'o']
+                retinfo = []
+                for func in bv.functions:
+                    for bb in func.low_level_il.basic_blocks:
+                        for ins in bb:
+                            retinfo.append("LLIL first stack element: " + str(ins.get_stack_contents(0,1)))
+                            retinfo.append("LLIL second stack element: " + str(ins.get_stack_contents_after(0,1)))
+                            retinfo.append("LLIL possible first stack element: " + str(ins.get_possible_stack_contents(0,1)))
+                            retinfo.append("LLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0,1)))
+                            for flag in flag_list:
+                                retinfo.append("LLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
+                                retinfo.append("LLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
+                                retinfo.append("LLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values(flag))))
+                                retinfo.append("LLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values_after(flag))))
+                return fixOutput(retinfo)
         finally:
             self.delete_package("jumptable_reordered")
 
@@ -856,32 +856,32 @@ class TestBuilder(Builder):
         """MLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
         try:
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-            flag_list = ['c', 'p', 'a', 'z', 's', 'o']
-            retinfo = []
-            for func in bv.functions:
-                for bb in func.mlil.basic_blocks:
-                    for ins in bb:
-                        retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
-                        retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))
-                        retinfo.append("MLIL second stack element: " + str(ins.get_stack_contents_after(0, 1)))
-                        retinfo.append("MLIL possible first stack element: " + str(ins.get_possible_stack_contents(0, 1)))
-                        retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
+                flag_list = ['c', 'p', 'a', 'z', 's', 'o']
+                retinfo = []
+                for func in bv.functions:
+                    for bb in func.mlil.basic_blocks:
+                        for ins in bb:
+                            retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
+                            retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))
+                            retinfo.append("MLIL second stack element: " + str(ins.get_stack_contents_after(0, 1)))
+                            retinfo.append("MLIL possible first stack element: " + str(ins.get_possible_stack_contents(0, 1)))
+                            retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
 
-                        for reg in reg_list:
-                            retinfo.append("MLIL reg {} var at {}: {}".format(reg, hex(ins.address), str(ins.get_var_for_reg(reg))))
-                            retinfo.append("MLIL reg {} value at {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value(reg))))
-                            retinfo.append("MLIL reg {} value after {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value_after(reg))))
-                            retinfo.append("MLIL reg {} possible value at {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values(reg)))))
-                            retinfo.append("MLIL reg {} possible value after {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values_after(reg)))))
+                            for reg in reg_list:
+                                retinfo.append("MLIL reg {} var at {}: {}".format(reg, hex(ins.address), str(ins.get_var_for_reg(reg))))
+                                retinfo.append("MLIL reg {} value at {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value(reg))))
+                                retinfo.append("MLIL reg {} value after {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value_after(reg))))
+                                retinfo.append("MLIL reg {} possible value at {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values(reg)))))
+                                retinfo.append("MLIL reg {} possible value after {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values_after(reg)))))
 
-                        for flag in flag_list:
-                            retinfo.append("MLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
-                            retinfo.append("MLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
-                            retinfo.append("MLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
-                            retinfo.append("MLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
-            return fixOutput(retinfo)
+                            for flag in flag_list:
+                                retinfo.append("MLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
+                                retinfo.append("MLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
+                                retinfo.append("MLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
+                                retinfo.append("MLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
+                return fixOutput(retinfo)
         finally:
             self.delete_package("jumptable_reordered")
 
@@ -889,85 +889,85 @@ class TestBuilder(Builder):
         """Event failure"""
         file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType['ELF'].open(file_name)
-            bv.update_analysis_and_wait()
+            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
 
-            results = []
+                bv.update_analysis_and_wait()
+                results = []
 
-            def simple_complete(self):
-                results.append("analysis complete")
-            _ = binja.AnalysisCompletionEvent(bv, simple_complete)
+                def simple_complete(self):
+                    results.append("analysis complete")
+                _ = binja.AnalysisCompletionEvent(bv, simple_complete)
 
-            class NotifyTest(binja.BinaryDataNotification):
-                def data_written(self, view, offset, length):
-                    results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
+                class NotifyTest(binja.BinaryDataNotification):
+                    def data_written(self, view, offset, length):
+                        results.append("data written: offset {0} length {1}".format(hex(offset), hex(length)))
 
-                def data_inserted(self, view, offset, length):
-                    results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
+                    def data_inserted(self, view, offset, length):
+                        results.append("data inserted: offset {0} length {1}".format(hex(offset), hex(length)))
 
-                def data_removed(self, view, offset, length):
-                    results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
+                    def data_removed(self, view, offset, length):
+                        results.append("data removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
-                def function_added(self, view, func):
-                    results.append("function added: {0}".format(func.name))
+                    def function_added(self, view, func):
+                        results.append("function added: {0}".format(func.name))
 
-                def function_removed(self, view, func):
-                    results.append("function removed: {0}".format(func.name))
+                    def function_removed(self, view, func):
+                        results.append("function removed: {0}".format(func.name))
 
-                def data_var_added(self, view, var):
-                    results.append("data var added: {0}".format(hex(var.address)))
+                    def data_var_added(self, view, var):
+                        results.append("data var added: {0}".format(hex(var.address)))
 
-                def data_var_removed(self, view, var):
-                    results.append("data var removed: {0}".format(hex(var.address)))
+                    def data_var_removed(self, view, var):
+                        results.append("data var removed: {0}".format(hex(var.address)))
 
-                def string_found(self, view, string_type, offset, length):
-                    results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
+                    def string_found(self, view, string_type, offset, length):
+                        results.append("string found: offset {0} length {1}".format(hex(offset), hex(length)))
 
-                def string_removed(self, view, string_type, offset, length):
-                    results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
+                    def string_removed(self, view, string_type, offset, length):
+                        results.append("string removed: offset {0} length {1}".format(hex(offset), hex(length)))
 
-                def type_defined(self, view, name, type):
-                    results.append("type defined: {0}".format(name))
+                    def type_defined(self, view, name, type):
+                        results.append("type defined: {0}".format(name))
 
-                def type_undefined(self, view, name, type):
-                    results.append("type undefined: {0}".format(name))
+                    def type_undefined(self, view, name, type):
+                        results.append("type undefined: {0}".format(name))
 
-            test = NotifyTest()
-            bv.register_notification(test)
-            sacrificial_addr = 0x84fc
+                test = NotifyTest()
+                bv.register_notification(test)
+                sacrificial_addr = 0x84fc
 
-            type, name = bv.parse_type_string("int foo")
-            type_id = type.generate_auto_type_id("source", name)
+                type, name = bv.parse_type_string("int foo")
+                type_id = type.generate_auto_type_id("source", name)
 
-            bv.define_type(type_id, name, type)
-            bv.undefine_type(type_id)
+                bv.define_type(type_id, name, type)
+                bv.undefine_type(type_id)
 
-            bv.update_analysis_and_wait()
+                bv.update_analysis_and_wait()
 
-            bv.insert(sacrificial_addr, b"AAAA")
-            bv.update_analysis_and_wait()
+                bv.insert(sacrificial_addr, b"AAAA")
+                bv.update_analysis_and_wait()
 
-            bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
-            bv.update_analysis_and_wait()
+                bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
+                bv.update_analysis_and_wait()
 
-            bv.write(sacrificial_addr, b"BBBB")
-            bv.update_analysis_and_wait()
+                bv.write(sacrificial_addr, b"BBBB")
+                bv.update_analysis_and_wait()
 
-            bv.add_function(sacrificial_addr)
-            bv.update_analysis_and_wait()
+                bv.add_function(sacrificial_addr)
+                bv.update_analysis_and_wait()
 
-            bv.remove_function(bv.get_function_at(sacrificial_addr))
-            bv.update_analysis_and_wait()
+                bv.remove_function(bv.get_function_at(sacrificial_addr))
+                bv.update_analysis_and_wait()
 
-            bv.undefine_data_var(sacrificial_addr)
-            bv.update_analysis_and_wait()
+                bv.undefine_data_var(sacrificial_addr)
+                bv.update_analysis_and_wait()
 
-            bv.remove(sacrificial_addr, 4)
-            bv.update_analysis_and_wait()
+                bv.remove(sacrificial_addr, 4)
+                bv.update_analysis_and_wait()
 
-            bv.unregister_notification(test)
+                bv.unregister_notification(test)
 
-            return fixOutput(sorted(results))
+                return fixOutput(sorted(results))
         finally:
             self.delete_package("helloworld")
 
@@ -1043,21 +1043,21 @@ class VerifyBuilder(Builder):
     def test_expression_parse(self):
         file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            assert bv.parse_expression("1 + 1") == 2
-            assert bv.parse_expression("-1 + 1") == 0
-            assert bv.parse_expression("1 - 1") == 0
-            assert bv.parse_expression("1 + -1") == 0
-            assert bv.parse_expression("[0x8000]") == 0x464c457f
-            assert bv.parse_expression("[0x8000]b") == 0
-            assert bv.parse_expression("[0x8000].b") == 0x7f
-            assert bv.parse_expression("[0x8000].w") == 0x457f
-            assert bv.parse_expression("[0x8000].d") == 0x464c457f
-            assert bv.parse_expression("[0x8000].q") == 0x10101464c457f
-            assert bv.parse_expression("$here + 1", 12345) == 12345 + 1
-            assert bv.parse_expression("_start") == 0x830c
-            assert bv.parse_expression("_start + 4") == 0x8310
-            return True
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                assert bv.parse_expression("1 + 1") == 2
+                assert bv.parse_expression("-1 + 1") == 0
+                assert bv.parse_expression("1 - 1") == 0
+                assert bv.parse_expression("1 + -1") == 0
+                assert bv.parse_expression("[0x8000]") == 0x464c457f
+                assert bv.parse_expression("[0x8000]b") == 0
+                assert bv.parse_expression("[0x8000].b") == 0x7f
+                assert bv.parse_expression("[0x8000].w") == 0x457f
+                assert bv.parse_expression("[0x8000].d") == 0x464c457f
+                assert bv.parse_expression("[0x8000].q") == 0x10101464c457f
+                assert bv.parse_expression("$here + 1", 12345) == 12345 + 1
+                assert bv.parse_expression("_start") == 0x830c
+                assert bv.parse_expression("_start + 4") == 0x8310
+                return True
         finally:
             self.delete_package("helloworld")
 
@@ -1073,31 +1073,31 @@ class VerifyBuilder(Builder):
         #  - Validate that the modifications are present
         file_name = self.unpackage_file("helloworld")
         try:
-            bv = binja.BinaryViewType['ELF'].open(file_name)
-            bv.update_analysis_and_wait()
-            # Make some modifications to the binary view
+            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
+                bv.update_analysis_and_wait()
+                # Make some modifications to the binary view
 
-            # Add a comment
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
-            # Add a new function
-            bv.add_function(bv.functions[0].start + 4)
-            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+                # Add a comment
+                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                # Add a new function
+                bv.add_function(bv.functions[0].start + 4)
+                temp_name = next(tempfile._get_candidate_names()) + ".bndb"
 
-            comments = self.get_comments(bv)
-            functions = self.get_functions(bv)
-            bv.create_database(temp_name)
-            bv.file.close()
-            del bv
+                comments = self.get_comments(bv)
+                functions = self.get_functions(bv)
+                bv.create_database(temp_name)
+                bv.file.close()
+                del bv
 
-            bv = binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF')
-            bv.update_analysis_and_wait()
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            # force windows to close the handle to the bndb that we want to delete
-            bv.file.close()
-            del bv
-            os.unlink(temp_name)
-            return [str(functions == bndb_functions and comments == bndb_comments)]
+                bv = binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF')
+                bv.update_analysis_and_wait()
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                # force windows to close the handle to the bndb that we want to delete
+                bv.file.close()
+                del bv
+                os.unlink(temp_name)
+                return [str(functions == bndb_functions and comments == bndb_comments)]
         finally:
             self.delete_package("helloworld")
 
@@ -1106,43 +1106,40 @@ class VerifyBuilder(Builder):
         try:
             temp_name = next(tempfile._get_candidate_names()) + ".bndb"
 
-            bv = binja.BinaryViewType['ELF'].open(file_name)
-            bv.update_analysis_and_wait()
+            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
 
-            bv.begin_undo_actions()
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
-            bv.commit_undo_actions()
+                bv.update_analysis_and_wait()
 
-            comments = self.get_comments(bv)
-            functions = self.get_functions(bv)
+                bv.begin_undo_actions()
+                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                bv.commit_undo_actions()
 
-            bv.begin_undo_actions()
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
-            bv.commit_undo_actions()
+                comments = self.get_comments(bv)
+                functions = self.get_functions(bv)
 
-            bv.begin_undo_actions()
-            bv.create_user_function(bv.start)
-            bv.commit_undo_actions()
-            bv.update_analysis_and_wait()
+                bv.begin_undo_actions()
+                bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
+                bv.commit_undo_actions()
 
-            bv.create_database(temp_name)
-            bv.file.close()
-            del bv
+                bv.begin_undo_actions()
+                bv.create_user_function(bv.start)
+                bv.commit_undo_actions()
 
-            bv = binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF')
-            bv.update_analysis_and_wait()
+                bv.create_database(temp_name)
 
-            bv.undo()
-            bv.undo()
+            with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:
 
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
+                bv.update_analysis_and_wait()
 
-            bv.file.close()
-            del bv
+                bv.undo()
+                bv.undo()
+
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+
             os.unlink(temp_name)
-
             return functions == bndb_functions and comments == bndb_comments
+
         finally:
             self.delete_package("helloworld")
 
@@ -1197,155 +1194,137 @@ class VerifyBuilder(Builder):
         binja.Settings().reset("files.universal.architecturePreference")
         try:
             # test with default arch preference
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86")
-            assert(bv.start == 0x1000)
-            load_setting_keys = bv.get_load_settings("Mach-O")
-            assert(load_setting_keys is not None)
-            assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
-            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x1000)
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86")
+                assert(bv.start == 0x1000)
+                load_setting_keys = bv.get_load_settings("Mach-O")
+                assert(load_setting_keys is not None)
+                assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
+                assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x1000)
 
-            # save temp bndb for round trip testing
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
-            comments = self.get_comments(bv)
-            functions = self.get_functions(bv)
-            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
-            bv.create_database(temp_name)
-            bv.file.close()
-            del bv
+                # save temp bndb for round trip testing
+                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                comments = self.get_comments(bv)
+                functions = self.get_functions(bv)
+                temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+                bv.create_database(temp_name)
 
             # test get_view_of_file open path
             binja.Settings().reset("files.universal.architecturePreference")
-            bv = BinaryViewType.get_view_of_file(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86")
-            assert(bv.start == 0x1000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86")
+                assert(bv.start == 0x1000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file_with_options open path
             binja.Settings().reset("files.universal.architecturePreference")
-            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86")
-            assert(bv.start == 0x1000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86")
+                assert(bv.start == 0x1000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-            bv = BinaryViewType.get_view_of_file(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86")
-            assert(bv.start == 0x1000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86")
+                assert(bv.start == 0x1000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file_with_options open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86")
-            assert(bv.start == 0x1000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86")
+                assert(bv.start == 0x1000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
             os.unlink(temp_name)
 
             # test with overridden arch preference
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-            bv = binja.BinaryViewType.get_view_of_file(file_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "aarch64")
-            assert(bv.start == 0x100000000)
-            load_setting_keys = bv.get_load_settings("Mach-O")
-            assert(load_setting_keys is not None)
-            assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
-            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x4c000)
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "aarch64")
+                assert(bv.start == 0x100000000)
+                load_setting_keys = bv.get_load_settings("Mach-O")
+                assert(load_setting_keys is not None)
+                assert(len(bv.get_load_settings("Mach-O").keys()) == 1)
+                assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x4c000)
 
-            # save temp bndb for round trip testing
-            bv.functions[0].set_comment(bv.functions[0].start, "Function start")
-            comments = self.get_comments(bv)
-            functions = self.get_functions(bv)
-            temp_name = next(tempfile._get_candidate_names()) + ".bndb"
-            bv.create_database(temp_name)
-            bv.file.close()
-            del bv
+                # save temp bndb for round trip testing
+                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                comments = self.get_comments(bv)
+                functions = self.get_functions(bv)
+                temp_name = next(tempfile._get_candidate_names()) + ".bndb"
+                bv.create_database(temp_name)
 
             # test get_view_of_file open path
             binja.Settings().reset("files.universal.architecturePreference")
-            bv = BinaryViewType.get_view_of_file(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "aarch64")
-            assert(bv.start == 0x100000000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "aarch64")
+                assert(bv.start == 0x100000000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file_with_options open path
             binja.Settings().reset("files.universal.architecturePreference")
-            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "aarch64")
-            assert(bv.start == 0x100000000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "aarch64")
+                assert(bv.start == 0x100000000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86"])
-            bv = BinaryViewType.get_view_of_file(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "aarch64")
-            assert(bv.start == 0x100000000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "aarch64")
+                assert(bv.start == 0x100000000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
 
             # test get_view_of_file_with_options open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            bv = BinaryViewType.get_view_of_file_with_options(temp_name)
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "aarch64")
-            assert(bv.start == 0x100000000)
-            bndb_functions = self.get_functions(bv)
-            bndb_comments = self.get_comments(bv)
-            assert([str(functions == bndb_functions and comments == bndb_comments)])
-            bv.file.close()
-            del bv
+            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "aarch64")
+                assert(bv.start == 0x100000000)
+                bndb_functions = self.get_functions(bv)
+                bndb_comments = self.get_comments(bv)
+                assert([str(functions == bndb_functions and comments == bndb_comments)])
+                bv.file.close()
             os.unlink(temp_name)
 
-            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            bv = binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000})
-            assert(bv.view_type == "Mach-O")
-            assert(bv.arch.name == "x86_64")
-            assert(bv.start == 0xfffffff0000)
-            load_setting_keys = bv.get_load_settings("Mach-O")
-            assert(load_setting_keys is not None)
-            assert(len(bv.get_load_settings("Mach-O").keys()) == 8)
-            assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x8000)
-            bv.file.close()
 
-            binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
-            return True
+            binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
+            with binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000}) as bv:
+                assert(bv.view_type == "Mach-O")
+                assert(bv.arch.name == "x86_64")
+                assert(bv.start == 0xfffffff0000)
+                load_setting_keys = bv.get_load_settings("Mach-O")
+                assert(load_setting_keys is not None)
+                assert(len(bv.get_load_settings("Mach-O").keys()) == 8)
+                assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x8000)
+
+                binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
+                return True
+
         finally:
             binja.Settings().set_string_list("files.universal.architecturePreference", save_setting_value)
             self.delete_package("fat_macho_9arch")

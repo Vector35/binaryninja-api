@@ -20,7 +20,7 @@ The issue tracker for this repository tracks not only issues with the source cod
 
 ## Building
 
-Starting mid March 2017, the C++ portion of this API can be built into a static library (.a, .lib) that binary plugins can link against. Use Makefile on MacOS, Linux, and Windows mingw environments, and Makefile.win (nmake file) for Windows Visual Studio environment (nmake -f).
+Starting July 10th, C++ portion of this API can be built into a static library (.a, .lib) that binary plugins can link against using [cmake](https://cmake.org/).
 
 The compiled API contains names and functions you can use from your plugins, but most of the implementation is missing until you link up against libbinaryninjacore.dylib or libbinaryninjacore.dll (via import file libbinaryninjacore.lib). See the ./examples.
 
@@ -28,6 +28,13 @@ Since BinaryNinja is a 64-bit only product, ensure that you are using a 64-bit c
 
 ## Examples
 
-* bin-info is a standalone executable that prints some information about a given binary to stdout
-* breakpoint is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes
-* print_syscalls is a standalone executable that prints the syscalls used in a given binary 
+There are many examples available. The [Python examples folder ](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while native examples include:
+
+* [bin-info](https://github.com/Vector35/binaryninja-api/tree/dev/examples/bin-info) is a standalone executable that prints some information about a given binary to stdout (only usable with licenses that support headless API access)
+* [breakpoint](https://github.com/Vector35/binaryninja-api/tree/dev/examples/breakpoint) is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes
+* [command-line disassm](https://github.com/Vector35/binaryninja-api/tree/dev/examples/cmdline_disasm) demonstrates how to dump disassembly to the command-line (only usable with licenses that support headless API access)
+* [llil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/examples/llil_parser) parses Low-Level IL, demonstrating how to match types and use a visitor class (only usable with licenses that support headless API access)
+* [mlil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/examples/mlil_parser) parses Medium-Level IL, demonstrating how to match types and use a visitor class (only usable with licenses that support headless API access)
+* [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary (only usable with licenses that support headless API access)
+* [triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT
+* [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement

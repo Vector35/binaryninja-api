@@ -5118,7 +5118,7 @@ class BinaryView(object):
 
 		:param int start: virtual address to start searching from.
 		:param int constant: constant to search for
-		:param settings: disassembly settings
+		:param DisassemblySettings settings: disassembly settings
 		"""
 		if not isinstance(constant, numbers.Integral):
 			raise TypeError("constant parameter is not integral type")

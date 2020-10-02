@@ -1673,7 +1673,6 @@ class BinaryView(object):
 
 	@property
 	def notifications(self):
-		""":py:class:`FileMetadata` backing the BinaryView """
 		return self._notifications
 
 	@notifications.setter
@@ -1956,7 +1955,7 @@ class BinaryView(object):
 
 	@property
 	def sections(self):
-		"""List of sections (read-only)"""
+		"""Dictionary of sections (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSections(self.handle, count)
 		result = {}
@@ -2810,7 +2809,7 @@ class BinaryView(object):
 		``is_offset_code_semantics`` checks if an virtual address ``addr`` is semantically valid for code.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:return: true if the virtual address is valid for code semantics, false if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetCodeSemantics(self.handle, addr)
@@ -2820,7 +2819,7 @@ class BinaryView(object):
 		``is_offset_extern_semantics`` checks if an virtual address ``addr`` is semantically valid for external references.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:return: true if the virtual address is valid for for external references, false if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetExternSemantics(self.handle, addr)
@@ -3691,6 +3690,7 @@ class BinaryView(object):
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
+		:param bool user
 		:return: The created Tag
 		:rtype: Tag
 		:Example:
@@ -3833,7 +3833,7 @@ class BinaryView(object):
 			tags = self.get_data_tags_at(addr)
 			for tag in tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, False)
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
@@ -5118,6 +5118,7 @@ class BinaryView(object):
 
 		:param int start: virtual address to start searching from.
 		:param int constant: constant to search for
+		:param settings: disassembly settings
 		"""
 		if not isinstance(constant, numbers.Integral):
 			raise TypeError("constant parameter is not integral type")

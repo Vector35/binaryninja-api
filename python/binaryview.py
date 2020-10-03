@@ -3791,7 +3791,7 @@ class BinaryView(object):
 			tags = self.get_data_tags_at(addr)
 			for tag in tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, True)
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)

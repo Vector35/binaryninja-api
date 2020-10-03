@@ -1352,7 +1352,7 @@ class Function(object):
 			tags = self.get_address_tags_at(addr, arch)
 			for tag in tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, True)
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
@@ -1403,7 +1403,7 @@ class Function(object):
 			tags = self.get_address_tags_at(addr, arch)
 			for tag in tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, False)
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
@@ -1461,7 +1461,7 @@ class Function(object):
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, True)
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
@@ -1499,7 +1499,7 @@ class Function(object):
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
-					return
+					return tag
 
 		tag = self.create_tag(type, data, False)
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)

@@ -14,7 +14,7 @@ setvars()
 	APP="binaryninja"
 	FILECOMMENT="Binary Ninja Analysis Database"
 	APPCOMMENT="Binary Ninja: A Reverse Engineering Platform"
-	BNPATH="$(dirname $(readlink -f "$0"))/.."
+	BNPATH=$(realpath "$(dirname "$(readlink -f "$0")")/..")
 	EXEC="${BNPATH}/binaryninja"
 	PNG="${BNPATH}/docs/img/logo.png"
 	EXT="bndb"
@@ -73,11 +73,11 @@ pythonpath()
 	fi
 	if [[ -x "`which python`" ]]
 	then
-		python -V >/dev/null 2>&1 && ${SUDO}python ${BNPATH}/scripts/install_api.py ${ROOT} ${SILENT}
+		python -V >/dev/null 2>&1 && ${SUDO}python "${BNPATH}/scripts/install_api.py" ${ROOT} ${SILENT}
 	fi
 	if [[ -x "`which python3`" ]]
 	then
-		python3 -V >/dev/null 2>&1 && ${SUDO}python3 ${BNPATH}/scripts/install_api.py ${ROOT} ${SILENT}
+		python3 -V >/dev/null 2>&1 && ${SUDO}python3 "${BNPATH}/scripts/install_api.py" ${ROOT} ${SILENT}
 	fi
 }
 
@@ -90,9 +90,9 @@ createdesktopfile()
 	read -d '' DESKTOP << EOF
 [Desktop Entry]
 Name=${APP}
-Exec=${EXEC} %u
+Exec=${EXEC// /\s} %u
 MimeType=application/x-${APP};x-scheme-handler/${APP};
-Icon=${PNG}
+Icon=${PNG// /\s}
 Terminal=false
 Type=Application
 Categories=Utility;
@@ -130,19 +130,19 @@ createmime()
 </mime-info>"| $SUDO tee ${MIMEFILE} >/dev/null
 
 	#echo Copying icon
-	#$SUDO cp $PNG $IMAGEFILE
-	$SUDO cp ${PNG} ${IMAGEFILE}
+	#$SUDO cp "$PNG" "$IMAGEFILE"
+	$SUDO cp "${PNG}" "${IMAGEFILE}"
 	$SUDO update-mime-database ${SHARE}/mime
 }
 
 addtodesktop()
 {
-	cp $DESKTOPFILE ${HOME}/Desktop
+	cp "$DESKTOPFILE" "${HOME}/Desktop"
 }
 
 uninstall()
 {
-	rm -i -r $DESKTOPFILE $MIMEFILE $IMAGEFILE ${HOME}/Desktop/${APP}.desktop
+	rm -i -r "$DESKTOPFILE" "$MIMEFILE" "$IMAGEFILE" "${HOME}/Desktop/${APP}.desktop"
 	$SUDO update-mime-database ${SHARE}/mime
 	exit 0
 }

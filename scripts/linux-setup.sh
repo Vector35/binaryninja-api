@@ -90,9 +90,9 @@ createdesktopfile()
 	read -d '' DESKTOP << EOF
 [Desktop Entry]
 Name=${APP}
-Exec=${EXEC// /\s} %u
+Exec=${EXEC// /\\\\ } %u
 MimeType=application/x-${APP};x-scheme-handler/${APP};
-Icon=${PNG// /\s}
+Icon=${PNG// /\\\\s}
 Terminal=false
 Type=Application
 Categories=Utility;
@@ -107,6 +107,21 @@ EOF
 	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
 	echo "${MIMEAPPS}" | $SUDO tee -a ${MIMEFILE} >/dev/null
 	$SUDO chmod +x ${DESKTOPFILE}
+	GNOMEVERSION=`gnome-shell --version|awk '{print $3}'`
+	MINVERSION=3.36
+	# This check is dumb. Thanks Gnome for not only imitating the worst
+	# permission models of MacOS and Windows but doing it in a way that isn't
+	# even consistent between adjacent LTS versions :facepalm: Note that a
+	# reboot or reload of Gnome is required but I'm not going to do it here
+	# because the experience is poor.
+	if [ $(echo -en "$GNOMEVERSION\n$MINVERSION" | sort -t '.' -k 1,1 -k 2,2 -k 3,3 -g | tail -n1) != $MINVERSION ]
+	then
+		DBFLAG="true"
+	else
+		DBFLAG="yes"
+	fi
+	echo -e "\n\nWARNING: Note that the desktop icon that was created may not be usable until you login again or reboot depending on your GNOME version.\n"
+	$SUDO dbus-launch gio set "${DESKTOPFILE}" "metadata::trusted" $DBFLAG
 	$SUDO update-desktop-database ${SHARE}/applications
 }
 

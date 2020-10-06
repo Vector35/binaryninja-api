@@ -1028,6 +1028,8 @@ class LowLevelILInstruction(object):
 	@property
 	def high_level_il(self):
 		"""Gets the high level IL expression corresponding to this expression (may be None for eliminated instructions)"""
+		if self.mlil is None:
+			return None
 		return self.mlil.hlil
 
 	@property

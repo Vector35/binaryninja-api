@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import pickle
 import sys
 import os
@@ -7,12 +7,8 @@ from optparse import OptionParser
 import testcommon
 import time
 
-if sys.version_info.major == 3:
-    # The differences between the behavior of str() on Python 2 and Python 3 make it very difficult to make
-    # test results created on Python 3 work when testing on Python 2. Test results generated with Python 2
-    # will work when testing on both Python 2 and Python 3.
-    # FIXME: When Python 2 is dropped fully, use Python 3 to generate the tests.
-    print("Generate unit tests on Python 2. Python 3 generated test results are NOT COMPATIBLE with Python 2.")
+if sys.version_info.major == 2:
+    print("Generate unit tests on Python 3. Python 2 is not compatible.")
     sys.exit(1)
 
 unit_test_template = """#!/usr/bin/env python

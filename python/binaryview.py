@@ -3833,7 +3833,7 @@ class BinaryView(object):
 			tags = self.get_data_tags_at(addr)
 			for tag in tags:
 				if tag.type == type and tag.data == data:
-					return tag
+					return
 
 		tag = self.create_tag(type, data, False)
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)

@@ -700,14 +700,14 @@ __attribute__ ((format (printf, 1, 2)))
 	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
-	bool DemangleMS(Architecture* arch,
-		const std::string& mangledName,
-		Type** outType,
-		QualifiedName& outVarName);
-	bool DemangleGNU3(Ref<Architecture> arch,
-		const std::string& mangledName,
-		Type** outType,
-		QualifiedName& outVarName);
+
+	class BinaryView;
+
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
+		QualifiedName& outVarName, const Ref<BinaryView>& view);
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
+		QualifiedName& outVarName, const Ref<BinaryView>& view);
+
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
@@ -830,8 +830,6 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual uint64_t GetCurrentOffset() = 0;
 		virtual bool Navigate(const std::string& view, uint64_t offset) = 0;
 	};
-
-	class BinaryView;
 
 	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
 	{

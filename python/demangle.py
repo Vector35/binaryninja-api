@@ -22,6 +22,7 @@ import ctypes
 
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
+from binaryninja.binaryview import BinaryView
 from binaryninja import types
 
 # 2-3 compatibility
@@ -47,7 +48,7 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
-def demangle_ms(arch, mangled_name):
+def demangle_ms(arch, mangled_name, view = None):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
@@ -65,7 +66,9 @@ def demangle_ms(arch, mangled_name):
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+	if isinstance(view, BinaryView):
+		view = view.handle
+	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), view):
 		for i in range(outSize.value):
 			names.append(pyNativeStr(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
@@ -73,12 +76,14 @@ def demangle_ms(arch, mangled_name):
 	return (None, mangled_name)
 
 
-def demangle_gnu3(arch, mangled_name):
+def demangle_gnu3(arch, mangled_name, view = None):
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize)):
+	if isinstance(view, BinaryView):
+		view = view.handle
+	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), view):
 		for i in range(outSize.value):
 			names.append(pyNativeStr(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)

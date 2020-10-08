@@ -4,15 +4,13 @@ using namespace std;
 
 namespace BinaryNinja
 {
-	bool DemangleMS(Architecture* arch,
-									const std::string& mangledName,
-									Type** outType,
-									QualifiedName& outVarName)
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
+		QualifiedName& outVarName, const Ref<BinaryView>& view)
 	{
 		BNType* localType = nullptr;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
-		if (!BNDemangleMS(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize))
+		if (!BNDemangleMS(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, view->GetObject()))
 			return false;
 		if (!localType)
 			return false;
@@ -27,15 +25,13 @@ namespace BinaryNinja
 	}
 
 
-	bool DemangleGNU3(Ref<Architecture> arch,
-									const std::string& mangledName,
-									Type** outType,
-									QualifiedName& outVarName)
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
+		QualifiedName& outVarName, const Ref<BinaryView>& view)
 	{
 		BNType* localType;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
-		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize))
+		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, view->GetObject()))
 			return false;
 		if (!localType)
 			return false;

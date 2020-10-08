@@ -4463,11 +4463,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibrariesByName(BNPlatform* platform, char* depName, size_t* count);
 
 	//Demangler
-	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch,
-	                                     const char* mangledName,
-	                                     BNType** outType,
-	                                     char*** outVarName,
-	                                     size_t* outVarNameElements);
+	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch, const char* mangledName, BNType** outType, char*** outVarName,
+		size_t* outVarNameElements, const BNBinaryView* const view);
 
 	// Download providers
 	BINARYNINJACOREAPI BNDownloadProvider* BNRegisterDownloadProvider(const char* name, BNDownloadProviderCallbacks* callbacks);
@@ -4609,11 +4606,8 @@ __attribute__ ((format (printf, 1, 2)))
 		const char* title, BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
-	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch,
-	                                       const char* mangledName,
-	                                       BNType** outType,
-	                                       char*** outVarName,
-	                                       size_t* outVarNameElements);
+	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch, const char* mangledName, BNType** outType,
+		char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 
 	// Plugin repository APIs

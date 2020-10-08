@@ -27,6 +27,7 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor;
 	size_t lineIndex;
 	size_t tokenIndex;
+	size_t characterIndex;
 
 	LinearViewCursorPosition();
 	LinearViewCursorPosition(const LinearViewCursorPosition& pos);
@@ -150,6 +151,10 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void bindActions();
 	void getHexDumpLineBytes(const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes,
 		size_t& totalCols);
+
+	void paintHexDumpLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, uint32_t addrLen, int tagOffset);
+	void paintAnalysisWarningLine(QPainter& p, const LinearViewLine& line, int xoffset, int y);
+	void paintTokenLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, QRect eventRect, int tagOffset);
 
 	void setSectionSemantics(const std::string& name, BNSectionSemantics semantics);
 

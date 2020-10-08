@@ -60,6 +60,9 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 		size_t instrIndex;
 		size_t lineIndexForAddress;
 		size_t tokenIndex;
+		size_t characterIndex;
+
+		bool operator<(const CursorPosition& other) const;
 	};
 
 	BinaryViewRef m_data;
@@ -245,6 +248,11 @@ public:
 	QRect getMiniRenderRect() const { return m_miniRenderRect; }
 	void paintMiniGraphAndViewport(QWidget* owner);
 	bool paintMiniGraph(QWidget* owner, QPainter& p);
+
+	void paintNode(QPainter& p, FlowGraphNodeRef& node, int minY, int maxY);
+	void paintHighlight(QPainter& p, const std::vector<BinaryNinja::DisassemblyTextLine>& lines,
+		int nodeX, int nodeWidth, int x, int y, size_t line, int tagIndent);
+	void paintEdge(QPainter& p, const FlowGraphNodeRef& node, const BinaryNinja::FlowGraphEdge& edge);
 
 	void showAddress(uint64_t addr, bool select = false);
 	void showTopNode();

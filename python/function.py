@@ -887,16 +887,7 @@ class Variable(object):
 
 	@name.setter
 	def name(self, value):
-		if self._function is None:
-			self._name = value
-		elif value:
-			self._function.create_user_var(self, self._type, value)
-			self._name = value
-		else:
-			# Name will be reassigned by analysis on the next analysis update
-			# This Variable object is will not be updated
-			self._function.create_user_var(self, self._type, "")
-			self._name = None
+		self._name = value
 
 	@property
 	def type(self):

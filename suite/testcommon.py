@@ -1015,6 +1015,7 @@ class VerifyBuilder(Builder):
             bv.begin_undo_actions()
             bv.create_user_function(bv.start)
             bv.commit_undo_actions()
+            bv.update_analysis_and_wait()
 
             bv.create_database(temp_name)
             bv.file.close()

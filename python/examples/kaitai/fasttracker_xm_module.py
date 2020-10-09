@@ -459,11 +459,11 @@ class FasttrackerXmModule(KaitaiStruct):
         class SamplesData(KaitaiStruct):
             """The saved data uses simple delta-encoding to achieve better compression ratios (when compressed with pkzip, etc.)
             Pseudocode for converting the delta-coded data to normal data,
-            old = 0;
+            old = 0
             for i in range(data_len):
-              new = sample[i] + old;
-              sample[i] = new;
-              old = new;
+              new = sample[i] + old
+              sample[i] = new
+              old = new
             """
             SEQ_FIELDS = ["data"]
             def __init__(self, header, _io, _parent=None, _root=None):

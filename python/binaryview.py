@@ -4715,8 +4715,8 @@ class BinaryView(object):
 			<in set([0x1, 0x2, 0x3])>
 			>>>
 		"""
-		result = core.BNPossibleValueSet();
-		errors = ctypes.c_char_p();
+		result = core.BNPossibleValueSet()
+		errors = ctypes.c_char_p()
 		if not core.BNParsePossibleValueSet(self.handle, value, state, result, here, errors):
 			if errors:
 				error_str = errors.value.decode("utf-8")

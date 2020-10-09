@@ -350,8 +350,11 @@ int main(int argc, char* argv[])
 					break;
 				}
 		}
-		if (name == "BNFreeString")
+		if (name == "BNFreeString" || name == "BNRustFreeString")
 			stringArgument = false;
+
+		// Rust-allocated strings are deallocated differently
+		bool rustFFI = name.rfind("BNRust", 0) == 0;
 
 		bool callbackConvention = false;
 		if (name == "BNAllocString")
@@ -377,7 +380,7 @@ int main(int argc, char* argv[])
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
-				if (name == "BNFreeString")
+				if (name == "BNFreeString" || name == "BNRustFreeString")
 				{
 					// BNFreeString expects a pointer to a string allocated by the core, so do not use
 					// a c_char_p here, as that would be allocated by the Python runtime.  This can
@@ -440,7 +443,10 @@ int main(int argc, char* argv[])
 			else
 				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
 			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
-			fprintf(out, "\tBNFreeString(result)\n");
+			if (rustFFI)
+				fprintf(out, "\tBNRustFreeString(result)\n");
+			else
+				fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}
 		else if (pointerResult)

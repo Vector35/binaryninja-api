@@ -4464,6 +4464,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	//Demangler
 	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch, const char* mangledName, BNType** outType, char*** outVarName,
+		size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI bool BNDemangleMSWithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType, char*** outVarName,
 		size_t* outVarNameElements, const BNBinaryView* const view);
 
 	// Download providers
@@ -4607,6 +4609,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
 	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch, const char* mangledName, BNType** outType,
+		char*** outVarName, size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI bool BNDemangleGNU3WithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
 		char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 
@@ -4871,6 +4875,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
 
 	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
+
+	BINARYNINJACOREAPI void BNRustFreeString(const char* const);
+	BINARYNINJACOREAPI void BNRustFreeStringArray(const char** const, uint64_t);
+	BINARYNINJACOREAPI const char** const BNRustSimplifyStrToFQN(const char* const, bool);
+	BINARYNINJACOREAPI const char* const BNRustSimplifyStrToStr(const char* const);
 
 #ifdef __cplusplus
 }

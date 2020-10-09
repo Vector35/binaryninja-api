@@ -590,6 +590,44 @@ class TestBuilder(Builder):
         testfunction = binja.Type.function(inttype, [inttype, inttype, inttype])
         return ["Test_function params: " + str(testfunction.parameters), "Test_function pointer: " + str(testfunction.pointer(binja.Architecture["x86"], testfunction))]
 
+    def test_Simplifier(self):
+        """Template Simplification"""
+        result = [binja.demangle.simplify_name_to_string(s) for s in [
+            # Simple
+            "std::__cxx11::basic_string<T, std::char_traits<T>, std::allocator<T> >",
+            "std::vector<T, std::allocator<T> >",
+            "std::vector<T, std::allocator<T>, std::lessthan<T> >",
+            "std::deque<T, std::allocator<T> >",
+            "std::forward_list<T, std::allocator<T> >",
+            "std::list<T, std::allocator<T> >",
+            "std::stack<T, std::deque<T> >",
+            "std::queue<T, std::deque<T> >",
+            "std::set<T, std::less<T>, std::allocator<T> >",
+            "std::multiset<T, std::less<T>, std::allocator<T> >",
+            "std::map<T1, T2, std::less<T1>, std::allocator<std::pair<const T1, T2> > >",
+            "std::multimap<T1, T2, std::less<T1>, std::allocator<std::pair<const T1, T2> > >",
+            "std::unordered_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T> >",
+            "std::unordered_multiset<T, std::hash<T>, std::equal_to<T>, std::allocator<T> >",
+            "std::unordered_map<T1, T2, std::hash<T1>, std::equal_to<T1>, std::allocator<std::pair<const T1, T2> > >",
+            "std::unordered_multimap<T1, T2, std::hash<T1>, std::equal_to<T1>, std::allocator<std::pair<const T1, T2> > >",
+
+            # More complex
+            "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string",
+            "std::vector<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::array<uint32_t, 5ul> >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::array<uint32_t, 5ul> > > >::_M_default_append(uint64_t)",
+            "std::vector<std::vector<T, std::allocator<T> >, std::allocator<std::vector<T, std::allocator<T> > > >::_M_check_len(uint64_t, char const*) const",
+        ]]
+
+        # Test all the APIs
+        qName = binja.types.QualifiedName(["std", "__cxx11", "basic_string<T, std::char_traits<T>, std::allocator<T> >"])
+        result.append(binja.demangle.simplify_name_to_string(qName))
+        result.append(str(binja.demangle.simplify_name_to_qualified_name(qName)))
+        result.append(str(binja.demangle.simplify_name_to_qualified_name(str(qName))))
+        result.append(str(binja.demangle.simplify_name_to_qualified_name(str(qName), False).name))
+        result.append("::".join(binja.demangle_gnu3(binja.Architecture['x86_64'], "_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_createERmm", False)[1]))
+        result.append("::".join(binja.demangle_gnu3(binja.Architecture['x86_64'], "_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_createERmm", True)[1]))
+
+        return result
+
     def test_Struct(self):
         """Struct produced different result"""
         retinfo = []

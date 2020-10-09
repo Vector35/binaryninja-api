@@ -48,12 +48,14 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
-def demangle_ms(arch, mangled_name, view = None):
+def demangle_ms(arch, mangled_name, options = False):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
 	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
 	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
+	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directally
+	:type options: Tuple[bool, BinaryView, None]
 	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
 	:rtype: Tuple
 	:Example:
@@ -66,9 +68,9 @@ def demangle_ms(arch, mangled_name, view = None):
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if isinstance(view, BinaryView):
-		view = view.handle
-	if core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), view):
+	if (isinstance(options, BinaryView) and core.BNDemangleMSWithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
+		(isinstance(options, bool) and core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
+		(options is None and core.BNDemangleMSWithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None)):
 		for i in range(outSize.value):
 			names.append(pyNativeStr(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
@@ -76,14 +78,24 @@ def demangle_ms(arch, mangled_name, view = None):
 	return (None, mangled_name)
 
 
-def demangle_gnu3(arch, mangled_name, view = None):
+def demangle_gnu3(arch, mangled_name, options = None):
+	"""
+	``demangle_gnu3`` demangles a mangled name to a Type object.
+
+	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
+	:param str mangled_name: a mangled GNU3 name
+	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directally
+	:type options: Tuple[bool, BinaryView, None]
+	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
+	:rtype: Tuple
+	"""
 	handle = ctypes.POINTER(core.BNType)()
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if isinstance(view, BinaryView):
-		view = view.handle
-	if core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), view):
+	if (isinstance(options, BinaryView) and core.BNDemangleGNU3WithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
+		(isinstance(options, bool) and core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
+		(options is None and core.BNDemangleGNU3WithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None)):
 		for i in range(outSize.value):
 			names.append(pyNativeStr(outName[i]))
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
@@ -91,3 +103,62 @@ def demangle_gnu3(arch, mangled_name, view = None):
 			return (None, names)
 		return (types.Type(handle), names)
 	return (None, mangled_name)
+
+
+def simplify_name_to_string(input_name):
+	"""
+	``simplify_name_to_string`` simplifies a templated C++ name with default arguments and returns a string
+
+	:param input_name: String or qualified name to be simplified
+	:type input_name: Union[str, QualifiedName]
+	:return: simplified name (or original name if simplifier fails/cannot simplify)
+	:rtype: str
+	:Example:
+
+		>>> bdemangle.simplify_name_to_string("std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >")
+		'std::string'
+		>>>
+	"""
+	result = None
+	if isinstance(input_name, str):
+		result = core.BNRustSimplifyStrToStr(input_name)
+	elif isinstance(input_name, types.QualifiedName):
+		result = core.BNRustSimplifyStrToStr(str(input_name))
+	else:
+		raise TypeError("Parameter must be of type `str` or `types.QualifiedName`")
+	return result
+
+
+def simplify_name_to_qualified_name(input_name, simplify = True):
+	"""
+	``simplify_name_to_qualified_name`` simplifies a templated C++ name with default arguments and returns a qualified name.  This can also tokenize a string to a qualified name with/without simplifying it
+
+	:param input_name: String or qualified name to be simplified
+	:type input_name: Union[str, QualifiedName]
+	:param bool simplify_name: (optional) Whether to simplify input string (no effect if given a qualified name; will always simplify)
+	:return: simplified name (or one-element array containing the input if simplifier fails/cannot simplify)
+	:rtype: QualifiedName
+	:Example:
+
+		>>> demangle.simplify_name_to_qualified_name(QualifiedName(["std", "__cxx11", "basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >"]), True)
+		'std::wstring'
+		>>>
+	"""
+	result = None
+	if isinstance(input_name, str):
+		result = core.BNRustSimplifyStrToFQN(input_name, simplify)
+	elif isinstance(input_name, types.QualifiedName):
+		result = core.BNRustSimplifyStrToFQN(str(input_name), True)
+	else:
+		raise TypeError("Parameter must be of type `str` or `types.QualifiedName`")
+
+	native_result = []
+	for name in result:
+		if name == b'':
+			break
+		native_result.append(name)
+	name_count = len(native_result)
+
+	native_result = types.QualifiedName(native_result)
+	core.BNRustFreeStringArray(result, name_count+1)
+	return native_result

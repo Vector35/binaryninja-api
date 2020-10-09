@@ -108,7 +108,7 @@ class SettingsAPI(unittest.TestCase):
 		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
 
 		s2 = Settings("test2")
-		assert s2.serialize_schema() is "", "test_settings_types failed"
+		assert s2.serialize_schema() == "", "test_settings_types failed"
 		test_schema = settings.serialize_schema()
 		assert test_schema != "", "test_settings_types failed"
 		assert s2.deserialize_schema(test_schema), "test_settings_types failed"

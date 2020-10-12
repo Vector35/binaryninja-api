@@ -90,16 +90,16 @@ Then just restart, and your plugin will be loaded.
 
 ### Installing Prerequisites
 
-Because Windows ships with an embedded version of Python, if you want to install plugins inside that Python, you'll need to either adjust your `sys.path` to include the locations for the other libraries (making sure they're compatible with the built-in version), or else install them directly in the environment via:
+Because Windows and MacOS ship with an embedded version of Python, if you want to install plugins inside that Python, we recommend instead installing an official [python.org] (NOTE: ensure you do not accidentally install a 32-bit build) version, or a [homebrew] Python 3.x build.
 
-``` py
-import pip
-pip.main(['install', '--quiet', 'packagename'])
+Then, you can adjust your [python.interpreter setting] to point to the appropriate install location. Note that the file being pointed to should be a `.dll` or `.dylib` though homebrew will often make the files not have any extension. For example:
+
+```
+$ file /usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3.8/Python
+/usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3.8/Python: Mach-O 64-bit dynamically linked shared library x86_64
 ```
 
-_--quiet is required to minimize some of the normal output of pip that doesn't work within the context of our scripting console_
-
-Binary Ninja can also switch to a different installed version of Python using the [python.interpreter setting].
+Note that using `pip.main` is no longer supported by the pip maintainers therefore this previous approach to installing dependencies is not currently supported.
 
 ### Troubleshooting
 
@@ -156,3 +156,5 @@ For the Personal edition, we recommend simply commenting out the `register_` fun
 [1]: https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/kaitai
 [2]: https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/snippets
 [3]: https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage
+[python.org]: https://www.python.org/downloads/windows/
+[homebrew]: https://docs.brew.sh/Homebrew-and-Python

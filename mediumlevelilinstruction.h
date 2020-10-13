@@ -203,11 +203,10 @@ namespace BinaryNinja
 		{
 #ifdef BINARYNINJACORE_LIBRARY
 			MediumLevelILFunction* function;
-			const BNMediumLevelILInstruction* instr;
 #else
 			Ref<MediumLevelILFunction> function;
-			BNMediumLevelILInstruction instr;
 #endif
+			BNMediumLevelILInstruction instr;
 			size_t operand, count;
 
 			bool operator==(const ListIterator& a) const;

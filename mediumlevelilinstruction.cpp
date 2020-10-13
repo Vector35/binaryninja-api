@@ -380,11 +380,7 @@ MediumLevelILIntegerList::ListIterator& MediumLevelILIntegerList::ListIterator::
 	if (operand >= 4)
 	{
 		operand = 0;
-#ifdef BINARYNINJACORE_LIBRARY
-		instr = &function->GetRawExpr((size_t)instr->operands[4]);
-#else
 		instr = function->GetRawExpr((size_t)instr.operands[4]);
-#endif
 	}
 	return *this;
 }
@@ -392,11 +388,7 @@ MediumLevelILIntegerList::ListIterator& MediumLevelILIntegerList::ListIterator::
 
 uint64_t MediumLevelILIntegerList::ListIterator::operator*()
 {
-#ifdef BINARYNINJACORE_LIBRARY
-	return instr->operands[operand];
-#else
 	return instr.operands[operand];
-#endif
 }
 
 
@@ -404,11 +396,7 @@ MediumLevelILIntegerList::MediumLevelILIntegerList(MediumLevelILFunction* func,
 	const BNMediumLevelILInstruction& instr, size_t count)
 {
 	m_start.function = func;
-#ifdef BINARYNINJACORE_LIBRARY
-	m_start.instr = &instr;
-#else
 	m_start.instr = instr;
-#endif
 	m_start.operand = 0;
 	m_start.count = count;
 }

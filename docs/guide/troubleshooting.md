@@ -135,6 +135,20 @@ open /Applications/Python\ 3.6/Install\ Certificates.command
 
 Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
 
+#### Common Problems
+
+Below are a few of the most common problems with Linux installations:
+
+ - Some unzip utilities do not maintain the `+x` executable bit on files when extracted. To fix this, we recommend:
+
+ ```
+ chmod +x binaryninja/*.so.*
+ chmod +x binaryninja/plugins/*
+ ```
+
+ - Permissions: ensure that the user you are running Binary Ninja as has write permission to `~/.binaryninja` as it needs to be able to update user settings and other files in this folder.
+
+
 #### Debian
 
 Debian requires one package be manually installed to support the emoji icons used in the Tag system:
@@ -153,7 +167,7 @@ apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 l
 
 #### Arch Linux
 
- - The only known issues with Arch linux are related to not being able to automatically find the appropriate libpython. Specifying your own custom path to the `libpython.so` in the [Advanced Settings](../getting-started.md#advanced-settings) dialog under the `Python Interpreter` setting should solve any issues.
+ - The only known issues with Arch linux are related to not being able to automatically find the appropriate libpython. Specifying your own custom path to the `libpython.so` in the [Settings](../getting-started.md#settings) pane under the `Python Interpreter` setting should solve any issues.
 
 #### KDE
 
@@ -166,7 +180,7 @@ QT_PLUGIN_PATH=./qt ./binaryninja
 
 #### NixOS
 
-Here's a customer-provided nix derivation file for the Binary Ninja demo. Note that you'll likely want to update the SHA256 field with the latest value available [here](https://binary.ninja/js/hashes.js).  Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel) to find out more:
+Here's a customer-provided nix derivation file for the Binary Ninja demo. Note that you'll likely want to update the SHA256 field with the latest [hashes].  Adapt as necessary for other versions, or hop onto our slack (specifically the #unsupported-distros channel on our [slack]) to find out more:
 
 ``` js
 { stdenv, autoPatchelfHook, makeWrapper, fetchurl, unzip, libGL, glib, fontconfig, xlibs, dbus, xkeyboard_config }:
@@ -199,4 +213,5 @@ stdenv.mkDerivation rec {
 [FAQ]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
 [unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
-
+[slack]: https://slack.binary.ninja
+[hashes]: https://binary.ninja/js/hashes.js

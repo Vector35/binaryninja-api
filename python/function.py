@@ -789,28 +789,12 @@ class StackVariableReference(object):
 
 
 class Variable(object):
-	def __init__(self, func, source_type, index, storage, name = None, var_type = None):
+	def __init__(self, func, source_type, index, storage, name = None, var_type = None, identifier = None):
 		self._function = func
-		self._source_type = VariableSourceType(source_type)
+		self._source_type = source_type
 		self._index = index
 		self._storage = storage
-
-		var = core.BNVariable()
-		var.type = source_type
-		var.index = index
-		var.storage = storage
-		self._identifier = core.BNToVariableIdentifier(var)
-
-		if func is not None:
-			if name is None:
-				name = core.BNGetVariableName(func.handle, var)
-			if var_type is None:
-				var_type_conf = core.BNGetVariableType(func.handle, var)
-				if var_type_conf.type:
-					var_type = types.Type(var_type_conf.type, platform = func.platform, confidence = var_type_conf.confidence)
-				else:
-					var_type = None
-
+		self._identifier = identifier
 		self._name = name
 		self._type = var_type
 
@@ -874,6 +858,8 @@ class Variable(object):
 	@property
 	def identifier(self):
 		""" """
+		if self._identifier is None:
+			self._identifier = core.BNToVariableIdentifier(self.to_BNVariable())
 		return self._identifier
 
 	@identifier.setter
@@ -883,6 +869,9 @@ class Variable(object):
 	@property
 	def name(self):
 		"""Name of the variable"""
+		if self._name is None:
+			if self._function is not None:
+				self._name = core.BNGetVariableName(self._function.handle, self.to_BNVariable())
 		return self._name
 
 	@name.setter
@@ -892,16 +881,28 @@ class Variable(object):
 	@property
 	def type(self):
 		""" """
+		if self._type is None:
+			if self._function is not None:
+				var_type_conf = core.BNGetVariableType(self._function.handle, self.to_BNVariable())
+				if var_type_conf.type:
+					self._type = types.Type(var_type_conf.type, platform = self._function.platform, confidence = var_type_conf.confidence)
 		return self._type
 
 	@type.setter
 	def type(self, value):
 		self._type = value
 
+	def to_BNVariable(self):
+		v = core.BNVariable()
+		v.type = self._source_type
+		v.index = self._index
+		v.storage = self._storage
+		return v
+
 	@classmethod
-	def from_identifier(self, func, identifier, name = None, var_type = None):
+	def from_identifier(self, func, identifier, name=None, var_type=None):
 		var = core.BNFromVariableIdentifier(identifier)
-		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type)
+		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type, identifier)
 
 class ConstantReference(object):
 	def __init__(self, val, size, ptr, intermediate):

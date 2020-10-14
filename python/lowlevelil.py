@@ -61,12 +61,14 @@ class ILRegister(object):
 		return self._name
 
 	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
+		if isinstance(other, str) and other in self._arch.regs:
+			other = binaryninja.lowlevelil.ILRegister(self._arch, self._arch.regs[other].index)
+		elif not isinstance(other, self.__class__):
 			return NotImplemented
 		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
 
 	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, (self.__class__, str)):
 			return NotImplemented
 		return not (self == other)
 

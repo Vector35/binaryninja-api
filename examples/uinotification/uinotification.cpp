@@ -89,7 +89,7 @@ extern "C"
 {
 	BINARYNINJAPLUGIN bool UIPluginInit()
 	{
-	    NotificationListener::init();
+		NotificationListener::init();
 		return true;
 	}
 }

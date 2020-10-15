@@ -5481,7 +5481,9 @@ class BinaryView(object):
 		:param Settings settings: the load settings
 		:rtype: None
 		"""
-		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings.handle)
+		if settings is not None:
+			settings = settings.handle
+		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings)
 
 	def __setattr__(self, name, value):
 		try:

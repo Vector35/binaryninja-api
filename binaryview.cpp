@@ -3048,7 +3048,7 @@ Ref<Settings> BinaryView::GetLoadSettings(const string& typeName)
 
 void BinaryView::SetLoadSettings(const string& typeName, Ref<Settings> settings)
 {
-	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), settings->GetObject());
+	BNBinaryViewSetLoadSettings(m_object, typeName.c_str(), settings ? settings->GetObject() : nullptr);
 }
 
 

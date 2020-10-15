@@ -172,6 +172,9 @@ class SettingsAPI(unittest.TestCase):
 		assert mapped_view.view_type == bvt_name, "test_load_settings failed"
 		assert mapped_view.segments[0].start == 0x500000, "test_load_settings failed"
 		assert len(mapped_view) == 4, "test_load_settings failed"
+		assert raw_view.get_load_settings(bvt_name) == load_settings
+		raw_view.set_load_settings(bvt_name, None)
+		assert raw_view.get_load_settings(bvt_name) is None
 
 
 class MetaddataAPI(unittest.TestCase):

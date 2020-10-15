@@ -4684,7 +4684,7 @@ class BinaryView(object):
 		return types.TypeParserResult(type_dict, variables, functions)
 
 	def parse_possiblevalueset(self, value, state, here=0):
-		r"""
+		"""
 		Evaluates a string representation of a PossibleValueSet into an instance of the ``PossibleValueSet`` value.
 
 		.. note:: Values are evaluated based on the rules as specified for :py:meth:`parse_expression` API. This implies that a ``ConstantValue [0x4000].d`` can be provided given that 4 bytes can be read at ``0x4000``. All constants are considered to be in hexadecimal form by default.

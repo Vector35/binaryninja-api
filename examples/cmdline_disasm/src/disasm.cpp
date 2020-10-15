@@ -58,7 +58,7 @@ int main(int ac, char **av)
 	path_bundled_plugins = BNGetBundledPluginDirectory();
 	printf("using bundled plugin path: %s\n", path_bundled_plugins);
 	BNSetBundledPluginDirectory(path_bundled_plugins);
-	BNInitCorePlugins();
+	BNInitPlugins(true);
 
 	/* parse architecture argument */
 	if(ac < 2)

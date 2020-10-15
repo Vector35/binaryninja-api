@@ -313,8 +313,7 @@ int main(int argc, char *argv[])
 	// libbinaryninjacore is in the path get the path to it and use it to
 	// determine the plugins directory
 	SetBundledPluginDirectory(GetPluginsDirectory());
-	InitCorePlugins();
-	InitUserPlugins();
+	InitPlugins();
 
 	Ref<BinaryData> bd = new BinaryData(new FileMetadata(), argv[1]);
 	Ref<BinaryView> bv;

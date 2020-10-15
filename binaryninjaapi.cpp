@@ -42,6 +42,12 @@ bool BinaryNinja::IsPluginsEnabled()
 }
 
 
+bool BinaryNinja::InitPlugins(bool allowUserPlugins)
+{
+	return BNInitPlugins(allowUserPlugins);
+}
+
+
 void BinaryNinja::InitCorePlugins()
 {
 	BNInitCorePlugins();

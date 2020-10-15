@@ -659,8 +659,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 	void DisablePlugins();
 	bool IsPluginsEnabled();
-	void InitCorePlugins();
-	void InitUserPlugins();
+	bool InitPlugins(bool allowUserPlugins = true);
+	void InitCorePlugins(); // Deprecated, use InitPlugins
+	void InitUserPlugins(); // Deprecated, use InitPlugins
 	void InitRepoPlugins();
 
 	std::string GetBundledPluginDirectory();

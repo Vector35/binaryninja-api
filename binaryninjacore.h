@@ -2448,10 +2448,11 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetUniqueIdentifierString(void);
 
 	// Plugin initialization
-	BINARYNINJACOREAPI bool BNInitCorePlugins(void);
+	BINARYNINJACOREAPI bool BNInitPlugins(bool allowUserPlugins);
+	BINARYNINJACOREAPI bool BNInitCorePlugins(void); // Deprecated, use BNInitPlugins
 	BINARYNINJACOREAPI void BNDisablePlugins(void);
 	BINARYNINJACOREAPI bool BNIsPluginsEnabled(void);
-	BINARYNINJACOREAPI void BNInitUserPlugins(void);
+	BINARYNINJACOREAPI void BNInitUserPlugins(void); // Deprecated, use BNInitPlugins
 	BINARYNINJACOREAPI void BNInitRepoPlugins(void);
 
 	BINARYNINJACOREAPI char* BNGetInstallDirectory(void);

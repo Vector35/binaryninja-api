@@ -61,6 +61,9 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 		size_t lineIndexForAddress;
 		size_t tokenIndex;
 		size_t characterIndex;
+		// Directly from QMouseEvent, not used in comparator
+		int cursorX;
+		int cursorY;
 
 		bool operator<(const CursorPosition& other) const;
 	};

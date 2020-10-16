@@ -30,6 +30,9 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition
 	size_t lineIndex;
 	size_t tokenIndex;
 	size_t characterIndex;
+	// Directly from QMouseEvent, not used in comparators
+	int cursorX;
+	int cursorY;
 
 	LinearViewCursorPosition();
 	LinearViewCursorPosition(const LinearViewCursorPosition& pos);

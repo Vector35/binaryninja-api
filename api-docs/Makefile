@@ -2,18 +2,18 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXOPTS    ?= -j auto
+SPHINXBUILD   ?= sphinx-build
 PAPER         =
-BUILDDIR      = build
-SOURCEDIR     = source
+BUILDDIR      ?= build
+SOURCEDIR     ?= source
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
-ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
+ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCEDIR)
 # the i18n builder cannot share the environment and doctrees with the others
-I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
+I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCEDIR)
 
 .PHONY: help
 help:
@@ -50,6 +50,7 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -f $(SOURCEDIR)/binaryninja.*.rst
 	rm -f $(SOURCEDIR)/index.rst
+	rm -f $(SOURCEDIR)/api/*.rst
 
 .PHONY: html
 html:

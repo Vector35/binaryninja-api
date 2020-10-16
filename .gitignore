@@ -48,6 +48,8 @@ api-docs/source/python.rst
 api-docs/source/index.rst
 api-docs/source/uiapi
 api-docs/doxygen
+api-docs/cppdocs/api
+api-docs/cppdocs/xml
 !api-docs/Makefile
 
 # CMake

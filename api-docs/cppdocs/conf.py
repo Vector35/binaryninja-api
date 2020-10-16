@@ -36,64 +36,9 @@ sys.path.insert(0, bnpath)
 import binaryninja
 binaryninja._init_plugins() #force license check
 
-def modulelist(modulename):
-	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "with_metaclass", "cstr", "fnsignature", "get_class_members", "datetime", "inspect")))
-
-def classlist(module):
-	members = inspect.getmembers(module, inspect.isclass)
-	if module.__name__ != "binaryninja.enums":
-		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta)
-	members.extend(inspect.getmembers(module, inspect.isfunction))
-	return (x for x in members if not x[0].startswith("_"))
-
 def setup(app):
 	app.add_css_file('css/other.css')
 	app.is_parallel_allowed('write')
-
-def generaterst():
-	pythonrst = open("index.rst", "w")
-	pythonrst.write('''Binary Ninja Python API Documentation
-=====================================
-
-.. toctree::
-   :maxdepth: 2
-
-''')
-
-	for modulename, module in modulelist(binaryninja):
-		filename = 'binaryninja.{module}-module.rst'.format(module=modulename)
-		pythonrst.write('   {module} <{filename}>\n'.format(module=modulename, filename=filename))
-		modulefile = open(filename, "w")
-		modulefile.write('''{module} module
-=====================
-
-.. autosummary::
-   :toctree:
-
-'''.format(module=modulename))
-
-		for (classname, classref) in classlist(module):
-			modulefile.write("   binaryninja.{module}.{classname}\n".format(module=modulename, classname=classname))
-
-		modulefile.write('''\n.. toctree::
-   :maxdepth: 2\n''')
-
-		modulefile.write('''\n\n.. automodule:: binaryninja.{module}
-   :members:
-   :undoc-members:
-   :show-inheritance:'''.format(module=modulename))
-		modulefile.close()
-
-	pythonrst.write('''.. automodule:: binaryninja
-   :members:
-   :undoc-members:
-   :show-inheritance:
-''')
-	pythonrst.close()
-
-
-generaterst()
 
 # -- General configuration ------------------------------------------------
 
@@ -109,14 +54,40 @@ extensions = [
 	'sphinx.ext.autodoc',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
-	'sphinx.ext.viewcode'
+	'sphinx.ext.viewcode',
+	'breathe',
+	'exhale'
 ]
 
-autosummary_generate = True
-autodoc_member_order = 'groupwise'
+breathe_projects = { "BinaryNinja": "./xml/" }
+'''
+breathe_projects_source = {
+		"BinaryNinja": ("../../", ["binaryninjaapi.h", "binaryninjacore.h"])
+	}
+'''
+breathe_default_project = "BinaryNinja"
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+import glob
+inputfiles = glob.glob("../../*.h") + glob.glob("../../*.cpp") + glob.glob("../../ui/*.h") + glob.glob("../../ui/*.cpp")
+inputfiles = ' '.join([x for x in inputfiles if not "progressindicator" in x])
+
+exhale_args = {
+	# These arguments are required
+	"containmentFolder":     "./api",
+	"rootFileName":          "library_root.rst",
+	"rootFileTitle":         "Binary Ninja C++ API",
+	"doxygenStripFromPath":  "..",
+	# Suggested optional arguments
+	"createTreeView":        True,
+	# TIP: if using the sphinx-bootstrap-theme, you need
+	# "treeViewIsBootstrap": True,
+	"exhaleExecutesDoxygen": True,
+	"exhaleDoxygenStdin":    f'''RECURSIVE = NO
+INPUT = {inputfiles}
+WARN_IF_UNDOCUMENTED = NO
+'''
+}
+
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -129,10 +100,10 @@ source_suffix = '.rst'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = 'api/library_root'
 
 # General information about the project.
-project = u'Binary Ninja Python API'
+project = u'Binary Ninja C++ API'
 copyright = u'2015-2020, Vector 35 Inc'
 author = u'Vector 35 Inc'
 
@@ -193,11 +164,11 @@ html_theme_options = {
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-html_title = u'Binary Ninja API Documentation v' + version
+html_title = u'Binary Ninja C++ API Documentation v' + version
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
-html_short_title = u'BN API'
+html_short_title = u'BN C++ API'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

@@ -1,3 +1,0 @@
-Platform
-=========
-.. doxygenclass:: BinaryNinja::Platform

@@ -1257,14 +1257,7 @@ class VerifyBuilder(Builder):
             assert([str(functions == bndb_functions and comments == bndb_comments)])
             bv.file.close()
             del bv
-            for i in range(5):
-                try:
-                    time.sleep(1)
-                    os.unlink(temp_name)
-                    break
-                except OSError:
-                    print("Failed to remove file {}".format(temp_name))
-                    continue
+            os.unlink(temp_name)
 
             # test with overridden arch preference
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
@@ -1333,14 +1326,7 @@ class VerifyBuilder(Builder):
             assert([str(functions == bndb_functions and comments == bndb_comments)])
             bv.file.close()
             del bv
-            for i in range(5):
-                try:
-                    time.sleep(1)
-                    os.unlink(temp_name)
-                    break
-                except OSError:
-                    print("Failed to remove file {}".format(temp_name))
-                    continue
+            os.unlink(temp_name)
 
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
             bv = binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000})
@@ -1458,15 +1444,9 @@ class VerifyBuilder(Builder):
                         found = True
                 assert(found)
 
-            for i in range(5):
-                try:
-                    time.sleep(1)
-                    os.unlink(temp_name)
-                    break
-                except OSError:
-                    print("Failed to remove file {}".format(temp_name))
-                    continue
+            os.unlink(temp_name)
             return True
+
         finally:
             self.delete_package("helloworld")
 
@@ -1507,15 +1487,9 @@ class VerifyBuilder(Builder):
 
                     assert(def_ins.get_possible_reg_values_after('r3') == value)
 
-                for i in range(5):
-                    try:
-                        time.sleep(1)
-                        os.unlink(temp_name)
-                        break
-                    except OSError:
-                        print("Failed to remove file {}".format(temp_name))
-                        continue
+                os.unlink(temp_name)
                 return True
+
             finally:
                 self.delete_package("helloworld")
 

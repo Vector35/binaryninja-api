@@ -58,7 +58,7 @@ PROJECT_LOGO           = ../../docs/img/logo.png
 # entered, it will be relative to the location where doxygen was started. If
 # left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = xml
+OUTPUT_DIRECTORY       =
 
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create 4096 sub-
 # directories (in 2 levels) under the output directory of each output format and
@@ -767,7 +767,7 @@ CITE_BIB_FILES         =
 # messages are off.
 # The default value is: NO.
 
-QUIET                  = NO
+QUIET                  = YES
 
 # The WARNINGS tag can be used to turn on/off the warning messages that are
 # generated to standard error (stderr) by doxygen. If WARNINGS is set to YES
@@ -905,6 +905,7 @@ EXCLUDE_PATTERNS       =
 # exclude all test directories use the pattern */test/*
 
 EXCLUDE_SYMBOLS        =
+#EXCLUDE_SYMBOLS        = QProgressIndicator #Broke Exhale
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or directories
 # that contain example code fragments that are included (see the \include
@@ -999,7 +1000,7 @@ USE_MDFILE_AS_MAINPAGE = index.md
 # also VERBATIM_HEADERS is set to NO.
 # The default value is: NO.
 
-SOURCE_BROWSER         = YES
+SOURCE_BROWSER         = NO
 
 # Setting the INLINE_SOURCES tag to YES will include the body of functions,
 # classes and enums directly into the documentation.
@@ -1032,7 +1033,7 @@ REFERENCES_RELATION    = NO
 # link to the documentation.
 # The default value is: YES.
 
-REFERENCES_LINK_SOURCE = YES
+REFERENCES_LINK_SOURCE = NO
 
 # If SOURCE_TOOLTIPS is enabled (the default) then hovering a hyperlink in the
 # source code will show a tooltip with additional information such as prototype,
@@ -1072,7 +1073,7 @@ USE_HTAGS              = NO
 # See also: Section \class.
 # The default value is: YES.
 
-VERBATIM_HEADERS       = YES
+VERBATIM_HEADERS       = NO
 
 #---------------------------------------------------------------------------
 # Configuration options related to the alphabetical class index
@@ -1083,7 +1084,7 @@ VERBATIM_HEADERS       = YES
 # classes, structs, unions or interfaces.
 # The default value is: YES.
 
-ALPHABETICAL_INDEX     = NO
+ALPHABETICAL_INDEX     = YES
 
 # The COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns in
 # which the alphabetical index list will be split.
@@ -1115,7 +1116,7 @@ GENERATE_HTML          = YES
 # The default directory is: html.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_OUTPUT            = ../html
+HTML_OUTPUT            =
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for each
 # generated HTML page (for example: .htm, .php, .asp).
@@ -1991,7 +1992,7 @@ GENERATE_XML           = YES
 # The default directory is: xml.
 # This tag requires that the tag GENERATE_XML is set to YES.
 
-XML_OUTPUT             = xml
+XML_OUTPUT             =
 
 # If the XML_PROGRAMLISTING tag is set to YES, doxygen will dump the program
 # listings (including syntax highlighting and cross-referencing information) to

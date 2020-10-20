@@ -82,7 +82,7 @@
       <properties title=""/>
       <events title=""/>
     </memberdef>
-    <allmemberslink visible="yes"/>
+    <allmemberslink visible="no"/>
     <usedfiles visible="$SHOW_USED_FILES"/>
     <authorsection visible="yes"/>
   </class>

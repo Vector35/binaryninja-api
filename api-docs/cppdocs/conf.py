@@ -57,28 +57,11 @@ extensions = [
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
 	'sphinx.ext.viewcode',
-	'exhale',
 	'breathe'
 ]
 
 breathe_projects = { "bncpp": "./xml/" }
 breathe_default_project = "bncpp"
-
-
-exhale_args = {
-    # These arguments are required
-    "containmentFolder":     "api",
-    "rootFileName":          "library_root.rst",
-    "rootFileTitle":         "Library API",
-    "doxygenStripFromPath":  apipath,
-    # Suggested optional arguments
-    "createTreeView":        True,
-    # TIP: if using the sphinx-bootstrap-theme, you need
-    # "treeViewIsBootstrap": True,
-    "exhaleExecutesDoxygen": False
-    #"exhaleUseDoxyfile": True
-    #"exhaleDoxygenStdin":    "INPUT = ../include"
-}
 
 # Tell sphinx what the primary language being documented is.
 primary_domain = 'cpp'

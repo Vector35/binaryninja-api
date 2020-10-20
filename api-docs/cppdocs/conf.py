@@ -21,6 +21,8 @@ import sys
 import platform
 import inspect
 
+apipath = os.path.realpath(os.path.join(os.path.abspath('.'), "..", ".."))
+
 if (platform.system() == "Darwin"):
 	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "build", "out", "binaryninja.app", "Contents", "Resources", "python")
 else:
@@ -55,52 +57,35 @@ extensions = [
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
 	'sphinx.ext.viewcode',
-	'breathe',
-	'exhale'
+	'exhale',
+	'breathe'
 ]
 
-breathe_projects = { "BinaryNinja": "./xml/" }
-'''
-breathe_projects_source = {
-		"BinaryNinja": ("../../", ["binaryninjaapi.h", "binaryninjacore.h"])
-	}
-'''
-breathe_default_project = "BinaryNinja"
+breathe_projects = { "bncpp": "./xml/" }
+breathe_default_project = "bncpp"
 
-import glob
-inputfiles = glob.glob("../../*.h") + glob.glob("../../*.cpp") + glob.glob("../../ui/*.h") + glob.glob("../../ui/*.cpp")
-inputfiles = ' '.join([x for x in inputfiles if not "progressindicator" in x])
 
 exhale_args = {
-	# These arguments are required
-	"containmentFolder":     "./api",
-	"rootFileName":          "library_root.rst",
-	"rootFileTitle":         "Binary Ninja C++ API",
-	"doxygenStripFromPath":  "..",
-	# Suggested optional arguments
-	"createTreeView":        True,
-	# TIP: if using the sphinx-bootstrap-theme, you need
-	# "treeViewIsBootstrap": True,
-	"exhaleExecutesDoxygen": True,
-	"exhaleDoxygenStdin":    f'''RECURSIVE = NO
-INPUT = {inputfiles}
-WARN_IF_UNDOCUMENTED = NO
-'''
+    # These arguments are required
+    "containmentFolder":     "api",
+    "rootFileName":          "library_root.rst",
+    "rootFileTitle":         "Library API",
+    "doxygenStripFromPath":  apipath,
+    # Suggested optional arguments
+    "createTreeView":        True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+    "exhaleExecutesDoxygen": False
+    #"exhaleUseDoxyfile": True
+    #"exhaleDoxygenStdin":    "INPUT = ../include"
 }
 
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'cpp'
 
-# The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = 'cpp'
 
-# The encoding of source files.
-#
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = 'api/library_root'
 
 # General information about the project.
 project = u'Binary Ninja C++ API'
@@ -146,7 +131,7 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_theme_path = [os.path.join(os.path.abspath("."), "..", "..", "sphinx_rtd_theme")]
+#html_theme_path = [os.path.join(os.path.abspath("."), "..", "..", "sphinx_rtd_theme")]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -265,104 +250,3 @@ html_show_sphinx = False
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'BinaryNinjaAPIDocumentation'
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-	 # The paper size ('letterpaper' or 'a4paper').
-	 #
-	 # 'papersize': 'letterpaper',
-
-	 # The font size ('10pt', '11pt' or '12pt').
-	 #
-	 # 'pointsize': '10pt',
-
-	 # Additional stuff for the LaTeX preamble.
-	 #
-	 # 'preamble': '',
-
-	 # Latex figure (float) alignment
-	 #
-	 # 'figure_align': 'htbp',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-	(master_doc, 'BinaryNinjaAPIDocumentation.tex', u'Binary Ninja API Documentation',
-	 u'Vector 35 Inc', 'manual'),
-]
-
-# The name of an image file (relative to this directory) to place at the top of
-# the title page.
-#
-# latex_logo = None
-
-# For "manual" documents, if this is true, then toplevel headings are parts,
-# not chapters.
-#
-# latex_use_parts = False
-
-# If true, show page references after internal links.
-#
-# latex_show_pagerefs = False
-
-# If true, show URL addresses after external links.
-#
-# latex_show_urls = False
-
-# Documents to append as an appendix to all manuals.
-#
-# latex_appendices = []
-
-# If false, no module index is generated.
-#
-# latex_domain_indices = True
-
-
-# -- Options for manual page output ---------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [
-	(master_doc, 'binaryninjaapi', u'Binary Ninja API Documentation',
-	 [author], 1)
-]
-
-# If true, show URL addresses after external links.
-#
-# man_show_urls = False
-
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-	(master_doc, 'BinaryNinjaAPIDocumentation', u'Binary Ninja API Documentation',
-	 author, 'BinaryNinjaAPIDocumentation', 'One line description of project.',
-	 'Miscellaneous'),
-]
-
-# Documents to append as an appendix to all manuals.
-#
-# texinfo_appendices = []
-
-# If false, no module index is generated.
-#
-# texinfo_domain_indices = True
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#
-# texinfo_show_urls = 'footnote'
-
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-#
-# texinfo_no_detailmenu = False
-
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
-

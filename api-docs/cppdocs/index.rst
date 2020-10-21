@@ -4,8 +4,9 @@ Binary Ninja C++ API Documentation
    :maxdepth: 2
    :caption: Contents:
 
-.. doxygennamespace:: BinaryNinja
-   :members:
+.. doxygenindex::
+   :outline:
+
 
 Indices and tables
 ==================

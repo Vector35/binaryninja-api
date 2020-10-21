@@ -43,7 +43,7 @@ def modulelist(modulename):
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
 	if module.__name__ != "binaryninja.enums":
-		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta)
+		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ != 'builtins')
 	members.extend(inspect.getmembers(module, inspect.isfunction))
 	return (x for x in members if not x[0].startswith("_"))
 

@@ -287,7 +287,7 @@ The function list also highlights imports, and functions identified with symbols
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
-To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Script console` menu.
+To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Native Docks`/`Show Python Console` menu.
 
 Once loaded, the script console can be docked in different locations or popped out into a stand-alone window. Note that [at this time](https://github.com/Vector35/binaryninja-api/issues/226) window locations are not saved on restart.
 

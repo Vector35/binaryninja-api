@@ -115,7 +115,7 @@ Additionally, running a python plugin with an environment variable of `BN_DISABL
 
 ## Writing Plugins
 
-First, take a look at some of the [example] plugins, or some of the [community] plugins to get a feel for different APIs you might be interested in. Of course, the full [API] docs are online and available offline via the `Help`/`Open API Reference...`.
+First, take a look at some of the [example] plugins, or some of the [community] plugins to get a feel for different APIs you might be interested in. Of course, the full [API] docs are online and available offline via the `Help`/`Open Python Reference...`.
 
 To start, we suggest you download the [sample plugin] as a template since it contains all of the elements you're likely to need.
 

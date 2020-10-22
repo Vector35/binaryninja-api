@@ -958,7 +958,7 @@ extern "C"
 		MLIL_CALL_UNTYPED, // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
 		MLIL_CALL_OUTPUT, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_CALL_PARAM, // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
-		MLIL_RET, // Not valid in SSA form (see MLIL_RET_SSA)
+		MLIL_RET,
 		MLIL_NORET,
 		MLIL_IF,
 		MLIL_GOTO,

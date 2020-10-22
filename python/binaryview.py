@@ -760,7 +760,7 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	@classmethod
 	def get_view_of_file(cls, filename, update_analysis=True, progress_func=None):
 		"""
-		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view matches
+		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view is available
 
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
@@ -859,6 +859,9 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 			load_settings = view.get_load_settings(bvt.name)
 		if load_settings is None:
 			load_settings = bvt.get_load_settings_for_data(view)
+		if load_settings is None:
+			log.log_error(f"Could not get load settings for binary view of type `{bvt.name}`")
+			return view
 		load_settings.set_resource_id(bvt.name)
 		view.set_load_settings(bvt.name, load_settings)
 
@@ -878,7 +881,9 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		else:
 			bv = bvt.create(view)
 
-		if bv is not None and update_analysis:
+		if bv is None:
+			return view
+		elif update_analysis:
 			bv.update_analysis_and_wait()
 		return bv
 

@@ -593,8 +593,8 @@ class TestBuilder(Builder):
     def test_Simplifier(self):
         """Template Simplification"""
         result = [binja.demangle.simplify_name_to_string(s) for s in [
-            # Simple
-            "std::__cxx11::basic_string<T, std::char_traits<T>, std::allocator<T> >",
+            # Minimal exhaustive examples of simplifier (these are replicated in testcommon)
+            "std::basic_string<T, std::char_traits<T>, std::allocator<T> >",
             "std::vector<T, std::allocator<T> >",
             "std::vector<T, std::allocator<T>, std::lessthan<T> >",
             "std::deque<T, std::allocator<T> >",
@@ -611,10 +611,59 @@ class TestBuilder(Builder):
             "std::unordered_map<T1, T2, std::hash<T1>, std::equal_to<T1>, std::allocator<std::pair<const T1, T2> > >",
             "std::unordered_multimap<T1, T2, std::hash<T1>, std::equal_to<T1>, std::allocator<std::pair<const T1, T2> > >",
 
-            # More complex
-            "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string",
+            "std::basic_stringbuf<char, std::char_traits<char>, std::allocator<char> >",
+            "std::basic_istringstream<char, std::char_traits<char>, std::allocator<char> >",
+            "std::basic_ostringstream<char, std::char_traits<char>, std::allocator<char> >",
+            "std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >",
+            "std::basic_stringbuf<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >",
+            "std::basic_istringstream<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >",
+            "std::basic_ostringstream<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >",
+            "std::basic_stringstream<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >",
+            "std::basic_stringbuf<T, std::char_traits<T>, std::allocator<T> >",
+            "std::basic_istringstream<T, std::char_traits<T>, std::allocator<T> >",
+            "std::basic_ostringstream<T, std::char_traits<T>, std::allocator<T> >",
+            "std::basic_stringstream<T, std::char_traits<T>, std::allocator<T> >",
+
+            "std::basic_ios<char, std::char_traits<char> >",
+            "std::basic_streambuf<char, std::char_traits<char> >",
+            "std::basic_istream<char, std::char_traits<char> >",
+            "std::basic_ostream<char, std::char_traits<char> >",
+            "std::basic_iostream<char, std::char_traits<char> >",
+            "std::basic_filebuf<char, std::char_traits<char> >",
+            "std::basic_ifstream<char, std::char_traits<char> >",
+            "std::basic_ofstream<char, std::char_traits<char> >",
+            "std::basic_fstream<char, std::char_traits<char> >",
+            "std::basic_ios<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_streambuf<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_istream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_ostream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_iostream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_filebuf<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_ifstream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_ofstream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_fstream<wchar_t, std::char_traits<wchar_t> >",
+            "std::basic_ios<T, std::char_traits<T> >",
+            "std::basic_streambuf<T, std::char_traits<T> >",
+            "std::basic_istream<T, std::char_traits<T> >",
+            "std::basic_ostream<T, std::char_traits<T> >",
+            "std::basic_iostream<T, std::char_traits<T> >",
+            "std::basic_filebuf<T, std::char_traits<T> >",
+            "std::basic_ifstream<T, std::char_traits<T> >",
+            "std::basic_ofstream<T, std::char_traits<T> >",
+            "std::basic_fstream<T, std::char_traits<T> >",
+
+            "std::fpos<__mbstate_t>",
+            "std::_Ios_Iostate",
+            "std::_Ios_Seekdir",
+            "std::_Ios_Openmode",
+            "std::_Ios_Fmtflags",
+
+            # More complex examples:
+            "AddRequiredUIPluginDependency(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)",
+            "std::vector<std::vector<BinaryNinja::InstructionTextToken, std::allocator<BinaryNinja::InstructionTextToken> >, std::allocator<std::vector<BinaryNinja::InstructionTextToken, std::allocator<BinaryNinja::InstructionTextToken> > > >::_M_check_len(uint64_t, char const*) const",
             "std::vector<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::array<uint32_t, 5ul> >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::array<uint32_t, 5ul> > > >::_M_default_append(uint64_t)",
-            "std::vector<std::vector<T, std::allocator<T> >, std::allocator<std::vector<T, std::allocator<T> > > >::_M_check_len(uint64_t, char const*) const",
+            "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string",
+            "std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::~basic_string",
         ]]
 
         # Test all the APIs

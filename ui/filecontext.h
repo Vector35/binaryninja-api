@@ -75,4 +75,5 @@ public:
 
 	static FileContext* newFile();
 	static FileContext* openFilename(const QString& path);
+	static const std::set<FileContext*>& getOpenFileContexts();
 };

@@ -4738,6 +4738,8 @@ class BinaryView(object):
 		"""
 		result = core.BNPossibleValueSet()
 		errors = ctypes.c_char_p()
+		if value == None:
+			value = ''
 		if not core.BNParsePossibleValueSet(self.handle, value, state, result, here, errors):
 			if errors:
 				error_str = errors.value.decode("utf-8")

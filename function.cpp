@@ -1779,7 +1779,7 @@ void Function::SetUserVariableValue(const Variable& var, uint64_t defAddr, Possi
 	{
 		LogError("Could not get definition for Variable");
 		return;
-	} 
+	}
 	bool found = false;
 	for (auto& site : varDefs)
 	{
@@ -1817,7 +1817,7 @@ void Function::ClearUserVariableValue(const Variable& var, uint64_t defAddr)
 	{
 		LogError("Could not get definition for Variable");
 		return;
-	} 
+	}
 	bool found = false;
 	for (auto& site : varDefs)
 	{

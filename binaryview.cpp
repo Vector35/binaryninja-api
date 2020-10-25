@@ -2454,7 +2454,7 @@ uint64_t BinaryView::GetPreviousDataVariableStartBeforeAddress(uint64_t addr)
 bool BinaryView::ParsePossibleValueSet(const string& value, BNRegisterValueType state, PossibleValueSet& result, uint64_t here, string& errors)
 {
 	BNPossibleValueSet res;
-	char* errorStr;
+	char* errorStr = nullptr;
 
 	if (!BNParsePossibleValueSet(m_object, value.c_str(), state, &res, here, &errorStr))
 	{

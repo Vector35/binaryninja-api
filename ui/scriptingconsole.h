@@ -50,10 +50,14 @@ class BINARYNINJAUIAPI ScriptingCompletionPopup: public QDialog
 	QListView* m_list;
 	ScriptingCompletionModel* m_model;
 
+protected:
+	virtual bool eventFilter(QObject* obj, QEvent* event) override;
+
 public:
 	ScriptingCompletionPopup(QWidget* parent);
 	void showWithData(QPoint pt, int cursorSize, const std::vector<std::string>& completions, bool searching = false);
 	bool handleKeyEvent(QKeyEvent* event);
+	virtual ~ScriptingCompletionPopup();
 
 private Q_SLOTS:
 	void clickRow(const QModelIndex& index);

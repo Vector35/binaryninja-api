@@ -163,10 +163,10 @@ class SettingsAPI(unittest.TestCase):
 		assert load_settings.contains("loader.architecture"), "test_load_settings failed"
 		assert load_settings.contains("loader.platform"), "test_load_settings failed"
 		assert load_settings.contains("loader.imageBase"), "test_load_settings failed"
-		assert load_settings.contains("loader.entryPoint"), "test_load_settings failed"
+		assert load_settings.contains("loader.entryPointOffset"), "test_load_settings failed"
 		load_settings.set_string("loader.architecture", 'x86_64')
 		load_settings.set_integer("loader.imageBase", 0x500000)
-		load_settings.set_integer("loader.entryPoint", 0x500000)
+		load_settings.set_integer("loader.entryPointOffset", 0)
 		raw_view.set_load_settings(bvt_name, load_settings)
 		mapped_view = BinaryViewType[bvt_name].create(raw_view)
 		assert mapped_view.view_type == bvt_name, "test_load_settings failed"

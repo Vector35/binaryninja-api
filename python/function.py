@@ -799,9 +799,7 @@ class Variable(object):
 		self._type = var_type
 
 	def __repr__(self):
-		if self._type is None:
-			return "<var %s>" % self.name
-		return "<var %s %s%s>" % (self._type.get_string_before_name(), self.name, self._type.get_string_after_name())
+		return "<var %s %s%s>" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
 
 	def __str__(self):
 		return self.name
@@ -831,6 +829,9 @@ class Variable(object):
 	@property
 	def source_type(self):
 		""":class:`~enums.VariableSourceType`"""
+		if not isinstance(self._source_type, VariableSourceType):
+			self._source_type = VariableSourceType(self._source_type)
+
 		return self._source_type
 
 	@source_type.setter
@@ -894,7 +895,7 @@ class Variable(object):
 
 	def to_BNVariable(self):
 		v = core.BNVariable()
-		v.type = self._source_type
+		v.type = self.source_type
 		v.index = self._index
 		v.storage = self._storage
 		return v

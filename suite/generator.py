@@ -261,11 +261,19 @@ def generate(test_store, outdir, exclude_binaries):
     allfiles = sorted(testcommon.get_file_list(test_store))
     for progress, testfile in enumerate(allfiles):
         oraclefile = None
+        zip_only = False
         if testfile.endswith(".gitignore"):
             continue
         if testfile.endswith(".pkl"):
             continue
         elif testfile.endswith(".DS_Store"):
+            continue
+        elif testfile.endswith(".bndb"):
+            # For databases, we do not wish to create oracle data for them
+            # However, we do wish them to be zipped
+            zip_only = True
+            oraclefile = testfile
+        elif testfile.endswith(".bndb.zip"):
             continue
         elif testfile.endswith(".zip"):
             # We have a zipped binary unzip it so we can rebaseline
@@ -281,6 +289,15 @@ def generate(test_store, outdir, exclude_binaries):
                 continue
             # We have a binary that isn't zipped use it as a new test case
             oraclefile = testfile
+
+        # create the zip archive for the file
+        if not os.path.exists(oraclefile + ".zip"):
+            with zipfile.ZipFile(oraclefile + ".zip", "w") as zf:
+                zf.write(oraclefile, os.path.relpath(oraclefile, start=os.path.dirname(__file__)))
+
+        if zip_only:
+            os.unlink(oraclefile)
+            continue
 
         oraclefile_rel = os.path.relpath(oraclefile, start=os.path.dirname(__file__))
 
@@ -305,10 +322,6 @@ def generate(test_store, outdir, exclude_binaries):
             for method in test_data.methods():
                 binary_oracle.add_entry(test_data, method)
             binary_oracle.close()
-
-        if not os.path.exists(oraclefile + ".zip"):
-            with zipfile.ZipFile(oraclefile + ".zip", "w") as zf:
-                zf.write(oraclefile, os.path.relpath(oraclefile, start=os.path.dirname(__file__)))
 
         os.unlink(oraclefile)
 

@@ -454,19 +454,20 @@ class TestBuilder(Builder):
 
     def test_deprecated_BinaryViewType(self):
         """deprecated BinaryViewType list doesnt match"""
-        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "fat_macho_9arch.bndb")
+        file_name = self.unpackage_file("fat_macho_9arch.bndb")
         if not os.path.exists(file_name):
             return [""]
 
+        view_types = []
         with binja.filemetadata.FileMetadata().open_existing_database(file_name, None) as bv:
-            view_types = []
             for view_type in bv.available_view_types:
                 if view_type.is_deprecated:
                     view_types.append('BinaryViewType: %s (deprecated)' % view_type.name)
                 else:
                     view_types.append('BinaryViewType: %s' % view_type.name)
 
-            return view_types
+        self.delete_package("fat_macho_9arch.bndb")
+        return view_types
 
     def test_Architecture_list(self):
         """Architecture list doesnt match"""
@@ -1522,14 +1523,16 @@ class VerifyBuilder(Builder):
 
     def test_load_old_database(self):
         """Load a database produced by Binary Ninja v1.2.1921"""
-        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "binja_v1.2.1921_bin_ls.bndb")
+        file_name = self.unpackage_file("binja_v1.2.1921_bin_ls.bndb")
         if not os.path.exists(file_name):
             return False
 
+        ret = None
         with BinaryViewType.get_view_of_file(file_name) as bv:
             if bv is None:
-                return False
+                ret = False
             if bv.file.snapshot_data_applied_without_error:
-                return True
+                ret = True
 
-        return False
+        self.delete_package("binja_v1.2.1921_bin_ls.bndb")
+        return ret

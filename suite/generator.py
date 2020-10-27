@@ -11,7 +11,7 @@ if sys.version_info.major == 2:
     print("Generate unit tests on Python 3. Python 2 is not compatible.")
     sys.exit(1)
 
-unit_test_template = """#!/usr/bin/env python
+unit_test_template = """#!/usr/bin/env python3
 # This is an auto generated unit test file do not edit directly
 import os
 import sys

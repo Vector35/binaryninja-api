@@ -530,7 +530,7 @@ class BinaryDataNotificationCallbacks(object):
 			address = var[0].address
 			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_added(self._view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_added(self._view, DataVariable(address, var_type, auto_discovered, self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -539,7 +539,7 @@ class BinaryDataNotificationCallbacks(object):
 			address = var[0].address
 			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_removed(self._view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_removed(self._view, DataVariable(address, var_type, auto_discovered, self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -548,7 +548,7 @@ class BinaryDataNotificationCallbacks(object):
 			address = var[0].address
 			var_type = types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
 			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_updated(self._view, DataVariable(address, var_type, auto_discovered, view))
+			self._notify.data_var_updated(self._view, DataVariable(address, var_type, auto_discovered, self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -633,14 +633,14 @@ class BinaryDataNotificationCallbacks(object):
 	def _type_defined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self._notify.type_defined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+			self._notify.type_defined(self._view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view, name, type_obj):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
-			self._notify.type_undefined(view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+			self._notify.type_undefined(self._view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 

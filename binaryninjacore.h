@@ -2507,6 +2507,8 @@ __attribute__ ((format (printf, 1, 2)))
 #endif
 	BINARYNINJACOREAPI void BNLogAlert(const char* fmt, ...);
 
+	BINARYNINJACOREAPI void BNLogString(BNLogLevel level, const char* str);
+
 	BINARYNINJACOREAPI void BNRegisterLogListener(BNLogListener* listener);
 	BINARYNINJACOREAPI void BNUnregisterLogListener(BNLogListener* listener);
 	BINARYNINJACOREAPI void BNUpdateLogListeners(void);

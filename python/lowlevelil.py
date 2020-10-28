@@ -75,7 +75,7 @@ class ILRegister(object):
 
 
 	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, (self.__class__, str)):
 			return NotImplemented
 		return not (self == other)
 

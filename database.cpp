@@ -38,6 +38,12 @@ void ProgressCallback(void* ctxt, size_t current, size_t total)
 }
 
 
+KeyValueStore::KeyValueStore()
+{
+	m_object = BNCreateKeyValueStore();
+}
+
+
 KeyValueStore::KeyValueStore(BNKeyValueStore* store)
 {
 	m_object = store;

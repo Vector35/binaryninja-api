@@ -853,6 +853,7 @@ __attribute__ ((format (printf, 1, 2)))
 	class KeyValueStore: public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
 	{
 	public:
+		KeyValueStore();
 		KeyValueStore(BNKeyValueStore* store);
 
 		std::vector<std::string> GetKeys() const;

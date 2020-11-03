@@ -2422,6 +2422,19 @@ extern "C"
 		uint64_t start, end;
 	};
 
+	enum BNBinaryViewEventType
+	{
+		BinaryViewFinalizationEvent,
+		BinaryViewInitialAnalysisCompletionEvent
+	};
+
+	struct BNBinaryViewEvent
+	{
+		BNBinaryViewEventType type;
+		void (*callback)(void* ctx, BNBinaryView* view);
+		void* ctx;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2789,6 +2802,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNRegisterDefaultPlatformForViewType(BNBinaryViewType* type, BNArchitecture* arch,
 	                                                             BNPlatform* platform);
 	BINARYNINJACOREAPI BNPlatform* BNGetPlatformForViewType(BNBinaryViewType* type, uint32_t id, BNArchitecture* arch);
+
+	BINARYNINJACOREAPI void BNRegisterBinaryViewEvent(BNBinaryViewEventType type,
+		void (*callback)(void* ctx, BNBinaryView* view), void* ctx);
 
 	// Stream reader object
 	BINARYNINJACOREAPI BNBinaryReader* BNCreateBinaryReader(BNBinaryView* view);

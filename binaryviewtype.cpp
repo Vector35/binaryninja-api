@@ -219,6 +219,31 @@ bool BinaryViewType::IsDeprecated()
 	return BNIsBinaryViewTypeDeprecated(m_object);
 }
 
+
+void BinaryViewType::RegisterBinaryViewFinalizationEvent(const function<void(BinaryView* view)>& callback)
+{
+	BinaryViewEvent* event = new BinaryViewEvent;
+	event->action = callback;
+	BNRegisterBinaryViewEvent(BinaryViewFinalizationEvent, BinaryViewEventCallback, event);
+}
+
+
+void BinaryViewType::RegisterBinaryViewInitialAnalysisCompletionEvent(const function<void(BinaryView* view)>& callback)
+{
+	BinaryViewEvent* event = new BinaryViewEvent;
+	event->action = callback;
+	BNRegisterBinaryViewEvent(BinaryViewInitialAnalysisCompletionEvent, BinaryViewEventCallback, event);
+}
+
+
+void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
+{
+	BinaryViewEvent* event = (BinaryViewEvent*)ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	event->action(viewObject);
+}
+
+
 CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(type)
 {
 }

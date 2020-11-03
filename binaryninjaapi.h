@@ -1803,6 +1803,11 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class BinaryViewType: public StaticCoreRefCountObject<BNBinaryViewType>
 	{
+		struct BinaryViewEvent
+		{
+			std::function<void(BinaryView*)> action;
+		};
+
 	protected:
 		std::string m_nameForRegister, m_longNameForRegister;
 
@@ -1841,6 +1846,11 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual BinaryView* Parse(BinaryView* data) = 0;
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
+
+		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
+		static void RegisterBinaryViewInitialAnalysisCompletionEvent(const std::function<void(BinaryView* view)>& callback);
+
+		static void BinaryViewEventCallback(void* ctxt, BNBinaryView* view);
 	};
 
 	class CoreBinaryViewType: public BinaryViewType

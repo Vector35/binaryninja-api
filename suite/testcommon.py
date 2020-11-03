@@ -1505,3 +1505,39 @@ class VerifyBuilder(Builder):
         assert(test_helper(binja.PossibleValueSet.in_set_of_values([1,2,3,4])))
         assert(test_helper(binja.PossibleValueSet.not_in_set_of_values([1,2,3,4])))
         return True
+
+    def test_binaryview_callbacks(self):
+        """BinaryView finalized callback and analysis completion callback"""
+        file_name = self.unpackage_file("helloworld")
+
+        # Currently, there is no way to unregister a BinaryView event callback.
+        # This boolean tells the callback function whether it should run or just return
+        callback_should_run = True
+
+        def bv_finalized_callback(bv):
+            if callback_should_run:
+                bv.store_metadata('finalized', 'yes')
+
+        def bv_finalized_callback_2(bv):
+            if callback_should_run:
+                bv.store_metadata('finalized_2', 'yes')
+
+        def bv_analysis_completion_callback(bv):
+            if callback_should_run:
+                bv.store_metadata('analysis_completion', 'yes')
+
+        BinaryViewType.add_binaryview_finalized_event(bv_finalized_callback)
+        BinaryViewType.add_binaryview_finalized_event(bv_finalized_callback_2)
+        BinaryViewType.add_binaryview_initial_analysis_completion_event(bv_analysis_completion_callback)
+
+        try:
+            with binja.open_view(file_name) as bv:
+                finalized = bv.query_metadata('finalized') == 'yes'
+                finalized_2 = bv.query_metadata('finalized_2') == 'yes'
+                analysis_completion = bv.query_metadata('analysis_completion') == 'yes'
+                return finalized and finalized_2 and analysis_completion
+
+        finally:
+            self.delete_package("helloworld")
+            callback_should_run = False
+

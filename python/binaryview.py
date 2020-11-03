@@ -32,7 +32,8 @@ from collections import OrderedDict
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import (AnalysisState, SymbolType, InstructionTextTokenType,
-	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag, TypeClass, SaveOption)
+	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
+	TypeClass, SaveOption, BinaryViewEventType)
 import binaryninja
 from binaryninja import associateddatastore # required for _BinaryViewAssociatedDataStore
 from binaryninja import log
@@ -252,7 +253,42 @@ class AnalysisCompletionEvent(object):
 	def view(self, value):
 		self._view = value
 
+# This has no functional purposes;
+# we just need it to stop Python from prematurely freeing the object
+_binaryview_events = {}
+class BinaryViewEvent(object):
+	"""
+	The ``BinaryViewEvent`` object provides a mechanism for receiving callbacks	when a BinaryView
+	is Finalized or the initial analysis is finished. The BinaryView finalized callbacks run before the
+	intialanalysis starts. The callbacks run one-after-another in the same order as they get registered.
+	It is a good place to modify the BinaryView to add extra information to it.
 
+	The callback function receives a BinaryView as its parameter. It is possible to call
+	BinaryView.add_analysis_completion_event() on it to set up other callbacks for analysis completion.
+
+	:Example:
+		>>> def callback(bv):
+   		...		print('start: 0x%x' % bv.start)
+		...
+		>>> BinaryViewEvent.add_binaryview_finalized_event(callback)
+	"""
+	@classmethod
+	def register(cls, event_type, callback):
+		callback_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._notify(view, callback))
+		core.BNRegisterBinaryViewEvent(event_type, callback_obj, None)
+		global _binaryview_events
+		_binaryview_events[len(_binaryview_events)] = callback_obj
+
+	@classmethod
+	def _notify(cls, view, callback):
+		try:
+			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			callback(view_obj)
+		except:
+			binaryninja.log.log_error(traceback.format_exc())
+
+			
 class ActiveAnalysisInfo(object):
 	def __init__(self, func, analysis_time, update_count, submit_count):
 		self._func = func
@@ -931,6 +967,14 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		if plat is None:
 			return None
 		return binaryninja.platform.Platform(handle = plat)
+
+	@staticmethod
+	def add_binaryview_finalized_event(callback):
+		BinaryViewEvent.register(BinaryViewEventType.BinaryViewFinalizationEvent, callback)
+
+	@staticmethod
+	def add_binaryview_initial_analysis_completion_event(callback):
+		BinaryViewEvent.register(BinaryViewEventType.BinaryViewInitialAnalysisCompletionEvent, callback)
 
 
 class Segment(object):

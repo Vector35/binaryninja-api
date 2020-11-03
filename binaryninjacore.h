@@ -2697,8 +2697,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNKeyValueStoreHasValue(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI char* BNGetKeyValueStoreValue(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name);
-	BINARYNINJACOREAPI void BNSetKeyValueStoreValue(BNKeyValueStore* store, const char* name, const char* value);
-	BINARYNINJACOREAPI void BNSetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name, const BNDataBuffer* value);
+	BINARYNINJACOREAPI bool BNSetKeyValueStoreValue(BNKeyValueStore* store, const char* name, const char* value);
+	BINARYNINJACOREAPI bool BNSetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name, const BNDataBuffer* value);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreSerializedData(BNKeyValueStore* store);
 	BINARYNINJACOREAPI void BNBeginKeyValueStoreNamespace(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI void BNEndKeyValueStoreNamespace(BNKeyValueStore* store);
@@ -2713,8 +2713,14 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeDatabase(BNDatabase* database);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseCurrentSnapshot(BNDatabase* database);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseSnapshot(BNDatabase* database, int64_t id);
+	BINARYNINJACOREAPI int64_t BNWriteDatabaseSnapshotData(BNDatabase* database, int64_t parent, BNBinaryView* file, const char* name, BNKeyValueStore* data, bool autoSave, void* ctxt, void(*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI char* BNReadDatabaseGlobal(BNDatabase* database, const char* key);
+	BINARYNINJACOREAPI bool BNWriteDatabaseGlobal(BNDatabase* database, const char* key, const char* val);
+	BINARYNINJACOREAPI BNDataBuffer* BNReadDatabaseGlobalData(BNDatabase* database, const char* key);
+	BINARYNINJACOREAPI bool BNWriteDatabaseGlobalData(BNDatabase* database, const char* key, BNDataBuffer* val);
+	BINARYNINJACOREAPI BNFileMetadata* BNGetDatabaseFile(BNDatabase* database);
 
-	// Database snapshots
+// Database snapshots
 	BINARYNINJACOREAPI BNSnapshot* BNNewSnapshotReference(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeSnapshot(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI int64_t BNGetSnapshotId(BNSnapshot* snapshot);

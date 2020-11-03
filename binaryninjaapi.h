@@ -886,8 +886,12 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Snapshot> GetParent();
 		DataBuffer GetFileContents();
 		std::vector<UndoEntry> GetUndoEntries();
+		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();
+		Ref<KeyValueStore> ReadData(const std::function<void(size_t, size_t)>& progress);
 	};
+
+	class FileMetadata;
 
 	class Database: public CoreRefCountObject<BNDatabase, BNNewDatabaseReference, BNFreeDatabase>
 	{
@@ -896,6 +900,14 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<Snapshot> GetSnapshot(int64_t id);
 		Ref<Snapshot> GetCurrentSnapshot();
+		int64_t WriteSnapshotData(int64_t parent, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
+
+		Json::Value ReadGlobal(const std::string& key) const;
+		void WriteGlobal(const std::string& key, const Json::Value& val);
+		DataBuffer ReadGlobalData(const std::string& key) const;
+		void WriteGlobalData(const std::string& key, const DataBuffer& val);
+
+		Ref<FileMetadata> GetFile();
 	};
 
 	struct UndoAction

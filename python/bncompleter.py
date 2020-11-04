@@ -195,11 +195,10 @@ class Completer:
 			noprefix = None
 		while True:
 			for word in words:
-				if (word[:n] == attr and
-					not (noprefix and word[:n+1] == noprefix)):
+				if (word[:n] == attr and not (noprefix and word[:n+1] == noprefix)):
 					match = "%s.%s" % (expr, word)
 					try:
-						val = getattr_static(thisobject, word)
+						val = inspect.getattr_static(thisobject, word)
 					except Exception:
 						pass  # Include even if attribute not set
 					else:

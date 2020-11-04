@@ -199,7 +199,7 @@ class Completer:
 					not (noprefix and word[:n+1] == noprefix)):
 					match = "%s.%s" % (expr, word)
 					try:
-						val = getattr(thisobject, word)
+						val = getattr_static(thisobject, word)
 					except Exception:
 						pass  # Include even if attribute not set
 					else:

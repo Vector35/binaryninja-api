@@ -5,7 +5,7 @@ import os
 from binaryninja.binaryview import BinaryView, BinaryViewType
 from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
-from binaryninja.demangle import demangle_gnu3, get_qualified_name
+from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
 from binaryninja.architecture import Architecture
 
 
@@ -274,6 +274,20 @@ class DemanglerTest(unittest.TestCase):
 			out += get_qualified_name(n)
 			out += str(t.get_string_after_name())
 		return out
+
+	def test_demangle_ms(self):
+		tests = (
+			"??_V@YAPAXI@Z",
+			"??_U@YAPAXI@Z"
+		)
+
+		results = (
+			"void* __cdecl operator delete[](uint32_t)",
+			"void* __cdecl operator new[](uint32_t)"
+		)
+		for i, test in enumerate(tests):
+			t, n = demangle_ms(Architecture['x86'], test)
+			self.get_type_string(t, n) == results[i]
 
 	def test_demangle_gnu3(self):
 		tests = ("__ZN15BinaryNinjaCore12BinaryReader5Read8Ev",

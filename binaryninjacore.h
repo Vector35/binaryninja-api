@@ -626,6 +626,8 @@ extern "C"
 		LvalueSuffix
 	};
 
+	// Caution: these enumeration values are used a lookups into the static NameTypeStrings in the core
+	// if you modify this you must also modify the string lookups as well
 	enum BNNameType
 	{
 		NoNameType,
@@ -640,7 +642,6 @@ extern "C"
 		OperatorEqualNameType,
 		OperatorNotEqualNameType,
 		OperatorArrayNameType,
-		OperatorDotNameType,
 		OperatorArrowNameType,
 		OperatorStarNameType,
 		OperatorIncrementNameType,

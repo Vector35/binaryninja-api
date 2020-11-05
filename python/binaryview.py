@@ -5171,19 +5171,22 @@ class BinaryView(object):
 		"""
 		core.BNReanalyzeAllFunctions(self.handle)
 
-	def rebase(self, address, progress_func = None):
+	def rebase(self, address, force = False, progress_func = None):
 		"""
 		``rebase`` rebase the existing :py:class:`BinaryView` into a new :py:class:`BinaryView` at the specified virtual address
 
-		.. note:: This method should not be called from the UI and is intended for headless operation only.
+		.. note:: This method does not update cooresponding UI components. If the `BinaryView` is associated with
+		UI components then initiate the rebase operation within the UI, e.g. using the command palette. If working with views that
+		are not associated with UI components while the UI is active, then set ``force`` to ``True`` to enable rebasing.
 
 		:param int address: virtual address of the start of the :py:class:`BinaryView`
+		:param bool force: enable rebasing while the UI is active
 		:return: the new :py:class:`BinaryView` object or ``None`` on failure
 		:rtype: :py:class:`BinaryView` or ``None``
 		"""
 		result = False
-		if core.BNIsUIEnabled():
-			log.log_warn("The BinaryView.rebase API is for headless operation only.")
+		if core.BNIsUIEnabled() and not force:
+			log.log_warn("The BinaryView rebase API does not update cooresponding UI components. If the BinaryView is not associated with the UI rerun with 'force = True'.")
 			return None
 		if progress_func is None:
 			result = core.BNRebase(self.handle, address)

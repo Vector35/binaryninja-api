@@ -83,7 +83,7 @@ Json::Value KeyValueStore::GetValue(const std::string& name) const
 	                   static_cast<const char*>(value.GetDataAt(value.GetLength())),
 	                   &json, &errors))
 	{
-		throw Exception(errors);
+		throw DatabaseException(errors);
 	}
 	return json;
 }
@@ -94,7 +94,7 @@ DataBuffer KeyValueStore::GetBuffer(const std::string& name) const
 	BNDataBuffer* buffer = BNGetKeyValueStoreBuffer(m_object, name.c_str());
 	if (buffer == nullptr)
 	{
-		throw Exception("Unknown key");
+		throw DatabaseException("Unknown key");
 	}
 	return DataBuffer(buffer);
 }
@@ -107,7 +107,7 @@ void KeyValueStore::SetValue(const std::string& name, const Json::Value& value)
 	string json = Json::writeString(builder, value);
 	if (!BNSetKeyValueStoreValue(m_object, name.c_str(), json.c_str()))
 	{
-		throw Exception("BNSetKeyValueStoreValue");
+		throw DatabaseException("BNSetKeyValueStoreValue");
 	}
 }
 
@@ -116,7 +116,7 @@ void KeyValueStore::SetBuffer(const std::string& name, const DataBuffer& value)
 {
 	if (!BNSetKeyValueStoreBuffer(m_object, name.c_str(), value.GetBufferObject()))
 	{
-		throw Exception("BNSetKeyValueStoreBuffer");
+		throw DatabaseException("BNSetKeyValueStoreBuffer");
 	}
 }
 
@@ -210,7 +210,7 @@ DataBuffer Snapshot::GetFileContents()
 	BNDataBuffer* buffer = BNGetSnapshotFileContents(m_object);
 	if (buffer == nullptr)
 	{
-		throw Exception("BNGetSnapshotFileContents");
+		throw DatabaseException("BNGetSnapshotFileContents");
 	}
 	return DataBuffer(buffer);
 }
@@ -231,7 +231,7 @@ vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<void(size_t, size
 	BNUndoEntry* entries = BNGetSnapshotUndoEntriesWithProgress(m_object, &pctxt, ProgressCallback, &numEntries);
 	if (entries == nullptr)
 	{
-		throw Exception("BNGetSnapshotUndoEntries");
+		throw DatabaseException("BNGetSnapshotUndoEntries");
 	}
 
 	vector<UndoEntry> result;
@@ -268,7 +268,7 @@ Ref<KeyValueStore> Snapshot::ReadData(const std::function<void(size_t, size_t)>&
 	BNKeyValueStore* store = BNReadSnapshotDataWithProgress(m_object, &pctxt, ProgressCallback);
 	if (store == nullptr)
 	{
-		throw Exception("BNReadSnapshotData");
+		throw DatabaseException("BNReadSnapshotData");
 	}
 	return new KeyValueStore(store);
 }
@@ -305,9 +305,22 @@ int64_t Database::WriteSnapshotData(int64_t parent, Ref<BinaryView> file, const 
 	int64_t result = BNWriteDatabaseSnapshotData(m_object, parent, file->GetObject(), name.c_str(), data->GetObject(), autoSave, &pctxt, ProgressCallback);
 	if (result < 0)
 	{
-		throw Exception("BNWriteDatabaseSnapshotData");
+		throw DatabaseException("BNWriteDatabaseSnapshotData");
 	}
 	return result;
+}
+
+
+bool Database::HasGlobal(const std::string& key) const
+{
+	// 0 - false, 1 - true, <0 - exception
+	int value = BNDatabaseHasGlobal(m_object, key.c_str());
+	if (value < 0)
+	{
+		throw DatabaseException("BNDatabaseHasGlobal");
+	}
+
+	return value == 1;
 }
 
 
@@ -316,7 +329,7 @@ Json::Value Database::ReadGlobal(const std::string& key) const
 	char* value = BNReadDatabaseGlobal(m_object, key.c_str());
 	if (value == nullptr)
 	{
-		throw Exception("BNReadDatabaseGlobal");
+		throw DatabaseException("BNReadDatabaseGlobal");
 	}
 
 	Json::Value json;
@@ -324,7 +337,7 @@ Json::Value Database::ReadGlobal(const std::string& key) const
 	std::string errors;
 	if (!reader->parse(value, value + strlen(value), &json, &errors))
 	{
-		throw Exception(errors);
+		throw DatabaseException(errors);
 	}
 
 	BNFreeString(value);
@@ -339,7 +352,7 @@ void Database::WriteGlobal(const std::string& key, const Json::Value& val)
 	string json = Json::writeString(builder, val);
 	if (!BNWriteDatabaseGlobal(m_object, key.c_str(), json.c_str()))
 	{
-		throw Exception("BNWriteDatabaseGlobal");
+		throw DatabaseException("BNWriteDatabaseGlobal");
 	}
 }
 
@@ -349,7 +362,7 @@ DataBuffer Database::ReadGlobalData(const std::string& key) const
 	BNDataBuffer* value = BNReadDatabaseGlobalData(m_object, key.c_str());
 	if (value == nullptr)
 	{
-		throw Exception("BNReadDatabaseGlobalData");
+		throw DatabaseException("BNReadDatabaseGlobalData");
 	}
 	return DataBuffer(value);
 }
@@ -359,7 +372,7 @@ void Database::WriteGlobalData(const std::string& key, const DataBuffer& val)
 {
 	if (!BNWriteDatabaseGlobalData(m_object, key.c_str(), val.GetBufferObject()))
 	{
-		throw Exception("BNWriteDatabaseGlobalData");
+		throw DatabaseException("BNWriteDatabaseGlobalData");
 	}
 }
 

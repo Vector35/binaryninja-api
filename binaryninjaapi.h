@@ -850,6 +850,11 @@ __attribute__ ((format (printf, 1, 2)))
 	struct InstructionTextToken;
 	struct UndoEntry;
 
+	struct DatabaseException: std::runtime_error
+	{
+		DatabaseException(const std::string& desc): std::runtime_error(desc.c_str()) {}
+	};
+
 	class KeyValueStore: public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
 	{
 	public:
@@ -903,6 +908,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(int64_t parent, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
 
+		bool HasGlobal(const std::string& key) const;
 		Json::Value ReadGlobal(const std::string& key) const;
 		void WriteGlobal(const std::string& key, const Json::Value& val);
 		DataBuffer ReadGlobalData(const std::string& key) const;

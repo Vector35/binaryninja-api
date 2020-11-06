@@ -166,11 +166,11 @@ def _init_plugins():
 	global _plugin_init
 	if not _plugin_init:
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.
-		is_headless = not core.BNIsUIEnabled()
+		# The result is pulled from BNInitPlugins as that now wraps BNInitCorePlugins.
+		is_headless_init_once = core.BNInitPlugins(not os.environ.get('BN_DISABLE_USER_PLUGINS'))
 		min_level = Settings().get_string("python.log.minLevel")
-		if _enable_default_log and is_headless and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
+		if _enable_default_log and is_headless_init_once and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
 			log_to_stderr(LogLevel[min_level])
-		core.BNInitPlugins(not os.environ.get('BN_DISABLE_USER_PLUGINS'))
 		core.BNInitRepoPlugins()
 	if core.BNIsLicenseValidated():
 		_plugin_init = True

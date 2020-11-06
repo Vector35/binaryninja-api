@@ -53,6 +53,20 @@ if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
     endif()
 endif()
 
+if(NOT HEADLESS)
+    if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
+        find_library(BN_UI_LIBRARY
+            NAMES binaryninjaui libbinaryninjaui.so.1
+            PATHS ${BN_INSTALL_BIN_DIR})
+
+        if(BN_UI_LIBRARY)
+            message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
+        else()
+            message(FATAL_ERROR "Binary Ninja UI Not Found")
+        endif()
+    endif()
+endif()
+
 file(GLOB BN_API_SOURCES *.cpp *.h json/json.h json/json-forwards.h)
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
@@ -67,6 +81,16 @@ if(NOT BN_INTERNAL_BUILD)
     target_link_libraries(binaryninjaapi ${BN_CORE_LIBRARY})
 else()
     target_link_libraries(binaryninjaapi binaryninjacore)
+endif()
+
+if(NOT HEADLESS)
+    target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
+
+    if(NOT BN_INTERNAL_BUILD)
+        target_link_libraries(binaryninjaapi ${BN_UI_LIBRARY})
+    else()
+        target_link_libraries(binaryninjaapi)
+    endif()
 endif()
 
 set_target_properties(binaryninjaapi PROPERTIES

@@ -26,6 +26,33 @@ The compiled API contains names and functions you can use from your plugins, but
 
 Since BinaryNinja is a 64-bit only product, ensure that you are using a 64-bit compiling and linking environment. Errors on windows like LNK1107 might indicate that your bits don't match.
 
+## Build Instructions
+
+```Bash
+# Get the source
+git clone https://github.com/Vector35/binaryninja-api.git
+cd binaryninja-api
+git submodule update --init --recursive
+
+# Do an out-of-source build
+cd ../
+mkdir build
+cd build
+
+# Build it
+cmake ../binaryninja-api
+make -j8
+```
+
+The output is in `build/out`.
+
+There are several options that you can pass to cmake:
+
+- If BinaryNinja is installed at a different location than the defautls in CMakeLists.txt, it will complain "Binary Ninja Core Not Found". Specify the path by `-DBN_INSTALL_DIR=/path/to/binaryninja/installation`
+- If you also wish to build the API examples, pass `-DBN_API_BUILD_EXAMPLES=ON`. After the make succeeds, you can install the built plugins by `make install`
+- If you are using a headless BinaryNinja distribution or you do not wish to build UI plugins, pass `-DHEADLESS=ON`.
+- You will need Qt 5.15.0 (as of writing) installed to build UI plugins.
+
 ## Examples
 
 There are many examples available. The [Python examples folder ](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while native examples include:

@@ -126,7 +126,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
-	BNFunctionGraphType m_type;
+	BNFunctionGraphType m_ilViewType;
 
 	InstructionEdit* m_instrEdit;
 
@@ -320,8 +320,10 @@ public:
 
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
 
+	BNFunctionGraphType getILViewType() { return m_ilViewType; };
+	void setILViewType(BNFunctionGraphType ilViewType);
+
 	void toggleOption(BNDisassemblyOption option);
-	void setViewType(BNFunctionGraphType type);
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }

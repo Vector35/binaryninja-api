@@ -46,8 +46,9 @@ public:
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
 
-	void setGraphType(BNFunctionGraphType type);
-	BNFunctionGraphType getGraphType() { return m_graphType; };
+	BNFunctionGraphType getILViewType() { return m_ilViewType; };
+	void setILViewType(BNFunctionGraphType ilViewType);
+
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);
 
@@ -86,7 +87,7 @@ private:
 
 	void bindActions();
 
-	BNFunctionGraphType m_graphType;
+	BNFunctionGraphType m_ilViewType;
 	std::set<BNDisassemblyOption> m_options;
 	DisassemblyContainer* m_container;
 	SettingsRef m_settings;
@@ -148,7 +149,7 @@ public:
 
 	void updateFonts();
 	void setCurrentFunction(FunctionRef func);
-	void setGraphType(BNFunctionGraphType graphType);
+	void setILViewType(BNFunctionGraphType ilViewType);
 	void setHighlightToken(const HighlightTokenState& state);
 
 	virtual QSize sizeHint() const override;
@@ -176,7 +177,7 @@ public:
 	void updateFonts();
 	void refreshHeader(FunctionRef func);
 	void setCurrentFunction(FunctionRef func);
-	void setGraphType(BNFunctionGraphType graphType);
+	void setILViewType(BNFunctionGraphType ilViewType);
 	void setHeaderHighlightToken(const HighlightTokenState& state);
 
 protected:

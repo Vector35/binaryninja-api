@@ -283,7 +283,16 @@ def get_memory_usage_info():
 
 def open_view(*args, **kwargs):
 	"""
-	Open a BinaryView object
+	`open_view` opens a BinaryView object.
+
+	Note: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
+
+	:param str filename: path to filename or bndb to open
+	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+	:param callback progress_func: optional function to be called with the current progress and total count
+	:param dict options: a dictionary in the form {setting identifier string : object value}
+	:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+	:rtype: :py:class:`BinaryView` or ``None``
 
 	:Example:
 		>>> from binaryninja import *

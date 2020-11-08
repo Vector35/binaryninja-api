@@ -540,6 +540,16 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		return False
 
 	def execute(self, context):
+		r"""
+		``execute`` Execute a Plugin
+
+		:param str context: PluginCommandContext to pass the PluginCommamnd
+		:rtype: None
+
+			>>> ctx = PluginCommandContext(bv);
+			>>> PluginCommand.get_valid_list(ctx)[r'PDB\Load'].execute(ctx)
+
+		"""
 		if not self.is_valid(context):
 			return
 		if self._command.type == PluginCommandType.DefaultPluginCommand:

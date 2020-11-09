@@ -33,6 +33,7 @@ class DockHandler;
 class FeatureMap;
 class StatusBarWidget;
 class ViewNavigationMode;
+class TransformParameterDialog;
 
 
 class BINARYNINJAUIAPI View
@@ -41,6 +42,7 @@ protected:
 	Menu m_contextMenu;
 	UIActionHandler m_actionHandler;
 	bool m_binaryDataNavigable = false;
+	QPointer<TransformParameterDialog> m_transformParamDialog;
 
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
 	BinaryNinja::DataBuffer readDataFromClipboard(TransformRef xform);
@@ -108,7 +110,7 @@ public:
 	virtual void transform(TransformRef xform, bool encode);
 	virtual bool canTransform();
 
-	virtual void writeData(const BinaryNinja::DataBuffer& data);
+	virtual void writeData(const BinaryNinja::DataBuffer& data, uint64_t addr);
 
 	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType);
 	virtual void displayAs(const UIActionContext& context, BNIntegerDisplayType type);

@@ -31,7 +31,7 @@ public:
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataRemoved(BinaryNinja::BinaryView* data, uint64_t offset, uint64_t len) override;
 
-	virtual void writeData(const BinaryNinja::DataBuffer& data) override;
+	virtual void writeData(const BinaryNinja::DataBuffer& data, uint64_t addr) override;
 	virtual void selectAll();
 	virtual void selectNone();
 

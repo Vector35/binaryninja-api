@@ -2621,7 +2621,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNNavigate(BNFileMetadata* file, const char* view, uint64_t offset);
 
 	BINARYNINJACOREAPI BNBinaryView* BNGetFileViewOfType(BNFileMetadata* file, const char* name);
-	
+
 	BINARYNINJACOREAPI char** BNGetExistingViews(BNFileMetadata* file, size_t* count);
 
 	// Binary view access
@@ -4881,8 +4881,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI void BNRustFreeString(const char* const);
 	BINARYNINJACOREAPI void BNRustFreeStringArray(const char** const, uint64_t);
-	BINARYNINJACOREAPI const char** const BNRustSimplifyStrToFQN(const char* const, bool);
-	BINARYNINJACOREAPI const char* const BNRustSimplifyStrToStr(const char* const);
+	BINARYNINJACOREAPI char** BNRustSimplifyStrToFQN(const char* const, bool);
+	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 #ifdef __cplusplus
 }

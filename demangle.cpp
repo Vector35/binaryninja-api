@@ -89,7 +89,7 @@ namespace BinaryNinja
 		if (dest == SimplifierDest::str)
 			m_rust_string = BNRustSimplifyStrToStr(input.c_str());
 		else
-			m_rust_array = BNRustSimplifyStrToFQN(input.c_str(), simplify);
+			m_rust_array = const_cast<const char**>(BNRustSimplifyStrToFQN(input.c_str(), simplify));
 	}
 
 

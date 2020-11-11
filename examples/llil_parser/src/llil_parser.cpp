@@ -272,7 +272,7 @@ static void PrintILExpr(const LowLevelILInstruction& instr, size_t indent)
 		case SSARegisterListLowLevelOperand:
 			PrintIndent(indent);
 			printf("ssa reg list ");
-			for (auto& i : operand.GetSSARegisterList())
+			for (auto i : operand.GetSSARegisterList())
 			{
 				PrintRegister(instr.function, i.reg);
 				printf("#%" PRIdPTR " ", i.version);
@@ -283,7 +283,7 @@ static void PrintILExpr(const LowLevelILInstruction& instr, size_t indent)
 		case SSAFlagListLowLevelOperand:
 			PrintIndent(indent);
 			printf("ssa reg list ");
-			for (auto& i : operand.GetSSAFlagList())
+			for (auto i : operand.GetSSAFlagList())
 			{
 				PrintFlag(instr.function, i.flag);
 				printf("#%" PRIdPTR " ", i.version);

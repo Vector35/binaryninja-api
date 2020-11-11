@@ -795,7 +795,7 @@ size_t LowLevelILIndexMap::operator[](uint64_t value) const
 LowLevelILIndexMap::operator map<uint64_t, size_t>() const
 {
 	map<uint64_t, size_t> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result[i.first] = i.second;
 	return result;
 }
@@ -907,7 +907,7 @@ const RegisterOrFlag LowLevelILRegisterOrFlagList::operator[](size_t i) const
 LowLevelILRegisterOrFlagList::operator vector<RegisterOrFlag>() const
 {
 	vector<RegisterOrFlag> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -965,7 +965,7 @@ const SSARegister LowLevelILSSARegisterList::operator[](size_t i) const
 LowLevelILSSARegisterList::operator vector<SSARegister>() const
 {
 	vector<SSARegister> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1023,7 +1023,7 @@ const SSARegisterStack LowLevelILSSARegisterStackList::operator[](size_t i) cons
 LowLevelILSSARegisterStackList::operator vector<SSARegisterStack>() const
 {
 	vector<SSARegisterStack> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1081,7 +1081,7 @@ const SSAFlag LowLevelILSSAFlagList::operator[](size_t i) const
 LowLevelILSSAFlagList::operator vector<SSAFlag>() const
 {
 	vector<SSAFlag> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1139,7 +1139,7 @@ const SSARegisterOrFlag LowLevelILSSARegisterOrFlagList::operator[](size_t i) co
 LowLevelILSSARegisterOrFlagList::operator vector<SSARegisterOrFlag>() const
 {
 	vector<SSARegisterOrFlag> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1400,7 +1400,7 @@ const LowLevelILOperand LowLevelILOperandList::operator[](size_t i) const
 LowLevelILOperandList::operator vector<LowLevelILOperand>() const
 {
 	vector<LowLevelILOperand> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1898,16 +1898,16 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		break;
 	case LLIL_CALL_SSA:
 		GetDestExpr<LLIL_CALL_SSA>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<LLIL_CALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_CALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<LLIL_SYSCALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_SYSCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_TAILCALL_SSA:
 		GetDestExpr<LLIL_TAILCALL_SSA>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<LLIL_TAILCALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_RET:
@@ -1989,11 +1989,11 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
 		break;
 	case LLIL_INTRINSIC:
-		for (auto& i : GetParameterExprs<LLIL_INTRINSIC>())
+		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
 			i.VisitExprs(func);
 		break;
 	case LLIL_INTRINSIC_SSA:
-		for (auto& i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
+		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
 	default:
@@ -2166,19 +2166,19 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 	case LLIL_TRAP:
 		return dest->Trap(GetVector<LLIL_TRAP>(), *this);
 	case LLIL_CALL_SSA:
-		for (auto& i : GetParameterExprs<LLIL_CALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_CALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->CallSSA(GetOutputSSARegisters<LLIL_CALL_SSA>(), subExprHandler(GetDestExpr<LLIL_CALL_SSA>()),
 			params, GetStackSSARegister<LLIL_CALL_SSA>(), GetDestMemoryVersion<LLIL_CALL_SSA>(),
 			GetSourceMemoryVersion<LLIL_CALL_SSA>(), *this);
 	case LLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<LLIL_SYSCALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_SYSCALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->SystemCallSSA(GetOutputSSARegisters<LLIL_SYSCALL_SSA>(),
 			params, GetStackSSARegister<LLIL_SYSCALL_SSA>(), GetDestMemoryVersion<LLIL_SYSCALL_SSA>(),
 			GetSourceMemoryVersion<LLIL_SYSCALL_SSA>(), *this);
 	case LLIL_TAILCALL_SSA:
-		for (auto& i : GetParameterExprs<LLIL_TAILCALL_SSA>())
+		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->TailCallSSA(GetOutputSSARegisters<LLIL_TAILCALL_SSA>(), subExprHandler(GetDestExpr<LLIL_TAILCALL_SSA>()),
 			params, GetStackSSARegister<LLIL_TAILCALL_SSA>(), GetDestMemoryVersion<LLIL_TAILCALL_SSA>(),
@@ -2283,12 +2283,12 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
 			subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
 			subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case LLIL_INTRINSIC:
-		for (auto& i : GetParameterExprs<LLIL_INTRINSIC>())
+		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));
 		return dest->Intrinsic(GetOutputRegisterOrFlagList<LLIL_INTRINSIC>(), GetIntrinsic<LLIL_INTRINSIC>(),
 			params, flags, *this);
 	case LLIL_INTRINSIC_SSA:
-		for (auto& i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
+		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetOutputSSARegisterOrFlagList<LLIL_INTRINSIC_SSA>(), GetIntrinsic<LLIL_INTRINSIC_SSA>(),
 			params, *this);

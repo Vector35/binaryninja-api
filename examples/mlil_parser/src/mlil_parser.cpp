@@ -213,7 +213,7 @@ static void PrintILExpr(const MediumLevelILInstruction& instr, size_t indent)
 		case VariableListMediumLevelOperand:
 			PrintIndent(indent);
 			printf("var list ");
-			for (auto& i : operand.GetVariableList())
+			for (auto i : operand.GetVariableList())
 			{
 				PrintVariable(instr.function, i);
 				printf(" ");
@@ -224,7 +224,7 @@ static void PrintILExpr(const MediumLevelILInstruction& instr, size_t indent)
 		case SSAVariableListMediumLevelOperand:
 			PrintIndent(indent);
 			printf("ssa var list ");
-			for (auto& i : operand.GetSSAVariableList())
+			for (auto i : operand.GetSSAVariableList())
 			{
 				PrintVariable(instr.function, i.var);
 				printf("#%" PRIdPTR " ", i.version);

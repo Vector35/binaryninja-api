@@ -463,7 +463,7 @@ const HighLevelILInstruction HighLevelILInstructionList::operator[](size_t i) co
 HighLevelILInstructionList::operator vector<HighLevelILInstruction>() const
 {
 	vector<HighLevelILInstruction> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -521,7 +521,7 @@ const SSAVariable HighLevelILSSAVariableList::operator[](size_t i) const
 HighLevelILSSAVariableList::operator vector<SSAVariable>() const
 {
 	vector<SSAVariable> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -665,7 +665,7 @@ const HighLevelILOperand HighLevelILOperandList::operator[](size_t i) const
 HighLevelILOperandList::operator vector<HighLevelILOperand>() const
 {
 	vector<HighLevelILOperand> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1237,7 +1237,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_NOP:
 		return dest->Nop(*this);
 	case HLIL_BLOCK:
-		for (auto& i : GetBlockExprs<HLIL_BLOCK>())
+		for (auto i : GetBlockExprs<HLIL_BLOCK>())
 			params.push_back(subExprHandler(i));
 		return dest->Block(params, *this);
 	case HLIL_IF:
@@ -1268,12 +1268,12 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 			subExprHandler(GetUpdateExpr<HLIL_FOR_SSA>()),
 			subExprHandler(GetLoopExpr<HLIL_FOR_SSA>()), *this);
 	case HLIL_SWITCH:
-		for (auto& i : GetCases<HLIL_SWITCH>())
+		for (auto i : GetCases<HLIL_SWITCH>())
 			params.push_back(subExprHandler(i));
 		return dest->Switch(subExprHandler(GetConditionExpr<HLIL_SWITCH>()),
 			subExprHandler(GetDefaultExpr<HLIL_SWITCH>()), params, *this);
 	case HLIL_CASE:
-		for (auto& i : GetValueExprs<HLIL_CASE>())
+		for (auto i : GetValueExprs<HLIL_CASE>())
 			params.push_back(subExprHandler(i));
 		return dest->Case(params, subExprHandler(GetTrueExpr<HLIL_CASE>()), *this);
 	case HLIL_BREAK:
@@ -1296,7 +1296,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->Assign(size, subExprHandler(GetDestExpr<HLIL_ASSIGN>()),
 			subExprHandler(GetSourceExpr<HLIL_ASSIGN>()), *this);
 	case HLIL_ASSIGN_UNPACK:
-		for (auto& i : GetDestExprs<HLIL_ASSIGN_UNPACK>())
+		for (auto i : GetDestExprs<HLIL_ASSIGN_UNPACK>())
 			output.push_back(subExprHandler(i));
 		return dest->AssignUnpack(output,
 			subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK>()), *this);
@@ -1305,7 +1305,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 			GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), subExprHandler(GetSourceExpr<HLIL_ASSIGN_MEM_SSA>()),
 			GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), *this);
 	case HLIL_ASSIGN_UNPACK_MEM_SSA:
-		for (auto& i : GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+		for (auto i : GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			output.push_back(subExprHandler(i));
 		return dest->AssignUnpackMemSSA(output, GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(),
 			subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>()),
@@ -1346,29 +1346,29 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_ADDRESS_OF:
 		return dest->AddressOf(subExprHandler(GetSourceExpr<HLIL_ADDRESS_OF>()), *this);
 	case HLIL_CALL:
-		for (auto& i : GetParameterExprs<HLIL_CALL>())
+		for (auto i : GetParameterExprs<HLIL_CALL>())
 			params.push_back(subExprHandler(i));
 		return dest->Call(subExprHandler(GetDestExpr<HLIL_CALL>()), params, *this);
 	case HLIL_SYSCALL:
-		for (auto& i : GetParameterExprs<HLIL_SYSCALL>())
+		for (auto i : GetParameterExprs<HLIL_SYSCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->Syscall(params, *this);
 	case HLIL_TAILCALL:
-		for (auto& i : GetParameterExprs<HLIL_TAILCALL>())
+		for (auto i : GetParameterExprs<HLIL_TAILCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->TailCall(subExprHandler(GetDestExpr<HLIL_TAILCALL>()), params, *this);
 	case HLIL_CALL_SSA:
-		for (auto& i : GetParameterExprs<HLIL_CALL_SSA>())
+		for (auto i : GetParameterExprs<HLIL_CALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->CallSSA(subExprHandler(GetDestExpr<HLIL_CALL_SSA>()), params,
 			GetDestMemoryVersion<HLIL_CALL_SSA>(), GetSourceMemoryVersion<HLIL_CALL_SSA>(), *this);
 	case HLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<HLIL_SYSCALL_SSA>())
+		for (auto i : GetParameterExprs<HLIL_SYSCALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->SyscallSSA(params, GetDestMemoryVersion<HLIL_SYSCALL_SSA>(),
 			GetSourceMemoryVersion<HLIL_SYSCALL_SSA>(), *this);
 	case HLIL_RET:
-		for (auto& i : GetSourceExprs<HLIL_RET>())
+		for (auto i : GetSourceExprs<HLIL_RET>())
 			params.push_back(subExprHandler(i));
 		return dest->Return(params, *this);
 	case HLIL_NORET:
@@ -1463,11 +1463,11 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_TRAP:
 		return dest->Trap(GetVector<HLIL_TRAP>(), *this);
 	case HLIL_INTRINSIC:
-		for (auto& i : GetParameterExprs<HLIL_INTRINSIC>())
+		for (auto i : GetParameterExprs<HLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));
 		return dest->Intrinsic(GetIntrinsic<HLIL_INTRINSIC>(), params, *this);
 	case HLIL_INTRINSIC_SSA:
-		for (auto& i : GetParameterExprs<HLIL_INTRINSIC_SSA>())
+		for (auto i : GetParameterExprs<HLIL_INTRINSIC_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetIntrinsic<HLIL_INTRINSIC_SSA>(), params,
 			GetDestMemoryVersion<HLIL_INTRINSIC_SSA>(), GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>(), *this);

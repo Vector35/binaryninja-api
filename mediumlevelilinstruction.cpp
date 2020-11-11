@@ -550,7 +550,7 @@ size_t MediumLevelILIndexMap::operator[](uint64_t value) const
 MediumLevelILIndexMap::operator map<uint64_t, size_t>() const
 {
 	map<uint64_t, size_t> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result[i.first] = i.second;
 	return result;
 }
@@ -604,7 +604,7 @@ const Variable MediumLevelILVariableList::operator[](size_t i) const
 MediumLevelILVariableList::operator vector<Variable>() const
 {
 	vector<Variable> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -662,7 +662,7 @@ const SSAVariable MediumLevelILSSAVariableList::operator[](size_t i) const
 MediumLevelILSSAVariableList::operator vector<SSAVariable>() const
 {
 	vector<SSAVariable> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -720,7 +720,7 @@ const MediumLevelILInstruction MediumLevelILInstructionList::operator[](size_t i
 MediumLevelILInstructionList::operator vector<MediumLevelILInstruction>() const
 {
 	vector<MediumLevelILInstruction> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -891,7 +891,7 @@ const MediumLevelILOperand MediumLevelILOperandList::operator[](size_t i) const
 MediumLevelILOperandList::operator vector<MediumLevelILOperand>() const
 {
 	vector<MediumLevelILOperand> result;
-	for (auto& i : *this)
+	for (auto i : *this)
 		result.push_back(i);
 	return result;
 }
@@ -1333,7 +1333,7 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		break;
 	case MLIL_CALL:
 		GetDestExpr<MLIL_CALL>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<MLIL_CALL>())
+		for (auto i : GetParameterExprs<MLIL_CALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_CALL_UNTYPED:
@@ -1341,23 +1341,23 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		break;
 	case MLIL_CALL_SSA:
 		GetDestExpr<MLIL_CALL_SSA>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<MLIL_CALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_CALL_UNTYPED_SSA:
 		GetDestExpr<MLIL_CALL_UNTYPED_SSA>().VisitExprs(func);
 		break;
 	case MLIL_SYSCALL:
-		for (auto& i : GetParameterExprs<MLIL_SYSCALL>())
+		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<MLIL_SYSCALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL:
 		GetDestExpr<MLIL_TAILCALL>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<MLIL_TAILCALL>())
+		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL_UNTYPED:
@@ -1365,14 +1365,14 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		break;
 	case MLIL_TAILCALL_SSA:
 		GetDestExpr<MLIL_TAILCALL_SSA>().VisitExprs(func);
-		for (auto& i : GetParameterExprs<MLIL_TAILCALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL_UNTYPED_SSA:
 		GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>().VisitExprs(func);
 		break;
 	case MLIL_RET:
-		for (auto& i : GetSourceExprs<MLIL_RET>())
+		for (auto i : GetSourceExprs<MLIL_RET>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_STORE:
@@ -1475,11 +1475,11 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
 		break;
 	case MLIL_INTRINSIC:
-		for (auto& i : GetParameterExprs<MLIL_INTRINSIC>())
+		for (auto i : GetParameterExprs<MLIL_INTRINSIC>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_INTRINSIC_SSA:
-		for (auto& i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+		for (auto i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
 	default:
@@ -1569,7 +1569,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->AddressOfField(GetSourceVariable<MLIL_ADDRESS_OF_FIELD>(),
 			GetOffset<MLIL_ADDRESS_OF_FIELD>(), *this);
 	case MLIL_CALL:
-		for (auto& i : GetParameterExprs<MLIL_CALL>())
+		for (auto i : GetParameterExprs<MLIL_CALL>())
 			params.push_back(subExprHandler(i));
 		return dest->Call(GetOutputVariables<MLIL_CALL>(), subExprHandler(GetDestExpr<MLIL_CALL>()),
 			params, *this);
@@ -1578,7 +1578,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			subExprHandler(GetDestExpr<MLIL_CALL_UNTYPED>()), GetParameterVariables<MLIL_CALL_UNTYPED>(),
 			subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED>()), *this);
 	case MLIL_CALL_SSA:
-		for (auto& i : GetParameterExprs<MLIL_CALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->CallSSA(GetOutputSSAVariables<MLIL_CALL_SSA>(), subExprHandler(GetDestExpr<MLIL_CALL_SSA>()),
 			params, GetDestMemoryVersion<MLIL_CALL_SSA>(), GetSourceMemoryVersion<MLIL_CALL_SSA>(), *this);
@@ -1590,7 +1590,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			GetSourceMemoryVersion<MLIL_CALL_UNTYPED_SSA>(),
 			subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED_SSA>()), *this);
 	case MLIL_SYSCALL:
-		for (auto& i : GetParameterExprs<MLIL_SYSCALL>())
+		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->Syscall(GetOutputVariables<MLIL_SYSCALL>(), params, *this);
 	case MLIL_SYSCALL_UNTYPED:
@@ -1598,7 +1598,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			GetParameterVariables<MLIL_SYSCALL_UNTYPED>(),
 			subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED>()), *this);
 	case MLIL_SYSCALL_SSA:
-		for (auto& i : GetParameterExprs<MLIL_SYSCALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->SyscallSSA(GetOutputSSAVariables<MLIL_SYSCALL_SSA>(), params,
 			GetDestMemoryVersion<MLIL_SYSCALL_SSA>(), GetSourceMemoryVersion<MLIL_SYSCALL_SSA>(), *this);
@@ -1609,7 +1609,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			GetSourceMemoryVersion<MLIL_SYSCALL_UNTYPED_SSA>(),
 			subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED_SSA>()), *this);
 	case MLIL_TAILCALL:
-		for (auto& i : GetParameterExprs<MLIL_TAILCALL>())
+		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->TailCall(GetOutputVariables<MLIL_TAILCALL>(), subExprHandler(GetDestExpr<MLIL_TAILCALL>()),
 			params, *this);
@@ -1618,7 +1618,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			subExprHandler(GetDestExpr<MLIL_TAILCALL_UNTYPED>()), GetParameterVariables<MLIL_TAILCALL_UNTYPED>(),
 			subExprHandler(GetStackExpr<MLIL_TAILCALL_UNTYPED>()), *this);
 	case MLIL_TAILCALL_SSA:
-		for (auto& i : GetParameterExprs<MLIL_TAILCALL_SSA>())
+		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->TailCallSSA(GetOutputSSAVariables<MLIL_TAILCALL_SSA>(), subExprHandler(GetDestExpr<MLIL_TAILCALL_SSA>()),
 			params, GetDestMemoryVersion<MLIL_TAILCALL_SSA>(), GetSourceMemoryVersion<MLIL_TAILCALL_SSA>(), *this);
@@ -1630,7 +1630,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			GetSourceMemoryVersion<MLIL_TAILCALL_UNTYPED_SSA>(),
 			subExprHandler(GetStackExpr<MLIL_TAILCALL_UNTYPED_SSA>()), *this);
 	case MLIL_RET:
-		for (auto& i : GetSourceExprs<MLIL_RET>())
+		for (auto i : GetSourceExprs<MLIL_RET>())
 			params.push_back(subExprHandler(i));
 		return dest->Return(params, *this);
 	case MLIL_NORET:
@@ -1778,12 +1778,12 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_TRAP:
 		return dest->Trap(GetVector<MLIL_TRAP>(), *this);
 	case MLIL_INTRINSIC:
-		for (auto& i : GetParameterExprs<MLIL_INTRINSIC>())
+		for (auto i : GetParameterExprs<MLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));
 		return dest->Intrinsic(GetOutputVariables<MLIL_INTRINSIC>(),
 			GetIntrinsic<MLIL_INTRINSIC>(), params, *this);
 	case MLIL_INTRINSIC_SSA:
-		for (auto& i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+		for (auto i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetOutputSSAVariables<MLIL_INTRINSIC_SSA>(),
 			GetIntrinsic<MLIL_INTRINSIC_SSA>(), params, *this);

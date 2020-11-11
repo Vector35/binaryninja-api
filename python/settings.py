@@ -60,6 +60,29 @@ class Settings(object):
 
 	Individual settings are identified by a key, which is a string in the form of **'<group>.<name>'**. Groups provide a simple way \
 	to categorize settings. Additionally, sub-categories can be expressed directly in the name part of the key with a similar dot notation.
+
+	Here's a simple example using a Resource Scope to cause settings to be saved inside of a BNDB when saved:
+
+		>>> bv2 = open_view("/tmp/ls")
+		>>> plugin_settings = Settings()
+		>>> description = "Tells Zhu Li to do the thing."
+		>>> title = "Do the thing"
+		>>> schema = f'{{"description" : "{description}", "title" : "{title}", "default" : true, "type" : "boolean"}}'
+		>>> plugin_settings.register_setting("ui.dothething", schema)
+		True
+		>>> plugin_settings.set_bool("ui.dothething", False, bv, SettingsScope.SettingsResourceScope)
+		True
+		>>> # Resource scope will save the setting in the BNDB itself
+		>>> bv2.create_database("/tmp/ls.bndb")
+		True
+		>>> bv = open_view("/tmp/ls")
+		>>> # If in a plugin we would need to make sure we re-regsitered the setting before querying
+		>>> plugin_settings.get_bool("ui.dothething", bv)
+		True
+		>>> bv = binaryninja.open_view("/tmp/ls.bndb")
+		>>> plugin_settings.get_bool("ui.dothething", bv)
+		False
+
 	"""
 	handle = core.BNCreateSettings("default")
 

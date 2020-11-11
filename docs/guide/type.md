@@ -182,6 +182,12 @@ __convention
 __noreturn
 ```
 
+To use the `__convention` keyword, pass in the convention name as a parameter argument:
+
+```
+__convention("customconvention")
+```
+
 
 #### Applying Structures and Types
 

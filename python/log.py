@@ -140,7 +140,7 @@ def log_to_stdout(min_level=LogLevel.InfoLog):
 	"""
 	``log_to_stdout`` redirects minimum log level to standard out.
 
-	:param int min_level: minimum level to log to
+	:param enums.LogLevel log_level: minimum level to log to
 	:rtype: None
 	:Example:
 
@@ -157,7 +157,7 @@ def log_to_stderr(min_level):
 	"""
 	``log_to_stderr`` redirects minimum log level to standard error.
 
-	:param int min_level: minimum level to log to
+	:param enums.LogLevel min_level: minimum level to log to
 	:rtype: None
 	"""
 	core.BNLogToStderr(min_level)
@@ -167,7 +167,7 @@ def log_to_file(min_level, path, append = False):
 	"""
 	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwriting.
 
-	:param int min_level: minimum level to log to
+	:param enums.Log_Level min_level: minimum level to log to
 	:param str path: path to log to
 	:param bool append: optional flag for specifying appending. True = append, False = overwrite.
 	:rtype: None

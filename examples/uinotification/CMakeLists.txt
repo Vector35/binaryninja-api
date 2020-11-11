@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 project(uinotification)
 
+set(CMAKE_OSX_ARCHITECTURES x86_64)
+
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
 file(GLOB SOURCES

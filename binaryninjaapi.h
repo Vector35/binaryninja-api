@@ -792,6 +792,9 @@ __attribute__ ((format (printf, 1, 2)))
 		uint8_t& operator[](size_t offset);
 		const uint8_t& operator[](size_t offset) const;
 
+		bool operator==(const DataBuffer& other) const;
+		bool operator!=(const DataBuffer& other) const;
+
 		std::string ToEscapedString() const;
 		static DataBuffer FromEscapedString(const std::string& src);
 		std::string ToBase64() const;
@@ -905,6 +908,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Database(BNDatabase* database);
 
 		Ref<Snapshot> GetSnapshot(int64_t id);
+		std::vector<Ref<Snapshot>> GetSnapshots();
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(int64_t parent, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
 

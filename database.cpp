@@ -288,6 +288,16 @@ Ref<Snapshot> Database::GetSnapshot(int64_t id)
 	return new Snapshot(snap);
 }
 
+vector<Ref<Snapshot>> Database::GetSnapshots()
+{
+	size_t count;
+	BNSnapshot** snapshots = BNGetDatabaseSnapshots(m_object, &count);
+	vector<Ref<Snapshot>> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Snapshot(snapshots[i]));
+	return result;
+}
+
 
 Ref<Snapshot> Database::GetCurrentSnapshot()
 {

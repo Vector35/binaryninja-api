@@ -111,6 +111,12 @@ extern "C"
 		LatePluginLoadOrder
 	};
 
+	enum PluginLoadStatus {
+		NotAttemptedStatus,
+		LoadSucceededStatus,
+		LoadFaildStatus
+	};
+
 	typedef bool (*BNCorePluginInitFunction)(void);
 	typedef void (*BNCorePluginDependencyFunction)(void);
 

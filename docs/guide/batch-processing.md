@@ -34,8 +34,8 @@ Opening /bin/ls which has 128 functions
 
 Note that we used the `open_view` method which lets you temporarily create a `bv` with the appropriate scope. The traditional way to do that was with `BinaryViewType.get_view_of_file` which returns a [BinaryView](https://api.binary.ninja/binaryninja.binaryview.BinaryView.html#binaryninja.binaryview.BinaryView) directly. Note however, that if you use that method you **MUST** close the BinaryView yourself when you are done with it. To do so, just:
 
-```
-bv.file.close()
+```python
+bv.file.close() #close the file handle or else leak memory
 ```
 
 ### Multiple files 
@@ -113,16 +113,16 @@ Of course, if you do any timing tests you'll quickly notice that this script is 
 
 ## Disabling Plugins and Settings
 
-Because the headless APIs will be using the same settings as the UI, you may wish to write batch-processing scripts that do NOT follow the same settings that you are using for interactive analysis. Likewise with wanting to not load additional plugins. You can disable loading of both of those by setting environment variables before importing binaryninja like:
+Because the headless APIs will be using the same settings as the UI, you may wish to write batch-processing scripts that do NOT follow the same settings that you are using for interactive analysis. Likewise with wanting to not load additional plugins. You can disable loading of both of those by setting environment variables _before_ importing binaryninja like:
 
 ```python
 import os
-os.environ["BN_DISABLE_USER_SETTINGS"] = 1
-os.environ["BN_DISABLE_USER_PLUGINS"] = 1
+os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
+os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 import binaryninja
 ```
 
-Other alternative solutions include manually moving your settings file from your [user folder](../getting-started.md#user-folder) before running your headless automation
+Other alternative solutions include setting the environment variable before running your script, or manually moving your settings file from your [user folder](../getting-started.md#user-folder) before running your automation.
 
 ## Other Languages
 

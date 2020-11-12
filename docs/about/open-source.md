@@ -35,6 +35,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [Rust] ([Rust license] - MIT)
     - [curl-rust] ([curl-rust license] - MIT)
     - [curl] ([curl license] - MIT)
+    - [NOM] ([NOM license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -122,3 +123,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [curl-rust]: https://github.com/alexcrichton/curl-rust
 [curl license]: https://github.com/curl/curl/blob/master/COPYING
 [curl]: https://github.com/curl/curl
+[nom license]: https://github.com/Geal/nom/blob/master/LICENSE
+[nom]: https://github.com/Geal/nom

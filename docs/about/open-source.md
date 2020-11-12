@@ -35,7 +35,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [Rust] ([Rust license] - MIT)
     - [curl-rust] ([curl-rust license] - MIT)
     - [curl] ([curl license] - MIT)
-    - [NOM] ([NOM license] - MIT)
+    - [nom] ([nom license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64

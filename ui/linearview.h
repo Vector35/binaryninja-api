@@ -57,6 +57,9 @@ class BINARYNINJAUIAPI LinearViewHistoryEntry: public HistoryEntry
 	std::vector<BinaryNinja::LinearViewObjectIdentifier> m_cursorPath;
 	size_t m_cursorLineIndex;
 	uint64_t m_cursorAddr;
+	PlatformRef m_platform;
+	uint64_t m_func;
+	bool m_inFunc;
 	HighlightTokenState m_highlight;
 
 public:
@@ -66,6 +69,9 @@ public:
 	const std::vector<BinaryNinja::LinearViewObjectIdentifier>& getCursorPath() const { return m_cursorPath; }
 	size_t getCursorLineIndex() const { return m_cursorLineIndex; }
 	uint64_t getCursorAddress() const { return m_cursorAddr; }
+	PlatformRef getPlatform() const { return m_platform; }
+	uint64_t getFunction() const { return m_func; }
+	bool inFunction() const { return m_inFunc; }
 	const HighlightTokenState& getHighlightTokenState() const { return m_highlight; }
 
 	void setTopPath(const std::vector<BinaryNinja::LinearViewObjectIdentifier>& path) { m_topPath = path; }
@@ -74,6 +80,9 @@ public:
 	void setCursorPath(const std::vector<BinaryNinja::LinearViewObjectIdentifier>& path) { m_cursorPath = path; }
 	void setCursorLineIndex(size_t offset) { m_cursorLineIndex = offset; }
 	void setCursorAddress(uint64_t addr) { m_cursorAddr = addr; }
+	void setPlatform(PlatformRef platform) { m_platform = platform; }
+	void setFunction(uint64_t f) { m_func = f; }
+	void setInFunction(bool inFunc) { m_inFunc = inFunc; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
 };
 

@@ -1072,6 +1072,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool operator==(const NameList& other) const;
 		virtual bool operator!=(const NameList& other) const;
 		virtual bool operator<(const NameList& other) const;
+		virtual bool operator>(const NameList& other) const;
 
 		virtual NameList operator+(const NameList& other) const;
 
@@ -1166,11 +1167,47 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};
 
+	// TODO: This describes how the xref source references the target
+	enum ReferenceType
+	{
+		UnspecifiedReferenceType			= 0x0,
+		ReadReferenceType					= 0x1,
+		WriteReferenceType					= 0x2,
+		ExecuteReferenceType				= 0x4,
+
+		// A type is referenced by a data variable
+		DataVariableReferenceType			= 0x8,
+
+		// A type is referenced by another type
+		DirectTypeReferenceType				= 0x10,
+		IndirectTypeReferenceType			= 0x20,
+	};
+
+	// ReferenceSource describes code reference source; TypeReferenceSource describes type reference source.
+	// When we query references, code references return vector<ReferenceSource>, data references return vector<uint64_t>,
+	// type references return vector<TypeReferenceSource>.
+
 	struct ReferenceSource
 	{
 		Ref<Function> func;
 		Ref<Architecture> arch;
 		uint64_t addr;
+	};
+
+	struct ILReferenceSource
+	{
+		Ref<Function> func;
+		Ref<Architecture> arch;
+		uint64_t addr;
+		BNFunctionGraphType type;
+		size_t exprId;
+	};
+
+	struct TypeReferenceSource
+	{
+		QualifiedName name;
+		uint64_t offset;
+		BNTypeReferenceType type;
 	};
 
 	struct InstructionTextToken
@@ -1573,6 +1610,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Function> GetAnalysisFunction(Platform* platform, uint64_t addr);
 		Ref<Function> GetRecentAnalysisFunctionForAddress(uint64_t addr);
 		std::vector<Ref<Function>> GetAnalysisFunctionsForAddress(uint64_t addr);
+		std::vector<Ref<Function>> GetAnalysisFunctionsContainingAddress(uint64_t addr);
 		Ref<Function> GetAnalysisEntryPoint();
 
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
@@ -1590,6 +1628,21 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr, uint64_t len);
 		void AddUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 		void RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr);
+
+		// References to type 
+		std::vector<ReferenceSource> GetCodeReferencesForType(const QualifiedName& type);
+		std::vector<uint64_t> GetDataReferencesForType(const QualifiedName& type);
+		std::vector<TypeReferenceSource> GetTypeReferencesForType(const QualifiedName& type);
+
+		// References to type field
+		std::vector<ReferenceSource> GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+		std::vector<uint64_t> GetDataReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+		std::vector<TypeReferenceSource> GetTypeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+
+		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFrom(ReferenceSource src);
+		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFrom(ReferenceSource src, uint64_t len);
+		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src);
+		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len);
 
 		std::vector<uint64_t> GetCallees(ReferenceSource addr);
 		std::vector<ReferenceSource> GetCallers(uint64_t addr);
@@ -2492,6 +2545,12 @@ __attribute__ ((format (printf, 1, 2)))
 		static Variable FromIdentifier(uint64_t id);
 	};
 
+	struct VariableReferenceSource
+	{
+		Variable var;
+		ILReferenceSource source;
+	};
+
 	struct FunctionParameter
 	{
 		std::string name;
@@ -2610,6 +2669,9 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Type> WithReplacedStructure(Structure* from, Structure* to);
 		Ref<Type> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
 		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
+
+		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
+			std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
 	};
 
 	class TypeBuilder
@@ -3043,6 +3105,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+		void AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
+		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
+		void AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset);
+		void RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
@@ -3059,6 +3125,14 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
+
+		std::vector<ILReferenceSource> GetMediumLevelILVariableReferences(const Variable& var);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
+
+		std::vector<ILReferenceSource> GetHighLevelILVariableReferences(const Variable& var);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
@@ -4379,6 +4453,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<DisassemblyTextLine> GetExprText(ExprId expr, bool asFullAst = true);
 		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr, bool asFullAst = true);
+		std::vector<DisassemblyTextLine> GetInstructionText(size_t i, bool asFullAst = true);
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);
@@ -5309,6 +5384,7 @@ __attribute__ ((format (printf, 1, 2)))
 		DisassemblyTextRenderer(Function* func, DisassemblySettings* settings = nullptr);
 		DisassemblyTextRenderer(LowLevelILFunction* func, DisassemblySettings* settings = nullptr);
 		DisassemblyTextRenderer(MediumLevelILFunction* func, DisassemblySettings* settings = nullptr);
+		DisassemblyTextRenderer(HighLevelILFunction* func, DisassemblySettings* settings = nullptr);
 		DisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer);
 
 		Ref<Function> GetFunction() const;

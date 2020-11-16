@@ -217,7 +217,7 @@ private Q_SLOTS:
 	void adjustSize(int width, int height);
 	void viewInHexEditor();
 	void viewInGraph();
-	void viewInTypesView(std::string typeName = "");
+	void viewInTypesView(std::string typeName = "", uint64_t offset = 0);
 	void cycleILView(bool forward);
 	void copyAddressSlot();
 	void goToAddress();
@@ -295,7 +295,7 @@ public:
 	virtual uint64_t getCurrentOffset() override;
 	virtual UIActionContext actionContext() override;
 	virtual BNAddressRange getSelectionOffsets() override;
-	virtual BNAddressRange getSelectionForInfo() override;
+	virtual SelectionInfoForXref getSelectionForXref() override;
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual FunctionRef getCurrentFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;

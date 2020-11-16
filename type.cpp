@@ -91,6 +91,12 @@ bool NameList::operator<(const NameList& other) const
 }
 
 
+bool NameList::operator>(const NameList& other) const
+{
+	return m_name > other.m_name;
+}
+
+
 NameList NameList::operator+(const NameList& other) const
 {
 	NameList result(*this);
@@ -959,6 +965,32 @@ Ref<Type> Type::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTy
 		return this;
 	}
 	return new Type(result);
+}
+
+
+bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& tokens, int64_t offset,
+			vector<string>& nameList, size_t size, bool indirect)
+{
+	size_t tokenCount;
+	BNInstructionTextToken* list;
+
+	size_t nameCount;
+	char** names = nullptr;
+
+	if (!BNAddTypeMemberTokens(m_object, data->GetObject(), &list, &tokenCount, offset, &names, &nameCount, size, indirect))
+		return false;
+
+	vector<InstructionTextToken> newTokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, tokenCount);
+	tokens.insert(tokens.end(), newTokens.begin(), newTokens.end());
+
+	nameList.clear();
+	nameList.reserve(nameCount);
+	for (size_t i = 0; i < nameCount; i++)
+		nameList.emplace_back(names[i]);
+
+	BNFreeStringList(names, nameCount);
+
+	return true;
 }
 
 

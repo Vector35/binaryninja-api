@@ -1000,6 +1000,94 @@ class TestBuilder(Builder):
         finally:
             self.delete_package("helloworld")
 
+    def test_type_xref(self):
+        """Type xref failure"""
+
+        def dump_type_xref_info(type_name, code_refs, data_refs, type_refs, offset = None):
+            retinfo = []
+            if offset is None:
+                for ref in code_refs:
+                    retinfo.append('type {} is referenced by code {}'.format(type_name, ref))
+                for ref in data_refs:
+                    retinfo.append('type {} is referenced by data {}'.format(type_name, ref))
+                for ref in type_refs:
+                    retinfo.append('type {} is referenced by type {}'.format(type_name, ref))
+            else:
+                for ref in code_refs:
+                    retinfo.append('type field {}, offset {} is referenced by code {}'.format(type_name, hex(offset), ref))
+                for ref in data_refs:
+                    retinfo.append('type field {}, offset {} is referenced by data {}'.format(type_name, hex(offset), ref))
+                for ref in type_refs:
+                    retinfo.append('type field {}, offset {} is referenced by type {}'.format(type_name, hex(offset), ref))
+
+            return retinfo
+ 
+        retinfo = []
+        file_name = self.unpackage_file("type_xref.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            types = bv.types
+            test_types = ['A', 'B', 'C', 'D', 'E', 'F']
+            for test_type in test_types:
+                code_refs = bv.get_code_refs_for_type(test_type)
+                data_refs = bv.get_data_refs_for_type(test_type)
+                type_refs = bv.get_type_refs_for_type(test_type)
+                retinfo.extend(dump_type_xref_info(test_type, code_refs, data_refs, type_refs))
+
+                t = types[test_type]
+                if not t:
+                    continue
+                
+                for member in t.structure.members:
+                    offset = member.offset
+                    code_refs = bv.get_code_refs_for_type_field(test_type, offset)
+                    data_refs = bv.get_data_refs_for_type_field(test_type, offset)
+                    type_refs = bv.get_type_refs_for_type_field(test_type, offset)
+                    retinfo.extend(dump_type_xref_info(test_type, code_refs, data_refs, type_refs, offset))
+
+        self.delete_package("type_xref.bndb")
+        return fixOutput(sorted(retinfo))
+
+    def test_variable_xref(self):
+        """Variable xref failure"""
+
+        def dump_var_xref_info(var, var_refs):
+            retinfo = []
+            for ref in var_refs:
+                retinfo.append('var {} is referenced at {}'.format(repr(var), repr(ref)))
+            return retinfo
+ 
+        retinfo = []
+        file_name = self.unpackage_file("type_xref.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            func = bv.get_function_at(0x1169)
+            for var in func.vars:
+                mlil_refs = func.get_mlil_var_refs(var)
+                retinfo.extend(dump_var_xref_info(var, mlil_refs))
+                hlil_refs = func.get_hlil_var_refs(var)
+                retinfo.extend(dump_var_xref_info(var, hlil_refs))
+
+            mlil_range_var_refs = func.get_mlil_var_refs_from(0x1175, 0x8c)
+            for ref in mlil_range_var_refs:
+                retinfo.append("var {} is referenced at {}".format(ref.var, ref.src))
+
+            hlil_range_var_refs = func.get_hlil_var_refs_from(0x1175, 0x8c)
+            for ref in hlil_range_var_refs:
+                retinfo.append("var {} is referenced at {}".format(ref.var, ref.src))
+
+        self.delete_package("type_xref.bndb")
+        return fixOutput(sorted(retinfo))
 
 class VerifyBuilder(Builder):
     """ The VerifyBuilder is for tests that verify

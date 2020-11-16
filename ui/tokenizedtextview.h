@@ -63,7 +63,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 
 	void viewInHexEditor();
 	void viewInGraph();
-	void viewInTypesView(std::string typeName = "");
+	void viewInTypesView(std::string typeName = "", uint64_t offset = 0);
 	void goToAddress();
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
@@ -108,7 +108,7 @@ public:
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
 	virtual BNAddressRange getSelectionOffsets() override;
-	virtual BNAddressRange getSelectionForInfo() override;
+	virtual SelectionInfoForXref getSelectionForXref() override;
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual FunctionRef getCurrentFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;

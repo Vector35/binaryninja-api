@@ -2253,6 +2253,12 @@ DisassemblyTextRenderer::DisassemblyTextRenderer(MediumLevelILFunction* func, Di
 }
 
 
+DisassemblyTextRenderer::DisassemblyTextRenderer(HighLevelILFunction* func, DisassemblySettings* settings)
+{
+	m_object = BNCreateHighLevelILDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+}
+
+
 DisassemblyTextRenderer::DisassemblyTextRenderer(BNDisassemblyTextRenderer* renderer)
 {
 	m_object = renderer;

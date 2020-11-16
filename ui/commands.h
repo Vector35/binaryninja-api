@@ -33,7 +33,10 @@ bool BINARYNINJAUIAPI overwriteCode(BinaryViewRef data, ArchitectureRef arch,
 StructureRef BINARYNINJAUIAPI getInnerMostStructureContaining(BinaryViewRef data, StructureRef structure,
 	size_t& memberIndex, const std::vector<std::string>& nameList, size_t nameIndex, TypeRef& type, std::string& typeName);
 StructureRef BINARYNINJAUIAPI getInnerMostStructureContainingOffset(BinaryViewRef data, StructureRef structure,
-	const std::vector<std::string>& nameList, size_t nameIndex, size_t& offset, TypeRef& type, std::string& typeName);
+	const std::vector<std::string>& nameList, size_t nameIndex, size_t offset, TypeRef& type, std::string& typeName);
+// Get the offset of the inner most structure, ralative to the supplied outer most structure
+uint64_t BINARYNINJAUIAPI getInnerMostStructureOffset(BinaryViewRef data, StructureRef structure,
+	const std::vector<std::string>& nameList, size_t nameIndex);
 
 // Auto generate a structure name
 std::string BINARYNINJAUIAPI createStructureName(BinaryViewRef data);

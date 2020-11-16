@@ -241,6 +241,32 @@ def generate(test_store, outdir, exclude_binaries):
     unittest = UnitTestFile(os.path.join(outdir, "unit.py"), outdir, test_store)
     oracle = OracleTestFile(os.path.join(outdir, "oracle"))
 
+    # check all files to see if there is any newly added ones.
+    # If so, create a zip archive for it and delete the original file
+    allfiles = sorted(testcommon.get_file_list(test_store))
+    for progress, testfile in enumerate(allfiles):
+        oraclefile = None
+        zip_only = False
+        if testfile.endswith(".gitignore"):
+            continue
+        if testfile.endswith(".pkl"):
+            continue
+        elif testfile.endswith(".DS_Store"):
+            continue
+        elif testfile.endswith(".zip"):
+            continue
+        else:
+            if os.path.exists(testfile + ".zip"):
+                # We've got a zip file for it, skip
+                continue
+
+            # create the zip archive for the file
+            if not os.path.exists(testfile + ".zip"):
+                with zipfile.ZipFile(testfile + ".zip", "w") as zf:
+                    zf.write(testfile, os.path.relpath(testfile, start=os.path.dirname(__file__)))
+
+            os.unlink(testfile)
+
     # Generate the tests that don't involve binaries but do involve oracles
     builder = testcommon.TestBuilder(test_store)
     tests = builder.methods()

@@ -21,6 +21,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [libxcb] ([libxcb license] - MIT)
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
     - [rlcompleter] ([python license] - Python Software Foundation License 2)
+    - [QCheckboxCombo] ([QCheckboxCombo License] - MIT)
 
 * Core
     - [discount] ([discount license] - BSD)
@@ -125,3 +126,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [curl]: https://github.com/curl/curl
 [nom license]: https://github.com/Geal/nom/blob/master/LICENSE
 [nom]: https://github.com/Geal/nom
+[QCheckboxCombo]: https://github.com/CuriousCrow/QCheckboxCombo
+[QCheckboxCombo License]: https://github.com/CuriousCrow/QCheckboxCombo/blob/master/LICENSE

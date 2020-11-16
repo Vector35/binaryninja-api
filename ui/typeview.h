@@ -157,6 +157,7 @@ public:
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
 	virtual BNAddressRange getSelectionOffsets() override;
+	virtual SelectionInfoForXref getSelectionForXref() override;
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t) override;
 
@@ -164,7 +165,8 @@ public:
 	virtual void setNavigationMode(std::string mode) override;
 	virtual std::vector<std::string> getNavigationModes() override;
 
-	bool navigateToType(const std::string& name);
+	uint64_t findMatchingLine(const BinaryNinja::QualifiedName& name, uint64_t offset);
+	bool navigateToType(const std::string& name, uint64_t offset = 0);
 
 	virtual void OnTypeDefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
 		BinaryNinja::Type* type) override;
@@ -196,6 +198,8 @@ public:
 
 	static void registerActions();
 
+	virtual ArchitectureRef getOrAskForArchitecture();
+
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -222,6 +226,7 @@ private Q_SLOTS:
 	void createStructure();
 	void createUnion();
 	void setStructureSize();
+	void addUserXref();
 	void updateLineNumberAreaWidth(size_t lineCount);
 };
 

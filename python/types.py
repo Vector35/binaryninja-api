@@ -26,7 +26,7 @@ import ctypes
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType
+from binaryninja.enums import SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, InstructionTextTokenType, StructureType, ReferenceType, VariableSourceType, TypeReferenceType
 
 # 2-3 compatibility
 from binaryninja import range
@@ -145,6 +145,88 @@ class QualifiedName(object):
 	def byte_name(self, value):
 		self._byte_name = value
 
+
+class TypeReferenceSource(object):
+	def __init__(self, name, offset, ref_type):
+		self._name = name
+		self._offset = offset
+		self._ref_type = ref_type
+	
+	def __str__(self):
+		if self.ref_type == TypeReferenceType.DirectTypeReferenceType:
+			s = 'direct'
+		elif self.ref_type == TypeReferenceType.IndirectTypeReferenceType:
+			s = 'indirect'
+		else:
+			s = 'unknown'
+		return '<type %s, offset 0x%x, %s>' % (self.name, self.offset, s)
+
+	def __repr__(self):
+		return repr(str(self))
+
+	@property
+	def name(self):
+		""" """
+		return self._name
+
+	@property
+	def offset(self):
+		""" """
+		return self._offset
+
+	@property
+	def ref_type(self):
+		""" """
+		return self._ref_type
+
+	def __eq__(self, other):
+		if isinstance(other, self.__class__):
+			return self.name == other.name and self.offset == other.offset and self.ref_type == other.ref_type
+		return NotImplemented
+
+	def __ne__(self, other):
+		if isinstance(other, self.__class__):
+			return not self.__eq__(other)
+		return NotImplemented
+
+	def __lt__(self, other):
+		if isinstance(other, self.__class__):
+			if self.name < other.name:
+				return True
+			elif self.name > other.name:
+				return False
+			elif self.offset < other.offset:
+				return True
+			elif self.offset > other.offset:
+				return False
+			return self.ref_type < other.ref_type
+		return NotImplemented
+
+	def __gt__(self, other):
+		if isinstance(other, self.__class__):
+			if self.name > other.name:
+				return True
+			elif self.name < other.name:
+				return False
+			elif self.offset > other.offset:
+				return True
+			elif self.offset < other.offset:
+				return False
+			return self.ref_type > other.ref_type
+		return NotImplemented
+
+	def __cmp__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+
+		if self == other:
+			return 0
+		elif self < other:
+			return -1
+		return 1
+
+	def __hash__(self):
+		return hash(str(self))
 
 class NameSpace(QualifiedName):
 	def __str__(self):

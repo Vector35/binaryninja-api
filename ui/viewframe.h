@@ -14,6 +14,45 @@
 #include "viewtype.h"
 #include "action.h"
 
+// this struct is used to pass selection information for cross references
+struct SelectionInfoForXref
+{
+	// Check these booleans before accessing the address/type/variable info,
+	// since the invalid fields are not guaranteed to be initialized/zero-ed.
+	// At any given time, at most one of these four should be true.
+	bool addrValid, typeValid, typeFieldValid, localVarValid;
+
+	BNFunctionGraphType ilSource;
+
+	uint64_t start;
+	uint64_t end;
+
+	BinaryNinja::QualifiedName type;
+	uint64_t offset;
+
+	BinaryNinja::Variable var;
+
+	// These two need to be tested against nullptr before de-referencing
+	FunctionRef func;
+	ArchitectureRef arch;
+
+	bool operator== (const SelectionInfoForXref& other) const 
+	{
+		if (addrValid && other.addrValid)
+			return (start == other.start) && (end == other.end) &&
+				(func == other.func) && (arch == other.arch);
+		else if (typeValid && other.typeValid)
+			return type == other.type;
+		else if (typeFieldValid && other.typeFieldValid)
+			return (type == other.type) && (offset == other.offset);
+		else if (localVarValid && other.localVarValid)
+			return (var == other.var) && (ilSource == other.ilSource);
+		return false;
+	}
+
+	bool operator!= (const SelectionInfoForXref& other) const { return !(*this == other); }
+	bool isValid() const { return addrValid || typeValid || typeFieldValid || localVarValid; }
+};
 
 class BINARYNINJAUIAPI HistoryEntry: public BinaryNinja::RefCountObject
 {
@@ -77,7 +116,7 @@ public:
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;
 	virtual BNAddressRange getSelectionOffsets();
-	virtual BNAddressRange getSelectionForInfo();
+	virtual SelectionInfoForXref getSelectionForXref();
 	virtual void setSelectionOffsets(BNAddressRange range) = 0;
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
@@ -290,6 +329,8 @@ public:
 	bool navigate(BinaryViewRef data, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool navigateToFunction(FunctionRef func, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
+	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation,
+		bool addHistoryEntry = true);
 	QString getTypeForView(QWidget* view);
 	QString getDataTypeForView(const QString& type);
 	QString getDataTypeForView(QWidget* view);

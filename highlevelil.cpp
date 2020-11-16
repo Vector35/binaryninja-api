@@ -445,6 +445,13 @@ vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(const HighLevelILIn
 }
 
 
+vector<DisassemblyTextLine> HighLevelILFunction::GetInstructionText(size_t i, bool asFullAst)
+{
+	HighLevelILInstruction instr = GetInstruction(i);
+	return GetExprText(instr, asFullAst);
+}
+
+
 Confidence<Ref<Type>> HighLevelILFunction::GetExprType(size_t expr)
 {
 	BNTypeWithConfidence result = BNGetHighLevelILExprType(m_object, expr);

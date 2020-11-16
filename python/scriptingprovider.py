@@ -529,6 +529,32 @@ class BlacklistedDict(dict):
 		self._blacklist_enabled = value
 
 
+def bninspect(code, globals_, locals_):
+	"""
+	``bninspect`` prints documentation about a command that is about to be run
+	The interpreter will invoke this function if you input a line ending in `?` e.g. `bv?`
+
+	:param str code: Python code to be evaluated
+	:param dict globals_: globals() from callsite
+	:param dict locals_: locals() from callsite
+	"""
+	try:
+		import inspect
+		value = eval(code, globals_, locals_)
+		doc = inspect.getdoc(value)
+		if doc is None:
+			comments = inspect.getcomments(value)
+			if comments is None:
+				print(f"No documentation found for {code}")
+			else:
+				print(comments)
+		else:
+			print(doc)
+	except:
+		# Hide exceptions so the normal execution can report them
+		pass
+
+
 class PythonScriptingInstance(ScriptingInstance):
 	_interpreter = threading.local()
 
@@ -611,6 +637,13 @@ class PythonScriptingInstance(ScriptingInstance):
 					PythonScriptingInstance._interpreter.value = self
 					try:
 						self.update_locals()
+
+						# If a single-line command ends in ?, show docs as well
+						if code[-2:] == b'?\n' and len(code.split(b'\n')) < 3:
+							escaped_code = repr(code[:-2])
+							self.interpreter.push(f'bninspect({escaped_code}, globals(), locals())\n')
+							# Strip ? from the evaluated input
+							code = code[:-2] + b'\n'
 
 						for line in code.split(b'\n'):
 							self.interpreter.push(line.decode('charmap'))

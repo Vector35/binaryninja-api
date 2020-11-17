@@ -260,8 +260,13 @@ class BinaryViewEvent(object):
 	"""
 	The ``BinaryViewEvent`` object provides a mechanism for receiving callbacks	when a BinaryView
 	is Finalized or the initial analysis is finished. The BinaryView finalized callbacks run before the
-	intialanalysis starts. The callbacks run one-after-another in the same order as they get registered.
+	intial analysis starts. The callbacks run one-after-another in the same order as they get registered.
 	It is a good place to modify the BinaryView to add extra information to it.
+
+	For newly opened binaries, the initial analysis completion callbacks run after the initial analysis,
+	as well as linear sweep	and signature matcher (if they are configured to run), completed. For loading
+	old databases, the callbacks run after the database is loaded, as well as any automatic analysis
+	update finishes.
 
 	The callback function receives a BinaryView as its parameter. It is possible to call
 	BinaryView.add_analysis_completion_event() on it to set up other callbacks for analysis completion.

@@ -892,7 +892,8 @@ __attribute__ ((format (printf, 1, 2)))
 		int64_t GetId();
 		std::string GetName();
 		bool IsAutoSave();
-		Ref<Snapshot> GetParent();
+		Ref<Snapshot> GetFirstParent();
+		std::vector<Ref<Snapshot>> GetParents();
 		DataBuffer GetFileContents();
 		std::vector<UndoEntry> GetUndoEntries();
 		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);

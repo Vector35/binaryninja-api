@@ -196,12 +196,26 @@ bool Snapshot::IsAutoSave()
 }
 
 
-Ref<Snapshot> Snapshot::GetParent()
+Ref<Snapshot> Snapshot::GetFirstParent()
 {
-	BNSnapshot* snap = BNGetSnapshotParent(m_object);
+	BNSnapshot* snap = BNGetSnapshotFirstParent(m_object);
 	if (snap == nullptr)
 		return nullptr;
 	return new Snapshot(snap);
+}
+
+
+vector<Ref<Snapshot>> Snapshot::GetParents()
+{
+	size_t count;
+	BNSnapshot** parents = BNGetSnapshotParents(m_object, &count);
+	vector<Ref<Snapshot>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(new Snapshot(BNNewSnapshotReference(parents[i])));
+	}
+	BNFreeSnapshotList(parents, count);
+	return result;
 }
 
 

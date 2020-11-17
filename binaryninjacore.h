@@ -2726,8 +2726,10 @@ __attribute__ ((format (printf, 1, 2)))
 // Database snapshots
 	BINARYNINJACOREAPI BNSnapshot* BNNewSnapshotReference(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeSnapshot(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeSnapshotList(BNSnapshot** snapshots, size_t count);
 	BINARYNINJACOREAPI int64_t BNGetSnapshotId(BNSnapshot* snapshot);
-	BINARYNINJACOREAPI BNSnapshot* BNGetSnapshotParent(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNSnapshot* BNGetSnapshotFirstParent(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNSnapshot** BNGetSnapshotParents(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI char* BNGetSnapshotName(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI bool BNIsSnapshotAutoSave(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotFileContents(BNSnapshot* snapshot);

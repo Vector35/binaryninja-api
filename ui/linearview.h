@@ -59,7 +59,7 @@ class BINARYNINJAUIAPI LinearViewHistoryEntry: public HistoryEntry
 	uint64_t m_cursorAddr;
 	PlatformRef m_platform;
 	uint64_t m_func;
-	bool m_inFunc;
+	bool m_inFunc = false;
 	HighlightTokenState m_highlight;
 
 public:

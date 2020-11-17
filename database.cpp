@@ -322,11 +322,11 @@ Ref<Snapshot> Database::GetCurrentSnapshot()
 }
 
 
-int64_t Database::WriteSnapshotData(int64_t parent, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress)
+int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	int64_t result = BNWriteDatabaseSnapshotData(m_object, parent, file->GetObject(), name.c_str(), data->GetObject(), autoSave, &pctxt, ProgressCallback);
+	int64_t result = BNWriteDatabaseSnapshotData(m_object, parents.data(), parents.size(), file->GetObject(), name.c_str(), data->GetObject(), autoSave, &pctxt, ProgressCallback);
 	if (result < 0)
 	{
 		throw DatabaseException("BNWriteDatabaseSnapshotData");

@@ -314,7 +314,7 @@ vector<Ref<Snapshot>> Database::GetSnapshots()
 	BNSnapshot** snapshots = BNGetDatabaseSnapshots(m_object, &count);
 	vector<Ref<Snapshot>> result;
 	for (size_t i = 0; i < count; i++)
-		result.push_back(new Snapshot(snapshots[i]));
+		result.push_back(new Snapshot(BNNewSnapshotReference(snapshots[i])));
 	BNFreeSnapshotList(snapshots, count);
 	return result;
 }

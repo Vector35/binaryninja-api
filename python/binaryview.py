@@ -4231,6 +4231,8 @@ class BinaryView(object):
 		``get_strings`` returns a list of strings defined in the binary in the optional virtual address range:
 		``start-(start+length)``
 
+		Note that this API will only return strings that have been identified by the string-analysis and thus governed by the minimum and maximum length settings and unrelated to the type system.
+
 		:param int start: optional virtual address to start the string list from, defaults to start of the binary
 		:param int length: optional length range to return strings from, defaults to length of the binary
 		:return: a list of all strings or a list of strings defined between ``start`` and ``start+length``
@@ -4258,6 +4260,8 @@ class BinaryView(object):
 		"""
 		``get_string_at`` returns the string that falls on given virtual address.
 
+		.. note:: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings. For an alternative API that simply returns any potential c-string at a given location, use :py:BinaryView:`binaryview.get_ascii_string_at`.
+
 		:param int addr: virtual address to get the string from
 		:param bool partial: whether to return a partial string reference or not
 		:return: returns the StringReference at the given virtual address, otherwise None.
@@ -4280,7 +4284,9 @@ class BinaryView(object):
 
 	def get_ascii_string_at(self, addr, min_length=4, max_length=None, require_cstring=True):
 		"""
-		``get_ascii_string_at`` returns the string found at ``addr``
+		``get_ascii_string_at`` returns an ascii string found at ``addr``.
+
+		.. note:: This returns an ascii string irrespective of whether the core analysis identified a string at that location. For an alternative API that uses existing identified strings, use :py:BinaryView:`binaryview.get_string_at`.
 
 		:param int addr: virtual address to start the string
 		:param int min_length: minimum length to define a string

@@ -884,11 +884,14 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t NamespaceSize() const;
 	};
 
+	class Database;
+
 	class Snapshot: public CoreRefCountObject<BNSnapshot, BNNewSnapshotReference, BNFreeSnapshot>
 	{
 	public:
 		Snapshot(BNSnapshot* snapshot);
 
+		Ref<Database> GetDatabase();
 		int64_t GetId();
 		std::string GetName();
 		bool IsAutoSave();

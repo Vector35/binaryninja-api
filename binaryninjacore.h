@@ -2723,10 +2723,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobalData(BNDatabase* database, const char* key, BNDataBuffer* val);
 	BINARYNINJACOREAPI BNFileMetadata* BNGetDatabaseFile(BNDatabase* database);
 
-// Database snapshots
+	// Database snapshots
 	BINARYNINJACOREAPI BNSnapshot* BNNewSnapshotReference(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeSnapshot(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeSnapshotList(BNSnapshot** snapshots, size_t count);
+	BINARYNINJACOREAPI BNDatabase* BNGetSnapshotDatabase(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI int64_t BNGetSnapshotId(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNSnapshot* BNGetSnapshotFirstParent(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNSnapshot** BNGetSnapshotParents(BNSnapshot* snapshot, size_t* count);

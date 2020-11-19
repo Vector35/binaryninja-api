@@ -175,6 +175,12 @@ Snapshot::Snapshot(BNSnapshot* snapshot)
 }
 
 
+Ref<Database> Snapshot::GetDatabase()
+{
+	return new Database(BNGetSnapshotDatabase(m_object));
+}
+
+
 int64_t Snapshot::GetId()
 {
 	return BNGetSnapshotId(m_object);
@@ -309,6 +315,7 @@ vector<Ref<Snapshot>> Database::GetSnapshots()
 	vector<Ref<Snapshot>> result;
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Snapshot(snapshots[i]));
+	BNFreeSnapshotList(snapshots, count);
 	return result;
 }
 

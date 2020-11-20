@@ -75,7 +75,12 @@ bool KeyValueStore::HasValue(const std::string& name) const
 
 Json::Value KeyValueStore::GetValue(const std::string& name) const
 {
-	DataBuffer value = DataBuffer(BNGetKeyValueStoreBuffer(m_object, name.c_str()));
+	BNDataBuffer* bnBuffer = BNGetKeyValueStoreBuffer(m_object, name.c_str());
+	if (bnBuffer == nullptr)
+	{
+		throw DatabaseException("BNGetKeyValueStoreBuffer");
+	}
+	DataBuffer value = DataBuffer(bnBuffer);
 	Json::Value json;
 	std::unique_ptr<Json::CharReader> reader(Json::CharReaderBuilder().newCharReader());
 	std::string errors;

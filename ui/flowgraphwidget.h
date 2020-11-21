@@ -104,6 +104,8 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	CursorPosition m_cursorPos, m_selectionStartPos;
 	HighlightTokenState m_highlight;
 	bool m_tokenSelection = false;
+	std::set<size_t> m_relatedIndexHighlights;
+	std::set<uint64_t> m_relatedInstructionHighlights;
 
 	ContextMenuManager m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
@@ -217,6 +219,9 @@ public:
 	bool navigateWithHistoryEntry(uint64_t addr, FlowGraphHistoryEntry* entry);
 	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, FlowGraphHistoryEntry* entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }
+
+	virtual void setRelatedIndexHighlights(const std::set<size_t>& related);
+	virtual void setRelatedInstructionHighlights(const std::set<uint64_t>& related);
 
 	virtual void zoom(bool direction);
 	virtual void zoomActual();

@@ -189,7 +189,7 @@ Q_SIGNALS:
 public Q_SLOTS:
 	void disassembly();
 	void createFunc();
-	void createFuncWithPlatform(PlatformRef platform);
+	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 
 private Q_SLOTS:
 	void scrollBarMoved(int value);

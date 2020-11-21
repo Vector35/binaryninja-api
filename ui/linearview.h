@@ -223,7 +223,7 @@ private Q_SLOTS:
 	void setUserVariableValue();
 	void clearUserVariableValue();
 	void createFunc();
-	void createFuncWithPlatform(PlatformRef platform);
+	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();
 	void undefineFunc();
 	void reanalyze();

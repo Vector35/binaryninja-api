@@ -336,7 +336,7 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 
 Settings are available via the `[CMD/CTRL] ,` hotkey and allow a wide variety of customization.
 
-All settings are saved in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin or logical group.  
+All settings are saved in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin or logical group.
 
 Enabling the `identifiers` check box will show the raw identifiers used to set settings in the json file which may be useful for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
 
@@ -498,29 +498,29 @@ Here's a list of all settings currently available from the UI:
 |ui|Show Local Data Variables|Show local data variables in the symbol list.|`boolean`|`False`|<a id='ui.symbolList.showLocalDataVars'>ui.symbolList.showLocalDataVars</a>|
 |ui|Show Local Functions|Show local functions in the symbol list.|`boolean`|`True`|<a id='ui.symbolList.showLocalFunctions'>ui.symbolList.showLocalFunctions</a>|
 |ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a id='ui.theme'>ui.theme</a>|
-|ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL', 'HighLevelIL']`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`Disassembly`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`LowLevelIL`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`LiftedIL`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`MediumLevelIL`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`HighLevelIL`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.disassembly.carousel'>ui.view.disassembly.carousel</a>|
-|ui|Gutter Width|Disassembly view gutter and tags width, in characters.|`number`|`5`|<a id='ui.view.disassembly.gutterWidth'>ui.view.disassembly.gutterWidth</a>|
-|ui|Default Linear View Type|Default linear view type to display on startup.|`string`|`HighLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`Disassembly`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`LowLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`LiftedIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`MediumLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`HighLevelIL`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
-| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.disassembly.type'>ui.view.disassembly.type</a>|
+|ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL', 'HighLevelIL']`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`Disassembly`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`LowLevelIL`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`LiftedIL`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`MediumLevelIL`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`HighLevelIL`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+|ui|Gutter Width|Disassembly view gutter and tags width, in characters.|`number`|`5`|<a id='ui.view.linear.gutterWidth'>ui.view.linear.gutterWidth</a>|
+|ui|Default Linear View Type|Default linear view type to display on startup.|`string`|`HighLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`Disassembly`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LowLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LiftedIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MediumLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`HighLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
 |ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|`['Disassembly', 'LowLevelIL', 'MediumLevelIL', 'HighLevelIL']`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`Disassembly`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`LowLevelIL`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
@@ -532,17 +532,17 @@ Here's a list of all settings currently available from the UI:
 | | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`HighLevelIL`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
-|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`Disassembly`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`LowLevelIL`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`LiftedIL`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`MediumLevelIL`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`HighLevelIL`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
-| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.graph.default'>ui.view.graph.default</a>|
+|ui|Default Disassembly Graph|Default disassembly graph to display on startup.|`string`|`Disassembly`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`Disassembly`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LowLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LiftedIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`LowLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MediumLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MediumLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MappedMediumLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`MappedMediumLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`HighLevelIL`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`HighLevelILSSAForm`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
 |ui|Prefer Disassembly Graph|Prefer disassembly graph over linear view on startup.|`boolean`|`False`|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
 |ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
 |updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a id='updates.activeContent'>updates.activeContent</a>|
@@ -553,7 +553,7 @@ Here's a list of all settings currently available from the UI:
 
 ## Updates
 
-Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on MacOS) preferences by turning off the `Update to latest version automatically` option. 
+Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on MacOS) preferences by turning off the `Update to latest version automatically` option.
 
 Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
 

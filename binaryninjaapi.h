@@ -3755,6 +3755,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
 		size_t GetMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMediumLevelILExprIndex(size_t expr) const;
+		std::set<size_t> GetMediumLevelILExprIndexes(size_t expr) const;
 		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
 
@@ -4098,6 +4099,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		size_t GetLowLevelILInstructionIndex(size_t instr) const;
 		size_t GetLowLevelILExprIndex(size_t expr) const;
+		std::set<size_t> GetLowLevelILExprIndexes(size_t expr) const;
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		size_t GetHighLevelILInstructionIndex(size_t instr) const;
 		size_t GetHighLevelILExprIndex(size_t expr) const;
@@ -4354,6 +4356,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		size_t GetMediumLevelILExprIndex(size_t expr) const;
+		std::set<size_t> GetMediumLevelILExprIndexes(size_t expr) const;
 
 		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
 		void ReplaceExpr(size_t expr, size_t newExpr);

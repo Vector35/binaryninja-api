@@ -470,6 +470,14 @@ class MediumLevelILInstruction(object):
 		return self.low_level_il
 
 	@property
+	def llils(self):
+		exprs = self.function.get_low_level_il_expr_indexes(self.expr_index)
+		result = []
+		for expr in exprs:
+			result.append(lowlevelil.LowLevelILInstruction(self._function.low_level_il.ssa_form, expr))
+		return result
+
+	@property
 	def high_level_il(self):
 		"""High level IL form of this expression"""
 		expr = self._function.get_high_level_il_expr_index(self._expr_index)
@@ -1160,6 +1168,15 @@ class MediumLevelILFunction(object):
 		result = core.BNGetLowLevelILExprIndex(self.handle, expr)
 		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
 			return None
+		return result
+
+	def get_low_level_il_expr_indexes(self, expr):
+		count = ctypes.c_ulonglong()
+		exprs = core.BNGetLowLevelILExprIndexes(self.handle, expr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(exprs[i])
+		core.BNFreeILInstructionList(exprs)
 		return result
 
 	def get_high_level_il_instruction_index(self, instr):

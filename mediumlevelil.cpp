@@ -776,6 +776,20 @@ size_t MediumLevelILFunction::GetLowLevelILExprIndex(size_t expr) const
 }
 
 
+set<size_t> MediumLevelILFunction::GetLowLevelILExprIndexes(size_t expr) const
+{
+	size_t count;
+	size_t* exprs = BNGetLowLevelILExprIndexes(m_object, expr, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(exprs[i]);
+
+	BNFreeILInstructionList(exprs);
+	return result;
+}
+
+
 Ref<HighLevelILFunction> MediumLevelILFunction::GetHighLevelIL() const
 {
 	BNHighLevelILFunction* func = BNGetHighLevelILForMediumLevelIL(m_object);

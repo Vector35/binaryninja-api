@@ -3826,6 +3826,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMappedMediumLevelIL(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionIndex(BNLowLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILExprIndex(BNLowLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILExprIndexes(BNLowLevelILFunction* func, size_t expr, size_t* count);
 	BINARYNINJACOREAPI size_t BNGetMappedMediumLevelILInstructionIndex(BNLowLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetMappedMediumLevelILExprIndex(BNLowLevelILFunction* func, size_t expr);
 
@@ -3968,6 +3969,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetLowLevelILForMediumLevelIL(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILExprIndex(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelILExprIndexes(BNMediumLevelILFunction* func, size_t expr, size_t* count);
 
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetHighLevelILForMediumLevelIL(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetHighLevelILInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
@@ -4003,6 +4005,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILForHighLevelILFunction(BNHighLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILExprIndexFromHighLevelIL(BNHighLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILExprIndexesFromHighLevelIL(BNHighLevelILFunction* func, size_t expr, size_t* count);
 
 	BINARYNINJACOREAPI void BNUpdateHighLevelILOperand(BNHighLevelILFunction* func, size_t instr, size_t operandIndex, uint64_t value);
 	BINARYNINJACOREAPI void BNReplaceHighLevelILExpr(BNHighLevelILFunction* func, size_t expr, size_t newExpr);

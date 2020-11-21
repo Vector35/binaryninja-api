@@ -384,6 +384,20 @@ size_t HighLevelILFunction::GetMediumLevelILExprIndex(size_t expr) const
 }
 
 
+set<size_t> HighLevelILFunction::GetMediumLevelILExprIndexes(size_t expr) const
+{
+	size_t count;
+	size_t* exprs = BNGetMediumLevelILExprIndexesFromHighLevelIL(m_object, expr, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(exprs[i]);
+
+	BNFreeILInstructionList(exprs);
+	return result;
+}
+
+
 void HighLevelILFunction::UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value)
 {
 	BNUpdateHighLevelILOperand(m_object, i, operandIndex, value);

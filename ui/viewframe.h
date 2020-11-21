@@ -122,6 +122,8 @@ public:
 
 	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() { return nullptr; }
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() { return nullptr; }
+	virtual BNFunctionGraphType getILViewType() { return NormalFunctionGraph; }
+	virtual void setILViewType(BNFunctionGraphType ilViewType) { }
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
 
 	virtual QFont getFont() = 0;

@@ -329,8 +329,8 @@ public:
 
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
 
-	BNFunctionGraphType getILViewType() { return m_ilViewType; };
-	void setILViewType(BNFunctionGraphType ilViewType);
+	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
+	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
 
 	void toggleOption(BNDisassemblyOption option);
 

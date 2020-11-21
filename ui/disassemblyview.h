@@ -46,8 +46,8 @@ public:
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
 
-	BNFunctionGraphType getILViewType() { return m_ilViewType; };
-	void setILViewType(BNFunctionGraphType ilViewType);
+	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
+	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
 
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);

@@ -128,6 +128,7 @@ public:
 	virtual BNFunctionGraphType getILViewType() { return NormalFunctionGraph; }
 	virtual void setILViewType(BNFunctionGraphType ilViewType) { }
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
+	virtual bool navigateToFunctionIndex(FunctionRef func, size_t index) { return false; }
 
 	virtual QFont getFont() = 0;
 	DisassemblySettingsRef getDisassemblySettings();

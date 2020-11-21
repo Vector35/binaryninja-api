@@ -40,6 +40,7 @@ public:
 
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
+	virtual bool navigateToFunctionIndex(FunctionRef func, size_t index) override;
 
 	virtual HistoryEntry* getHistoryEntry() override;
 	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;

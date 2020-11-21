@@ -113,6 +113,7 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	uint64_t m_addrAfterLayout;
 	bool m_pendingXrefNavigation, m_xrefNavigation;
 	uint64_t m_xrefTarget;
+	size_t m_indexAfterlayout;
 
 	InstructionEdit* m_instrEdit;
 
@@ -163,8 +164,8 @@ protected:
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
 
-	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr, bool notify,
-		bool recenterWithPreviousGraph);
+	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr,
+		bool notify, bool recenterWithPreviousGraph, size_t index = BN_INVALID_EXPR);
 
 	void up(bool selecting, size_t count = 1);
 	void down(bool selecting, size_t count = 1);
@@ -198,6 +199,7 @@ public:
 
 	void setGraph(FlowGraphRef graph);
 	void setGraph(FlowGraphRef graph, uint64_t addr);
+	void setGraphAtIndex(FlowGraphRef graph, size_t index);
 	void setGraph(FlowGraphRef graph, FlowGraphHistoryEntry* entry);
 	void setRelatedGraph(FlowGraphRef graph);
 	void setRelatedGraph(FlowGraphRef graph, uint64_t addr);
@@ -211,6 +213,7 @@ public:
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
+	virtual bool navigateToFunctionIndex(FunctionRef func, size_t index) override;
 	bool navigateWithHistoryEntry(uint64_t addr, FlowGraphHistoryEntry* entry);
 	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, FlowGraphHistoryEntry* entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }
@@ -258,6 +261,7 @@ public:
 	void paintEdge(QPainter& p, const FlowGraphNodeRef& node, const BinaryNinja::FlowGraphEdge& edge);
 
 	void showAddress(uint64_t addr, bool select = false);
+	void showIndex(size_t index);
 	void showTopNode();
 	void showNode(FlowGraphNodeRef node);
 	void showLineInNode(FlowGraphNodeRef node, size_t lineIndex);

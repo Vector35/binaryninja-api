@@ -294,6 +294,7 @@ public:
 	virtual FunctionRef getCurrentFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
+	virtual size_t getCurrentILInstructionIndex() override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
 	virtual bool navigate(uint64_t pos) override;
 

@@ -7,13 +7,12 @@
 
 #include "binaryninjaapi.h"
 #include "action.h"
+#include "viewframe.h"
 #include "uitypes.h"
 
 class ContextMenuManager;
 class DockHandler;
 class Menu;
-class View;
-class ViewFrame;
 
 
 struct BINARYNINJAUIAPI DockProperties
@@ -101,7 +100,7 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 	bool m_shouldResizeDocks = false;
 	std::map<Qt::DockWidgetArea, bool> m_enableHiddenGroupSave;
 
-	uint64_t m_currentOffset = 0;
+	ViewLocation m_currentViewLocation;
 
 	friend class DockContextHandler;
 	std::map<QWidget*, DockContextHandler*> m_contexts;

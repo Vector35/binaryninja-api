@@ -10,10 +10,10 @@
 #include <stack>
 #include <utility>
 #include <vector>
-#include "dockhandler.h"
 #include "filecontext.h"
 #include "viewtype.h"
 #include "action.h"
+
 
 class BINARYNINJAUIAPI HistoryEntry: public BinaryNinja::RefCountObject
 {
@@ -26,11 +26,14 @@ public:
 	void setViewType(const QString& type) { m_viewType = type; }
 };
 
+
 class AssembleDialog;
 class CompileDialog;
+class DockHandler;
 class FeatureMap;
 class StatusBarWidget;
 class ViewNavigationMode;
+
 
 class BINARYNINJAUIAPI View
 {
@@ -158,7 +161,6 @@ class BINARYNINJAUIAPI ViewLocation
 	bool m_valid = false;
 	QString m_viewType;
 	uint64_t m_offset = 0;
-	bool m_hasILViewType = false;
 	BNFunctionGraphType m_ilViewType = NormalFunctionGraph;
 	size_t m_instrIndex = BN_INVALID_EXPR;
 
@@ -166,21 +168,30 @@ public:
 	ViewLocation() { }
 	ViewLocation(const QString& viewType, uint64_t offset) : m_valid(true), m_viewType(viewType), m_offset(offset) { }
 	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType) : m_valid(true),
-		m_viewType(viewType), m_offset(offset), m_hasILViewType(true), m_ilViewType(ilViewType) { }
+		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType) { }
 	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
-		m_viewType(viewType), m_offset(offset), m_hasILViewType(true), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
+		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 
 	bool isValid() const { return m_valid; }
 	QString getViewType() const { return m_viewType; }
 	uint64_t getOffset() const { return m_offset; }
-	bool hasILViewType() const { return m_hasILViewType; }
 	BNFunctionGraphType getILViewType() const { return m_ilViewType; }
 	size_t getInstrIndex() const { return m_instrIndex; }
 
 	void setViewType(QString& viewType) { m_viewType = viewType; }
 	void setOffset(uint64_t offset) { m_offset = offset; }
-	void setILViewType(BNFunctionGraphType ilViewType) { m_hasILViewType = true; m_ilViewType = ilViewType; }
+	void setILViewType(BNFunctionGraphType ilViewType) { m_ilViewType = ilViewType; }
 	void setInstrIndex(uint64_t index) { m_instrIndex = index; }
+
+	bool operator==(const ViewLocation& other) const
+	{
+		return (m_valid == other.m_valid) &&
+				(m_viewType == other.m_viewType) &&
+				(m_offset == other.m_offset) &&
+				(m_ilViewType == other.m_ilViewType) &&
+				(m_instrIndex == other.m_instrIndex);
+	}
+	bool operator!=(const ViewLocation& other) const { return !((*this) == other); }
 };
 
 

@@ -1115,6 +1115,7 @@ class VerifyBuilder(Builder):
                 bv.functions[0].set_comment(bv.functions[0].start, "Function start")
                 bv.commit_undo_actions()
 
+                bv.update_analysis_and_wait()
                 comments = self.get_comments(bv)
                 functions = self.get_functions(bv)
 
@@ -1126,6 +1127,7 @@ class VerifyBuilder(Builder):
                 bv.create_user_function(bv.start)
                 bv.commit_undo_actions()
 
+                bv.update_analysis_and_wait()
                 bv.create_database(temp_name)
 
             with binja.FileMetadata(temp_name).open_existing_database(temp_name).get_view_of_type('ELF') as bv:

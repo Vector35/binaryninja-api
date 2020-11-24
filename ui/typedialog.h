@@ -5,11 +5,17 @@
 #include <QtCore/QStringListModel>
 #include <QtWidgets/QComboBox>
 #include <QtCore/QTimer>
+#ifndef BINARYNINJAUI_BINDINGS
 #include <QtCore/QThread>
+#endif
 #include "binaryninjaapi.h"
 #include "uitypes.h"
 
 
+#ifdef BINARYNINJAUI_BINDINGS
+// QThread has issues working in the bindings on some platforms
+class GetTypesListThread;
+#else
 class BINARYNINJAUIAPI GetTypesListThread: public QThread
 {
 	Q_OBJECT
@@ -29,6 +35,7 @@ public:
 
 	const QStringList& getTypes() const { return m_allTypes; }
 };
+#endif
 
 class BINARYNINJAUIAPI TypeDialog: public QDialog
 {

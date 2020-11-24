@@ -6,10 +6,16 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtCore/QTimer>
+#ifndef BINARYNINJAUI_BINDINGS
 #include <QtCore/QThread>
+#endif
 #include "binaryninjaapi.h"
 #include "uitypes.h"
 
+#ifdef BINARYNINJAUI_BINDINGS
+// QThread has issues working in the bindings on some platforms
+class GetSymbolsListThread;
+#else
 class BINARYNINJAUIAPI GetSymbolsListThread: public QThread
 {
 	Q_OBJECT
@@ -29,6 +35,7 @@ public:
 
 	const QStringList& getSymbols() const { return m_allSymbols; }
 };
+#endif
 
 
 class BINARYNINJAUIAPI AddressDialogWithPreview: public QDialog

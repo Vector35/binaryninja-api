@@ -2694,13 +2694,28 @@ class BinaryView(object):
 		self._file.redo()
 
 	def navigate(self, view, offset):
+		"""
+		``navigate`` navigates the UI to the specified virtual address
+
+		.. note:: Despite the confusing name, ``view`` in this context is not a BinaryView but rather a string describing the different UI Views.  Check :py:attr:`view` while in different views to see examples such as ``Linear:ELF``, ``Graph:PE``.
+
+		:param str view: virtual address to read from.
+		:param int offset: address to navigate to
+		:return: whether or not navigation succeeded
+		:rtype: bool
+		:Example:
+
+			>>> import random
+			>>> bv.navigate(bv.view, random.choice(bv.functions).start)
+			True
+		"""
 		return self._file.navigate(view, offset)
 
 	def read(self, addr, length):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
-		Note: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
+		..note:: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
  		still get you a str in either case.
 
 		:param int addr: virtual address to read from.
@@ -5335,6 +5350,13 @@ class BinaryView(object):
 		return Segment(core.BNNewSegmentReference(seg))
 
 	def get_address_for_data_offset(self, offset):
+		"""
+		``get_address_for_data_offset`` returns the virtual address that maps to the specific file offset
+
+		:param int offset: file offset
+		:return: the virtual address of the first segment that contains that file location
+		:rtype: Int
+		"""
 		address = ctypes.c_ulonglong()
 		if not core.BNGetAddressForDataOffset(self.handle, offset, address):
 			return None

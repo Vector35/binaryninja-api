@@ -369,6 +369,21 @@ class FileMetadata(object):
 		core.BNRedo(self.handle)
 
 	def navigate(self, view, offset):
+		"""
+		``navigate`` navigates the UI to the specified virtual address
+
+		.. note:: Despite the confusing name, ``view`` in this context is not a BinaryView but rather a string describing the different UI Views.  Check :py:attr:`view` while in different views to see examples such as ``Linear:ELF``, ``Graph:PE``.
+
+		:param str view: virtual address to read from.
+		:param int offset: address to navigate to
+		:return: whether or not navigation succeeded
+		:rtype: bool
+		:Example:
+
+			>>> import random
+			>>> bv.navigate(bv.view, random.choice(bv.functions).start)
+			True
+		"""
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(self, filename, progress_func = None, settings = None):

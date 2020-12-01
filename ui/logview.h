@@ -16,7 +16,6 @@
 #include "action.h"
 #include "dockhandler.h"
 
-#define DEFAULT_MAX_LOG_SIZE 10000
 #define LOG_UPDATE_INTERVAL 100
 
 class LogStatus;
@@ -40,7 +39,7 @@ class BINARYNINJAUIAPI LogListModel: public QAbstractItemModel, public BinaryNin
 	QWidget* m_owner;
 	std::deque<LogListItem> m_items;
 	std::deque<LogListItem> m_visibleItems;
-	size_t m_maxSize;
+	int64_t m_maxSize;
 
 	std::vector<LogListItem> m_pendingItems;
 	std::mutex m_mutex;

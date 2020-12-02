@@ -137,7 +137,15 @@ The second and more powerful (but more complicated) mechanism is to leverage the
 
 It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API].  (install_api.py is included in every install in the installation folder)
 
-For the Personal edition, we recommend simply commenting out the `register_` function normally used to register the plugin via whatever mechanism it uses and instead simply using the built-in Python console along with the python `reload` function to load new changes and test them by directly calling functions in the module. This work-around unfortunately is not supported for Binary View or Architecture plugins which unfortunately do require a restart to test if not running on Commercial. 
+For other plugins, we recommend the following workflow from the scripting console which enables easy iteration and testing:
+
+```python
+import pluginname
+import importlib
+importlib.reload(pluginname);pluginname.callbackmethod(bv)
+```
+
+Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
 
 [PluginManager API]: https://api.binary.ninja/binaryninja.pluginmanager-module.html
 [example]: https://github.com/Vector35/binaryninja-api/tree/dev/python/examples

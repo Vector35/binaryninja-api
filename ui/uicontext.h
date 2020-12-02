@@ -16,6 +16,7 @@ typedef void (*UIPluginDependencyFunction)(void);
 class ViewFrame;
 class UIActionHandler;
 class FileContext;
+class ViewLocation;
 
 class BINARYNINJAUIAPI UIContextNotification
 {
@@ -33,6 +34,7 @@ public:
 	virtual void OnAfterCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; }
 
 	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) { (void)context; (void)frame; (void)type; }
+	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) { (void)context; (void)frame; (void)view; (void)location; };
 };
 
 class BINARYNINJAUIAPI UIContextHandler
@@ -86,6 +88,7 @@ public:
 	void NotifyOnAfterCloseFile(FileContext* file, ViewFrame* frame);
 
 	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
+	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 
 	static void setHandler(UIContextHandler* handler);
 

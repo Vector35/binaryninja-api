@@ -85,6 +85,12 @@ void NotificationListener::OnViewChange(UIContext* context, ViewFrame* frame, co
 }
 
 
+void NotificationListener::OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location)
+{
+	LogInfo("OnAddressChange: %llx", location.getOffset());
+}
+
+
 extern "C"
 {
 	BINARYNINJAPLUGIN bool UIPluginInit()

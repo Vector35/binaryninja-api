@@ -71,6 +71,12 @@ class UINotification(UIContextNotification):
         else:
             print("py OnViewChange")
 
+    def OnAddressChange(self, context, frame, view, location):
+        if frame:
+            print(f"py OnAddressChange {frame.getShortFileName()} {location.getOffset()}")
+        else:
+            print(f"py OnAddressChange {location.getOffset()}")
+
 
 # Register as a global so it doesn't get destructed
 notif = UINotification()

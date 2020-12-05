@@ -288,7 +288,7 @@ class BinaryViewEvent(object):
 		except:
 			binaryninja.log.log_error(traceback.format_exc())
 
-			
+
 class ActiveAnalysisInfo(object):
 	def __init__(self, func, analysis_time, update_count, submit_count):
 		self._func = func
@@ -604,11 +604,11 @@ class BinaryDataNotificationCallbacks(object):
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
-			tag = tag_ref[0].tag
-			arch = tag_ref[0].arch
-			func = tag_ref[0].func
+			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
-			self._notify.tag_added(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+			self._notify.tag_added(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -616,11 +616,11 @@ class BinaryDataNotificationCallbacks(object):
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
-			tag = tag_ref[0].tag
-			arch = tag_ref[0].arch
-			func = tag_ref[0].func
+			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
-			self._notify.tag_updated(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+			self._notify.tag_updated(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -628,11 +628,11 @@ class BinaryDataNotificationCallbacks(object):
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
-			tag = tag_ref[0].tag
-			arch = tag_ref[0].arch
-			func = tag_ref[0].func
+			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
-			self._notify.tag_removed(self._view, Tag(core.BNNewTagReference(tag)), ref_type, auto_defined, arch, func, addr)
+			self._notify.tag_removed(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
 			log.log_error(traceback.format_exc())
 

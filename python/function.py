@@ -685,7 +685,7 @@ class PossibleValueSet(object):
 
 class ArchAndAddr(object):
 	def __init__(self, arch = None, addr = 0):
-		self._arch = binaryninja.architecture.CoreArchitecture(arch)
+		self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
 		self._addr = addr
 
 	def __repr__(self):
@@ -1285,7 +1285,7 @@ class Function(object):
 		tags = core.BNGetAddressTagReferences(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			arch = binaryninja.architecture.CoreArchitecture(tags[i].arch)
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tags[i].arch)
 			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i].tag))
 			result.append((arch, tags[i].addr, tag))
 		core.BNFreeTagReferences(tags, count.value)
@@ -3502,7 +3502,7 @@ class DisassemblyTextRenderer(object):
 
 	@property
 	def arch(self):
-		return binaryninja.architecture.CoreArchitecture(handle = core.BNGetDisassemblyTextRendererArchitecture(self.handle))
+		return binaryninja.architecture.CoreArchitecture._from_cache(handle = core.BNGetDisassemblyTextRendererArchitecture(self.handle))
 
 	@arch.setter
 	def arch(self, arch):

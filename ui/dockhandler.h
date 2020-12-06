@@ -81,6 +81,7 @@ public:
 	virtual void notifyOffsetChanged(uint64_t /*offset*/) { }
 	virtual void notifyThemeChanged() { }
 	virtual void notifyViewChanged(ViewFrame* /*frame*/) { }
+	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) { }
 	virtual void notifyVisibilityChanged(bool /*visible*/) { }
 	virtual bool shouldBeVisible(ViewFrame* /*frame*/) { return true; }
 };
@@ -100,7 +101,7 @@ class BINARYNINJAUIAPI DockHandler: public QObject
 	bool m_shouldResizeDocks = false;
 	std::map<Qt::DockWidgetArea, bool> m_enableHiddenGroupSave;
 
-	ViewLocation m_currentViewLocation;
+	std::map<View*, ViewLocation> m_currentViewLocation;
 
 	friend class DockContextHandler;
 	std::map<QWidget*, DockContextHandler*> m_contexts;
@@ -131,7 +132,7 @@ public:
 
 	bool shouldResizeDocks();
 	void updateFonts();
-	void updateOffset(uint64_t offset);
+	void updateViewLocation(View* view, const ViewLocation& viewLocation);
 	void updateTheme();
 	void addActionOnShow(const QString& name, const std::function<void()>& action);
 

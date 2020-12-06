@@ -26,8 +26,7 @@ public:
 	ReflectionView(ViewFrame* frame, BinaryViewRef data);
 	~ReflectionView();
 
-	virtual void notifyOffsetChanged(uint64_t offset) override;
-	virtual void notifyViewChanged(ViewFrame* frame) override;
+	virtual void notifyViewLocationChanged(View* view, const ViewLocation& viewLocation) override;
 	virtual void notifyVisibilityChanged(bool visible) override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
 

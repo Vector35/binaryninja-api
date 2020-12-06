@@ -220,6 +220,7 @@ public:
 	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, FlowGraphHistoryEntry* entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }
 
+	virtual void clearRelatedHighlights();
 	virtual void setRelatedIndexHighlights(const std::set<size_t>& related);
 	virtual void setRelatedInstructionHighlights(const std::set<uint64_t>& related);
 

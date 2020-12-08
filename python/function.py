@@ -268,6 +268,11 @@ class ValueRange(object):
 			return NotImplemented
 		return self.start == other.start and self.end == other.end and self.step == other.step
 
+	def __contains__(self, other):
+		if not isinstance(other, numbers.Integral):
+			return NotImplemented
+		return other in range(self._start, self._end, self._step)
+
 	@property
 	def start(self):
 		""" """
@@ -378,6 +383,27 @@ class PossibleValueSet(object):
 		if self._type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"
+
+	def __contains__(self, other):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, numbers.Integral):
+			return self.value == other
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and hasattr(other, "value"):
+			return self.value == other.value
+		if not isinstance(other, numbers.Integral):
+			return NotImplemented
+		#Initial implementation only checks numbers, no set logic
+		if self.type == RegisterValueType.StackFrameOffset:
+			return NotImplemented
+		if self.type in [RegisterValueType.SignedRangeValue, RegisterValueType.UnsignedRangeValue]:
+			for rng in self.ranges:
+				if other in rng:
+					return True
+			return False
+		if self.type == RegisterValueType.InSetOfValues:
+			return other in self.values
+		if self.type == RegisterValueType.NotInSetOfValues:
+			return not other in self.values
+		return NotImplemented
 
 	def __eq__(self, other):
 		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, numbers.Integral):

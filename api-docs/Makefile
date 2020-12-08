@@ -4,6 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    ?= -j auto
 SPHINXBUILD   ?= sphinx-build
+DOC2DASH      ?= doc2dash
 PAPER         =
 BUILDDIR      ?= build
 SOURCEDIR     ?= source
@@ -40,6 +41,7 @@ help:
 	@echo "  changes    to make an overview of all changed/added/deprecated items"
 	@echo "  xml        to make Docutils-native XML files"
 	@echo "  pseudoxml  to make pseudoxml-XML files for display purposes"
+	@echo "  dashdoc    to make a Dash docset"
 	@echo "  linkcheck  to check all external links for integrity"
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
@@ -221,6 +223,15 @@ pseudoxml:
 	$(SPHINXBUILD) -b pseudoxml $(ALLSPHINXOPTS) $(BUILDDIR)/pseudoxml
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
+
+.PHONY: dashdoc
+dashdoc:
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/dashhtml
+	# Probably a cleaner way to do this
+	@echo ".wy-nav-side {display: none;}.wy-nav-content-wrap {margin-left: 0;}" >> $(BUILDDIR)/dashhtml/_static/css/theme.css
+	$(DOC2DASH) -n 'Binary Ninja' -d $(BUILDDIR)/docset $(BUILDDIR)/dashhtml
+	@echo
+	@echo "Build finished; now you can open the docset in $(BUILDDIR)/docset."
 
 .PHONY: dummy
 dummy:

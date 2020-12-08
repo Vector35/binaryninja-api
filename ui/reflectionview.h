@@ -21,10 +21,16 @@ class BINARYNINJAUIAPI ReflectionView: public QWidget, public DockContextHandler
 	ViewFrame* m_frame;
 	BinaryViewRef m_data;
 	DisassemblyContainer* m_disassemblyContainer;
+	std::map<BNFunctionGraphType, BNFunctionGraphType> m_ilMap;
+	bool m_ilSync;
+	bool m_locationSync;
 
 public:
 	ReflectionView(ViewFrame* frame, BinaryViewRef data);
 	~ReflectionView();
+
+	void toggleILSync();
+	void toggleLocationSync();
 
 	virtual void notifyViewLocationChanged(View* view, const ViewLocation& viewLocation) override;
 	virtual void notifyVisibilityChanged(bool visible) override;

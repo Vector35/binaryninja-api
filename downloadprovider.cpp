@@ -85,7 +85,7 @@ void DownloadInstance::PerformFreeResponse(void* ctxt, BNDownloadInstanceRespons
 }
 
 
-uint64_t DownloadInstance::ReadDataCallback(uint8_t* data, uint64_t len)
+int64_t DownloadInstance::ReadDataCallback(uint8_t* data, uint64_t len)
 {
 	return BNReadDataForDownloadInstance(m_object, data, len);
 }

@@ -4939,7 +4939,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		int PerformRequest(const std::string& url, BNDownloadInstanceOutputCallbacks* callbacks);
 		int PerformCustomRequest(const std::string& method, const std::string& url, const std::unordered_map<std::string, std::string>& headers, Response& response, BNDownloadInstanceInputOutputCallbacks* callbacks);
-		uint64_t ReadDataCallback(uint8_t* data, uint64_t len);
+		int64_t ReadDataCallback(uint8_t* data, uint64_t len);
 		uint64_t WriteDataCallback(uint8_t* data, uint64_t len);
 		bool NotifyProgressCallback(uint64_t progress, uint64_t total);
 		void SetError(const std::string& error);

@@ -110,16 +110,25 @@ class DownloadInstance(object):
 			for i in range(header_count):
 				headers[header_key_array[i]] = header_value_array[i]
 
-			# Read all data
-			data = b''
-			while True:
-				read_buffer = ctypes.create_string_buffer(0x1000)
-				read_len = core.BNReadDataForDownloadInstance(self.handle, ctypes.cast(read_buffer, ctypes.POINTER(ctypes.c_uint8)), 0x1000)
-				if read_len == 0:
-					break
-				data += read_buffer[:read_len]
+			# Generator function that returns a chunk of data on every iteration
+			def data_generator():
+				while True:
+					read_buffer = ctypes.create_string_buffer(0x1000)
+					read_len = core.BNReadDataForDownloadInstance(self.handle, ctypes.cast(read_buffer, ctypes.POINTER(ctypes.c_uint8)), 0x1000)
+					if read_len == 0:
+						break
+					if read_len < 0:
+						raise IOError()
+					yield read_buffer[:read_len]
 
-			py_response = self.perform_custom_request(method, url, headers, data)
+			try:
+				py_response = self.perform_custom_request(method, url, headers, data_generator())
+			except Exception as e:
+				out_response[0] = None
+				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
+				log.log_error(traceback.format_exc())
+				return -1
+
 			if py_response is not None:
 				# Assign to an instance variable so the memory stays live until the request is done
 				self.bn_response = core.BNDownloadInstanceResponse()
@@ -152,7 +161,7 @@ class DownloadInstance(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def perform_custom_request(self, method, url, headers, data):
+	def perform_custom_request(self, method, url, headers, data_generator):
 		raise NotImplementedError
 
 	def _read_callback(self, data, len_, ctxt):
@@ -404,37 +413,32 @@ try:
 
 			return 0
 
-		def perform_custom_request(self, method, url, headers, data):
-			try:
-				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
-				if proxy_setting:
-					proxies = {"https": proxy_setting}
-				else:
-					proxies = None
+		def perform_custom_request(self, method, url, headers, data_generator):
+			proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+			if proxy_setting:
+				proxies = {"https": proxy_setting}
+			else:
+				proxies = None
 
-				r = requests.request(pyNativeStr(method), pyNativeStr(url), headers=headers, data=data, proxies=proxies)
-				response = r.content
-				if len(response) == 0:
-					core.BNSetErrorForDownloadInstance(self.handle, "No data received from server!")
-					return None
-				raw_bytes = (ctypes.c_ubyte * len(response)).from_buffer_copy(response)
+			# Cannot have Content-Length if the body is chunked
+			if b"Content-Length" in headers:
+				del headers[b"Content-Length"]
+
+			r = requests.request(pyNativeStr(method), pyNativeStr(url), headers=headers, data=data_generator, proxies=proxies, stream=True)
+			bytes_sent = 0
+			for chunk in r.iter_content(None):
+				raw_bytes = (ctypes.c_ubyte * len(chunk)).from_buffer_copy(chunk)
 				bytes_wrote = core.BNWriteDataForDownloadInstance(self.handle, raw_bytes, len(raw_bytes))
 				if bytes_wrote != len(raw_bytes):
 					core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
 					return None
+				bytes_sent += bytes_wrote
 				continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_wrote, bytes_wrote)
 				if continue_download is False:
 					core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
 					return None
 
-				return DownloadInstance.Response(r.status_code, r.headers, None)
-			except requests.RequestException as e:
-				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-				return None
-			except:
-				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
-				log.log_error(traceback.format_exc())
-				return None
+			return DownloadInstance.Response(r.status_code, r.headers, None)
 
 	class PythonDownloadProvider(DownloadProvider):
 		name = "PythonDownloadProvider"
@@ -521,7 +525,7 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 						return self._method
 					return Request.get_method(self, *args, **kwargs)
 
-			def perform_custom_request(self, method, url, headers, data):
+			def perform_custom_request(self, method, url, headers, data_generator):
 				result = None
 				try:
 					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
@@ -529,21 +533,14 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 						opener = build_opener(ProxyHandler({'https': proxy_setting}))
 						install_opener(opener)
 
+					# Cannot have Content-Length if the body is chunked
 					if b"Content-Length" in headers:
 						del headers[b"Content-Length"]
 
-					req = PythonDownloadInstance.CustomRequest(pyNativeStr(url), data=data, headers=headers, method=pyNativeStr(method))
+					req = PythonDownloadInstance.CustomRequest(pyNativeStr(url), data=data_generator, headers=headers, method=pyNativeStr(method))
 					result = urlopen(req)
 				except HTTPError as he:
 					result = he
-				except URLError as e:
-					core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-					log.log_error(str(e))
-					return None
-				except:
-					core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
-					log.log_error(traceback.format_exc())
-					return None
 
 				total_size = int(result.headers.get('content-length', 0))
 				bytes_sent = 0
@@ -561,10 +558,6 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 					if continue_download is False:
 						core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
 						return None
-
-				if not bytes_sent:
-					core.BNSetErrorForDownloadInstance(self.handle, "Received no data!")
-					return None
 
 				return DownloadInstance.Response(result.getcode(), result.headers, None)
 

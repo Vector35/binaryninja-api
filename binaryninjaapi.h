@@ -939,6 +939,10 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<Ref<User>> GetUsers();
 		std::vector<UndoEntry> GetUndoEntries();
 
+		bool OpenProject();
+		void CloseProject();
+		bool IsProjectOpen();
+
 		std::string GetCurrentView();
 		uint64_t GetCurrentOffset();
 		bool Navigate(const std::string& view, uint64_t offset);

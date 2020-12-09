@@ -454,6 +454,15 @@ class FileMetadata(object):
 				return None
 		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
 
+	def open_project(self):
+		return core.BNOpenProject(self.handle)
+
+	def close_project(self):
+		core.BNCloseProject(self.handle)
+
+	def is_project_open(self):
+		return core.BNIsProjectOpen(self.handle)
+
 	@property
 	def existing_views(self):
 		length = ctypes.c_ulonglong()

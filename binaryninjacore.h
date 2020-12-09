@@ -2635,6 +2635,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetUserEmail(BNUser* user);
 	BINARYNINJACOREAPI char* BNGetUserId(BNUser* user);
 
+	BINARYNINJACOREAPI bool BNOpenProject(BNFileMetadata* file);
+	BINARYNINJACOREAPI void BNCloseProject(BNFileMetadata* file);
+	BINARYNINJACOREAPI bool BNIsProjectOpen(BNFileMetadata* file);
+
 	BINARYNINJACOREAPI char* BNGetCurrentView(BNFileMetadata* file);
 	BINARYNINJACOREAPI uint64_t BNGetCurrentOffset(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNNavigate(BNFileMetadata* file, const char* view, uint64_t offset);

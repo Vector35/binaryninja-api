@@ -923,6 +923,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
 		Ref<FileMetadata> GetFile();
+
+		Ref<KeyValueStore> ReadAnalysisCache() const;
+		void WriteAnalysisCache(Ref<KeyValueStore> val);
 	};
 
 	struct UndoAction

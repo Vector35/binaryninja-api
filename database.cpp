@@ -417,3 +417,23 @@ Ref<FileMetadata> Database::GetFile()
 {
 	return new FileMetadata(BNGetDatabaseFile(m_object));
 }
+
+
+Ref<KeyValueStore> Database::ReadAnalysisCache() const
+{
+	BNKeyValueStore* store = BNReadDatabaseAnalysisCache(m_object);
+	if (store == nullptr)
+	{
+		throw DatabaseException("BNReadDatabaseAnalysisCache");
+	}
+	return new KeyValueStore(store);
+}
+
+
+void Database::WriteAnalysisCache(Ref<KeyValueStore> val)
+{
+	if (!BNWriteDatabaseAnalysisCache(m_object, val->GetObject()))
+	{
+		throw DatabaseException("BNWriteDatabaseAnalysisCache");
+	}
+}

@@ -49,14 +49,14 @@ class Settings(object):
 	backing store. The backing store can be different for each level. When querying setting values, the values returned or modified \
 	are in order of preference (i.e. ``SettingsAutoScope``). It is possible to override the scope by specifying the desired ``SettingsScope``.
 
-		================= ========================== ============== ================================ ===============================
-		Setting Level     Settings Scope             Preference     Backing Store ('default')        Backing Store (Other)
-		================= ========================== ============== ================================ ===============================
-		Default           SettingsDefaultScope       Lowest         Settings Schema                  Settings Schema
-		User              SettingsUserScope          -              <User Directory>/settings.json   <TBD>
-		Project           SettingsProjectScope       -              <TBD>                            <TBD>
-		Resource          SettingsResourceScope      Highest        BinaryView (Storage in BNDB)     SettingsResource (Customizable)
-		================= ========================== ============== ================================ ===============================
+		================= ========================== ============== ==============================================
+		Setting Level     Settings Scope             Preference     Storage
+		================= ========================== ============== ==============================================
+		Default           SettingsDefaultScope       Lowest         Settings Schema
+		User              SettingsUserScope          -              <User Directory>/settings.json
+		Project           SettingsProjectScope       -              <Project Directory>/.binaryninja/settings.json
+		Resource          SettingsResourceScope      Highest        BinaryView (Storage in BNDB)
+		================= ========================== ============== ==============================================
 
 	Individual settings are identified by a key, which is a string in the form of **'<group>.<name>'**. Groups provide a simple way \
 	to categorize settings. Additionally, sub-categories can be expressed directly in the name part of the key with a similar dot notation.

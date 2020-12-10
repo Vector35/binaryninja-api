@@ -334,15 +334,16 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 
 ## Settings
 
-Settings are available via the `[CMD/CTRL] ,` hotkey and allow a wide variety of customization.
+Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 
-All settings are saved in the [_user_ directory](#user-folder) in the file `settings.json`. Each top level object in this file is represents a different plugin or logical group.
+There are several scopes available for settings:
+* **User Settings** - Settings that apply globally and override the defaults. These settings are stored in `settings.json` within the [User Folder](#user-folder).
+* **Project Settings** - Settings which only apply if a project is opened. These settings are stored in `.binaryninja/settings.json` within a Project Folder. Project Folders can exist anywhere except within the User Folder. These settings apply to all files contained in the Project Folder and override the default and user settings.
+* **Resource Settings** - Settings which only apply to a specific BinaryView object within a file. These settings persist in a Binary Ninja Database (.bndb) database or ephemerally in a BinaryView object if a database does not yet exist for a file.
 
-Enabling the `identifiers` check box will show the raw identifiers used to set settings in the json file which may be useful for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
+All settings are uniquely identified with an identifier string. Identifiers are available in the UI via the context menu and are useful for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
 
-Note
-!!! Tip "Note"
-    Changing a setting to a non-default value and then changing it back to a default value will result in explicitly specifying that default value which will not change if the default ever does. This can be avoided by right-clicking and choosing `Clear Setting` which will remove the user-setting.
+**Note**: In order to facilitate reproducible analysis results, when opening a file for the first time, all of the analysis settings are automatically serialized into the _Resource Setting_ scope. This prevents subsequent _User_ and _Project_ setting modifications from unintentionally changing existing analysis results.
 
 ### All Settings
 

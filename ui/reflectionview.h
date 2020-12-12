@@ -25,6 +25,10 @@ class BINARYNINJAUIAPI ReflectionView: public QWidget, public DockContextHandler
 	bool m_ilSync;
 	bool m_locationSync;
 
+	BNFunctionGraphType m_lastSrcILViewType = NormalFunctionGraph;
+	BNFunctionGraphType m_lastTgtILViewType = NormalFunctionGraph;
+	bool m_ilSyncOverride = false;
+
 public:
 	ReflectionView(ViewFrame* frame, BinaryViewRef data);
 	~ReflectionView();

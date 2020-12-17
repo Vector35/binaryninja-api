@@ -3234,6 +3234,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::string GetGotoLabelName(uint64_t labelId);
 		void SetGotoLabelName(uint64_t labelId, const std::string& name);
+
+		BNDeadStoreElimination GetVariableDeadStoreElimination(const Variable& var);
+		void SetVariableDeadStoreElimination(const Variable& var, BNDeadStoreElimination mode);
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor

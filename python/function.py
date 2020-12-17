@@ -35,7 +35,7 @@ from binaryninja import types
 from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
-	FunctionAnalysisSkipOverride, MediumLevelILOperation)
+	FunctionAnalysisSkipOverride, MediumLevelILOperation, DeadStoreElimination)
 
 # 2-3 compatibility
 from binaryninja import range
@@ -925,6 +925,16 @@ class Variable(object):
 		v.index = self._index
 		v.storage = self._storage
 		return v
+
+	@property
+	def dead_store_elimination(self):
+		if self._function is not None and self._identifier is not None:
+			return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable()))
+		return None
+
+	@dead_store_elimination.setter
+	def dead_store_elimination(self, value):
+		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
 
 	@classmethod
 	def from_identifier(self, func, identifier, name=None, var_type=None):

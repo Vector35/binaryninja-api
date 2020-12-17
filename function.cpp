@@ -1900,6 +1900,26 @@ void Function::SetGotoLabelName(uint64_t labelId, const std::string& name)
 }
 
 
+BNDeadStoreElimination Function::GetVariableDeadStoreElimination(const Variable& var)
+{
+	BNVariable varData;
+	varData.type = var.type;
+	varData.index = var.index;
+	varData.storage = var.storage;
+	return BNGetFunctionVariableDeadStoreElimination(m_object, &varData);
+}
+
+
+void Function::SetVariableDeadStoreElimination(const Variable& var, BNDeadStoreElimination mode)
+{
+	BNVariable varData;
+	varData.type = var.type;
+	varData.index = var.index;
+	varData.storage = var.storage;
+	BNSetFunctionVariableDeadStoreElimination(m_object, &varData, mode);
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
 {
 	if (m_func)

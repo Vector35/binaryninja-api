@@ -209,6 +209,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void getCurrentOffsetByTypeInternal(TypeRef resType, uint64_t baseAddr, uint64_t& begin, uint64_t& end,
 		bool singleLine, std::set<TypeRef>& seen);
 
+	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
+
 private Q_SLOTS:
 	void adjustSize(int width, int height);
 	void viewInHexEditor();
@@ -273,6 +275,8 @@ private Q_SLOTS:
 
 	void editInstruction();
 	void instrEditDoneEvent();
+
+	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
 
 Q_SIGNALS:
 	void notifyResizeEvent(int width, int height);

@@ -174,6 +174,7 @@ class OracleTestFile:
 class UnitTestFile:
     binary_test_options = {}
     binary_test_options['binaries/test_corpus/pe_thumb'] = {'analysis.experimental.alternateTypePropagation' : True}
+    binary_test_options['binaries/test_corpus/quick3dcoreplugin.dll'] = {'analysis.experimental.alternateTypePropagation' : True}
 
     def __init__(self, filename, outdir, test_store):
         self.filename = filename

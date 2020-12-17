@@ -2441,6 +2441,13 @@ extern "C"
 		void* ctx;
 	};
 
+	enum BNDeadStoreElimination
+	{
+		DefaultDeadStoreElimination,
+		PreventDeadStoreElimination,
+		AllowDeadStoreElimination
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -3275,6 +3282,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetVariableName(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI uint64_t BNToVariableIdentifier(const BNVariable* var);
 	BINARYNINJACOREAPI BNVariable BNFromVariableIdentifier(uint64_t id);
+	BINARYNINJACOREAPI BNDeadStoreElimination BNGetFunctionVariableDeadStoreElimination(BNFunction* func,
+		const BNVariable* var);
+	BINARYNINJACOREAPI void BNSetFunctionVariableDeadStoreElimination(BNFunction* func,
+		const BNVariable* var, BNDeadStoreElimination mode);
 
 	BINARYNINJACOREAPI BNReferenceSource* BNGetFunctionCallSites(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetCallees(BNBinaryView* view, BNReferenceSource* callSite, size_t* count);

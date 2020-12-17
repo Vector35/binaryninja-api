@@ -140,6 +140,8 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	bool updatePositionForNode(FlowGraphNodeRef oldNode, FlowGraphNodeRef newNode, CursorPosition& pos);
 	void recenterUpdatedGraph(FlowGraphRef oldGraph, int oldXOfs, int oldYOfs);
 
+	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
+
 protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
@@ -340,4 +342,6 @@ private Q_SLOTS:
 
 	void editInstruction();
 	void instrEditDoneEvent();
+
+	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
 };

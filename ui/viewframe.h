@@ -241,6 +241,7 @@ public:
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
+	DockHandler* getDockHandler() const { return m_docks; }
 
 	QString getTabName();
 	QString getShortFileName();

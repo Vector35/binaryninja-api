@@ -10,6 +10,7 @@
 
 class ContextMenuManager;
 class DisassemblyContainer;
+class FlowGraphWidget;
 class Menu;
 class ViewFrame;
 
@@ -32,6 +33,8 @@ class BINARYNINJAUIAPI ReflectionView: public QWidget, public DockContextHandler
 public:
 	ReflectionView(ViewFrame* frame, BinaryViewRef data);
 	~ReflectionView();
+
+	FlowGraphWidget* getFlowGraphWidget();
 
 	void toggleILSync();
 	void toggleLocationSync();

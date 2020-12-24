@@ -217,7 +217,7 @@ public:
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
-	virtual bool navigateToFunctionIndex(FunctionRef func, size_t index) override;
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
 	bool navigateWithHistoryEntry(uint64_t addr, FlowGraphHistoryEntry* entry);
 	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, FlowGraphHistoryEntry* entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }

@@ -79,6 +79,7 @@ public:
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) { return false; }
 
 	bool isBinaryDataNavigable() { return m_binaryDataNavigable; }
 	void setBinaryDataNavigable(bool navigable) { m_binaryDataNavigable = navigable; }
@@ -128,7 +129,6 @@ public:
 	virtual BNFunctionGraphType getILViewType() { return NormalFunctionGraph; }
 	virtual void setILViewType(BNFunctionGraphType ilViewType) { }
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
-	virtual bool navigateToFunctionIndex(FunctionRef func, size_t index) { return false; }
 
 	virtual QFont getFont() = 0;
 	DisassemblySettingsRef getDisassemblySettings();
@@ -161,6 +161,7 @@ class BINARYNINJAUIAPI ViewLocation
 {
 	bool m_valid = false;
 	QString m_viewType;
+	FunctionRef m_function = nullptr;
 	uint64_t m_offset = 0;
 	BNFunctionGraphType m_ilViewType = NormalFunctionGraph;
 	size_t m_instrIndex = BN_INVALID_EXPR;
@@ -172,17 +173,21 @@ public:
 		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType) { }
 	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
 		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
+	ViewLocation(FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
+		m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 
 	bool isValid() const { return m_valid; }
 	QString getViewType() const { return m_viewType; }
 	uint64_t getOffset() const { return m_offset; }
 	BNFunctionGraphType getILViewType() const { return m_ilViewType; }
 	size_t getInstrIndex() const { return m_instrIndex; }
+	FunctionRef getFunction() const { return m_function; }
 
 	void setViewType(QString& viewType) { m_viewType = viewType; }
 	void setOffset(uint64_t offset) { m_offset = offset; }
 	void setILViewType(BNFunctionGraphType ilViewType) { m_ilViewType = ilViewType; }
 	void setInstrIndex(uint64_t index) { m_instrIndex = index; }
+	void setFunction(FunctionRef function) { m_function = function; }
 
 	bool operator==(const ViewLocation& other) const
 	{
@@ -190,7 +195,8 @@ public:
 				(m_viewType == other.m_viewType) &&
 				(m_offset == other.m_offset) &&
 				(m_ilViewType == other.m_ilViewType) &&
-				(m_instrIndex == other.m_instrIndex);
+				(m_instrIndex == other.m_instrIndex) &&
+				(m_function == other.m_function);
 	}
 	bool operator!=(const ViewLocation& other) const { return !((*this) == other); }
 };

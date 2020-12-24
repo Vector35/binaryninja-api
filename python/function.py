@@ -2040,6 +2040,52 @@ class Function(object):
 
 		return self.llil[idx]
 
+	def get_llil_at(self, addr, arch=None):
+		"""
+		``get_llil_at`` gets the LowLevelILInstruction corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: LowLevelILInstruction
+		:Example:
+
+			>>> func = bv.functions[0]
+			>>> func.get_llil_at(func.start)
+			<il: push(rbp)>
+		"""
+		if arch is None:
+			arch = self.arch
+
+		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.llil):
+			return None
+
+		return self.llil[idx]
+
+	def get_llils_at(self, addr, arch=None):
+		"""
+		``get_llils_at`` gets the LowLevelILInstruction(s) corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: list(LowLevelILInstruction)
+		:Example:
+
+			>>> func = bv.functions[0]
+			>>> func.get_llils_at(func.start)
+			[<il: push(rbp)>]
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLowLevelILInstructionsForAddress(self.handle, arch.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(self.llil[instrs[i]])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def get_low_level_il_exits_at(self, addr, arch=None):
 		if arch is None:
 			arch = self.arch

@@ -307,6 +307,20 @@ size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 }
 
 
+set<size_t> Function::GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	size_t* instrs = BNGetLowLevelILInstructionsForAddress(m_object, arch->GetObject(), addr, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
 vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;

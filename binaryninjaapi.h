@@ -3047,6 +3047,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
+		std::set<size_t> GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);

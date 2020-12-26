@@ -18,13 +18,15 @@ class BINARYNINJAUIAPI MiniGraph: public QWidget, public DockContextHandler
 	Q_OBJECT
 	Q_INTERFACES(DockContextHandler)
 
+	ViewFrame* m_frame;
 	FlowGraphWidget* m_flowGraphWidget = nullptr;
 
 public:
-	MiniGraph(QWidget* parent);
+	MiniGraph(ViewFrame* frame);
 	~MiniGraph();
 
 	virtual void notifyViewChanged(ViewFrame* frame) override;
+	virtual void notifyVisibilityChanged(bool visible) override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;
 
 protected:

@@ -299,8 +299,9 @@ public:
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual size_t getCurrentILInstructionIndex() override;
-	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
 	virtual bool navigate(uint64_t pos) override;
+	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
 
 	virtual std::string getNavigationMode() override;
 	virtual void setNavigationMode(std::string mode) override;

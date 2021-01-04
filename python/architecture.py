@@ -110,7 +110,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	address_size = 8
 	default_int_size = 4
 	instr_alignment = 1
-	max_instr_length = 16
+	max_instr_length = 15
 	opcode_display_length = 8
 	regs = {}
 	stack_pointer = None

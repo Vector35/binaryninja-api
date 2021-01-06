@@ -605,8 +605,15 @@ class BinaryDataNotificationCallbacks(object):
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
 			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
-			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
-			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
+			# Null for data tags (not in any arch or function)
+			if ctypes.cast(tag_ref[0].arch, ctypes.c_void_p).value is None:
+				arch = None
+			else:
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			if ctypes.cast(tag_ref[0].func, ctypes.c_void_p).value is None:
+				func = None
+			else:
+				func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
 			self._notify.tag_added(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
@@ -617,8 +624,15 @@ class BinaryDataNotificationCallbacks(object):
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
 			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
-			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
-			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
+			# Null for data tags (not in any arch or function)
+			if ctypes.cast(tag_ref[0].arch, ctypes.c_void_p).value is None:
+				arch = None
+			else:
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			if ctypes.cast(tag_ref[0].func, ctypes.c_void_p).value is None:
+				func = None
+			else:
+				func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
 			self._notify.tag_updated(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
@@ -629,8 +643,15 @@ class BinaryDataNotificationCallbacks(object):
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
 			tag = Tag(core.BNNewTagReference(tag_ref[0].tag))
-			arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
-			func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
+			# Null for data tags (not in any arch or function)
+			if ctypes.cast(tag_ref[0].arch, ctypes.c_void_p).value is None:
+				arch = None
+			else:
+				arch = binaryninja.architecture.CoreArchitecture._from_cache(tag_ref[0].arch)
+			if ctypes.cast(tag_ref[0].func, ctypes.c_void_p).value is None:
+				func = None
+			else:
+				func = binaryninja.function.Function(self._view, core.BNNewFunctionReference(tag_ref[0].func))
 			addr = tag_ref[0].addr
 			self._notify.tag_removed(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:

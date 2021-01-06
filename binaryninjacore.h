@@ -2736,6 +2736,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetSnapshotName(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI bool BNIsSnapshotAutoSave(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotFileContents(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetSnapshotFileContentsHash(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotData(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);

@@ -241,6 +241,17 @@ DataBuffer Snapshot::GetFileContents()
 }
 
 
+DataBuffer Snapshot::GetFileContentsHash()
+{
+	BNDataBuffer* buffer = BNGetSnapshotFileContentsHash(m_object);
+	if (buffer == nullptr)
+	{
+		throw DatabaseException("BNGetSnapshotFileContentsHash");
+	}
+	return DataBuffer(buffer);
+}
+
+
 vector<UndoEntry> Snapshot::GetUndoEntries()
 {
 	return GetUndoEntries([](size_t, size_t){});

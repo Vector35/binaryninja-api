@@ -898,6 +898,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Snapshot> GetFirstParent();
 		std::vector<Ref<Snapshot>> GetParents();
 		DataBuffer GetFileContents();
+		DataBuffer GetFileContentsHash();
 		std::vector<UndoEntry> GetUndoEntries();
 		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();

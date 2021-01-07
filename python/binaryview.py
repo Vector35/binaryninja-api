@@ -1859,7 +1859,7 @@ class BinaryView(object):
 
 	@property
 	def has_data_variables(self):
-		"""Boolean whether the binary has functions (read-only)"""
+		"""Boolean whether the binary has data variables (read-only)"""
 		return core.BNHasDataVariables(self.handle)
 
 	@property

@@ -358,6 +358,15 @@ int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView
 }
 
 
+void Database::RemoveSnapshot(int64_t id)
+{
+	if (!BNRemoveDatabaseSnapshot(m_object, id))
+	{
+		throw DatabaseException("BNRemoveDatabaseSnapshot");
+	}
+}
+
+
 bool Database::HasGlobal(const std::string& key) const
 {
 	// 0 - false, 1 - true, <0 - exception

@@ -916,6 +916,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<Ref<Snapshot>> GetSnapshots();
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
+		void RemoveSnapshot(int64_t id);
 
 		bool HasGlobal(const std::string& key) const;
 		Json::Value ReadGlobal(const std::string& key) const;

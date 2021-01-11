@@ -903,6 +903,8 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();
 		Ref<KeyValueStore> ReadData(const std::function<void(size_t, size_t)>& progress);
+		bool HasAncestor(Ref<Snapshot> other);
+		Ref<Snapshot> Merge(Ref<Snapshot> other);
 	};
 
 	class FileMetadata;
@@ -914,6 +916,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<Snapshot> GetSnapshot(int64_t id);
 		std::vector<Ref<Snapshot>> GetSnapshots();
+		void SetCurrentSnapshot(int64_t id);
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
 		void RemoveSnapshot(int64_t id);

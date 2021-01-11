@@ -310,6 +310,21 @@ Ref<KeyValueStore> Snapshot::ReadData(const std::function<void(size_t, size_t)>&
 }
 
 
+bool Snapshot::HasAncestor(Ref<Snapshot> other)
+{
+	return BNSnapshotHasAncestor(m_object, other->GetObject());
+}
+
+
+Ref<Snapshot> Snapshot::Merge(Ref<Snapshot> other)
+{
+	BNSnapshot* result = BNMergeSnapshot(m_object, other->GetObject());
+	if (result == nullptr)
+		return nullptr;
+	return new Snapshot(result);
+}
+
+
 Database::Database(BNDatabase* database)
 {
 	m_object = database;
@@ -333,6 +348,12 @@ vector<Ref<Snapshot>> Database::GetSnapshots()
 		result.push_back(new Snapshot(BNNewSnapshotReference(snapshots[i])));
 	BNFreeSnapshotList(snapshots, count);
 	return result;
+}
+
+
+void Database::SetCurrentSnapshot(int64_t id)
+{
+	BNSetDatabaseCurrentSnapshot(m_object, id);
 }
 
 

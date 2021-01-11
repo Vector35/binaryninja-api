@@ -2712,6 +2712,7 @@ __attribute__ ((format (printf, 1, 2)))
 	// Database object
 	BINARYNINJACOREAPI BNDatabase* BNNewDatabaseReference(BNDatabase* database);
 	BINARYNINJACOREAPI void BNFreeDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI void BNSetDatabaseCurrentSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseCurrentSnapshot(BNDatabase* database);
 	BINARYNINJACOREAPI BNSnapshot** BNGetDatabaseSnapshots(BNDatabase* database, size_t* count);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseSnapshot(BNDatabase* database, int64_t id);
@@ -2742,6 +2743,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadSnapshotDataWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
+	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
+	BINARYNINJACOREAPI BNSnapshot* BNMergeSnapshot(BNSnapshot* snapshot, BNSnapshot* other);
+
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(BNBinaryView* data, uint64_t address, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total));

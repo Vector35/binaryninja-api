@@ -66,7 +66,22 @@ public:
 	virtual QMainWindow* mainWindow() = 0;
 	virtual void viewChanged(ViewFrame* frame, const QString& type);
 	virtual bool navigateForBinaryView(BinaryViewRef view, uint64_t addr);
+
+	virtual View* getCurrentView() = 0;
+	virtual ViewFrame* getCurrentViewFrame() = 0;
+	virtual UIActionHandler* getCurrentActionHandler() = 0;
+
 	virtual void createTabForWidget(const QString& name, QWidget* widget) = 0;
+	virtual QList<QWidget*> getTabs() = 0;
+	virtual QWidget* getTabForName(const QString& name) = 0;
+	virtual QString getNameForTab(QWidget* tab) = 0;
+	virtual void activateTab(QWidget* tab) = 0;
+	virtual void closeTab(QWidget* tab) = 0;
+	virtual QWidget* getCurrentTab() = 0;
+
+	virtual View* getViewForTab(QWidget* tab) = 0;
+	virtual ViewFrame* getViewFrameForTab(QWidget* tab) = 0;
+
 	virtual bool openFilename(const QString& path, bool openOptions = false);
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
 

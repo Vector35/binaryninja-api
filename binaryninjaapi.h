@@ -904,7 +904,6 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<KeyValueStore> ReadData();
 		Ref<KeyValueStore> ReadData(const std::function<void(size_t, size_t)>& progress);
 		bool HasAncestor(Ref<Snapshot> other);
-		Ref<Snapshot> Merge(Ref<Snapshot> other);
 	};
 
 	class FileMetadata;

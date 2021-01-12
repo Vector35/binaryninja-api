@@ -2744,7 +2744,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntries(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(BNSnapshot* snapshot, void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
 	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
-	BINARYNINJACOREAPI BNSnapshot* BNMergeSnapshot(BNSnapshot* snapshot, BNSnapshot* other);
 
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);

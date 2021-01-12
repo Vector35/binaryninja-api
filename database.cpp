@@ -316,15 +316,6 @@ bool Snapshot::HasAncestor(Ref<Snapshot> other)
 }
 
 
-Ref<Snapshot> Snapshot::Merge(Ref<Snapshot> other)
-{
-	BNSnapshot* result = BNMergeSnapshot(m_object, other->GetObject());
-	if (result == nullptr)
-		return nullptr;
-	return new Snapshot(result);
-}
-
-
 Database::Database(BNDatabase* database)
 {
 	m_object = database;

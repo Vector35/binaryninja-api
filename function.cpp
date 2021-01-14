@@ -1082,6 +1082,12 @@ void Function::DeleteUserVariable(const Variable& var)
 }
 
 
+bool Function::IsVariableUserDefinded(const Variable& var)
+{
+	return BNIsVariableUserDefined(m_object, &var);
+}
+
+
 Confidence<Ref<Type>> Function::GetVariableType(const Variable& var)
 {
 	BNTypeWithConfidence type = BNGetVariableType(m_object, &var);

@@ -3124,6 +3124,7 @@ __attribute__ ((format (printf, 1, 2)))
 			bool ignoreDisjointUses = false);
 		void DeleteAutoVariable(const Variable& var);
 		void DeleteUserVariable(const Variable& var);
+		bool IsVariableUserDefinded(const Variable& var);
 		Confidence<Ref<Type>> GetVariableType(const Variable& var);
 		std::string GetVariableName(const Variable& var);
 

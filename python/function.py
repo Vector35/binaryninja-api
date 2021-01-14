@@ -2607,6 +2607,13 @@ class Function(object):
 		var_data.storage = var.storage
 		core.BNDeleteUserVariable(self.handle, var_data)
 
+	def is_var_user_defined(self, var):
+		var_data = core.BNVariable()
+		var_data.type = var.source_type
+		var_data.index = var.index
+		var_data.storage = var.storage
+		return core.BNIsVariableUserDefined(self.handle, var_data)
+
 	def get_stack_var_at_frame_offset(self, offset, addr, arch=None):
 		if arch is None:
 			arch = self.arch

@@ -3278,6 +3278,7 @@ __attribute__ ((format (printf, 1, 2)))
 		const char* name, bool ignoreDisjointUses);
 	BINARYNINJACOREAPI void BNDeleteAutoVariable(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI void BNDeleteUserVariable(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI bool BNIsVariableUserDefined(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetVariableType(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI char* BNGetVariableName(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI uint64_t BNToVariableIdentifier(const BNVariable* var);

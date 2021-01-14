@@ -230,6 +230,20 @@ vector<Ref<Snapshot>> Snapshot::GetParents()
 }
 
 
+vector<Ref<Snapshot>> Snapshot::GetChildren()
+{
+	size_t count;
+	BNSnapshot** children = BNGetSnapshotChildren(m_object, &count);
+	vector<Ref<Snapshot>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(new Snapshot(BNNewSnapshotReference(children[i])));
+	}
+	BNFreeSnapshotList(children, count);
+	return result;
+}
+
+
 DataBuffer Snapshot::GetFileContents()
 {
 	BNDataBuffer* buffer = BNGetSnapshotFileContents(m_object);

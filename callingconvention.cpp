@@ -43,6 +43,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.areArgumentRegistersSharedIndex = AreArgumentRegistersSharedIndexCallback;
 	cc.isStackReservedForArgumentRegisters = IsStackReservedForArgumentRegistersCallback;
 	cc.isStackAdjustedOnReturn = IsStackAdjustedOnReturnCallback;
+	cc.isEligibleForHeuristics = IsEligibleForHeuristicsCallback;
 	cc.getIntegerReturnValueRegister = GetIntegerReturnValueRegisterCallback;
 	cc.getHighIntegerReturnValueRegister = GetHighIntegerReturnValueRegisterCallback;
 	cc.getFloatReturnValueRegister = GetFloatReturnValueRegisterCallback;
@@ -141,6 +142,13 @@ bool CallingConvention::IsStackAdjustedOnReturnCallback(void* ctxt)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	return cc->IsStackAdjustedOnReturn();
+}
+
+
+bool CallingConvention::IsEligibleForHeuristicsCallback(void* ctxt)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	return cc->IsEligibleForHeuristics();
 }
 
 
@@ -284,6 +292,12 @@ bool CallingConvention::IsStackAdjustedOnReturn()
 }
 
 
+bool CallingConvention::IsEligibleForHeuristics()
+{
+	return true;
+}
+
+
 uint32_t CallingConvention::GetHighIntegerReturnValueRegister()
 {
 	return BN_INVALID_REGISTER;
@@ -404,6 +418,12 @@ bool CoreCallingConvention::IsStackReservedForArgumentRegisters()
 bool CoreCallingConvention::IsStackAdjustedOnReturn()
 {
 	return BNIsStackAdjustedOnReturn(m_object);
+}
+
+
+bool CoreCallingConvention::IsEligibleForHeuristics()
+{
+	return BNIsEligibleForHeuristics(m_object);
 }
 
 

@@ -1948,6 +1948,7 @@ extern "C"
 		bool (*areArgumentRegistersSharedIndex)(void* ctxt);
 		bool (*isStackReservedForArgumentRegisters)(void* ctxt);
 		bool (*isStackAdjustedOnReturn)(void* ctxt);
+		bool (*isEligibleForHeuristics)(void* ctxt);
 
 		uint32_t (*getIntegerReturnValueRegister)(void* ctxt);
 		uint32_t (*getHighIntegerReturnValueRegister)(void* ctxt);
@@ -4428,6 +4429,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersSharedIndex(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackReservedForArgumentRegisters(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackAdjustedOnReturn(BNCallingConvention* cc);
+	BINARYNINJACOREAPI bool BNIsEligibleForHeuristics(BNCallingConvention* cc);
 
 	BINARYNINJACOREAPI uint32_t BNGetIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetHighIntegerReturnValueRegister(BNCallingConvention* cc);

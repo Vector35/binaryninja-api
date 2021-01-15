@@ -4639,6 +4639,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
 		static bool IsStackReservedForArgumentRegistersCallback(void* ctxt);
 		static bool IsStackAdjustedOnReturnCallback(void* ctxt);
+		static bool IsEligibleForHeuristicsCallback(void* ctxt);
 
 		static uint32_t GetIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetHighIntegerReturnValueRegisterCallback(void* ctxt);
@@ -4666,6 +4667,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool AreArgumentRegistersSharedIndex();
 		virtual bool IsStackReservedForArgumentRegisters();
 		virtual bool IsStackAdjustedOnReturn();
+		virtual bool IsEligibleForHeuristics();
 
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
 		virtual uint32_t GetHighIntegerReturnValueRegister();
@@ -4693,6 +4695,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool AreArgumentRegistersSharedIndex() override;
 		virtual bool IsStackReservedForArgumentRegisters() override;
 		virtual bool IsStackAdjustedOnReturn() override;
+		virtual bool IsEligibleForHeuristics() override;
 
 		virtual uint32_t GetIntegerReturnValueRegister() override;
 		virtual uint32_t GetHighIntegerReturnValueRegister() override;

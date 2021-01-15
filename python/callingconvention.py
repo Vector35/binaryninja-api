@@ -40,6 +40,7 @@ class CallingConvention(object):
 	arg_regs_share_index = False
 	stack_reserved_for_arg_regs = False
 	stack_adjusted_on_return = False
+	eligible_for_heuristics = True
 	int_return_reg = None
 	high_int_return_reg = None
 	float_return_reg = None
@@ -65,6 +66,7 @@ class CallingConvention(object):
 			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(self._arg_regs_share_index)
 			self._cb.isStackReservedForArgumentRegisters = self._cb.isStackReservedForArgumentRegisters.__class__(self._stack_reserved_for_arg_regs)
 			self._cb.isStackAdjustedOnReturn = self._cb.isStackAdjustedOnReturn.__class__(self._stack_adjusted_on_return)
+			self._cb.isEligibleForHeuristics = self._cb.isEligibleForHeuristics.__class__(self._eligible_for_heuristics)
 			self._cb.getIntegerReturnValueRegister = self._cb.getIntegerReturnValueRegister.__class__(self._get_int_return_reg)
 			self._cb.getHighIntegerReturnValueRegister = self._cb.getHighIntegerReturnValueRegister.__class__(self._get_high_int_return_reg)
 			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(self._get_float_return_reg)
@@ -83,6 +85,7 @@ class CallingConvention(object):
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
 			self.__dict__["stack_adjusted_on_return"] = core.BNIsStackAdjustedOnReturn(self.handle)
+			self.__dict__["eligible_for_heuristics"] = core.BNIsEligibleForHeuristics(self.handle)
 
 			count = ctypes.c_ulonglong()
 			regs = core.BNGetCallerSavedRegisters(self.handle, count)
@@ -264,6 +267,13 @@ class CallingConvention(object):
 	def _stack_adjusted_on_return(self, ctxt):
 		try:
 			return self.__class__.stack_adjusted_on_return
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def _eligible_for_heuristics(self, ctxt):
+		try:
+			return self.__class__.eligible_for_heuristics
 		except:
 			log.log_error(traceback.format_exc())
 			return False

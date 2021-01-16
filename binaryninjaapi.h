@@ -1006,6 +1006,10 @@ __attribute__ ((format (printf, 1, 2)))
 		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
 		bool SaveAutoSnapshot(BinaryView* data,
 			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+		void GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+			const std::function<void(size_t, size_t)>& progress);
+		void ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+			const std::function<void(size_t, size_t)>& progress, bool openForConfiguration = false, bool restoreRawView = true);
 		Ref<Database> GetDatabase();
 
 		bool Rebase(BinaryView* data, uint64_t address);

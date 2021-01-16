@@ -223,6 +223,24 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
 }
 
 
+void FileMetadata::GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+	const std::function<void(size_t, size_t)>& progress)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progress;
+	BNGetSnapshotData(GetObject(), data->GetObject(), cache->GetObject(), &cb, DatabaseProgressCallback);
+}
+
+
+void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
+	const std::function<void(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progress;
+	BNApplySnapshotData(GetObject(), file->GetObject(), data->GetObject(), cache->GetObject(), &cb, DatabaseProgressCallback, openForConfiguration, restoreRawView);
+}
+
+
 Ref<Database> FileMetadata::GetDatabase()
 {
 	BNDatabase* db = BNGetFileMetadataDatabase(m_object);

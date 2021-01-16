@@ -2687,6 +2687,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 		void (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
+	BINARYNINJACOREAPI void BNGetSnapshotData(BNFileMetadata* file, BNKeyValueStore* data, BNKeyValueStore* cache, void* ctxt, void (*progress)(void* ctxt, size_t current, size_t total));
+	BINARYNINJACOREAPI void BNApplySnapshotData(BNFileMetadata* file, BNBinaryView* view, BNKeyValueStore* data, BNKeyValueStore* cache, void* ctxt, void (*progress)(void* ctxt, size_t current, size_t total), bool openForConfiguration, bool restoreRawView);
 	BINARYNINJACOREAPI BNDatabase* BNGetFileMetadataDatabase(BNFileMetadata* file);
 
 	// Key value store

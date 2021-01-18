@@ -319,7 +319,7 @@ Plugins can be installed by one of two methods. First, they can be manually inst
 
 Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
 
-For more detailed information on plugins, see the [plugin guide](/guide/plugins).
+For more detailed information on plugins, see the [plugin guide](guide/plugins.md).
 
 ## PDB Plugin
 

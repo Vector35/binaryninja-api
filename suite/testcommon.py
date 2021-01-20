@@ -363,7 +363,8 @@ class BinaryViewTestBuilder(Builder):
             for hlilins in func.hlil.instructions:
                 retinfo.append("Function: {:x} Instruction: {:x} HLIL->LLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.llil)))
                 retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.mlil)))
-                retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(hlilins.mlils)))
+                # TODO figure out the HLIL->MLILS instability
+                #retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(hlilins.mlils)))
         return fixOutput(retinfo)
 
     def test_functions_attributes(self):

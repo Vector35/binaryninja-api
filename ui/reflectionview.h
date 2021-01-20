@@ -39,6 +39,7 @@ public:
 	void toggleILSync();
 	void toggleLocationSync();
 
+	virtual void notifyFontChanged() override;
 	virtual void notifyViewLocationChanged(View* view, const ViewLocation& viewLocation) override;
 	virtual void notifyVisibilityChanged(bool visible) override;
 	virtual bool shouldBeVisible(ViewFrame* frame) override;

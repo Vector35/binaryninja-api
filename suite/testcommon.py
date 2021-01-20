@@ -191,7 +191,7 @@ class BinaryViewTestBuilder(Builder):
             for bb in func.low_level_il.basic_blocks:
                 for ins in bb:
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL->MLIL: {}".format(func.start, ins.address, str(ins.mlil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL->MLILS: {}".format(func.start, ins.address, str(ins.mlils)))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL->MLILS: {}".format(func.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
                     # TODO figure out the LLIL->HLIL instability
                     #retinfo.append("Function: {:x} Instruction: {:x} LLIL->HLIL: {}".format(func.start, ins.address, str(ins.hlil)))
                     retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL: {}".format(func.start, ins.address, str(ins.mapped_medium_level_il)))
@@ -246,7 +246,7 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_medium_level_il_instruction_index(ins.instr_index))))
                     retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_mapped_medium_level_il_instruction_index(ins.instr_index))))
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLIL: {}".format(func.source_function.start, ins.address, str(ins.mlil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLILS: {}".format(func.source_function.start, ins.address, str(ins.mlils)))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLILS: {}".format(func.source_function.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
                     # TODO figure out the LLIL_SSA->HLIL instability
                     #retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLIL: {}".format(func.source_function.start, ins.address, str(ins.hlil)))
         return fixOutput(retinfo)
@@ -259,7 +259,7 @@ class BinaryViewTestBuilder(Builder):
                 for ins in bb:
                     retinfo.append("Function: {:x} Instruction: {:x} Expression type:  {}".format(func.start, ins.address, str(ins.expr_type)))
                     retinfo.append("Function: {:x} Instruction: {:x} MLIL->LLIL:  {}".format(func.start, ins.address, str(ins.llil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} MLIL->LLILS:  {}".format(func.start, ins.address, str(ins.llils)))
+                    retinfo.append("Function: {:x} Instruction: {:x} MLIL->LLILS:  {}".format(func.start, ins.address, str(sorted(list(map(str, ins.llils))))))
                     # TODO figure out the MLIL->HLIL instability
                     #retinfo.append("Function: {:x} Instruction: {:x} MLIL->HLIL:  {}".format(func.start, ins.address, str(ins.hlil)))
                     retinfo.append("Function: {:x} Instruction: {:x} Value:  {}".format(func.start, ins.address, str(ins.value)))
@@ -364,7 +364,7 @@ class BinaryViewTestBuilder(Builder):
                 retinfo.append("Function: {:x} Instruction: {:x} HLIL->LLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.llil)))
                 retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.mlil)))
                 # TODO figure out the HLIL->MLILS instability
-                #retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(hlilins.mlils)))
+                #retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(sorted(list(map(str, hlilins.mlils))))))
         return fixOutput(retinfo)
 
     def test_functions_attributes(self):

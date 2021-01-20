@@ -2243,6 +2243,29 @@ class Function(object):
 
 		return self.lifted_il[idx]
 
+	def get_lifted_ils_at(self, addr, arch=None):
+		"""
+		``get_lifted_ils_at`` gets the Lifted IL Instruction(s) corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: list(LowLevelILInstruction)
+		:Example:
+
+			>>> func = bv.functions[0]
+			>>> func.get_lifted_ils_at(func.start)
+			[<il: push(rbp)>]
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		instrs = core.BNGetLiftedILInstructionsForAddress(self.handle, arch.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(self.lifted_il[instrs[i]])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def get_lifted_il_flag_uses_for_definition(self, i, flag):
 		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()

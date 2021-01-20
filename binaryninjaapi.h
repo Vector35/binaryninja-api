@@ -3063,6 +3063,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
+		std::set<size_t> GetLiftedILInstructionsForAddress(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag);
 		std::set<size_t> GetLiftedILFlagDefinitionsForUse(size_t i, uint32_t flag);
 		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);

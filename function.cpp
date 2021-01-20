@@ -558,6 +558,20 @@ size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
 }
 
 
+set<size_t> Function::GetLiftedILInstructionsForAddress(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	size_t* instrs = BNGetLiftedILInstructionsForAddress(m_object, arch->GetObject(), addr, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}
+
+
 set<size_t> Function::GetLiftedILFlagUsesForDefinition(size_t i, uint32_t flag)
 {
 	size_t count;

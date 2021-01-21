@@ -118,7 +118,7 @@ protected:
 	void contextMenuEvent(QContextMenuEvent* event) override;
 
 public Q_SLOTS:
-	virtual void mousePressEvent(QMouseEvent* event) override;
+	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	void viewChanged(QWidget* frame);
 };
 

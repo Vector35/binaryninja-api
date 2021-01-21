@@ -37,11 +37,18 @@ class ViewFrame;
 
     \ingroup logview
 */
+struct BINARYNINJAUIAPI LogTokenList
+{
+	std::vector<std::pair<int, int>> tokens;
+};
+
+
 struct BINARYNINJAUIAPI LogListItem
 {
 	size_t sessionId;
 	BNLogLevel level;
 	std::string text;
+	LogTokenList tokens;
 	bool selected;
 	std::string logger;
 	size_t threadId{0};
@@ -113,6 +120,7 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 		static constexpr int Message = Qt::UserRole + 4;
 		static constexpr int Session = Qt::UserRole + 5;
 		static constexpr int FormattedMessage = Qt::UserRole + 6;
+		static constexpr int Tokens = Qt::UserRole + 7;
 
 		LogListModel(QWidget* parent);
 		~LogListModel();
@@ -124,6 +132,9 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 
 		virtual void LogMessage(size_t sessionId, BNLogLevel level, const std::string& msg, const std::string& loggerName = "", size_t tid = 0) override;
 		virtual BNLogLevel GetLogLevel() override;
+
+		QString getFormattedMessage(const LogListItem& item) const;
+		void updateTokens();
 
 		virtual QModelIndex index(int row, int col, const QModelIndex& parent) const override;
 		virtual QModelIndex parent(const QModelIndex& i) const override;

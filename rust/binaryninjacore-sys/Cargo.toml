@@ -1,0 +1,8 @@
+[package]
+name = "binaryninjacore-sys"
+version = "0.1.0"
+authors = ["Ryan Snyder <ryan.snyder.or@gmail.com>"]
+build = "build.rs"
+
+[build-dependencies]
+bindgen = "0.49"

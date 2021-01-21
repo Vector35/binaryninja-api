@@ -1,0 +1,201 @@
+use std::fmt;
+use std::borrow::Borrow;
+use std::ops::Deref;
+use std::ffi::{CStr, CString};
+use std::os::raw;
+use std::mem;
+
+use crate::rc::*;
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(C)]
+pub struct BnStr {
+    raw: [u8]
+}
+
+impl BnStr {
+    pub(crate) unsafe fn from_raw<'a>(ptr: *const raw::c_char) -> &'a Self {
+        mem::transmute(CStr::from_ptr(ptr).to_bytes_with_nul())
+    }
+
+    pub fn as_str(&self) -> &str {
+       self.as_cstr().to_str().unwrap()
+    }
+
+    pub fn as_cstr(&self) -> &CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(&self.raw) }
+    }
+}
+
+impl Deref for BnStr {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl AsRef<[u8]> for BnStr {
+    fn as_ref(&self) -> &[u8] {
+        &self.raw
+    }
+}
+
+impl AsRef<str> for BnStr {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Borrow<str> for BnStr {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl fmt::Display for BnStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_cstr().to_string_lossy())
+    }
+}
+
+#[repr(C)]
+pub struct BnString {
+    raw: *mut raw::c_char,
+}
+
+/// A nul-terminated C string allocated by the core.
+/// 
+/// Received from a variety of core function calls, and
+/// must be used when giving strings to the core from many
+/// core-invoked callbacks.
+impl BnString {
+    pub fn new<S: BnStrCompatible>(s: S) -> Self {
+        use binaryninjacore_sys::BNAllocString;
+
+        let raw = s.as_bytes_with_nul();
+
+        unsafe {
+            let ptr = raw.as_ref().as_ptr() as *mut _;
+
+            Self { raw: BNAllocString(ptr) }
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
+        Self { raw }
+    }
+
+    pub(crate) fn into_raw(self) -> *mut raw::c_char {
+        let res = self.raw;
+
+        // we're surrendering ownership over the *mut c_char to
+        // the core, so ensure we don't free it
+        mem::forget(self);
+
+        res
+    }
+}
+
+impl Drop for BnString {
+    fn drop(&mut self) {
+        use binaryninjacore_sys::BNFreeString;
+
+        unsafe {
+            BNFreeString(self.raw);
+        }
+    }
+}
+
+impl Deref for BnString {
+    type Target = BnStr;
+
+    fn deref(&self) -> &BnStr {
+        unsafe { BnStr::from_raw(self.raw) }
+    }
+}
+
+impl AsRef<[u8]> for BnString {
+    fn as_ref(&self) -> &[u8] {
+        self.as_cstr().to_bytes_with_nul()
+    }
+}
+
+impl fmt::Display for BnString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_cstr().to_string_lossy())
+    }
+}
+
+unsafe impl CoreOwnedArrayProvider for BnString {
+    type Raw = *mut raw::c_char;
+    type Context = ();
+
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        use binaryninjacore_sys::BNFreeStringList;
+        BNFreeStringList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreOwnedArrayWrapper<'a> for BnString {
+    type Wrapped = &'a BnStr;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        BnStr::from_raw(*raw)
+    }
+}
+
+pub unsafe trait BnStrCompatible {
+    type Result: AsRef<[u8]>;
+    fn as_bytes_with_nul(self) -> Self::Result;
+}
+
+unsafe impl<'a> BnStrCompatible for &'a BnStr {
+    type Result = &'a [u8];
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self.as_cstr().to_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for BnString {
+    type Result = Self;
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self
+    }
+}
+
+unsafe impl<'a> BnStrCompatible for &'a CStr {
+    type Result = &'a [u8];
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self.to_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for CString {
+    type Result = Vec<u8>;
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self.into_bytes_with_nul()
+    }
+}
+
+unsafe impl<'a> BnStrCompatible for &'a str {
+    type Result = Vec<u8>;
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
+        ret.into_bytes_with_nul()
+    }
+}
+
+unsafe impl BnStrCompatible for String {
+    type Result = Vec<u8>;
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
+        ret.into_bytes_with_nul()
+    }
+}

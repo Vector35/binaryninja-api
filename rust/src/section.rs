@@ -1,0 +1,251 @@
+use std::fmt;
+use std::ops::Range;
+
+use binaryninjacore_sys::*;
+
+use crate::binaryview::BinaryView;
+use crate::string::*;
+use crate::rc::*;
+
+pub enum Semantics {
+    DefaultSection,
+    ReadOnlyCode,
+    ReadOnlyData,
+    ReadWriteData,
+    External,
+}
+
+impl From<BNSectionSemantics> for Semantics {
+    fn from(bn: BNSectionSemantics) -> Self {
+        use self::BNSectionSemantics::*;
+
+        match bn {
+            DefaultSectionSemantics => Semantics::DefaultSection,
+            ReadOnlyCodeSectionSemantics => Semantics::ReadOnlyCode,
+            ReadOnlyDataSectionSemantics => Semantics::ReadOnlyData,
+            ReadWriteDataSectionSemantics => Semantics::ReadWriteData,
+            ExternalSectionSemantics => Semantics::External,
+        }
+    }
+}
+
+impl Into<BNSectionSemantics> for Semantics {
+    fn into(self) -> BNSectionSemantics {
+        use self::BNSectionSemantics::*;
+
+        match self {
+            Semantics::DefaultSection => DefaultSectionSemantics,
+            Semantics::ReadOnlyCode => ReadOnlyCodeSectionSemantics,
+            Semantics::ReadOnlyData => ReadOnlyDataSectionSemantics,
+            Semantics::ReadWriteData => ReadWriteDataSectionSemantics,
+            Semantics::External => ExternalSectionSemantics,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct Section {
+    handle: *mut BNSection,
+}
+
+impl Section {
+    pub(crate) unsafe fn from_raw(raw: *mut BNSection) -> Self {
+        Self { handle: raw }
+    }
+
+    pub fn new<S: BnStrCompatible>(name: S, range: Range<u64>) -> SectionBuilder<S> {
+        SectionBuilder {
+            is_auto: false,
+            name: name,
+            range: range,
+            semantics: Semantics::DefaultSection,
+            _ty: None,
+            align: 1,
+            entry_size: 1,
+            linked_section: None,
+            info_section: None,
+            info_data: 0
+        }
+    }
+
+    pub fn name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetName(self.handle)) }
+    }
+
+    pub fn section_type(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetType(self.handle)) }
+    }
+
+    pub fn start(&self) -> u64 {
+        unsafe { BNSectionGetStart(self.handle) }
+    }
+
+    pub fn end(&self) -> u64 {
+        unsafe { BNSectionGetEnd(self.handle) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe { BNSectionGetLength(self.handle) as usize }
+    }
+
+    pub fn address_range(&self) -> Range<u64> {
+        self.start() .. self.end()
+    }
+
+    pub fn semantics(&self) -> Semantics {
+        unsafe { BNSectionGetSemantics(self.handle).into() }
+    }
+
+    pub fn linked_section(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetLinkedSection(self.handle)) }
+    }
+
+    pub fn info_section(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetInfoSection(self.handle)) }
+    }
+
+    pub fn info_data(&self) -> u64 {
+        unsafe { BNSectionGetInfoData(self.handle) }
+    }
+
+    pub fn align(&self) -> u64 {
+        unsafe { BNSectionGetAlign(self.handle) }
+    }
+
+    pub fn entry_size(&self) -> usize {
+        unsafe { BNSectionGetEntrySize(self.handle) as usize }
+    }
+
+    pub fn auto_defined(&self) -> bool {
+        unsafe { BNSectionIsAutoDefined(self.handle) }
+    }
+}
+
+impl fmt::Debug for Section {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<section '{}' @ {:x}-{:x}>", self.name(), self.start(), self.end())
+    }
+}
+
+impl ToOwned for Section {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for Section {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewSectionReference(handle.handle),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeSection(handle.handle);
+    }
+}
+
+unsafe impl CoreOwnedArrayProvider for Section {
+    type Raw = *mut BNSection;
+    type Context = ();
+
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeSectionList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Section {
+    type Wrapped = Guard<'a, Section>;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+        Guard::new(Section::from_raw(*raw), context)
+    }
+}
+
+#[must_use]
+pub struct SectionBuilder<S: BnStrCompatible> {
+    is_auto: bool,
+    name: S,
+    range: Range<u64>,
+    semantics: Semantics,
+    _ty: Option<S>,
+    align: u64,
+    entry_size: u64,
+    linked_section: Option<S>,
+    info_section: Option<S>,
+    info_data: u64,
+}
+
+impl<S: BnStrCompatible> SectionBuilder<S> {
+    pub fn semantics(mut self, semantics: Semantics) -> Self {
+        self.semantics = semantics;
+        self
+    }
+
+    pub fn section_type(mut self, ty: S) -> Self {
+        self._ty = Some(ty);
+        self
+    }
+
+    pub fn align(mut self, align: u64) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn entry_size(mut self, entry_size: u64) -> Self {
+        self.entry_size = entry_size;
+        self
+    }
+
+    pub fn linked_section(mut self, linked_section: S) -> Self {
+        self.linked_section = Some(linked_section);
+        self
+    }
+
+    pub fn info_section(mut self, info_section: S) -> Self {
+        self.info_section = Some(info_section);
+        self
+    }
+
+    pub fn info_data(mut self, info_data: u64) -> Self {
+        self.info_data = info_data;
+        self
+    }
+
+    pub fn is_auto(mut self, is_auto: bool) -> Self {
+        self.is_auto = is_auto;
+        self
+    }
+
+    pub(crate) fn create(self, view: &BinaryView) {
+        let name = self.name.as_bytes_with_nul();
+        let ty = self._ty.map(|s| s.as_bytes_with_nul());
+        let linked_section = self.linked_section.map(|s| s.as_bytes_with_nul());
+        let info_section = self.info_section.map(|s| s.as_bytes_with_nul());
+
+        let start = self.range.start;
+        let len = self.range.end.wrapping_sub(start);
+
+        unsafe {
+            use std::ffi::CStr;
+
+            let nul_str = CStr::from_bytes_with_nul_unchecked(b"\x00").as_ptr();
+            let name_ptr = name.as_ref().as_ptr() as *mut _;
+            let ty_ptr = ty.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+            let linked_section_ptr = linked_section.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+            let info_section_ptr = info_section.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+
+            if self.is_auto {
+                BNAddAutoSection(view.handle, name_ptr, start, len, self.semantics.into(),
+                                 ty_ptr, self.align, self.entry_size, linked_section_ptr,
+                                 info_section_ptr, self.info_data);
+            } else {
+                BNAddUserSection(view.handle, name_ptr, start, len, self.semantics.into(),
+                                 ty_ptr, self.align, self.entry_size, linked_section_ptr,
+                                 info_section_ptr, self.info_data);
+            }
+        }
+    }
+}

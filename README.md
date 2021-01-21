@@ -65,3 +65,7 @@ There are many examples available. The [Python examples folder ](https://github.
 * [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary (only usable with licenses that support headless API access)
 * [triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT
 * [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement
+
+## Licensing
+
+Some components may be released under compatible but slightly different open source licenses and will have their own LICENSE file as appropriate.

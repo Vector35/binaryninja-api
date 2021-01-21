@@ -73,3 +73,13 @@ build
 generator
 types/
 plugins/
+
+# Rust
+rust/**/*.swp
+rust/**/*.rs.bk
+rust/Cargo.lock
+rust/target/
+rust/binaryninjacore-sys/Cargo.lock
+rust/binaryninjacore-sys/target/
+rust/examples/*/Cargo.lock
+rust/examples/*/target/

@@ -1,12 +1,26 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::borrow::Borrow;
 
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::callingconvention::CallingConvention;
-use crate::types::QualifiedNameAndType;
 use crate::rc::*;
 use crate::string::*;
+use crate::types::QualifiedNameAndType;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -35,13 +49,16 @@ macro_rules! cc_func {
         pub fn $set_name<A: Architecture>(&self, cc: &CallingConvention<A>) {
             let arch = self.arch();
 
-            assert!(cc.arch_handle.borrow().as_ref().0 == arch.0, "use of calling convention with non-matching Platform architecture!");
+            assert!(
+                cc.arch_handle.borrow().as_ref().0 == arch.0,
+                "use of calling convention with non-matching Platform architecture!"
+            );
 
             unsafe {
                 $set_api(self.handle, cc.handle);
             }
         }
-    }
+    };
 }
 
 impl Platform {
@@ -93,20 +110,26 @@ impl Platform {
         }
     }
 
-    pub fn list_by_os_and_arch<S: BnStrCompatible>(name: S, arch: &CoreArchitecture) -> Array<Platform> {
+    pub fn list_by_os_and_arch<S: BnStrCompatible>(
+        name: S,
+        arch: &CoreArchitecture,
+    ) -> Array<Platform> {
         let raw_name = name.as_bytes_with_nul();
 
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOSAndArchitecture(raw_name.as_ref().as_ptr() as *mut _,
-                                                               arch.0, &mut count);
+            let handles = BNGetPlatformListByOSAndArchitecture(
+                raw_name.as_ref().as_ptr() as *mut _,
+                arch.0,
+                &mut count,
+            );
 
             Array::new(handles, count, ())
         }
     }
 
     pub fn list_available_os() -> Array<BnString> {
-        unsafe { 
+        unsafe {
             let mut count = 0;
             let list = BNGetPlatformOSList(&mut count);
 
@@ -133,9 +156,7 @@ impl Platform {
     }
 
     pub fn arch(&self) -> CoreArchitecture {
-        unsafe {
-            CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle))
-        }
+        unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
     }
 
     pub fn register_os<S: BnStrCompatible>(&self, os: S) {
@@ -146,20 +167,40 @@ impl Platform {
         }
     }
 
-    cc_func!(get_default_calling_convention, BNGetPlatformDefaultCallingConvention,
-             set_default_calling_convention, BNRegisterPlatformDefaultCallingConvention);
+    cc_func!(
+        get_default_calling_convention,
+        BNGetPlatformDefaultCallingConvention,
+        set_default_calling_convention,
+        BNRegisterPlatformDefaultCallingConvention
+    );
 
-    cc_func!(get_cdecl_calling_convention, BNGetPlatformCdeclCallingConvention,
-             set_cdecl_calling_convention, BNRegisterPlatformCdeclCallingConvention);
+    cc_func!(
+        get_cdecl_calling_convention,
+        BNGetPlatformCdeclCallingConvention,
+        set_cdecl_calling_convention,
+        BNRegisterPlatformCdeclCallingConvention
+    );
 
-    cc_func!(get_stdcall_calling_convention, BNGetPlatformStdcallCallingConvention,
-             set_stdcall_calling_convention, BNRegisterPlatformStdcallCallingConvention);
+    cc_func!(
+        get_stdcall_calling_convention,
+        BNGetPlatformStdcallCallingConvention,
+        set_stdcall_calling_convention,
+        BNRegisterPlatformStdcallCallingConvention
+    );
 
-    cc_func!(get_fastcall_calling_convention, BNGetPlatformFastcallCallingConvention,
-             set_fastcall_calling_convention, BNRegisterPlatformFastcallCallingConvention);
+    cc_func!(
+        get_fastcall_calling_convention,
+        BNGetPlatformFastcallCallingConvention,
+        set_fastcall_calling_convention,
+        BNRegisterPlatformFastcallCallingConvention
+    );
 
-    cc_func!(get_syscall_convention, BNGetPlatformSystemCallConvention,
-             set_syscall_convention, BNSetPlatformSystemCallConvention);
+    cc_func!(
+        get_syscall_convention,
+        BNGetPlatformSystemCallConvention,
+        set_syscall_convention,
+        BNSetPlatformSystemCallConvention
+    );
 
     pub fn types(&self) -> Array<QualifiedNameAndType> {
         unsafe {

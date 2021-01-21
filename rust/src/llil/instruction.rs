@@ -1,12 +1,26 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 
 use std::marker::PhantomData;
 
-use super::*;
 use super::operation;
 use super::operation::Operation;
+use super::*;
 
 use crate::architecture::Architecture;
 
@@ -20,8 +34,10 @@ where
     pub(crate) instr_idx: usize,
 }
 
-fn common_info<'func, A, M, F>(function: &'func Function<A, M, F>, op: BNLowLevelILInstruction)
-    -> Option<InstrInfo<'func, A, M, F>>
+fn common_info<'func, A, M, F>(
+    function: &'func Function<A, M, F>,
+    op: BNLowLevelILInstruction,
+) -> Option<InstrInfo<'func, A, M, F>>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -54,8 +70,7 @@ macro_rules! visit {
     }
 }
 
-fn common_visit<'func, A, M, F, CB>(info: &InstrInfo<'func, A, M, F>, f: &mut CB)
-    -> VisitorAction
+fn common_visit<'func, A, M, F, CB>(info: &InstrInfo<'func, A, M, F>, f: &mut CB) -> VisitorAction
 where
     A: 'func + Architecture,
     M: FunctionMutability,
@@ -70,7 +85,7 @@ where
         Ret(ref op) => visit!(f, &op.target()),
         If(ref op) => visit!(f, &op.condition()),
         Value(ref e, _) => visit!(f, e),
-        _ => {},
+        _ => {}
     };
 
     VisitorAction::Sibling
@@ -85,7 +100,8 @@ where
     pub fn info(&self) -> InstrInfo<'func, A, M, NonSSA<V>> {
         use binaryninjacore_sys::BNLowLevelILOperation::*;
 
-        let expr_idx = unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
+        let expr_idx =
+            unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
 
         match op.operation {
@@ -94,8 +110,9 @@ where
             LLIL_SET_FLAG => InstrInfo::SetFlag(Operation::new(self.function, op)),
             LLIL_STORE => InstrInfo::Store(Operation::new(self.function, op)),
             LLIL_PUSH => InstrInfo::Push(Operation::new(self.function, op)),
-            LLIL_CALL |
-            LLIL_CALL_STACK_ADJUST => InstrInfo::Call(Operation::new(self.function, op)),
+            LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
+                InstrInfo::Call(Operation::new(self.function, op))
+            }
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
             _ => {
                 common_info(self.function, op).unwrap_or_else(|| {
@@ -118,7 +135,10 @@ where
 
     pub fn visit_tree<F>(&self, f: &mut F) -> VisitorAction
     where
-        F: FnMut(&Expression<'func, A, M, NonSSA<V>, ValueExpr>, &ExprInfo<'func, A, M, NonSSA<V>>) -> VisitorAction,
+        F: FnMut(
+            &Expression<'func, A, M, NonSSA<V>, ValueExpr>,
+            &ExprInfo<'func, A, M, NonSSA<V>>,
+        ) -> VisitorAction,
     {
         use self::InstrInfo::*;
         let info = self.info();
@@ -171,5 +191,8 @@ where
     Trap(Operation<'func, A, M, F, operation::Trap>),
     Undef(Operation<'func, A, M, F, operation::NoArgs>),
 
-    Value(Expression<'func, A, M, F, ValueExpr>, ExprInfo<'func, A, M, F>),
+    Value(
+        Expression<'func, A, M, F, ValueExpr>,
+        ExprInfo<'func, A, M, F>,
+    ),
 }

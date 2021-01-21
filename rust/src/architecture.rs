@@ -1,26 +1,40 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // container abstraction to avoid Vec<> (want CoreArchFlagList, CoreArchRegList)
 // RegisterInfo purge
 use binaryninjacore_sys::*;
 
-use std::ffi::{CString, CStr};
-use std::ptr;
-use std::ops::Drop;
 use std::borrow::{Borrow, Cow};
-use std::slice;
-use std::ops;
-use std::mem::zeroed;
-use std::hash::Hash;
 use std::collections::HashMap;
+use std::ffi::{CStr, CString};
+use std::hash::Hash;
+use std::mem::zeroed;
+use std::ops;
+use std::ops::Drop;
+use std::ptr;
+use std::slice;
 
-use crate::{BranchType, Endianness};
 use crate::callingconvention::CallingConvention;
 use crate::platform::Platform;
+use crate::{BranchType, Endianness};
 
-use crate::llil::{Lifter, LiftedExpr, FlagWriteOp};
-use crate::llil::{get_default_flag_write_llil, get_default_flag_cond_llil};
+use crate::llil::{get_default_flag_cond_llil, get_default_flag_write_llil};
+use crate::llil::{FlagWriteOp, LiftedExpr, Lifter};
 
-use crate::string::*;
 use crate::rc::*;
+use crate::string::*;
 
 pub enum BranchInfo {
     Unconditional(u64),
@@ -32,6 +46,7 @@ pub enum BranchInfo {
     Indirect,
     Exception,
     Unresolved,
+    UserDefined,
 }
 
 pub struct BranchIter<'a>(&'a InstructionInfo, ops::Range<usize>);
@@ -45,7 +60,11 @@ impl<'a> Iterator for BranchIter<'a> {
             Some(i) => {
                 let target = (self.0).0.branchTarget[i];
                 let arch = (self.0).0.branchArch[i];
-                let arch = if arch.is_null() { None } else { Some(CoreArchitecture(arch)) };
+                let arch = if arch.is_null() {
+                    None
+                } else {
+                    Some(CoreArchitecture(arch))
+                };
 
                 let res = match (self.0).0.branchType[i] {
                     UnconditionalBranch => BranchInfo::Unconditional(target),
@@ -57,6 +76,7 @@ impl<'a> Iterator for BranchIter<'a> {
                     IndirectBranch => BranchInfo::Indirect,
                     ExceptionBranch => BranchInfo::Exception,
                     UnresolvedBranch => BranchInfo::Unresolved,
+                    UserDefinedBranch => BranchInfo::UserDefined,
                 };
 
                 Some((res, arch))
@@ -70,23 +90,29 @@ impl<'a> Iterator for BranchIter<'a> {
 pub struct InstructionInfo(BNInstructionInfo);
 impl InstructionInfo {
     pub fn new(len: usize, branch_delay: bool) -> Self {
-        InstructionInfo (
-            BNInstructionInfo {
-                length: len,
-                archTransitionByTargetAddr: false,
-                branchDelay: branch_delay,
-                branchCount: 0usize,
-                branchType: [BranchType::UnresolvedBranch; 3],
-                branchTarget: [0u64; 3],
-                branchArch: [ptr::null_mut(); 3],
-            }
-        )
+        InstructionInfo(BNInstructionInfo {
+            length: len,
+            archTransitionByTargetAddr: false,
+            branchDelay: branch_delay,
+            branchCount: 0usize,
+            branchType: [BranchType::UnresolvedBranch; 3],
+            branchTarget: [0u64; 3],
+            branchArch: [ptr::null_mut(); 3],
+        })
     }
-            
-    pub fn len(&self) -> usize { self.0.length }
-    pub fn branch_count(&self) -> usize { self.0.branchCount }
-    pub fn branch_delay(&self) -> bool { self.0.branchDelay }
-    pub fn branches(&self) -> BranchIter { BranchIter(self, 0 .. self.branch_count()) }
+
+    pub fn len(&self) -> usize {
+        self.0.length
+    }
+    pub fn branch_count(&self) -> usize {
+        self.0.branchCount
+    }
+    pub fn branch_delay(&self) -> bool {
+        self.0.branchDelay
+    }
+    pub fn branches(&self) -> BranchIter {
+        BranchIter(self, 0..self.branch_count())
+    }
 
     pub fn allow_arch_transition_by_target_addr(&mut self, transition: bool) {
         self.0.archTransitionByTargetAddr = transition;
@@ -118,6 +144,7 @@ impl InstructionInfo {
                 BranchInfo::Indirect => BranchType::IndirectBranch,
                 BranchInfo::Exception => BranchType::ExceptionBranch,
                 BranchInfo::Unresolved => BranchType::UnresolvedBranch,
+                BranchInfo::UserDefined => BranchType::UserDefinedBranch,
             };
 
             self.0.branchType[idx] = ty;
@@ -138,7 +165,7 @@ pub enum InstructionTextTokenContents {
     Instruction,
     OperandSeparator,
     Register,
-    Integer(u64), // TODO size?
+    Integer(u64),         // TODO size?
     PossibleAddress(u64), // TODO size?
     BeginMemoryOperand,
     EndMemoryOperand,
@@ -165,16 +192,14 @@ impl InstructionTextToken {
 
         match contents {
             Integer(v) => res.value = v,
-            PossibleAddress(v) |
-            CodeRelativeAddress(v) => {
+            PossibleAddress(v) | CodeRelativeAddress(v) => {
                 res.value = v;
                 res.address = v;
             }
-            _ => {},
+            _ => {}
         }
 
         res.type_ = match contents {
-
             Text => TextToken,
             Instruction => InstructionToken,
             OperandSeparator => OperandSeparatorToken,
@@ -234,21 +259,19 @@ impl InstructionTextToken {
 
 impl Clone for InstructionTextToken {
     fn clone(&self) -> Self {
-        InstructionTextToken (
-            BNInstructionTextToken {
-                type_: self.0.type_,
-                context: self.0.context,
-                address: self.0.address,
-                size: self.0.size,
-                operand: self.0.operand,
-                value: self.0.value,
-                width: 0,
-                text: self.text().to_owned().into_raw(),
-                confidence: 0xff,
-                typeNames: ptr::null_mut(),
-                namesCount: 0,
-            }
-        )
+        InstructionTextToken(BNInstructionTextToken {
+            type_: self.0.type_,
+            context: self.0.context,
+            address: self.0.address,
+            size: self.0.size,
+            operand: self.0.operand,
+            value: self.0.value,
+            width: 0,
+            text: self.text().to_owned().into_raw(),
+            confidence: 0xff,
+            typeNames: ptr::null_mut(),
+            namesCount: 0,
+        })
     }
 }
 
@@ -258,12 +281,12 @@ impl Drop for InstructionTextToken {
     }
 }
 
+pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
-pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 
 pub trait RegisterInfo: Sized {
-    type RegType: Register<InfoType=Self>;
+    type RegType: Register<InfoType = Self>;
 
     fn parent(&self) -> Option<Self::RegType>;
     fn size(&self) -> usize;
@@ -271,8 +294,8 @@ pub trait RegisterInfo: Sized {
     fn implicit_extend(&self) -> ImplicitRegisterExtend;
 }
 
-pub trait Register: Sized + Clone + Copy  {
-    type InfoType: RegisterInfo<RegType=Self>;
+pub trait Register: Sized + Clone + Copy {
+    type InfoType: RegisterInfo<RegType = Self>;
 
     fn name(&self) -> Cow<str>;
     fn info(&self) -> Self::InfoType;
@@ -362,13 +385,13 @@ pub trait FlagGroup: Sized + Clone + Copy {
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type Handle: Borrow<Self> + Clone;
 
-    type RegisterInfo: RegisterInfo<RegType=Self::Register>;
-    type Register: Register<InfoType=Self::RegisterInfo>;
+    type RegisterInfo: RegisterInfo<RegType = Self::Register>;
+    type Register: Register<InfoType = Self::RegisterInfo>;
 
-    type Flag: Flag<FlagClass=Self::FlagClass>;
-    type FlagWrite: FlagWrite<FlagType=Self::Flag, FlagClass=Self::FlagClass>;
+    type Flag: Flag<FlagClass = Self::FlagClass>;
+    type FlagWrite: FlagWrite<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
     type FlagClass: FlagClass;
-    type FlagGroup: FlagGroup<FlagType=Self::Flag, FlagClass=Self::FlagClass>;
+    type FlagGroup: FlagGroup<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
 
     type InstructionTextContainer: Into<Vec<InstructionTextToken>>;
 
@@ -382,8 +405,17 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture;
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
-    fn instruction_text(&self, data: &[u8], addr: u64) -> Option<(usize, Self::InstructionTextContainer)>;
-    fn instruction_llil(&self, data: &[u8], addr: u64, il: &mut Lifter<Self>) -> Option<(usize, bool)>;
+    fn instruction_text(
+        &self,
+        data: &[u8],
+        addr: u64,
+    ) -> Option<(usize, Self::InstructionTextContainer)>;
+    fn instruction_llil(
+        &self,
+        data: &[u8],
+        addr: u64,
+        il: &mut Lifter<Self>,
+    ) -> Option<(usize, bool)>;
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
@@ -394,9 +426,13 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// This function *MUST NOT* observe the values of other flags.
     ///
     /// This function *MUST* return `None` or an expression representing a boolean value.
-    fn flag_write_llil<'a>(&self, flag: Self::Flag, flag_write_type: Self::FlagWrite, op: FlagWriteOp<Self::Register>, il: &'a mut Lifter<Self>)
-        -> Option<LiftedExpr<'a, Self>>
-    {
+    fn flag_write_llil<'a>(
+        &self,
+        flag: Self::Flag,
+        flag_write_type: Self::FlagWrite,
+        op: FlagWriteOp<Self::Register>,
+        il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
         let role = flag.role(flag_write_type.class());
         Some(get_default_flag_write_llil(self, role, op, il))
     }
@@ -406,7 +442,11 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     ///
     /// If automatic recovery is not possible, the `flag_cond_llil` method will be invoked to give
     /// this `Architecture` implementation arbitrary control over the expression to be evaluated.
-    fn flags_required_for_flag_condition(&self, condition: FlagCondition, class: Option<Self::FlagClass>) -> Vec<Self::Flag>;
+    fn flags_required_for_flag_condition(
+        &self,
+        condition: FlagCondition,
+        class: Option<Self::FlagClass>,
+    ) -> Vec<Self::Flag>;
 
     /// This function *MUST NOT* append instructions that have side effects.
     ///
@@ -414,9 +454,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// `flags_required_for_flag_condition`.
     ///
     /// This function *MUST* return `None` or an expression representing a boolean value.
-    fn flag_cond_llil<'a>(&self, cond: FlagCondition, class: Option<Self::FlagClass>, il: &'a mut Lifter<Self>)
-        -> Option<LiftedExpr<'a, Self>>
-    {
+    fn flag_cond_llil<'a>(
+        &self,
+        cond: FlagCondition,
+        class: Option<Self::FlagClass>,
+        il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
         Some(get_default_flag_cond_llil(self, cond, class, il))
     }
 
@@ -434,7 +477,11 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     ///
     /// This function must not observe the values of any flag not returned by `group`'s
     /// `flags_required` method.
-    fn flag_group_llil<'a>(&self, group: Self::FlagGroup, il: &'a mut Lifter<Self>) -> Option<LiftedExpr<'a, Self>>;
+    fn flag_group_llil<'a>(
+        &self,
+        group: Self::FlagGroup,
+        il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>>;
 
     fn registers_all(&self) -> Vec<Self::Register>;
     fn registers_full_width(&self) -> Vec<Self::Register>;
@@ -445,7 +492,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn flag_write_types(&self) -> Vec<Self::FlagWrite>;
     fn flag_classes(&self) -> Vec<Self::FlagClass>;
     fn flag_groups(&self) -> Vec<Self::FlagGroup>;
-
 
     fn stack_pointer_reg(&self) -> Option<Self::Register>;
     fn link_reg(&self) -> Option<Self::Register>;
@@ -540,7 +586,7 @@ impl Flag for CoreFlag {
     fn role(&self, class: Option<CoreFlagClass>) -> FlagRole {
         let class_id = match class {
             Some(class) => class.1,
-            _ => 0
+            _ => 0,
         };
 
         unsafe { BNGetArchitectureFlagRole(self.0, self.1, class_id) }
@@ -584,10 +630,15 @@ impl FlagWrite for CoreFlagWrite {
         };
 
         let ret = unsafe {
-            slice::from_raw_parts_mut(regs, count).iter().map(|reg| CoreFlag(self.0, *reg)).collect()
+            slice::from_raw_parts_mut(regs, count)
+                .iter()
+                .map(|reg| CoreFlag(self.0, *reg))
+                .collect()
         };
 
-        unsafe { BNFreeRegisterList(regs); }
+        unsafe {
+            BNFreeRegisterList(regs);
+        }
 
         ret
     }
@@ -659,10 +710,15 @@ impl FlagGroup for CoreFlagGroup {
         };
 
         let ret = unsafe {
-            slice::from_raw_parts_mut(regs, count).iter().map(|reg| CoreFlag(self.0, *reg)).collect()
+            slice::from_raw_parts_mut(regs, count)
+                .iter()
+                .map(|reg| CoreFlag(self.0, *reg))
+                .collect()
         };
 
-        unsafe { BNFreeRegisterList(regs); }
+        unsafe {
+            BNFreeRegisterList(regs);
+        }
 
         ret
     }
@@ -671,11 +727,21 @@ impl FlagGroup for CoreFlagGroup {
         let mut count: usize = 0;
 
         unsafe {
-            let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(self.0, self.1, &mut count as *mut _);
+            let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(
+                self.0,
+                self.1,
+                &mut count as *mut _,
+            );
 
-            let ret = slice::from_raw_parts_mut(flag_conds, count).iter().map(|class_cond| {
-                (CoreFlagClass(self.0, class_cond.semanticClass), class_cond.condition)
-            }).collect();
+            let ret = slice::from_raw_parts_mut(flag_conds, count)
+                .iter()
+                .map(|class_cond| {
+                    (
+                        CoreFlagClass(self.0, class_cond.semanticClass),
+                        class_cond.condition,
+                    )
+                })
+                .collect();
 
             BNFreeFlagConditionsForSemanticFlagGroup(flag_conds);
 
@@ -695,7 +761,9 @@ impl ops::Deref for CoreArchitectureList {
 
 impl Drop for CoreArchitectureList {
     fn drop(&mut self) {
-        unsafe { BNFreeArchitectureList(self.0); }
+        unsafe {
+            BNFreeArchitectureList(self.0);
+        }
     }
 }
 
@@ -754,9 +822,7 @@ impl CoreArchitecture {
     }
 
     pub fn name(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetArchitectureName(self.0))
-        }
+        unsafe { BnString::from_raw(BNGetArchitectureName(self.0)) }
     }
 }
 
@@ -810,7 +876,15 @@ impl Architecture for CoreArchitecture {
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
-        let success = unsafe { BNGetInstructionInfo(self.0, data.as_ptr(), addr, data.len(), &mut (info.0) as *mut _) };
+        let success = unsafe {
+            BNGetInstructionInfo(
+                self.0,
+                data.as_ptr(),
+                addr,
+                data.len(),
+                &mut (info.0) as *mut _,
+            )
+        };
 
         if success {
             Some(info)
@@ -819,14 +893,24 @@ impl Architecture for CoreArchitecture {
         }
     }
 
-    fn instruction_text(&self, data: &[u8], addr: u64) -> Option<(usize, InstructionTextTokenList)> {
+    fn instruction_text(
+        &self,
+        data: &[u8],
+        addr: u64,
+    ) -> Option<(usize, InstructionTextTokenList)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
         let mut result: *mut BNInstructionTextToken = ptr::null_mut();
 
         unsafe {
-            if BNGetInstructionText(self.0, data.as_ptr(), addr, &mut consumed as *mut _, &mut result as *mut _,
-                                    &mut count as *mut _) {
+            if BNGetInstructionText(
+                self.0,
+                data.as_ptr(),
+                addr,
+                &mut consumed as *mut _,
+                &mut result as *mut _,
+                &mut count as *mut _,
+            ) {
                 Some((consumed, InstructionTextTokenList(result, count)))
             } else {
                 None
@@ -834,28 +918,41 @@ impl Architecture for CoreArchitecture {
         }
     }
 
-    fn instruction_llil(&self, _data: &[u8], _addr: u64, _il: &mut Lifter<Self>) -> Option<(usize, bool)> {
+    fn instruction_llil(
+        &self,
+        _data: &[u8],
+        _addr: u64,
+        _il: &mut Lifter<Self>,
+    ) -> Option<(usize, bool)> {
         None
     }
 
-    fn flag_write_llil<'a>(&self, _flag: Self::Flag, _flag_write: Self::FlagWrite, _op: FlagWriteOp<Self::Register>, _il: &'a mut Lifter<Self>)
-        -> Option<LiftedExpr<'a, Self>>
-    {
+    fn flag_write_llil<'a>(
+        &self,
+        _flag: Self::Flag,
+        _flag_write: Self::FlagWrite,
+        _op: FlagWriteOp<Self::Register>,
+        _il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
         None
     }
 
-    fn flag_cond_llil<'a>(&self, _cond: FlagCondition, _class: Option<Self::FlagClass>, _il: &'a mut Lifter<Self>)
-        -> Option<LiftedExpr<'a, Self>>
-    {
+    fn flag_cond_llil<'a>(
+        &self,
+        _cond: FlagCondition,
+        _class: Option<Self::FlagClass>,
+        _il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
         None
     }
 
-    fn flag_group_llil<'a>(&self, _group: Self::FlagGroup, _il: &'a mut Lifter<Self>)
-        -> Option<LiftedExpr<'a, Self>>
-    {
+    fn flag_group_llil<'a>(
+        &self,
+        _group: Self::FlagGroup,
+        _il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
         None
     }
-
 
     fn registers_all(&self) -> Vec<CoreRegister> {
         unsafe {
@@ -985,12 +1082,21 @@ impl Architecture for CoreArchitecture {
         }
     }
 
-    fn flags_required_for_flag_condition(&self, condition: FlagCondition, class: Option<Self::FlagClass>) -> Vec<Self::Flag> {
+    fn flags_required_for_flag_condition(
+        &self,
+        condition: FlagCondition,
+        class: Option<Self::FlagClass>,
+    ) -> Vec<Self::Flag> {
         let class_id = class.map(|c| c.id()).unwrap_or(0);
 
         unsafe {
             let mut count: usize = 0;
-            let flags = BNGetArchitectureFlagsRequiredForFlagCondition(self.0, condition, class_id, &mut count as *mut _);
+            let flags = BNGetArchitectureFlagsRequiredForFlagCondition(
+                self.0,
+                condition,
+                class_id,
+                &mut count as *mut _,
+            );
 
             let ret = slice::from_raw_parts_mut(flags, count)
                 .iter()
@@ -1006,14 +1112,14 @@ impl Architecture for CoreArchitecture {
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureStackPointerRegister(self.0) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg))
+            reg => Some(CoreRegister(self.0, reg)),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureLinkRegister(self.0) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg))
+            reg => Some(CoreRegister(self.0, reg)),
         }
     }
 
@@ -1066,13 +1172,16 @@ macro_rules! cc_func {
         fn $set_name(&self, cc: &CallingConvention<Self>) {
             let handle = self.as_ref();
 
-            assert!(cc.arch_handle.borrow().as_ref().0 == handle.0, "use of calling convention with non-matching architecture!");
+            assert!(
+                cc.arch_handle.borrow().as_ref().0 == handle.0,
+                "use of calling convention with non-matching architecture!"
+            );
 
             unsafe {
                 $set_api(handle.0, cc.handle);
             }
         }
-    }
+    };
 }
 
 /// Contains helper methods for all types implementing 'Architecture'
@@ -1080,23 +1189,41 @@ pub trait ArchitectureExt: Architecture {
     fn register_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Self::Register> {
         let name = name.as_bytes_with_nul();
 
-        match unsafe { BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _) } {
+        match unsafe {
+            BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _)
+        } {
             0xffff_ffff => None,
-            reg => self.register_from_id(reg)
+            reg => self.register_from_id(reg),
         }
     }
 
-    cc_func!(get_default_calling_convention, BNGetArchitectureDefaultCallingConvention,
-             set_default_calling_convention, BNSetArchitectureDefaultCallingConvention);
+    cc_func!(
+        get_default_calling_convention,
+        BNGetArchitectureDefaultCallingConvention,
+        set_default_calling_convention,
+        BNSetArchitectureDefaultCallingConvention
+    );
 
-    cc_func!(get_cdecl_calling_convention, BNGetArchitectureCdeclCallingConvention,
-             set_cdecl_calling_convention, BNSetArchitectureCdeclCallingConvention);
+    cc_func!(
+        get_cdecl_calling_convention,
+        BNGetArchitectureCdeclCallingConvention,
+        set_cdecl_calling_convention,
+        BNSetArchitectureCdeclCallingConvention
+    );
 
-    cc_func!(get_stdcall_calling_convention, BNGetArchitectureStdcallCallingConvention,
-             set_stdcall_calling_convention, BNSetArchitectureStdcallCallingConvention);
+    cc_func!(
+        get_stdcall_calling_convention,
+        BNGetArchitectureStdcallCallingConvention,
+        set_stdcall_calling_convention,
+        BNSetArchitectureStdcallCallingConvention
+    );
 
-    cc_func!(get_fastcall_calling_convention, BNGetArchitectureFastcallCallingConvention,
-             set_fastcall_calling_convention, BNSetArchitectureFastcallCallingConvention);
+    cc_func!(
+        get_fastcall_calling_convention,
+        BNGetArchitectureFastcallCallingConvention,
+        set_fastcall_calling_convention,
+        BNSetArchitectureFastcallCallingConvention
+    );
 
     fn standalone_platform(&self) -> Option<Ref<Platform>> {
         unsafe {
@@ -1111,21 +1238,21 @@ pub trait ArchitectureExt: Architecture {
     }
 }
 
-impl<T: Architecture> ArchitectureExt for T { }
+impl<T: Architecture> ArchitectureExt for T {}
 
 pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
 where
     S: BnStrCompatible,
-    A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync + Sized,
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
-    use std::os::raw::{c_void, c_char};
     use std::mem;
+    use std::os::raw::{c_char, c_void};
 
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
         F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
     {
         arch: A,
@@ -1134,23 +1261,26 @@ where
 
     extern "C" fn cb_init<A, F>(ctxt: *mut c_void, obj: *mut BNArchitecture)
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
         F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
     {
         unsafe {
             let custom_arch = &mut *(ctxt as *mut ArchitectureBuilder<A, F>);
             let custom_arch_handle = CustomArchitectureHandle {
-                handle: ctxt as *mut A
+                handle: ctxt as *mut A,
             };
 
             let create = ptr::read(&custom_arch.func);
-            ptr::write(&mut custom_arch.arch, create(custom_arch_handle, CoreArchitecture(obj)));
+            ptr::write(
+                &mut custom_arch.arch,
+                create(custom_arch_handle, CoreArchitecture(obj)),
+            );
         }
     }
 
     extern "C" fn cb_endianness<A>(ctxt: *mut c_void) -> BNEndianness
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.endianness()
@@ -1158,7 +1288,7 @@ where
 
     extern "C" fn cb_address_size<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.address_size()
@@ -1166,7 +1296,7 @@ where
 
     extern "C" fn cb_default_integer_size<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.default_integer_size()
@@ -1174,7 +1304,7 @@ where
 
     extern "C" fn cb_instruction_alignment<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.instruction_alignment()
@@ -1182,7 +1312,7 @@ where
 
     extern "C" fn cb_max_instr_len<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.max_instr_len()
@@ -1190,15 +1320,18 @@ where
 
     extern "C" fn cb_opcode_display_len<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.opcode_display_len()
     }
 
-    extern "C" fn cb_associated_arch_by_addr<A>(ctxt: *mut c_void, addr: *mut u64) -> *mut BNArchitecture
+    extern "C" fn cb_associated_arch_by_addr<A>(
+        ctxt: *mut c_void,
+        addr: *mut u64,
+    ) -> *mut BNArchitecture
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let addr = unsafe { &mut *(addr) };
@@ -1206,10 +1339,15 @@ where
         custom_arch.associated_arch_by_addr(addr).0
     }
 
-    extern "C" fn cb_instruction_info<A>(ctxt: *mut c_void, data: *const u8, addr: u64,
-                                         len: usize, result: *mut BNInstructionInfo) -> bool
+    extern "C" fn cb_instruction_info<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+        result: *mut BNInstructionInfo,
+    ) -> bool
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -1224,10 +1362,16 @@ where
         }
     }
 
-    extern "C" fn cb_get_instruction_text<A>(ctxt: *mut c_void, data: *const u8, addr: u64, len: *mut usize,
-                                             result: *mut *mut BNInstructionTextToken, count: *mut usize) -> bool
+    extern "C" fn cb_get_instruction_text<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        result: *mut *mut BNInstructionTextToken,
+        count: *mut usize,
+    ) -> bool
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, *len) };
@@ -1253,17 +1397,23 @@ where
     }
 
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
-        let _tokens = unsafe { Vec::from_raw_parts(tokens as *mut InstructionTextToken, count, count) };
+        let _tokens =
+            unsafe { Vec::from_raw_parts(tokens as *mut InstructionTextToken, count, count) };
     }
 
-    extern "C" fn cb_instruction_llil<A>(ctxt: *mut c_void, data: *const u8, addr: u64, len: *mut usize,
-                                         il: *mut BNLowLevelILFunction) -> bool
+    extern "C" fn cb_instruction_llil<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        il: *mut BNLowLevelILFunction,
+    ) -> bool
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A
+            handle: ctxt as *mut A,
         };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
@@ -1280,7 +1430,7 @@ where
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1292,7 +1442,7 @@ where
 
     extern "C" fn cb_flag_name<A>(ctxt: *mut c_void, flag: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1304,7 +1454,7 @@ where
 
     extern "C" fn cb_flag_write_name<A>(ctxt: *mut c_void, flag_write: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1316,7 +1466,7 @@ where
 
     extern "C" fn cb_semantic_flag_class_name<A>(ctxt: *mut c_void, class: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1328,7 +1478,7 @@ where
 
     extern "C" fn cb_semantic_flag_group_name<A>(ctxt: *mut c_void, group: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1338,7 +1488,10 @@ where
         }
     }
 
-    fn alloc_register_list<I: Iterator<Item=u32> + ExactSizeIterator>(items: I, count: &mut usize) -> *mut u32 {
+    fn alloc_register_list<I: Iterator<Item = u32> + ExactSizeIterator>(
+        items: I,
+        count: &mut usize,
+    ) -> *mut u32 {
         let len = items.len();
         *count = len;
 
@@ -1364,7 +1517,7 @@ where
 
     extern "C" fn cb_registers_full_width<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_full_width();
@@ -1374,7 +1527,7 @@ where
 
     extern "C" fn cb_registers_all<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_all();
@@ -1384,7 +1537,7 @@ where
 
     extern "C" fn cb_registers_global<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_global();
@@ -1394,7 +1547,7 @@ where
 
     extern "C" fn cb_registers_system<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_system();
@@ -1404,7 +1557,7 @@ where
 
     extern "C" fn cb_flags<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flags = custom_arch.flags();
@@ -1414,7 +1567,7 @@ where
 
     extern "C" fn cb_flag_write_types<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_writes = custom_arch.flag_write_types();
@@ -1424,7 +1577,7 @@ where
 
     extern "C" fn cb_semantic_flag_classes<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_classes = custom_arch.flag_classes();
@@ -1434,7 +1587,7 @@ where
 
     extern "C" fn cb_semantic_flag_groups<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_groups = custom_arch.flag_groups();
@@ -1444,21 +1597,28 @@ where
 
     extern "C" fn cb_flag_role<A>(ctxt: *mut c_void, flag: u32, class: u32) -> BNFlagRole
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        if let (Some(flag), class) = (custom_arch.flag_from_id(flag), custom_arch.flag_class_from_id(class)) {
+        if let (Some(flag), class) = (
+            custom_arch.flag_from_id(flag),
+            custom_arch.flag_class_from_id(class),
+        ) {
             flag.role(class)
         } else {
             FlagRole::SpecialFlagRole
         }
     }
 
-    extern "C" fn cb_flags_required_for_flag_cond<A>(ctxt: *mut c_void, cond: BNLowLevelILFlagCondition, class: u32,
-                                                     count: *mut usize) -> *mut u32
+    extern "C" fn cb_flags_required_for_flag_cond<A>(
+        ctxt: *mut c_void,
+        cond: BNLowLevelILFlagCondition,
+        class: u32,
+        count: *mut usize,
+    ) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let class = custom_arch.flag_class_from_id(class);
@@ -1467,9 +1627,13 @@ where
         alloc_register_list(flags.iter().map(|r| r.id()), unsafe { &mut *count })
     }
 
-    extern "C" fn cb_flags_required_for_semantic_flag_group<A>(ctxt: *mut c_void, group: u32, count: *mut usize) -> *mut u32
+    extern "C" fn cb_flags_required_for_semantic_flag_group<A>(
+        ctxt: *mut c_void,
+        group: u32,
+        count: *mut usize,
+    ) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1477,15 +1641,20 @@ where
             let flags = group.flags_required();
             alloc_register_list(flags.iter().map(|r| r.id()), unsafe { &mut *count })
         } else {
-            unsafe { *count = 0; }
+            unsafe {
+                *count = 0;
+            }
             ptr::null_mut()
         }
     }
 
-    extern "C" fn cb_flag_conditions_for_semantic_flag_group<A>(ctxt: *mut c_void, group: u32, count: *mut usize)
-        -> *mut BNFlagConditionForSemanticClass
+    extern "C" fn cb_flag_conditions_for_semantic_flag_group<A>(
+        ctxt: *mut c_void,
+        group: u32,
+        count: *mut usize,
+    ) -> *mut BNFlagConditionForSemanticClass
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1493,7 +1662,8 @@ where
             let flag_conditions = group.flag_conditions();
 
             unsafe {
-                let allocation_size = mem::size_of::<BNFlagConditionForSemanticClass>() * flag_conditions.len();
+                let allocation_size =
+                    mem::size_of::<BNFlagConditionForSemanticClass>() * flag_conditions.len();
                 let result = libc::malloc(allocation_size) as *mut BNFlagConditionForSemanticClass;
                 let out_slice = slice::from_raw_parts_mut(result, flag_conditions.len());
 
@@ -1508,21 +1678,31 @@ where
                 result
             }
         } else {
-            unsafe { *count = 0; }
+            unsafe {
+                *count = 0;
+            }
             ptr::null_mut()
         }
     }
 
-    extern "C" fn cb_free_flag_conditions_for_semantic_flag_group<A>(_ctxt: *mut c_void, conds: *mut BNFlagConditionForSemanticClass)
-    where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+    extern "C" fn cb_free_flag_conditions_for_semantic_flag_group<A>(
+        _ctxt: *mut c_void,
+        conds: *mut BNFlagConditionForSemanticClass,
+    ) where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        unsafe { libc::free(conds as *mut _); }
+        unsafe {
+            libc::free(conds as *mut _);
+        }
     }
 
-    extern "C" fn cb_flags_written_by_write_type<A>(ctxt: *mut c_void, write_type: u32, count: *mut usize) -> *mut u32
+    extern "C" fn cb_flags_written_by_write_type<A>(
+        ctxt: *mut c_void,
+        write_type: u32,
+        count: *mut usize,
+    ) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1530,28 +1710,43 @@ where
             let written = write_type.flags_written();
             alloc_register_list(written.iter().map(|f| f.id()), unsafe { &mut *count })
         } else {
-            unsafe { *count = 0; }
+            unsafe {
+                *count = 0;
+            }
             ptr::null_mut()
         }
     }
 
-    extern "C" fn cb_semantic_class_for_flag_write_type<A>(ctxt: *mut c_void, write_type: u32) -> u32
+    extern "C" fn cb_semantic_class_for_flag_write_type<A>(
+        ctxt: *mut c_void,
+        write_type: u32,
+    ) -> u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        custom_arch.flag_write_from_id(write_type).map(|w| w.id()).unwrap_or(0)
+        custom_arch
+            .flag_write_from_id(write_type)
+            .map(|w| w.id())
+            .unwrap_or(0)
     }
 
-    extern "C" fn cb_flag_write_llil<A>(ctxt: *mut c_void, op: BNLowLevelILOperation, size: usize, flag_write: u32,
-                                        flag: u32, operands_raw: *mut BNRegisterOrConstant, operand_count: usize,
-                                        il: *mut BNLowLevelILFunction) -> usize
+    extern "C" fn cb_flag_write_llil<A>(
+        ctxt: *mut c_void,
+        op: BNLowLevelILOperation,
+        size: usize,
+        flag_write: u32,
+        flag: u32,
+        operands_raw: *mut BNRegisterOrConstant,
+        operand_count: usize,
+        il: *mut BNLowLevelILFunction,
+    ) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A
+            handle: ctxt as *mut A,
         };
 
         let flag_write = custom_arch.flag_write_from_id(flag_write);
@@ -1566,14 +1761,25 @@ where
                     return expr.expr_idx;
                 }
             } else {
-                warn!("unable to unpack flag write op: {:?} with {} operands", op, operands.len());
+                warn!(
+                    "unable to unpack flag write op: {:?} with {} operands",
+                    op,
+                    operands.len()
+                );
             }
 
             let role = flag.role(flag_write.class());
 
             unsafe {
-                BNGetDefaultArchitectureFlagWriteLowLevelIL(custom_arch.as_ref().0, op, size,
-                                                            role, operands_raw, operand_count, il)
+                BNGetDefaultArchitectureFlagWriteLowLevelIL(
+                    custom_arch.as_ref().0,
+                    op,
+                    size,
+                    role,
+                    operands_raw,
+                    operand_count,
+                    il,
+                )
             }
         } else {
             // TODO this should be impossible; requires bad flag/flag_write ids passed in;
@@ -1582,14 +1788,18 @@ where
         }
     }
 
-    extern "C" fn cb_flag_cond_llil<A>(ctxt: *mut c_void, cond: FlagCondition, class: u32,
-                                       il: *mut BNLowLevelILFunction) -> usize
+    extern "C" fn cb_flag_cond_llil<A>(
+        ctxt: *mut c_void,
+        cond: FlagCondition,
+        class: u32,
+        il: *mut BNLowLevelILFunction,
+    ) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A
+            handle: ctxt as *mut A,
         };
 
         let class = custom_arch.flag_class_from_id(class);
@@ -1603,14 +1813,17 @@ where
         lifter.unimplemented().expr_idx
     }
 
-    extern "C" fn cb_flag_group_llil<A>(ctxt: *mut c_void, group: u32,
-                                        il: *mut BNLowLevelILFunction) -> usize
+    extern "C" fn cb_flag_group_llil<A>(
+        ctxt: *mut c_void,
+        group: u32,
+        il: *mut BNLowLevelILFunction,
+    ) -> usize
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A
+            handle: ctxt as *mut A,
         };
 
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
@@ -1639,7 +1852,7 @@ where
 
     extern "C" fn cb_register_info<A>(ctxt: *mut c_void, reg: u32, result: *mut BNRegisterInfo)
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let result = unsafe { &mut *result };
@@ -1660,7 +1873,7 @@ where
 
     extern "C" fn cb_stack_pointer<A>(ctxt: *mut c_void) -> u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1673,7 +1886,7 @@ where
 
     extern "C" fn cb_link_reg<A>(ctxt: *mut c_void) -> u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1686,7 +1899,7 @@ where
 
     extern "C" fn cb_reg_stack_name<A>(ctxt: *mut c_void, _stack: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         BnString::new("reg_stack").into_raw()
@@ -1694,24 +1907,29 @@ where
 
     extern "C" fn cb_reg_stacks<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe { *count = 0; }
+        unsafe {
+            *count = 0;
+        }
         ptr::null_mut()
     }
 
-    extern "C" fn cb_reg_stack_info<A>(ctxt: *mut c_void, _stack: u32, _info: *mut BNRegisterStackInfo)
-    where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+    extern "C" fn cb_reg_stack_info<A>(
+        ctxt: *mut c_void,
+        _stack: u32,
+        _info: *mut BNRegisterStackInfo,
+    ) where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
     }
 
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, _intrinsic: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         BnString::new("intrinsic").into_raw()
@@ -1719,71 +1937,118 @@ where
 
     extern "C" fn cb_intrinsics<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe { *count = 0; }
+        unsafe {
+            *count = 0;
+        }
         ptr::null_mut()
     }
 
-    extern "C" fn cb_intrinsic_inputs<A>(ctxt: *mut c_void, _intrinsic: u32, count: *mut usize) -> *mut BNNameAndType
+    extern "C" fn cb_intrinsic_inputs<A>(
+        ctxt: *mut c_void,
+        _intrinsic: u32,
+        count: *mut usize,
+    ) -> *mut BNNameAndType
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe { *count = 0; }
+        unsafe {
+            *count = 0;
+        }
         ptr::null_mut()
     }
 
-    extern "C" fn cb_free_name_and_types<A>(ctxt: *mut c_void, _nt: *mut BNNameAndType, _count: usize)
-    where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+    extern "C" fn cb_free_name_and_types<A>(
+        ctxt: *mut c_void,
+        _nt: *mut BNNameAndType,
+        _count: usize,
+    ) where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
     }
 
-    extern "C" fn cb_intrinsic_outputs<A>(ctxt: *mut c_void, _intrinsic: u32, count: *mut usize) -> *mut BNTypeWithConfidence
+    extern "C" fn cb_intrinsic_outputs<A>(
+        ctxt: *mut c_void,
+        _intrinsic: u32,
+        count: *mut usize,
+    ) -> *mut BNTypeWithConfidence
     where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe { *count = 0; }
+        unsafe {
+            *count = 0;
+        }
         ptr::null_mut()
     }
 
-    extern "C" fn cb_free_type_list<A>(ctxt: *mut c_void, _tl: *mut BNTypeWithConfidence, _count: usize)
-    where
-        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+    extern "C" fn cb_free_type_list<A>(
+        ctxt: *mut c_void,
+        _tl: *mut BNTypeWithConfidence,
+        _count: usize,
+    ) where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
     }
 
-    extern "C" fn cb_assemble(_ctxt: *mut c_void, _code: *const c_char, _addr: u64,
-                              _result: *mut BNDataBuffer, errors: *mut *mut c_char) -> bool
-    {
-        unsafe { *errors = ptr::null_mut(); }
+    // TODO : I have no idea what I'm doing and this is likely wrong!
+    extern "C" fn cb_can_assemble(_ctxt: *mut c_void) -> bool {
         false
     }
 
-    extern "C" fn cb_patch_unavailable(_ctxt: *mut c_void, _data: *const u8, _addr: u64, _len: usize) -> bool {
+    extern "C" fn cb_assemble(
+        _ctxt: *mut c_void,
+        _code: *const c_char,
+        _addr: u64,
+        _result: *mut BNDataBuffer,
+        errors: *mut *mut c_char,
+    ) -> bool {
+        unsafe {
+            *errors = ptr::null_mut();
+        }
         false
     }
 
-    extern "C" fn cb_do_patch_unavailable(_ctxt: *mut c_void, _data: *mut u8, _addr: u64, _len: usize) -> bool {
+    extern "C" fn cb_patch_unavailable(
+        _ctxt: *mut c_void,
+        _data: *const u8,
+        _addr: u64,
+        _len: usize,
+    ) -> bool {
         false
     }
 
-    extern "C" fn cb_skip_patch_unavailable(_ctxt: *mut c_void, _data: *mut u8, _addr: u64, _len: usize, _val: u64) -> bool {
+    extern "C" fn cb_do_patch_unavailable(
+        _ctxt: *mut c_void,
+        _data: *mut u8,
+        _addr: u64,
+        _len: usize,
+    ) -> bool {
+        false
+    }
+
+    extern "C" fn cb_skip_patch_unavailable(
+        _ctxt: *mut c_void,
+        _data: *mut u8,
+        _addr: u64,
+        _len: usize,
+        _val: u64,
+    ) -> bool {
         false
     }
 
     let name = name.as_bytes_with_nul();
 
     let uninit_arch = ArchitectureBuilder {
-        arch: unsafe { mem::uninitialized() },
+        arch: unsafe { zeroed() },
         func: func,
     };
 
@@ -1820,8 +2085,12 @@ where
         getFlagsRequiredForFlagCondition: Some(cb_flags_required_for_flag_cond::<A>),
 
         getFlagsRequiredForSemanticFlagGroup: Some(cb_flags_required_for_semantic_flag_group::<A>),
-        getFlagConditionsForSemanticFlagGroup: Some(cb_flag_conditions_for_semantic_flag_group::<A>),
-        freeFlagConditionsForSemanticFlagGroup: Some(cb_free_flag_conditions_for_semantic_flag_group::<A>),
+        getFlagConditionsForSemanticFlagGroup: Some(
+            cb_flag_conditions_for_semantic_flag_group::<A>,
+        ),
+        freeFlagConditionsForSemanticFlagGroup: Some(
+            cb_free_flag_conditions_for_semantic_flag_group::<A>,
+        ),
 
         getFlagsWrittenByFlagWriteType: Some(cb_flags_written_by_write_type::<A>),
         getSemanticClassForFlagWriteType: Some(cb_semantic_class_for_flag_write_type::<A>),
@@ -1848,6 +2117,7 @@ where
         getIntrinsicOutputs: Some(cb_intrinsic_outputs::<A>),
         freeTypeList: Some(cb_free_type_list::<A>),
 
+        canAssemble: Some(cb_can_assemble),
         assemble: Some(cb_assemble),
 
         isNeverBranchPatchAvailable: Some(cb_patch_unavailable),
@@ -1863,7 +2133,8 @@ where
     };
 
     unsafe {
-        let res = BNRegisterArchitecture(name.as_ref().as_ptr() as *mut _, &mut custom_arch as *mut _);
+        let res =
+            BNRegisterArchitecture(name.as_ref().as_ptr() as *mut _, &mut custom_arch as *mut _);
 
         assert!(!res.is_null());
 
@@ -1873,39 +2144,40 @@ where
 
 pub struct CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
 {
-    handle: *mut A
+    handle: *mut A,
 }
 
-unsafe impl<A> Send for CustomArchitectureHandle<A>
-where
-    A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync
-{}
+unsafe impl<A> Send for CustomArchitectureHandle<A> where
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync
+{
+}
 
-unsafe impl<A> Sync for CustomArchitectureHandle<A>
-where
-    A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync
-{}
+unsafe impl<A> Sync for CustomArchitectureHandle<A> where
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync
+{
+}
 
 impl<A> Clone for CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle=Self> + Send + Sync
+    A: 'static + Architecture<Handle = Self> + Send + Sync,
 {
     fn clone(&self) -> Self {
-        Self { handle: self.handle }
+        Self {
+            handle: self.handle,
+        }
     }
 }
 
-impl<A> Copy for CustomArchitectureHandle<A>
-where
-    A: 'static + Architecture<Handle=Self> + Send + Sync
+impl<A> Copy for CustomArchitectureHandle<A> where
+    A: 'static + Architecture<Handle = Self> + Send + Sync
 {
 }
 
 impl<A> Borrow<A> for CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle=Self> + Send + Sync
+    A: 'static + Architecture<Handle = Self> + Send + Sync,
 {
     fn borrow(&self) -> &A {
         unsafe { &*self.handle }

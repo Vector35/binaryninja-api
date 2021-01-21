@@ -1,12 +1,27 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt;
 use std::ptr;
 
-use binaryninjacore_sys::*;
-use crate::string::*;
 use crate::rc::*;
+use crate::string::*;
+use binaryninjacore_sys::*;
 
+// TODO : Rename
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum SymType {
+pub enum SymbolType {
     Function,
     LibraryFunction,
     ImportAddress,
@@ -16,34 +31,34 @@ pub enum SymType {
     External,
 }
 
-impl From<BNSymbolType> for SymType {
-    fn from(bn: BNSymbolType) -> SymType {
+impl From<BNSymbolType> for SymbolType {
+    fn from(bn: BNSymbolType) -> SymbolType {
         use self::BNSymbolType::*;
 
         match bn {
-            FunctionSymbol => SymType::Function,
-            LibraryFunctionSymbol => SymType::LibraryFunction,
-            ImportAddressSymbol => SymType::ImportAddress,
-            ImportedFunctionSymbol => SymType::ImportedFunction,
-            DataSymbol => SymType::Data,
-            ImportedDataSymbol => SymType::ImportedData,
-            ExternalSymbol => SymType::External,
+            FunctionSymbol => SymbolType::Function,
+            LibraryFunctionSymbol => SymbolType::LibraryFunction,
+            ImportAddressSymbol => SymbolType::ImportAddress,
+            ImportedFunctionSymbol => SymbolType::ImportedFunction,
+            DataSymbol => SymbolType::Data,
+            ImportedDataSymbol => SymbolType::ImportedData,
+            ExternalSymbol => SymbolType::External,
         }
     }
 }
 
-impl Into<BNSymbolType> for SymType {
+impl Into<BNSymbolType> for SymbolType {
     fn into(self) -> BNSymbolType {
         use self::BNSymbolType::*;
 
         match self {
-            SymType::Function => FunctionSymbol,
-            SymType::LibraryFunction => LibraryFunctionSymbol,
-            SymType::ImportAddress => ImportAddressSymbol,
-            SymType::ImportedFunction => ImportedFunctionSymbol,
-            SymType::Data => DataSymbol,
-            SymType::ImportedData => ImportedDataSymbol,
-            SymType::External => ExternalSymbol,
+            SymbolType::Function => FunctionSymbol,
+            SymbolType::LibraryFunction => LibraryFunctionSymbol,
+            SymbolType::ImportAddress => ImportAddressSymbol,
+            SymbolType::ImportedFunction => ImportedFunctionSymbol,
+            SymbolType::Data => DataSymbol,
+            SymbolType::ImportedData => ImportedDataSymbol,
+            SymbolType::External => ExternalSymbol,
         }
     }
 }
@@ -82,9 +97,10 @@ impl Into<BNSymbolBinding> for Binding {
     }
 }
 
+// TODO : Clean this up
 #[must_use]
 pub struct SymbolBuilder<S: BnStrCompatible> {
-    ty: SymType,
+    ty: SymbolType,
     binding: Binding,
     addr: u64,
     raw_name: S,
@@ -121,13 +137,23 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
 
         unsafe {
             let raw_name = raw_name.as_ref().as_ptr() as *mut _;
-            let short_name = short_name.as_ref().map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
-            let full_name = full_name.as_ref().map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
+            let short_name = short_name
+                .as_ref()
+                .map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
+            let full_name = full_name
+                .as_ref()
+                .map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
 
-            let res = BNCreateSymbol(self.ty.into(),
-                short_name, full_name, raw_name,
-                self.addr, self.binding.into(), ptr::null_mut(),
-                self.ordinal);
+            let res = BNCreateSymbol(
+                self.ty.into(),
+                short_name,
+                full_name,
+                raw_name,
+                self.addr,
+                self.binding.into(),
+                ptr::null_mut(),
+                self.ordinal,
+            );
 
             Ref::new(Symbol::from_raw(res))
         }
@@ -147,7 +173,7 @@ impl Symbol {
         Self { handle: raw }
     }
 
-    pub fn new<S: BnStrCompatible>(ty: SymType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
+    pub fn new<S: BnStrCompatible>(ty: SymbolType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
         SymbolBuilder {
             ty: ty,
             binding: Binding::None,
@@ -159,7 +185,7 @@ impl Symbol {
         }
     }
 
-    pub fn sym_type(&self) -> SymType {
+    pub fn sym_type(&self) -> SymbolType {
         unsafe { BNGetSymbolType(self.handle).into() }
     }
 
@@ -167,7 +193,7 @@ impl Symbol {
         unsafe { BNGetSymbolBinding(self.handle).into() }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn full_name(&self) -> BnString {
         unsafe {
             let name = BNGetSymbolFullName(self.handle);
             BnString::from_raw(name)
@@ -199,7 +225,14 @@ impl Symbol {
 
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<sym {:?} '{}' @ {:x} (handle: {:?})>", self.sym_type(), self.name(), self.address(), self.handle)
+        write!(
+            f,
+            "<sym {:?} '{}' @ {:x} (handle: {:?})>",
+            self.sym_type(),
+            self.full_name(),
+            self.address(),
+            self.handle
+        )
     }
 }
 

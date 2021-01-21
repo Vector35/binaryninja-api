@@ -1,16 +1,30 @@
-use std::fmt;
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::borrow::Borrow;
-use std::ops::Deref;
 use std::ffi::{CStr, CString};
-use std::os::raw;
+use std::fmt;
 use std::mem;
+use std::ops::Deref;
+use std::os::raw;
 
 use crate::rc::*;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(C)]
 pub struct BnStr {
-    raw: [u8]
+    raw: [u8],
 }
 
 impl BnStr {
@@ -19,7 +33,7 @@ impl BnStr {
     }
 
     pub fn as_str(&self) -> &str {
-       self.as_cstr().to_str().unwrap()
+        self.as_cstr().to_str().unwrap()
     }
 
     pub fn as_cstr(&self) -> &CStr {
@@ -65,7 +79,7 @@ pub struct BnString {
 }
 
 /// A nul-terminated C string allocated by the core.
-/// 
+///
 /// Received from a variety of core function calls, and
 /// must be used when giving strings to the core from many
 /// core-invoked callbacks.
@@ -78,7 +92,9 @@ impl BnString {
         unsafe {
             let ptr = raw.as_ref().as_ptr() as *mut _;
 
-            Self { raw: BNAllocString(ptr) }
+            Self {
+                raw: BNAllocString(ptr),
+            }
         }
     }
 

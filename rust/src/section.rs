@@ -1,11 +1,25 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt;
 use std::ops::Range;
 
 use binaryninjacore_sys::*;
 
 use crate::binaryview::BinaryView;
-use crate::string::*;
 use crate::rc::*;
+use crate::string::*;
 
 pub enum Semantics {
     DefaultSection,
@@ -64,7 +78,7 @@ impl Section {
             entry_size: 1,
             linked_section: None,
             info_section: None,
-            info_data: 0
+            info_data: 0,
         }
     }
 
@@ -89,7 +103,7 @@ impl Section {
     }
 
     pub fn address_range(&self) -> Range<u64> {
-        self.start() .. self.end()
+        self.start()..self.end()
     }
 
     pub fn semantics(&self) -> Semantics {
@@ -123,7 +137,13 @@ impl Section {
 
 impl fmt::Debug for Section {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<section '{}' @ {:x}-{:x}>", self.name(), self.start(), self.end())
+        write!(
+            f,
+            "<section '{}' @ {:x}-{:x}>",
+            self.name(),
+            self.start(),
+            self.end()
+        )
     }
 }
 
@@ -233,18 +253,44 @@ impl<S: BnStrCompatible> SectionBuilder<S> {
 
             let nul_str = CStr::from_bytes_with_nul_unchecked(b"\x00").as_ptr();
             let name_ptr = name.as_ref().as_ptr() as *mut _;
-            let ty_ptr = ty.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
-            let linked_section_ptr = linked_section.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
-            let info_section_ptr = info_section.as_ref().map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+            let ty_ptr = ty
+                .as_ref()
+                .map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+            let linked_section_ptr = linked_section
+                .as_ref()
+                .map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
+            let info_section_ptr = info_section
+                .as_ref()
+                .map_or(nul_str, |s| s.as_ref().as_ptr() as *mut _);
 
             if self.is_auto {
-                BNAddAutoSection(view.handle, name_ptr, start, len, self.semantics.into(),
-                                 ty_ptr, self.align, self.entry_size, linked_section_ptr,
-                                 info_section_ptr, self.info_data);
+                BNAddAutoSection(
+                    view.handle,
+                    name_ptr,
+                    start,
+                    len,
+                    self.semantics.into(),
+                    ty_ptr,
+                    self.align,
+                    self.entry_size,
+                    linked_section_ptr,
+                    info_section_ptr,
+                    self.info_data,
+                );
             } else {
-                BNAddUserSection(view.handle, name_ptr, start, len, self.semantics.into(),
-                                 ty_ptr, self.align, self.entry_size, linked_section_ptr,
-                                 info_section_ptr, self.info_data);
+                BNAddUserSection(
+                    view.handle,
+                    name_ptr,
+                    start,
+                    len,
+                    self.semantics.into(),
+                    ty_ptr,
+                    self.align,
+                    self.entry_size,
+                    linked_section_ptr,
+                    info_section_ptr,
+                    self.info_data,
+                );
             }
         }
     }

@@ -1,0 +1,12 @@
+[package]
+name = "flowgraph"
+version = "0.1.0"
+authors = ["Kyle Martin <kyle@vector35.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninja = {path="../../"}
+

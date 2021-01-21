@@ -1,24 +1,40 @@
-use binaryninjacore_sys::{BNFileMetadata,
-                          BNCreateFileMetadata,
-                          BNNewFileReference,
-                          BNFreeFileMetadata,
-                          BNCloseFile,
-                          //BNSetFileMetadataNavigationHandler,
-                          BNIsFileModified,
-                          BNIsAnalysisChanged,
-                          BNMarkFileModified,
-                          BNMarkFileSaved,
-                          BNIsBackedByDatabase,
-                          BNGetFilename,
-                          BNSetFilename,
-                          BNBeginUndoActions,
-                          BNCommitUndoActions,
-                          BNUndo,
-                          BNRedo,
-                          BNGetCurrentView,
-                          BNGetCurrentOffset,
-                          BNNavigate,
-                          BNGetFileViewOfType};
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use binaryninjacore_sys::{
+    BNBeginUndoActions,
+    BNCloseFile,
+    BNCommitUndoActions,
+    BNCreateFileMetadata,
+    BNFileMetadata,
+    BNFreeFileMetadata,
+    BNGetCurrentOffset,
+    BNGetCurrentView,
+    BNGetFileViewOfType,
+    BNGetFilename,
+    BNIsAnalysisChanged,
+    BNIsBackedByDatabase,
+    //BNSetFileMetadataNavigationHandler,
+    BNIsFileModified,
+    BNMarkFileModified,
+    BNMarkFileSaved,
+    BNNavigate,
+    BNNewFileReference,
+    BNRedo,
+    BNSetFilename,
+    BNUndo,
+};
 
 use crate::binaryview::BinaryView;
 
@@ -39,12 +55,10 @@ impl FileMetadata {
     }
 
     pub fn new() -> Ref<Self> {
-        unsafe { 
-            Ref::new(
-                Self {
-                    handle: BNCreateFileMetadata(),
-                }
-            )
+        unsafe {
+            Ref::new(Self {
+                handle: BNCreateFileMetadata(),
+            })
         }
     }
 
@@ -55,7 +69,9 @@ impl FileMetadata {
     }
 
     pub fn close(&self) {
-        unsafe { BNCloseFile(self.handle); }
+        unsafe {
+            BNCloseFile(self.handle);
+        }
     }
 
     pub fn filename(&self) -> BnString {
@@ -68,7 +84,9 @@ impl FileMetadata {
     pub fn set_filename<S: BnStrCompatible>(&self, name: S) {
         let name = name.as_bytes_with_nul();
 
-        unsafe { BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _); }
+        unsafe {
+            BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
+        }
     }
 
     pub fn is_modified(&self) -> bool {
@@ -76,7 +94,9 @@ impl FileMetadata {
     }
 
     pub fn mark_modified(&self) {
-        unsafe { BNMarkFileModified(self.handle); }
+        unsafe {
+            BNMarkFileModified(self.handle);
+        }
     }
 
     pub fn is_analysis_changed(&self) -> bool {
@@ -84,7 +104,9 @@ impl FileMetadata {
     }
 
     pub fn mark_saved(&self) {
-        unsafe { BNMarkFileSaved(self.handle); }
+        unsafe {
+            BNMarkFileSaved(self.handle);
+        }
     }
 
     pub fn is_database_backed(&self) -> bool {
@@ -92,25 +114,31 @@ impl FileMetadata {
     }
 
     pub fn begin_undo_actions(&self) {
-        unsafe { BNBeginUndoActions(self.handle); }
+        unsafe {
+            BNBeginUndoActions(self.handle);
+        }
     }
 
     pub fn commit_undo_actions(&self) {
-        unsafe { BNCommitUndoActions(self.handle); }
+        unsafe {
+            BNCommitUndoActions(self.handle);
+        }
     }
 
     pub fn undo(&self) {
-        unsafe { BNUndo(self.handle); }
+        unsafe {
+            BNUndo(self.handle);
+        }
     }
 
     pub fn redo(&self) {
-        unsafe { BNRedo(self.handle); }
+        unsafe {
+            BNRedo(self.handle);
+        }
     }
 
     pub fn current_view(&self) -> BnString {
-        unsafe {
-            BnString::from_raw(BNGetCurrentView(self.handle))
-        }
+        unsafe { BnString::from_raw(BNGetCurrentView(self.handle)) }
     }
 
     pub fn current_offset(&self) -> u64 {
@@ -164,11 +192,9 @@ unsafe impl RefCountable for FileMetadata {
     }
 }
 
-
 /*
 BNCreateDatabase,
 BNCreateDatabaseWithProgress,
 BNOpenExistingDatabase,
 BNOpenExistingDatabaseWithProgress,
 */
-

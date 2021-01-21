@@ -1,5 +1,18 @@
-use binaryninjacore_sys::*;
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+use binaryninjacore_sys::*;
 
 use std::ops::Range;
 
@@ -67,7 +80,9 @@ impl SegmentBuilder {
     pub(crate) fn create(self, view: &BinaryView) {
         let ea_start = self.ea.start;
         let ea_len = self.ea.end.wrapping_sub(ea_start);
-        let (b_start, b_len) = self.parent_backing.map_or((0, 0), |s| (s.start, s.end.wrapping_sub(s.start)));
+        let (b_start, b_len) = self
+            .parent_backing
+            .map_or((0, 0), |s| (s.start, s.end.wrapping_sub(s.start)));
 
         unsafe {
             if self.is_auto {
@@ -101,7 +116,7 @@ impl Segment {
     pub fn address_range(&self) -> Range<u64> {
         let start = unsafe { BNSegmentGetStart(self.handle) };
         let end = unsafe { BNSegmentGetEnd(self.handle) };
-        start .. end
+        start..end
     }
 
     pub fn parent_backing(&self) -> Option<Range<u64>> {
@@ -109,7 +124,7 @@ impl Segment {
         let end = unsafe { BNSegmentGetDataEnd(self.handle) };
 
         if start != end {
-            Some(start .. end)
+            Some(start..end)
         } else {
             None
         }

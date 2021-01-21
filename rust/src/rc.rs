@@ -1,9 +1,23 @@
-use std::marker::PhantomData;
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::borrow::Borrow;
-use std::ops::{Deref, DerefMut};
-use std::slice;
+use std::marker::PhantomData;
 use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::ptr;
+use std::slice;
 
 // RefCountable provides an abstraction over the various
 // core-allocated refcounted resources.
@@ -17,7 +31,7 @@ use std::ptr;
 // `T` does not have the `Drop` impl in order to allow more
 // efficient handling of core owned objects we receive pointers
 // to in callbacks
-pub unsafe trait RefCountable: ToOwned<Owned=Ref<Self>> + Sized {
+pub unsafe trait RefCountable: ToOwned<Owned = Ref<Self>> + Sized {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self>;
     unsafe fn dec_ref(handle: &Self);
 }
@@ -71,11 +85,13 @@ impl<T: RefCountable> Borrow<T> for Ref<T> {
 
 impl<T: RefCountable> Drop for Ref<T> {
     fn drop(&mut self) {
-        unsafe { RefCountable::dec_ref(&self.contents); }
+        unsafe {
+            RefCountable::dec_ref(&self.contents);
+        }
     }
 }
 
-impl <T: RefCountable> Clone for Ref<T> {
+impl<T: RefCountable> Clone for Ref<T> {
     fn clone(&self) -> Self {
         unsafe { RefCountable::inc_ref(&self.contents) }
     }
@@ -99,7 +115,7 @@ impl<'a, T> Guard<'a, T> {
     pub(crate) unsafe fn new<O: 'a>(contents: T, _owner: &O) -> Self {
         Self {
             contents,
-            _guard: PhantomData
+            _guard: PhantomData,
         }
     }
 }
@@ -149,15 +165,25 @@ where
 
 pub struct Array<P>
 where
-    P: CoreOwnedArrayProvider
+    P: CoreOwnedArrayProvider,
 {
     contents: *mut P::Raw,
     count: usize,
     context: P::Context,
 }
 
-unsafe impl<P> Sync for Array<P> where P: CoreOwnedArrayProvider, P::Context: Sync {}
-unsafe impl<P> Send for Array<P> where P: CoreOwnedArrayProvider, P::Context: Send {}
+unsafe impl<P> Sync for Array<P>
+where
+    P: CoreOwnedArrayProvider,
+    P::Context: Sync,
+{
+}
+unsafe impl<P> Send for Array<P>
+where
+    P: CoreOwnedArrayProvider,
+    P::Context: Send,
+{
+}
 
 impl<P: CoreOwnedArrayProvider> Array<P> {
     pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
@@ -186,11 +212,10 @@ impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> Array<P> {
     pub fn iter(&'a self) -> ArrayIter<'a, P> {
         ArrayIter {
             it: unsafe { slice::from_raw_parts(self.contents, self.count).iter() },
-            context: &self.context
+            context: &self.context,
         }
     }
 }
-
 
 impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> IntoIterator for &'a Array<P> {
     type Item = P::Wrapped;
@@ -201,32 +226,40 @@ impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> IntoIterator for &'a Array<P> {
     }
 }
 
-
 impl<P: CoreOwnedArrayProvider> Drop for Array<P> {
     fn drop(&mut self) {
-        unsafe { P::free(self.contents, self.count, &self.context); }
+        unsafe {
+            P::free(self.contents, self.count, &self.context);
+        }
     }
 }
 
 pub struct ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>
+    P: 'a + CoreOwnedArrayWrapper<'a>,
 {
     it: slice::Iter<'a, P::Raw>,
     context: &'a P::Context,
 }
 
-unsafe impl<'a, P> Send for ArrayIter<'a, P> where P: CoreOwnedArrayWrapper<'a>, P::Context: Sync {}
+unsafe impl<'a, P> Send for ArrayIter<'a, P>
+where
+    P: CoreOwnedArrayWrapper<'a>,
+    P::Context: Sync,
+{
+}
 
 impl<'a, P> Iterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>
+    P: 'a + CoreOwnedArrayWrapper<'a>,
 {
     type Item = P::Wrapped;
 
     #[inline]
     fn next(&mut self) -> Option<P::Wrapped> {
-        self.it.next().map(|r| unsafe { P::wrap_raw(r, &self.context) })
+        self.it
+            .next()
+            .map(|r| unsafe { P::wrap_raw(r, &self.context) })
     }
 
     #[inline]
@@ -237,7 +270,7 @@ where
 
 impl<'a, P> ExactSizeIterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>
+    P: 'a + CoreOwnedArrayWrapper<'a>,
 {
     #[inline]
     fn len(&self) -> usize {
@@ -247,11 +280,13 @@ where
 
 impl<'a, P> DoubleEndedIterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>
+    P: 'a + CoreOwnedArrayWrapper<'a>,
 {
     #[inline]
     fn next_back(&mut self) -> Option<P::Wrapped> {
-        self.it.next_back().map(|r| unsafe { P::wrap_raw(r, &self.context) })
+        self.it
+            .next_back()
+            .map(|r| unsafe { P::wrap_raw(r, &self.context) })
     }
 }
 
@@ -269,9 +304,7 @@ where
     P::Wrapped: Send,
 {
     pub fn par_iter(&'a self) -> ParArrayIter<'a, P> {
-        ParArrayIter {
-            it: self.iter(),
-        }
+        ParArrayIter { it: self.iter() }
     }
 }
 #[cfg(feature = "rayon")]
@@ -294,7 +327,7 @@ where
 
     fn drive_unindexed<C>(self, consumer: C) -> C::Result
     where
-        C: UnindexedConsumer<Self::Item>
+        C: UnindexedConsumer<Self::Item>,
     {
         bridge(self, consumer)
     }
@@ -313,7 +346,7 @@ where
 {
     fn drive<C>(self, consumer: C) -> C::Result
     where
-        C: Consumer<Self::Item>
+        C: Consumer<Self::Item>,
     {
         bridge(self, consumer)
     }
@@ -324,7 +357,7 @@ where
 
     fn with_producer<CB>(self, callback: CB) -> CB::Output
     where
-        CB: ProducerCallback<Self::Item>
+        CB: ProducerCallback<Self::Item>,
     {
         callback.callback(ArrayIterProducer { it: self.it })
     }
@@ -355,7 +388,19 @@ where
     fn split_at(self, index: usize) -> (Self, Self) {
         let (l, r) = self.it.it.as_slice().split_at(index);
 
-        (Self { it: ArrayIter { it: l.iter(), context: self.it.context } },
-         Self { it: ArrayIter { it: r.iter(), context: self.it.context } })
+        (
+            Self {
+                it: ArrayIter {
+                    it: l.iter(),
+                    context: self.it.context,
+                },
+            },
+            Self {
+                it: ArrayIter {
+                    it: r.iter(),
+                    context: self.it.context,
+                },
+            },
+        )
     }
 }

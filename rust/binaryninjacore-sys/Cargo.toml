@@ -1,8 +1,11 @@
 [package]
 name = "binaryninjacore-sys"
 version = "0.1.0"
-authors = ["Ryan Snyder <ryan.snyder.or@gmail.com>"]
+authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
 
 [build-dependencies]
-bindgen = "0.49"
+bindgen = "0.55"
+
+[features]
+headless = []

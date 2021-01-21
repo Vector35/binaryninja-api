@@ -1,8 +1,22 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt;
 
-use binaryninjacore_sys::*;
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
+use binaryninjacore_sys::*;
 
 use crate::rc::*;
 
@@ -38,7 +52,11 @@ impl<'a, C: 'a + BlockContext> Edge<'a, C> {
 
 impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?} ({}) {:?} -> {:?}", self.branch, self.back_edge, &*self.source, &*self.target)
+        write!(
+            f,
+            "{:?} ({}) {:?} -> {:?}",
+            self.branch, self.back_edge, &*self.source, &*self.target
+        )
     }
 }
 
@@ -60,8 +78,17 @@ unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for Edge<'a, C> 
     type Wrapped = Edge<'a, C>;
 
     unsafe fn wrap_raw(raw: &'a BNBasicBlockEdge, context: &'a Self::Context) -> Edge<'a, C> {
-        let edge_target = Guard::new(BasicBlock::from_raw(raw.target, context.orig_block.context.clone()), raw);
-        let orig_block = Guard::new(BasicBlock::from_raw(context.orig_block.handle, context.orig_block.context.clone()), raw);
+        let edge_target = Guard::new(
+            BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
+            raw,
+        );
+        let orig_block = Guard::new(
+            BasicBlock::from_raw(
+                context.orig_block.handle,
+                context.orig_block.context.clone(),
+            ),
+            raw,
+        );
 
         let (source, target) = match context.dir {
             EdgeDirection::Incoming => (edge_target, orig_block),
@@ -79,7 +106,7 @@ unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for Edge<'a, C> 
 
 pub trait BlockContext: Clone + Sync + Send + Sized {
     type Instruction;
-    type Iter: Iterator<Item=Self::Instruction>;
+    type Iter: Iterator<Item = Self::Instruction>;
 
     fn start(&self, block: &BasicBlock<Self>) -> Self::Instruction;
     fn iter(&self, block: &BasicBlock<Self>) -> Self::Iter;
@@ -135,10 +162,14 @@ impl<C: BlockContext> BasicBlock<C> {
             let mut count = 0;
             let edges = BNGetBasicBlockIncomingEdges(self.handle, &mut count);
 
-            Array::new(edges, count, EdgeContext {
-                dir: EdgeDirection::Incoming,
-                orig_block: self,
-            })
+            Array::new(
+                edges,
+                count,
+                EdgeContext {
+                    dir: EdgeDirection::Incoming,
+                    orig_block: self,
+                },
+            )
         }
     }
 
@@ -147,10 +178,14 @@ impl<C: BlockContext> BasicBlock<C> {
             let mut count = 0;
             let edges = BNGetBasicBlockOutgoingEdges(self.handle, &mut count);
 
-            Array::new(edges, count, EdgeContext {
-                dir: EdgeDirection::Outgoing,
-                orig_block: self,
-            })
+            Array::new(
+                edges,
+                count,
+                EdgeContext {
+                    dir: EdgeDirection::Outgoing,
+                    orig_block: self,
+                },
+            )
         }
     }
 
@@ -216,7 +251,6 @@ impl<C: BlockContext> BasicBlock<C> {
     }
 
     // TODO iterated dominance frontier
-
 }
 
 impl<'a, C: BlockContext> IntoIterator for &'a BasicBlock<C> {
@@ -230,7 +264,14 @@ impl<'a, C: BlockContext> IntoIterator for &'a BasicBlock<C> {
 
 impl<C: fmt::Debug + BlockContext> fmt::Debug for BasicBlock<C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<bb handle {:p} context {:?} contents: {} -> {}>", self.handle, &self.context, self.raw_start(), self.raw_end())
+        write!(
+            f,
+            "<bb handle {:p} context {:?} contents: {} -> {}>",
+            self.handle,
+            &self.context,
+            self.raw_start(),
+            self.raw_end()
+        )
     }
 }
 
@@ -271,4 +312,3 @@ unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for BasicBlock<C
         Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
     }
 }
-

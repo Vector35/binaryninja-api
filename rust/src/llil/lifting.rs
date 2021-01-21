@@ -1,23 +1,43 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::marker::PhantomData;
 use std::mem;
 
-use crate::architecture::Register as ArchReg;
-use crate::architecture::{FlagWrite, Flag, FlagClass, FlagGroup, FlagRole, FlagCondition};
 use crate::architecture::Architecture;
-
+use crate::architecture::Register as ArchReg;
+use crate::architecture::{Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite};
 
 use super::*;
 
 pub trait Liftable<'func, A: 'func + Architecture> {
     type Result: ExpressionResultType;
 
-    fn lift(il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self)
-        -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>;
+    fn lift(
+        il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+    ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>;
 }
 
-pub trait LiftableWithSize<'func, A: 'func + Architecture>: Liftable<'func, A, Result=ValueExpr> {
-    fn lift_with_size(il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self, size: usize)
-        -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
+pub trait LiftableWithSize<'func, A: 'func + Architecture>:
+    Liftable<'func, A, Result = ValueExpr>
+{
+    fn lift_with_size(
+        il: &'func Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+        size: usize,
+    ) -> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>;
 }
 
 use binaryninjacore_sys::BNRegisterOrConstant;
@@ -40,7 +60,7 @@ impl<R: ArchReg> RegisterOrConstant<R> {
                 constant: true,
                 reg: 0,
                 value: value,
-            }
+            },
         }
     }
 }
@@ -90,30 +110,57 @@ pub enum FlagWriteOp<R: ArchReg> {
     TestBit(usize, RegisterOrConstant<R>, RegisterOrConstant<R>),
     AddOverflow(usize, RegisterOrConstant<R>, RegisterOrConstant<R>),
 
-    Adc(usize, RegisterOrConstant<R>, RegisterOrConstant<R>, RegisterOrConstant<R>),
-    Sbb(usize, RegisterOrConstant<R>, RegisterOrConstant<R>, RegisterOrConstant<R>),
-    Rlc(usize, RegisterOrConstant<R>, RegisterOrConstant<R>, RegisterOrConstant<R>),
-    Rrc(usize, RegisterOrConstant<R>, RegisterOrConstant<R>, RegisterOrConstant<R>),
+    Adc(
+        usize,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+    ),
+    Sbb(
+        usize,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+    ),
+    Rlc(
+        usize,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+    ),
+    Rrc(
+        usize,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+        RegisterOrConstant<R>,
+    ),
 
     Pop(usize),
-
     // TODO: floating point stuff, llil comparison ops that set flags, intrinsics
 }
 
 impl<R: ArchReg> FlagWriteOp<R> {
-    pub(crate) fn from_op<A>(arch: &A, size: usize, op: BNLowLevelILOperation, operands: &[BNRegisterOrConstant])
-        -> Option<Self>
+    pub(crate) fn from_op<A>(
+        arch: &A,
+        size: usize,
+        op: BNLowLevelILOperation,
+        operands: &[BNRegisterOrConstant],
+    ) -> Option<Self>
     where
-        A: Architecture<Register=R>,
-        R: ArchReg<InfoType=A::RegisterInfo>,
+        A: Architecture<Register = R>,
+        R: ArchReg<InfoType = A::RegisterInfo>,
     {
-        use binaryninjacore_sys::BNLowLevelILOperation::*;
         use self::FlagWriteOp::*;
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
 
-        fn build_op<A, R>(arch: &A, size: usize, operand: &BNRegisterOrConstant) -> RegisterOrConstant<R>
+        fn build_op<A, R>(
+            arch: &A,
+            size: usize,
+            operand: &BNRegisterOrConstant,
+        ) -> RegisterOrConstant<R>
         where
-            A: Architecture<Register=R>,
-            R: ArchReg<InfoType=A::RegisterInfo>,
+            A: Architecture<Register = R>,
+            R: ArchReg<InfoType = A::RegisterInfo>,
         {
             if operand.constant {
                 RegisterOrConstant::Constant(size, operand.value)
@@ -182,15 +229,15 @@ impl<R: ArchReg> FlagWriteOp<R> {
             (3, LLIL_RLC) => op!(Rlc, 0, 1, 2),
             (3, LLIL_RRC) => op!(Rrc, 0, 1, 2),
 
-            (0, LLIL_POP) => op!(Pop, ),
+            (0, LLIL_POP) => op!(Pop,),
 
             _ => return None,
         })
     }
 
     pub(crate) fn size_and_op(&self) -> (usize, BNLowLevelILOperation) {
-        use binaryninjacore_sys::BNLowLevelILOperation::*;
         use self::FlagWriteOp::*;
+        use binaryninjacore_sys::BNLowLevelILOperation::*;
 
         match *self {
             SetReg(size, ..) => (size, LLIL_SET_REG),
@@ -252,54 +299,54 @@ impl<R: ArchReg> FlagWriteOp<R> {
         let count = match *self {
             Pop(_) => 0,
 
-            SetReg(_, op0) |
-            Load(_, op0) |
-            Push(_, op0) |
-            Neg(_, op0) |
-            Not(_, op0) |
-            Sx(_, op0) |
-            Zx(_, op0) |
-            LowPart(_, op0) |
-            BoolToInt(_, op0) |
-            FloatToInt(_, op0) => {
+            SetReg(_, op0)
+            | Load(_, op0)
+            | Push(_, op0)
+            | Neg(_, op0)
+            | Not(_, op0)
+            | Sx(_, op0)
+            | Zx(_, op0)
+            | LowPart(_, op0)
+            | BoolToInt(_, op0)
+            | FloatToInt(_, op0) => {
                 operands[0] = op0.into_api();
                 1
             }
 
-            SetRegSplit(_, op0, op1) |
-            Sub(_, op0, op1) |
-            Add(_, op0, op1) |
-            Store(_, op0, op1) |
-            And(_, op0, op1) |
-            Or(_, op0, op1) |
-            Xor(_, op0, op1) |
-            Lsl(_, op0, op1) |
-            Lsr(_, op0, op1) |
-            Asr(_, op0, op1) |
-            Rol(_, op0, op1) |
-            Ror(_, op0, op1) |
-            Mul(_, op0, op1) |
-            MuluDp(_, op0, op1) |
-            MulsDp(_, op0, op1) |
-            Divu(_, op0, op1) |
-            Divs(_, op0, op1) |
-            Modu(_, op0, op1) |
-            Mods(_, op0, op1) |
-            DivuDp(_, op0, op1) |
-            DivsDp(_, op0, op1) |
-            ModuDp(_, op0, op1) |
-            ModsDp(_, op0, op1) |
-            TestBit(_, op0, op1) |
-            AddOverflow(_, op0, op1) => {
+            SetRegSplit(_, op0, op1)
+            | Sub(_, op0, op1)
+            | Add(_, op0, op1)
+            | Store(_, op0, op1)
+            | And(_, op0, op1)
+            | Or(_, op0, op1)
+            | Xor(_, op0, op1)
+            | Lsl(_, op0, op1)
+            | Lsr(_, op0, op1)
+            | Asr(_, op0, op1)
+            | Rol(_, op0, op1)
+            | Ror(_, op0, op1)
+            | Mul(_, op0, op1)
+            | MuluDp(_, op0, op1)
+            | MulsDp(_, op0, op1)
+            | Divu(_, op0, op1)
+            | Divs(_, op0, op1)
+            | Modu(_, op0, op1)
+            | Mods(_, op0, op1)
+            | DivuDp(_, op0, op1)
+            | DivsDp(_, op0, op1)
+            | ModuDp(_, op0, op1)
+            | ModsDp(_, op0, op1)
+            | TestBit(_, op0, op1)
+            | AddOverflow(_, op0, op1) => {
                 operands[0] = op0.into_api();
                 operands[1] = op1.into_api();
                 2
             }
 
-            Adc(_, op0, op1, op2) |
-            Sbb(_, op0, op1, op2) |
-            Rlc(_, op0, op1, op2) |
-            Rrc(_, op0, op1, op2) => {
+            Adc(_, op0, op1, op2)
+            | Sbb(_, op0, op1, op2)
+            | Rlc(_, op0, op1, op2)
+            | Rrc(_, op0, op1, op2) => {
                 operands[0] = op0.into_api();
                 operands[1] = op1.into_api();
                 operands[2] = op2.into_api();
@@ -311,19 +358,29 @@ impl<R: ArchReg> FlagWriteOp<R> {
     }
 }
 
-
-pub fn get_default_flag_write_llil<'func, A>(arch: &A, role: FlagRole, op: FlagWriteOp<A::Register>, il: &'func Lifter<A>)
-    -> LiftedExpr<'func, A>
+pub fn get_default_flag_write_llil<'func, A>(
+    arch: &A,
+    role: FlagRole,
+    op: FlagWriteOp<A::Register>,
+    il: &'func Lifter<A>,
+) -> LiftedExpr<'func, A>
 where
-    A: 'func + Architecture
+    A: 'func + Architecture,
 {
     let (size, operation) = op.size_and_op();
     let (count, operands) = op.api_operands();
 
     let expr_idx = unsafe {
         use binaryninjacore_sys::BNGetDefaultArchitectureFlagWriteLowLevelIL;
-        BNGetDefaultArchitectureFlagWriteLowLevelIL(arch.as_ref().0, operation, size, role,
-                                                    operands.as_ptr() as *mut _, count, il.handle)
+        BNGetDefaultArchitectureFlagWriteLowLevelIL(
+            arch.as_ref().0,
+            operation,
+            size,
+            role,
+            operands.as_ptr() as *mut _,
+            count,
+            il.handle,
+        )
     };
 
     Expression {
@@ -333,10 +390,14 @@ where
     }
 }
 
-pub fn get_default_flag_cond_llil<'func, A>(arch: &A, cond: FlagCondition, class: Option<A::FlagClass>, il: &'func Lifter<A>)
-    -> LiftedExpr<'func, A>
+pub fn get_default_flag_cond_llil<'func, A>(
+    arch: &A,
+    cond: FlagCondition,
+    class: Option<A::FlagClass>,
+    il: &'func Lifter<A>,
+) -> LiftedExpr<'func, A>
 where
-    A: 'func + Architecture
+    A: 'func + Architecture,
 {
     use binaryninjacore_sys::BNGetDefaultArchitectureFlagConditionLowLevelIL;
 
@@ -344,7 +405,8 @@ where
     let class_id = class.map(|c| c.id()).unwrap_or(0);
 
     unsafe {
-        let expr_idx = BNGetDefaultArchitectureFlagConditionLowLevelIL(handle.0, cond, class_id, il.handle);
+        let expr_idx =
+            BNGetDefaultArchitectureFlagConditionLowLevelIL(handle.0, cond, class_id, il.handle);
 
         Expression {
             function: il,
@@ -402,13 +464,15 @@ prim_int_lifter!(u32);
 prim_int_lifter!(u64);
 
 impl<'a, R: ArchReg, A: 'a + Architecture> Liftable<'a, A> for Register<R>
-    where R: Liftable<'a, A, Result=ValueExpr> + Into<Register<R>>
+where
+    R: Liftable<'a, A, Result = ValueExpr> + Into<Register<R>>,
 {
     type Result = ValueExpr;
 
-    fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, reg: Self)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
-    {
+    fn lift(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        reg: Self,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         match reg {
             Register::ArchReg(r) => R::lift(il, r),
             Register::Temp(t) => il.reg(il.arch().default_integer_size(), Register::Temp(t)),
@@ -417,11 +481,14 @@ impl<'a, R: ArchReg, A: 'a + Architecture> Liftable<'a, A> for Register<R>
 }
 
 impl<'a, R: ArchReg, A: 'a + Architecture> LiftableWithSize<'a, A> for Register<R>
-    where R: LiftableWithSize<'a, A> + Into<Register<R>>
+where
+    R: LiftableWithSize<'a, A> + Into<Register<R>>,
 {
-    fn lift_with_size(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, reg: Self, size: usize)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    fn lift_with_size(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        reg: Self,
+        size: usize,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         match reg {
             Register::ArchReg(r) => R::lift_with_size(il, r, size),
             Register::Temp(t) => il.reg(size, Register::Temp(t)),
@@ -429,15 +496,16 @@ impl<'a, R: ArchReg, A: 'a + Architecture> LiftableWithSize<'a, A> for Register<
     }
 }
 
-
 impl<'a, R: ArchReg, A: 'a + Architecture> Liftable<'a, A> for RegisterOrConstant<R>
-    where R: LiftableWithSize<'a, A, Result=ValueExpr> + Into<Register<R>>
+where
+    R: LiftableWithSize<'a, A, Result = ValueExpr> + Into<Register<R>>,
 {
     type Result = ValueExpr;
 
-    fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, reg: Self)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
-    {
+    fn lift(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        reg: Self,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         match reg {
             RegisterOrConstant::Register(size, r) => Register::<R>::lift_with_size(il, r, size),
             RegisterOrConstant::Constant(size, value) => u64::lift_with_size(il, value, size),
@@ -446,11 +514,14 @@ impl<'a, R: ArchReg, A: 'a + Architecture> Liftable<'a, A> for RegisterOrConstan
 }
 
 impl<'a, R: ArchReg, A: 'a + Architecture> LiftableWithSize<'a, A> for RegisterOrConstant<R>
-    where R: LiftableWithSize<'a, A> + Into<Register<R>>
+where
+    R: LiftableWithSize<'a, A> + Into<Register<R>>,
 {
-    fn lift_with_size(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, reg: Self, size: usize)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    fn lift_with_size(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        reg: Self,
+        size: usize,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         // TODO ensure requested size is compatible with size of this constant
         match reg {
             RegisterOrConstant::Register(_, r) => Register::<R>::lift_with_size(il, r, size),
@@ -459,7 +530,6 @@ impl<'a, R: ArchReg, A: 'a + Architecture> LiftableWithSize<'a, A> for RegisterO
     }
 }
 
-
 impl<'a, A, R> Liftable<'a, A> for Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>
 where
     A: 'a + Architecture,
@@ -467,24 +537,33 @@ where
 {
     type Result = R;
 
-    fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
-    {
+    fn lift(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
         expr
     }
 }
 
-impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A> for Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
-    fn lift_with_size(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self, _size: usize)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
-    {
+impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A>
+    for Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
+{
+    fn lift_with_size(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+        _size: usize,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         #[cfg(debug_assertions)]
         {
             if let Some(expr_size) = expr.info().size() {
                 if expr_size != _size {
-                    warn!("il @ {:x} attempted to lift {} byte expression as {} bytes",
-                          il.current_address(), expr_size, _size);
+                    warn!(
+                        "il @ {:x} attempted to lift {} byte expression as {} bytes",
+                        il.current_address(),
+                        expr_size,
+                        _size
+                    );
                 }
             }
         }
@@ -492,7 +571,6 @@ impl<'a, A: 'a + Architecture> LiftableWithSize<'a, A> for Expression<'a, A, Mut
         Liftable::lift(il, expr)
     }
 }
-
 
 impl<'func, A, R> Expression<'func, A, Mutable, NonSSA<LiftedNonSSA>, R>
 where
@@ -502,9 +580,7 @@ where
     pub fn with_source_operand(self, op: u32) -> Self {
         use binaryninjacore_sys::BNLowLevelILSetExprSourceOperand;
 
-        unsafe {
-            BNLowLevelILSetExprSourceOperand(self.function.handle, self.expr_idx, op)
-        }
+        unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.expr_idx, op) }
 
         self
     }
@@ -514,7 +590,6 @@ where
         il.instruction(self);
     }
 }
-
 
 use binaryninjacore_sys::BNLowLevelILOperation;
 pub struct ExpressionBuilder<'func, A, R>
@@ -548,7 +623,10 @@ where
         self.into()
     }
 
-    pub fn with_source_operand(self, op: u32) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn with_source_operand(
+        self,
+        op: u32,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
         let expr = self.into_expr();
         expr.with_source_operand(op)
     }
@@ -561,7 +639,8 @@ where
     }
 }
 
-impl<'a, A, R> Into<Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>> for ExpressionBuilder<'a, A, R>
+impl<'a, A, R> Into<Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>>
+    for ExpressionBuilder<'a, A, R>
 where
     A: 'a + Architecture,
     R: ExpressionResultType,
@@ -570,9 +649,16 @@ where
         use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.function.handle,
-                                 self.op, self.size, self.flags,
-                                 self.op1, self.op2, self.op3, self.op4)
+            BNLowLevelILAddExpr(
+                self.function.handle,
+                self.op,
+                self.size,
+                self.flags,
+                self.op1,
+                self.op2,
+                self.op3,
+                self.op4,
+            )
         };
 
         Expression {
@@ -590,9 +676,10 @@ where
 {
     type Result = R;
 
-    fn lift(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result>
-    {
+    fn lift(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
 
         expr.into()
@@ -603,34 +690,36 @@ impl<'a, A> LiftableWithSize<'a, A> for ExpressionBuilder<'a, A, ValueExpr>
 where
     A: 'a + Architecture,
 {
-    fn lift_with_size(il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>, expr: Self, _size: usize)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    fn lift_with_size(
+        il: &'a Function<A, Mutable, NonSSA<LiftedNonSSA>>,
+        expr: Self,
+        _size: usize,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_UNIMPL, LLIL_UNIMPL_MEM};
 
             if expr.size != _size && ![LLIL_UNIMPL, LLIL_UNIMPL_MEM].contains(&expr.op) {
-                warn!("il @ {:x} attempted to lift {} byte expression builder as {} bytes",
-                      il.current_address(), expr.size, _size);
+                warn!(
+                    "il @ {:x} attempted to lift {} byte expression builder as {} bytes",
+                    il.current_address(),
+                    expr.size,
+                    _size
+                );
             }
         }
 
         Liftable::lift(il, expr)
     }
 }
-    
 
 macro_rules! no_arg_lifter {
     ($name:ident, $op:ident, $result:ty) => {
         pub fn $name(&self) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, $result> {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
             use binaryninjacore_sys::BNLowLevelILAddExpr;
+            use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
-            let expr_idx = unsafe {
-                 BNLowLevelILAddExpr(self.handle, $op,
-                                     0, 0, 0, 0, 0, 0)
-            };
+            let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, $op, 0, 0, 0, 0, 0, 0) };
 
             Expression {
                 function: self,
@@ -638,13 +727,12 @@ macro_rules! no_arg_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! sized_no_arg_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self, size: usize) -> ExpressionBuilder<A, $result>
-        {
+        pub fn $name(&self, size: usize) -> ExpressionBuilder<A, $result> {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
             ExpressionBuilder {
@@ -659,24 +747,25 @@ macro_rules! sized_no_arg_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! unsized_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, expr: E) 
-            -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, $result> 
+        pub fn $name<'a, E>(
+            &'a self,
+            expr: E,
+        ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, $result>
         where
-            E: Liftable<'a, A, Result=ValueExpr>
+            E: Liftable<'a, A, Result = ValueExpr>,
         {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
             use binaryninjacore_sys::BNLowLevelILAddExpr;
+            use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
             let expr = E::lift(self, expr);
 
             let expr_idx = unsafe {
-                 BNLowLevelILAddExpr(self.handle, $op, 0, 0,
-                                     expr.expr_idx as u64, 0, 0, 0)
+                BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.expr_idx as u64, 0, 0, 0)
             };
 
             Expression {
@@ -685,15 +774,14 @@ macro_rules! unsized_unary_op_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! sized_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) 
-            -> ExpressionBuilder<'a, A, $result>
+        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, A, $result>
         where
-            E: LiftableWithSize<'a, A>
+            E: LiftableWithSize<'a, A>,
         {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
@@ -711,15 +799,14 @@ macro_rules! sized_unary_op_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! size_changing_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) 
-            -> ExpressionBuilder<'a, A, $result>
+        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, A, $result>
         where
-            E: LiftableWithSize<'a, A>
+            E: LiftableWithSize<'a, A>,
         {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
@@ -737,16 +824,20 @@ macro_rules! size_changing_unary_op_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! binary_op_lifter {
     ($name:ident, $op:ident) => {
-        pub fn $name<'a, L, R>(&'a self, size: usize, left: L, right: R) 
-            -> ExpressionBuilder<'a, A, ValueExpr>
+        pub fn $name<'a, L, R>(
+            &'a self,
+            size: usize,
+            left: L,
+            right: R,
+        ) -> ExpressionBuilder<'a, A, ValueExpr>
         where
             L: LiftableWithSize<'a, A>,
-            R: LiftableWithSize<'a, A>
+            R: LiftableWithSize<'a, A>,
         {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
@@ -765,13 +856,18 @@ macro_rules! binary_op_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 macro_rules! binary_op_carry_lifter {
     ($name:ident, $op:ident) => {
-        pub fn $name<'a, L, R, C>(&'a self, size: usize, left: L, right: R, carry: C) 
-            -> ExpressionBuilder<'a, A, ValueExpr>
+        pub fn $name<'a, L, R, C>(
+            &'a self,
+            size: usize,
+            left: L,
+            right: R,
+            carry: C,
+        ) -> ExpressionBuilder<'a, A, ValueExpr>
         where
             L: LiftableWithSize<'a, A>,
             R: LiftableWithSize<'a, A>,
@@ -795,21 +891,21 @@ macro_rules! binary_op_carry_lifter {
                 _ty: PhantomData,
             }
         }
-    }
+    };
 }
 
 impl<A> Function<A, Mutable, NonSSA<LiftedNonSSA>>
 where
     A: Architecture,
 {
-    pub fn expression<'a, E: Liftable<'a, A>>(&'a self, expr: E) 
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, E::Result>
-    {
+    pub fn expression<'a, E: Liftable<'a, A>>(
+        &'a self,
+        expr: E,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, E::Result> {
         E::lift(self, expr)
     }
 
-    pub fn instruction<'a, E: Liftable<'a, A>>(&'a self, expr: E)
-    {
+    pub fn instruction<'a, E: Liftable<'a, A>>(&'a self, expr: E) {
         let expr = self.expression(expr);
 
         unsafe {
@@ -818,35 +914,35 @@ where
         }
     }
 
-
     pub unsafe fn replace_expression<'a, E: Liftable<'a, A>>(
         &'a self,
         replaced_expr_index: usize,
-        replacement: E)
-    {
-        unsafe {
-            use binaryninjacore_sys::BNReplaceLowLevelILExpr;
-            use binaryninjacore_sys::BNGetLowLevelILExprCount;
+        replacement: E,
+    ) {
+        use binaryninjacore_sys::BNGetLowLevelILExprCount;
+        use binaryninjacore_sys::BNReplaceLowLevelILExpr;
 
-            if replaced_expr_index >= BNGetLowLevelILExprCount(self.handle) {
-                panic!("bad expr idx used: {} exceeds function bounds", replaced_expr_index);
-            }
-
-            let expr = self.expression(replacement);
-            BNReplaceLowLevelILExpr(self.handle, replaced_expr_index, expr.expr_idx);
+        if replaced_expr_index >= BNGetLowLevelILExprCount(self.handle) {
+            panic!(
+                "bad expr idx used: {} exceeds function bounds",
+                replaced_expr_index
+            );
         }
+
+        let expr = self.expression(replacement);
+        BNReplaceLowLevelILExpr(self.handle, replaced_expr_index, expr.expr_idx);
     }
 
-    pub fn const_int(&self, size: usize, val: u64)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn const_int(
+        &self,
+        size: usize,
+        val: u64,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST;
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
 
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_CONST, size, 0,
-                                 val, 0, 0, 0)
-        };
+        let expr_idx =
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST, size, 0, val, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -855,16 +951,16 @@ where
         }
     }
 
-    pub fn const_ptr_sized(&self, size: usize, val: u64)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn const_ptr_sized(
+        &self,
+        size: usize,
+        val: u64,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST_PTR;
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
 
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_CONST_PTR, size, 0,
-                                 val, 0, 0, 0)
-        };
+        let expr_idx =
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST_PTR, size, 0, val, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -873,22 +969,15 @@ where
         }
     }
 
-    pub fn const_ptr(&self, val: u64)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn const_ptr(&self, val: u64) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         self.const_ptr_sized(self.arch().address_size(), val)
     }
 
-    pub fn trap(&self, val: u64)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
-    {
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TRAP;
+    pub fn trap(&self, val: u64) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TRAP;
 
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_TRAP, 0, 0,
-                                 val, 0, 0, 0)
-        };
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_TRAP, 0, 0, val, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -910,19 +999,26 @@ where
     unsized_unary_op_lifter!(jump, LLIL_JUMP, VoidExpr);
     // JumpTo TODO
 
-    pub fn if_expr<'a: 'b, 'b, C>(&'a self, cond: C, t: &'b Label, f: &'b Label)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
-        where
-            C: Liftable<'b, A, Result=ValueExpr>,
+    pub fn if_expr<'a: 'b, 'b, C>(
+        &'a self,
+        cond: C,
+        t: &'b Label,
+        f: &'b Label,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
+    where
+        C: Liftable<'b, A, Result = ValueExpr>,
     {
         use binaryninjacore_sys::BNLowLevelILIf;
 
         let cond = C::lift(self, cond);
 
         let expr_idx = unsafe {
-            BNLowLevelILIf(self.handle, cond.expr_idx as u64,
-                           &t.0 as *const _ as *mut _,
-                           &f.0 as *const _ as *mut _)
+            BNLowLevelILIf(
+                self.handle,
+                cond.expr_idx as u64,
+                &t.0 as *const _ as *mut _,
+                &f.0 as *const _ as *mut _,
+            )
         };
 
         Expression {
@@ -932,14 +1028,13 @@ where
         }
     }
 
-    pub fn goto<'a: 'b, 'b>(&'a self, l: &'b Label)
-        -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
-    {
+    pub fn goto<'a: 'b, 'b>(
+        &'a self,
+        l: &'b Label,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
-        let expr_idx = unsafe {
-            BNLowLevelILGoto(self.handle, &l.0 as *const _ as *mut _)
-        };
+        let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &l.0 as *const _ as *mut _) };
 
         Expression {
             function: self,
@@ -948,11 +1043,13 @@ where
         }
     }
 
-    pub fn reg<R: Into<Register<A::Register>>>(&self, size: usize, reg: R)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG;
+    pub fn reg<R: Into<Register<A::Register>>>(
+        &self,
+        size: usize,
+        reg: R,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG;
 
         // TODO verify valid id
         let reg = match reg.into() {
@@ -960,10 +1057,8 @@ where
             Register::Temp(r) => 0x8000_0000 | r,
         };
 
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0,
-                                 reg as u64, 0, 0, 0)
-        };
+        let expr_idx =
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg as u64, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -972,11 +1067,15 @@ where
         }
     }
 
-    pub fn set_reg<'a, R, E>(&'a self, size: usize, dest_reg: R, expr: E) 
-        -> ExpressionBuilder<'a, A, VoidExpr>
+    pub fn set_reg<'a, R, E>(
+        &'a self,
+        size: usize,
+        dest_reg: R,
+        expr: E,
+    ) -> ExpressionBuilder<'a, A, VoidExpr>
     where
         R: Into<Register<A::Register>>,
-        E: LiftableWithSize<'a, A>
+        E: LiftableWithSize<'a, A>,
     {
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SET_REG;
 
@@ -1001,12 +1100,17 @@ where
         }
     }
 
-    pub fn set_reg_split<'a, H, L, E>(&'a self, size: usize, hi_reg: H, lo_reg: L, expr: E) 
-        -> ExpressionBuilder<'a, A, VoidExpr>
+    pub fn set_reg_split<'a, H, L, E>(
+        &'a self,
+        size: usize,
+        hi_reg: H,
+        lo_reg: L,
+        expr: E,
+    ) -> ExpressionBuilder<'a, A, VoidExpr>
     where
         H: Into<Register<A::Register>>,
         L: Into<Register<A::Register>>,
-        E: LiftableWithSize<'a, A>
+        E: LiftableWithSize<'a, A>,
     {
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SET_REG_SPLIT;
 
@@ -1037,17 +1141,13 @@ where
         }
     }
 
-    pub fn flag(&self, flag: A::Flag)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn flag(&self, flag: A::Flag) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG;
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         // TODO verify valid id
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0,
-                                 flag.id() as u64, 0, 0, 0)
-        };
+        let expr_idx =
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id() as u64, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -1056,17 +1156,16 @@ where
         }
     }
 
-    pub fn flag_cond(&self, cond: FlagCondition)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn flag_cond(
+        &self,
+        cond: FlagCondition,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_COND;
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         // TODO verify valid id
-        let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_FLAG_COND, 0, 0,
-                                 cond as u64, 0, 0, 0)
-        };
+        let expr_idx =
+            unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG_COND, 0, 0, cond as u64, 0, 0, 0) };
 
         Expression {
             function: self,
@@ -1075,16 +1174,25 @@ where
         }
     }
 
-    pub fn flag_group(&self, group: A::FlagGroup)
-        -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-    {
+    pub fn flag_group(
+        &self,
+        group: A::FlagGroup,
+    ) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_GROUP;
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         // TODO verify valid id
         let expr_idx = unsafe {
-             BNLowLevelILAddExpr(self.handle, LLIL_FLAG_GROUP, 0, 0,
-                                 group.id() as u64, 0, 0, 0)
+            BNLowLevelILAddExpr(
+                self.handle,
+                LLIL_FLAG_GROUP,
+                0,
+                0,
+                group.id() as u64,
+                0,
+                0,
+                0,
+            )
         };
 
         Expression {
@@ -1094,10 +1202,13 @@ where
         }
     }
 
-    pub fn set_flag<'a, E>(&'a self, dest_flag: A::Flag, expr: E) 
-        -> ExpressionBuilder<'a, A, VoidExpr>
+    pub fn set_flag<'a, E>(
+        &'a self,
+        dest_flag: A::Flag,
+        expr: E,
+    ) -> ExpressionBuilder<'a, A, VoidExpr>
     where
-        E: LiftableWithSize<'a, A>
+        E: LiftableWithSize<'a, A>,
     {
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SET_FLAG;
 
@@ -1123,10 +1234,9 @@ where
     FlagBit(usize, Flag<A>, u64),
     */
 
-    pub fn load<'a, E>(&'a self, size: usize, source_mem: E) 
-        -> ExpressionBuilder<'a, A, ValueExpr>
+    pub fn load<'a, E>(&'a self, size: usize, source_mem: E) -> ExpressionBuilder<'a, A, ValueExpr>
     where
-        E: Liftable<'a, A, Result=ValueExpr>
+        E: Liftable<'a, A, Result = ValueExpr>,
     {
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LOAD;
 
@@ -1145,11 +1255,15 @@ where
         }
     }
 
-    pub fn store<'a, D, V>(&'a self, size: usize, dest_mem: D, value: V) 
-        -> ExpressionBuilder<'a, A, VoidExpr>
+    pub fn store<'a, D, V>(
+        &'a self,
+        size: usize,
+        dest_mem: D,
+        value: V,
+    ) -> ExpressionBuilder<'a, A, VoidExpr>
     where
-        D: Liftable<'a, A, Result=ValueExpr>,
-        V: LiftableWithSize<'a, A>
+        D: Liftable<'a, A, Result = ValueExpr>,
+        V: LiftableWithSize<'a, A>,
     {
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_STORE;
 
@@ -1206,7 +1320,6 @@ where
     binary_op_carry_lifter!(adc, LLIL_ADC);
     binary_op_carry_lifter!(sbb, LLIL_SBB);
 
-
     /*
     DivsDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
     DivuDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
@@ -1233,9 +1346,7 @@ where
 
     pub fn current_address(&self) -> u64 {
         use binaryninjacore_sys::BNLowLevelILGetCurrentAddress;
-        unsafe {
-            BNLowLevelILGetCurrentAddress(self.handle)
-        }
+        unsafe { BNLowLevelILGetCurrentAddress(self.handle) }
     }
 
     pub fn set_current_address<L: Into<Location>>(&self, loc: L) {
@@ -1244,7 +1355,9 @@ where
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
-        unsafe { BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr); }
+        unsafe {
+            BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr);
+        }
     }
 
     pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<&Label> {
@@ -1253,9 +1366,7 @@ where
         let loc: Location = loc.into();
         let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
-        let res = unsafe {
-            BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr)
-        };
+        let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr) };
 
         if res.is_null() {
             None
@@ -1282,11 +1393,10 @@ impl Label {
         use binaryninjacore_sys::BNLowLevelILInitLabel;
 
         unsafe {
-            let mut res = Label(mem::uninitialized());
+            // This is one instance where it'd be easy to use mem::MaybeUninit, but *shrug* this is easier
+            let mut res = Label(mem::zeroed());
             BNLowLevelILInitLabel(&mut res.0 as *mut _);
             res
         }
     }
 }
-
-

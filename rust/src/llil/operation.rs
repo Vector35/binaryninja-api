@@ -1,3 +1,17 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use binaryninjacore_sys::BNLowLevelILInstruction;
 
 use std::marker::PhantomData;
@@ -46,15 +60,13 @@ where
     pub fn flag_write(&self) -> Option<A::FlagWrite> {
         match self.op.flags {
             0 => None,
-            id => self.function.arch().flag_write_from_id(id)
+            id => self.function.arch().flag_write_from_id(id),
         }
     }
 }
 
 // LLIL_NOP, LLIL_NORET, LLIL_BP, LLIL_UNDEF, LLIL_UNIMPL
 pub struct NoArgs;
-
-
 
 // LLIL_POP
 pub struct Pop;
@@ -70,14 +82,8 @@ where
     }
 }
 
-
-
-
 // LLIL_SYSCALL, LLIL_SYSCALL_SSA
 pub struct Syscall;
-
-
-
 
 // LLIL_SET_REG, LLIL_SET_REG_SSA, LLIL_SET_REG_PARTIAL_SSA
 pub struct SetReg;
@@ -98,14 +104,18 @@ where
         if raw_id >= 0x8000_0000 {
             Register::Temp(raw_id & 0x7fff_ffff)
         } else {
-            self.function.arch().register_from_id(raw_id)
-                              .map(Register::ArchReg)
-                              .unwrap_or_else(|| {
-                error!("got garbage register from LLIL_SET_REG @ 0x{:x}",
-                       self.op.address);
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_SET_REG @ 0x{:x}",
+                        self.op.address
+                    );
 
-                Register::Temp(0)
-            })
+                    Register::Temp(0)
+                })
         }
     }
 
@@ -117,7 +127,6 @@ where
         }
     }
 }
-
 
 // LLIL_SET_REG_SPLIT, LLIL_SET_REG_SPLIT_SSA
 pub struct SetRegSplit;
@@ -138,14 +147,18 @@ where
         if raw_id >= 0x8000_0000 {
             Register::Temp(raw_id & 0x7fff_ffff)
         } else {
-            self.function.arch().register_from_id(raw_id)
-                              .map(Register::ArchReg)
-                              .unwrap_or_else(|| {
-                error!("got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
-                       self.op.address);
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
+                        self.op.address
+                    );
 
-                Register::Temp(0)
-            })
+                    Register::Temp(0)
+                })
         }
     }
 
@@ -155,14 +168,18 @@ where
         if raw_id >= 0x8000_0000 {
             Register::Temp(raw_id & 0x7fff_ffff)
         } else {
-            self.function.arch().register_from_id(raw_id)
-                              .map(Register::ArchReg)
-                              .unwrap_or_else(|| {
-                error!("got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
-                       self.op.address);
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
+                        self.op.address
+                    );
 
-                Register::Temp(0)
-            })
+                    Register::Temp(0)
+                })
         }
     }
 
@@ -174,9 +191,6 @@ where
         }
     }
 }
-
-
-
 
 // LLIL_SET_FLAG, LLIL_SET_FLAG_SSA
 pub struct SetFlag;
@@ -195,7 +209,6 @@ where
         }
     }
 }
-
 
 // LLIL_LOAD, LLIL_LOAD_SSA
 pub struct Load;
@@ -218,8 +231,6 @@ where
         }
     }
 }
-
-
 
 // LLIL_STORE, LLIL_STORE_SSA
 pub struct Store;
@@ -251,8 +262,6 @@ where
     }
 }
 
-
-
 // LLIL_REG, LLIL_REG_SSA, LLIL_REG_SSA_PARTIAL
 pub struct Reg;
 
@@ -272,30 +281,27 @@ where
         if raw_id >= 0x8000_0000 {
             Register::Temp(raw_id & 0x7fff_ffff)
         } else {
-            self.function.arch().register_from_id(raw_id)
-                              .map(Register::ArchReg)
-                              .unwrap_or_else(|| {
-                error!("got garbage register from LLIL_REG @ 0x{:x}",
-                       self.op.address);
+            self.function
+                .arch()
+                .register_from_id(raw_id)
+                .map(Register::ArchReg)
+                .unwrap_or_else(|| {
+                    error!(
+                        "got garbage register from LLIL_REG @ 0x{:x}",
+                        self.op.address
+                    );
 
-                Register::Temp(0)
-            })
+                    Register::Temp(0)
+                })
         }
     }
 }
 
-
-
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
-
-
-
 // LLIL_FLAG_BIT, LLIL_FLAG_BIT_SSA
 pub struct FlagBit;
-
-
 
 // LLIL_JUMP
 pub struct Jump;
@@ -315,8 +321,6 @@ where
     }
 }
 
-
-
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
@@ -335,8 +339,6 @@ where
     }
     // TODO target list
 }
-
-
 
 // LLIL_CALL, LLIL_CALL_SSA
 pub struct Call;
@@ -366,8 +368,6 @@ where
     }
 }
 
-
-
 // LLIL_RET
 pub struct Ret;
 
@@ -385,8 +385,6 @@ where
         }
     }
 }
-
-
 
 // LLIL_IF
 pub struct If;
@@ -420,8 +418,6 @@ where
     }
 }
 
-
-
 // LLIL_GOTO
 pub struct Goto;
 
@@ -439,12 +435,8 @@ where
     }
 }
 
-
-
 // LLIL_FLAG_COND
 pub struct FlagCond;
-
-
 
 // LLIL_FLAG_GROUP
 pub struct FlagGroup;
@@ -460,8 +452,6 @@ where
     }
 }
 
-
-
 // LLIL_TRAP
 pub struct Trap;
 
@@ -476,22 +466,14 @@ where
     }
 }
 
-
-
 // LLIL_REG_PHI
 pub struct RegPhi;
-
-
 
 // LLIL_FLAG_PHI
 pub struct FlagPhi;
 
-
-
 // LLIL_MEM_PHI
 pub struct MemPhi;
-
-
 
 // LLIL_CONST, LLIL_CONST_PTR
 pub struct Const;
@@ -517,8 +499,10 @@ where
             };
 
             if !is_safe {
-                error!("il expr @ {:x} contains constant 0x{:x} as {} byte value (doesn't fit!)",
-                       self.op.address, self.op.operands[0], self.op.size);
+                error!(
+                    "il expr @ {:x} contains constant 0x{:x} as {} byte value (doesn't fit!)",
+                    self.op.address, self.op.operands[0], self.op.size
+                );
             }
         }
 
@@ -532,8 +516,6 @@ where
         self.op.operands[0] & mask
     }
 }
-
-
 
 // LLIL_ADD, LLIL_SUB, LLIL_AND, LLIL_OR
 // LLIL_XOR, LLIL_LSL, LLIL_LSR, LLIL_ASR
@@ -568,8 +550,6 @@ where
         }
     }
 }
-
-
 
 // LLIL_ADC, LLIL_SBB, LLIL_RLC, LLIL_RRC
 pub struct BinaryOpCarry;
@@ -609,8 +589,6 @@ where
     }
 }
 
-
-
 // LLIL_DIVS_DP, LLIL_DIVU_DP, LLIL_MODU_DP, LLIL_MODS_DP
 pub struct DoublePrecDivOp;
 
@@ -649,8 +627,6 @@ where
     }
 }
 
-
-
 // LLIL_PUSH, LLIL_NEG, LLIL_NOT, LLIL_SX,
 // LLIL_ZX, LLIL_LOW_PART, LLIL_BOOL_TO_INT, LLIL_UNIMPL_MEM
 pub struct UnaryOp;
@@ -673,8 +649,6 @@ where
         }
     }
 }
-
-
 
 // LLIL_CMP_X
 pub struct Condition;
@@ -705,7 +679,6 @@ where
         }
     }
 }
-
 
 // LLIL_UNIMPL_MEM
 pub struct UnimplMem;

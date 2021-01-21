@@ -1,9 +1,21 @@
-use binaryninjacore_sys::{BNRegisterPluginCommand,
-                          BNRegisterPluginCommandForAddress,
-                          BNRegisterPluginCommandForRange,
-                          BNRegisterPluginCommandForFunction,
-                          BNBinaryView,
-                          BNFunction};
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use binaryninjacore_sys::{
+    BNBinaryView, BNFunction, BNRegisterPluginCommand, BNRegisterPluginCommandForAddress,
+    BNRegisterPluginCommandForFunction, BNRegisterPluginCommandForRange,
+};
 
 use std::ops::Range;
 use std::os::raw::c_void;
@@ -68,9 +80,13 @@ where
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
-        BNRegisterPluginCommand(name_ptr, desc_ptr,
-                                Some(cb_action::<C>), Some(cb_valid::<C>),
-                                ctxt as *mut _);
+        BNRegisterPluginCommand(
+            name_ptr,
+            desc_ptr,
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
     }
 }
 
@@ -130,9 +146,13 @@ where
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
-        BNRegisterPluginCommandForAddress(name_ptr, desc_ptr,
-                                          Some(cb_action::<C>), Some(cb_valid::<C>),
-                                          ctxt as *mut _);
+        BNRegisterPluginCommandForAddress(
+            name_ptr,
+            desc_ptr,
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
     }
 }
 
@@ -167,11 +187,16 @@ where
             let cmd = &*(ctxt as *const C);
             let view = BinaryView::from_raw(view);
 
-            cmd.action(&view, addr .. addr.wrapping_add(len));
+            cmd.action(&view, addr..addr.wrapping_add(len));
         })
     }
 
-    extern "C" fn cb_valid<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64, len: u64) -> bool
+    extern "C" fn cb_valid<C>(
+        ctxt: *mut c_void,
+        view: *mut BNBinaryView,
+        addr: u64,
+        len: u64,
+    ) -> bool
     where
         C: RangeCommand,
     {
@@ -179,7 +204,7 @@ where
             let cmd = &*(ctxt as *const C);
             let view = BinaryView::from_raw(view);
 
-            cmd.valid(&view, addr .. addr.wrapping_add(len))
+            cmd.valid(&view, addr..addr.wrapping_add(len))
         })
     }
 
@@ -192,9 +217,13 @@ where
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
-        BNRegisterPluginCommandForRange(name_ptr, desc_ptr,
-                                        Some(cb_action::<C>), Some(cb_valid::<C>),
-                                        ctxt as *mut _);
+        BNRegisterPluginCommandForRange(
+            name_ptr,
+            desc_ptr,
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
     }
 }
 
@@ -234,7 +263,11 @@ where
         })
     }
 
-    extern "C" fn cb_valid<C>(ctxt: *mut c_void, view: *mut BNBinaryView, func: *mut BNFunction) -> bool
+    extern "C" fn cb_valid<C>(
+        ctxt: *mut c_void,
+        view: *mut BNBinaryView,
+        func: *mut BNFunction,
+    ) -> bool
     where
         C: FunctionCommand,
     {
@@ -256,8 +289,12 @@ where
     let ctxt = Box::into_raw(Box::new(command));
 
     unsafe {
-        BNRegisterPluginCommandForFunction(name_ptr, desc_ptr,
-                                           Some(cb_action::<C>), Some(cb_valid::<C>),
-                                           ctxt as *mut _);
+        BNRegisterPluginCommandForFunction(
+            name_ptr,
+            desc_ptr,
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
     }
 }

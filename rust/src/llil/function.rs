@@ -1,6 +1,20 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use binaryninjacore_sys::BNFreeLowLevelILFunction;
 use binaryninjacore_sys::BNLowLevelILFunction;
 use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
-use binaryninjacore_sys::BNFreeLowLevelILFunction;
 
 use std::borrow::Borrow;
 use std::marker::PhantomData;
@@ -19,7 +33,6 @@ pub trait FunctionMutability: 'static {}
 impl FunctionMutability for Mutable {}
 impl FunctionMutability for Finalized {}
 
-
 #[derive(Copy, Clone, Debug)]
 pub struct LiftedNonSSA;
 #[derive(Copy, Clone, Debug)]
@@ -37,7 +50,6 @@ pub struct NonSSA<V: NonSSAVariant>(V);
 pub trait FunctionForm: 'static {}
 impl FunctionForm for SSA {}
 impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
-
 
 pub struct Function<A: Architecture, M: FunctionMutability, F: FunctionForm> {
     pub(crate) borrower: A::Handle,
@@ -68,7 +80,7 @@ impl<'func, A, M, F> Function<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
-    F: FunctionForm
+    F: FunctionForm,
 {
     pub(crate) unsafe fn from_raw(borrower: A::Handle, handle: *mut BNLowLevelILFunction) -> Self {
         debug_assert!(!handle.is_null());
@@ -87,8 +99,8 @@ where
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<A, M, F>> {
-        use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
         use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
+        use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
@@ -112,7 +124,7 @@ where
             use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
             if instr_idx >= BNGetLowLevelILInstructionCount(self.handle) {
                 panic!("instruction index {} out of bounds", instr_idx);
-            } 
+            }
 
             Instruction {
                 function: self,
@@ -127,7 +139,6 @@ where
             BNGetLowLevelILInstructionCount(self.handle)
         }
     }
-
 }
 
 // LLIL basic blocks are not available until the function object
@@ -136,7 +147,7 @@ where
 impl<'func, A, F> Function<A, Finalized, F>
 where
     A: 'func + Architecture,
-    F: FunctionForm
+    F: FunctionForm,
 {
     pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelBlock<A, Finalized, F>>> {
         use binaryninjacore_sys::BNGetLowLevelILBasicBlockList;
@@ -155,7 +166,7 @@ impl<'func, A, M, F> ToOwned for Function<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
-    F: FunctionForm
+    F: FunctionForm,
 {
     type Owned = Ref<Self>;
 
@@ -164,12 +175,11 @@ where
     }
 }
 
-
 unsafe impl<'func, A, M, F> RefCountable for Function<A, M, F>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
-    F: FunctionForm
+    F: FunctionForm,
 {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {

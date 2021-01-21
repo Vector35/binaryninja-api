@@ -1,52 +1,63 @@
 extern crate bindgen;
 
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::path::PathBuf;
-use std::fs::File;
 use std::env;
+use std::path::PathBuf;
 
-#[cfg(target_os = "macos")]
+#[cfg(feature = "headless")]
+use std::fs::File;
+#[cfg(feature = "headless")]
+use std::io::prelude::*;
+#[cfg(feature = "headless")]
+use std::io::BufReader;
+
+#[cfg(all(target_os = "macos", feature = "headless"))]
 static LASTRUN_PATH: (&str, &str) = ("HOME", "Library/Application Support/Binary Ninja/lastrun");
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "headless"))]
 static LASTRUN_PATH: (&str, &str) = ("HOME", ".binaryninja/lastrun");
 
-#[cfg(windows)]
+#[cfg(all(windows, feature = "headless"))]
 static LASTRUN_PATH: (&str, &str) = ("APPDATA", "Binary Ninja\\lastrun");
 
+#[cfg(feature = "headless")]
 fn link_path() -> PathBuf {
     let home = PathBuf::from(env::var(LASTRUN_PATH.0).unwrap());
-    let lastrun = PathBuf::from(&home)
-        .join(LASTRUN_PATH.1);
+    let lastrun = PathBuf::from(&home).join(LASTRUN_PATH.1);
 
-    File::open(lastrun).and_then(|f| {
-        let mut binja_path = String::new();
-        let mut reader = BufReader::new(f);
+    File::open(lastrun)
+        .and_then(|f| {
+            let mut binja_path = String::new();
+            let mut reader = BufReader::new(f);
 
-        reader.read_line(&mut binja_path)?;
-        Ok(PathBuf::from(binja_path.trim()))
-    }).unwrap_or_else(|_| {
-        #[cfg(target_os = "macos")]
-        return PathBuf::from("/Applications/Binary Ninja.app/Contents/MacOS");
+            reader.read_line(&mut binja_path)?;
+            Ok(PathBuf::from(binja_path.trim()))
+        })
+        .unwrap_or_else(|_| {
+            #[cfg(target_os = "macos")]
+            return PathBuf::from("/Applications/Binary Ninja.app/Contents/MacOS");
 
-        #[cfg(target_os = "linux")]
-        return home.join("binaryninja");
+            #[cfg(target_os = "linux")]
+            return home.join("binaryninja");
 
-        #[cfg(windows)]
-        return PathBuf::from(env::var("PROGRAMFILES").unwrap()).join("Vector35\\BinaryNinja\\");
-    })
+            #[cfg(windows)]
+            return PathBuf::from(env::var("PROGRAMFILES").unwrap())
+                .join("Vector35\\BinaryNinja\\");
+        })
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=../../binaryninjacore.h");
+
     // Allow the library search path to be overridden for internal dev builds, but
     // otherwise search the usual install paths
     let out_dir = env::var("OUT_DIR").unwrap();
+
+    #[cfg(feature = "headless")]
     let link_path = env::var("BINARYNINJADIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| link_path());
 
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "headless"))]
     {
         use std::process::Command;
 
@@ -61,7 +72,7 @@ fn main() {
         // system anywhere. If only we could trick the linker into linking with an
         // absolute path...
         //
-        // LOOK UPON MY WORKS, YE MIGHTY, AND DESPAIR
+        // LOOK ON MY WORKS, YE MIGHTY, AND DESPAIR
         //
         // We build a simple do-nothing library called liblinkhack and add it as a
         // native dependency. Crucially, we ensure that LC_ID_DYLIB (macos) or DT_SONAME
@@ -77,24 +88,37 @@ fn main() {
         // way to make `cargo test` work.
         //
         // I'm not happy about it either.
-/*
+
         #[cfg(target_os = "macos")]
         Command::new("clang")
             .args(&["-Wl,-dylib", "-o"])
             .arg(&format!("{}/liblinkhack.dylib", out_dir))
-            .arg(&format!("-Wl,-install_name,{}/libbinaryninjacore.dylib", &link_path.to_str().unwrap()))
-            .arg(&format!("{}/linkhack/linkhack.c", env::var("CARGO_MANIFEST_DIR").unwrap()))
-            .status().unwrap();
-            */
+            .arg(&format!(
+                "-Wl,-install_name,{}/libbinaryninjacore.dylib",
+                &link_path.to_str().unwrap()
+            ))
+            .arg(&format!(
+                "{}/linkhack/linkhack.c",
+                env::var("CARGO_MANIFEST_DIR").unwrap()
+            ))
+            .status()
+            .unwrap();
 
         #[cfg(target_os = "linux")]
         {
             Command::new("gcc")
                 .args(&["-shared", "-o"])
                 .arg(&format!("{}/liblinkhack.so", out_dir))
-                .arg(&format!("-Wl,-soname,{}/libbinaryninjacore.so.1", &link_path.to_str().unwrap()))
-                .arg(&format!("{}/linkhack/linkhack.c", env::var("CARGO_MANIFEST_DIR").unwrap()))
-                .status().unwrap();
+                .arg(&format!(
+                    "-Wl,-soname,{}libbinaryninjacore.so.1",
+                    &link_path.to_str().unwrap()
+                )) // TODO : Check mac to see if I need to remove the extra slash as well
+                .arg(&format!(
+                    "{}/linkhack/linkhack.c",
+                    env::var("CARGO_MANIFEST_DIR").unwrap()
+                ))
+                .status()
+                .unwrap();
 
             // Linux builds of binaryninja ship with libbinaryninjacore.so.1 in the
             // application folder and no symlink. The linker will attempt to link with
@@ -104,23 +128,33 @@ fn main() {
             let symlink_target = PathBuf::from(&out_dir).join("libbinaryninjacore.so");
             if !link_path.join("libbinaryninjacore.so").exists() && !symlink_target.exists() {
                 use std::os::unix::fs;
-                fs::symlink(link_path.join("libbinaryninjacore.so.1"), PathBuf::from(&out_dir).join("libbinaryninjacore.so"))
-                    .expect("failed to create required symlink");
+                fs::symlink(
+                    link_path.join("libbinaryninjacore.so.1"),
+                    PathBuf::from(&out_dir).join("libbinaryninjacore.so"),
+                )
+                .expect("failed to create required symlink");
             }
         }
 
-        //println!("cargo:rustc-link-lib=linkhack");
-        //println!("cargo:rustc-link-search={}", out_dir);
+        println!("cargo:rustc-link-lib=linkhack");
+        println!("cargo:rustc-link-search={}", out_dir);
     }
 
-    println!("cargo:rustc-link-lib=binaryninjacore");
-    println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
+    #[cfg(feature = "headless")]
+    {
+        println!("cargo:rustc-link-lib=binaryninjacore");
+        println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
+    }
 
-    let bindings = bindgen::builder().header("wrapper.hpp")
+    let bindings = bindgen::builder()
+        .header("../../binaryninjacore.h")
+        .clang_arg("-std=c++17")
+        .clang_arg("-x")
+        .clang_arg("c++")
+        .size_t_is_usize(true)
         .generate_comments(false)
         .whitelist_function("BN.*")
         .rustified_enum("BN.*")
-        .rustfmt_bindings(false) // required; things break otherwise
         .generate()
         .expect("Unable to generate bindings");
 

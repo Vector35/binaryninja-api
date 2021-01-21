@@ -1,28 +1,44 @@
+// Copyright 2021 Vector 35 Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt;
 
-// TODO provide some way to forbid emitting register reads for certain registers
+// TODO : provide some way to forbid emitting register reads for certain registers
 // also writing for certain registers (e.g. zero register must prohibit il.set_reg and il.reg
 // (replace with nop or const(0) respectively)
 // requirements on load/store memory address sizes?
 // can reg/set_reg be used with sizes that differ from what is in BNRegisterInfo?
 
-use crate::architecture::Register as ArchReg;
 use crate::architecture::Architecture;
+use crate::architecture::Register as ArchReg;
 use crate::function::Location;
 
+mod block;
+mod expression;
 mod function;
 mod instruction;
-mod expression;
 mod lifting;
-mod block;
 pub mod operation;
 
+pub use self::expression::*;
 pub use self::function::*;
 pub use self::instruction::*;
-pub use self::expression::*;
-pub use self::lifting::{Liftable, LiftableWithSize, Label, ExpressionBuilder, FlagWriteOp, RegisterOrConstant};
-pub use self::lifting::get_default_flag_write_llil;
 pub use self::lifting::get_default_flag_cond_llil;
+pub use self::lifting::get_default_flag_write_llil;
+pub use self::lifting::{
+    ExpressionBuilder, FlagWriteOp, Label, Liftable, LiftableWithSize, RegisterOrConstant,
+};
 
 pub use self::block::Block as LowLevelBlock;
 pub use self::block::BlockIter as LowLevelBlockIter;
@@ -60,14 +76,13 @@ impl<R: ArchReg> fmt::Debug for Register<R> {
 #[derive(Copy, Clone, Debug)]
 pub enum SSARegister<R: ArchReg> {
     Full(Register<R>, u32), // no such thing as partial access to a temp register, I think
-    Partial(R, u32, R), // partial accesses only possible for arch registers, I think
+    Partial(R, u32, R),     // partial accesses only possible for arch registers, I think
 }
 
 impl<R: ArchReg> SSARegister<R> {
     pub fn version(&self) -> u32 {
         match *self {
-            SSARegister::Full(_, ver) |
-            SSARegister::Partial(_, ver, _) => ver
+            SSARegister::Full(_, ver) | SSARegister::Partial(_, ver, _) => ver,
         }
     }
 }
@@ -77,4 +92,3 @@ pub enum VisitorAction {
     Sibling,
     Halt,
 }
-

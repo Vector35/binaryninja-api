@@ -439,6 +439,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn registers_all(&self) -> Vec<Self::Register>;
     fn registers_full_width(&self) -> Vec<Self::Register>;
     fn registers_global(&self) -> Vec<Self::Register>;
+    fn registers_system(&self) -> Vec<Self::Register>;
 
     fn flags(&self) -> Vec<Self::Flag>;
     fn flag_write_types(&self) -> Vec<Self::FlagWrite>;
@@ -892,6 +893,22 @@ impl Architecture for CoreArchitecture {
         unsafe {
             let mut count: usize = 0;
             let regs = BNGetArchitectureGlobalRegisters(self.0, &mut count as *mut _);
+
+            let ret = slice::from_raw_parts_mut(regs, count)
+                .iter()
+                .map(|reg| CoreRegister(self.0, *reg))
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            ret
+        }
+    }
+
+    fn registers_system(&self) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count: usize = 0;
+            let regs = BNGetArchitectureSystemRegisters(self.0, &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
@@ -1375,6 +1392,16 @@ where
         alloc_register_list(regs.iter().map(|r| r.id()), unsafe { &mut *count })
     }
 
+    extern "C" fn cb_registers_system<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
+    where
+        A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let regs = custom_arch.registers_system();
+
+        alloc_register_list(regs.iter().map(|r| r.id()), unsafe { &mut *count })
+    }
+
     extern "C" fn cb_flags<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         A: 'static + Architecture<Handle=CustomArchitectureHandle<A>> + Send + Sync,
@@ -1808,6 +1835,7 @@ where
         getStackPointerRegister: Some(cb_stack_pointer::<A>),
         getLinkRegister: Some(cb_link_reg::<A>),
         getGlobalRegisters: Some(cb_registers_global::<A>),
+        getSystemRegisters: Some(cb_registers_system::<A>),
 
         getRegisterStackName: Some(cb_reg_stack_name::<A>),
         getAllRegisterStacks: Some(cb_reg_stacks::<A>),

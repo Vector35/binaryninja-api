@@ -190,6 +190,8 @@ class BinaryViewTestBuilder(Builder):
         for func in self.bv.functions:
             for bb in func.low_level_il.basic_blocks:
                 for ins in bb:
+                    retinfo.append("Function: {:x} Instruction: {:x} ADDR->LiftedILS: {}".format(func.start, ins.address, str(sorted(list(map(str, func.get_lifted_ils_at(ins.address)))))))
+                    retinfo.append("Function: {:x} Instruction: {:x} ADDR->LLILS: {}".format(func.start, ins.address, str(sorted(list(map(str, func.get_llils_at(ins.address)))))))
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL->MLIL: {}".format(func.start, ins.address, str(ins.mlil)))
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL->MLILS: {}".format(func.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
                     # TODO figure out the LLIL->HLIL instability

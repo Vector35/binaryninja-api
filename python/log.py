@@ -47,7 +47,7 @@ class LogListener(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def get_log_level(self, ctxt):
+	def get_log_level(self, ctxt) -> LogLevel:
 		raise NotImplementedError
 
 	@abc.abstractmethod

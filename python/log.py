@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 
+import abc
 import ctypes
 
 
@@ -31,18 +32,37 @@ _output_to_log = False
 
 
 class LogListener(object):
-	def __init__(self, log, close, get_log_level):
+	"""Base class for custom LogListener classes"""
+
+	def __init__(self):
+		self._registered = False
 		self._listener = core.BNLogListener()
 		self._listener.context = 0
-		self._listener.log = self._listener.log.__class__(log)
-		self._listener.close = self._listener.close.__class__(close)
-		self._listener.getLogLevel = self._listener.getLogLevel.__class__(get_log_level)
+		self._listener.log = self._listener.log.__class__(self.log)
+		self._listener.close = self._listener.close.__class__(self.close)
+		self._listener.getLogLevel = self._listener.getLogLevel.__class__(self.get_log_level)
+
+	@abc.abstractmethod
+	def close(self, ctxt):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def get_log_level(self, ctxt):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def log(self, ctxt, log_level, msg):
+		raise NotImplementedError
 
 	def register(self):
-		core.BNRegisterLogListener(ctypes.pointer(self._listener))
+		if not self._registered:
+			core.BNRegisterLogListener(ctypes.pointer(self._listener))
+			self._registered = True
 
 	def unregister(self):
-		core.BNUnregisterLogListener(ctypes.pointer(self._listener))
+		if self._registered:
+			core.BNUnregisterLogListener(ctypes.pointer(self._listener))
+			self._registered = False
 
 
 def redirect_output_to_log():

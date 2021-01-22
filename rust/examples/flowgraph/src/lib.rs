@@ -1,12 +1,9 @@
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::command::register;
-use binaryninja::disassembly::{
-    DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType,
+use binaryninja::{
+    binaryview::{BinaryView, BinaryViewExt},
+    command::register,
+    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType},
+    flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
 };
-use binaryninja::flowgraph::{
-    BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor,
-};
-use binaryninja::plugin_abi_version;
 
 fn test_graph(view: &BinaryView) {
     let graph = FlowGraph::new();
@@ -50,9 +47,4 @@ pub extern "C" fn UIPluginInit() -> bool {
         test_graph,
     );
     true
-}
-
-#[no_mangle]
-pub extern "C" fn UIPluginABIVersion() -> u32 {
-    plugin_abi_version()
 }

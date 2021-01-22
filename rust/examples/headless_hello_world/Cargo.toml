@@ -1,12 +1,8 @@
 [package]
-name = "dwarfdump"
+name = "headless_hello_world"
 version = "0.1.0"
 authors = ["Kyle Martin <kyle@vector35.com>"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
-binaryninja = {path="../../"}
-gimli = "0.23.0"
+binaryninja = {path="../../", features = ["headless"]}

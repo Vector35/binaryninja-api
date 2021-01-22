@@ -36,6 +36,7 @@ from binaryninja.databuffer import *
 from binaryninja.filemetadata import *
 from binaryninja.fileaccessor import *
 from binaryninja.binaryview import *
+from binaryninja.debuginfo import *
 from binaryninja.transform import *
 from binaryninja.architecture import *
 from binaryninja.basicblock import *

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::ptr;
 
 use crate::rc::*;
@@ -165,9 +166,6 @@ pub struct Symbol {
     pub(crate) handle: *mut BNSymbol,
 }
 
-unsafe impl Send for Symbol {}
-unsafe impl Sync for Symbol {}
-
 impl Symbol {
     pub(crate) unsafe fn from_raw(raw: *mut BNSymbol) -> Self {
         Self { handle: raw }
@@ -223,6 +221,9 @@ impl Symbol {
     }
 }
 
+unsafe impl Send for Symbol {}
+unsafe impl Sync for Symbol {}
+
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -270,5 +271,18 @@ unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Symbol {
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
         Guard::new(Symbol::from_raw(*raw), context)
+    }
+}
+
+impl PartialEq for Ref<Symbol> {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+impl Eq for Ref<Symbol> {}
+
+impl Hash for Ref<Symbol> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (**self).hash(state);
     }
 }

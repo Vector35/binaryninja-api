@@ -1,12 +1,12 @@
 [package]
-name = "dwarfdump"
+name = "parse_dwarf"
 version = "0.1.0"
-authors = ["Kyle Martin <kyle@vector35.com>"]
+authors = ["KyleMiles <kyle@vector35.com>"]
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-binaryninja = {path="../../"}
 gimli = "0.23.0"
+binaryninja = { path = "../../" }

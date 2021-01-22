@@ -46,6 +46,7 @@ pub mod callingconvention;
 pub mod command;
 pub mod custombinaryview;
 pub mod databuffer;
+pub mod debuginfo;
 pub mod disassembly;
 pub mod fileaccessor;
 pub mod filemetadata;

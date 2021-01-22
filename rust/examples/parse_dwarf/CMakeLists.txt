@@ -1,0 +1,81 @@
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+
+project(parse_dwarf)
+
+file(GLOB PLUGIN_SOURCES
+	${PROJECT_SOURCE_DIR}/Cargo.toml
+	${PROJECT_SOURCE_DIR}/src/*.rs)
+
+file(GLOB API_SOURCES
+	${PROJECT_SOURCE_DIR}/../../../binaryninjacore.h
+	${PROJECT_SOURCE_DIR}/../../binaryninjacore-sys/build.rs
+	${PROJECT_SOURCE_DIR}/../../binaryninjacore-sys/Cargo.toml
+	${PROJECT_SOURCE_DIR}/../../binaryninjacore-sys/src/*
+	${PROJECT_SOURCE_DIR}/../../Cargo.toml
+	${PROJECT_SOURCE_DIR}/../../src/*.rs)
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+	set(TARGET_DIR ${PROJECT_BINARY_DIR}/target/debug)
+	set(CARGO_OPTS --target-dir=${PROJECT_BINARY_DIR}/target)
+else()
+	set(TARGET_DIR ${PROJECT_BINARY_DIR}/target/release)
+	set(CARGO_OPTS --target-dir=${PROJECT_BINARY_DIR}/target --release)
+endif()
+set(PLUGIN_PATH ${TARGET_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+find_program(CARGO_PATH cargo REQUIRED HINTS ~/.cargo/bin)
+
+add_custom_target(parse_dwarf ALL DEPENDS ${PLUGIN_PATH})
+add_dependencies(parse_dwarf binaryninjaapi)
+
+if(APPLE)
+	if(UNIVERSAL)
+		if(CMAKE_BUILD_TYPE MATCHES Debug)
+			set(AARCH64_LIB_PATH ${PROJECT_BINARY_DIR}/target/aarch64-apple-darwin/debug/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+			set(X86_64_LIB_PATH ${PROJECT_BINARY_DIR}/target/x86_64-apple-darwin/debug/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+		else()
+			set(AARCH64_LIB_PATH ${PROJECT_BINARY_DIR}/target/aarch64-apple-darwin/release/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+			set(X86_64_LIB_PATH ${PROJECT_BINARY_DIR}/target/x86_64-apple-darwin/release/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+		endif()
+
+		add_custom_command(
+			OUTPUT ${PLUGIN_PATH}
+			COMMAND ${CMAKE_COMMAND} -E env MACOSX_DEPLOYMENT_TARGET=10.14
+				LIBCLANG_PATH=${LLVM_PATH}/lib LLVM_VERSION=${LLVM_VERSION} ${CARGO_PATH} build --target=aarch64-apple-darwin ${CARGO_OPTS}
+			COMMAND ${CMAKE_COMMAND} -E env MACOSX_DEPLOYMENT_TARGET=10.14
+				LIBCLANG_PATH=${LLVM_PATH}/lib LLVM_VERSION=${LLVM_VERSION} ${CARGO_PATH} build --target=x86_64-apple-darwin ${CARGO_OPTS}
+			COMMAND mkdir -p ${TARGET_DIR}
+			COMMAND lipo -create ${AARCH64_LIB_PATH} ${X86_64_LIB_PATH} -output ${PLUGIN_PATH}
+			WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+			DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
+	else()
+		if(CMAKE_BUILD_TYPE MATCHES Debug)
+			set(X86_64_LIB_PATH ${PROJECT_BINARY_DIR}/target/x86_64-apple-darwin/debug/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+		else()
+			set(X86_64_LIB_PATH ${PROJECT_BINARY_DIR}/target/x86_64-apple-darwin/release/${CMAKE_STATIC_LIBRARY_PREFIX}parse_dwarf${CMAKE_SHARED_LIBRARY_SUFFIX})
+		endif()
+
+		add_custom_command(
+			OUTPUT ${PLUGIN_PATH}
+			COMMAND ${CMAKE_COMMAND} -E env MACOSX_DEPLOYMENT_TARGET=10.14
+				LIBCLANG_PATH=${LLVM_PATH}/lib LLVM_VERSION=${LLVM_VERSION} ${CARGO_PATH} build --target=x86_64-apple-darwin ${CARGO_OPTS}
+			COMMAND cp ${X86_64_LIB_PATH} ${PLUGIN_PATH}
+			COMMAND cp ${PLUGIN_PATH} ${BN_CORE_PLUGIN_DIR}
+			WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+			DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
+	endif()
+elseif(WIN32)
+	add_custom_command(
+		OUTPUT ${PLUGIN_PATH}
+		COMMAND ${CMAKE_COMMAND} -E env LIBCLANG_PATH=${LLVM_PATH}/lib env LLVM_VERSION=${LLVM_VERSION} env BINARYNINJADIR=${BN_CORE_OUTPUT_DIR} ${CARGO_PATH} build ${CARGO_OPTS}
+		COMMAND cp ${PLUGIN_PATH} ${BN_CORE_PLUGIN_DIR}
+		WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+		DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
+else()
+	add_custom_command(
+		OUTPUT ${PLUGIN_PATH}
+		COMMAND ${CMAKE_COMMAND} -E env LIBCLANG_PATH=${LLVM_PATH}/lib env LLVM_VERSION=${LLVM_VERSION} ${CARGO_PATH} build ${CARGO_OPTS}
+		COMMAND cp ${PLUGIN_PATH} ${BN_CORE_PLUGIN_DIR}
+		WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+		DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
+endif()

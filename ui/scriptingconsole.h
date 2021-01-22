@@ -21,7 +21,6 @@
 #include "uitypes.h"
 
 #define SCRIPT_OUTPUT_UPDATE_INTERVAL 100
-#define SCRIPT_HISTORY_LENGTH 100
 
 class ScriptingConsole;
 

@@ -19,12 +19,30 @@
 # IN THE SOFTWARE.
 
 
+import ctypes
+
+
 # Binary Ninja components
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import LogLevel
 
 
 _output_to_log = False
+
+
+class LogListener(object):
+	def __init__(self, log, close, get_log_level):
+		self._listener = core.BNLogListener()
+		self._listener.context = 0
+		self._listener.log = self._listener.log.__class__(log)
+		self._listener.close = self._listener.close.__class__(close)
+		self._listener.getLogLevel = self._listener.getLogLevel.__class__(get_log_level)
+
+	def register(self):
+		core.BNRegisterLogListener(ctypes.pointer(self._listener))
+
+	def unregister(self):
+		core.BNUnregisterLogListener(ctypes.pointer(self._listener))
 
 
 def redirect_output_to_log():

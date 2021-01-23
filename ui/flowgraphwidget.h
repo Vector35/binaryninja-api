@@ -107,7 +107,7 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	std::set<size_t> m_relatedIndexHighlights;
 	std::set<uint64_t> m_relatedInstructionHighlights;
 
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
 
 	BinaryNinja::Ref<FlowGraphHistoryEntry> m_pendingHistoryEntry, m_layoutHistoryEntry;

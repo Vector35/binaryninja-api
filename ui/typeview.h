@@ -118,7 +118,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 
 	Qt::KeyboardModifiers m_ctrl, m_command;
 
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 	QAction* m_actionCopy;
 	QAction* m_actionSelectAll;
 

@@ -171,7 +171,7 @@ private:
 	RenderContext m_render;
 	HexEditorHighlightState m_highlightState;
 
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

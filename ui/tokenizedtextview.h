@@ -48,7 +48,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 
 	QTimer* m_updateTimer;
 
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
 
 	void adjustSize(int width, int height);

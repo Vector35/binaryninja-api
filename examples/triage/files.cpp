@@ -4,9 +4,10 @@
 #include "files.h"
 
 
-TriageFilePicker::TriageFilePicker(UIContext* context): m_contextMenuManager(this)
+TriageFilePicker::TriageFilePicker(UIContext* context)
 {
 	m_context = context;
+	m_contextMenuManager = new ContextMenuManager(this);
 	m_actionHandler.setupActionHandler(this);
 
 	QVBoxLayout* layout = new QVBoxLayout();
@@ -53,7 +54,7 @@ TriageFilePicker::TriageFilePicker(UIContext* context): m_contextMenuManager(thi
 
 void TriageFilePicker::contextMenuEvent(QContextMenuEvent*)
 {
-	m_contextMenuManager.show(&m_contextMenu, &m_actionHandler);
+	m_contextMenuManager->show(&m_contextMenu, &m_actionHandler);
 }
 
 

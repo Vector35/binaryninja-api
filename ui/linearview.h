@@ -146,7 +146,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	QTimer* m_updateTimer;
 
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
 
 	std::map<FunctionRef, BinaryNinja::AdvancedFunctionAnalysisDataRequestor> m_analysisRequestors;

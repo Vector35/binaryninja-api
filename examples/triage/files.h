@@ -16,7 +16,7 @@ class TriageFilePicker: public QWidget
 	UIContext* m_context;
 	UIActionHandler m_actionHandler;
 	Menu m_contextMenu;
-	ContextMenuManager m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 
 	QFileSystemModel* m_model;
 	QTreeView* m_tree;

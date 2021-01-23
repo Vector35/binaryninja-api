@@ -34,22 +34,30 @@ class BINARYNINJAUIAPI MenuHelper: public QLabel
 	Q_OBJECT
 
 	QPalette::ColorRole m_backgroundRole;
+	QPalette::ColorRole m_activeBackgroundRole;
+	QPalette::ColorRole m_pressedBackgroundRole;
 	QPalette::ColorRole m_foregroundRole;
 	QPalette::ColorRole m_activeForegroundRole;
+	QPalette::ColorRole m_pressedForegroundRole;
 
 protected:
 	Menu m_menu;
 	ContextMenuManager m_contextMenuManager;
 	QTimer* m_timer;
 	bool m_activeOnHover = true;
+	bool m_active;
+	bool m_pressed;
 
 public:
 	MenuHelper() { }
 	MenuHelper(QWidget* parent, bool activeOnHover = true);
 
-	void setBackgroundColorRole(QPalette::ColorRole role = QPalette::Highlight);
-	void setForegroundColorRole(QPalette::ColorRole role = QPalette::WindowText);
-	void setActiveForegroundColorRole(QPalette::ColorRole role = QPalette::HighlightedText);
+	void setBackgroundColorRole(QPalette::ColorRole role);
+	void setActiveBackgroundColorRole(QPalette::ColorRole role);
+	void setPressedBackgroundColorRole(QPalette::ColorRole role);
+	void setForegroundColorRole(QPalette::ColorRole role);
+	void setActiveForegroundColorRole(QPalette::ColorRole role);
+	void setPressedForegroundColorRole(QPalette::ColorRole role);
 
 Q_SIGNALS:
 	void clicked();
@@ -63,5 +71,8 @@ private Q_SLOTS:
 protected:
 	void enterEvent(QEvent* event) override;
 	void leaveEvent(QEvent* event) override;
+	void mousePressEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent* event) override;
+
+	void updateColors();
 };

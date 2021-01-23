@@ -175,6 +175,8 @@ public:
 		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType) { }
 	ViewLocation(const QString& viewType, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
 		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
+	ViewLocation(const QString& viewType, FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) :
+		m_valid(true), m_viewType(viewType), m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 	ViewLocation(FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
 		m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 
@@ -185,7 +187,7 @@ public:
 	size_t getInstrIndex() const { return m_instrIndex; }
 	FunctionRef getFunction() const { return m_function; }
 
-	void setViewType(QString& viewType) { m_viewType = viewType; }
+	void setViewType(const QString& viewType) { m_viewType = viewType; }
 	void setOffset(uint64_t offset) { m_offset = offset; }
 	void setILViewType(BNFunctionGraphType ilViewType) { m_ilViewType = ilViewType; }
 	void setInstrIndex(uint64_t index) { m_instrIndex = index; }

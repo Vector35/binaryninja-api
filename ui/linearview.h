@@ -26,6 +26,7 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition
 	FunctionRef function;
 	BasicBlockRef block;
 	uint64_t address;
+	size_t instrIndex;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor;
 	size_t lineIndex;
 	size_t tokenIndex;
@@ -160,6 +161,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void updateCache();
 	void refreshAtCurrentLocation(bool cursorFixup = false);
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
+	bool navigateToLine(uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToGotoLabel(uint64_t label);
 
 	void scrollLines(int count);
@@ -299,8 +301,8 @@ public:
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual size_t getCurrentILInstructionIndex() override;
-	virtual bool navigate(uint64_t pos) override;
-	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
+	virtual bool navigate(uint64_t offset) override;
+	virtual bool navigateToFunction(FunctionRef func, uint64_t offset) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
 
 	virtual std::string getNavigationMode() override;

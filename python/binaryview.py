@@ -3668,7 +3668,7 @@ class BinaryView(object):
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
 		:param Symbol sym: the symbol to define
-		:param SymbolType sym_type: Type of symbol being defined (can be None)
+		:param Type sym_type: Type of symbol being defined (can be None)
 		:param Platform plat: (optional) platform
 		:rtype: None
 		"""
@@ -3680,7 +3680,7 @@ class BinaryView(object):
 		if isinstance(sym_type, binaryninja.Type):
 			sym_type = sym_type.handle
 		elif sym_type is not None:
-			raise AttributeError("Provided sym_type is not of type `binaryninja.SymbolType`")
+			raise AttributeError("Provided sym_type is not of type `binaryninja.Type`")
 
 		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
 

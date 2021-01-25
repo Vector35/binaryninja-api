@@ -93,6 +93,8 @@ void NotificationListener::OnAddressChange(UIContext* context, ViewFrame* frame,
 
 extern "C"
 {
+	BN_DECLARE_UI_ABI_VERSION
+
 	BINARYNINJAPLUGIN bool UIPluginInit()
 	{
 		NotificationListener::init();

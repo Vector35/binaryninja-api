@@ -25,6 +25,18 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+// Current ABI version for linking to the core. This is incremented any time
+// there are changes to the API that affect linking, including new functions,
+// new types, or modifications to existing functions or types.
+#define BN_CURRENT_CORE_ABI_VERSION 1
+
+// Minimum ABI version that is supported for loading of plugins. Plugins that
+// are linked to an ABI version less than this will not be able to load and
+// will require rebuilding. The minimum version is increased when there are
+// incompatible changes that break binary compatibility, such as changes to
+// existing types or functions.
+#define BN_MINIMUM_CORE_ABI_VERSION 1
+
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
 #    define BINARYNINJACOREAPI __attribute__((visibility("default")))
@@ -100,6 +112,23 @@
 #define DEFAULT_INTERNAL_NAMESPACE "BNINTERNALNAMESPACE"
 #define DEFAULT_EXTERNAL_NAMESPACE "BNEXTERNALNAMESPACE"
 
+
+// The BN_DECLARE_CORE_ABI_VERSION must be included in native plugin modules. If
+// the ABI version is not declared, the core will not load the plugin.
+#ifdef DEMO_VERSION
+#define BN_DECLARE_CORE_ABI_VERSION
+#else
+#define BN_DECLARE_CORE_ABI_VERSION \
+	extern "C" \
+	{ \
+		BINARYNINJAPLUGIN uint32_t CorePluginABIVersion() \
+		{ \
+			return BN_CURRENT_CORE_ABI_VERSION; \
+		} \
+	}
+#endif
+
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -119,6 +148,7 @@ extern "C"
 
 	typedef bool (*BNCorePluginInitFunction)(void);
 	typedef void (*BNCorePluginDependencyFunction)(void);
+	typedef uint32_t (*BNCorePluginABIVersionFunction)(void);
 
 	struct BNDataBuffer;
 	struct BNBinaryView;
@@ -2459,6 +2489,8 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNGetVersionString(void);
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);
+	BINARYNINJACOREAPI uint32_t BNGetCurrentCoreABIVersion(void);
+	BINARYNINJACOREAPI uint32_t BNGetMinimumCoreABIVersion(void);
 
 	BINARYNINJACOREAPI char* BNGetSerialNumber(void);
 	BINARYNINJACOREAPI uint64_t BNGetLicenseExpirationTime(void);

@@ -215,3 +215,25 @@ pub mod logger {
 pub fn version() -> string::BnString {
     unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
 }
+
+pub fn plugin_abi_version() -> u32 {
+    binaryninjacore_sys::BN_CURRENT_CORE_ABI_VERSION
+}
+
+pub fn plugin_abi_minimum_version() -> u32 {
+    binaryninjacore_sys::BN_MINIMUM_CORE_ABI_VERSION
+}
+
+pub fn core_abi_version() -> u32 {
+    unsafe { binaryninjacore_sys::BNGetCurrentCoreABIVersion() }
+}
+
+pub fn core_abi_minimum_version() -> u32 {
+    unsafe { binaryninjacore_sys::BNGetMinimumCoreABIVersion() }
+}
+
+// Provide ABI version automatically so that the core can verify binary compatibility
+#[cfg(not(feature = "headless"))]
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn CorePluginABIVersion() -> u32 { plugin_abi_version() }

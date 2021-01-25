@@ -25,6 +25,8 @@ void write_breakpoint(BinaryNinja::BinaryView *view, uint64_t start, uint64_t le
 
 extern "C"
 {
+  BN_DECLARE_CORE_ABI_VERSION
+
   BINARYNINJAPLUGIN bool CorePluginInit()
   {
         // Register the plugin with Binary Ninja

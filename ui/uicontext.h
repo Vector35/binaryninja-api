@@ -12,6 +12,7 @@
 
 typedef bool (*UIPluginInitFunction)(void);
 typedef void (*UIPluginDependencyFunction)(void);
+typedef uint32_t (*UIPluginABIVersionFunction)(void);
 
 class ViewFrame;
 class UIActionHandler;

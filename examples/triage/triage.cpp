@@ -6,6 +6,8 @@
 
 extern "C"
 {
+	BN_DECLARE_UI_ABI_VERSION
+
 #ifdef DEMO_VERSION
 	bool TriagePluginInit()
 #else

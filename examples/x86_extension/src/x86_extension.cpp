@@ -47,6 +47,8 @@ public:
 
 extern "C"
 {
+	BN_DECLARE_CORE_ABI_VERSION
+
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		// Make sure we load after the original x86 plugin loads

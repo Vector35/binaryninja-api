@@ -2,6 +2,19 @@
 
 #include "binaryninjaapi.h"
 
+// Current ABI version for linking to the UI API. This is incremented any time
+// there are changes to the API that affect linking, including new functions,
+// new types, modifications to existing functions or types, or new versions
+// of the Qt libraries.
+#define BN_CURRENT_UI_ABI_VERSION 1
+
+// Minimum ABI version that is supported for loading of plugins. Plugins that
+// are linked to an ABI version less than this will not be able to load and
+// will require rebuilding. The minimum version is increased when there are
+// incompatible changes that break binary compatibility, such as changes to
+// existing types or functions, or a new version of Qt.
+#define BN_MINIMUM_UI_ABI_VERSION 1
+
 #ifdef __GNUC__
 #  ifdef BINARYNINJAUI_LIBRARY
 #    define BINARYNINJAUIAPI __attribute__((visibility("default")))
@@ -26,6 +39,21 @@
 
 #ifdef BINARYNINJAUI_PYTHON_BINDINGS
 #include "bindings.h"
+#endif
+
+// The BN_DECLARE_UI_ABI_VERSION must be included in native UI plugin modules. If
+// the ABI version is not declared, the UI will not load the plugin.
+#ifdef DEMO_VERSION
+#define BN_DECLARE_UI_ABI_VERSION
+#else
+#define BN_DECLARE_UI_ABI_VERSION \
+	extern "C" \
+	{ \
+		BINARYNINJAPLUGIN uint32_t UIPluginABIVersion() \
+		{ \
+			return BN_CURRENT_UI_ABI_VERSION; \
+		} \
+	}
 #endif
 
 // The Python bindings generator does not recognize automatic conversion of API types into their

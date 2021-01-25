@@ -154,6 +154,8 @@ fn main() {
         .size_t_is_usize(true)
         .generate_comments(false)
         .whitelist_function("BN.*")
+        .whitelist_var("BN_CURRENT_CORE_ABI_VERSION")
+        .whitelist_var("BN_MINIMUM_CORE_ABI_VERSION")
         .rustified_enum("BN.*")
         .generate()
         .expect("Unable to generate bindings");

@@ -3436,7 +3436,7 @@ class InstructionTextToken(object):
 				result[j].context = tokens[j].context
 				result[j].confidence = tokens[j].confidence
 				result[j].address = tokens[j].address
-				result[j].nameCount = len(tokens[j].typeNames)
+				result[j].namesCount = len(tokens[j].typeNames)
 				result[j].typeNames = (ctypes.c_char_p * len(tokens[j].typeNames))()
 				for i in range(len(tokens[j].typeNames)):
 					result[j].typeNames[i] = binaryninja.cstr(tokens[j].typeNames[i])

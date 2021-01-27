@@ -564,6 +564,9 @@ Note
 !!! Tip "Note"
     If you have any trouble with the self-updater, you can always [request](https://binary.ninja/recover/) a fresh set of download links as long as you are under active support.
 
+### Development Branch
+
+Binary Ninja [stable builds](https://binary.ninja/changelog) releases happen on semi-regular intervals throughout the year. However, we also make development builds available to customers with active support. Simply use the update dialog, and select one of the "Development" channels in the `Update Channel` field.
 
 ## Unicode Support
 

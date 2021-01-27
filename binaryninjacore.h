@@ -3992,6 +3992,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetHighLevelILForMediumLevelIL(BNMediumLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetHighLevelILInstructionIndex(BNMediumLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI size_t BNGetHighLevelILExprIndex(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI size_t* BNGetHighLevelILExprIndexes(BNMediumLevelILFunction* func, size_t expr, size_t* count);
 
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetMediumLevelILExprType(BNMediumLevelILFunction* func, size_t expr);
 

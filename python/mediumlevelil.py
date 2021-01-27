@@ -471,7 +471,7 @@ class MediumLevelILInstruction(object):
 
 	@property
 	def llils(self):
-		exprs = self.function.get_low_level_il_expr_indexes(self.expr_index)
+		exprs = self._function.get_low_level_il_expr_indexes(self.expr_index)
 		result = []
 		for expr in exprs:
 			result.append(lowlevelil.LowLevelILInstruction(self._function.low_level_il.ssa_form, expr))
@@ -489,6 +489,14 @@ class MediumLevelILInstruction(object):
 	def hlil(self):
 		"""Alias for high_level_il"""
 		return self.high_level_il
+
+	@property
+	def hlils(self):
+		exprs = self._function.get_high_level_il_expr_indexes(self.expr_index)
+		result = []
+		for expr in exprs:
+			result.append(binaryninja.highlevelil.HighLevelILInstruction(self._function.high_level_il, expr))
+		return result
 
 	@property
 	def ssa_memory_version(self):
@@ -1195,6 +1203,15 @@ class MediumLevelILFunction(object):
 		result = core.BNGetHighLevelILExprIndex(self.handle, expr)
 		if result >= core.BNGetHighLevelILExprCount(high_il.handle):
 			return None
+		return result
+
+	def get_high_level_il_expr_indexes(self, expr):
+		count = ctypes.c_ulonglong()
+		exprs = core.BNGetHighLevelILExprIndexes(self.handle, expr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(exprs[i])
+		core.BNFreeILInstructionList(exprs)
 		return result
 
 	def create_graph(self, settings = None):

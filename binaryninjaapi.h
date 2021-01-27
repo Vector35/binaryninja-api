@@ -4113,6 +4113,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		size_t GetHighLevelILInstructionIndex(size_t instr) const;
 		size_t GetHighLevelILExprIndex(size_t expr) const;
+		std::set<size_t> GetHighLevelILExprIndexes(size_t expr) const;
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);

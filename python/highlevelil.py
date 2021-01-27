@@ -531,7 +531,7 @@ class HighLevelILInstruction(object):
 
 	@property
 	def mlils(self):
-		exprs = self.function.get_medium_level_il_expr_indexes(self._expr_index)
+		exprs = self._function.get_medium_level_il_expr_indexes(self._expr_index)
 		result = []
 		for expr in exprs:
 			result.append(mediumlevelil.MediumLevelILInstruction(self._function.medium_level_il.ssa_form, expr))
@@ -548,6 +548,14 @@ class HighLevelILInstruction(object):
 	def llil(self):
 		"""Alias for low_level_il"""
 		return self.low_level_il
+
+	@property
+	def llils(self):
+		result = set()
+		for mlil_expr in self.mlils:
+			for llil_expr in mlil_expr.llils:
+				result.add(llil_expr)
+		return list(result)
 
 	@property
 	def il_basic_block(self):

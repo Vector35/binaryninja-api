@@ -811,6 +811,20 @@ size_t MediumLevelILFunction::GetHighLevelILExprIndex(size_t expr) const
 }
 
 
+set<size_t> MediumLevelILFunction::GetHighLevelILExprIndexes(size_t expr) const
+{
+	size_t count;
+	size_t* exprs = BNGetHighLevelILExprIndexes(m_object, expr, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(exprs[i]);
+
+	BNFreeILInstructionList(exprs);
+	return result;
+}
+
+
 Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(size_t expr)
 {
 	BNTypeWithConfidence result = BNGetMediumLevelILExprType(m_object, expr);

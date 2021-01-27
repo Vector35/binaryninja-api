@@ -1017,7 +1017,7 @@ class LowLevelILInstruction(object):
 
 	@property
 	def mlils(self):
-		exprs = self.function.get_medium_level_il_expr_indexes(self.expr_index)
+		exprs = self._function.get_medium_level_il_expr_indexes(self.expr_index)
 		result = []
 		for expr in exprs:
 			result.append(binaryninja.mediumlevelil.MediumLevelILInstruction(self._function.medium_level_il, expr))
@@ -1045,6 +1045,14 @@ class LowLevelILInstruction(object):
 	@property
 	def hlil(self):
 		return self.high_level_il
+
+	@property
+	def hlils(self):
+		result = set()
+		for mlil_expr in self.mlils:
+			for hlil_expr in mlil_expr.hlils:
+				result.add(hlil_expr)
+		return list(result)
 
 	@property
 	def value(self):

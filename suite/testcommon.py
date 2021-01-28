@@ -682,6 +682,16 @@ class TestBuilder(Builder):
             "std::foo<T, std::char_traits<T> >::~foo",
             "std::foo<T, std::char_traits<T> >::bar",
 
+            "std::foo<bleh::T, std::char_traits<bleh::T> >",
+            "std::bar<bleh::T, std::char_traits<bleh::T> >::bar",
+            "std::foo<bleh::T, std::char_traits<bleh::T> >::~foo",
+            "std::foo<bleh::T, std::char_traits<bleh::T> >::bar",
+
+            "std::foo<foo::bleh::T, std::char_traits<foo::bleh::T> >",
+            "std::bar<foo::bleh::T, std::char_traits<foo::bleh::T> >::bar",
+            "std::foo<foo::bleh::T, std::char_traits<foo::bleh::T> >::~foo",
+            "std::foo<foo::bleh::T, std::char_traits<foo::bleh::T> >::bar",
+
             # More complex examples:
             "AddRequiredUIPluginDependency(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)",
             "std::vector<std::vector<BinaryNinja::InstructionTextToken, std::allocator<BinaryNinja::InstructionTextToken> >, std::allocator<std::vector<BinaryNinja::InstructionTextToken, std::allocator<BinaryNinja::InstructionTextToken> > > >::_M_check_len(uint64_t, char const*) const",

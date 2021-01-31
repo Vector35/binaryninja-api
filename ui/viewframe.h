@@ -28,6 +28,7 @@ public:
 
 
 class AssembleDialog;
+class ClickableLabel;
 class CompileDialog;
 class DockHandler;
 class FeatureMap;
@@ -42,7 +43,6 @@ protected:
 	Menu m_contextMenu;
 	UIActionHandler m_actionHandler;
 	bool m_binaryDataNavigable = false;
-	bool m_writeTraction = true;
 	QPointer<TransformParameterDialog> m_transformParamDialog;
 
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
@@ -84,8 +84,6 @@ public:
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) { return false; }
 
-	bool isWriteTractionEnabled() { return m_writeTraction; }
-	void setWriteTractionEnabled(bool enable) { m_writeTraction = enable; }
 	bool isBinaryDataNavigable() { return m_binaryDataNavigable; }
 	void setBinaryDataNavigable(bool navigable) { m_binaryDataNavigable = navigable; }
 
@@ -227,6 +225,8 @@ private:
 	HistoryEntry* getHistoryEntry();
 
 	FileContext* m_context;
+	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
+	ClickableLabel* m_fileContentsLockStatus;
 	BinaryViewRef m_data;
 	DockHandler* m_docks;
 	QWidget* m_view;
@@ -254,6 +254,10 @@ public:
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
+	bool areFileContentsLocked() { return m_fileContentsLock; }
+	void setFileContentsLocked(bool enable) { m_fileContentsLock = enable; }
+	QWidget* getFileContentsLockStatus();
+
 	DockHandler* getDockHandler() const { return m_docks; }
 
 	QString getTabName();

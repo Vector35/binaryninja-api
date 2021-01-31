@@ -432,8 +432,8 @@ class BinaryViewTestBuilder(Builder):
         for allrange in self.bv.allocated_ranges:
             retinfo.append("BV allocated range: " + str(allrange))
         retinfo.append("Session Data: " + str(self.bv.session_data))
-        for var in map(hex, sorted(self.bv.data_vars.keys())):
-            retinfo.append("BV data var: " + var)
+        for addr in sorted(self.bv.data_vars.keys()):
+            retinfo.append("BV data var: " + str(self.bv.data_vars[addr]))
         retinfo.append("BV Entry function: " + repr(self.bv.entry_function))
         for i in self.bv:
             retinfo.append("BV function: " + repr(i))

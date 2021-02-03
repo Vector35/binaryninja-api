@@ -255,7 +255,7 @@ public:
 
 	FileContext* getFileContext() const { return m_context; }
 	bool areFileContentsLocked() { return m_fileContentsLock; }
-	void setFileContentsLocked(bool enable) { m_fileContentsLock = enable; }
+	void setFileContentsLocked(bool enable);
 	QWidget* getFileContentsLockStatus();
 
 	DockHandler* getDockHandler() const { return m_docks; }

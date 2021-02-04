@@ -334,15 +334,11 @@ class BINARYNINJAUIAPI CrossReferenceTable: public QTableView, public CrossRefer
 	CrossReferenceItemDelegate* m_itemDelegate;
 	CrossReferenceFilterProxyModel* m_model;
 
-	int m_charWidth = 0;
-	int m_charHeight = 0;
-	int m_maxWidthAddress = 0;
-	int m_maxWidthFunction = 0;
-	int m_maxWidthPreview = 0;
 public:
 	CrossReferenceTable(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
 	virtual ~CrossReferenceTable();
 
+	void updateFontAndHeaderSize();
 	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget) override;
 	virtual QModelIndex nextIndex() override;
 	virtual QModelIndex prevIndex() override;

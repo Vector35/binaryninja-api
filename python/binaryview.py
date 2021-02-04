@@ -874,8 +874,8 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. This is because \
 		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas opening with \
-		:func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries, by default.
+		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
+		setting and opening with :func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
 
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``

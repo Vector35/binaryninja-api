@@ -28,14 +28,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 6
+#define BN_CURRENT_CORE_ABI_VERSION 7
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 5
+#define BN_MINIMUM_CORE_ABI_VERSION 6
 
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
@@ -2176,6 +2176,22 @@ extern "C"
 		FindCaseInsensitive = 1
 	};
 
+	enum BNFindRangeType
+	{
+		AllRangeType,
+		CustomRangeType,
+		CurrentFunctionRangeType
+	};
+
+	enum BNFindType
+	{
+		FindTypeRawString,
+		FindTypeEscapedString,
+		FindTypeText,
+		FindTypeConstant,
+		FindTypeBytes
+	};
+
 	enum BNScriptingProviderInputReadyState
 	{
 		NotReadyForInput,
@@ -2810,19 +2826,47 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI size_t BNGetInstructionLength(BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
 
-	BINARYNINJACOREAPI bool BNFindNextData(BNBinaryView* view, uint64_t start, BNDataBuffer* data, uint64_t* result,
-		BNFindFlag flags);
-	BINARYNINJACOREAPI bool BNFindNextText(BNBinaryView* view, uint64_t start, const char* data, uint64_t* result,
-		BNDisassemblySettings* settings, BNFindFlag flags);
-	BINARYNINJACOREAPI bool BNFindNextConstant(BNBinaryView* view, uint64_t start, uint64_t constant, uint64_t* result,
-		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI bool BNFindNextData(BNBinaryView* view, uint64_t start,
+		BNDataBuffer* data,	uint64_t* result, BNFindFlag flags);
+	BINARYNINJACOREAPI bool BNFindNextText(BNBinaryView* view, uint64_t start, const char* data,
+		uint64_t* result, BNDisassemblySettings* settings, BNFindFlag flags,
+		BNFunctionGraphType graph);
+	BINARYNINJACOREAPI bool BNFindNextConstant(BNBinaryView* view, uint64_t start,
+		uint64_t constant, uint64_t* result, BNDisassemblySettings* settings,
+		BNFunctionGraphType graph);
 
-	BINARYNINJACOREAPI bool BNFindNextDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, BNDataBuffer* data, uint64_t* result, BNFindFlag flags,
+	BINARYNINJACOREAPI bool BNFindNextDataWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, BNDataBuffer* data, uint64_t* result, BNFindFlag flags,
 		void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
-	BINARYNINJACOREAPI bool BNFindNextTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, const char* data, uint64_t* result,
-		BNDisassemblySettings* settings, BNFindFlag flags, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
-	BINARYNINJACOREAPI bool BNFindNextConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end, uint64_t constant, uint64_t* result,
-		BNDisassemblySettings* settings, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
+	BINARYNINJACOREAPI bool BNFindNextTextWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, const char* data, uint64_t* result, BNDisassemblySettings* settings,
+		BNFindFlag flags, BNFunctionGraphType graph, void* ctxt,
+		bool (*progress)(void* ctxt, size_t current, size_t total));
+	BINARYNINJACOREAPI bool BNFindNextConstantWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, uint64_t constant, uint64_t* result, BNDisassemblySettings* settings,
+		BNFunctionGraphType graph, void* ctxt,
+		bool (*progress)(void* ctxt, size_t current, size_t total));
+
+	BINARYNINJACOREAPI bool BNFindAllDataWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, BNDataBuffer* data, BNFindFlag flags,
+		void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
+		void* matchCtxt,
+		bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNDataBuffer* match));
+	BINARYNINJACOREAPI bool BNFindAllTextWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, const char* data, BNDisassemblySettings* settings, BNFindFlag flags,
+		BNFunctionGraphType graph, void* ctxt,
+		bool (*progress)(void* ctxt, size_t current, size_t total),
+		void* matchCtxt,
+		bool (*matchCallback)(void* matchCtxt, uint64_t addr, const char* match,
+			BNLinearDisassemblyLine* line));
+	BINARYNINJACOREAPI bool BNFindAllConstantWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, uint64_t constant, BNDisassemblySettings* settings,
+		BNFunctionGraphType graph,
+		void* ctxt,
+		bool (*progress)(void* ctxt, size_t current, size_t total),
+		void* matchCtxt,
+		bool (*matchCallback)(void* matchCtxt, uint64_t addr,
+			BNLinearDisassemblyLine* line));
 
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length,
 		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
@@ -3159,6 +3203,10 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksForAddress(BNBinaryView* view, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlocksStartingAtAddress(BNBinaryView* view, uint64_t addr, size_t* count);
 
+	BINARYNINJACOREAPI uint64_t BNGetFunctionHighestAddress(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionLowestAddress(BNFunction* func);
+	BINARYNINJACOREAPI BNAddressRange* BNGetFunctionAddressRanges(BNFunction* func, size_t* count);
+
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelILIfAvailable(BNFunction* func);
 	BINARYNINJACOREAPI size_t BNGetLowLevelILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
@@ -3247,6 +3295,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionGlobalPointerValue(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionRegisterValueAtExit(BNFunction* func, uint32_t reg);
 
+	BINARYNINJACOREAPI bool BNGetInstructionContainingAddress(BNFunction* func,
+		BNArchitecture* arch, uint64_t addr, uint64_t* start);
+
 	BINARYNINJACOREAPI BNFunction* BNGetBasicBlockFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNArchitecture* BNGetBasicBlockArchitecture(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetBasicBlockSource(BNBasicBlock* block);
@@ -3272,6 +3323,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNIsMediumLevelILBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetBasicBlockLowLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetBasicBlockMediumLevelILFunction(BNBasicBlock* block);
+	BINARYNINJACOREAPI bool BNGetBasicBlockInstructionContainingAddress(BNBasicBlock* block,
+		uint64_t addr, uint64_t* start);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);

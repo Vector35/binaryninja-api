@@ -159,7 +159,7 @@ public:
 	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb) override;
 	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text, uint64_t& addr,
-		DisassemblySettingsRef settings, BNFindFlag flags,
+		DisassemblySettingsRef settings, BNFindFlag flags, BNFunctionGraphType graph,
 		const std::function<bool (size_t current, size_t total)>& cb) override;
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;

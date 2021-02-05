@@ -10,7 +10,8 @@ from binaryninja.binaryview import BinaryViewType, BinaryView
 from binaryninja.filemetadata import FileMetadata, SaveSettings
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
-from binaryninja.enums import InstructionTextTokenType, SaveOption
+from binaryninja.enums import InstructionTextTokenType, SaveOption, FindFlag,\
+    FunctionGraphType
 import subprocess
 import re
 
@@ -1085,6 +1086,52 @@ class TestBuilder(Builder):
             hlil_range_var_refs = func.get_hlil_var_refs_from(0x1175, 0x8c)
             for ref in hlil_range_var_refs:
                 retinfo.append("var {} is referenced at {}".format(ref.var, ref.src))
+
+        self.delete_package("type_xref.bndb")
+        return fixOutput(sorted(retinfo))
+
+    def test_search(self):
+        """Search"""
+        retinfo = []
+        file_name = self.unpackage_file("type_xref.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            for addr, match in bv.find_all_data(bv.start, bv.end, b'\xc3'):
+                retinfo.append('byte 0xc3 is found at address 0x%lx with DataBuffer %s' %
+                    (addr, match.escape()))
+
+            for addr, match, line in bv.find_all_text(bv.start, bv.end, 'test'):
+                retinfo.append('text "test" is found at address 0x%lx with string %s \
+                    line %s' % (addr, match, line))
+
+            for addr, line in bv.find_all_constant(bv.start, bv.end, 0x58):
+                retinfo.append('constant 0x58 is found at address 0x%lx with line' %\
+                    (addr, line))
+
+            def data_callback(addr, match):
+                retinfo.append('match found at address: 0x%lx with DataBuffer %s' % (addr, match.escape()))
+
+            bv.find_all_data(bv.start, bv.end, b'\xc3', FindFlag.FindCaseSensitive, None,
+                data_callback)
+
+            def string_callback(addr, match, line):
+                retinfo.append('match found at address: 0x%lx with string %s, line %s' %\
+                    (addr, match, line))
+
+            bv.find_all_text(bv.start, bv.end, 'test', None, FindFlag.FindCaseSensitive, None,
+                string_callback)
+    
+            def constant_callback(addr, line):
+                retinfo.append('match found at address: 0x%lx with constant 0x58, line %s'\
+                    % (addr, line))
+
+            bv.find_all_constant(bv.start, bv.end, 0x58, None,\
+                FunctionGraphType.NormalFunctionGraph, None, constant_callback)
 
         self.delete_package("type_xref.bndb")
         return fixOutput(sorted(retinfo))

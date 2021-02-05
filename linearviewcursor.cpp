@@ -198,22 +198,7 @@ vector<LinearDisassemblyLine> LinearViewCursor::GetLines()
 	vector<LinearDisassemblyLine> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		LinearDisassemblyLine line;
-		line.type = lines[i].type;
-		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
-		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.contents.addr = lines[i].contents.addr;
-		line.contents.instrIndex = lines[i].contents.instrIndex;
-		line.contents.highlight = lines[i].contents.highlight;
-		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
-		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
-		line.contents.typeInfo.hasTypeInfo = lines[i].contents.typeInfo.hasTypeInfo;
-		line.contents.typeInfo.fieldIndex = lines[i].contents.typeInfo.fieldIndex;
-		line.contents.typeInfo.parentType = lines[i].contents.typeInfo.parentType ?
-			new Type(BNNewTypeReference(lines[i].contents.typeInfo.parentType)) : nullptr;
-		result.push_back(line);
-	}
+		result.push_back(LinearDisassemblyLine::FromAPIObject(&lines[i]));
 
 	BNFreeLinearDisassemblyLines(lines, count);
 	return result;

@@ -24,6 +24,26 @@ using namespace std;
 using namespace BinaryNinja;
 
 
+LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(BNLinearDisassemblyLine* line)
+{
+	LinearDisassemblyLine result;
+	result.type = line->type;
+	result.function = line->function ? new Function(BNNewFunctionReference(line->function)) : nullptr;
+	result.block = line->block ? new BasicBlock(BNNewBasicBlockReference(line->block)) : nullptr;
+	result.contents.addr = line->contents.addr;
+	result.contents.instrIndex = line->contents.instrIndex;
+	result.contents.highlight = line->contents.highlight;
+	result.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(line->contents.tokens, line->contents.count);
+	result.contents.tags = Tag::ConvertTagList(line->contents.tags, line->contents.tagCount);
+	result.contents.typeInfo.hasTypeInfo = line->contents.typeInfo.hasTypeInfo;
+	result.contents.typeInfo.fieldIndex = line->contents.typeInfo.fieldIndex;
+	result.contents.typeInfo.parentType = line->contents.typeInfo.parentType ?
+		new Type(BNNewTypeReference(line->contents.typeInfo.parentType)) : nullptr;
+
+	return result;
+}
+
+
 LinearViewObjectIdentifier::LinearViewObjectIdentifier():
 	type(SingleLinearViewObject), start(0), end(0)
 {
@@ -135,22 +155,7 @@ vector<LinearDisassemblyLine> LinearViewObject::GetLines(LinearViewObject* prev,
 	vector<LinearDisassemblyLine> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-	{
-		LinearDisassemblyLine line;
-		line.type = lines[i].type;
-		line.function = lines[i].function ? new Function(BNNewFunctionReference(lines[i].function)) : nullptr;
-		line.block = lines[i].block ? new BasicBlock(BNNewBasicBlockReference(lines[i].block)) : nullptr;
-		line.contents.addr = lines[i].contents.addr;
-		line.contents.instrIndex = lines[i].contents.instrIndex;
-		line.contents.highlight = lines[i].contents.highlight;
-		line.contents.tokens = InstructionTextToken::ConvertInstructionTextTokenList(lines[i].contents.tokens, lines[i].contents.count);
-		line.contents.tags = Tag::ConvertTagList(lines[i].contents.tags, lines[i].contents.tagCount);
-		line.contents.typeInfo.hasTypeInfo = lines[i].contents.typeInfo.hasTypeInfo;
-		line.contents.typeInfo.fieldIndex = lines[i].contents.typeInfo.fieldIndex;
-		line.contents.typeInfo.parentType = lines[i].contents.typeInfo.parentType ?
-			new Type(BNNewTypeReference(lines[i].contents.typeInfo.parentType)) : nullptr;
-		result.push_back(line);
-	}
+		result.push_back(LinearDisassemblyLine::FromAPIObject(&lines[i]));
 
 	BNFreeLinearDisassemblyLines(lines, count);
 	return result;

@@ -5,7 +5,6 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QModelIndex>
 #include <QtGui/QImage>
-#include <QtCore/QParallelAnimationGroup>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QTreeView>
@@ -15,8 +14,6 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QGridLayout>
-#include <QtWidgets/QScrollArea>
-#include <QtWidgets/QToolButton>
 
 #include <vector>
 #include <deque>
@@ -26,6 +23,7 @@
 #include "dockhandler.h"
 #include "viewframe.h"
 #include "fontsettings.h"
+#include "expandablegroup.h"
 
 class XrefHeader;
 class XrefItem
@@ -521,27 +519,6 @@ public Q_SLOTS:
 	void selectionChanged();
 	void typeChanged(int index, bool checked);
 	void directionChanged(int change, bool checked);
-};
-
-
-class BINARYNINJAUIAPI ExpandableGroup : public QWidget
-{
-	Q_OBJECT
-
-private:
-	QToolButton* m_button;
-	QParallelAnimationGroup* m_animation;
-	QScrollArea* m_content;
-	int m_duration = 100;
-
-private Q_SLOTS:
-	void toggled(bool expanded);
-
-public:
-	explicit ExpandableGroup(const QString& title = "", QWidget* parent = nullptr);
-	void setContentLayout(QLayout* contentLayout);
-	void setTitle(const QString& title) { m_button->setText(title); }
-	void toggle(bool expanded);
 };
 
 

@@ -14,6 +14,7 @@
 #include <stack>
 #include <utility>
 #include <vector>
+#include "binaryninjaapi.h"
 #include "filecontext.h"
 #include "viewtype.h"
 #include "action.h"
@@ -78,6 +79,7 @@ class FeatureMap;
 class StatusBarWidget;
 class ViewNavigationMode;
 class TransformParameterDialog;
+// struct BinaryNinjaCore::LinearDisassemblyLine;
 
 
 class BINARYNINJAUIAPI View
@@ -109,13 +111,30 @@ public:
 	virtual bool canAssemble() { return false; }
 	virtual bool canCompile() { return false; }
 
-	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data,
+		uint64_t& addr, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb);
-	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text, uint64_t& addr,
-		DisassemblySettingsRef settings, BNFindFlag flags,
+	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text,
+		uint64_t& addr,	DisassemblySettingsRef settings, BNFindFlag flags,
+		BNFunctionGraphType graph,
 		const std::function<bool (size_t current, size_t total)>& cb);
-	virtual bool findNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, DisassemblySettingsRef settings,
+	virtual bool findNextConstant(uint64_t start, uint64_t end, uint64_t constant,
+		uint64_t& addr, DisassemblySettingsRef settings, BNFunctionGraphType graph,
 		const std::function<bool (size_t current, size_t total)>& cb);
+
+	virtual bool findAllData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<bool (uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
+	virtual bool findAllText(uint64_t start, uint64_t end, const std::string& data, 
+		DisassemblySettingsRef settings, BNFindFlag flags, BNFunctionGraphType graph,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<bool (uint64_t addr, const std::string& match,
+			const BinaryNinja::LinearDisassemblyLine& line)>& matchCallback);
+	virtual bool findAllConstant(uint64_t start, uint64_t end, uint64_t constant, 
+		DisassemblySettingsRef settings, BNFunctionGraphType graph,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<bool (uint64_t addr,
+			const BinaryNinja::LinearDisassemblyLine& line)>& matchCallback);
 
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;
@@ -307,12 +326,12 @@ public:
 	QString getShortFileName();
 	std::vector<QString> getAvailableTypes() const;
 
-	QString getCurrentView();
-	QString getCurrentDataType();
-	uint64_t getCurrentOffset();
-	BNAddressRange getSelectionOffsets();
+	QString getCurrentView() const;
+	QString getCurrentDataType() const;
+	uint64_t getCurrentOffset() const;
+	BNAddressRange getSelectionOffsets() const;
 
-	ViewLocation getViewLocation();
+	ViewLocation getViewLocation() const;
 	void setViewLocation(const ViewLocation& viewLocation);
 
 	View* getCurrentViewInterface() const { return View::getViewFromWidget(m_view); }
@@ -335,9 +354,9 @@ public:
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
 	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation,
 		bool addHistoryEntry = true);
-	QString getTypeForView(QWidget* view);
-	QString getDataTypeForView(const QString& type);
-	QString getDataTypeForView(QWidget* view);
+	QString getTypeForView(QWidget* view) const;
+	QString getDataTypeForView(const QString& type) const;
+	QString getDataTypeForView(QWidget* view) const;
 
 	bool closeRequest();
 	void closing();
@@ -366,6 +385,13 @@ public:
 	void editTag(TagRef tag);
 	void nextTag();
 	void prevTag();
+
+	void startNewFind(const BinaryNinja::FindParameters& params);
+	bool updateSearchProgress(uint64_t cur, uint64_t total);
+	void notifySearchCompleted();
+	void addSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
+	void addSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match,
+		const BinaryNinja::LinearDisassemblyLine& line);
 
 	virtual UIActionContext actionContext();
 	void bindActions();

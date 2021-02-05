@@ -2904,20 +2904,22 @@ void BinaryView::RegisterPlatformTypes(Platform* platform)
 }
 
 
-bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
+bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result,
+	BNFindFlag flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);
 }
 
 bool BinaryView::FindNextText(uint64_t start, const std::string& data, uint64_t& result,
-	Ref<DisassemblySettings> settings, BNFindFlag flags)
+	Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph)
 {
-	return BNFindNextText(m_object, start, data.c_str(), &result, settings->GetObject(), flags);
+	return BNFindNextText(m_object, start, data.c_str(), &result, settings->GetObject(), flags, graph);
 }
 
-bool BinaryView::FindNextConstant(uint64_t start, uint64_t constant, uint64_t& result, Ref<DisassemblySettings> settings)
+bool BinaryView::FindNextConstant(uint64_t start, uint64_t constant, uint64_t& result,
+	Ref<DisassemblySettings> settings, BNFunctionGraphType graph)
 {
-	return BNFindNextConstant(m_object, start, constant, &result, settings->GetObject());
+	return BNFindNextConstant(m_object, start, constant, &result, settings->GetObject(), graph);
 }
 
 
@@ -2934,6 +2936,54 @@ static bool FindProgressCallback(void* ctxt, size_t progress, size_t total)
 }
 
 
+struct MatchCallbackContextForDataBuffer
+{
+	std::function<bool(uint64_t, const DataBuffer&)> func;
+};
+
+
+static bool MatchCallbackForDataBuffer(void* ctxt, uint64_t addr, BNDataBuffer* buffer)
+{
+	MatchCallbackContextForDataBuffer* cb = (MatchCallbackContextForDataBuffer*)ctxt;
+	return cb->func(addr, DataBuffer(buffer));
+}
+
+
+struct MatchCallbackContextForText
+{
+	std::function<bool(uint64_t, const string&, const LinearDisassemblyLine&)> func;
+};
+
+
+static bool MatchCallbackForText(void* ctxt, uint64_t addr, const char* buffer,
+	BNLinearDisassemblyLine* line)
+{
+	MatchCallbackContextForText* cb = (MatchCallbackContextForText*)ctxt;
+
+	LinearDisassemblyLine result = LinearDisassemblyLine::FromAPIObject(line);
+	BNFreeLinearDisassemblyLines(line, 1);
+
+	return cb->func(addr, string(buffer), result);
+}
+
+
+struct MatchCallbackContextForConstant
+{
+	std::function<bool(uint64_t, const LinearDisassemblyLine&)> func;
+};
+
+
+static bool MatchCallbackForConstant(void* ctxt, uint64_t addr, BNLinearDisassemblyLine* line)
+{
+	MatchCallbackContextForConstant* cb = (MatchCallbackContextForConstant*)ctxt;
+
+	LinearDisassemblyLine result = LinearDisassemblyLine::FromAPIObject(line);
+	BNFreeLinearDisassemblyLines(line, 1);
+
+	return cb->func(addr, result);
+}
+
+
 bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
 	const std::function<bool(size_t current, size_t total)>& progress)
 {
@@ -2943,21 +2993,68 @@ bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& da
 }
 
 
-bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
-	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress)
-{
-	FindProgressCallbackContext fp;
-	fp.func = progress;
-	return BNFindNextTextWithProgress(m_object, start, end, data.c_str(), &addr, settings->GetObject(), flags, &fp, FindProgressCallback);
-}
-
-
-bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings,
+bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data,
+	uint64_t& addr, Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
 	const std::function<bool(size_t current, size_t total)>& progress)
 {
 	FindProgressCallbackContext fp;
 	fp.func = progress;
-	return BNFindNextConstantWithProgress(m_object, start, end, constant, &addr, settings->GetObject(), &fp, FindProgressCallback);
+	return BNFindNextTextWithProgress(m_object, start, end, data.c_str(), &addr,
+		settings->GetObject(), flags, graph, &fp, FindProgressCallback);
+}
+
+
+bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr,
+	Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
+	const std::function<bool(size_t current, size_t total)>& progress)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	return BNFindNextConstantWithProgress(m_object, start, end, constant, &addr,
+		settings->GetObject(), graph, &fp, FindProgressCallback);
+}
+
+
+bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& data,
+	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<bool(uint64_t addr, const DataBuffer& match)>& matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContextForDataBuffer mc;
+	mc.func = matchCallback;
+	return BNFindAllDataWithProgress(m_object, start, end, data.GetBufferObject(),
+		flags, &fp, FindProgressCallback, &mc, MatchCallbackForDataBuffer);
+}
+
+
+bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& data,
+	Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
+	const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<bool(uint64_t addr, const std::string& match,
+		const LinearDisassemblyLine& line)>& matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContextForText mc;
+	mc.func = matchCallback;
+	return BNFindAllTextWithProgress(m_object, start, end, data.c_str(), settings->GetObject(),
+		flags, graph, &fp, FindProgressCallback, &mc, MatchCallbackForText);
+}
+
+
+bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant,
+	Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
+	const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>&
+		matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContextForConstant mc;
+	mc.func = matchCallback;
+	return BNFindAllConstantWithProgress(m_object, start, end, constant, settings->GetObject(),
+		graph, &fp, FindProgressCallback, &mc, MatchCallbackForConstant);
 }
 
 

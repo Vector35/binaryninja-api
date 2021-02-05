@@ -475,3 +475,9 @@ Ref<MediumLevelILFunction> BasicBlock::GetMediumLevelILFunction() const
 		return nullptr;
 	return new MediumLevelILFunction(func);
 }
+
+
+bool BasicBlock::GetInstructionContainingAddress(uint64_t addr, uint64_t* start)
+{
+	return BNGetBasicBlockInstructionContainingAddress(m_object, addr, start);
+}

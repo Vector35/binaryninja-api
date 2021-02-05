@@ -275,7 +275,7 @@ class BinaryViewEvent(object):
 		>>> def callback(bv):
    		...		print('start: 0x%x' % bv.start)
 		...
-		>>> BinaryViewEvent.add_binaryview_finalized_event(callback)
+		>>> BinaryViewType.add_binaryview_finalized_event(callback)
 	"""
 	@classmethod
 	def register(cls, event_type, callback):
@@ -996,10 +996,21 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 	@staticmethod
 	def add_binaryview_finalized_event(callback):
+		"""
+		`add_binaryview_finalized_event` adds a callback that gets executed
+		when new binaryview is finalized.
+		For more details, please refer to the documentation of BinaryViewEvent.
+		"""
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewFinalizationEvent, callback)
 
 	@staticmethod
 	def add_binaryview_initial_analysis_completion_event(callback):
+		"""
+		`add_binaryview_initial_analysis_completion_event` adds a callback
+		that gets executed after the initial analysis, as well as linear
+		sweep and signature matcher (if they are configured to run) completed.
+		For more details, please refer to the documentation of BinaryViewEvent.
+		"""
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewInitialAnalysisCompletionEvent, callback)
 
 

@@ -105,7 +105,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		>>> from binaryninja import *
 		>>> arch = Architecture['x86']
 
-		.. note:: The `max_instr_length` property of an architecture is not necessarily representative of the maximum instruction size of the associated CPU architecture. Rather, it represents the maximum size of a potential instruction that the architecture plugin can handle. So for example, the value for x86 is 16 despite the lagest valid instruction being only 15 bytes long, and the value for mips32 is currently 8 because multiple instrutions are decoded looking for delay slots so they can be reordered.
+	.. note:: The `max_instr_length` property of an architecture is not necessarily representative of the maximum instruction size of the associated CPU architecture. Rather, it represents the maximum size of a potential instruction that the architecture plugin can handle. So for example, the value for x86 is 16 despite the lagest valid instruction being only 15 bytes long, and the value for mips32 is currently 8 because multiple instrutions are decoded looking for delay slots so they can be reordered.
 
 	"""
 	name = None

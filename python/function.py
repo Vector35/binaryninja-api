@@ -1436,12 +1436,12 @@ class Function(object):
 	@property
 	def highest_address(self):
 		"The highest virtual address contained in a function."""
-		return max(self, key=lambda block:block.end).end - 1
+		return core.BNGetFunctionHighestAddress(self.handle)
 
 	@property
 	def lowest_address(self):
 		"""The lowest virtual address contained in a function."""
-		return min(self, key=lambda block:block.start).start
+		return core.BNGetFunctionLowestAddress(self.handle)
 
 	@property
 	def symbol(self):

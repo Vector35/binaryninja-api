@@ -386,16 +386,3 @@ map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 	BNFreeMemoryUsageInfo(info, count);
 	return result;
 }
-
-
-vector<string> BinaryNinja::GetRegisteredPluginLoaders()
-{
-	size_t count = 0;
-	char** loaders = BNGetRegisteredPluginLoaders(&count);
-	vector<string> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.push_back(loaders[i]);
-	BNFreeRegisteredPluginLoadersList(loaders, count);
-	return result;
-}

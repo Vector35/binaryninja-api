@@ -50,6 +50,11 @@ class RepoPlugin(object):
 		return core.BNPluginGetPath(self.handle)
 
 	@property
+	def dependencies(self):
+		"""Dependencies required for installing this plugin"""
+		return core.BNPluginGetDependencies(self.handle)
+
+	@property
 	def installed(self):
 		"""Boolean True if the plugin is installed, False otherwise"""
 		return core.BNPluginIsInstalled(self.handle)
@@ -60,6 +65,9 @@ class RepoPlugin(object):
 			return core.BNPluginInstall(self.handle)
 		else:
 			return core.BNPluginUninstall(self.handle)
+
+	def install_dependencies(self):
+		return core.BNPluginInstallDependencies(self.handle)
 
 	@property
 	def enabled(self):

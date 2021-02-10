@@ -210,7 +210,6 @@ extern "C"
 	struct BNLinearViewObject;
 	struct BNLinearViewCursor;
 
-	typedef bool (*BNLoadPluginCallback)(const char* repoPath, const char* pluginPath, bool force, void* ctx);
 
 	//! Console log levels
 	enum BNLogLevel
@@ -2208,7 +2207,8 @@ extern "C"
 	{
 		void* context;
 		BNScriptingInstance* (*createInstance)(void* ctxt);
-
+		bool (*loadModule)(void* ctxt, const char* repoPath, const char* pluginPath, bool force);
+		bool (*installModules)(void* ctxt, const char* modules);
 	};
 
 	struct BNScriptingOutputListener
@@ -4663,14 +4663,18 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNSetErrorForDownloadInstance(BNDownloadInstance* instance, const char* error);
 
 	// Scripting providers
-	BINARYNINJACOREAPI BNScriptingProvider* BNRegisterScriptingProvider(const char* name,
+	BINARYNINJACOREAPI BNScriptingProvider* BNRegisterScriptingProvider(const char* name, const char* apiName,
 		BNScriptingProviderCallbacks* callbacks);
 	BINARYNINJACOREAPI BNScriptingProvider** BNGetScriptingProviderList(size_t* count);
 	BINARYNINJACOREAPI void BNFreeScriptingProviderList(BNScriptingProvider** providers);
 	BINARYNINJACOREAPI BNScriptingProvider* BNGetScriptingProviderByName(const char* name);
+	BINARYNINJACOREAPI BNScriptingProvider* BNGetScriptingProviderByAPIName(const char* name);
 
 	BINARYNINJACOREAPI char* BNGetScriptingProviderName(BNScriptingProvider* provider);
+	BINARYNINJACOREAPI char* BNGetScriptingProviderAPIName(BNScriptingProvider* provider);
 	BINARYNINJACOREAPI BNScriptingInstance* BNCreateScriptingProviderInstance(BNScriptingProvider* provider);
+	BINARYNINJACOREAPI bool BNLoadScriptingProviderModule(BNScriptingProvider* provider, const char* repository, const char* module, bool force);
+	BINARYNINJACOREAPI bool BNInstallScriptingProviderModules(BNScriptingProvider* provider, const char* modules);
 
 	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(BNScriptingProvider* provider,
 		BNScriptingInstanceCallbacks* callbacks);
@@ -4805,6 +4809,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRepoPlugin* BNNewPluginReference(BNRepoPlugin* r);
 	BINARYNINJACOREAPI void BNFreePlugin(BNRepoPlugin* plugin);
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetDependencies(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsEnabled(BNRepoPlugin* p);
 	BINARYNINJACOREAPI BNPluginStatus BNPluginGetPluginStatus(BNRepoPlugin* p);
@@ -4812,6 +4817,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNPluginEnable(BNRepoPlugin* p, bool force);
 	BINARYNINJACOREAPI bool BNPluginDisable(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstall(BNRepoPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNRepoPlugin* p);
 	BINARYNINJACOREAPI char* BNPluginGetInstallInstructions(BNRepoPlugin* p, const char* platform);
@@ -4852,13 +4858,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRepositoryManager* BNGetRepositoryManager();
 
 	BINARYNINJACOREAPI BNRepository* BNRepositoryManagerGetDefaultRepository(BNRepositoryManager* r);
-	BINARYNINJACOREAPI void BNRegisterForPluginLoading(
-		const char* pluginApiName,
-		bool (*cb)(const char* repoPath, const char* pluginPath, bool force, void* ctx), // BNLoadPluginCallback
-		void* ctx);
-	BINARYNINJACOREAPI bool BNLoadPluginForApi(const char* pluginApiName, const char* repoPath, const char* pluginPath, bool force);
-	BINARYNINJACOREAPI char** BNGetRegisteredPluginLoaders(size_t* count);
-	BINARYNINJACOREAPI void BNFreeRegisteredPluginLoadersList(char** pluginLoaders, size_t count);
 
 	// LLVM Services APIs
 	BINARYNINJACOREAPI void BNLlvmServicesInit(void);

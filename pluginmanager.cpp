@@ -20,6 +20,11 @@ string RepoPlugin::GetPath() const
 	RETURN_STRING(BNPluginGetPath(m_object));
 }
 
+string RepoPlugin::GetDependencies() const
+{
+	RETURN_STRING(BNPluginGetDependencies(m_object));
+}
+
 bool RepoPlugin::IsInstalled() const
 {
 	return BNPluginIsInstalled(m_object);
@@ -211,6 +216,12 @@ bool RepoPlugin::Uninstall()
 bool RepoPlugin::Install()
 {
 	return BNPluginInstall(m_object);
+}
+
+
+bool RepoPlugin::InstallDependencies()
+{
+	return BNPluginInstallDependencies(m_object);
 }
 
 

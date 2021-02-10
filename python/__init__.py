@@ -26,7 +26,6 @@ import ctypes
 from time import gmtime
 import os
 
-
 from binaryninja.compatibility import *
 
 
@@ -88,54 +87,6 @@ def get_install_directory():
 	.. warning:: ONLY for use within the Binary Ninja UI, behavior is undefined and unreliable if run headlessly
 	"""
 	return core.BNGetInstallDirectory()
-
-
-_plugin_api_name = "python{}".format(sys.version_info.major)
-
-
-class PluginManagerLoadPluginCallback(object):
-	"""Callback for BNLoadPluginForApi("python{version}", ...), dynamically loads python plugins."""
-	def __init__(self):
-		self.cb = ctypes.CFUNCTYPE(
-			ctypes.c_bool,
-			ctypes.c_char_p,
-			ctypes.c_char_p,
-			ctypes.c_bool,
-			ctypes.c_void_p)(self._load_plugin)
-
-	def _load_plugin(self, repo_path, plugin_path, force, ctx):
-		try:
-			repo_path = repo_path.decode("utf-8")
-			plugin_path = plugin_path.decode("utf-8")
-			repo = RepositoryManager()[repo_path]
-			plugin = repo[plugin_path]
-
-			if not force and _plugin_api_name not in plugin.api:
-				raise ValueError("Plugin API name is not " + _plugin_api_name)
-
-			if not force and core.core_platform not in plugin.install_platforms:
-				raise ValueError("Current platform {} isn't in list of valid platforms for this plugin {}".format(
-					core.core_platform, plugin.install_platforms))
-			if not plugin.installed:
-				plugin.installed = True
-
-			plugin_full_path = os.path.join(repo.full_path, plugin.path)
-			if repo.full_path not in sys.path:
-				sys.path.append(repo.full_path)
-			if plugin_full_path not in sys.path:
-				sys.path.append(plugin_full_path)
-
-			__import__(plugin_path)
-			return True
-		except KeyError:
-			log_error("Failed to find python plugin: {}/{}".format(repo_path, plugin_path))
-		except ImportError as ie:
-			log_error("Failed to import python plugin: {}/{}: {}".format(repo_path, plugin_path, ie))
-		return False
-
-
-load_plugin = PluginManagerLoadPluginCallback()
-core.BNRegisterForPluginLoading(_plugin_api_name, load_plugin.cb, 0)
 
 
 class _DestructionCallbackHandler(object):

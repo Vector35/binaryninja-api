@@ -25,17 +25,19 @@ import ctypes
 import threading
 import abc
 import sys
-from binaryninja import bncompleter
+import subprocess
+from pathlib import Path, PurePath
 import re
 
 # Binary Ninja components
 import binaryninja
+from binaryninja import bncompleter, log
 from binaryninja import _binaryninjacore as core
+from binaryninja.settings import Settings
+from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-from binaryninja import log
 
 # 2-3 compatibility
-from binaryninja import range
 from binaryninja import with_metaclass
 
 
@@ -364,7 +366,9 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 		self._cb = core.BNScriptingProviderCallbacks()
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
-		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self._cb)
+		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
+		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
+		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -382,6 +386,12 @@ class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
 		if result is None:
 			return None
 		return ScriptingInstance(self, handle = result)
+
+	def _load_plugin(self, ctx, repo_path, plugin_path, force):
+		return False
+
+	def _install_modules(self, ctx, modules):
+		return False
 
 
 class _PythonScriptingInstanceOutput(object):
@@ -422,7 +432,7 @@ class _PythonScriptingInstanceOutput(object):
 	def seek(self):
 		pass
 
-	def sofspace(self):
+	def softspace(self):
 		return 0
 
 	def truncate(self):
@@ -789,9 +799,152 @@ class PythonScriptingInstance(ScriptingInstance):
 			return ""
 		return result
 
+
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
+	apiName = f"python{sys.version_info.major}" # Used for plugin compatibility testing
 	instance_class = PythonScriptingInstance
+
+	def _load_module(self, ctx, repo_path, module, force):
+		try:
+			repo_path = repo_path.decode("utf-8")
+			module = module.decode("utf-8")
+			repo = RepositoryManager()[repo_path]
+			plugin = repo[module]
+
+			if not force and self.apiName not in plugin.api:
+				raise ValueError(f"Plugin API name is not {self.name}")
+
+			if not force and core.core_platform not in plugin.install_platforms:
+				raise ValueError(f"Current platform {core.core_platform} isn't in list of "\
+					f"valid platforms for this plugin {plugin.install_platforms}")
+			if not plugin.installed:
+				plugin.installed = True
+
+			plugin_full_path = str(Path(repo.full_path) / plugin.path)
+			if repo.full_path not in sys.path:
+				sys.path.append(repo.full_path)
+			if plugin_full_path not in sys.path:
+				sys.path.append(plugin_full_path)
+
+			__import__(module)
+			return True
+		except KeyError:
+			log.log_error(f"Failed to find python plugin: {repo_path}/{module}")
+		except ImportError as ie:
+			log.log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
+		return False
+
+	def _run_args(self, args):
+		si = None
+		if sys.platform == "win32":
+			si = subprocess.STARTUPINFO()
+			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+		try:
+			return (True, subprocess.check_output(args, startupinfo=si).decode("utf-8"))
+		except SubprocessError as se:
+			return (False, str(se))
+
+
+	def _bin_version(self, python_bin: str):
+		return self._run_args([str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"])[1]
+
+	def _get_executable_for_libpython(self, python_lib: str, python_bin: str):
+		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+		if python_bin is not None and python_bin != "":
+			python_bin_version = self._bin_version(python_bin)
+			if python_lib_version != python_bin_version:
+				return (None, f"Specified Python Binary Override is the wrong version. Expected: {python_lib_version} got: {python_bin_version}")
+			return (python_bin, "Success")
+
+		using_bundled_python = python_lib is None
+		si = None
+		if sys.platform == "darwin":
+			if using_bundled_python:
+				return (None, "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again")
+
+			python_bin =  Path(python_lib).parent / f"bin/python{python_lib_version}"
+		elif sys.platform == "linux":
+			class Dl_info(ctypes.Structure):
+				_fields_ = [
+					("dli_fname", ctypes.c_char_p),
+					("dli_fbase", ctypes.c_void_p),
+					("dli_sname", ctypes.c_char_p),
+					("dli_saddr", ctypes.c_void_p),
+				]
+			def _linked_libpython():
+				libdl = ctypes.CDLL(find_library("dl"))
+				libdl.dladdr.argtypes = [ctypes.c_void_p, ctypes.POINTER(Dl_info)]
+				libdl.dladdr.restype = ctypes.c_int
+				dlinfo = Dl_info()
+				retcode = libdl.dladdr(ctypes.cast(ctypes.pythonapi.Py_GetVersion, ctypes.c_void_p), ctypes.pointer(dlinfo))
+				if retcode == 0:  # means error
+					return None
+				return os.path.realpath(dlinfo.dli_fname.decode())
+			if using_bundled_python:
+				python_lib = _linked_libpython()
+				if python_lib is None:
+					return (None, "Failed: No python specified. Specify a full python installation in your 'Python Interpreter' and try again")
+
+			if python_lib == os.path.realpath(sys.executable):
+				python_bin = python_lib
+			else:
+				python_path = Path(python_lib)
+				for path in python_path.parents:
+					if path.name in ["lib", "lib64"]:
+						break
+				else:
+					return (None, f"Failed to find python binary from {python_lib}")
+
+				python_bin = path.parent / f"bin/python{python_lib_version}"
+		else:
+			if using_bundled_python:
+				python_bin = Path(get_install_directory()) / "plugins\\python\\python.exe"
+			else:
+				python_bin =  Path(python_lib).parent / "python.exe"
+		python_bin_version = self._bin_version(python_bin)
+		if python_bin_version != python_lib_version:
+			return (None, f"Failed: Python version not equal {python_bin_version} and {python_lib_version}")
+
+		return (python_bin, "Success")
+
+	def _install_modules(self, ctx, modules):
+		# This callback should not be called directly it is indirectly
+		# executed binary ninja is executed with --pip option
+		python_lib = Settings().get_string("python.interpreter")
+		python_bin_override = Settings().get_string("python.binaryOverride")
+		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
+		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
+			log.log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status} Please specify a path to a python library in the 'Python Interpreter' setting")
+			return False
+		elif python_bin is None:
+			log.log_error(f"Unable to discover python executable required for installing python modules: {status} Please specify a path to a python binary in the 'Python Path Override'")
+			return False
+
+		python_bin_version = subprocess.check_output([python_bin, "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"]).decode("utf-8")
+		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+		if (python_bin_version != python_lib_version):
+			log.log_error(f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}")
+			return False
+
+		args = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
+		proxy_settings = Settings().get_string("downloadClient.httpsProxy")
+		if proxy_settings:
+			args.extend(["--proxy", proxy_settings])
+
+		args.append("install")
+		args.append("--verbose")
+		venv = Settings().get_string("python.virtualenv")
+		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir():
+			args.extend(["--target", venv])
+
+		args.extend(filter(len, modules.decode("utf-8").split("\n")))
+		log.log_info(f"Running pip {args}")
+		status, result = self._run_args(args)
+		if not status:
+			log.log_error(f"Error while attempting to install requirements {result}")
+		return status
 
 
 PythonScriptingProvider().register()

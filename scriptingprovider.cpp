@@ -281,7 +281,7 @@ std::string CoreScriptingInstance::CompleteInput(const std::string& text, uint64
 }
 
 
-ScriptingProvider::ScriptingProvider(const string& name): m_nameForRegister(name)
+ScriptingProvider::ScriptingProvider(const string& name, const string& apiName): m_nameForRegister(name), m_apiNameForRegister(apiName)
 {
 }
 
@@ -300,9 +300,32 @@ BNScriptingInstance* ScriptingProvider::CreateInstanceCallback(void* ctxt)
 }
 
 
+bool ScriptingProvider::LoadModuleCallback(void* ctxt, const char* repository, const char* module, bool force)
+{
+	ScriptingProvider* provider = (ScriptingProvider*)ctxt;
+	return BNLoadScriptingProviderModule(provider->GetObject(), repository, module, force);
+}
+
+
+bool ScriptingProvider::InstallModulesCallback(void* ctxt, const char* modules)
+{
+	ScriptingProvider* provider = (ScriptingProvider*)ctxt;
+	return BNInstallScriptingProviderModules(provider->GetObject(), modules);
+}
+
+
 string ScriptingProvider::GetName()
 {
 	char* providerNameRaw = BNGetScriptingProviderName(m_object);
+	string providerName(providerNameRaw);
+	BNFreeString(providerNameRaw);
+	return providerName;
+}
+
+
+string ScriptingProvider::GetAPIName()
+{
+	char* providerNameRaw = BNGetScriptingProviderAPIName(m_object);
 	string providerName(providerNameRaw);
 	BNFreeString(providerNameRaw);
 	return providerName;
@@ -330,12 +353,23 @@ Ref<ScriptingProvider> ScriptingProvider::GetByName(const string& name)
 }
 
 
+Ref<ScriptingProvider> ScriptingProvider::GetByAPIName(const string& name)
+{
+	BNScriptingProvider* result = BNGetScriptingProviderByAPIName(name.c_str());
+	if (!result)
+		return nullptr;
+	return new CoreScriptingProvider(result);
+}
+
+
 void ScriptingProvider::Register(ScriptingProvider* provider)
 {
 	BNScriptingProviderCallbacks cb;
 	cb.context = provider;
 	cb.createInstance = CreateInstanceCallback;
-	provider->m_object = BNRegisterScriptingProvider(provider->m_nameForRegister.c_str(), &cb);
+	cb.loadModule = LoadModuleCallback;
+	cb.installModules = InstallModulesCallback;
+	provider->m_object = BNRegisterScriptingProvider(provider->m_nameForRegister.c_str(), provider->m_apiNameForRegister.c_str(), &cb);
 }
 
 
@@ -350,4 +384,16 @@ Ref<ScriptingInstance> CoreScriptingProvider::CreateNewInstance()
 	if (!result)
 		return nullptr;
 	return new CoreScriptingInstance(result);
+}
+
+
+bool CoreScriptingProvider::LoadModule(const std::string& repository, const std::string& module, bool force)
+{
+	return BNLoadScriptingProviderModule(m_object, repository.c_str(), module.c_str(), force);
+}
+
+
+bool CoreScriptingProvider::InstallModules(const std::string& modules)
+{
+	return BNInstallScriptingProviderModules(m_object, modules.c_str());
 }

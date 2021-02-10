@@ -756,7 +756,6 @@ __attribute__ ((format (printf, 1, 2)))
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
-	std::vector<std::string> GetRegisteredPluginLoaders();
 
 	class DataBuffer
 	{
@@ -5010,20 +5009,27 @@ __attribute__ ((format (printf, 1, 2)))
 	class ScriptingProvider: public StaticCoreRefCountObject<BNScriptingProvider>
 	{
 		std::string m_nameForRegister;
+		std::string m_apiNameForRegister;
 
 	protected:
-		ScriptingProvider(const std::string& name);
+		ScriptingProvider(const std::string& name, const std::string& apiName);
 		ScriptingProvider(BNScriptingProvider* provider);
 
 		static BNScriptingInstance* CreateInstanceCallback(void* ctxt);
+		static bool LoadModuleCallback(void* ctxt, const char* repository, const char* module, bool force);
+		static bool InstallModulesCallback(void* ctxt, const char* modules);
 
 	public:
 		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
+		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) = 0;
+		virtual bool InstallModules(const std::string& modules) = 0;
 
 		std::string GetName();
+		std::string GetAPIName();
 
 		static std::vector<Ref<ScriptingProvider>> GetList();
 		static Ref<ScriptingProvider> GetByName(const std::string& name);
+		static Ref<ScriptingProvider> GetByAPIName(const std::string& apiName);
 		static void Register(ScriptingProvider* provider);
 	};
 
@@ -5032,6 +5038,8 @@ __attribute__ ((format (printf, 1, 2)))
 	public:
 		CoreScriptingProvider(BNScriptingProvider* provider);
 		virtual Ref<ScriptingInstance> CreateNewInstance() override;
+		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) override;
+		virtual bool InstallModules(const std::string& modules) override;
 	};
 
 	class MainThreadAction: public CoreRefCountObject<BNMainThreadAction,
@@ -5159,6 +5167,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<std::string> GetApis() const;
 		std::vector<std::string> GetInstallPlatforms() const;
 		std::string GetPath() const;
+		std::string GetDependencies() const;
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
@@ -5189,6 +5198,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool Uninstall();
 		bool Install();
+		bool InstallDependencies();
 		// `force` ignores optional checks for platform/api compliance
 		bool Enable(bool force);
 		bool Disable();

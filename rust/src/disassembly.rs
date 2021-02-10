@@ -26,7 +26,10 @@ pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
+// TODO : Consider remodeling this after types::EnumerationMember
 impl InstructionTextToken {
+    // TODO : New vs new_with_value ?
+
     pub fn new(type_: InstructionTextTokenType, text: &str, value: u64) -> Self {
         let raw_name = BnString::new(text);
 

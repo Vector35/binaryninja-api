@@ -237,4 +237,13 @@ pub fn core_abi_minimum_version() -> u32 {
 #[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "C" fn CorePluginABIVersion() -> u32 { plugin_abi_version() }
+pub extern "C" fn CorePluginABIVersion() -> u32 {
+    plugin_abi_version()
+}
+
+// TODO : We need to get this from uitypes.h
+#[cfg(any(windows, not(feature = "headless")))]
+#[no_mangle]
+pub extern "C" fn UIPluginABIVersion() -> u32 {
+    plugin_abi_version()
+}

@@ -409,12 +409,15 @@ unsafe impl<A: Architecture> Send for CallingConvention<A> {}
 unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
 
 impl<A: Architecture> CallingConvention<A> {
-    pub(crate) unsafe fn from_raw(handle: *mut BNCallingConvention, arch: A::Handle) -> Self {
-        CallingConvention {
+    pub(crate) unsafe fn ref_from_raw(
+        handle: *mut BNCallingConvention,
+        arch: A::Handle,
+    ) -> Ref<Self> {
+        Ref::new(CallingConvention {
             handle: handle,
             arch_handle: arch,
             _arch: PhantomData,
-        }
+        })
     }
 }
 

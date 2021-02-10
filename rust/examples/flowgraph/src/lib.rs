@@ -4,14 +4,15 @@ use binaryninja::{
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType},
     flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
 };
+use binaryninja::plugin_abi_version;
 
 fn test_graph(view: &BinaryView) {
     let graph = FlowGraph::new();
 
     let disassembly_lines_a = vec![DisassemblyTextLine::from(vec![
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, "Li"),
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, "ne"),
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, " 1"),
+        InstructionTextToken::new(InstructionTextTokenType::TextToken, "Li", 0),
+        InstructionTextToken::new(InstructionTextTokenType::TextToken, "ne", 0),
+        InstructionTextToken::new(InstructionTextTokenType::TextToken, " 1", 0),
     ])];
 
     let node_a = FlowGraphNode::new(&graph);
@@ -47,4 +48,9 @@ pub extern "C" fn UIPluginInit() -> bool {
         test_graph,
     );
     true
+}
+
+#[no_mangle]
+pub extern "C" fn UIPluginABIVersion() -> u32 {
+    plugin_abi_version()
 }

@@ -1164,7 +1164,7 @@ macro_rules! cc_func {
                 if cc.is_null() {
                     None
                 } else {
-                    Some(Ref::new(CallingConvention::from_raw(cc, self.handle())))
+                    Some(CallingConvention::ref_from_raw(cc, self.handle()))
                 }
             }
         }

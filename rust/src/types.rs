@@ -12,85 +12,338 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::*;
-use std::{fmt, mem, ptr, slice};
+// TODO : More widely enforce the use of ref_from_raw vs just from_raw to simplify internal binding usage?  Perhaps remove from_raw functions?
+// TODO : Add documentation and fix examples
+// TODO : Test the get_enumeration and get_structure methods
 
-use crate::architecture::Architecture;
+use binaryninjacore_sys::*;
+use std::{fmt, mem, ptr, result, slice};
+
+use crate::architecture::{Architecture, CoreArchitecture};
+use crate::callingconvention::CallingConvention;
 use crate::string::{BnStr, BnStrCompatible, BnString};
 
 use crate::rc::*;
+
+pub type Result<R> = result::Result<R, ()>;
 
 pub type ReferenceType = BNReferenceType;
 pub type TypeClass = BNTypeClass;
 pub type NamedTypeReferenceClass = BNNamedTypeReferenceClass;
 
-//////////
-// Type
+////////////////
+// Confidence
 
-#[derive(PartialEq, Eq, Hash)]
-pub struct Type {
-    pub(crate) handle: *mut BNType,
-    pub(crate) confidence: u8,
+pub struct Conf<T> {
+    pub contents: T,
+    pub confidence: u8,
 }
 
-impl Type {
-    pub(crate) unsafe fn from_raw(handle: *mut BNType) -> Self {
+impl<T> Conf<T> {
+    pub fn new(contents: T, confidence: u8) -> Self {
+        Self {
+            contents,
+            confidence,
+        }
+    }
+}
+
+#[inline]
+pub fn min_confidence() -> u8 {
+    u8::MIN
+}
+
+#[inline]
+pub fn max_confidence() -> u8 {
+    u8::MAX
+}
+
+impl<T: Clone> Clone for Conf<T> {
+    fn clone(&self) -> Self {
+        Self {
+            contents: self.contents.clone(),
+            confidence: self.confidence,
+        }
+    }
+}
+
+impl<T> From<T> for Conf<T> {
+    fn from(contents: T) -> Self {
+        Self::new(contents, max_confidence())
+    }
+}
+
+impl From<BNTypeWithConfidence> for Conf<Ref<Type>> {
+    fn from(type_with_confidence: BNTypeWithConfidence) -> Self {
+        Self::new(
+            unsafe { Type::ref_from_raw(type_with_confidence.type_) },
+            type_with_confidence.confidence,
+        )
+    }
+}
+
+impl From<BNBoolWithConfidence> for Conf<bool> {
+    fn from(bool_with_confidence: BNBoolWithConfidence) -> Self {
+        Self::new(bool_with_confidence.value, bool_with_confidence.confidence)
+    }
+}
+
+impl From<BNCallingConventionWithConfidence> for Conf<Ref<CallingConvention<CoreArchitecture>>> {
+    fn from(cc_with_confidence: BNCallingConventionWithConfidence) -> Self {
+        Self::new(
+            unsafe {
+                CallingConvention::ref_from_raw(
+                    cc_with_confidence.convention,
+                    CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(
+                        cc_with_confidence.convention,
+                    )),
+                )
+            },
+            cc_with_confidence.confidence,
+        )
+    }
+}
+
+impl From<BNOffsetWithConfidence> for Conf<i64> {
+    fn from(offset_with_confidence: BNOffsetWithConfidence) -> Self {
+        Self::new(
+            offset_with_confidence.value,
+            offset_with_confidence.confidence,
+        )
+    }
+}
+
+impl Into<BNTypeWithConfidence> for Conf<&Type> {
+    fn into(self) -> BNTypeWithConfidence {
+        BNTypeWithConfidence {
+            type_: self.contents.handle,
+            confidence: self.confidence,
+        }
+    }
+}
+
+impl Into<BNTypeWithConfidence> for &Conf<&Type> {
+    fn into(self) -> BNTypeWithConfidence {
+        BNTypeWithConfidence {
+            type_: self.contents.handle,
+            confidence: self.confidence,
+        }
+    }
+}
+
+impl Into<BNBoolWithConfidence> for Conf<bool> {
+    fn into(self) -> BNBoolWithConfidence {
+        BNBoolWithConfidence {
+            value: self.contents,
+            confidence: self.confidence,
+        }
+    }
+}
+
+impl<A: Architecture> Into<BNCallingConventionWithConfidence> for Conf<&CallingConvention<A>> {
+    fn into(self) -> BNCallingConventionWithConfidence {
+        BNCallingConventionWithConfidence {
+            convention: self.contents.handle,
+            confidence: self.confidence,
+        }
+    }
+}
+
+impl Into<BNOffsetWithConfidence> for Conf<i64> {
+    fn into(self) -> BNOffsetWithConfidence {
+        BNOffsetWithConfidence {
+            value: self.contents,
+            confidence: self.confidence,
+        }
+    }
+}
+
+//////////////////
+// Type Builder
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct TypeBuilder {
+    pub(crate) handle: *mut BNTypeBuilder,
+}
+
+impl TypeBuilder {
+    pub fn new(t: &Type) -> Self {
+        unsafe { Self::from_raw(BNCreateTypeBuilderFromType(t.handle)) }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: *mut BNTypeBuilder) -> Self {
         debug_assert!(!handle.is_null());
 
-        Self {
-            handle,
-            // TODO : Remove this field and and make Confidence<Type>
-            confidence: 255,
+        Self { handle }
+    }
+
+    // Settable properties
+
+    pub fn set_const<'a, T: Into<Conf<bool>>>(&'a mut self, value: T) -> &'a mut Self {
+        let mut bool_with_confidence = value.into().into();
+        unsafe { BNTypeBuilderSetConst(self.handle, &mut bool_with_confidence) };
+        self
+    }
+
+    pub fn set_volatile<'a, T: Into<Conf<bool>>>(&'a mut self, value: T) -> &'a mut Self {
+        let mut bool_with_confidence = value.into().into();
+        unsafe { BNTypeBuilderSetVolatile(self.handle, &mut bool_with_confidence) };
+        self
+    }
+
+    // Chainable terminal
+
+    pub fn finalize(&self) -> Ref<Type> {
+        unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(self.handle)) }
+    }
+
+    // Readable properties
+
+    pub fn type_class(&self) -> TypeClass {
+        unsafe { BNGetTypeBuilderClass(self.handle) }
+    }
+
+    pub fn width(&self) -> u64 {
+        unsafe { BNGetTypeBuilderWidth(self.handle) }
+    }
+
+    pub fn alignment(&self) -> usize {
+        unsafe { BNGetTypeBuilderAlignment(self.handle) }
+    }
+
+    pub fn is_signed(&self) -> Conf<bool> {
+        unsafe { BNIsTypeBuilderSigned(self.handle).into() }
+    }
+
+    pub fn is_const(&self) -> Conf<bool> {
+        unsafe { BNIsTypeBuilderConst(self.handle).into() }
+    }
+
+    pub fn is_volatile(&self) -> Conf<bool> {
+        unsafe { BNIsTypeBuilderVolatile(self.handle).into() }
+    }
+
+    pub fn is_floating_point(&self) -> bool {
+        unsafe { BNIsTypeBuilderFloatingPoint(self.handle) }
+    }
+
+    pub fn target(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
         }
     }
 
-    // TODO : Implement type builders (how I did with structures)
-    // pub(crate) unsafe fn from_builder(handle: *mut BNTypeBuilder) -> Self {
-    //     debug_assert!(!handle.is_null());
+    pub fn element_type(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
+        }
+    }
 
-    //     Self { handle }
-    // }
+    pub fn return_value(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
+        }
+    }
 
-    // TODO : Add this to a real doc_string:
-    //   use binaryninja::types::Type;
-    //   let bv = unsafe { BinaryView::from_raw(view) };
-    //   let my_custom_type_1 = Type::named_int(5, false, "my_w");
-    //   let my_custom_type_2 = Type::int(5, false);
-    //   bv.define_user_type("int_1", &my_custom_type_1);
-    //   bv.define_user_type("int_2", &my_custom_type_2);
+    pub fn calling_convention(&self) -> Result<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+        let convention_confidence = unsafe { BNGetTypeBuilderCallingConvention(self.handle) };
+        if convention_confidence.convention.is_null() {
+            Err(())
+        } else {
+            Ok(convention_confidence.into())
+        }
+    }
+
+    // pub fn parameters(&self) -> ? {}
+
+    pub fn has_variable_arguments(&self) -> Conf<bool> {
+        unsafe { BNTypeBuilderHasVariableArguments(self.handle).into() }
+    }
+
+    pub fn get_structure(&self) -> Result<Ref<Structure>> {
+        let result = unsafe { BNGetTypeBuilderStructure(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { Structure::ref_from_raw(result) })
+        }
+    }
+
+    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
+        let result = unsafe { BNGetTypeBuilderEnumeration(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(Enumeration::ref_from_raw(result))
+        }
+    }
+
+    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+        let result = unsafe { BNGetTypeBuilderNamedTypeReference(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { NamedTypeReference::from_raw(result) })
+        }
+    }
+
+    pub fn count(&self) -> u64 {
+        unsafe { BNGetTypeBuilderElementCount(self.handle) }
+    }
+
+    pub fn offset(&self) -> u64 {
+        unsafe { BNGetTypeBuilderOffset(self.handle) }
+    }
+
+    pub fn stack_adjustment(&self) -> Conf<i64> {
+        unsafe { BNGetTypeBuilderStackAdjustment(self.handle).into() }
+    }
+
+    // TODO : This and properties
+    // pub fn tokens(&self) -> ? {}
 
     pub fn void() -> Self {
-        unsafe { Type::from_raw(BNCreateVoidType()) }
+        unsafe { Self::from_raw(BNCreateVoidTypeBuilder()) }
     }
 
     pub fn bool() -> Self {
-        unsafe { Type::from_raw(BNCreateBoolType()) }
+        unsafe { Self::from_raw(BNCreateBoolTypeBuilder()) }
     }
 
     pub fn char() -> Self {
-        Type::int(1, true)
+        Self::int(1, true)
     }
 
     pub fn int(width: usize, is_signed: bool) -> Self {
-        let mut is_signed = BoolWithConfidence::new(is_signed, 0);
+        let mut is_signed = Conf::new(is_signed, max_confidence()).into();
+
         unsafe {
-            Type::from_raw(BNCreateIntegerType(
+            Self::from_raw(BNCreateIntegerTypeBuilder(
                 width,
-                &mut is_signed.0,
+                &mut is_signed,
                 BnString::new("").as_ptr() as *mut _,
             ))
         }
     }
 
     pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Self {
-        let mut is_signed = BoolWithConfidence::new(is_signed, 0);
+        let mut is_signed = Conf::new(is_signed, max_confidence()).into();
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.as_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
-            Type::from_raw(BNCreateIntegerType(
+            Self::from_raw(BNCreateIntegerTypeBuilder(
                 width,
-                &mut is_signed.0,
+                &mut is_signed,
                 alt_name.as_ref().as_ptr() as _,
             ))
         }
@@ -98,7 +351,7 @@ impl Type {
 
     pub fn float(width: usize) -> Self {
         unsafe {
-            Type::from_raw(BNCreateFloatType(
+            Self::from_raw(BNCreateFloatTypeBuilder(
                 width,
                 BnString::new("").as_ptr() as *mut _,
             ))
@@ -109,35 +362,43 @@ impl Type {
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.as_bytes_with_nul(); // See same line in `named_int` above
 
-        unsafe { Type::from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
+        unsafe {
+            Self::from_raw(BNCreateFloatTypeBuilder(
+                width,
+                alt_name.as_ref().as_ptr() as _,
+            ))
+        }
     }
 
-    pub fn array(t: &Type, count: u64) -> Self {
-        let mut type_conf = TypeWithConfidence::new(&t, t.confidence);
-        unsafe { Type::from_raw(BNCreateArrayType(&mut type_conf.0, count)) }
+    pub fn array<'a, T: Into<Conf<&'a Type>>>(t: T, count: u64) -> Self {
+        unsafe { Self::from_raw(BNCreateArrayTypeBuilder(&t.into().into(), count)) }
     }
 
-    pub fn structure_type(structure_type: &mut Structure) -> Self {
-        unsafe { Type::from_raw(BNCreateStructureType(structure_type.handle())) }
+    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: bool) -> Self {
+        //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
+        //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
+
+        unsafe {
+            Self::from_raw(BNCreateEnumerationTypeBuilder(
+                ptr::null_mut(),
+                enumeration.handle,
+                width,
+                is_signed,
+            ))
+        }
     }
 
-    // TODO : Create enumeration type and finish implementing this
-    // pub fn enumeration<A: Architecture>(
-    //     arch: A,
-    //     enum_type: Enumeration,
-    //     width: usize,
-    //     is_signed: bool,
-    // ) -> Self {
-    //     unsafe { Type::from_raw(BNCreateEnumerationType(arch, enum_type, width, is_signed)) }
-    // }
+    pub fn structure(structure_type: &Structure) -> Self {
+        unsafe { Self::from_raw(BNCreateStructureTypeBuilder(structure_type.handle)) }
+    }
 
     pub fn named_type(type_reference: NamedTypeReference) -> Self {
         unsafe {
-            Type::from_raw(BNFinalizeTypeBuilder(BNCreateNamedTypeReferenceBuilder(
+            Self::from_raw(BNCreateNamedTypeReferenceBuilder(
                 type_reference.handle,
                 0,
                 1,
-            )))
+            ))
         }
     }
 
@@ -145,64 +406,477 @@ impl Type {
         let mut name = QualifiedName::from(name);
 
         unsafe {
-            Type::from_raw(BNFinalizeTypeBuilder(
-                BNCreateNamedTypeReferenceBuilderFromTypeAndId(
-                    BnString::new("").as_ptr() as *mut _,
-                    &mut name.0, // BNCreateNamedTypeReferenceBuilderFromTypeAndId copy's qualified the name
-                    t.handle,
-                ),
+            Self::from_raw(BNCreateNamedTypeReferenceBuilderFromTypeAndId(
+                BnString::new("").as_ptr() as *mut _,
+                &mut name.0,
+                t.handle,
             ))
         }
     }
 
-    // TODO : BNCreateFunctionType
+    // TODO : BNCreateFunctionTypeBuilder
 
-    pub fn pointer<A: Architecture>(arch: &A, t: &Type) -> Self {
-        let mut is_const = BoolWithConfidence::new(false, 0);
-        let mut is_volatile = BoolWithConfidence::new(false, 0);
-        let mut type_conf = TypeWithConfidence::new(&t, t.confidence);
+    pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, t: T) -> Self {
+        let mut is_const = Conf::new(false, min_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
+
         unsafe {
-            Type::from_raw(BNCreatePointerType(
+            Self::from_raw(BNCreatePointerTypeBuilder(
                 arch.as_ref().0,
-                &mut type_conf.0,
-                &mut is_const.0,
-                &mut is_volatile.0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
                 ReferenceType::PointerReferenceType,
             ))
         }
     }
 
-    pub fn const_pointer<A: Architecture>(arch: &A, t: &Type) -> Self {
-        let mut is_const = BoolWithConfidence::new(true, 0);
-        let mut is_volatile = BoolWithConfidence::new(false, 0);
-        let mut type_conf = TypeWithConfidence::new(&t, t.confidence);
+    pub fn const_pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, t: T) -> Self {
+        let mut is_const = Conf::new(true, max_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
+
         unsafe {
-            Type::from_raw(BNCreatePointerType(
+            Self::from_raw(BNCreatePointerTypeBuilder(
                 arch.as_ref().0,
-                &mut type_conf.0,
-                &mut is_const.0,
-                &mut is_volatile.0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
                 ReferenceType::PointerReferenceType,
             ))
         }
     }
 
-    pub fn pointer_with_options<A: Architecture>(
-        arch: &A,
-        t: &Type,
+    pub fn pointer_of_width<'a, T: Into<Conf<&'a Type>>>(
+        t: T,
+        size: usize,
         is_const: bool,
         is_volatile: bool,
         ref_type: Option<ReferenceType>,
     ) -> Self {
-        let mut is_const = BoolWithConfidence::new(is_const, 0);
-        let mut is_volatile = BoolWithConfidence::new(is_volatile, 0);
-        let mut type_conf = TypeWithConfidence::new(&t, t.confidence);
+        let mut is_const = Conf::new(is_const, max_confidence()).into();
+        let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
+
         unsafe {
-            Type::from_raw(BNCreatePointerType(
+            Self::from_raw(BNCreatePointerTypeBuilderOfWidth(
+                size,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
+                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+            ))
+        }
+    }
+
+    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
+        arch: &A,
+        t: T,
+        is_const: bool,
+        is_volatile: bool,
+        ref_type: Option<ReferenceType>,
+    ) -> Self {
+        let mut is_const = Conf::new(is_const, max_confidence()).into();
+        let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
+        unsafe {
+            Self::from_raw(BNCreatePointerTypeBuilder(
                 arch.as_ref().0,
-                &mut type_conf.0,
-                &mut is_const.0,
-                &mut is_volatile.0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
+                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+            ))
+        }
+    }
+}
+
+impl fmt::Display for TypeBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", unsafe {
+            BnString::from_raw(BNGetTypeBuilderString(self.handle, ptr::null_mut()))
+        })
+    }
+}
+
+impl Drop for TypeBuilder {
+    fn drop(&mut self) {
+        unsafe { BNFreeTypeBuilder(self.handle) };
+    }
+}
+
+//////////
+// Type
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct Type {
+    pub(crate) handle: *mut BNType,
+}
+
+impl Type {
+    //!   use binaryninja::types::Type;
+    //!   let bv = unsafe { BinaryView::from_raw(view) };
+    //!   let my_custom_type_1 = Self::named_int(5, false, "my_w");
+    //!   let my_custom_type_2 = Self::int(5, false);
+    //!   bv.define_user_type("int_1", &my_custom_type_1);
+    //!   bv.define_user_type("int_2", &my_custom_type_2);
+
+    unsafe fn from_raw(handle: *mut BNType) -> Self {
+        debug_assert!(!handle.is_null());
+
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNType) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+
+        Ref::new(Self { handle })
+    }
+
+    pub fn to_builder(&self) -> TypeBuilder {
+        TypeBuilder::new(self)
+    }
+
+    // Readable properties
+
+    pub fn type_class(&self) -> TypeClass {
+        unsafe { BNGetTypeClass(self.handle) }
+    }
+
+    pub fn width(&self) -> u64 {
+        unsafe { BNGetTypeWidth(self.handle) }
+    }
+
+    pub fn alignment(&self) -> usize {
+        unsafe { BNGetTypeAlignment(self.handle) }
+    }
+
+    pub fn is_signed(&self) -> Conf<bool> {
+        unsafe { BNIsTypeSigned(self.handle).into() }
+    }
+
+    pub fn is_const(&self) -> Conf<bool> {
+        unsafe { BNIsTypeConst(self.handle).into() }
+    }
+
+    pub fn is_volatile(&self) -> Conf<bool> {
+        unsafe { BNIsTypeVolatile(self.handle).into() }
+    }
+
+    pub fn is_floating_point(&self) -> bool {
+        unsafe { BNIsTypeFloatingPoint(self.handle) }
+    }
+
+    pub fn target(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
+        }
+    }
+
+    pub fn element_type(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
+        }
+    }
+
+    pub fn return_value(&self) -> Result<Conf<Ref<Type>>> {
+        let raw_target = unsafe { BNGetChildType(self.handle) };
+        if raw_target.type_.is_null() {
+            Err(())
+        } else {
+            Ok(raw_target.into())
+        }
+    }
+
+    pub fn calling_convention(&self) -> Result<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+        let convention_confidence = unsafe { BNGetTypeCallingConvention(self.handle) };
+        if convention_confidence.convention.is_null() {
+            Err(())
+        } else {
+            Ok(convention_confidence.into())
+        }
+    }
+
+    // TODO : This
+    // pub fn parameters(&self) -> ? {}
+
+    pub fn has_variable_arguments(&self) -> Conf<bool> {
+        unsafe { BNTypeHasVariableArguments(self.handle).into() }
+    }
+
+    pub fn can_return(&self) -> Conf<bool> {
+        unsafe { BNFunctionTypeCanReturn(self.handle).into() }
+    }
+
+    pub fn get_structure(&self) -> Result<Ref<Structure>> {
+        let result = unsafe { BNGetTypeStructure(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { Structure::ref_from_raw(result) })
+        }
+    }
+
+    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
+        let result = unsafe { BNGetTypeEnumeration(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(Enumeration::ref_from_raw(result))
+        }
+    }
+
+    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+        let result = unsafe { BNGetTypeNamedTypeReference(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { NamedTypeReference::from_raw(result) })
+        }
+    }
+
+    pub fn count(&self) -> u64 {
+        unsafe { BNGetTypeElementCount(self.handle) }
+    }
+
+    pub fn offset(&self) -> u64 {
+        unsafe { BNGetTypeOffset(self.handle) }
+    }
+
+    pub fn stack_adjustment(&self) -> Conf<i64> {
+        unsafe { BNGetTypeStackAdjustment(self.handle).into() }
+    }
+
+    pub fn registered_name(&self) -> Result<NamedTypeReference> {
+        let result = unsafe { BNGetRegisteredTypeName(self.handle) };
+        if result.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { NamedTypeReference::from_raw(result) })
+        }
+    }
+
+    // TODO : This and properties
+    // pub fn tokens(&self) -> ? {}
+
+    pub fn void() -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateVoidType()) }
+    }
+
+    pub fn bool() -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateBoolType()) }
+    }
+
+    pub fn char() -> Ref<Self> {
+        Self::int(1, true)
+    }
+
+    pub fn int(width: usize, is_signed: bool) -> Ref<Self> {
+        let mut is_signed = Conf::new(is_signed, max_confidence()).into();
+        unsafe {
+            Self::ref_from_raw(BNCreateIntegerType(
+                width,
+                &mut is_signed,
+                BnString::new("").as_ptr() as *mut _,
+            ))
+        }
+    }
+
+    pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
+        let mut is_signed = Conf::new(is_signed, max_confidence()).into();
+        // let alt_name = BnString::new(alt_name);
+        let alt_name = alt_name.as_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+
+        unsafe {
+            Self::ref_from_raw(BNCreateIntegerType(
+                width,
+                &mut is_signed,
+                alt_name.as_ref().as_ptr() as _,
+            ))
+        }
+    }
+
+    pub fn float(width: usize) -> Ref<Self> {
+        unsafe {
+            Self::ref_from_raw(BNCreateFloatType(
+                width,
+                BnString::new("").as_ptr() as *mut _,
+            ))
+        }
+    }
+
+    pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Ref<Self> {
+        // let alt_name = BnString::new(alt_name);
+        let alt_name = alt_name.as_bytes_with_nul(); // See same line in `named_int` above
+
+        unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
+    }
+
+    pub fn array<'a, T: Into<Conf<&'a Type>>>(t: T, count: u64) -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateArrayType(&t.into().into(), count)) }
+    }
+
+    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: bool) -> Ref<Self> {
+        //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
+        //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
+
+        unsafe {
+            Self::ref_from_raw(BNCreateEnumerationType(
+                ptr::null_mut(),
+                enumeration.handle,
+                width,
+                is_signed,
+            ))
+        }
+    }
+
+    pub fn structure(structure: &Structure) -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateStructureType(structure.handle)) }
+    }
+
+    pub fn named_type(type_reference: &NamedTypeReference) -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateNamedTypeReference(type_reference.handle, 0, 1)) }
+    }
+
+    pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {
+        let mut name = QualifiedName::from(name);
+
+        unsafe {
+            Self::ref_from_raw(BNCreateNamedTypeReferenceFromTypeAndId(
+                BnString::new("").as_ptr() as *mut _,
+                &mut name.0,
+                t.handle,
+            ))
+        }
+    }
+
+    pub fn function<'a, A: Architecture, S: BnStrCompatible + Copy, T: Into<Conf<&'a Type>>>(
+        return_type: T,
+        parameters: &[FunctionParameter<S>],
+        variable_arguments: bool,
+        calling_convention: Option<Conf<&CallingConvention<A>>>,
+        stack_adjust: Option<Conf<i64>>,
+    ) -> Ref<Self> {
+        let mut return_type = return_type.into().into();
+
+        let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
+
+        // TODO : Don't do this?  It should be fine
+        #[allow(invalid_value)]
+        let calling_convention_ref =
+            Conf::<&CallingConvention<A>>::new(unsafe { mem::zeroed() }, min_confidence());
+        let mut raw_calling_convention: BNCallingConventionWithConfidence = match calling_convention
+        {
+            Some(calling_convention) => calling_convention.into(),
+            None => calling_convention_ref.into(),
+        };
+
+        let mut stack_adjust = match stack_adjust {
+            Some(stack_adjust) => stack_adjust.into(),
+            None => Conf::<i64>::new(0, min_confidence()).into(),
+        };
+
+        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
+        for parameter in parameters {
+            //  TODO : The core side is fine, but test this function with named parameters to ensure rust doesn't delete the reference
+            let raw_name = parameter.name.as_bytes_with_nul();
+
+            let location = match &parameter.location {
+                Some(location) => location.into_raw(),
+                None => unsafe { mem::zeroed() },
+            };
+
+            raw_parameters.push(BNFunctionParameter {
+                name: raw_name.as_ref().as_ptr() as *mut _,
+                type_: parameter.t.contents.handle,
+                typeConfidence: parameter.t.confidence,
+                defaultLocation: parameter.location.is_none(),
+                location,
+            });
+        }
+
+        unsafe {
+            Self::ref_from_raw(BNCreateFunctionType(
+                &mut return_type,
+                &mut raw_calling_convention,
+                raw_parameters.as_mut_ptr(),
+                raw_parameters.len(),
+                &mut variable_arguments,
+                &mut stack_adjust,
+            ))
+        }
+        // 	return Type(core.BNCreateFunctionTypeBuilder(ret_conf, conv_conf, param_buf, len(params), vararg_conf, stack_adjust_conf))
+    }
+
+    pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, t: T) -> Ref<Self> {
+        let mut is_const = Conf::new(false, min_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
+        unsafe {
+            Self::ref_from_raw(BNCreatePointerType(
+                arch.as_ref().0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
+                ReferenceType::PointerReferenceType,
+            ))
+        }
+    }
+
+    pub fn const_pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
+        arch: &A,
+        t: T,
+    ) -> Ref<Self> {
+        let mut is_const = Conf::new(true, max_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
+        unsafe {
+            Self::ref_from_raw(BNCreatePointerType(
+                arch.as_ref().0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
+                ReferenceType::PointerReferenceType,
+            ))
+        }
+    }
+
+    pub fn pointer_of_width<'a, T: Into<Conf<&'a Type>>>(
+        t: T,
+        size: usize,
+        is_const: bool,
+        is_volatile: bool,
+        ref_type: Option<ReferenceType>,
+    ) -> Ref<Self> {
+        let mut is_const = Conf::new(is_const, max_confidence()).into();
+        let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
+        unsafe {
+            Self::ref_from_raw(BNCreatePointerTypeOfWidth(
+                size,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
+                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+            ))
+        }
+    }
+
+    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
+        arch: &A,
+        t: T,
+        is_const: bool,
+        is_volatile: bool,
+        ref_type: Option<ReferenceType>,
+    ) -> Ref<Self> {
+        let mut is_const = Conf::new(is_const, max_confidence()).into();
+        let mut is_volatile = Conf::new(is_volatile, max_confidence()).into();
+        unsafe {
+            Self::ref_from_raw(BNCreatePointerType(
+                arch.as_ref().0,
+                &t.into().into(),
+                &mut is_const,
+                &mut is_volatile,
                 ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
             ))
         }
@@ -211,6 +885,12 @@ impl Type {
     pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a BnStr {
         let mut name = QualifiedName::from(name);
         unsafe { BnStr::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+    }
+}
+
+impl From<&TypeBuilder> for Ref<Type> {
+    fn from(builder: &TypeBuilder) -> Self {
+        unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(builder.handle)) }
     }
 }
 
@@ -227,10 +907,7 @@ unsafe impl Sync for Type {}
 
 unsafe impl RefCountable for Type {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewTypeReference(handle.handle),
-            confidence: handle.confidence,
-        })
+        Self::ref_from_raw(BNNewTypeReference(handle.handle))
     }
 
     unsafe fn dec_ref(handle: &Self) {
@@ -246,105 +923,424 @@ impl ToOwned for Type {
     }
 }
 
+///////////////////////
+// FunctionParameter
+
+pub struct FunctionParameter<'a, S: BnStrCompatible> {
+    pub t: Conf<&'a Type>,
+    pub name: S,
+    pub location: Option<Variable>,
+}
+
+// impl<'a, S: BnStrCompatible> FunctionParameter<'a, S> {}
+
+//////////////
+// Variable
+
+pub struct Variable {
+    pub t: BNVariableSourceType,
+    pub index: u32,
+    pub storage: i64,
+}
+
+impl Variable {
+    pub fn new(t: BNVariableSourceType, index: u32, storage: i64) -> Self {
+        Self { t, index, storage }
+    }
+
+    // pub(crate) unsafe fn from_raw(var: *mut BNVariable) -> Self {
+    //     Self {
+    //         t: (*var).type_,
+    //         index: (*var).index,
+    //         storage: (*var).storage,
+    //     }
+    // }
+
+    pub(crate) fn into_raw(&self) -> BNVariable {
+        BNVariable {
+            type_: self.t,
+            index: self.index,
+            storage: self.storage,
+        }
+    }
+}
+
+////////////////////////
+// EnumerationBuilder
+
+pub struct EnumerationMember {
+    pub name: BnString,
+    pub value: u64,
+    pub is_default: bool,
+}
+
+impl EnumerationMember {
+    pub fn new<S: BnStrCompatible>(name: S, value: u64, is_default: bool) -> Self {
+        Self {
+            name: BnString::new(name),
+            value,
+            is_default,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: *mut BNEnumerationMember) -> Self {
+        Self {
+            name: BnString::new(BnStr::from_raw((*handle).name)),
+            value: (*handle).value,
+            is_default: (*handle).isDefault,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct EnumerationBuilder {
+    pub(crate) handle: *mut BNEnumerationBuilder,
+}
+
+impl EnumerationBuilder {
+    pub fn new() -> Self {
+        Self {
+            handle: unsafe { BNCreateEnumerationBuilder() },
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: *mut BNEnumerationBuilder) -> Self {
+        Self { handle }
+    }
+
+    pub fn finalize(&self) -> Ref<Enumeration> {
+        Enumeration::new(self)
+    }
+
+    pub fn append<'a, S: BnStrCompatible>(&'a mut self, name: S) -> &'a mut Self {
+        let name = name.as_bytes_with_nul();
+        unsafe {
+            BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
+        }
+        self
+    }
+
+    pub fn insert<'a, S: BnStrCompatible>(&'a mut self, name: S, value: u64) -> &'a mut Self {
+        let name = name.as_bytes_with_nul();
+        unsafe {
+            BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
+        }
+        self
+    }
+
+    pub fn replace<'a, S: BnStrCompatible>(
+        &'a mut self,
+        id: usize,
+        name: S,
+        value: u64,
+    ) -> &'a mut Self {
+        let name = name.as_bytes_with_nul();
+        unsafe {
+            BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
+        }
+        self
+    }
+
+    pub fn remove<'a>(&'a mut self, id: usize) -> &'a mut Self {
+        unsafe {
+            BNRemoveEnumerationBuilderMember(self.handle, id);
+        }
+
+        self
+    }
+
+    pub fn members(&self) -> Vec<EnumerationMember> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let members_raw = BNGetEnumerationBuilderMembers(self.handle, &mut count);
+            let members: &[*mut BNEnumerationMember] =
+                slice::from_raw_parts(members_raw as *mut _, count);
+
+            let mut result = vec![];
+            for i in 0..count {
+                result.push(EnumerationMember::from_raw(members[i]));
+            }
+
+            BNFreeEnumerationMemberList(members_raw, count);
+
+            result
+        }
+    }
+}
+
+impl From<&Enumeration> for EnumerationBuilder {
+    fn from(enumeration: &Enumeration) -> Self {
+        unsafe {
+            Self::from_raw(BNCreateEnumerationBuilderFromEnumeration(
+                enumeration.handle,
+            ))
+        }
+    }
+}
+
+impl Drop for EnumerationBuilder {
+    fn drop(&mut self) {
+        unsafe { BNFreeEnumerationBuilder(self.handle) };
+    }
+}
+
+/////////////////
+// Enumeration
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct Enumeration {
+    pub(crate) handle: *mut BNEnumeration,
+}
+
+impl Enumeration {
+    pub fn new(builder: &EnumerationBuilder) -> Ref<Self> {
+        unsafe {
+            let handle = BNFinalizeEnumerationBuilder(builder.handle);
+            Ref::new(Self { handle })
+        }
+    }
+
+    fn from_raw(handle: *mut BNEnumeration) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub(crate) fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        unsafe { Ref::new(Self { handle }) }
+    }
+
+    pub fn members(&self) -> Vec<EnumerationMember> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
+            let members: &[*mut BNEnumerationMember] =
+                slice::from_raw_parts(members_raw as *mut _, count);
+
+            let mut result = vec![];
+            for i in 0..count {
+                result.push(EnumerationMember::from_raw(members[i]));
+            }
+
+            BNFreeEnumerationMemberList(members_raw, count);
+
+            result
+        }
+    }
+}
+
+impl From<&EnumerationBuilder> for Ref<Enumeration> {
+    fn from(builder: &EnumerationBuilder) -> Self {
+        Enumeration::new(builder)
+    }
+}
+
+unsafe impl RefCountable for Enumeration {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self::from_raw(BNNewEnumerationReference(handle.handle)))
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeEnumeration(handle.handle);
+    }
+}
+
+impl ToOwned for Enumeration {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+//////////////////////
+// StructureBuilder
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct StructureBuilder {
+    pub(crate) handle: *mut BNStructureBuilder,
+}
+
+impl StructureBuilder {
+    //! // Includes
+    //! use binaryninja::types::{Structure, Type};
+
+    //! // Define struct, set size (in bytes)
+    //! let mut my_custom_struct = Structure::new();
+    //! my_custom_struct.set_width(17);
+
+    //! // Create some fields for the struct
+    //! let field_1 = Self::named_int(5, false, "my_weird_int_type");
+    //! let field_2 = Self::int(4, false);
+    //! let field_3 = Self::int(8, false);
+
+    //! // Assign those fields
+    //! my_custom_struct.append(&field_1, "field_4");
+    //! my_custom_struct.insert(&field_1, "field_1", 0);
+    //! my_custom_struct.insert(&field_2, "field_2", 5);
+    //! my_custom_struct.insert(&field_3, "field_3", 9);
+
+    //! // Convert structure to type
+    //! let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
+
+    //! // Add the struct to the binary view to use in analysis
+    //! let bv = unsafe { BinaryView::from_raw(view) };
+    //! bv.define_user_type("my_custom_struct", &my_custom_structure_type);
+
+    pub fn new() -> Self {
+        Self {
+            handle: unsafe { BNCreateStructureBuilder() },
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: *mut BNStructureBuilder) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    pub fn finalize(&self) -> Ref<Structure> {
+        Structure::new(self)
+    }
+
+    pub fn set_width<'a>(&'a mut self, width: u64) -> &'a mut Self {
+        unsafe {
+            BNSetStructureBuilderWidth(self.handle, width);
+        }
+
+        self
+    }
+
+    pub fn append<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
+        &'a mut self,
+        t: T,
+        name: S,
+    ) -> &'a mut Self {
+        let name = name.as_bytes_with_nul();
+        unsafe {
+            BNAddStructureBuilderMember(self.handle, &t.into().into(), name.as_ref().as_ptr() as _);
+        }
+
+        self
+    }
+
+    pub fn insert<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
+        &'a mut self,
+        t: T,
+        name: S,
+        offset: u64,
+    ) -> &'a mut Self {
+        let name = name.as_bytes_with_nul();
+        unsafe {
+            BNAddStructureBuilderMemberAtOffset(
+                self.handle,
+                &t.into().into(),
+                name.as_ref().as_ptr() as _,
+                offset,
+            );
+        }
+
+        self
+    }
+
+    pub fn width(&self) -> u64 {
+        unsafe { BNGetStructureBuilderWidth(self.handle) }
+    }
+
+    // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
+}
+
+impl From<&Structure> for StructureBuilder {
+    fn from(structure: &Structure) -> StructureBuilder {
+        unsafe { Self::from_raw(BNCreateStructureBuilderFromStructure(structure.handle)) }
+    }
+}
+
+impl Drop for StructureBuilder {
+    fn drop(&mut self) {
+        unsafe { BNFreeStructureBuilder(self.handle) };
+    }
+}
+
 ///////////////
 // Structure
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Structure {
-    pub builder: *mut BNStructureBuilder,
-    pub handle: Option<*mut BNStructure>,
+    pub(crate) handle: *mut BNStructure,
 }
 
-// TODO : Throw asserts or return results?
 impl Structure {
-    // TODO : Turn this into a real docstring
-    // // Includes
-    // use binaryninja::types::{Structure, Type};
+    //! // Includes
+    //! use binaryninja::types::{Structure, Type};
 
-    // // Define struct, set size (in bytes)
-    // let mut my_custom_struct = Structure::new();
-    // my_custom_struct.set_width(17);
+    //! // Define struct, set size (in bytes)
+    //! let mut my_custom_struct = Structure::new();
+    //! my_custom_struct.set_width(17);
 
-    // // Create some fields for the struct
-    // let field_1 = Type::named_int(5, false, "my_weird_int_type");
-    // let field_2 = Type::int(4, false);
-    // let field_3 = Type::int(8, false);
+    //! // Create some fields for the struct
+    //! let field_1 = Self::named_int(5, false, "my_weird_int_type");
+    //! let field_2 = Self::int(4, false);
+    //! let field_3 = Self::int(8, false);
 
-    // // Assign those fields
-    // my_custom_struct.append(&field_1, "field_4");
-    // my_custom_struct.insert(&field_1, "field_1", 0);
-    // my_custom_struct.insert(&field_2, "field_2", 5);
-    // my_custom_struct.insert(&field_3, "field_3", 9);
+    //! // Assign those fields
+    //! my_custom_struct.append(&field_1, "field_4");
+    //! my_custom_struct.insert(&field_1, "field_1", 0);
+    //! my_custom_struct.insert(&field_2, "field_2", 5);
+    //! my_custom_struct.insert(&field_3, "field_3", 9);
 
-    // // Convert structure to type
-    // let my_custom_structure_type = Type::structure_type(&mut my_custom_struct);
+    //! // Convert structure to type
+    //! let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
 
-    // // Add the struct to the binary view to use in analysis
-    // let bv = unsafe { BinaryView::from_raw(view) };
-    // bv.define_user_type("my_custom_struct", &my_custom_structure_type);
+    //! // Add the struct to the binary view to use in analysis
+    //! let bv = unsafe { BinaryView::from_raw(view) };
+    //! bv.define_user_type("my_custom_struct", &my_custom_structure_type);
 
-    pub fn new() -> Self {
-        Structure {
-            builder: unsafe { BNCreateStructureBuilder() },
-            handle: None,
-        }
-    }
-
-    pub(crate) fn handle(&mut self) -> *mut BNStructure {
-        if let Some(handle) = self.handle {
-            handle
-        } else {
-            unsafe {
-                self.handle = Some(BNFinalizeStructureBuilder(self.builder));
-                BNFreeStructureBuilder(self.builder);
-            }
-            self.handle.unwrap()
-        }
-    }
-
-    pub fn set_width(&self, width: u64) {
-        assert!(self.handle.is_none());
+    pub fn new(builder: &StructureBuilder) -> Ref<Self> {
         unsafe {
-            BNSetStructureBuilderWidth(self.builder, width);
+            let handle = BNFinalizeStructureBuilder(builder.handle);
+            Ref::new(Self { handle })
         }
     }
 
-    pub fn get_width(&self) -> u64 {
-        if let Some(structure_handle) = self.handle {
-            unsafe { BNGetStructureWidth(structure_handle) }
-        } else {
-            unsafe { BNGetStructureBuilderWidth(self.builder) }
-        }
+    unsafe fn from_raw(handle: *mut BNStructure) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
     }
 
-    pub fn append<S: BnStrCompatible>(&self, t: &Type, name: S) {
-        assert!(self.handle.is_none());
-        let mut type_conf = TypeWithConfidence::new(t, t.confidence);
-        let name = name.as_bytes_with_nul();
-        unsafe {
-            BNAddStructureBuilderMember(
-                self.builder,
-                &mut type_conf.0,
-                name.as_ref().as_ptr() as _,
-            );
-        }
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNStructure) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        Ref::new(Self { handle })
     }
 
-    pub fn insert<S: BnStrCompatible>(&self, t: &Type, name: S, offset: u64) {
-        assert!(self.handle.is_none());
-        let mut type_conf = TypeWithConfidence::new(t, t.confidence);
-        let name = name.as_bytes_with_nul();
-        unsafe {
-            BNAddStructureBuilderMemberAtOffset(
-                self.builder,
-                &mut type_conf.0,
-                name.as_ref().as_ptr() as _,
-                offset,
-            );
-        }
+    pub fn width(&self) -> u64 {
+        unsafe { BNGetStructureWidth(self.handle) }
     }
 
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
+}
+
+impl From<&StructureBuilder> for Ref<Structure> {
+    fn from(builder: &StructureBuilder) -> Self {
+        Structure::new(builder)
+    }
+}
+
+unsafe impl RefCountable for Structure {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self::from_raw(BNNewStructureReference(handle.handle)))
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeStructure(handle.handle);
+    }
+}
+
+impl ToOwned for Structure {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
 }
 
 // TODO : Use
@@ -358,31 +1354,6 @@ impl Structure {
 // }
 
 ////////////////////////
-// BoolWithConfidence
-
-pub struct BoolWithConfidence(BNBoolWithConfidence);
-
-impl BoolWithConfidence {
-    pub fn new(value: bool, confidence: u8) -> Self {
-        BoolWithConfidence(BNBoolWithConfidence { value, confidence })
-    }
-}
-
-////////////////////////
-// TypeWithConfidence
-
-pub struct TypeWithConfidence(BNTypeWithConfidence);
-
-impl TypeWithConfidence {
-    pub fn new(t: &Type, confidence: u8) -> Self {
-        TypeWithConfidence(BNTypeWithConfidence {
-            type_: t.handle,
-            confidence,
-        })
-    }
-}
-
-////////////////////////
 // NamedTypeReference
 
 #[derive(PartialEq, Eq, Hash)]
@@ -391,6 +1362,12 @@ pub struct NamedTypeReference {
 }
 
 impl NamedTypeReference {
+    pub(crate) unsafe fn from_raw(handle: *mut BNNamedTypeReference) -> Self {
+        debug_assert!(!handle.is_null());
+
+        Self { handle }
+    }
+
     pub fn new<S: BnStrCompatible>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
@@ -398,7 +1375,7 @@ impl NamedTypeReference {
     ) -> Self {
         let type_id = type_id.as_bytes_with_nul();
 
-        NamedTypeReference {
+        Self {
             handle: unsafe {
                 BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0)
             },

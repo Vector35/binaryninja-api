@@ -230,7 +230,7 @@ impl Function {
         }
     }
 
-    pub fn set_user_type(&self, t: &Type) {
+    pub fn set_user_type(&self, t: Type) {
         unsafe {
             BNSetFunctionUserType(self.handle, t.handle);
         }

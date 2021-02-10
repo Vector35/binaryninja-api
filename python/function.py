@@ -1918,7 +1918,7 @@ class Function(object):
 
 	@property
 	def analysis_skipped(self):
-		"""Whether automatic analysis was skipped for this function"""
+		"""Whether automatic analysis was skipped for this function, set to true to disable analysis."""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
 
 	@analysis_skipped.setter

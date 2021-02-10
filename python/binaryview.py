@@ -253,6 +253,7 @@ class AnalysisCompletionEvent(object):
 	def view(self, value):
 		self._view = value
 
+
 # This has no functional purposes;
 # we just need it to stop Python from prematurely freeing the object
 _binaryview_events = {}
@@ -260,7 +261,7 @@ class BinaryViewEvent(object):
 	"""
 	The ``BinaryViewEvent`` object provides a mechanism for receiving callbacks	when a BinaryView
 	is Finalized or the initial analysis is finished. The BinaryView finalized callbacks run before the
-	intial analysis starts. The callbacks run one-after-another in the same order as they get registered.
+	initial analysis starts. The callbacks run one-after-another in the same order as they get registered.
 	It is a good place to modify the BinaryView to add extra information to it.
 
 	For newly opened binaries, the initial analysis completion callbacks run after the initial analysis,
@@ -273,7 +274,7 @@ class BinaryViewEvent(object):
 
 	:Example:
 		>>> def callback(bv):
-   		...		print('start: 0x%x' % bv.start)
+		... 	print('start: 0x%x' % bv.start)
 		...
 		>>> BinaryViewType.add_binaryview_finalized_event(callback)
 	"""

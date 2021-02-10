@@ -25,7 +25,6 @@ import binaryninja
 from binaryninja import highlight
 from binaryninja import _binaryninjacore as core
 from binaryninja.enums import BranchType, HighlightColorStyle, HighlightStandardColor, InstructionTextTokenType
-from binaryninja import log
 
 # 2-3 compatibility
 from binaryninja import range

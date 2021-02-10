@@ -1,10 +1,8 @@
-use binaryninja::binaryview::{BinaryView, BinaryViewExt};
-use binaryninja::command::register;
-use binaryninja::disassembly::{
-    DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType,
-};
-use binaryninja::flowgraph::{
-    BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor,
+use binaryninja::{
+    binaryview::{BinaryView, BinaryViewExt},
+    command::register,
+    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType},
+    flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
 };
 
 fn test_graph(view: &BinaryView) {

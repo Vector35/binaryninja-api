@@ -1192,6 +1192,23 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+vector<uint64_t> Function::GetUnresolvedIndirectBranches()
+{
+	size_t count;
+	uint64_t* addrs = BNGetUnresolvedIndirectBranches(m_object, &count);
+	vector<uint64_t> result;
+	result.insert(result.end(), addrs, &addrs[count]);
+	BNFreeAddressList(addrs);
+	return result;
+}
+
+
+bool Function::HasUnresolvedIndirectBranches()
+{
+	return BNHasUnresolvedIndirectBranches(m_object);
+}
+
+
 void Function::SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust)
 {
 	BNTypeWithConfidence apiObject;

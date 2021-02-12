@@ -3336,6 +3336,9 @@ __attribute__ ((format (printf, 1, 2)))
 	                                                                 uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
 
+	BINARYNINJACOREAPI uint64_t* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
+
 	BINARYNINJACOREAPI void BNSetAutoCallTypeAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 		BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNSetUserCallTypeAdjustment(BNFunction* func, BNArchitecture* arch, uint64_t addr,

@@ -3135,6 +3135,9 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
+		std::vector<uint64_t> GetUnresolvedIndirectBranches();
+		bool HasUnresolvedIndirectBranches();
+
 		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,

@@ -1660,6 +1660,22 @@ class Function(object):
 		return result
 
 	@property
+	def unresolved_indirect_branches(self):
+		"""List of unresolved indirect branches (read-only)"""
+		count = ctypes.c_ulonglong()
+		addrs = core.BNGetUnresolvedIndirectBranches(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(addrs[i])
+		core.BNFreeAddressList(addrs)
+		return result
+
+	@property
+	def has_unresolved_indirect_branches(self):
+		"""Has unresolved indirect branches (read-only)"""
+		return core.BNHasUnresolvedIndirectBranches(self.handle)
+
+	@property
 	def session_data(self):
 		"""Dictionary object where plugins can store arbitrary data associated with the function"""
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)

@@ -233,7 +233,7 @@ pub fn core_abi_minimum_version() -> u32 {
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility
-#[cfg(not(feature = "headless"))]
+#[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginABIVersion() -> u32 { plugin_abi_version() }

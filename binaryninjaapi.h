@@ -4089,9 +4089,11 @@ __attribute__ ((format (printf, 1, 2)))
 			const std::set<Variable>& knownNotAliases = std::set<Variable>(),
 			const std::set<Variable>& knownAliases = std::set<Variable>());
 
-		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
+		bool GetExprText(Architecture* arch, ExprId expr,
+			std::vector<InstructionTextToken>& tokens,
+			DisassemblySettings* settings = nullptr);
 		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
-			std::vector<InstructionTextToken>& tokens);
+			std::vector<InstructionTextToken>& tokens, DisassemblySettings* settings = nullptr);
 
 		void VisitInstructions(const std::function<void(BasicBlock* block, const MediumLevelILInstruction& instr)>& func);
 		void VisitAllExprs(const std::function<bool(BasicBlock* block, const MediumLevelILInstruction& expr)>& func);
@@ -4421,9 +4423,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Finalize();
 
-		std::vector<DisassemblyTextLine> GetExprText(ExprId expr, bool asFullAst = true);
-		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr, bool asFullAst = true);
-		std::vector<DisassemblyTextLine> GetInstructionText(size_t i, bool asFullAst = true);
+		std::vector<DisassemblyTextLine> GetExprText(ExprId expr,
+			bool asFullAst = true, DisassemblySettings* settings = nullptr);
+		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr,
+			bool asFullAst = true, DisassemblySettings* settings = nullptr);
+		std::vector<DisassemblyTextLine> GetInstructionText(size_t i,
+			bool asFullAst = true, DisassemblySettings* settings = nullptr);
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);

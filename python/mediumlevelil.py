@@ -403,11 +403,11 @@ class MediumLevelILInstruction(object):
 		if ((self._instr_index is not None) and (self._function.source_function is not None) and
 			(self._expr_index == core.BNGetMediumLevelILIndexForInstruction(self._function.handle, self._instr_index))):
 			if not core.BNGetMediumLevelILInstructionText(self._function.handle, self._function.source_function.handle,
-				self._function.arch.handle, self._instr_index, tokens, count):
+				self._function.arch.handle, self._instr_index, tokens, count, None):
 				return None
 		else:
 			if not core.BNGetMediumLevelILExprText(self._function.handle, self._function.arch.handle,
-				self._expr_index, tokens, count):
+				self._expr_index, tokens, count, None):
 				return None
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)

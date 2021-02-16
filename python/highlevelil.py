@@ -378,7 +378,7 @@ class HighLevelILInstruction(object):
 	def lines(self):
 		"""HLIL text lines (read-only)"""
 		count = ctypes.c_ulonglong()
-		lines = core.BNGetHighLevelILExprText(self._function.handle, self._expr_index, self._as_ast, count)
+		lines = core.BNGetHighLevelILExprText(self._function.handle, self._expr_index, self._as_ast, count, None)
 		result = []
 		for i in range(0, count.value):
 			addr = lines[i].addr

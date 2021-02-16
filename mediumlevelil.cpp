@@ -338,11 +338,12 @@ void MediumLevelILFunction::GenerateSSAForm(bool analyzeConditionals, bool handl
 }
 
 
-bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens)
+bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens, DisassemblySettings* settings)
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetMediumLevelILExprText(m_object, arch->GetObject(), expr, &list, &count))
+	if (!BNGetMediumLevelILExprText(m_object, arch->GetObject(), expr, &list, &count,
+		settings ? settings->GetObject() : nullptr))
 		return false;
 
 	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);
@@ -351,12 +352,12 @@ bool MediumLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<
 
 
 bool MediumLevelILFunction::GetInstructionText(Function* func, Architecture* arch, size_t instr,
-	vector<InstructionTextToken>& tokens)
+	vector<InstructionTextToken>& tokens, DisassemblySettings* settings)
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetMediumLevelILInstructionText(m_object, func ? func->GetObject() : nullptr, arch->GetObject(),
-		instr, &list, &count))
+	if (!BNGetMediumLevelILInstructionText(m_object, func ? func->GetObject() : nullptr, arch->GetObject(), instr, &list, &count,
+		settings ? settings->GetObject() : nullptr))
 		return false;
 
 	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);

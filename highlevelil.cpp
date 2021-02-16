@@ -416,10 +416,12 @@ void HighLevelILFunction::Finalize()
 }
 
 
-vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr, bool asFullAst)
+vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr,
+	bool asFullAst, DisassemblySettings* settings)
 {
 	size_t count;
-	BNDisassemblyTextLine* lines = BNGetHighLevelILExprText(m_object, expr, asFullAst, &count);
+	BNDisassemblyTextLine* lines = BNGetHighLevelILExprText(m_object, expr, asFullAst, &count,
+		settings ? settings->GetObject() : nullptr);
 
 	vector<DisassemblyTextLine> result;
 	result.reserve(count);
@@ -439,16 +441,18 @@ vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr, bool a
 }
 
 
-vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(const HighLevelILInstruction& instr, bool asFullAst)
+vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(const HighLevelILInstruction& instr,
+	bool asFullAst, DisassemblySettings* settings)
 {
-	return GetExprText(instr.exprIndex, asFullAst);
+	return GetExprText(instr.exprIndex, asFullAst, settings);
 }
 
 
-vector<DisassemblyTextLine> HighLevelILFunction::GetInstructionText(size_t i, bool asFullAst)
+vector<DisassemblyTextLine> HighLevelILFunction::GetInstructionText(size_t i,
+	bool asFullAst, DisassemblySettings* settings)
 {
 	HighLevelILInstruction instr = GetInstruction(i);
-	return GetExprText(instr, asFullAst);
+	return GetExprText(instr, asFullAst, settings);
 }
 
 

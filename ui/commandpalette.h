@@ -11,9 +11,16 @@
 
 struct BINARYNINJAUIAPI CommandListItem
 {
+	enum CommandListItemType
+	{
+		OpenTab,
+		UIAction,
+	};
+
+	CommandListItemType type;
 	QString name;
 	QString shortcut;
-	QString action;
+	QVariant action;
 };
 
 class CommandPalette;
@@ -55,7 +62,7 @@ public:
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 
-	QString getActionForItem(int row);
+	CommandListItem getItem(int row);
 	void setFilterText(const QString& text);
 	size_t getRecentPosition(const QString& name) const;
 	void addRecentItem(const QString& name);
@@ -74,7 +81,7 @@ public:
 	void setFilter(CommandListFilter* filter) { m_filter = filter; }
 	void setFilterText(const QString& text);
 
-	QString getActionForItem(int row);
+	CommandListItem getItem(int row);
 
 	QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const;
 	void addRecentItem(const QString& name);

@@ -32,6 +32,7 @@
 #include <functional>
 #include <set>
 #include <mutex>
+#include <atomic>
 #include <memory>
 #include <cstdint>
 #include "binaryninjacore.h"
@@ -51,7 +52,7 @@ namespace BinaryNinja
 	class RefCountObject
 	{
 	public:
-		int m_refs;
+		std::atomic<int> m_refs;
 		RefCountObject(): m_refs(0) {}
 		virtual ~RefCountObject() {}
 
@@ -60,22 +61,13 @@ namespace BinaryNinja
 
 		void AddRef()
 		{
-#ifdef WIN32
-			InterlockedIncrement((LONG*)&m_refs);
-#else
-			__sync_fetch_and_add(&m_refs, 1);
-#endif
+			m_refs.fetch_add(1);
 		}
 
 		void Release()
 		{
-#ifdef WIN32
-			if (InterlockedDecrement((LONG*)&m_refs) == 0)
+			if (m_refs.fetch_sub(1) == 1)
 				delete this;
-#else
-			if (__sync_fetch_and_add(&m_refs, -1) == 1)
-				delete this;
-#endif
 		}
 	};
 
@@ -84,32 +76,20 @@ namespace BinaryNinja
 	{
 		void AddRefInternal()
 		{
-#ifdef WIN32
-			InterlockedIncrement((LONG*)&m_refs);
-#else
-			__sync_fetch_and_add(&m_refs, 1);
-#endif
+			m_refs.fetch_add(1);
 		}
 
 		void ReleaseInternal()
 		{
-#ifdef WIN32
-			if (InterlockedDecrement((LONG*)&m_refs) == 0)
+			if (m_refs.fetch_sub(1) == 1)
 			{
 				if (!m_registeredRef)
 					delete this;
 			}
-#else
-			if (__sync_fetch_and_add(&m_refs, -1) == 1)
-			{
-				if (!m_registeredRef)
-					delete this;
-			}
-#endif
 		}
 
 	public:
-		int m_refs;
+		std::atomic<int> m_refs;
 		bool m_registeredRef = false;
 		T* m_object;
 		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
@@ -157,26 +137,17 @@ namespace BinaryNinja
 	{
 		void AddRefInternal()
 		{
-#ifdef WIN32
-			InterlockedIncrement((LONG*)&m_refs);
-#else
-			__sync_fetch_and_add(&m_refs, 1);
-#endif
+			m_refs.fetch_add(1);
 		}
 
 		void ReleaseInternal()
 		{
-#ifdef WIN32
-			if (InterlockedDecrement((LONG*)&m_refs) == 0)
+			if (m_refs.fetch_sub(1) == 1)
 				delete this;
-#else
-			if (__sync_fetch_and_add(&m_refs, -1) == 1)
-				delete this;
-#endif
 		}
 
 	public:
-		int m_refs;
+		std::atomic<int> m_refs;
 		T* m_object;
 		StaticCoreRefCountObject(): m_refs(0), m_object(nullptr) {}
 		virtual ~StaticCoreRefCountObject() {}

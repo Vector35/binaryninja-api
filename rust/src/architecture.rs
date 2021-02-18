@@ -20,7 +20,7 @@ use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::hash::Hash;
-use std::mem::zeroed;
+use std::mem::{zeroed, MaybeUninit};
 use std::ops;
 use std::ops::Drop;
 use std::ptr;
@@ -2047,10 +2047,9 @@ where
 
     let name = name.as_bytes_with_nul();
 
-    let uninit_arch = ArchitectureBuilder {
-        arch: unsafe { zeroed() },
-        func: func,
-    };
+    let mut uninit_arch: MaybeUninit<ArchitectureBuilder<A, F>> = MaybeUninit::zeroed();
+    unsafe { (*uninit_arch.as_mut_ptr()).func = func };
+    let uninit_arch = unsafe { uninit_arch.assume_init() };
 
     let raw = Box::into_raw(Box::new(uninit_arch));
     let mut custom_arch = BNCustomArchitecture {

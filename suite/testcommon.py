@@ -1645,12 +1645,14 @@ class VerifyBuilder(Builder):
         if not os.path.exists(file_name):
             return False
 
+        binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
         ret = None
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
             if bv is None:
                 ret = False
             if bv.file.snapshot_data_applied_without_error:
                 ret = True
-
+        
+        binja.Settings().reset("analysis.database.suppressReanalysis")
         self.delete_package("binja_v1.2.1921_bin_ls.bndb")
         return ret

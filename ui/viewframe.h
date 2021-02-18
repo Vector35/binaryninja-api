@@ -36,7 +36,7 @@ struct SelectionInfoForXref
 	FunctionRef func;
 	ArchitectureRef arch;
 
-	bool operator== (const SelectionInfoForXref& other) const 
+	bool operator== (const SelectionInfoForXref& other) const
 	{
 		if (addrValid && other.addrValid)
 			return (start == other.start) && (end == other.end) &&
@@ -67,7 +67,7 @@ public:
 
 
 class AssembleDialog;
-class ClickableLabel;
+class ClickableStateLabel;
 class CompileDialog;
 class DockHandler;
 class FeatureMap;
@@ -265,7 +265,7 @@ private:
 
 	FileContext* m_context;
 	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
-	ClickableLabel* m_fileContentsLockStatus;
+	ClickableStateLabel* m_fileContentsLockStatus;
 	BinaryViewRef m_data;
 	DockHandler* m_docks;
 	QWidget* m_view;

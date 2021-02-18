@@ -235,7 +235,7 @@ class AnalysisCompletionEvent(object):
 		"""
 		The ``cancel`` method will cancel analysis for an :class:`AnalysisCompletionEvent`.
 
-		.. warning: This method should only be used when the system is being shut down and no further analysis should be done afterward.
+		.. warning:: This method should only be used when the system is being shut down and no further analysis should be done afterward.
 
 		"""
 		self.callback = self._empty_callback
@@ -3026,7 +3026,7 @@ class BinaryView(object):
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
-		.. warning: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :func:`remove_user_function` in their scripts.
+		.. warning:: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :func:`remove_user_function` in their scripts.
 
 		:param Function func: a Function object.
 		:rtype: None
@@ -4626,7 +4626,7 @@ class BinaryView(object):
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
-		.. warning: The built-in python console automatically updates analysis after every command is run, which means this call back may not behave as expected if entered interactively.
+		.. warning:: The built-in python console automatically updates analysis after every command is run, which means this call back may not behave as expected if entered interactively.
 
 		:param callback callback: A function to be called with no parameters when analysis has completed.
 		:return: An initialized AnalysisCompletionEvent object.

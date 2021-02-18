@@ -2872,7 +2872,7 @@ class Function(object):
 		"""
 		``set_auto_instr_highlight`` highlights the instruction at the specified address with the supplied color
 
-		.. warning: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
+		.. warning:: Use only in analysis plugins. Do not use in regular plugins, as colors won't be saved to the database.
 
 		:param int addr: virtual address of the instruction to be highlighted
 		:param HighlightStandardColor|highlight.HighlightColor color: Color value to use for highlighting

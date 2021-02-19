@@ -5602,6 +5602,16 @@ class BinaryView(object):
 		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
 
 	def remove_auto_segment(self, start, length):
+		"""
+		``remove_auto_segment`` removes an automatically generated segment from the current segment mapping.
+
+		:param int start: virtual address of the start of the segment
+		:param int length: length of the segment
+		:rtype: None
+
+		.. warning:: This action is not persistent across saving of a BNDB and must be re-applied each time a BNDB is loaded.
+
+		"""
 		core.BNRemoveAutoSegment(self.handle, start, length)
 
 	def add_user_segment(self, start, length, data_offset, data_length, flags):

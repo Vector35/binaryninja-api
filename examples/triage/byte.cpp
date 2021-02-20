@@ -1064,8 +1064,8 @@ void ByteView::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() != Qt::LeftButton)
 		return;
-	int x = (event->x() - 2) / m_render.getFontWidth() - ((int)m_addrWidth + 2);
-	int y = (event->y() - 2) / m_render.getFontHeight();
+	int x = (event->pos().x() - 2) / m_render.getFontWidth() - ((int)m_addrWidth + 2);
+	int y = (event->pos().y() - 2) / m_render.getFontHeight();
 	m_lastMouseX = x;
 	m_lastMouseY = y;
 	m_cursorAddr = addressFromLocation(x, y);
@@ -1081,8 +1081,8 @@ void ByteView::mouseMoveEvent(QMouseEvent* event)
 {
 	if (event->buttons() != Qt::LeftButton)
 		return;
-	int x = (event->x() - 2) / m_render.getFontWidth() - ((int)m_addrWidth + 2);
-	int y = (event->y() - 2) / m_render.getFontHeight();
+	int x = (event->pos().x() - 2) / m_render.getFontWidth() - ((int)m_addrWidth + 2);
+	int y = (event->pos().y() - 2) / m_render.getFontHeight();
 	if ((x == m_lastMouseX) && (y == m_lastMouseY))
 		return;
 	m_lastMouseX = x;

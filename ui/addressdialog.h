@@ -67,7 +67,7 @@ private Q_SLOTS:
 	void accepted();
 	void updateRelativeState(int state);
 	void updatePreview();
-	void updatePreview(QString data);
+	void updatePreviewWithText(QString data);
 
 public:
 	AddressDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here,

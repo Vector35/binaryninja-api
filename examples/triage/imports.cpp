@@ -273,7 +273,7 @@ void ImportsTreeView::closeFilter()
 
 void ImportsTreeView::keyPressEvent(QKeyEvent* event)
 {
-	if ((event->text().size() == 1) && (event->text()[0] > ' ') && (event->text()[0] < 127))
+	if ((event->text().size() == 1) && (event->text()[0] > ' ') && (event->text()[0] <= '~'))
 	{
 		m_parent->showFilter(event->text());
 		event->accept();

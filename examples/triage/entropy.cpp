@@ -111,7 +111,7 @@ void EntropyWidget::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() != Qt::LeftButton)
 		return;
-	float frac = (float)event->x() / (float)rect().width();
+	float frac = (float)event->pos().x() / (float)rect().width();
 	uint64_t offset = (uint64_t)(frac * m_width * m_blockSize);
 	m_view->navigateToFileOffset(offset);
 }

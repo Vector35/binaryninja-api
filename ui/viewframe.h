@@ -1,7 +1,11 @@
 #pragma once
 
-#include <QtWidgets/QAction>
 #include <QtWidgets/QGestureEvent>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QtWidgets/QAction>
+#else
+#include <QtGui/QAction>
+#endif
 #include <QtWidgets/QLabel>
 #include <QtCore/QPointer>
 #include <QtWidgets/QVBoxLayout>

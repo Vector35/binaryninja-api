@@ -88,7 +88,7 @@ def download_and_install(serial: str=None, downloaddir: str=None, dev: bool=Fals
 
 	download_path = download_headless(serial, downloaddir, dev)
 	logging.info(f"Successfully downloaded to: {download_path}")
-	if install is not None:
+	if install is True:
 		install_zip(download_path, installdir, clean)
 		logging.info(f"Successfully installed to {installdir}")
 

@@ -877,6 +877,16 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
 		setting and opening with :func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
 
+		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
+		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
+
+			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
+
+		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :func:`get_view_of_file_with_options`.
+		This specific usage of this setting is experimental and may change in the future ::
+
+			>>> bv = BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
+
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
@@ -904,10 +914,13 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		if view is None:
 			return None
 		bvt = None
+		universal_bvt = None
 		for available in view.available_view_types:
-			if available.name != "Raw":
+			if available.name == "Universal":
+				universal_bvt = available
+				continue
+			if bvt is None and available.name != "Raw":
 				bvt = available
-				break
 
 		if bvt is None:
 			bvt = cls["Mapped"]
@@ -920,7 +933,18 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 		if isDatabase:
 			load_settings = view.get_load_settings(bvt.name)
 		if load_settings is None:
-			load_settings = bvt.get_load_settings_for_data(view)
+			# FIXME:
+			if universal_bvt is not None and "files.universal.architecturePreference" in options:
+				load_settings = universal_bvt.get_load_settings_for_data(view)
+				arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
+				arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
+				if not arch_entry:
+					log.log_error(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
+					return None
+				load_settings = settings.Settings(core.BNGetUniqueIdentifierString())
+				load_settings.deserialize_schema(arch_entry[0]['loadSchema'])
+			else:
+				load_settings = bvt.get_load_settings_for_data(view)
 		if load_settings is None:
 			log.log_error(f"Could not get load settings for binary view of type `{bvt.name}`")
 			return view

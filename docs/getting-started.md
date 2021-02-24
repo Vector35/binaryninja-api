@@ -235,6 +235,13 @@ The cross-references pane comes in two different layouts: tree-based (default an
 
 The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
 
+#### Template Simplifier
+
+The `analysis.types.TemplateSimplifier` setting can be helpful when working with C++ symbols.
+
+![Before Template Simplification <](img/before-template-simplification.png "Before Template Simplification")
+![After Template Simplification >](img/after-template-simplification.png "After Template Simplification")
+
 #### Cross-Reference Filtering
 
 ![xrefs <](img/cross-reference-filter.png "xrefs filter")

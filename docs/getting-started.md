@@ -236,14 +236,25 @@ The hexadecimal view is useful for view raw binary files that may or may not eve
 
 ### Cross References Pane
 
-![Cross Reference Tree <](img/cross-reference-tree.png "xrefs tree")
+![Cross References <](img/cross-reference-tree.png "xrefs")
 
-The Cross References view in the lower-left shows all cross-references to the currently selected address or address range. Additionally this pane will change depending on whether an entire line is selected (all cross-references to that address are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data or code. To be explicit:
+The Cross References view in the lower-left shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
 
-* Incoming-Data References - The reference is a data variable pointing to this location.
-* Incoming-Code References - The reference is a pointer in code pointing to this location.
-* Outgoing-Data References - The currently selected item is a data variable pointer to the reference which itself is either data or code.
-* Outgoing-Code References - The currently selected item is code pointing to the reference which itself is either data or code.
+#### Code References
+
+Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are interprocedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
+
+#### Data References
+
+Data References are references created _by_ data (i.e. pointers), notnecessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
+
+#### Variable References
+
+Variable References are all the set of uses of a given variable. As these references are intraprocedural we're able to show the currently viewed IL in the preview.
+
+#### Type References
+
+Type References are references to types and type members made by other types, perhaps more accurately called Type-to-Type-References.
 
 #### Tree-based Layout
 The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (this can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed view, allowing users to quickly see (for instance) how many references are present to the current selection overall and by function. It also allows collapsing to quickly hide uninteresting results.
@@ -265,7 +276,7 @@ The `analysis.types.TemplateSimplifier` setting can be helpful when working with
 
 ![xrefs <](img/cross-reference-filter.png "xrefs filter")
 
-The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, or code and data (default). The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
+The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
 
 #### Cross-Reference Pinning
 

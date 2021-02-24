@@ -66,7 +66,7 @@ You can load files in many ways:
         * `binaryninja:///bin/ls?expr=sub_2830` - open the given file and navigate to the function: `sub_2830`
         * `binaryninja:///bin/ls?expr=.text` - open the given file and navigate to the start address of the `.text` section
         * `binaryninja:///bin/ls?expr=.text+6b` - open the given file and navigate to the hexadecimal offset `6b` from the `.text` section.
-    * URLs For referencing remote file files either the url should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
+    * URLs For referencing remote file files either the URL should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
         * `binaryninja:file://<remote_path>?expr=[.data + 400]` - Download the remote file and navigate to the address at `.data` plus `0x400`
 
 ## Status Bar
@@ -109,7 +109,7 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 ### Navigating
 
 ![navigation >](img/navigation.png "Navigation")
-Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges, etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
+Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
 ### Switching Views
 ![graph view >](img/view-choices.png "Different Views")
@@ -236,9 +236,9 @@ The hexadecimal view is useful for view raw binary files that may or may not eve
 
 ### Cross References Pane
 
-![Cross References <](img/cross-reference-tree.png "xrefs")
-
 The Cross References view in the lower-left shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
+
+![Cross References](img/cross-reference-tree.png "xrefs")
 
 #### Code References
 
@@ -261,20 +261,85 @@ The cross-references pane comes in two different layouts: tree-based (default an
 
 #### Table-based Layout
 
-![xrefs >](img/cross-reference-table.png "xrefs table")
+![xrefs](img/cross-reference-table.png "xrefs table")
 
 The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
 
 #### Template Simplifier
 
-The `analysis.types.TemplateSimplifier` setting can be helpful when working with C++ symbols.
+The [`analysis.types.TemplateSimplifier`](#analysis.types.TemplateSimplifier) setting can be helpful when working with C++ symbols.
 
-![Before Template Simplification <](img/before-template-simplification.png "Before Template Simplification")
-![After Template Simplification >](img/after-template-simplification.png "After Template Simplification")
+<div class="inline-slides">
+    <ol id="inline-slides-text">
+        <li id="currentline">Before Simplification</li>
+        <li>After Simplification</li>
+    </ol>
+    <div id="image-slider-container">
+        <ul id="image-slider">
+            <li>
+              <img src="img/before-template-simplification.png" alt="Before Simplification"/>
+            </li>
+            <li>
+              <img src="img/after-template-simplification.png" alt="After Simplification"/>
+            </li>
+        </ul>
+    </div>
+</div>
+
+_hover over the image to temporarily pause_
+
+<script>
+document.addEventListener("DOMContentLoaded", function(event) {
+    let pause = 3000;
+    let slider = $("#image-slider");
+    let sliderContainer = $(slider.selector + "-container");
+    window.slider = slider.lightSlider({
+        item:1,
+        loop: false,
+        auto: true,
+        speed: 200,
+        pause: pause,
+        slideMargin: 0,
+        pauseOnHover: true,
+        autoWidth:false,
+        thumbMargin:0,
+        onBeforeSlide: function (el) {
+            Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
+              if (index == el.getCurrentSlideCount() - 1)
+                item.id = "currentline";
+              else
+                item.id = "";
+             });
+        },
+        onSliderLoad: function() {
+            let sliderHeight = slider.height();
+            slider.find('img').each(function() {
+                $(this).parent().css("padding-top", (sliderHeight - this.naturalHeight)/2);
+            });
+            slider.removeClass('hiddenc');
+        },
+        onAfterSlide: function(el) {
+            if (el.getCurrentSlideCount() == el.getTotalSlideCount()) {
+                setTimeout(() => {!el.is(':hover') && el.goToSlide(0)}, pause);
+            }
+        },
+        onBeforeStart: function() {
+            let width = 0;
+            slider.find('img').each(function() {
+                width = Math.max(width, this.naturalWidth);
+            });
+            sliderContainer.width(width);
+        },
+    });
+    Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
+        item.addEventListener('click', function() { window.slider.goToSlide(index)});
+    });
+});
+</script>
 
 #### Cross-Reference Filtering
 
-![xrefs <](img/cross-reference-filter.png "xrefs filter")
+![xrefs >](img/cross-reference-filter.png "xrefs filter")
 
 The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
 
@@ -318,21 +383,19 @@ The function list also highlights imports, and functions identified with symbols
 !!! Tip "Tip"
     To search in the function list, just click to make sure it's focused and start typing!
 
-![console >](img/console.png "Console")
-
 ### Reflection View
 
 - View BNILs and assembly for the same file side-by-side
 
-![Reflection View >](img/reflection_view.png "Reflection View")
+![Reflection View](img/reflection_view.png "Reflection View")
 
 - Settings to control the synchronization behavior
 
-![Reflection Settings >](img/reflection_settings.png "Reflection Settings")
+![Reflection Settings](img/reflection_settings.png "Reflection Settings")
 
 - Right Click the Function Header for quick access to synchronization mode changes
 
-![Reflection Controls >](img/reflection_controls.png "Reflection Controls")
+![Reflection Controls](img/reflection_controls.png "Reflection Controls")
 
 - Reflection currently presents in graph view only
 
@@ -340,31 +403,33 @@ The function list also highlights imports, and functions identified with symbols
 
 ### High Level IL
 
+![HLIL Scoping Options >](img/hlil-scope.png "HLIL Scoping Options")
+
 Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
 
 You can control the way HLIL appears in the settings.
 
-![HLIL Scoping Options >](img/hlil-scope.png "HLIL Scoping Options")
-
 The different options are shown below:
 
-![HLIL Scoping Display >](img/hlil-braces.png "HLIL Scoping Display")
+![HLIL Scoping Display](img/hlil-braces.png "HLIL Scoping Display")
 
 ### Dead Store Elimination
 
-Binary Ninja tries to be convervative with eliminating unused variables on the stack. When the analysis finds a variable that cannot be eliminated but does not appear to be used, the assignment will appear grayed out in the decompiler output. The first two lines of the function below show this:
+Binary Ninja tries to be conservative with eliminating unused variables on the stack. When the analysis finds a variable that cannot be eliminated but does not appear to be used, the assignment will appear grayed out in the decompiler output. The first two lines of the function below show this:
 
-![Dead Stores >](img/dead-store-example.png "Dead Stores")
+![Dead Stores](img/dead-store-example.png "Dead Stores")
 
 In this case, these variables are actually unused and can be eliminated. You can tell Binary Ninja to do this by right clicking on the variable and choosing "Allow" from the "Dead Store Elimination" submenu.
 
-![Dead Store Elimination Menu >](img/dead-store-menu.png "Dead Store Elimination Menu")
+![Dead Store Elimination Menu](img/dead-store-menu.png "Dead Store Elimination Menu")
 
 Performing this action on both variables in the example results in the following output:
 
-![Dead Store Elimination Results >](img/dead-store-after.png "Dead Store Elimination Results")
+![Dead Store Elimination Results](img/dead-store-after.png "Dead Store Elimination Results")
 
 ### Script (Python) Console
+
+![console >](img/console.png "Console")
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
@@ -404,6 +469,8 @@ For more detailed information on plugins, see the [plugin guide](guide/plugins.m
 
 ## PDB Plugin
 
+![settings >](img/settings.png "Settings")
+
 Binary Ninja supports loading PDB files through a built in PDB loader. When selected from the plugin menu it attempts to find the corresponding PDB file using the following search order:
 
 1. Look for in the same directory as the opened file/bndb (e.g. If you have `c:\foo.exe` or `c:\foo.bndb` open the PDB plugin looks for `c:\foo.pdb`)
@@ -411,13 +478,12 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
 4. Prompt the user for the PDB.
 
-![settings >](img/settings.png "Settings")
-
 ## Settings
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 
 There are several scopes available for settings:
+
 * **User Settings** - Settings that apply globally and override the defaults. These settings are stored in `settings.json` within the [User Folder](#user-folder).
 * **Project Settings** - Settings which only apply if a project is opened. These settings are stored in `.binaryninja/settings.json` within a Project Folder. Project Folders can exist anywhere except within the User Folder. These settings apply to all files contained in the Project Folder and override the default and user settings.
 * **Resource Settings** - Settings which only apply to a specific BinaryView object within a file. These settings persist in a Binary Ninja Database (.bndb) database or ephemerally in a BinaryView object if a database does not yet exist for a file.

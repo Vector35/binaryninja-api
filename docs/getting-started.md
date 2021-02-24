@@ -338,6 +338,32 @@ The function list also highlights imports, and functions identified with symbols
 
 - When main view is linear, Mini Graph renders the Reflection View
 
+### High Level IL
+
+Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
+
+You can control the way HLIL appears in the settings.
+
+![HLIL Scoping Options >](img/hlil-scope.png "HLIL Scoping Options")
+
+The different options are shown below:
+
+![HLIL Scoping Display >](img/hlil-braces.png "HLIL Scoping Display")
+
+### Dead Store Elimination
+
+Binary Ninja tries to be convervative with eliminating unused variables on the stack. When the analysis finds a variable that cannot be eliminated but does not appear to be used, the assignment will appear grayed out in the decompiler output. The first two lines of the function below show this:
+
+![Dead Stores >](img/dead-store-example.png "Dead Stores")
+
+In this case, these variables are actually unused and can be eliminated. You can tell Binary Ninja to do this by right clicking on the variable and choosing "Allow" from the "Dead Store Elimination" submenu.
+
+![Dead Store Elimination Menu >](img/dead-store-menu.png "Dead Store Elimination Menu")
+
+Performing this action on both variables in the example results in the following output:
+
+![Dead Store Elimination Results >](img/dead-store-after.png "Dead Store Elimination Results")
+
 ### Script (Python) Console
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.

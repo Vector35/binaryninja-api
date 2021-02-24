@@ -283,6 +283,24 @@ The function list also highlights imports, and functions identified with symbols
 
 ![console >](img/console.png "Console")
 
+### Reflection View
+
+- View BNILs and assembly for the same file side-by-side
+
+![Reflection View >](img/reflection_view.png "Reflection View")
+
+- Settings to control the synchronization behavior
+
+![Reflection Settings >](img/reflection_settings.png "Reflection Settings")
+
+- Right Click the Function Header for quick access to synchronization mode changes
+
+![Reflection Controls >](img/reflection_controls.png "Reflection Controls")
+
+- Reflection currently presents in graph view only
+
+- When main view is linear, Mini Graph renders the Reflection View
+
 ### Script (Python) Console
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.

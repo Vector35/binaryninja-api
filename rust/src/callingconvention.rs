@@ -653,6 +653,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     bool_arg!(arg_registers_shared_index);
     bool_arg!(reserved_stack_space_for_arg_registers);
     bool_arg!(stack_adjusted_on_return);
+    bool_arg!(is_eligible_for_heuristics);
 
     reg!(return_int_reg);
     reg!(return_hi_int_reg);

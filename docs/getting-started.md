@@ -54,7 +54,7 @@ You can load files in many ways:
 
 ![open with options >](img/open-with-options.png "Open with Options")
 
-1. Drag-and-drop a file onto the Binary Ninja window
+1. Drag-and-drop a file onto the Binary Ninja window (hold `[CMD/CTRL-SHIFT]` while dropping to use the `Open with Options` workflow)
 2. Use the `File/Open` menu or `Open` button on the start screen (`[CMD/CTRL] o`)
 3. Use the `File/Open with Options` menu which allows you to customize the analysis options (`[CMD/CTRL-SHIFT] o`)
 4. Open a file from the Triage picker (`File/Open for Triage`) which enables several minimal analysis options and shows a summary view first
@@ -69,13 +69,32 @@ You can load files in many ways:
     * URLs For referencing remote file files either the url should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
         * `binaryninja:file://<remote_path>?expr=[.data + 400]` - Download the remote file and navigate to the address at `.data` plus `0x400`
 
+## Status Bar
+
+![status bar >](img/status-bar.png "Status Bar")
+
+The status bar provides current information about the open file as well as some interactive controls. Summary features are listed below:
+
+* Update Notification - perform updates, download status, and restart notification
+* Analysis progress - ongoing analysis progress of current active file
+* Cursor offset or selection
+* BinaryView Switcher
+* View Layer Selection - present a layer of analysis information from the BinaryView (e.g. hex, graph, linear, strings, types, etc.)
+* File Contents Lock - interactive control to prevent accidental changes to the underlying file
+
 ## Analysis
 
-![auto analysis >](img/analysis.png "Auto Analysis")
+
 
 As soon as you open a file, Binary Ninja begins its auto-analysis which is fairly similar to decompiling the entire binary.
 
 Even while Binary Ninja is analyzing a binary, the UI should be responsive. Not only that, but because the analysis prioritizes user-requested analysis, you can start navigating a binary immediately and wherever you are viewing will be prioritized for analysis. The current progress through a binary is shown in the status bar (more details are available via `bv.analysis_info` in the Python console), but note that the total number of items left to analyze will go up as well as the binary is processed and more items are discovered that require analysis.
+
+Analysis proceeds through several phases summarized below:
+
+* Phase 1 - Initial Recursive Descent
+* Phase 2 - Call Target Analysis (Part of Linear Sweep)
+* Phase 3.x - Control Flow Graph Analysis (Part of Linear Sweep)
 
 Errors or warnings during the load of the binary are also shown in the status bar, along with an icon (in the case of the image above, a large number of warnings were shown). The most common warnings are from incomplete lifting and can be safely ignored. If the warnings include a message like `Data flow for function at 0x41414141 did not terminate`, then please report the binary to the [bug database](https://github.com/Vector35/binaryninja-api/issues).
 

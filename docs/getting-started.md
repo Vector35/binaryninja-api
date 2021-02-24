@@ -430,237 +430,239 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 
 Here's a list of all settings currently available from the UI:
 
-|Category|Setting|Description|Type|Default|Key|
-|---|---|---|---|---|---|
-|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
-|analysis|Never Save Undo Data|Never save previous user actions to the database.|`boolean`|`False`|<a id='analysis.database.neverSaveUndoData'>analysis.database.neverSaveUndoData</a>|
-|analysis|Suppress Reanalysis|Disable function reanalysis on database load when the product version or analysis settings change.|`boolean`|`False`|<a id='analysis.database.suppressReanalysis'>analysis.database.suppressReanalysis</a>|
-|analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`False`|<a id='analysis.experimental.alternateTypePropagation'>analysis.experimental.alternateTypePropagation</a>|
-|analysis|Correlated Memory Value Propagation|Attempt to propagate the value of an expression from a memory definition to a usage. Currently this feature is simplistic and the scope is a single basic block. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|<a id='analysis.experimental.correlatedMemoryValuePropagation'>analysis.experimental.correlatedMemoryValuePropagation</a>|
-|analysis|Heuristic Value Range Clamping|Use DataVariable state inferencing to help determine the possible size of a lookup table.|`boolean`|`True`|<a id='analysis.experimental.heuristicRangeClamp'>analysis.experimental.heuristicRangeClamp</a>|
-|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
-|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values may result in very high memory utilization.|`number`|`64`|<a id='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
-|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. A value of 0 disables this feature. The default value is 20 seconds. Time is specified in milliseconds.|`number`|`20000`|<a id='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
-|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65536`|<a id='analysis.limits.maxFunctionSize'>analysis.limits.maxFunctionSize</a>|
-|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|<a id='analysis.limits.maxFunctionUpdateCount'>analysis.limits.maxFunctionUpdateCount</a>|
-|analysis|Max Lookup Table Size|Limits the maximum number of entries for a lookup table.|`number`|`4095`|<a id='analysis.limits.maxLookupTableSize'>analysis.limits.maxLookupTableSize</a>|
-|analysis|Maximum String Annotation Length|The maximum substring length that will be shown in string annotations.|`number`|`32`|<a id='analysis.limits.maxStringAnnotationLength'>analysis.limits.maxStringAnnotationLength</a>|
-|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|<a id='analysis.limits.minStringLength'>analysis.limits.minStringLength</a>|
-|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`15`|<a id='analysis.limits.workerThreadCount'>analysis.limits.workerThreadCount</a>|
-|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|<a id='analysis.linearSweep.autorun'>analysis.linearSweep.autorun</a>|
-|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|<a id='analysis.linearSweep.controlFlowGraph'>analysis.linearSweep.controlFlowGraph</a>|
-|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|<a id='analysis.linearSweep.detailedLogInfo'>analysis.linearSweep.detailedLogInfo</a>|
-|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|<a id='analysis.linearSweep.entropyHeuristics'>analysis.linearSweep.entropyHeuristics</a>|
-|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|<a id='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
-|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|<a id='analysis.mode'>analysis.mode</a>|
-| | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls. [Disassembly Only]|`enum`|`controlFlow`| |
-| | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables. [LLIL and Equivalents]|`enum`|`basic`| |
-| | |  enum: Perform analysis which includes type propagation and data flow. [MLIL and Equivalents]|`enum`|`intermediate`| |
-| | |  enum: Perform full analysis of the binary.|`enum`|`full`| |
-|analysis|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
-|analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
-|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
-|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
-|analysis|Simplify Templates|Simplify common C++ templates that are expanded with default arguments at compile time (eg. `std::__cxx11::basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >` to `std::wstring`).|`boolean`|`False`|<a id='analysis.types.TemplateSimplifier'>analysis.types.TemplateSimplifier</a>|
-|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|[]|<a id='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
-|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
-|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
-|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
-|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
-|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
-|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
-| | |  enum: Sets the disassembly syntax to a simplified Intel format. (TBD) |`enum`|`BN_INTEL`| |
-| | |  enum: Sets the disassembly syntax to Intel format. (Destination on the left) |`enum`|`INTEL`| |
-| | |  enum: Sets the disassembly syntax to AT&T format. (Destination on the right) |`enum`|`AT&T`| |
-|corePlugins|Aarch64 Architecture|Enable the built-in Aarch64 architecture module.|`boolean`|`True`|<a id='corePlugins.architectures.aarch64'>corePlugins.architectures.aarch64</a>|
-|corePlugins|ARMv7 Architecture|Enable the built-in ARMv7 architecture module.|`boolean`|`True`|<a id='corePlugins.architectures.armv7'>corePlugins.architectures.armv7</a>|
-|corePlugins|MIPS Architecture|Enable the built-in MIPS architecture module.|`boolean`|`True`|<a id='corePlugins.architectures.mips'>corePlugins.architectures.mips</a>|
-|corePlugins|PowerPC Architecture|Enable the built-in PowerPC architecture module.|`boolean`|`True`|<a id='corePlugins.architectures.powerpc'>corePlugins.architectures.powerpc</a>|
-|corePlugins|x86/x86_64 Architecture|Enable the built-in x86/x86_64 architecture module.|`boolean`|`True`|<a id='corePlugins.architectures.x86'>corePlugins.architectures.x86</a>|
-|corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|<a id='corePlugins.crypto'>corePlugins.crypto</a>|
-|corePlugins|PDB Loader|Enable the built-in PDB loader plugin.|`boolean`|`True`|<a id='corePlugins.pdb'>corePlugins.pdb</a>|
-|corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|
-|corePlugins|FreeBSD Platform|Enable the built-in FreeBSD platform module.|`boolean`|`True`|<a id='corePlugins.platforms.freebsd'>corePlugins.platforms.freebsd</a>|
-|corePlugins|Linux Platform|Enable the built-in Linux platform module.|`boolean`|`True`|<a id='corePlugins.platforms.linux'>corePlugins.platforms.linux</a>|
-|corePlugins|macOS Platform|Enable the built-in macOS platform module.|`boolean`|`True`|<a id='corePlugins.platforms.mac'>corePlugins.platforms.mac</a>|
-|corePlugins|Windows Platform|Enable the built-in Windows platform module.|`boolean`|`True`|<a id='corePlugins.platforms.windows'>corePlugins.platforms.windows</a>|
-|corePlugins|Triage Plugin|Enable the built-in triage plugin.|`boolean`|`True`|<a id='corePlugins.triage'>corePlugins.triage</a>|
-|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`| |<a id='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
-|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`CoreDownloadProvider`|<a id='downloadClient.providerName'>downloadClient.providerName</a>|
-| | | |`enum`|`QtDownloadProvider`| |
-| | | |`enum`|`CoreDownloadProvider`| |
-| | | |`enum`|`PythonDownloadProvider`| |
-|files|Auto Rebase Load File|When opening a file with options, automatically rebase an image which has a default load address of zero to 4MB for 64-bit binaries, or 64KB for 32-bit binaries.|`boolean`|`False`|<a id='files.pic.autoRebase'>files.pic.autoRebase</a>|
-|files|Universal Mach-O Architecture Preference|Specify an architecture preference for automatic loading of a Mach-O file from a Universal archive. By default, the first object file in the listing is loaded.|`array`|[]|<a id='files.universal.architecturePreference'>files.universal.architecturePreference</a>|
-| | | |`enum`|`alpha`| |
-| | | |`enum`|`arm`| |
-| | | |`enum`|`arm64`| |
-| | | |`enum`|`arm64_32`| |
-| | | |`enum`|`hppa`| |
-| | | |`enum`|`i860`| |
-| | | |`enum`|`mc680x0`| |
-| | | |`enum`|`mc88000`| |
-| | | |`enum`|`mc98000`| |
-| | | |`enum`|`mips`| |
-| | | |`enum`|`ppc`| |
-| | | |`enum`|`ppc64`| |
-| | | |`enum`|`sparc`| |
-| | | |`enum`|`vax`| |
-| | | |`enum`|`x86`| |
-| | | |`enum`|`x86_64`| |
-|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|<a id='pdb.autoDownload'>pdb.autoDownload</a>|
-|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`| |<a id='pdb.localStoreAbsolute'>pdb.localStoreAbsolute</a>|
-|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|<a id='pdb.localStoreRelative'>pdb.localStoreRelative</a>|
-|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|[`https://msdl.microsoft.com/download/symbols`]|<a id='pdb.symbolServerList'>pdb.symbolServerList</a>|
-|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|<a id='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
-| | |  enum: The default channel. This setting should be used unless you are testing the Plugin Manager.|`enum`|`master`| |
-| | |  enum: Plugin Manager test channel.|`enum`|`test`| |
-|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|<a id='pluginManager.officialUpdateChannel'>pluginManager.officialUpdateChannel</a>|
-| | |  enum: The default channel. This setting should be used unless you are testing the Plugin Manager.|`enum`|`master`| |
-| | |  enum: Plugin Manager test channel.|`enum`|`test`| |
-|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`| |<a id='python.interpreter'>python.interpreter</a>|
-|python|Minimum Python Log Level|Set the minimum Python log level which applies in headless operation only. The log is connected to stderr. Additionally, stderr must be associated with a terminal device.|`string`|`WarningLog`|<a id='python.log.minLevel'>python.log.minLevel</a>|
-| | |  enum: Print Debug, Info, Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`DebugLog`| |
-| | |  enum: Print Info, Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`InfoLog`| |
-| | |  enum: Print Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`WarningLog`| |
-| | |  enum: Print Error and Alert messages to stderr on the terminal device.|`enum`|`ErrorLog`| |
-| | |  enum: Print Alert messages to stderr on the terminal device.|`enum`|`AlertLog`| |
-| | |  enum: Disable all logging in headless operation.|`enum`|`Disabled`| |
-|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|<a id='triage.analysisMode'>triage.analysisMode</a>|
-| | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls.|`enum`|`controlFlow`| |
-| | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables.|`enum`|`basic`| |
-| | |  enum: Perform full analysis of the binary.|`enum`|`full`| |
-|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|<a id='triage.hiddenFiles'>triage.hiddenFiles</a>|
-|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|<a id='triage.linearSweep'>triage.linearSweep</a>|
-| | |  enum: Do not perform linear sweep of the binary.|`enum`|`none`| |
-| | |  enum: Perform linear sweep on the binary, but skip the control flow graph analysis phase.|`enum`|`partial`| |
-| | |  enum: Perform full linear sweep on the binary.|`enum`|`full`| |
-|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
-|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
-|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|<a id='ui.colorBlind'>ui.colorBlind</a>|
-|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|<a id='ui.debugMode'>ui.debugMode</a>|
-|ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
-|ui|Feature Map Auto-Rotate|Automatically rotate the feature map orientation based on the current layout and dimensions.|`boolean`|`True`|<a id='ui.featureMap.autoRotate'>ui.featureMap.autoRotate</a>|
-|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|
-|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|<a id='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
-|ui|File Contents Lock|Lock the file contents to prevent accidental edits from the UI. File modification via API and menu based patching is explicitly allowed while the lock is enabled.|`boolean`|`True`|<a id='ui.fileContentsLock'>ui.fileContentsLock</a>|
-|ui|Auto Open with Options|Specify the file types which automatically open with the options dialog.|`array`|[`Mapped`, `Universal`]|<a id='ui.files.openWithOptions'>ui.files.openWithOptions</a>|
-| | | |`enum`|`Mapped`| |
-| | | |`enum`|`ELF`| |
-| | | |`enum`|`Mach-O`| |
-| | | |`enum`|`PE`| |
-| | | |`enum`|`Universal`| |
-|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|<a id='ui.font.antialiasing'>ui.font.antialiasing</a>|
-| | |  enum: Perform subpixel antialiasing on fonts.|`enum`|`subpixel`| |
-| | |  enum: Avoid subpixel antialiasing on fonts if possible.|`enum`|`grayscale`| |
-| | |  enum: No subpixel antialiasing at High DPI.|`enum`|`hidpi`| |
-| | |  enum: No font antialiasing.|`enum`|`none`| |
-|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|<a id='ui.font.bold'>ui.font.bold</a>|
-|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|<a id='ui.font.name'>ui.font.name</a>|
-|ui|Font Size|Font point size selection.|`number`|`12`|<a id='ui.font.size'>ui.font.size</a>|
-|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|<a id='ui.font.spacing'>ui.font.spacing</a>|
-|ui|Font Style|Font Style selection.|`string`| |<a id='ui.font.style'>ui.font.style</a>|
-|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
-|ui|Maximum UI Log Size|Set the maximum number of lines for the UI log.|`number`|`10000`|<a id='ui.log.maxSize'>ui.log.maxSize</a>|
-|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|<a id='ui.log.minLevel'>ui.log.minLevel</a>|
-| | |  enum: Display Debug, Info, Warning, Error, and Alert messages to log console.|`enum`|`DebugLog`| |
-| | |  enum: Display Info, Warning, Error, and Alert messages to log console.|`enum`|`InfoLog`| |
-| | |  enum: Display Warning, Error, and Alert messages to log console.|`enum`|`WarningLog`| |
-| | |  enum: Display Error and Alert messages to log console.|`enum`|`ErrorLog`| |
-| | |  enum: Display Alert messages to log console.|`enum`|`AlertLog`| |
-|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|<a id='ui.manualTooltip'>ui.manualTooltip</a>|
-|ui|Recent Command Limit|Specify a limit for the recent command palette history.|`number`|`5`|<a id='ui.recentCommandLimit'>ui.recentCommandLimit</a>|
-|ui|Recent File Limit|Specify a limit for the recent file history in the new tab window.|`number`|`10`|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
-|ui|Show Indentation Guides|Show indentation markers in linear high-level IL|`boolean`|`True`|<a id='ui.renderIndentGuides'>ui.renderIndentGuides</a>|
-|ui|Default Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI.|`string`|`Python`|<a id='ui.scripting.defaultProvider'>ui.scripting.defaultProvider</a>|
-| | | |`enum`|`Python`| |
-|ui|Scripting Provider History Size|Specify the maximum number of lines contained in the scripting history.|`number`|`1000`|<a id='ui.scripting.historySize'>ui.scripting.historySize</a>|
-|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
-|ui|HLIL Scoping Style|Controls the display of new scopes in HLIL.|`string`|`default`|<a id='ui.style.hlil.scoping'>ui.style.hlil.scoping</a>|
-| | |  enum: Default BNIL scoping style.|`enum`|`default`| |
-| | |  enum: Braces around scopes, same line.|`enum`|`braces`| |
-| | |  enum: Braces around scopes, new line.|`enum`|`bracesNewLine`| |
-|ui|Show Exported Data Variables|Show exported data variables in the symbol list.|`boolean`|`False`|<a id='ui.symbolList.showExportedDataVars'>ui.symbolList.showExportedDataVars</a>|
-|ui|Show Exported Functions|Show exported functions in the symbol list.|`boolean`|`True`|<a id='ui.symbolList.showExportedFunctions'>ui.symbolList.showExportedFunctions</a>|
-|ui|Show Imports|Show imports in the symbol list.|`boolean`|`True`|<a id='ui.symbolList.showImports'>ui.symbolList.showImports</a>|
-|ui|Show Local Data Variables|Show local data variables in the symbol list.|`boolean`|`False`|<a id='ui.symbolList.showLocalDataVars'>ui.symbolList.showLocalDataVars</a>|
-|ui|Show Local Functions|Show local functions in the symbol list.|`boolean`|`True`|<a id='ui.symbolList.showLocalFunctions'>ui.symbolList.showLocalFunctions</a>|
-|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|<a id='ui.theme'>ui.theme</a>|
-|ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Default IL for Graph View|Default IL for graph view on startup.|`string`|`Disassembly`|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Prefer Disassembly Graph|Prefer graph view over linear view on startup.|`boolean`|`False`|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
-|ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Linear View Gutter Width|Linear view gutter and tags width, in characters.|`number`|`5`|<a id='ui.view.linear.gutterWidth'>ui.view.linear.gutterWidth</a>|
-|ui|Default IL for Linear View|Default linear view type to display on startup.|`string`|`HighLevelIL`|<a id='ui.view.linear.il'>ui.view.linear.il</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Default IL for Reflection View|Default IL for reflection view on startup.|`string`|`Disassembly`|<a id='ui.view.reflection.il'>ui.view.reflection.il</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Reflection View IL Map|Specify the IL view to display based on a given source IL view. The source IL view is encoded as the index of this array and corresponds to the values defined in BNFunctionGraphType.|`array`|[`LowLevelIL`, `Disassembly`, `Disassembly`, `Disassembly`, `LowLevelIL`, `LowLevelILSSAForm`, `LowLevelIL`, `LowLevelILSSAForm`, `MediumLevelIL`, `MediumLevelILSSAForm`]|<a id='ui.view.reflection.ilMap'>ui.view.reflection.ilMap</a>|
-| | | |`enum`|`Disassembly`| |
-| | | |`enum`|`LowLevelIL`| |
-| | | |`enum`|`LiftedIL`| |
-| | | |`enum`|`LowLevelILSSAForm`| |
-| | | |`enum`|`MediumLevelIL`| |
-| | | |`enum`|`MediumLevelILSSAForm`| |
-| | | |`enum`|`MappedMediumLevelIL`| |
-| | | |`enum`|`MappedMediumLevelILSSAForm`| |
-| | | |`enum`|`HighLevelIL`| |
-| | | |`enum`|`HighLevelILSSAForm`| |
-|ui|Reflection View IL Synchronization|Reflection view follows main view IL changes according to the Reflection View IL Map.|`boolean`|`True`|<a id='ui.view.reflection.ilSync'>ui.view.reflection.ilSync</a>|
-|ui|Reflection View Location Synchronization|Reflection view follows navigation actions in the main view.|`boolean`|`True`|<a id='ui.view.reflection.locationSync'>ui.view.reflection.locationSync</a>|
-|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
-|ui|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
-|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|<a id='updates.activeContent'>updates.activeContent</a>|
-|updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
-|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|<a id='updates.showAllVersions'>updates.showAllVersions</a>|
+|Category|Setting|Description|Type|Default|Scope|Key|
+|---|---|---|---|---|---|---|
+|analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
+|analysis|Never Save Undo Data|Never save previous user actions to the database.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.database.neverSaveUndoData'>analysis.database.neverSaveUndoData</a>|
+|analysis|Suppress Reanalysis|Disable function reanalysis on database load when the product version or analysis settings change.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.database.suppressReanalysis'>analysis.database.suppressReanalysis</a>|
+|analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.experimental.alternateTypePropagation'>analysis.experimental.alternateTypePropagation</a>|
+|analysis|Correlated Memory Value Propagation|Attempt to propagate the value of an expression from a memory definition to a usage. Currently this feature is simplistic and the scope is a single basic block. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.experimental.correlatedMemoryValuePropagation'>analysis.experimental.correlatedMemoryValuePropagation</a>|
+|analysis|Heuristic Value Range Clamping|Use DataVariable state inferencing to help determine the possible size of a lookup table.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.experimental.heuristicRangeClamp'>analysis.experimental.heuristicRangeClamp</a>|
+|analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
+|analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values may result in very high memory utilization.|`number`|`64`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
+|analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. A value of 0 disables this feature. The default value is 20 seconds. Time is specified in milliseconds.|`number`|`20000`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
+|analysis|Max Function Size|Any functions over this size will not be automatically analyzed. A value of 0 disables analysis of functions and suppresses the related log warning. To override see FunctionAnalysisSkipOverride. Size is specified in bytes.|`number`|`65536`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.maxFunctionSize'>analysis.limits.maxFunctionSize</a>|
+|analysis|Max Function Update Count|Any functions that exceed this incremental update count are deferred. A value of 0 disables this feature.|`number`|`100`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.maxFunctionUpdateCount'>analysis.limits.maxFunctionUpdateCount</a>|
+|analysis|Max Lookup Table Size|Limits the maximum number of entries for a lookup table.|`number`|`4095`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.maxLookupTableSize'>analysis.limits.maxLookupTableSize</a>|
+|analysis|Maximum String Annotation Length|The maximum substring length that will be shown in string annotations.|`number`|`32`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.maxStringAnnotationLength'>analysis.limits.maxStringAnnotationLength</a>|
+|analysis|Minimum String Length|The minimum length for strings created during auto-analysis|`number`|`4`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.minStringLength'>analysis.limits.minStringLength</a>|
+|analysis|Worker Thread Count|The number of worker threads available for concurrent analysis activities.|`number`|`15`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.limits.workerThreadCount'>analysis.limits.workerThreadCount</a>|
+|analysis|Autorun Linear Sweep|Automatically run linear sweep when opening a binary for analysis.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.linearSweep.autorun'>analysis.linearSweep.autorun</a>|
+|analysis|Control Flow Graph Analysis|Enable the control flow graph analysis (Analysis Phase 3) portion of linear sweep.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.linearSweep.controlFlowGraph'>analysis.linearSweep.controlFlowGraph</a>|
+|analysis|Detailed Linear Sweep Log Information|Linear sweep generates additional log information at the InfoLog level.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.linearSweep.detailedLogInfo'>analysis.linearSweep.detailedLogInfo</a>|
+|analysis|Entropy Heuristics for Linear Sweep|Enable the application of entropy based heuristics to the function search space for linear sweep.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.linearSweep.entropyHeuristics'>analysis.linearSweep.entropyHeuristics</a>|
+|analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
+|analysis|Analysis Mode|Controls the amount of analysis performed on functions.|`string`|`full`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.mode'>analysis.mode</a>|
+| | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls. [Disassembly Only]|`enum`|`controlFlow`| | |
+| | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables. [LLIL and Equivalents]|`enum`|`basic`| | |
+| | |  enum: Perform analysis which includes type propagation and data flow. [MLIL and Equivalents]|`enum`|`intermediate`| | |
+| | |  enum: Perform full analysis of the binary.|`enum`|`full`| | |
+|analysis|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
+|analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
+|analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
+|analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
+|analysis|Simplify Templates|Simplify common C++ templates that are expanded with default arguments at compile time (eg. `std::__cxx11::basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >` to `std::wstring`).|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.types.TemplateSimplifier'>analysis.types.TemplateSimplifier</a>|
+|analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|[]|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
+|analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
+|analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
+|analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
+|arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
+|arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|[`SettingsUserScope`]|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
+|arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
+| | |  enum: Sets the disassembly syntax to a simplified Intel format. (TBD) |`enum`|`BN_INTEL`| | |
+| | |  enum: Sets the disassembly syntax to Intel format. (Destination on the left) |`enum`|`INTEL`| | |
+| | |  enum: Sets the disassembly syntax to AT&T format. (Destination on the right) |`enum`|`AT&T`| | |
+|corePlugins|Aarch64 Architecture|Enable the built-in Aarch64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.aarch64'>corePlugins.architectures.aarch64</a>|
+|corePlugins|ARMv7 Architecture|Enable the built-in ARMv7 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.armv7'>corePlugins.architectures.armv7</a>|
+|corePlugins|MIPS Architecture|Enable the built-in MIPS architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.mips'>corePlugins.architectures.mips</a>|
+|corePlugins|PowerPC Architecture|Enable the built-in PowerPC architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.powerpc'>corePlugins.architectures.powerpc</a>|
+|corePlugins|x86/x86_64 Architecture|Enable the built-in x86/x86_64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.x86'>corePlugins.architectures.x86</a>|
+|corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.crypto'>corePlugins.crypto</a>|
+|corePlugins|PDB Loader|Enable the built-in PDB loader plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdb'>corePlugins.pdb</a>|
+|corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|
+|corePlugins|FreeBSD Platform|Enable the built-in FreeBSD platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.freebsd'>corePlugins.platforms.freebsd</a>|
+|corePlugins|Linux Platform|Enable the built-in Linux platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.linux'>corePlugins.platforms.linux</a>|
+|corePlugins|macOS Platform|Enable the built-in macOS platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.mac'>corePlugins.platforms.mac</a>|
+|corePlugins|Windows Platform|Enable the built-in Windows platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows'>corePlugins.platforms.windows</a>|
+|corePlugins|Triage Plugin|Enable the built-in triage plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.triage'>corePlugins.triage</a>|
+|downloadClient|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`| |[`SettingsUserScope`]|<a id='downloadClient.httpsProxy'>downloadClient.httpsProxy</a>|
+|downloadClient|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`CoreDownloadProvider`|[`SettingsUserScope`]|<a id='downloadClient.providerName'>downloadClient.providerName</a>|
+| | | |`enum`|`QtDownloadProvider`| | |
+| | | |`enum`|`CoreDownloadProvider`| | |
+| | | |`enum`|`PythonDownloadProvider`| | |
+|files|Auto Rebase Load File|When opening a file with options, automatically rebase an image which has a default load address of zero to 4MB for 64-bit binaries, or 64KB for 32-bit binaries.|`boolean`|`False`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='files.pic.autoRebase'>files.pic.autoRebase</a>|
+|files|Universal Mach-O Architecture Preference|Specify an architecture preference for automatic loading of a Mach-O file from a Universal archive. By default, the first object file in the listing is loaded.|`array`|[]|[`SettingsUserScope`]|<a id='files.universal.architecturePreference'>files.universal.architecturePreference</a>|
+| | | |`enum`|`alpha`| | |
+| | | |`enum`|`arm`| | |
+| | | |`enum`|`arm64`| | |
+| | | |`enum`|`arm64_32`| | |
+| | | |`enum`|`hppa`| | |
+| | | |`enum`|`i860`| | |
+| | | |`enum`|`mc680x0`| | |
+| | | |`enum`|`mc88000`| | |
+| | | |`enum`|`mc98000`| | |
+| | | |`enum`|`mips`| | |
+| | | |`enum`|`ppc`| | |
+| | | |`enum`|`ppc64`| | |
+| | | |`enum`|`sparc`| | |
+| | | |`enum`|`vax`| | |
+| | | |`enum`|`x86`| | |
+| | | |`enum`|`x86_64`| | |
+|pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='pdb.autoDownload'>pdb.autoDownload</a>|
+|pdb|Absolute PDB Symbol Store Path|Absolute path specifying where the PDB symbol store exists on this machine, overrides relative path.|`string`| |[`SettingsUserScope`, `SettingsProjectScope`]|<a id='pdb.localStoreAbsolute'>pdb.localStoreAbsolute</a>|
+|pdb|Relative PDB Symbol Store Path|Path *relative* to the binaryninja _user_ directory, specifying the pdb symbol store.|`string`|`symbols`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='pdb.localStoreRelative'>pdb.localStoreRelative</a>|
+|pdb|Symbol Server List|List of servers to query for pdb symbols.|`array`|[`https://msdl.microsoft.com/download/symbols`]|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='pdb.symbolServerList'>pdb.symbolServerList</a>|
+|pluginManager|Community Plugin Manager Update Channel|Specify which community update channel the Plugin Manager should update plugins from.|`string`|`master`|[`SettingsUserScope`]|<a id='pluginManager.communityUpdateChannel'>pluginManager.communityUpdateChannel</a>|
+| | |  enum: The default channel. This setting should be used unless you are testing the Plugin Manager.|`enum`|`master`| | |
+| | |  enum: Plugin Manager test channel.|`enum`|`test`| | |
+|pluginManager|Official Plugin Manager Update Channel|Specify which official update channel the Plugin Manager should update plugins from.|`string`|`master`|[`SettingsUserScope`]|<a id='pluginManager.officialUpdateChannel'>pluginManager.officialUpdateChannel</a>|
+| | |  enum: The default channel. This setting should be used unless you are testing the Plugin Manager.|`enum`|`master`| | |
+| | |  enum: Plugin Manager test channel.|`enum`|`test`| | |
+|python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`| |[`SettingsUserScope`]|<a id='python.interpreter'>python.interpreter</a>|
+|python|Minimum Python Log Level|Set the minimum Python log level which applies in headless operation only. The log is connected to stderr. Additionally, stderr must be associated with a terminal device.|`string`|`WarningLog`|[`SettingsUserScope`]|<a id='python.log.minLevel'>python.log.minLevel</a>|
+| | |  enum: Print Debug, Info, Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`DebugLog`| | |
+| | |  enum: Print Info, Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`InfoLog`| | |
+| | |  enum: Print Warning, Error, and Alert messages to stderr on the terminal device.|`enum`|`WarningLog`| | |
+| | |  enum: Print Error and Alert messages to stderr on the terminal device.|`enum`|`ErrorLog`| | |
+| | |  enum: Print Alert messages to stderr on the terminal device.|`enum`|`AlertLog`| | |
+| | |  enum: Disable all logging in headless operation.|`enum`|`Disabled`| | |
+|triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='triage.analysisMode'>triage.analysisMode</a>|
+| | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls.|`enum`|`controlFlow`| | |
+| | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables.|`enum`|`basic`| | |
+| | |  enum: Perform full analysis of the binary.|`enum`|`full`| | |
+|triage|Triage Shows Hidden Files|Whether the Triage file picker shows hidden files.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='triage.hiddenFiles'>triage.hiddenFiles</a>|
+|triage|Triage Linear Sweep Mode|Controls the level of linear sweep performed when opening for triage.|`string`|`partial`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='triage.linearSweep'>triage.linearSweep</a>|
+| | |  enum: Do not perform linear sweep of the binary.|`enum`|`none`| | |
+| | |  enum: Perform linear sweep on the binary, but skip the control flow graph analysis phase.|`enum`|`partial`| | |
+| | |  enum: Perform full linear sweep on the binary.|`enum`|`full`| | |
+|triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
+|triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
+|ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.colorBlind'>ui.colorBlind</a>|
+|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.debugMode'>ui.debugMode</a>|
+|ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
+|ui|Feature Map Auto-Rotate|Automatically rotate the feature map orientation based on the current layout and dimensions.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.featureMap.autoRotate'>ui.featureMap.autoRotate</a>|
+|ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|
+|ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
+|ui|File Contents Lock|Lock the file contents to prevent accidental edits from the UI. File modification via API and menu based patching is explicitly allowed while the lock is enabled.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.fileContentsLock'>ui.fileContentsLock</a>|
+|ui|Auto Open with Options|Specify the file types which automatically open with the options dialog.|`array`|[`Mapped`, `Universal`]|[`SettingsUserScope`]|<a id='ui.files.openWithOptions'>ui.files.openWithOptions</a>|
+| | | |`enum`|`Mapped`| | |
+| | | |`enum`|`ELF`| | |
+| | | |`enum`|`Mach-O`| | |
+| | | |`enum`|`PE`| | |
+| | | |`enum`|`Universal`| | |
+|ui|Antialiasing|Select font antialiasing style.|`string`|`subpixel`|[`SettingsUserScope`]|<a id='ui.font.antialiasing'>ui.font.antialiasing</a>|
+| | |  enum: Perform subpixel antialiasing on fonts.|`enum`|`subpixel`| | |
+| | |  enum: Avoid subpixel antialiasing on fonts if possible.|`enum`|`grayscale`| | |
+| | |  enum: No subpixel antialiasing at High DPI.|`enum`|`hidpi`| | |
+| | |  enum: No font antialiasing.|`enum`|`none`| | |
+|ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.bold'>ui.font.bold</a>|
+|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|[`SettingsUserScope`]|<a id='ui.font.name'>ui.font.name</a>|
+|ui|Font Size|Font point size selection.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.size'>ui.font.size</a>|
+|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.spacing'>ui.font.spacing</a>|
+|ui|Font Style|Font Style selection.|`string`| |[`SettingsUserScope`]|<a id='ui.font.style'>ui.font.style</a>|
+|ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
+|ui|Maximum UI Log Size|Set the maximum number of lines for the UI log.|`number`|`10000`|[`SettingsUserScope`]|<a id='ui.log.maxSize'>ui.log.maxSize</a>|
+|ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|[`SettingsUserScope`]|<a id='ui.log.minLevel'>ui.log.minLevel</a>|
+| | |  enum: Display Debug, Info, Warning, Error, and Alert messages to log console.|`enum`|`DebugLog`| | |
+| | |  enum: Display Info, Warning, Error, and Alert messages to log console.|`enum`|`InfoLog`| | |
+| | |  enum: Display Warning, Error, and Alert messages to log console.|`enum`|`WarningLog`| | |
+| | |  enum: Display Error and Alert messages to log console.|`enum`|`ErrorLog`| | |
+| | |  enum: Display Alert messages to log console.|`enum`|`AlertLog`| | |
+|ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.manualTooltip'>ui.manualTooltip</a>|
+|ui|Recent Command Limit|Specify a limit for the recent command palette history.|`number`|`5`|[`SettingsUserScope`]|<a id='ui.recentCommandLimit'>ui.recentCommandLimit</a>|
+|ui|Recent File Limit|Specify a limit for the recent file history in the new tab window.|`number`|`10`|[`SettingsUserScope`]|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
+|ui|Show Indentation Guides|Show indentation markers in linear high-level IL|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.renderIndentGuides'>ui.renderIndentGuides</a>|
+|ui|Default Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI.|`string`|`Python`|[`SettingsUserScope`]|<a id='ui.scripting.defaultProvider'>ui.scripting.defaultProvider</a>|
+| | | |`enum`|`Python`| | |
+|ui|Scripting Provider History Size|Specify the maximum number of lines contained in the scripting history.|`number`|`1000`|[`SettingsUserScope`]|<a id='ui.scripting.historySize'>ui.scripting.historySize</a>|
+|ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
+|ui|HLIL Scoping Style|Controls the display of new scopes in HLIL.|`string`|`default`|[`SettingsResourceScope`, `SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.style.hlil.scoping'>ui.style.hlil.scoping</a>|
+| | |  enum: Default BNIL scoping style.|`enum`|`default`| | |
+| | |  enum: Braces around scopes, same line.|`enum`|`braces`| | |
+| | |  enum: Braces around scopes, new line.|`enum`|`bracesNewLine`| | |
+|ui|Show Exported Data Variables|Show exported data variables in the symbol list.|`boolean`|`False`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.symbolList.showExportedDataVars'>ui.symbolList.showExportedDataVars</a>|
+|ui|Show Exported Functions|Show exported functions in the symbol list.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.symbolList.showExportedFunctions'>ui.symbolList.showExportedFunctions</a>|
+|ui|Show Imports|Show imports in the symbol list.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.symbolList.showImports'>ui.symbolList.showImports</a>|
+|ui|Show Local Data Variables|Show local data variables in the symbol list.|`boolean`|`False`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.symbolList.showLocalDataVars'>ui.symbolList.showLocalDataVars</a>|
+|ui|Show Local Functions|Show local functions in the symbol list.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.symbolList.showLocalFunctions'>ui.symbolList.showLocalFunctions</a>|
+|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|[`SettingsUserScope`]|<a id='ui.theme'>ui.theme</a>|
+|ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Default IL for Graph View|Default IL for graph view on startup.|`string`|`Disassembly`|[`SettingsUserScope`]|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Prefer Disassembly Graph|Prefer graph view over linear view on startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
+|ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Linear View Gutter Width|Linear view gutter and tags width, in characters.|`number`|`5`|[`SettingsUserScope`]|<a id='ui.view.linear.gutterWidth'>ui.view.linear.gutterWidth</a>|
+|ui|Default IL for Linear View|Default linear view type to display on startup.|`string`|`HighLevelIL`|[`SettingsUserScope`]|<a id='ui.view.linear.il'>ui.view.linear.il</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Default IL for Reflection View|Default IL for reflection view on startup.|`string`|`Disassembly`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.view.reflection.il'>ui.view.reflection.il</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Reflection View IL Map|Specify the IL view to display based on a given source IL view. The source IL view is encoded as the index of this array and corresponds to the values defined in BNFunctionGraphType.|`array`|[`LowLevelIL`, `Disassembly`, `Disassembly`, `Disassembly`, `LowLevelIL`, `LowLevelILSSAForm`, `LowLevelIL`, `LowLevelILSSAForm`, `MediumLevelIL`, `MediumLevelILSSAForm`]|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.view.reflection.ilMap'>ui.view.reflection.ilMap</a>|
+| | | |`enum`|`Disassembly`| | |
+| | | |`enum`|`LowLevelIL`| | |
+| | | |`enum`|`LiftedIL`| | |
+| | | |`enum`|`LowLevelILSSAForm`| | |
+| | | |`enum`|`MediumLevelIL`| | |
+| | | |`enum`|`MediumLevelILSSAForm`| | |
+| | | |`enum`|`MappedMediumLevelIL`| | |
+| | | |`enum`|`MappedMediumLevelILSSAForm`| | |
+| | | |`enum`|`HighLevelIL`| | |
+| | | |`enum`|`HighLevelILSSAForm`| | |
+|ui|Reflection View IL Synchronization|Reflection view follows main view IL changes according to the Reflection View IL Map.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.view.reflection.ilSync'>ui.view.reflection.ilSync</a>|
+|ui|Reflection View Location Synchronization|Reflection view follows navigation actions in the main view.|`boolean`|`True`|[`SettingsUserScope`, `SettingsProjectScope`]|<a id='ui.view.reflection.locationSync'>ui.view.reflection.locationSync</a>|
+|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
+|ui|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
+|updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|[`SettingsUserScope`]|<a id='updates.activeContent'>updates.activeContent</a>|
+|updates|Update Channel Preferences|Select update channel and version.|`string`|`dev (2.2.2657-dev)`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
+|updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|[`SettingsUserScope`]|<a id='updates.showAllVersions'>updates.showAllVersions</a>|
+|user|Email|The email that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.email'>user.email</a>|
+|user|Name|The name that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.name'>user.name</a>|
 
 ## Updates
 

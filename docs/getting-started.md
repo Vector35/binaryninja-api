@@ -725,7 +725,7 @@ Here's a list of all settings currently available from the UI:
 |ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
 |ui|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
 |updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|[`SettingsUserScope`]|<a id='updates.activeContent'>updates.activeContent</a>|
-|updates|Update Channel Preferences|Select update channel and version.|`string`|`dev (2.2.2657-dev)`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
+|updates|Update Channel Preferences|Select update channel and version.|`string`|`2.3.2660`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|
 |updates|Show All Versions|Show all versions that are available for the current update channel in the UI.|`boolean`|`False`|[`SettingsUserScope`]|<a id='updates.showAllVersions'>updates.showAllVersions</a>|
 |user|Email|The email that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.email'>user.email</a>|
 |user|Name|The name that will be shown when collaborating with other users.|`string`| |[`SettingsUserScope`]|<a id='user.name'>user.name</a>|

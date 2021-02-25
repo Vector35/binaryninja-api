@@ -242,15 +242,15 @@ The Cross References view in the lower-left shows all cross-references to the cu
 
 #### Code References
 
-Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are interprocedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
+Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are inter-procedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
 
 #### Data References
 
-Data References are references created _by_ data (i.e. pointers), notnecessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
+Data References are references created _by_ data (i.e. pointers), not necessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
 
 #### Variable References
 
-Variable References are all the set of uses of a given variable. As these references are intraprocedural we're able to show the currently viewed IL in the preview.
+Variable References are all the set of uses of a given variable. As these references are intra-procedural we're able to show the currently viewed IL in the preview.
 
 #### Type References
 

@@ -1672,7 +1672,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void AddTag(Ref<Tag> tag, bool user = false);
 		void RemoveTag(Ref<Tag> tag, bool user = false);
-		Ref<Tag> GetTag(uint64_t tagId);
+		Ref<Tag> GetTag(const std::string& tagId);
 
 		std::vector<TagReference> GetAllTagReferences();
 		std::vector<TagReference> GetAllAddressTagReferences();

@@ -3698,7 +3698,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTagType** BNGetTagTypes(BNBinaryView* view, size_t* count);
 
 	BINARYNINJACOREAPI void BNAddTag(BNBinaryView* view, BNTag* tag, bool user);
-	BINARYNINJACOREAPI BNTag* BNGetTag(BNBinaryView* view, uint64_t tagId);
+	BINARYNINJACOREAPI BNTag* BNGetTag(BNBinaryView* view, const char* tagId);
 	BINARYNINJACOREAPI void BNRemoveTag(BNBinaryView* view, BNTag* tag, bool user);
 
 	BINARYNINJACOREAPI BNTagReference* BNGetAllTagReferences(BNBinaryView* view, size_t* count);

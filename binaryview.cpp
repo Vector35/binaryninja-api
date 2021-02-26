@@ -2323,9 +2323,9 @@ void BinaryView::RemoveTag(Ref<Tag> tag, bool user)
 }
 
 
-Ref<Tag> BinaryView::GetTag(uint64_t tagId)
+Ref<Tag> BinaryView::GetTag(const string& tagId)
 {
-	BNTag* tag = BNGetTag(m_object, tagId);
+	BNTag* tag = BNGetTag(m_object, tagId.c_str());
 	if (!tag)
 		return nullptr;
 

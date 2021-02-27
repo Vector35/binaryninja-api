@@ -96,7 +96,7 @@ public:
 	static QSize getScaledWindowSize(int x, int y);
 	static void updateStatus(bool updateInfo = true);
 	static void notifyThemeChanged();
-	static void showPreview(QWidget* parent, PreviewWidget* preview, QPoint localPos);
+	static void showPreview(QWidget* parent, PreviewWidget* preview, QPoint localPos, bool anchorAtPoint = false);
 	static void closePreview();
 	static bool sendPreviewWheelEvent(QWheelEvent* event);
 	static void closeOtherActiveModalWidget(QWidget* current);

@@ -1307,6 +1307,10 @@ class Tag(object):
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
+	def id(self):
+		return core.BNTagGetId(self.handle)
+
+	@property
 	def type(self):
 		return TagType(core.BNTagGetType(self.handle))
 

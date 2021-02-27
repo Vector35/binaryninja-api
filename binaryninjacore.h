@@ -3738,6 +3738,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTag* BNNewTagReference(BNTag* tag);
 	BINARYNINJACOREAPI void BNFreeTag(BNTag* tag);
 	BINARYNINJACOREAPI void BNFreeTagList(BNTag** tags, size_t count);
+	BINARYNINJACOREAPI char* BNTagGetId(BNTag* tag);
 	BINARYNINJACOREAPI BNTagType* BNTagGetType(BNTag* tag);
 	BINARYNINJACOREAPI char* BNTagGetData(BNTag* tag);
 	BINARYNINJACOREAPI void BNTagSetData(BNTag* tag, const char* data);

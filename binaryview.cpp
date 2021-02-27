@@ -468,6 +468,15 @@ Tag::Tag(Ref<TagType> type, const std::string& data)
 }
 
 
+std::string Tag::GetId() const
+{
+	char* id = BNTagGetId(m_object);
+	std::string result = id;
+	BNFreeString(id);
+	return result;
+}
+
+
 Ref<TagType> Tag::GetType() const
 {
 	return new TagType(BNTagGetType(m_object));

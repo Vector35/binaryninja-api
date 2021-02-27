@@ -1327,6 +1327,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Tag(BNTag* tag);
 		Tag(Ref<TagType> type, const std::string& data = "");
 
+		std::string GetId() const;
 		Ref<TagType> GetType() const;
 		std::string GetData() const;
 		void SetData(const std::string& data);

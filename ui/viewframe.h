@@ -293,7 +293,7 @@ public:
 	virtual ~ViewFrame();
 
 	FileContext* getFileContext() const { return m_context; }
-	bool areFileContentsLocked() { return m_fileContentsLock; }
+	bool areFileContentsLocked(bool showToolTip = false);
 	void setFileContentsLocked(bool enable);
 	QWidget* getFileContentsLockStatus();
 

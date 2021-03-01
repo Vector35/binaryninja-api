@@ -28,6 +28,7 @@ import sys
 import subprocess
 from pathlib import Path, PurePath
 import re
+import os
 
 # Binary Ninja components
 import binaryninja
@@ -936,7 +937,8 @@ class PythonScriptingProvider(ScriptingProvider):
 		args.append("install")
 		args.append("--verbose")
 		venv = Settings().get_string("python.virtualenv")
-		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir():
+		in_virtual_env = 'VIRTUAL_ENV' in os.environ
+		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 
 		args.extend(filter(len, modules.decode("utf-8").split("\n")))

@@ -128,10 +128,10 @@ if __name__ == "__main__":
             elif sys.argv[i] == '--api-only':
                 config.api_only = True
 
-    test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
     test_suite = unittest.defaultTestLoader.loadTestsFromModule(rebasing_test)
     if not config.api_only:
         test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
+    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(api_test))
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(test_suite)
 """

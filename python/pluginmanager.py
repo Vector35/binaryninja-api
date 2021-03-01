@@ -62,6 +62,7 @@ class RepoPlugin(object):
 	@installed.setter
 	def installed(self, state):
 		if state:
+			self.install_dependencies()
 			return core.BNPluginInstall(self.handle)
 		else:
 			return core.BNPluginUninstall(self.handle)

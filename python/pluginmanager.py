@@ -97,7 +97,7 @@ class RepoPlugin(object):
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetApis(self.handle, count)
 		for i in range(count.value):
-			result.append(platforms[i])
+			result.append(platforms[i].decode("utf-8"))
 		core.BNFreePluginPlatforms(platforms, count)
 		return result
 
@@ -185,7 +185,7 @@ class RepoPlugin(object):
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetPlatforms(self.handle, count)
 		for i in range(count.value):
-			result.append(platforms[i])
+			result.append(platforms[i].decode("utf-8"))
 		core.BNFreePluginPlatforms(platforms, count)
 		return result
 

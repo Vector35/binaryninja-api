@@ -287,7 +287,7 @@ class DemanglerTest(unittest.TestCase):
 		)
 		for i, test in enumerate(tests):
 			t, n = demangle_ms(Architecture['x86'], test)
-			self.get_type_string(t, n) == results[i]
+			assert self.get_type_string(t, n) == results[i]
 
 	def test_demangle_gnu3(self):
 		tests = ("__ZN15BinaryNinjaCore12BinaryReader5Read8Ev",

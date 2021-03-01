@@ -59,6 +59,15 @@ class RepoPlugin(object):
 		"""Boolean True if the plugin is installed, False otherwise"""
 		return core.BNPluginIsInstalled(self.handle)
 
+	def install(self):
+		"""Attempt to install the given plugin"""
+		self.install_dependencies()
+		return core.BNPluginInstall(self.handle)
+
+	def uninstall(self):
+		"""Attempt to uninstall the given plugin"""
+		return core.BNPluginUninstall(self.handle)
+
 	@installed.setter
 	def installed(self, state):
 		if state:

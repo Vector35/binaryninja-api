@@ -7,7 +7,7 @@ from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
 from binaryninja.architecture import Architecture
-
+from binaryninja.pluginmanager import RepositoryManager
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -334,4 +334,26 @@ class DemanglerTest(unittest.TestCase):
 
 		for i, test in enumerate(tests):
 			t, n = demangle_gnu3(Architecture['x86'], test)
-			self.get_type_string(t, n) == results[i]
+			result = self.get_type_string(t, n)
+			assert result == oracle[i], f"oracle: '{oracle[i]}'\nresult: '{result}'"
+
+
+class PluginManagerTest(unittest.TestCase):
+	def test_install_plugin(self):
+		mgr = RepositoryManager()
+		assert mgr.default_repository.path == 'community'
+		assert 'community' in [r.path for r in mgr.repositories]
+		assert 'official' in [r.path for r in mgr.repositories]
+		assert 'Vector35_debugger' in [p.path for p in mgr['official'].plugins]
+		dbg = mgr['official']['Vector35_debugger']
+		assert dbg.dependencies == 'colorama\n'
+		assert dbg.name == 'Debugger'
+		assert not dbg.installed
+		assert not dbg.running
+		assert not dbg.enabled
+		assert not dbg.disable_pending
+		dbg.install()
+		dbg.enable()
+		assert dbg.installed
+		assert dbg.enabled
+		dbg.uninstall()

@@ -281,13 +281,14 @@ class DemanglerTest(unittest.TestCase):
 			"??_U@YAPAXI@Z"
 		)
 
-		results = (
+		oracle = (
 			"void* __cdecl operator delete[](uint32_t)",
 			"void* __cdecl operator new[](uint32_t)"
 		)
 		for i, test in enumerate(tests):
 			t, n = demangle_ms(Architecture['x86'], test)
-			assert self.get_type_string(t, n) == results[i]
+			result = self.get_type_string(t, n)
+			assert result == oracle[i], f"oracle: {oracle[i]}\nresult: {result}"
 
 	def test_demangle_gnu3(self):
 		tests = ("__ZN15BinaryNinjaCore12BinaryReader5Read8Ev",
@@ -299,7 +300,6 @@ class DemanglerTest(unittest.TestCase):
 			"__ZN5QListIP14QAbstractStateE3endEv",
 			"__ZNK15BinaryNinjaCore19ArchitectureWrapper22GetOpcodeDisplayLengthEv",
 			"__ZN15BinaryNinjaCore17ScriptingInstance19SetCurrentSelectionEyy",
-			"__ZL32qt_meta_stringdata_QHistoryState",
 			"__ZN12_GLOBAL__N_114TypeDestructor14DestructorImplI11QStringListLb1EE8DestructEiPv",
 			"__ZN13QGb18030Codec5_nameEv",
 			"__ZN5QListIP7QObjectE6detachEv",
@@ -311,7 +311,7 @@ class DemanglerTest(unittest.TestCase):
 			"__ZN26QAbstractProxyModelPrivateC2Ev",
 			"__ZNSt3__110__function6__funcIZ26BNWorkerInteractiveEnqueueE4$_16NS_9allocatorIS2_EEFvvEEclEv")
 
-		results = ("int32_t BinaryNinjaCore::BinaryReader::Read8()",
+		oracle = ("int32_t BinaryNinjaCore::BinaryReader::Read8()",
 			"int32_t QList<QAbstractAnimation*>::detach_helper_grow(int32_t, int32_t)",
 			"int32_t QStatePrivate::emitPropertiesAssigned()",
 			"int32_t QtMetaTypePrivate::QMetaTypeFunctionHelper<QItemSelection, true>::Construct(void*, void const*)",
@@ -320,7 +320,6 @@ class DemanglerTest(unittest.TestCase):
 			"int32_t QList<QAbstractState*>::end()",
 			"int32_t BinaryNinjaCore::ArchitectureWrapper::GetOpcodeDisplayLength() const",
 			"int32_t BinaryNinjaCore::ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)",
-			"qt_meta_stringdata_QHistoryState _qt_meta_stringdata_QHistoryState",
 			"int32_t (anonymous namespace)::TypeDestructor::DestructorImpl<QStringList, true>::Destruct(int32_t, void*)",
 			"int32_t QGb18030Codec::_name()",
 			"int32_t QList<QObject*>::detach()",

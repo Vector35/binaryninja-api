@@ -2618,6 +2618,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> BoolType();
 		static Ref<Type> IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
 		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
+		static Ref<Type> WideCharType(size_t width, const std::string& typeName = "");
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
@@ -2738,6 +2739,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static TypeBuilder BoolType();
 		static TypeBuilder IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
 		static TypeBuilder FloatType(size_t width, const std::string& typeName = "");
+		static TypeBuilder WideCharType(size_t width, const std::string& typeName = "");
 		static TypeBuilder StructureType(Structure* strct);
 		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
 		static TypeBuilder NamedType(const QualifiedName& name, Type* type);

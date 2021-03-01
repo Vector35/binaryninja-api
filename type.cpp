@@ -708,6 +708,12 @@ Ref<Type> Type::FloatType(size_t width, const string& altName)
 }
 
 
+Ref<Type> Type::WideCharType(size_t width, const string& altName)
+{
+	return new Type(BNCreateWideCharType(width, altName.c_str()));
+}
+
+
 Ref<Type> Type::StructureType(Structure* strct)
 {
 	return new Type(BNCreateStructureType(strct->GetObject()));
@@ -1337,6 +1343,12 @@ TypeBuilder TypeBuilder::IntegerType(size_t width, const Confidence<bool>& sign,
 TypeBuilder TypeBuilder::FloatType(size_t width, const string& altName)
 {
 	return TypeBuilder(BNCreateFloatTypeBuilder(width, altName.c_str()));
+}
+
+
+TypeBuilder TypeBuilder::WideCharType(size_t width, const string& altName)
+{
+	return TypeBuilder(BNCreateWideCharTypeBuilder(width, altName.c_str()));
 }
 
 

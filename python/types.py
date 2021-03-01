@@ -811,12 +811,22 @@ class Type(object):
 	@classmethod
 	def float(self, width, altname=""):
 		"""
-		``float`` class method for creating an floating point Types.
+		``float`` class method for creating floating point Types.
 
 		:param int width: width of the floating point number in bytes
 		:param str altname: alternate name for type
 		"""
 		return Type(core.BNCreateFloatTypeBuilder(width, altname))
+
+	@classmethod
+	def wide_char(self, width, altname=""):
+		"""
+		``wide_char`` class method for creating wide char Types.
+
+		:param int width: width of the wide character in bytes
+		:param str altname: alternate name for type
+		"""
+		return Type(core.BNCreateWideCharTypeBuilder(width, altname))
 
 	@classmethod
 	def structure_type(self, structure_type):

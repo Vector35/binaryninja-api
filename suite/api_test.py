@@ -340,6 +340,7 @@ class DemanglerTest(unittest.TestCase):
 class PluginManagerTest(unittest.TestCase):
 	def test_install_plugin(self):
 		mgr = RepositoryManager()
+		assert mgr.check_for_updates()
 		assert mgr.default_repository.path == 'community'
 		assert 'community' in [r.path for r in mgr.repositories]
 		assert 'official' in [r.path for r in mgr.repositories]

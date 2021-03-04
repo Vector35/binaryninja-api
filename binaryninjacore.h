@@ -2176,8 +2176,8 @@ extern "C"
 	enum BNFindRangeType
 	{
 		AllRangeType,
-		CurrentFunctionRangeType,
-		CustomRangeType
+		CustomRangeType,
+		CurrentFunctionRangeType
 	};
 
 	enum BNFindType

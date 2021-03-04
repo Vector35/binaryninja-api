@@ -71,13 +71,11 @@ pythonpath()
 	else
 		SILENT=""
 	fi
-	if [[ -x "`which python`" ]]
-	then
-		python -V >/dev/null 2>&1 && ${SUDO}python "${BNPATH}/scripts/install_api.py" ${ROOT} ${SILENT}
-	fi
 	if [[ -x "`which python3`" ]]
 	then
 		python3 -V >/dev/null 2>&1 && ${SUDO}python3 "${BNPATH}/scripts/install_api.py" ${ROOT} ${SILENT}
+	else
+		echo "Python3 not found. Not installing BN PTH file."
 	fi
 }
 

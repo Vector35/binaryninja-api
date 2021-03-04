@@ -36,6 +36,8 @@ public:
 
 	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) { (void)context; (void)frame; (void)type; }
 	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) { (void)context; (void)frame; (void)view; (void)location; };
+
+	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name) { (void)context; (void)file; (void)name; return false; }
 };
 
 class BINARYNINJAUIAPI UIContextHandler
@@ -74,6 +76,7 @@ public:
 	virtual void createTabForWidget(const QString& name, QWidget* widget) = 0;
 	virtual QList<QWidget*> getTabs() = 0;
 	virtual QWidget* getTabForName(const QString& name) = 0;
+	virtual QWidget* getTabForFile(FileContext* file) = 0;
 	virtual QString getNameForTab(QWidget* tab) = 0;
 	virtual void activateTab(QWidget* tab) = 0;
 	virtual void closeTab(QWidget* tab) = 0;
@@ -105,6 +108,8 @@ public:
 
 	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
+
+	QString GetNameForFile(FileContext* file);
 
 	static void setHandler(UIContextHandler* handler);
 

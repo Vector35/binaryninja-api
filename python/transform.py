@@ -126,6 +126,14 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		>>> rawhex=Transform['RawHex']
 		>>> rawhex.encode(sha512.encode("test string"))
 		'10e6d647af44624442f388c2c14a787ff8b17e6165b83d767ec047768d8cbcb71a1a3226e7cc7816bc79c0427d94a9da688c41a3992c7bf5e4d7cc3e0be5dbac'
+
+	Note that some transformations take additional parameters (most notably encryption ones that require a 'key' parameter passed via a dict):
+
+		>>> xor=Transform['XOR']
+		>>> rawhex=Transform['RawHex']
+		>>> xor.encode("Original Data", {'key':'XORKEY'})
+		>>> rawhex.encode(xor.encode("Original Data", {'key':'XORKEY'}))
+		b'173d3b2c2c373923720f242d39'
 	"""
 	transform_type = None
 	name = None

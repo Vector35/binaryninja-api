@@ -1669,6 +1669,7 @@ class BinaryView(object):
 	def set_default_session_data(cls, name, value):
 		"""
 		``set_default_session_data`` saves a variable to the BinaryView.
+
 		:param str name: name of the variable to be saved
 		:param str value: value of the variable to be saved
 

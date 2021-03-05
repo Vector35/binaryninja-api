@@ -120,6 +120,10 @@ public:
 		DisassemblySettingsRef settings, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb,
 		const std::function<void (uint64_t addr, const std::string& match)>& matchCallback);
+	virtual bool findAllConstant(uint64_t start, uint64_t end, uint64_t constant, 
+		DisassemblySettingsRef settings,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<void (uint64_t addr)>& matchCallback);
 
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;

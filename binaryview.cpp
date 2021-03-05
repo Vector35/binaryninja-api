@@ -2966,6 +2966,19 @@ static void MatchCallbackForString(void* ctxt, uint64_t addr, const char* buffer
 }
 
 
+struct MatchCallbackContextForAddress
+{
+	std::function<void(uint64_t)> func;
+};
+
+
+static void MatchCallbackForAddress(void* ctxt, uint64_t addr)
+{
+	MatchCallbackContextForAddress* cb = (MatchCallbackContextForAddress*)ctxt;
+	cb->func(addr);
+}
+
+
 bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
 	const std::function<bool(size_t current, size_t total)>& progress)
 {
@@ -3018,6 +3031,20 @@ bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& da
 	mc.func = matchCallback;
 	return BNFindAllTextWithProgress(m_object, start, end, data.c_str(), settings->GetObject(),
 		flags, &fp, FindProgressCallback, &mc, MatchCallbackForString);
+}
+
+
+bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant,
+	Ref<DisassemblySettings> settings,
+	const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<void(uint64_t addr)>& matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContextForAddress mc;
+	mc.func = matchCallback;
+	return BNFindAllConstantWithProgress(m_object, start, end, constant, settings->GetObject(),
+		&fp, FindProgressCallback, &mc, MatchCallbackForAddress);
 }
 
 

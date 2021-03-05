@@ -1779,6 +1779,10 @@ __attribute__ ((format (printf, 1, 2)))
 			Ref<DisassemblySettings> settings, BNFindFlag flags,
 			const std::function<bool(size_t current, size_t total)>& progress,
 			const std::function<void(uint64_t addr, const std::string& match)>& matchCallback);
+		bool FindAllConstant(uint64_t start, uint64_t end, uint64_t constant,
+			Ref<DisassemblySettings> settings,
+			const std::function<bool(size_t current, size_t total)>& progress,
+			const std::function<void(uint64_t addr)>& matchCallback);
 
 		void Reanalyze();
 

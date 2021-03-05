@@ -2847,6 +2847,11 @@ __attribute__ ((format (printf, 1, 2)))
 		void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
 		void* matchCtxt,
 		void (*matchCallback)(void* matchCtxt, uint64_t addr, const char* match));
+	BINARYNINJACOREAPI bool BNFindAllConstantWithProgress(BNBinaryView* view, uint64_t start,
+		uint64_t end, uint64_t constant, BNDisassemblySettings* settings, void* ctxt,
+		bool (*progress)(void* ctxt, size_t current, size_t total),
+		void* matchCtxt,
+		void (*matchCallback)(void* matchCtxt, uint64_t addr));
 
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length,
 		uint64_t dataOffset, uint64_t dataLength, uint32_t flags);

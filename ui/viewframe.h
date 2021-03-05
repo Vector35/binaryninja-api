@@ -105,14 +105,17 @@ public:
 	virtual bool canAssemble() { return false; }
 	virtual bool canCompile() { return false; }
 
-	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
-		const std::function<bool (size_t current, size_t total)>& cb,
-		const std::function<void (uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
+	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+		const std::function<bool (size_t current, size_t total)>& cb);
 	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text, uint64_t& addr,
 		DisassemblySettingsRef settings, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb);
 	virtual bool findNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, DisassemblySettingsRef settings,
 		const std::function<bool (size_t current, size_t total)>& cb);
+
+	virtual bool findAllData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<void (uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
 
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;

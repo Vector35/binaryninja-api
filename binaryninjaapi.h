@@ -1763,13 +1763,15 @@ __attribute__ ((format (printf, 1, 2)))
 			BNFindFlag flags = FindCaseSensitive);
 		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings);
 
-		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, BNFindFlag flags,
-			const std::function<bool(size_t current, size_t total)>& progress,
-			const std::function<void(uint64_t addr, const DataBuffer& match)>& matchCallback);
+		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, 		BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress);
 		bool FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
 			BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress);
 		bool FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr, Ref<DisassemblySettings> settings,
 			const std::function<bool(size_t current, size_t total)>& progress);
+
+		bool FindAllData(uint64_t start, uint64_t end, const DataBuffer& data, BNFindFlag flags,
+			const std::function<bool(size_t current, size_t total)>& progress,
+			const std::function<void(uint64_t addr, const DataBuffer& match)>& matchCallback);
 
 		void Reanalyze();
 

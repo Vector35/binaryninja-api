@@ -149,9 +149,8 @@ public:
 	explicit TypeView(BinaryViewRef data, ViewFrame* view);
 	virtual ~TypeView();
 
-	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
-		const std::function<bool (size_t current, size_t total)>& cb,
-		const std::function<void (uint64_t, const BinaryNinja::DataBuffer& match)>& matchCallback) override;
+	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+		const std::function<bool (size_t current, size_t total)>& cb) override;
 	virtual bool findNextText(uint64_t start, uint64_t end, const std::string& text, uint64_t& addr,
 		DisassemblySettingsRef settings, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb) override;

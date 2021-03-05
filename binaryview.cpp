@@ -2953,16 +2953,13 @@ static void MatchCallback(void* ctxt, uint64_t addr, const void* buffer, size_t 
 }
 
 
-bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data,
-	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress,
-	const std::function<void(uint64_t addr, const DataBuffer& match)>& matchCallback)
+
+bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+	const std::function<bool(size_t current, size_t total)>& progress)
 {
 	FindProgressCallbackContext fp;
 	fp.func = progress;
-	MatchCallbackContext mp;
-	mp.func = matchCallback;
-	return BNFindNextDataWithProgress(m_object, start, end, data.GetBufferObject(),
-		flags, &fp, FindProgressCallback, &mp, MatchCallback);
+	return BNFindNextDataWithProgress(m_object, start, end, data.GetBufferObject(), &addr, flags, &fp, FindProgressCallback);
 }
 
 
@@ -2981,6 +2978,19 @@ bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constan
 	FindProgressCallbackContext fp;
 	fp.func = progress;
 	return BNFindNextConstantWithProgress(m_object, start, end, constant, &addr, settings->GetObject(), &fp, FindProgressCallback);
+}
+
+
+bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& data,
+	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<void(uint64_t addr, const DataBuffer& match)>& matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContext mp;
+	mp.func = matchCallback;
+	return BNFindAllDataWithProgress(m_object, start, end, data.GetBufferObject(),
+		flags, &fp, FindProgressCallback, &mp, MatchCallback);
 }
 
 

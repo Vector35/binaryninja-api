@@ -38,6 +38,7 @@ public:
 	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) { (void)context; (void)frame; (void)view; (void)location; };
 
 	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name) { (void)context; (void)file; (void)name; return false; }
+	virtual bool GetNameForPath(UIContext* context, const QString& path, QString& name) { (void)context; (void)path; (void)name; return false; }
 };
 
 class BINARYNINJAUIAPI UIContextHandler
@@ -110,6 +111,7 @@ public:
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 
 	QString GetNameForFile(FileContext* file);
+	QString GetNameForPath(const QString& path);
 
 	static void setHandler(UIContextHandler* handler);
 

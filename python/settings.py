@@ -76,7 +76,7 @@ class Settings(object):
 		>>> bv2.create_database("/tmp/ls.bndb")
 		True
 		>>> bv = open_view("/tmp/ls")
-		>>> # If in a plugin we would need to make sure we re-regsitered the setting before querying
+		>>> # If in a plugin we would need to make sure we re-registered the setting before querying
 		>>> plugin_settings.get_bool("ui.dothething", bv)
 		True
 		>>> bv = binaryninja.open_view("/tmp/ls.bndb")

@@ -2940,18 +2940,30 @@ static bool FindProgressCallback(void* ctxt, size_t progress, size_t total)
 }
 
 
-struct MatchCallbackContext
+struct MatchCallbackContextForDataBuffer
 {
 	std::function<void(uint64_t, const DataBuffer& match)> func;
 };
 
 
-static void MatchCallback(void* ctxt, uint64_t addr, const void* buffer, size_t len)
+static void MatchCallbackForDataBuffer(void* ctxt, uint64_t addr, const void* buffer, size_t len)
 {
-	MatchCallbackContext* cb = (MatchCallbackContext*)ctxt;
+	MatchCallbackContextForDataBuffer* cb = (MatchCallbackContextForDataBuffer*)ctxt;
 	cb->func(addr, DataBuffer(buffer, len));
 }
 
+
+struct MatchCallbackContextForString
+{
+	std::function<void(uint64_t, const string& match)> func;
+};
+
+
+static void MatchCallbackForString(void* ctxt, uint64_t addr, const char* buffer)
+{
+	MatchCallbackContextForString* cb = (MatchCallbackContextForString*)ctxt;
+	cb->func(addr, string(buffer));
+}
 
 
 bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
@@ -2963,7 +2975,8 @@ bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& da
 }
 
 
-bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr, Ref<DisassemblySettings> settings,
+bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data,
+	uint64_t& addr, Ref<DisassemblySettings> settings,
 	BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress)
 {
 	FindProgressCallbackContext fp;
@@ -2987,10 +3000,24 @@ bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& dat
 {
 	FindProgressCallbackContext fp;
 	fp.func = progress;
-	MatchCallbackContext mp;
-	mp.func = matchCallback;
+	MatchCallbackContextForDataBuffer mc;
+	mc.func = matchCallback;
 	return BNFindAllDataWithProgress(m_object, start, end, data.GetBufferObject(),
-		flags, &fp, FindProgressCallback, &mp, MatchCallback);
+		flags, &fp, FindProgressCallback, &mc, MatchCallbackForDataBuffer);
+}
+
+
+bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& data,
+	Ref<DisassemblySettings> settings, BNFindFlag flags,
+	const std::function<bool(size_t current, size_t total)>& progress,
+	const std::function<void(uint64_t addr, const std::string& match)>& matchCallback)
+{
+	FindProgressCallbackContext fp;
+	fp.func = progress;
+	MatchCallbackContextForString mc;
+	mc.func = matchCallback;
+	return BNFindAllTextWithProgress(m_object, start, end, data.c_str(), settings->GetObject(),
+		flags, &fp, FindProgressCallback, &mc, MatchCallbackForString);
 }
 
 

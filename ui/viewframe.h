@@ -116,6 +116,10 @@ public:
 	virtual bool findAllData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb,
 		const std::function<void (uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
+	virtual bool findAllText(uint64_t start, uint64_t end, const std::string& data, 
+		DisassemblySettingsRef settings, BNFindFlag flags,
+		const std::function<bool (size_t current, size_t total)>& cb,
+		const std::function<void (uint64_t addr, const std::string& match)>& matchCallback);
 
 	virtual BinaryViewRef getData() = 0;
 	virtual uint64_t getCurrentOffset() = 0;

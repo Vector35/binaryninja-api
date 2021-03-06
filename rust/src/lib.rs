@@ -39,6 +39,7 @@ extern crate rayon;
 mod ffi;
 
 pub mod architecture;
+pub mod backgroundtask;
 pub mod basicblock;
 pub mod binaryview;
 pub mod callingconvention;

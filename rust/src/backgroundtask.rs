@@ -85,6 +85,15 @@ impl BackgroundTask {
             )
         }
     }
+
+    pub fn running_tasks() -> Array<BackgroundTask> {
+        unsafe {
+            let mut count = 0;
+            let handles = BNGetRunningBackgroundTasks(&mut count);
+            
+            Array::new(handles, count, ())
+        }
+    }
 }
 
 unsafe impl RefCountable for BackgroundTask {
@@ -96,6 +105,23 @@ unsafe impl RefCountable for BackgroundTask {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeBackgroundTask(handle.handle);
+    }
+}
+
+unsafe impl CoreOwnedArrayProvider for BackgroundTask {
+    type Raw = *mut BNBackgroundTask;
+    type Context = ();
+
+    unsafe fn free(raw: *mut *mut BNBackgroundTask, count: usize, _context: &()) {
+        BNFreeBackgroundTaskList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreOwnedArrayWrapper<'a> for BackgroundTask {
+    type Wrapped = Guard<'a, BackgroundTask>;
+
+    unsafe fn wrap_raw(raw: &'a *mut BNBackgroundTask, context: &'a ()) -> Guard<'a, BackgroundTask> {
+        Guard::new(BackgroundTask::from_raw(*raw), context)
     }
 }
 

@@ -46,6 +46,7 @@ from binaryninja import lineardisassembly
 from binaryninja import metadata
 from binaryninja import highlight
 from binaryninja import function
+from binaryninja.function import AddressRange
 from binaryninja import settings
 from binaryninja import pyNativeStr
 

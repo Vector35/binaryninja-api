@@ -1203,53 +1203,6 @@ class Section(object):
 		return self.start + len(self)
 
 
-class AddressRange(object):
-	def __init__(self, start, end):
-		self._start = start
-		self._end = end
-
-	def __repr__(self):
-		return "<%#x-%#x>" % (self._start, self._end)
-
-	def __len__(self):
-		return self._end - self.start
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._start, self._end) == (other._start, other._end)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._start, self._end))
-
-	@property
-	def length(self):
-		return self._end - self._start
-
-	@property
-	def start(self):
-		""" """
-		return self._start
-
-	@start.setter
-	def start(self, value):
-		self._start = value
-
-	@property
-	def end(self):
-		""" """
-		return self._end
-
-	@end.setter
-	def end(self, value):
-		self._end = value
-
-
 class TagType(object):
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNTagType)

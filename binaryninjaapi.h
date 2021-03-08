@@ -3338,6 +3338,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		uint64_t GetHighestAddress();
 		uint64_t GetLowestAddress();
+		std::vector<BNAddressRange> GetAddressRanges();
 	};
 
 	class AdvancedFunctionAnalysisDataRequestor

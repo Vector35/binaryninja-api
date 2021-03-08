@@ -5581,6 +5581,8 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string string;
 		BNFindFlag flags;
 		bool findAll;
+
+		uint64_t findConstant;
 		std::vector<BNAddressRange> ranges;
 	};
 }

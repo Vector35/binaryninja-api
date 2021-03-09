@@ -844,7 +844,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		try:
 			return (True, subprocess.check_output(args, startupinfo=si).decode("utf-8"))
-		except SubprocessError as se:
+		except subprocess.SubprocessError as se:
 			return (False, str(se))
 
 
@@ -859,8 +859,8 @@ class PythonScriptingProvider(ScriptingProvider):
 				return (None, f"Specified Python Binary Override is the wrong version. Expected: {python_lib_version} got: {python_bin_version}")
 			return (python_bin, "Success")
 
-		using_bundled_python = python_lib is None
-		si = None
+		using_bundled_python = not python_lib
+		
 		if sys.platform == "darwin":
 			if using_bundled_python:
 				return (None, "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again")

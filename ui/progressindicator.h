@@ -1,15 +1,15 @@
 // Copyright (c) 2011 Morgan Leborgne
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,9 +25,9 @@
 #include <QtGui/QColor>
 #include "uicontext.h"
 
-/*! 
+/*!
     \class QProgressIndicator
-    \brief The QProgressIndicator class lets an application display a progress indicator to show that a lengthy task is under way. 
+    \brief The QProgressIndicator class lets an application display a progress indicator to show that a lengthy task is under way.
 
     Progress indicators are indeterminate and do nothing more than spin to show that the application is busy.
     \sa QProgressBar
@@ -66,9 +66,9 @@ public:
       */
     const QColor & color() const { return m_color; }
 
-    virtual QSize sizeHint() const { return QSize(m_width, m_width); };
+    QSize sizeHint() const override { return QSize(m_width, m_width); };
     void setWidth(int width) { m_width = width; };
-    int heightForWidth(int w) const;
+    int heightForWidth(int w) const override;
 public Q_SLOTS:
     /*! Starts the spin animation.
         \sa stopAnimation isAnimated
@@ -82,30 +82,45 @@ public Q_SLOTS:
 
     /*! Sets the delay between animation steps.
         Setting the \a delay to a value larger than 40 slows the animation, while setting the \a delay to a smaller value speeds it up.
-        \param delay The delay, in milliseconds. 
-        \sa animationDelay 
+        \param delay The delay, in milliseconds.
+        \sa animationDelay
      */
     void setAnimationDelay(int delay);
 
-    /*! Sets whether the component hides itself when it is not animating. 
+    /*! Sets whether the component hides itself when it is not animating.
        \param state The animation state. Set false to hide the progress indicator when it is not animating; otherwise true.
        \sa isDisplayedWhenStopped
      */
-    void setDisplayedWhenStopped(bool state);
+    void setDisplayedWhenStopped(bool state, const QString& staticDisplay = "");
+
+    void setToolTips(const QString& staticToolTip, const QString& animatedToolTip);
 
     /*! Sets the color of the components to the given color.
         \sa color
      */
     void setColor(const QColor & color);
+
+Q_SIGNALS:
+	void clicked();
+
 protected:
-    virtual void timerEvent(QTimerEvent * event); 
-    virtual void paintEvent(QPaintEvent * event);
+	void enterEvent(QEvent* event) override;
+	void leaveEvent(QEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) Q_EMIT clicked(); }
+    void timerEvent(QTimerEvent * event) override;
+    void paintEvent(QPaintEvent * event) override;
+
 private:
     int m_angle;
     int m_timerId;
     int m_delay;
     bool m_displayedWhenStopped;
+    QString m_staticDisplay;
+    bool m_useAutoToolTips = false;
+    QString m_staticToolTip;
+    QString m_animatedToolTip;
     QColor m_color;
+    bool m_activeHover = false;
 };
 
 #endif // QPROGRESSINDICATOR_H

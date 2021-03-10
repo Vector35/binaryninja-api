@@ -5587,5 +5587,6 @@ __attribute__ ((format (printf, 1, 2)))
 		DataBuffer findBuffer;
 	
 		std::vector<BNAddressRange> ranges;
+		uint64_t totalLength;
 	};
 }

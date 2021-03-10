@@ -55,7 +55,7 @@ class BINARYNINJAUIAPI UIContext
 	static UIContextHandler* m_handler;
 	static std::set<UIContext*> m_contexts;
 	UIActionHandler m_globalActions;
-	static std::vector<UIContextNotification*> m_notifications;
+	static std::list<UIContextNotification*> m_notifications;
 
 	static QPointer<PreviewWidget> m_currentPreview;
 

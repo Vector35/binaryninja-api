@@ -108,12 +108,16 @@ class GraphTypeLabel: public MenuHelper
 	Q_OBJECT
 
 	DisassemblyContainer* m_container;
+	uint64_t m_paletteCacheKey = 0;
+
+	void updateCustomPalette();
 
 public:
 	GraphTypeLabel(QWidget* parent, DisassemblyContainer* container);
 
 protected:
-	virtual void showMenu();
+ 	void paintEvent(QPaintEvent* event) override;
+	void showMenu() override;
 };
 
 

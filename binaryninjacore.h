@@ -4876,6 +4876,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
 	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);
 	BINARYNINJACOREAPI bool BNRenameFile(const char* source, const char* dest);
+	BINARYNINJACOREAPI char* BNGetParentPath(const char* path);
 	BINARYNINJACOREAPI const char* BNGetFileName(const char* path);
 	BINARYNINJACOREAPI const char* BNGetFileExtension(const char* path);
 	BINARYNINJACOREAPI char** BNGetFilePathsInDirectory(const char* path, size_t* count);

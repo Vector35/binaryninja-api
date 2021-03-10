@@ -35,6 +35,8 @@ class BINARYNINJAUIAPI ClickableStateLabel: public ClickableLabel
 public:
 	ClickableStateLabel(QWidget* parent, const QString& name, const QString& altName): ClickableLabel(parent, name), m_name(name), m_altName(altName) { }
 
+	bool getState() { return m_state; }
+
 	void setDisplayState(bool state) {
 		m_state = state;
 		setText(m_state ? m_name : m_altName);

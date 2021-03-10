@@ -38,6 +38,8 @@ public:
 	explicit DisassemblyView(DisassemblyContainer* parent, BinaryViewRef data, FunctionRef func = nullptr,
 		bool navToAddr = false, uint64_t addr = 0);
 
+	virtual void updateFonts() override;
+
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;

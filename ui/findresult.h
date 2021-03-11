@@ -21,7 +21,6 @@ private:
     BinaryNinja::DataBuffer m_buffer;
     FunctionRef m_func;
     ArchitectureRef m_arch;
-    size_t m_instrId;
 
 public:
     FindResultItem() {}
@@ -32,14 +31,12 @@ public:
     }
     FindResultItem(const FindResultItem& other):
         m_addr(other.addr()), m_buffer(other.buffer()), m_func(other.func()),
-        m_arch(other.arch()), m_instrId(other.instrId())
+        m_arch(other.arch())
     {}
     uint64_t addr() const { return m_addr; }
     BinaryNinja::DataBuffer buffer() const { return m_buffer; }
     FunctionRef func() const { return m_func; }
     ArchitectureRef arch() const { return m_arch; }
-    size_t instrId() const { return m_instrId; }
-
 };
 
 Q_DECLARE_METATYPE(FindResultItem);

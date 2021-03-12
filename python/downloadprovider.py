@@ -34,7 +34,7 @@ else:
 import binaryninja._binaryninjacore as core
 
 import binaryninja
-from binaryninja.settings import Settings
+from binaryninja import settings
 from binaryninja import with_metaclass
 from binaryninja import startup
 from binaryninja import log
@@ -371,7 +371,7 @@ try:
 
 		def perform_request(self, url):
 			try:
-				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+				proxy_setting = settings.Settings().get_string('downloadClient.httpsProxy')
 				if proxy_setting:
 					proxies = {"https": proxy_setting}
 				else:
@@ -406,7 +406,7 @@ try:
 
 		def perform_custom_request(self, method, url, headers, data):
 			try:
-				proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+				proxy_setting = settings.Settings().get_string('downloadClient.httpsProxy')
 				if proxy_setting:
 					proxies = {"https": proxy_setting}
 				else:
@@ -462,7 +462,7 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 
 			def perform_request(self, url):
 				try:
-					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+					proxy_setting = settings.Settings().get_string('downloadClient.httpsProxy')
 					if proxy_setting:
 						opener = build_opener(ProxyHandler({'https': proxy_setting}))
 						install_opener(opener)
@@ -524,7 +524,7 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 			def perform_custom_request(self, method, url, headers, data):
 				result = None
 				try:
-					proxy_setting = Settings().get_string('downloadClient.httpsProxy')
+					proxy_setting = settings.Settings().get_string('downloadClient.httpsProxy')
 					if proxy_setting:
 						opener = build_opener(ProxyHandler({'https': proxy_setting}))
 						install_opener(opener)

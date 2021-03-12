@@ -12,7 +12,7 @@
 #include "dockhandler.h"
 #include "viewframe.h"
 #include "filter.h"
-
+#include "expandablegroup.h"
 
 class FindResultItem
 {
@@ -66,7 +66,6 @@ public:
     void addItem(const FindResultItem& addr);
     void clear();
     void updateFindParameters(const BinaryNinja::FindParameters params);
-
 };
 
 
@@ -128,6 +127,7 @@ public:
 
 public Q_SLOTS:
     void resultActivated(const QModelIndex& idx);
+    void updateFilter(const QString& filterText);
 
 };
 
@@ -141,6 +141,8 @@ class BINARYNINJAUIAPI FindResultWidget: public QWidget, public DockContextHandl
     BinaryViewRef m_data;
     FindResultTable* m_table;
     QLabel* m_label;
+    QLineEdit* m_lineEdit;
+    ExpandableGroup* m_group;
     BinaryNinja::FindParameters m_params;
 
 public:

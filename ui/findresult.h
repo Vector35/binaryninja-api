@@ -20,23 +20,16 @@ private:
     uint64_t m_addr;
     BinaryNinja::DataBuffer m_buffer;
     FunctionRef m_func;
-    ArchitectureRef m_arch;
 
 public:
     FindResultItem() {}
-    FindResultItem(uint64_t addr, const BinaryNinja::DataBuffer& buffer):
-        m_addr(addr), m_buffer(buffer)
-    {
-        // TODO: maybe try to find the corresonding functions based on addr
-    }
+    FindResultItem(uint64_t addr, const BinaryNinja::DataBuffer& buffer, FunctionRef func);
     FindResultItem(const FindResultItem& other):
-        m_addr(other.addr()), m_buffer(other.buffer()), m_func(other.func()),
-        m_arch(other.arch())
+        m_addr(other.addr()), m_buffer(other.buffer()), m_func(other.func())
     {}
     uint64_t addr() const { return m_addr; }
     BinaryNinja::DataBuffer buffer() const { return m_buffer; }
     FunctionRef func() const { return m_func; }
-    ArchitectureRef arch() const { return m_arch; }
 };
 
 Q_DECLARE_METATYPE(FindResultItem);
@@ -83,7 +76,9 @@ class BINARYNINJAUIAPI FindResultFilterProxyModel: public QSortFilterProxyModel
 
 public:
     FindResultFilterProxyModel(QObject* parent);
-    virtual bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const;
+    virtual bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+    virtual bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
+    virtual QVariant data(const QModelIndex& idx, int role) const override;
 };
 
 

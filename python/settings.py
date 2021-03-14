@@ -31,23 +31,23 @@ from binaryninja.enums import SettingsScope
 
 class Settings(object):
 	"""
-	``class Settings`` Provides a way to define and access settings in a hierarchical fashion. The value of a setting can \
+	:class:`Settings` provides a way to define and access settings in a hierarchical fashion. The value of a setting can \
 	be defined for each hierarchical level, where each level overrides the preceding level. The backing-store for setting \
-	values is also configurable and can be different for each level. This allows for ephemeral or platform-independent \
-	persistent settings storage for components within Binary Ninja or consumers of the Binary Ninja API.
+	values at each level is also configurable. This allows for ephemeral or platform-independent persistent settings storage \
+	for components within Binary Ninja or consumers of the Binary Ninja API.
 
-	Each :class:`Settings` instance has a unique ``instance_id`` and a settings schema that define the contents for the settings \
-	repository. By default, a new :class:`Settings` instance contains an empty schema. A schema can be built up by using the \
-	:func:`register_group` and func:`register_setting` methods, or by deserializing an existing schema with :func:`deserialize_schema`. \
-	Binary Ninja provides a default :class:`Settings` instance identified as *'default'*. The *'default'* settings repository defines \
-	all of the settings available for the active Binary Ninja components.
+	Each :class:`Settings` instance has an ``instance_id`` which identifies a schema. The schema defines the settings contents  \
+	and the way in which settings are retrieved and manipulated. A new :class:`Settings` instance defaults to using a value of *'default'* \
+	for the ``instance_id``. The *'default'* settings schema defines all of the settings available for the active Binary Ninja components \
+	which include at a minimum, the settings defined by the Binary Ninja core. The *'default'* schema may additionally define settings \
+	for the UI and/or installed plugins. Extending existing schemas, or defining new ones is accomplished by calling :func:`register_group` \
+	and :func:`register_setting` methods, or by deserializing an existing schema with :func:`deserialize_schema`.
 
-	.. note:: The Binary Ninja Application provides many settings that are only applicable to the UI, and thus would not be \
-	defined in the *'default'* settings schema for Binary Ninja headless.
+	.. note:: All settings in the *'default'* settings schema are rendered with UI elements in the Settings View of Binary Ninja UI.
 
-	Except for *default* setting values, setting values are optional for other levels and stored separately from the schema in a \
-	backing store. The backing store can be different for each level. When querying setting values, the values returned or modified \
-	are in order of preference (i.e. ``SettingsAutoScope``). It is possible to override the scope by specifying the desired ``SettingsScope``.
+	Allowing setting overrides is an important feature and Binary Ninja accomplishes this by allowing one to override a setting at various \
+	levels. The levels and their associated storage are shown in the following table. Default setting values are optional, and if specified, \
+	saved in the schema itself.
 
 		================= ========================== ============== ==============================================
 		Setting Level     Settings Scope             Preference     Storage
@@ -55,33 +55,68 @@ class Settings(object):
 		Default           SettingsDefaultScope       Lowest         Settings Schema
 		User              SettingsUserScope          -              <User Directory>/settings.json
 		Project           SettingsProjectScope       -              <Project Directory>/.binaryninja/settings.json
-		Resource          SettingsResourceScope      Highest        BinaryView (Storage in BNDB)
+		Resource          SettingsResourceScope      Highest        Raw BinaryView (Storage in BNDB)
 		================= ========================== ============== ==============================================
 
-	Individual settings are identified by a key, which is a string in the form of **'<group>.<name>'**. Groups provide a simple way \
-	to categorize settings. Additionally, sub-categories can be expressed directly in the name part of the key with a similar dot notation.
+	Settings are identified by a key, which is a string in the form of **'<group>.<name>'** or **'<group>.<subGroup>.<name>'**. Groups provide \
+	a simple way to categorize settings. Sub-groups are optional and multiple sub-groups are allowed. When defining a settings group, the \
+	:func:`register_group` method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a \
+	unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
 
-	Here's a simple example using a Resource Scope to cause settings to be saved inside of a BNDB when saved:
+		==================   ======================================   =================   ========   =======================================================================
+		Property             JSON Data Type                           Prerequisite        Optional   {Allowed Values} and Notes
+		==================   ======================================   =================   ========   =======================================================================
+		"title"              string                                   None                No         Concise Setting Title
+		"type"               string                                   None                No         {"array", "boolean", "number", "string"}
+		"elementType"        string                                   "type" is "array"   No         {"string"}
+		"enum"               array : {string}                         "type" is "array"   Yes        Enumeration definitions
+		"enumDescriptions"   array : {string}                         "type" is "array"   Yes        Enumeration descriptions that match "enum" array
+		"minValue"           number                                   "type" is "number"  Yes        Specify 0 to infer unsigned (default is signed)
+		"maxValue"           number                                   "type" is "number"  Yes        Values less than or equal to INT_MAX infer a spinbox.
+		"precision"          number                                   "type" is "number"  Yes        Specify precision for a QDoubleSpinBox
+		"default"            {array, boolean, number, string, null}   None                Yes        Specify optimal default value
+		"aliases"            array : {string}                         None                Yes        Array of deprecated setting key(s)
+		"description"        string                                   None                No         Detailed setting description
+		"ignore"             array : {string}                         None                Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
+		"readOnly"           boolean                                  None                Yes        Only enforced by UI elements
+		"optional"           boolean                                  None                Yes        Indicates setting can be null
 
-		>>> bv2 = open_view("/tmp/ls")
-		>>> plugin_settings = Settings()
-		>>> description = "Tells Zhu Li to do the thing."
-		>>> title = "Do the thing"
-		>>> schema = f'{{"description" : "{description}", "title" : "{title}", "default" : true, "type" : "boolean"}}'
-		>>> plugin_settings.register_setting("ui.dothething", schema)
+	.. note:: In order to facilitate deterministic analysis results, settings from the *'default'* schema that impact analysis are serialized \
+	from Default, User, and Project scope into Resource scope during initial BinaryView analysis. This allows an analysis database to be opened \
+	at a later time with the same settings, regardless if Default, User, or Project settings have been modified.
+
+	.. note:: Settings that do not impact analysis (e.g. many UI settings) should use the *"ignore"* property to exclude \
+		*"SettingsProjectScope"* and *"SettingsResourceScope"* from the applicable scopes for the setting.
+
+	Example analysis plugin setting:
+
+		>>> my_settings = Settings()
+		>>> title = "My Pre-Analysis Plugin"
+		>>> description = "Enable extra analysis before core analysis."
+		>>> properties = f'{{"title" : "{title}", "description" : "{description}", "type" : "boolean", "default" : false}}'
+		>>> my_settings.register_group("myPlugin", "My Plugin")
 		True
-		>>> plugin_settings.set_bool("ui.dothething", False, bv, SettingsScope.SettingsResourceScope)
+		>>> my_settings.register_setting("myPlugin.enablePreAnalysis", properties)
 		True
-		>>> # Resource scope will save the setting in the BNDB itself
-		>>> bv2.create_database("/tmp/ls.bndb")
-		True
-		>>> bv = open_view("/tmp/ls")
-		>>> # If in a plugin we would need to make sure we re-registered the setting before querying
-		>>> plugin_settings.get_bool("ui.dothething", bv)
-		True
-		>>> bv = binaryninja.open_view("/tmp/ls.bndb")
-		>>> plugin_settings.get_bool("ui.dothething", bv)
+		>>> my_bv = open_view("/bin/ls", options={'myPlugin.enablePreAnalysis' : True})
+		>>> Settings().get_bool("myPlugin.enablePreAnalysis")
 		False
+		>>> Settings().get_bool("myPlugin.enablePreAnalysis", my_bv)
+		True
+
+	Example UI plugin setting:
+
+		>>> my_settings = Settings()
+		>>> title = "My UI Plugin"
+		>>> description = "Enable My UI Plugin table display."
+		>>> properties = f'{{"title" : "{title}", "description" : "{description}", "type" : "boolean", "default" : true, "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]}}'
+		>>> my_settings.register_group("myPlugin", "My Plugin")
+		True
+		>>> my_settings.register_setting("myPlugin.enableTableView", properties)
+		True
+		>>> my_bv = open_view("/bin/ls", options={'myPlugin.enablePreAnalysis' : True})
+		>>> Settings().get_bool("myPlugin.enableTableView")
+		True
 
 	"""
 	handle = core.BNCreateSettings("default")

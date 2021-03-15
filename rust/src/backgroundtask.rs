@@ -28,7 +28,7 @@ pub struct BackgroundTask {
 }
 
 impl BackgroundTask {
-    pub unsafe fn from_raw(handle: *mut BNBackgroundTask) -> Self {
+    pub(crate) unsafe fn from_raw(handle: *mut BNBackgroundTask) -> Self {
         debug_assert!(!handle.is_null());
 
         Self { handle }
@@ -67,7 +67,7 @@ impl BackgroundTask {
         unsafe { BnString::from_raw(BNGetBackgroundTaskProgressText(self.handle)) }
     }
 
-    pub fn cancel(&self) {
+    pub fn cancel(&mut self) {
         unsafe { BNCancelBackgroundTask(self.handle) }
     }
 

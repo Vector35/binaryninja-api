@@ -21,7 +21,6 @@ use crate::string::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
-
 #[derive(PartialEq, Eq, Hash)]
 pub struct BackgroundTask {
     pub(crate) handle: *mut BNBackgroundTask,
@@ -34,15 +33,10 @@ impl BackgroundTask {
         Self { handle }
     }
 
-    pub fn new<S: BnStrCompatible>(
-        initial_text: S,
-        can_cancel: bool
-    ) -> Result<Ref<Self>> {
+    pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Result<Ref<Self>> {
         let text = initial_text.as_bytes_with_nul();
 
-        let handle = unsafe {
-            BNBeginBackgroundTask(text.as_ref().as_ptr() as *mut _, can_cancel)
-        };
+        let handle = unsafe { BNBeginBackgroundTask(text.as_ref().as_ptr() as *mut _, can_cancel) };
 
         if handle.is_null() {
             return Err(());
@@ -58,7 +52,7 @@ impl BackgroundTask {
     pub fn is_cancelled(&self) -> bool {
         unsafe { BNIsBackgroundTaskCancelled(self.handle) }
     }
-    
+
     pub fn is_finished(&self) -> bool {
         unsafe { BNIsBackgroundTaskFinished(self.handle) }
     }
@@ -78,11 +72,8 @@ impl BackgroundTask {
     pub fn set_progress_text<S: BnStrCompatible>(&self, text: S) {
         let progress_text = text.as_bytes_with_nul();
 
-        unsafe { 
-            BNSetBackgroundTaskProgressText(
-                self.handle,
-                progress_text.as_ref().as_ptr() as *mut _
-            )
+        unsafe {
+            BNSetBackgroundTaskProgressText(self.handle, progress_text.as_ref().as_ptr() as *mut _)
         }
     }
 
@@ -90,7 +81,7 @@ impl BackgroundTask {
         unsafe {
             let mut count = 0;
             let handles = BNGetRunningBackgroundTasks(&mut count);
-            
+
             Array::new(handles, count, ())
         }
     }
@@ -120,7 +111,10 @@ unsafe impl CoreOwnedArrayProvider for BackgroundTask {
 unsafe impl<'a> CoreOwnedArrayWrapper<'a> for BackgroundTask {
     type Wrapped = Guard<'a, BackgroundTask>;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNBackgroundTask, context: &'a ()) -> Guard<'a, BackgroundTask> {
+    unsafe fn wrap_raw(
+        raw: &'a *mut BNBackgroundTask,
+        context: &'a (),
+    ) -> Guard<'a, BackgroundTask> {
         Guard::new(BackgroundTask::from_raw(*raw), context)
     }
 }

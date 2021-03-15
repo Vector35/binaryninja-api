@@ -14,6 +14,8 @@
 #include "filter.h"
 #include "expandablegroup.h"
 
+#define FIND_RESULT_LIST_UPDATE_INTERVAL 250
+
 class FindResultItem
 {
 private:
@@ -45,6 +47,9 @@ protected:
     BinaryNinja::FindParameters m_params;
     std::vector<FindResultItem> m_refs;
 
+    std::mutex m_updateMutex;
+    std::vector<FindResultItem> m_pendingFindResults;
+
 public:
     enum ColumnHeaders
     {
@@ -66,6 +71,7 @@ public:
     void addItem(const FindResultItem& addr);
     void clear();
     void updateFindParameters(const BinaryNinja::FindParameters params);
+    void updateFindResults();
 };
 
 
@@ -107,6 +113,7 @@ class BINARYNINJAUIAPI FindResultTable: public QTableView
     FindResultItemDelegate* m_itemDelegate;
     BinaryViewRef m_data;
     BinaryNinja::FindParameters m_params;
+    QTimer* m_updateTimer;
 
 public:
     FindResultTable(FindResultWidget* parent, ViewFrame* view, BinaryViewRef data);
@@ -128,7 +135,7 @@ public:
 public Q_SLOTS:
     void resultActivated(const QModelIndex& idx);
     void updateFilter(const QString& filterText);
-
+    void updateTimerEvent();
 };
 
 

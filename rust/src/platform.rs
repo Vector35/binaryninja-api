@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Borrow;
+use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, CoreArchitecture};
-use crate::callingconvention::CallingConvention;
-use crate::rc::*;
-use crate::string::*;
-use crate::types::QualifiedNameAndType;
+use crate::{
+    architecture::{Architecture, CoreArchitecture},
+    callingconvention::CallingConvention,
+    rc::*,
+    string::*,
+    types::{QualifiedName, QualifiedNameAndType, Type},
+};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
@@ -227,6 +229,102 @@ impl Platform {
 
             Array::new(handles, count, ())
         }
+    }
+}
+
+pub trait TypeParser {
+    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+        &self,
+        _source: S,
+        _filename: S,
+        _include_directories: &[P],
+        _auto_type_source: S,
+    ) -> Result<TypeParserResult, String> {
+        Err(String::new())
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct TypeParserResult {
+    pub types: HashMap<String, Ref<Type>>,
+    pub variables: HashMap<String, Ref<Type>>,
+    pub functions: HashMap<String, Ref<Type>>,
+}
+
+impl TypeParser for Platform {
+    fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
+        &self,
+        source: S,
+        filename: S,
+        include_directories: &[P],
+        auto_type_source: S,
+    ) -> Result<TypeParserResult, String> {
+        let mut result = BNTypeParserResult {
+            functionCount: 0,
+            typeCount: 0,
+            variableCount: 0,
+            functions: ptr::null_mut(),
+            types: ptr::null_mut(),
+            variables: ptr::null_mut(),
+        };
+
+        let mut type_parser_result = TypeParserResult::default();
+
+        let mut error_string: *mut raw::c_char = ptr::null_mut();
+
+        let src = source.as_bytes_with_nul();
+        let filename = filename.as_bytes_with_nul();
+        let auto_type_source = auto_type_source.as_bytes_with_nul();
+
+        let mut include_dirs = vec![];
+
+        for dir in include_directories.iter() {
+            let d = dir.as_ref().to_string_lossy().as_bytes_with_nul();
+            include_dirs.push(d.as_ptr() as _);
+        }
+
+        unsafe {
+            let success = BNParseTypesFromSource(
+                self.handle,
+                src.as_ref().as_ptr() as _,
+                filename.as_ref().as_ptr() as _,
+                &mut result,
+                &mut error_string,
+                include_dirs.as_mut_ptr(),
+                include_dirs.len(),
+                auto_type_source.as_ref().as_ptr() as _,
+            );
+
+            let error_msg = BnString::from_raw(error_string);
+            BNFreeString(error_string);
+
+            if !success {
+                return Err(error_msg.to_string());
+            }
+
+            for i in slice::from_raw_parts(result.types, result.typeCount) {
+                let name = QualifiedName(i.name);
+                type_parser_result
+                    .types
+                    .insert(name.string(), Type::ref_from_raw(i.type_));
+            }
+
+            for i in slice::from_raw_parts(result.functions, result.functionCount) {
+                let name = QualifiedName(i.name);
+                type_parser_result
+                    .functions
+                    .insert(name.string(), Type::ref_from_raw(i.type_));
+            }
+
+            for i in slice::from_raw_parts(result.variables, result.variableCount) {
+                let name = QualifiedName(i.name);
+                type_parser_result
+                    .variables
+                    .insert(name.string(), Type::ref_from_raw(i.type_));
+            }
+        }
+
+        Ok(type_parser_result)
     }
 }
 

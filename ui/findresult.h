@@ -158,7 +158,6 @@ public:
     ~FindResultWidget();
 
     virtual void notifyFontChanged() override;
-    // virtual bool shouldBeVisiable(ViewFrame* frame) override;
 
     void startNewFind(const BinaryNinja::FindParameters& params);
     virtual QString getHeaderText();

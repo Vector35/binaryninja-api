@@ -65,11 +65,11 @@ impl BackgroundTask {
         unsafe { BNCancelBackgroundTask(self.handle) }
     }
 
-    pub fn finish(&self) {
+    pub fn finish(&mut self) {
         unsafe { BNFinishBackgroundTask(self.handle) }
     }
 
-    pub fn set_progress_text<S: BnStrCompatible>(&self, text: S) {
+    pub fn set_progress_text<S: BnStrCompatible>(&mut self, text: S) {
         let progress_text = text.as_bytes_with_nul();
 
         unsafe {

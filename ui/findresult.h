@@ -123,7 +123,8 @@ public:
     void updateFindParameters(const BinaryNinja::FindParameters& params);
     void clearFindResult();
 
-    void updateFontAndHeaderSize();
+    void updateFonts();
+    void updateHeaderFontAndSize();
 
     virtual void keyPressEvent(QKeyEvent* e) override;
 

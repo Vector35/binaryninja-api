@@ -373,7 +373,7 @@ public:
 	void nextTag();
 	void prevTag();
 
-	void startNewFind(const BinaryNinja::FindParameters& params);
+	void startNewFind(const BinaryNinja::FindParameters& params, bool focusWidget);
 	void addFindResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
 
 	virtual UIActionContext actionContext();

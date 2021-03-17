@@ -50,21 +50,23 @@ The previous tools are used in the generation of our documentation, but are not 
 
 ## Building Qt
 
-Binary Ninja uses [Qt 5.15] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
+Binary Ninja uses [Qt 5.15] or [Qt 6.0] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
 
 Please note that we offer no support for running Binary Ninja with modified Qt libraries.
 
-1. Follow the installation requirements on the [Building Qt 5 from Git] page.
-2. Download the Qt 5.15.0 [tarball] from binary.ninja. (Note this is an unmodified 5.15 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.15] terms.)
+1. Follow the installation requirements on the [Building Qt 5 from Git] or [Building Qt 6 from Git] page.
+2. Binary Ninja uses Qt 5.15 by default. Download the Qt 5.15.0 [tarball] from binary.ninja. (Note this is an unmodified 5.15 identical to that available from Qt's source control, but must be hosted locally according to the [Qt 5.15] terms.) If using a Qt 6.0 build, download the [Qt 6.0.2 tarball] from binary.ninja. The Qt 6.0.2 code has a [patch] applied but is ABI compatible with the official Qt release.
 3. Next, build QT using the aforementioned instructions.
 4. On OS X, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
 5. Finally, replace the built libraries:
      - On OS X, replace the `QtCore.framework`, `QtDBus.framework`, `QtGui.framework`, `QtNetwork.framework`, `QtPrintSupport.framework`, `QtWidgets.framework` folders inside of `/Applications/Binary Ninja.app/Contents/Frameworks`
-     - On Windows, replace the `Qt5core.dll`, `Qt5Gui.dll`, `Qt5Network.dll`, and `Qt5Widgets.dll` files in `C:\Program Files\Vector35\BinaryNinja\`
-     - On Linux, replace the `libQt5Core.so.5`, `libQt5DBus.so.5`, `libQt5Gui.so.5`, `libQt5Network.so.5`, `libQt5Widgets.so.5`, `libQt5XcbQpa.so.5` files wherever Binary Ninja was extracted
+     - On Windows, replace the `Qt5core.dll`, `Qt5Gui.dll`, `Qt5Network.dll`, and `Qt5Widgets.dll` files in `C:\Program Files\Vector35\BinaryNinja\` (or `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Network.dll`, and `Qt6Widgets.dll` for Qt 6.0 builds).
+     - On Linux, replace the `libQt5Core.so.5`, `libQt5DBus.so.5`, `libQt5Gui.so.5`, `libQt5Network.so.5`, `libQt5Widgets.so.5`, `libQt5XcbQpa.so.5` files wherever Binary Ninja was extracted (or `libQt6Core.so.6`, `libQt6DBus.so.6`, `libQt6Gui.so.6`, `libQt6Network.so.6`, `libQt6Widgets.so.6`, `libQt6XcbQpa.so.6` for Qt 6.0 builds).
 
 [Building Qt 5 from Git]: https://wiki.qt.io/Building-Qt-5-from-Git
+[Building Qt 6 from Git]: https://wiki.qt.io/Building_Qt_6_from_Git
 [Qt 5.15]: https://www.qt.io/qt-licensing-terms/
+[Qt 6.0]: https://www.qt.io/qt-licensing-terms/
 [capstone]: https://github.com/aquynh/capstone
 [capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE
@@ -105,6 +107,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
 [tarball]: https://binary.ninja/qt5.15.0.tar.xz
+[Qt 6.0.2 tarball]: https://binary.ninja/qt6.0.2.tar.xz
+[patch]: https://binary.ninja/qt6.0.2.patch
 [tomcrypt license]: https://github.com/libtom/libtomcrypt/blob/develop/LICENSE
 [tomcrypt]:  https://github.com/libtom/libtomcrypt
 [unsign]: https://github.com/steakknife/unsign

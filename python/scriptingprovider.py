@@ -860,12 +860,12 @@ class PythonScriptingProvider(ScriptingProvider):
 			return (python_bin, "Success")
 
 		using_bundled_python = not python_lib
-		
+
 		if sys.platform == "darwin":
 			if using_bundled_python:
 				return (None, "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again")
 
-			python_bin =  Path(python_lib).parent / f"bin/python{python_lib_version}"
+			python_bin = Path(python_lib).parent / f"bin/python{python_lib_version}"
 		elif sys.platform == "linux":
 			class Dl_info(ctypes.Structure):
 				_fields_ = [

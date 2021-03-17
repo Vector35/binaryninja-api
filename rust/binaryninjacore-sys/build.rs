@@ -51,6 +51,9 @@ fn main() {
     // Allow the library search path to be overridden for internal dev builds, but
     // otherwise search the usual install paths
     let out_dir = env::var("OUT_DIR").unwrap();
+    let llvm_dir = env::var("LIBCLANG_PATH");
+    let llvm_version = env::var("LLVM_VERSION");
+    let llvm_install_dir = env::var("LLVM_INSTALL_DIR");
 
     #[cfg(any(windows, feature = "headless"))]
     let link_path = env::var("BINARYNINJADIR")
@@ -146,19 +149,64 @@ fn main() {
         println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
     }
 
-    let bindings = bindgen::builder()
-        .header("../../binaryninjacore.h")
-        .clang_arg("-std=c++17")
-        .clang_arg("-x")
-        .clang_arg("c++")
-        .size_t_is_usize(true)
-        .generate_comments(false)
-        .whitelist_function("BN.*")
-        .whitelist_var("BN_CURRENT_CORE_ABI_VERSION")
-        .whitelist_var("BN_MINIMUM_CORE_ABI_VERSION")
-        .rustified_enum("BN.*")
-        .generate()
-        .expect("Unable to generate bindings");
+    #[warn(unused_assignments)]
+    let mut is_mac = false;
+    #[cfg(target_os = "macos")]
+    {
+        is_mac = true;
+    }
+
+    // Difference between global LLVM/Clang install and custom LLVM/Clang install...
+    //  First option is for the build server, second option is being nice to our dev who have `LLVM_INSTALL_DIR` set, third is for people with "normal" setups (and Macs)
+    let bindings;
+    if let (false, Ok(llvm_dir), Ok(llvm_version)) = (is_mac, llvm_dir, llvm_version) {
+        let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
+        bindings = bindgen::builder()
+            .header("../../binaryninjacore.h")
+            .clang_arg("-std=c++17")
+            .clang_arg("-x")
+            .clang_arg("c++")
+            .clang_arg(llvm_include_path)
+            .size_t_is_usize(true)
+            .generate_comments(false)
+            .whitelist_function("BN.*")
+            .whitelist_var("BN_CURRENT_CORE_ABI_VERSION")
+            .whitelist_var("BN_MINIMUM_CORE_ABI_VERSION")
+            .rustified_enum("BN.*")
+            .generate()
+            .expect("Unable to generate bindings");
+    } else if let (false, Ok(llvm_install_dir)) = (is_mac, llvm_install_dir) {
+        let llvm_include_path = format!("-I{}/11.0.0/lib/clang/11.0.0/include", llvm_install_dir);
+        env::set_var("LIBCLANG_PATH", format!("{}/11.0.0/lib", llvm_install_dir));
+        bindings = bindgen::builder()
+            .header("../../binaryninjacore.h")
+            .clang_arg("-std=c++17")
+            .clang_arg("-x")
+            .clang_arg("c++")
+            .clang_arg(llvm_include_path)
+            .size_t_is_usize(true)
+            .generate_comments(false)
+            .whitelist_function("BN.*")
+            .whitelist_var("BN_CURRENT_CORE_ABI_VERSION")
+            .whitelist_var("BN_MINIMUM_CORE_ABI_VERSION")
+            .rustified_enum("BN.*")
+            .generate()
+            .expect("Unable to generate bindings");
+    } else {
+        bindings = bindgen::builder()
+            .header("../../binaryninjacore.h")
+            .clang_arg("-std=c++17")
+            .clang_arg("-x")
+            .clang_arg("c++")
+            .size_t_is_usize(true)
+            .generate_comments(false)
+            .whitelist_function("BN.*")
+            .whitelist_var("BN_CURRENT_CORE_ABI_VERSION")
+            .whitelist_var("BN_MINIMUM_CORE_ABI_VERSION")
+            .rustified_enum("BN.*")
+            .generate()
+            .expect("Unable to generate bindings");
+    }
 
     bindings
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))

@@ -21,7 +21,9 @@ use std::slice;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, Register};
+use crate::architecture::{
+    Architecture, ArchitectureExt, CoreArchitecture, CoreRegister, Register,
+};
 use crate::rc::{Ref, RefCountable};
 use crate::string::*;
 
@@ -52,11 +54,11 @@ pub trait CallingConventionBase: Sync {
     fn implicitly_defined_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
 }
 
-pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CallingConvention<A>>
+pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CallingConvention>
 where
     A: Architecture,
     N: BnStrCompatible,
-    C: 'static + CallingConventionBase<Arch = A>,
+    C: 'static + CallingConventionBase,
 {
     struct CustomCallingConventionContext<C>
     where
@@ -391,55 +393,40 @@ where
 
         BNRegisterCallingConvention(arch.as_ref().0, result);
 
-        Ref::new(CallingConvention {
-            handle: result,
-            arch_handle: arch.handle(),
-            _arch: PhantomData,
-        })
+        Ref::new(CallingConvention { handle: result })
     }
 }
 
-pub struct CallingConvention<A: Architecture> {
+#[derive(PartialEq, Eq, Hash)]
+pub struct CallingConvention {
     pub(crate) handle: *mut BNCallingConvention,
-    pub(crate) arch_handle: A::Handle,
-    _arch: PhantomData<*mut A>,
 }
 
-unsafe impl<A: Architecture> Send for CallingConvention<A> {}
-unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
+unsafe impl Send for CallingConvention {}
+unsafe impl Sync for CallingConvention {}
 
-impl<A: Architecture> CallingConvention<A> {
-    pub(crate) unsafe fn from_raw(handle: *mut BNCallingConvention, arch: A::Handle) -> Self {
-        CallingConvention {
-            handle: handle,
-            arch_handle: arch,
-            _arch: PhantomData,
-        }
+impl CallingConvention {
+    pub(crate) unsafe fn from_raw(handle: *mut BNCallingConvention) -> Self {
+        Self { handle }
+    }
+
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNCallingConvention) -> Ref<Self> {
+        Ref::new(Self { handle })
+    }
+
+    pub fn architecture(&self) -> CoreArchitecture {
+        unsafe { CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(self.handle)) }
     }
 }
 
-impl<A: Architecture> Eq for CallingConvention<A> {}
-impl<A: Architecture> PartialEq for CallingConvention<A> {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.handle == rhs.handle
-    }
-}
+impl CallingConventionBase for CallingConvention {
+    type Arch = CoreArchitecture;
 
-use std::hash::{Hash, Hasher};
-impl<A: Architecture> Hash for CallingConvention<A> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.handle.hash(state);
-    }
-}
-
-impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
-    type Arch = A;
-
-    fn caller_saved_registers(&self) -> Vec<A::Register> {
+    fn caller_saved_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetCallerSavedRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
+            let arch = self.architecture();
 
             let res = slice::from_raw_parts(regs, count)
                 .iter()
@@ -455,11 +442,11 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
         }
     }
 
-    fn callee_saved_registers(&self) -> Vec<A::Register> {
+    fn callee_saved_registers(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count = 0;
             let regs = BNGetCalleeSavedRegisters(self.handle, &mut count);
-            let arch = self.arch_handle.borrow();
+            let arch = self.architecture();
 
             let res = slice::from_raw_parts(regs, count)
                 .iter()
@@ -475,11 +462,11 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
         }
     }
 
-    fn int_arg_registers(&self) -> Vec<A::Register> {
+    fn int_arg_registers(&self) -> Vec<CoreRegister> {
         Vec::new()
     }
 
-    fn float_arg_registers(&self) -> Vec<A::Register> {
+    fn float_arg_registers(&self) -> Vec<CoreRegister> {
         Vec::new()
     }
 
@@ -499,40 +486,40 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
         false
     }
 
-    fn return_int_reg(&self) -> Option<A::Register> {
+    fn return_int_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.architecture().register_from_id(id),
             _ => None,
         }
     }
 
-    fn return_hi_int_reg(&self) -> Option<A::Register> {
+    fn return_hi_int_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetHighIntegerReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.architecture().register_from_id(id),
             _ => None,
         }
     }
 
-    fn return_float_reg(&self) -> Option<A::Register> {
+    fn return_float_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetFloatReturnValueRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.architecture().register_from_id(id),
             _ => None,
         }
     }
 
-    fn global_pointer_reg(&self) -> Option<A::Register> {
+    fn global_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetGlobalPointerRegister(self.handle) } {
-            id if id < 0x8000_0000 => self.arch_handle.borrow().register_from_id(id),
+            id if id < 0x8000_0000 => self.architecture().register_from_id(id),
             _ => None,
         }
     }
 
-    fn implicitly_defined_registers(&self) -> Vec<A::Register> {
+    fn implicitly_defined_registers(&self) -> Vec<CoreRegister> {
         Vec::new()
     }
 }
 
-impl<A: Architecture> ToOwned for CallingConvention<A> {
+impl ToOwned for CallingConvention {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -540,12 +527,10 @@ impl<A: Architecture> ToOwned for CallingConvention<A> {
     }
 }
 
-unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
+unsafe impl RefCountable for CallingConvention {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewCallingConventionReference(handle.handle),
-            arch_handle: handle.arch_handle.clone(),
-            _arch: PhantomData,
         })
     }
 
@@ -663,7 +648,7 @@ impl<A: Architecture> ConventionBuilder<A> {
 
     reg_list!(implicitly_defined_registers);
 
-    pub fn register(self, name: &str) -> Ref<CallingConvention<A>> {
+    pub fn register(self, name: &str) -> Ref<CallingConvention> {
         let arch = self.arch_handle.clone();
 
         register_calling_convention(arch.borrow(), name, self)

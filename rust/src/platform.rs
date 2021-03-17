@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Borrow;
-
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, CoreArchitecture};
@@ -32,25 +30,23 @@ unsafe impl Sync for Platform {}
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        pub fn $get_name(&self) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
-            let arch = self.arch();
-
+        pub fn $get_name(&self) -> Option<Ref<CallingConvention>> {
             unsafe {
                 let cc = $get_api(self.handle);
 
                 if cc.is_null() {
                     None
                 } else {
-                    Some(Ref::new(CallingConvention::from_raw(cc, arch)))
+                    Some(Ref::new(CallingConvention::from_raw(cc)))
                 }
             }
         }
 
-        pub fn $set_name<A: Architecture>(&self, cc: &CallingConvention<A>) {
+        pub fn $set_name(&self, cc: &CallingConvention) {
             let arch = self.arch();
 
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == arch.0,
+                cc.architecture().0 == arch.0,
                 "use of calling convention with non-matching Platform architecture!"
             );
 

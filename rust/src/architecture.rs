@@ -1155,7 +1155,7 @@ impl Architecture for CoreArchitecture {
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        fn $get_name(&self) -> Option<Ref<CallingConvention<Self>>> {
+        fn $get_name(&self) -> Option<Ref<CallingConvention>> {
             let handle = self.as_ref();
 
             unsafe {
@@ -1164,16 +1164,16 @@ macro_rules! cc_func {
                 if cc.is_null() {
                     None
                 } else {
-                    Some(Ref::new(CallingConvention::from_raw(cc, self.handle())))
+                    Some(Ref::new(CallingConvention::from_raw(cc)))
                 }
             }
         }
 
-        fn $set_name(&self, cc: &CallingConvention<Self>) {
+        fn $set_name(&self, cc: &CallingConvention) {
             let handle = self.as_ref();
 
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == handle.0,
+                cc.architecture().0 == handle.0,
                 "use of calling convention with non-matching architecture!"
             );
 

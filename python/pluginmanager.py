@@ -323,10 +323,10 @@ class RepositoryManager(object):
 	@property
 	def plugins(self):
 		"""List of all RepoPlugins in each repository"""
-		plgs = {}
+		plugin_list = {}
 		for repo in self.repositories:
-			plgs[repo.path] = repo.plugins
-		return plgs
+			plugin_list[repo.path] = repo.plugins
+		return plugin_list
 
 	@property
 	def default_repository(self):

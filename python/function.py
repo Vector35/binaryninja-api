@@ -1061,10 +1061,10 @@ class ILReferenceSource(object):
 		self._address = addr
 		self._il_type = il_type
 		self._expr_id = expr_id
-	
+
 	def get_il_name(self, il_type):
 		if il_type == FunctionGraphType.NormalFunctionGraph:
-			return 'disasmbly'
+			return 'disassembly'
 		if il_type == FunctionGraphType.LowLevelILFunctionGraph:
 			return 'llil'
 		if il_type == FunctionGraphType.LiftedILFunctionGraph:
@@ -1083,7 +1083,7 @@ class ILReferenceSource(object):
 			return 'hlil'
 		if il_type == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			return 'hlil_ssa'
-		
+
 	def __repr__(self):
 		if self._arch:
 			return "<ref: %s@%#x, %s@%d>" %\
@@ -3837,7 +3837,7 @@ class InstructionTextToken(object):
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 
-	The below table is provided for ducmentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
+	The below table is provided for documentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
 
 	Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended), or additionally, applying color schemes appropriately.
 

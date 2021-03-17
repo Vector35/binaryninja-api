@@ -3542,7 +3542,7 @@ class BinaryView(object):
 		"""
 		``get_data_refs_for_type`` returns a list of virtual addresses of data which references the type ``name``.
 		Note, the returned addresses are the actual start of the queried type. For example, suppose there is a DataVariable
-		at 0x1000 that has type A, and type A contians type B at offset 0x10. Then `get_data_refs_for_type('B')` will
+		at 0x1000 that has type A, and type A contains type B at offset 0x10. Then `get_data_refs_for_type('B')` will
 		return 0x1010 for it.
 
 		:param QualifiedName name: name of type to query for references
@@ -3569,7 +3569,7 @@ class BinaryView(object):
 		"""
 		``get_data_refs_for_type_field`` returns a list of virtual addresses of data which references the type ``name``.
 		Note, the returned addresses are the actual start of the queried type field. For example, suppose there is a
-		DataVariable at 0x1000 that has type A, and type A contians type B at offset 0x10.
+		DataVariable at 0x1000 that has type A, and type A contains type B at offset 0x10.
 		Then `get_data_refs_for_type_field('B', 0x8)` will return 0x1018 for it.
 
 		:param QualifiedName name: name of type to query for references

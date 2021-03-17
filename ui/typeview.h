@@ -17,6 +17,27 @@
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
+enum BINARYNINJAUIAPI TypeDefinitionLineType
+{
+	TypedefLineType,
+	StructDefinitionLineType,
+	StructFieldLineType,
+	StructDefinitionEndLineType,
+	EnumDefinitionLineType,
+	EnumMemberLineType,
+	EnumDefinitionEndLineType,
+	PaddingLineType
+};
+
+struct BINARYNINJAUIAPI TypeDefinitionLine
+{
+	TypeDefinitionLineType lineType;
+	std::vector<BinaryNinja::InstructionTextToken> tokens;
+	TypeRef type, rootType;
+	uint64_t offset;
+	size_t fieldIndex;
+};
+
 class BINARYNINJAUIAPI TypeViewHistoryEntry: public HistoryEntry
 {
 	BinaryNinja::QualifiedName m_cursorType;
@@ -55,27 +76,6 @@ public:
 class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
-
-	enum TypeDefinitionLineType
-	{
-		TypedefLineType,
-		StructDefinitionLineType,
-		StructFieldLineType,
-		StructDefinitionEndLineType,
-		EnumDefinitionLineType,
-		EnumMemberLineType,
-		EnumDefinitionEndLineType,
-		PaddingLineType
-	};
-
-	struct TypeDefinitionLine
-	{
-		TypeDefinitionLineType lineType;
-		std::vector<BinaryNinja::InstructionTextToken> tokens;
-		TypeRef type, rootType;
-		uint64_t offset;
-		size_t fieldIndex;
-	};
 
 	struct TypeLineIndex
 	{
@@ -119,8 +119,6 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 
 	void adjustSize(int width, int height);
 
-	std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName, size_t index,
-		TypeRef type, TypeRef parent);
 	void refreshAllTypes();
 	void ensureCursorVisible();
 	void focusOnCursor();
@@ -203,6 +201,8 @@ public:
 	static void registerActions();
 
 	virtual ArchitectureRef getOrAskForArchitecture();
+
+	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName, size_t index, TypeRef type, TypeRef parent, int paddingCols);
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

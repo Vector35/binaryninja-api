@@ -114,6 +114,7 @@ private:
 	bool isSelectionActive();
 
 	void goToAddress(bool selection);
+	void goToAddressAtFileOffset();
 	void searchRegEx();
 	void findNext();
 

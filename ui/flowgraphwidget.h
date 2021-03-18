@@ -305,6 +305,7 @@ private Q_SLOTS:
 	void zoomPauseTimerEvent();
 
 	void goToAddress();
+	void goToAddressAtFileOffset();
 	void followPointer();
 	void defineName();
 	void undefineName();

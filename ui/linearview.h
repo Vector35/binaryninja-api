@@ -221,6 +221,7 @@ private Q_SLOTS:
 	void cycleILView(bool forward);
 	void copyAddressSlot();
 	void goToAddress();
+	void goToAddressAtFileOffset();
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
 	void undefineName();

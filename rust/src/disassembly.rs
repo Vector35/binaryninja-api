@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO : Combine this with the architecture implementation
+
 use binaryninjacore_sys::*;
 
 use crate::string::BnString;

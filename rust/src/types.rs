@@ -379,8 +379,10 @@ impl TypeBuilder {
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
 
         unsafe {
+            // TODO : This is _extremely fragile_, we should change the internals of BNCreateEnumerationTypeBuilder instead of doing this
+            let mut fake_arch: BNArchitecture = mem::zeroed();
             Self::from_raw(BNCreateEnumerationTypeBuilder(
-                ptr::null_mut(),
+                &mut fake_arch,
                 enumeration.handle,
                 width,
                 is_signed,
@@ -724,8 +726,10 @@ impl Type {
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
 
         unsafe {
+            // TODO : This is _extremely fragile_, we should change the internals of BNCreateEnumerationType instead of doing this
+            let mut fake_arch: BNArchitecture = mem::zeroed();
             Self::ref_from_raw(BNCreateEnumerationType(
-                ptr::null_mut(),
+                &mut fake_arch,
                 enumeration.handle,
                 width,
                 is_signed,
@@ -753,31 +757,69 @@ impl Type {
         }
     }
 
-    pub fn function<'a, A: Architecture, S: BnStrCompatible + Copy, T: Into<Conf<&'a Type>>>(
+    pub fn function<'a, S: BnStrCompatible + Copy, T: Into<Conf<&'a Type>>>(
         return_type: T,
         parameters: &[FunctionParameter<S>],
         variable_arguments: bool,
-        calling_convention: Option<Conf<&CallingConvention<A>>>,
-        stack_adjust: Option<Conf<i64>>,
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
-
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
 
-        // TODO : Don't do this?  It should be fine
-        #[allow(invalid_value)]
-        let calling_convention_ref =
-            Conf::<&CallingConvention<A>>::new(unsafe { mem::zeroed() }, min_confidence());
-        let mut raw_calling_convention: BNCallingConventionWithConfidence = match calling_convention
-        {
-            Some(calling_convention) => calling_convention.into(),
-            None => calling_convention_ref.into(),
-        };
+        let mut raw_calling_convention: BNCallingConventionWithConfidence =
+            BNCallingConventionWithConfidence {
+                convention: ptr::null_mut(),
+                confidence: min_confidence(),
+            };
 
-        let mut stack_adjust = match stack_adjust {
-            Some(stack_adjust) => stack_adjust.into(),
-            None => Conf::<i64>::new(0, min_confidence()).into(),
-        };
+        let mut stack_adjust = Conf::<i64>::new(0, min_confidence()).into();
+        let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
+        for parameter in parameters {
+            //  TODO : The core side is fine, but test this function with named parameters to ensure rust doesn't delete the reference
+            let raw_name = parameter.name.as_bytes_with_nul();
+
+            let location = match &parameter.location {
+                Some(location) => location.into_raw(),
+                None => unsafe { mem::zeroed() },
+            };
+
+            raw_parameters.push(BNFunctionParameter {
+                name: raw_name.as_ref().as_ptr() as *mut _,
+                type_: parameter.t.contents.handle,
+                typeConfidence: parameter.t.confidence,
+                defaultLocation: parameter.location.is_none(),
+                location,
+            });
+        }
+
+        unsafe {
+            Self::ref_from_raw(BNCreateFunctionType(
+                &mut return_type,
+                &mut raw_calling_convention,
+                raw_parameters.as_mut_ptr(),
+                raw_parameters.len(),
+                &mut variable_arguments,
+                &mut stack_adjust,
+            ))
+        }
+    }
+
+    pub fn function_with_options<
+        'a,
+        A: Architecture,
+        S: BnStrCompatible + Copy,
+        T: Into<Conf<&'a Type>>,
+    >(
+        return_type: T,
+        parameters: &[FunctionParameter<S>],
+        variable_arguments: bool,
+        calling_convention: Conf<&CallingConvention<A>>,
+        stack_adjust: Conf<i64>,
+    ) -> Ref<Self> {
+        let mut return_type = return_type.into().into();
+        let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
+        let mut raw_calling_convention: BNCallingConventionWithConfidence =
+            calling_convention.into();
+        let mut stack_adjust = stack_adjust.into();
 
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         for parameter in parameters {
@@ -808,7 +850,6 @@ impl Type {
                 &mut stack_adjust,
             ))
         }
-        // 	return Type(core.BNCreateFunctionTypeBuilder(ret_conf, conv_conf, param_buf, len(params), vararg_conf, stack_adjust_conf))
     }
 
     pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, t: T) -> Ref<Self> {
@@ -926,13 +967,21 @@ impl ToOwned for Type {
 ///////////////////////
 // FunctionParameter
 
-pub struct FunctionParameter<'a, S: BnStrCompatible> {
-    pub t: Conf<&'a Type>,
+pub struct FunctionParameter<S: BnStrCompatible> {
+    pub t: Conf<Ref<Type>>,
     pub name: S,
     pub location: Option<Variable>,
 }
 
-// impl<'a, S: BnStrCompatible> FunctionParameter<'a, S> {}
+impl<'a, S: BnStrCompatible> FunctionParameter<S> {
+    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: S, location: Option<Variable>) -> Self {
+        Self {
+            t: t.into(),
+            name,
+            location,
+        }
+    }
+}
 
 //////////////
 // Variable
@@ -1156,6 +1205,8 @@ impl ToOwned for Enumeration {
 //////////////////////
 // StructureBuilder
 
+pub type StructureType = BNStructureType;
+
 #[derive(PartialEq, Eq, Hash)]
 pub struct StructureBuilder {
     pub(crate) handle: *mut BNStructureBuilder,
@@ -1198,9 +1249,12 @@ impl StructureBuilder {
         Self { handle }
     }
 
+    // Chainable terminal
     pub fn finalize(&self) -> Ref<Structure> {
         Structure::new(self)
     }
+
+    // Chainable builders/setters
 
     pub fn set_width<'a>(&'a mut self, width: u64) -> &'a mut Self {
         unsafe {
@@ -1244,8 +1298,19 @@ impl StructureBuilder {
         self
     }
 
+    pub fn set_structure_type<'a>(&'a mut self, t: StructureType) -> &'a Self {
+        unsafe { BNSetStructureBuilderType(self.handle, t) };
+        self
+    }
+
+    // Getters
+
     pub fn width(&self) -> u64 {
         unsafe { BNGetStructureBuilderWidth(self.handle) }
+    }
+
+    pub fn structure_type(&self) -> StructureType {
+        unsafe { BNGetStructureBuilderType(self.handle) }
     }
 
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
@@ -1316,6 +1381,10 @@ impl Structure {
 
     pub fn width(&self) -> u64 {
         unsafe { BNGetStructureWidth(self.handle) }
+    }
+
+    pub fn structure_type(&self) -> StructureType {
+        unsafe { BNGetStructureType(self.handle) }
     }
 
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)

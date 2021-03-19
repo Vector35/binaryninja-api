@@ -4872,6 +4872,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
 	BINARYNINJACOREAPI bool BNCreateDirectory(const char* path, bool createSubdirectories);
 	BINARYNINJACOREAPI bool BNPathExists(const char* path);
+	BINARYNINJACOREAPI char* BNGetParentPath(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathDirectory(const char* path);
 	BINARYNINJACOREAPI bool BNIsPathRegularFile(const char* path);
 	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);

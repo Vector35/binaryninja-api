@@ -296,7 +296,6 @@ impl TypeParser for Platform {
             );
 
             let error_msg = BnString::from_raw(error_string);
-            BNFreeString(error_string);
 
             if !success {
                 return Err(error_msg.to_string());

@@ -98,7 +98,7 @@ If you're running Catlina MacOS with the Python 3 installed by XCode and wish to
 {
 	"downloadClient" :
 	{
-		"providerName" : "QtDownloadProvider"
+		"providerName" : "PythonDownloadProvider"
 	},
 	"python" :
 	{

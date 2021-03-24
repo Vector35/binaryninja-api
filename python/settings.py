@@ -63,23 +63,25 @@ class Settings(object):
 	:func:`register_group` method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a \
 	unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
 
-		==================   ======================================   =================   ========   =======================================================================
-		Property             JSON Data Type                           Prerequisite        Optional   {Allowed Values} and Notes
-		==================   ======================================   =================   ========   =======================================================================
-		"title"              string                                   None                No         Concise Setting Title
-		"type"               string                                   None                No         {"array", "boolean", "number", "string"}
-		"elementType"        string                                   "type" is "array"   No         {"string"}
-		"enum"               array : {string}                         "type" is "array"   Yes        Enumeration definitions
-		"enumDescriptions"   array : {string}                         "type" is "array"   Yes        Enumeration descriptions that match "enum" array
-		"minValue"           number                                   "type" is "number"  Yes        Specify 0 to infer unsigned (default is signed)
-		"maxValue"           number                                   "type" is "number"  Yes        Values less than or equal to INT_MAX infer a spinbox.
-		"precision"          number                                   "type" is "number"  Yes        Specify precision for a QDoubleSpinBox
-		"default"            {array, boolean, number, string, null}   None                Yes        Specify optimal default value
-		"aliases"            array : {string}                         None                Yes        Array of deprecated setting key(s)
-		"description"        string                                   None                No         Detailed setting description
-		"ignore"             array : {string}                         None                Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
-		"readOnly"           boolean                                  None                Yes        Only enforced by UI elements
-		"optional"           boolean                                  None                Yes        Indicates setting can be null
+		==================   ======================================   ==================   ========   =======================================================================
+		Property             JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
+		==================   ======================================   ==================   ========   =======================================================================
+		"title"              string                                   None                 No         Concise Setting Title
+		"type"               string                                   None                 No         {"array", "boolean", "number", "string"}
+		"elementType"        string                                   "type" is "array"    No         {"string"}
+		"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
+		"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
+		"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
+		"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
+		"maxValue"           number                                   "type" is "number"   Yes        Values less than or equal to INT_MAX infer a spinbox.
+		"precision"          number                                   "type" is "number"   Yes        Specify precision for a QDoubleSpinBox
+		"default"            {array, boolean, number, string, null}   None                 Yes        Specify optimal default value
+		"aliases"            array : {string}                         None                 Yes        Array of deprecated setting key(s)
+		"description"        string                                   None                 No         Detailed setting description
+		"ignore"             array : {string}                         None                 Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
+		"readOnly"           boolean                                  None                 Yes        Only enforced by UI elements
+		"optional"           boolean                                  None                 Yes        Indicates setting can be null
+		==================   ======================================   ==================   ========   =======================================================================
 
 	.. note:: In order to facilitate deterministic analysis results, settings from the *'default'* schema that impact analysis are serialized \
 	from Default, User, and Project scope into Resource scope during initial BinaryView analysis. This allows an analysis database to be opened \

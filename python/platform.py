@@ -153,11 +153,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 	@property
 	def cdecl_calling_convention(self):
 		"""
-		Cdecl calling convention.
-
-		:getter: returns a CallingConvention object for the cdecl calling convention.
-		:setter sets the cdecl calling convention
-		:type: CallingConvention
+		CallingConvention object for the cdecl calling convention
 		"""
 		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
 		if result is None:
@@ -166,16 +162,15 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 	@cdecl_calling_convention.setter
 	def cdecl_calling_convention(self, value):
+		"""
+		Sets the cdecl calling convention
+		"""
 		core.BNRegisterPlatformCdeclCallingConvention(self.handle, value.handle)
 
 	@property
 	def stdcall_calling_convention(self):
 		"""
-		Stdcall calling convention.
-
-		:getter: returns a CallingConvention object for the stdcall calling convention.
-		:setter sets the stdcall calling convention
-		:type: CallingConvention
+		CallingConvention object for the stdcall calling convention
 		"""
 		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
 		if result is None:
@@ -184,16 +179,15 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 	@stdcall_calling_convention.setter
 	def stdcall_calling_convention(self, value):
+		"""
+		Sets the stdcall calling convention
+		"""
 		core.BNRegisterPlatformStdcallCallingConvention(self.handle, value.handle)
 
 	@property
 	def fastcall_calling_convention(self):
 		"""
-		Fastcall calling convention.
-
-		:getter: returns a CallingConvention object for the fastcall calling convention.
-		:setter sets the fastcall calling convention
-		:type: CallingConvention
+		CallingConvention object for the fastcall calling convention
 		"""
 		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
 		if result is None:
@@ -202,16 +196,15 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 	@fastcall_calling_convention.setter
 	def fastcall_calling_convention(self, value):
+		"""
+		Sets the fastcall calling convention
+		"""
 		core.BNRegisterPlatformFastcallCallingConvention(self.handle, value.handle)
 
 	@property
 	def system_call_convention(self):
 		"""
-		System call convention.
-
-		:getter: returns a CallingConvention object for the system call convention.
-		:setter sets the system call convention
-		:type: CallingConvention
+		CallingConvention object for the system call convention
 		"""
 		result = core.BNGetPlatformSystemCallConvention(self.handle)
 		if result is None:
@@ -220,6 +213,9 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 	@system_call_convention.setter
 	def system_call_convention(self, value):
+		"""
+		Sets the system call convention
+		"""
 		core.BNSetPlatformSystemCallConvention(self.handle, value.handle)
 
 	@property

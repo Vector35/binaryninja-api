@@ -93,16 +93,16 @@ class RepoPlugin(object):
 
 	def enable(self, force=False):
 		"""
-		Enable this plugin, optionally trying to force it.
-		Force loading a plugin with ignore platform and api constraints.
-		 (e.g. The plugin author says the plugin will only work on Linux-python3 but you'd like to
+		Enable this plugin, optionally trying to force it. \
+		Force loading a plugin with ignore platform and api constraints. \
+		 (e.g. The plugin author says the plugin will only work on Linux-python3 but you'd like to \
 		 attempt to load it on Macos-python2)
 		"""
 		return core.BNPluginEnable(self.handle, force)
 
 	@property
 	def api(self):
-		"""string indicating the API used by the plugin"""
+		"""String indicating the API used by the plugin"""
 		result = []
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetApis(self.handle, count)

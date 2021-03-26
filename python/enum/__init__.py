@@ -114,7 +114,7 @@ class _EnumDict(dict):
 
         Single underscore (sunder) names are reserved.
 
-        Note:   in 3.x __order__ is simply discarded as a not necessary piece
+        .. note:: in 3.x __order__ is simply discarded as a not necessary piece \
                 leftover from 2.x
 
         """

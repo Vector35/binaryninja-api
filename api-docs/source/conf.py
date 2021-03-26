@@ -38,7 +38,7 @@ binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "with_metaclass", "cstr", "fnsignature", "get_class_members", "datetime", "inspect")))
+	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "with_metaclass", "cstr", "fnsignature", "get_class_members", "datetime", "inspect", "subprocess")))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
@@ -62,27 +62,28 @@ def generaterst():
 ''')
 
 	for modulename, module in modulelist(binaryninja):
-		filename = 'binaryninja.{module}-module.rst'.format(module=modulename)
-		pythonrst.write('   {module} <{filename}>\n'.format(module=modulename, filename=filename))
+		filename = f'binaryninja.{modulename}-module.rst'
+		pythonrst.write(f'   {modulename} <{filename}>\n')
 		modulefile = open(filename, "w")
-		modulefile.write('''{module} module
-=====================
+		underline = "="*len(f'{modulename} module')
+		modulefile.write(f'''{modulename} module
+{underline}
 
 .. autosummary::
    :toctree:
 
-'''.format(module=modulename))
+''')
 
 		for (classname, classref) in classlist(module):
-			modulefile.write("   binaryninja.{module}.{classname}\n".format(module=modulename, classname=classname))
+			modulefile.write(f"   binaryninja.{modulename}.{classname}\n")
 
 		modulefile.write('''\n.. toctree::
    :maxdepth: 2\n''')
 
-		modulefile.write('''\n\n.. automodule:: binaryninja.{module}
+		modulefile.write(f'''\n\n.. automodule:: binaryninja.{modulename}
    :members:
    :undoc-members:
-   :show-inheritance:'''.format(module=modulename))
+   :show-inheritance:''')
 		modulefile.close()
 
 	pythonrst.write('''.. automodule:: binaryninja

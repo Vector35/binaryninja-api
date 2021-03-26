@@ -235,7 +235,7 @@ def open_view(*args, **kwargs):
 	"""
 	`open_view` opens a BinaryView object.
 
-	Note: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
+	.. note:: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
 
 	:param str filename: path to filename or bndb to open
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``

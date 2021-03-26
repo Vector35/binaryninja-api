@@ -34,7 +34,7 @@ import os
 import binaryninja
 from binaryninja import bncompleter, log
 from binaryninja import _binaryninjacore as core
-from binaryninja.settings import Settings
+from binaryninja import settings
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 
@@ -913,8 +913,8 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _install_modules(self, ctx, modules):
 		# This callback should not be called directly it is indirectly
 		# executed binary ninja is executed with --pip option
-		python_lib = Settings().get_string("python.interpreter")
-		python_bin_override = Settings().get_string("python.binaryOverride")
+		python_lib = settings.Settings().get_string("python.interpreter")
+		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
 		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
 			log.log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status} Please specify a path to a python library in the 'Python Interpreter' setting")
@@ -930,13 +930,13 @@ class PythonScriptingProvider(ScriptingProvider):
 			return False
 
 		args = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
-		proxy_settings = Settings().get_string("downloadClient.httpsProxy")
+		proxy_settings = settings.Settings().get_string("downloadClient.httpsProxy")
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])
 
 		args.append("install")
 		args.append("--verbose")
-		venv = Settings().get_string("python.virtualenv")
+		venv = settings.Settings().get_string("python.virtualenv")
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])

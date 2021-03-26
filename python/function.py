@@ -24,6 +24,7 @@ import threading
 import traceback
 import ctypes
 import numbers
+import string
 
 # Binary Ninja components
 import binaryninja
@@ -895,7 +896,7 @@ class Variable(object):
 
 	@property
 	def name(self):
-		"""Name of the variable"""
+		"""Name of the variable, set to an empty string to delete"""
 		if self._name is None:
 			if self._function is not None:
 				self._name = core.BNGetVariableName(self._function.handle, self.to_BNVariable())
@@ -903,6 +904,18 @@ class Variable(object):
 
 	@name.setter
 	def name(self, value):
+		if value == None or value == "":
+			if self._source_type == VariableSourceType.StackVariableSourceType:
+				self._function.delete_user_stack_var(self)
+			else:
+				self._function.delete_user_var(self)
+			return
+		if value and value[0] not in string.ascii_lowercase + string.ascii_uppercase + "_?$@" and not ord(value[0]) & 0x80:
+			value = "_" + value
+		if self._source_type == VariableSourceType.StackVariableSourceType:
+			self._function.create_user_stack_var(self._storage, self._type, value)
+		else:
+			self._function.create_user_var(self, self._type, value)
 		self._name = value
 
 	@property
@@ -3110,12 +3123,12 @@ class Function(object):
 
 	def set_user_var_value(self, var, def_addr, value):
 		"""
-		`set_user_var_value` allows the user to specify a PossibleValueSet value for an MLIL variable at its
+		`set_user_var_value` allows the user to specify a PossibleValueSet value for an MLIL variable at its \
 		definition site.
 
-		.. warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow
-		to compute and propagate values which depend on the current variable. This implies that branch conditions
-		whose values can be determined statically will be computed, leading to potential branch elimination at
+		.. warning:: Setting the variable value, triggers a reanalysis of the function and allows the dataflow \
+		to compute and propagate values which depend on the current variable. This implies that branch conditions \
+		whose values can be determined statically will be computed, leading to potential branch elimination at \
 		the HLIL layer.
 
 		:param Variable var: Variable for which the value is to be set

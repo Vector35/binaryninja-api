@@ -2778,7 +2778,7 @@ class BinaryView(object):
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
-		..note:: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
+		.. note:: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
  		still get you a str in either case.
 
 		:param int addr: virtual address to read from.
@@ -4065,7 +4065,7 @@ class BinaryView(object):
 
 		:param TagType type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
-		:param bool user
+		:param bool user: Whether or not a user tag
 		:return: The created Tag
 		:rtype: Tag
 		:Example:
@@ -4578,7 +4578,7 @@ class BinaryView(object):
 		"""
 		``get_string_at`` returns the string that falls on given virtual address.
 
-		.. note:: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings. For an alternative API that simply returns any potential c-string at a given location, use :py:BinaryView:`binaryview.get_ascii_string_at`.
+		.. note:: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings. For an alternative API that simply returns any potential c-string at a given location, use :py:meth:`get_ascii_string_at`.
 
 		:param int addr: virtual address to get the string from
 		:param bool partial: whether to return a partial string reference or not
@@ -4604,7 +4604,7 @@ class BinaryView(object):
 		"""
 		``get_ascii_string_at`` returns an ascii string found at ``addr``.
 
-		.. note:: This returns an ascii string irrespective of whether the core analysis identified a string at that location. For an alternative API that uses existing identified strings, use :py:BinaryView:`binaryview.get_string_at`.
+		.. note:: This returns an ascii string irrespective of whether the core analysis identified a string at that location. For an alternative API that uses existing identified strings, use :py:meth:`get_string_at`.
 
 		:param int addr: virtual address to start the string
 		:param int min_length: minimum length to define a string
@@ -5037,7 +5037,7 @@ class BinaryView(object):
 	def parse_types_from_string(self, text):
 		"""
 		``parse_types_from_string`` parses string containing C into a :py:Class:`TypeParserResult` objects. This API
-		unlike the :py:Function:`platform.Platform.parse_types_from_source` allows the reference of types already defined
+		unlike the :py:meth:`Platform.parse_types_from_source` allows the reference of types already defined
 		in the BinaryView.
 
 		:param str text: C source code string of types, variables, and function types, to create
@@ -5543,8 +5543,8 @@ class BinaryView(object):
 		"""
 		``rebase`` rebase the existing :py:class:`BinaryView` into a new :py:class:`BinaryView` at the specified virtual address
 
-		.. note:: This method does not update cooresponding UI components. If the `BinaryView` is associated with
-		UI components then initiate the rebase operation within the UI, e.g. using the command palette. If working with views that
+		.. note:: This method does not update cooresponding UI components. If the `BinaryView` is associated with \
+		UI components then initiate the rebase operation within the UI, e.g. using the command palette. If working with views that \
 		are not associated with UI components while the UI is active, then set ``force`` to ``True`` to enable rebasing.
 
 		:param int address: virtual address of the start of the :py:class:`BinaryView`
@@ -5575,8 +5575,8 @@ class BinaryView(object):
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
 		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
 
-		Note: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
-			a simple text prompt is used.
+		.. note:: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
+		a simple text prompt is used.
 
 		:param str contents: markdown contents to display
 		:param str plaintext: Plain text version to display (used on the command-line)
@@ -5593,7 +5593,7 @@ class BinaryView(object):
 		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
 		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
 
-		Note: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
+		.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
 
 		:param str contents: HTML contents to display
@@ -5875,7 +5875,7 @@ class BinaryView(object):
 
 	def set_load_settings(self, type_name, settings):
 		"""
-		``set_load_settings`` set a :py:class:`Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
+		``set_load_settings`` set a :py:class:`settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
 		:param str type_name: the :py:class:`BinaryViewType` name
 		:param Settings settings: the load settings

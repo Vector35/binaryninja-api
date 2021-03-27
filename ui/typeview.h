@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtWidgets/QAbstractScrollArea>
+#include <QtWidgets/QComboBox>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QtWidgets/QAction>
 #else
@@ -14,6 +15,7 @@
 #include "viewframe.h"
 #include "render.h"
 #include "menus.h"
+#include "xreflist.h"
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
@@ -73,6 +75,8 @@ public:
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
 };
 
+class TypesContainer;
+
 class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -85,6 +89,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 
 	BinaryViewRef m_data;
 	ViewFrame* m_view;
+	TypesContainer* m_container;
 
 	RenderContext m_render;
 	QWidget* m_lineNumberArea;
@@ -148,7 +153,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	void checkForValidSelection();
 
 public:
-	explicit TypeView(BinaryViewRef data, ViewFrame* view);
+	explicit TypeView(BinaryViewRef data, ViewFrame* view, TypesContainer* container);
 	virtual ~TypeView();
 
 	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
@@ -175,6 +180,7 @@ public:
 	virtual void OnTypeUndefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
 		BinaryNinja::Type* type) override;
 
+	void MarkUpdatesRequired() { m_updatesRequired = true; }
 	virtual void updateFonts() override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
@@ -184,6 +190,8 @@ public:
 
 	void lineNumberAreaPaintEvent(QPaintEvent *event);
 	int lineNumberAreaWidth();
+
+	int paddingCols() const { return m_paddingCols; }
 
 	virtual bool canCut() override { return false; }
 	virtual bool canCopy() override;
@@ -232,6 +240,7 @@ private Q_SLOTS:
 	void setStructureSize();
 	void addUserXref();
 	void updateLineNumberAreaWidth(size_t lineCount);
+	void focusFilter();
 };
 
 
@@ -258,4 +267,51 @@ public:
 	virtual int getPriority(BinaryViewRef data, const QString& filename) override;
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* viewFrame) override;
 	static void init();
+};
+
+
+class BINARYNINJAUIAPI TypeFilter: public QWidget
+{
+	Q_OBJECT
+
+	TypesContainer* m_container;
+	ExpandableGroup* m_group;
+	QComboBox* m_showTypes;
+	QLineEdit* m_textFilter;
+
+	bool MatchesAutoFilter(const BinaryNinja::QualifiedName& name);
+	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
+
+Q_SIGNALS:
+	void filterChanged();
+
+public:
+	TypeFilter(TypesContainer* container);
+
+	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines();
+	void showAndFocus();
+};
+
+
+class BINARYNINJAUIAPI TypesContainer: public QWidget, public ViewContainer
+{
+	Q_OBJECT
+
+	BinaryViewRef m_data;
+	ViewFrame* m_view;
+	TypeView* m_typeView;
+	TypeFilter* m_typeFilter;
+	UIActionHandler m_actionHandler;
+
+
+public:
+	TypesContainer(BinaryViewRef data, ViewFrame* view);
+	virtual View* getView() override { return m_typeView; }
+
+	BinaryViewRef getData() { return m_data; }
+	TypeView* getTypesView() { return m_typeView; }
+	TypeFilter* getTypeFilter() { return m_typeFilter; }
+
+protected:
+	virtual void focusInEvent(QFocusEvent* event) override;
 };

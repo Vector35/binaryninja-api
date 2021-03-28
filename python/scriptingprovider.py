@@ -22,6 +22,7 @@
 import code
 import traceback
 import ctypes
+from ctypes.util import find_library
 import threading
 import abc
 import sys
@@ -901,7 +902,7 @@ class PythonScriptingProvider(ScriptingProvider):
 				python_bin = path.parent / f"bin/python{python_lib_version}"
 		else:
 			if using_bundled_python:
-				python_bin = Path(get_install_directory()) / "plugins\\python\\python.exe"
+				python_bin = Path(binaryninja.get_install_directory()) / "plugins\\python\\python.exe"
 			else:
 				python_bin =  Path(python_lib).parent / "python.exe"
 		python_bin_version = self._bin_version(python_bin)

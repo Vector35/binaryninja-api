@@ -237,6 +237,7 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	BinaryViewRef m_data;
 	ViewFrame* m_view;
 	std::vector<XrefItem> m_refs;
+	size_t m_maxUIItems;
 
 public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
@@ -256,6 +257,8 @@ public:
 	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
 	int leafCount() const;
 	ViewFrame* getView() const { return m_view; }
+	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
+	size_t getMaxUIItems() const { return m_maxUIItems; }
 };
 
 
@@ -267,6 +270,8 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	BinaryViewRef m_data;
 	ViewFrame* m_view;
 	std::vector<XrefItem> m_refs;
+	size_t m_maxUIItems;
+
 public:
 	enum ColumnHeaders
 	{
@@ -290,6 +295,8 @@ public:
 	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
 	const XrefItem& getRow(int idx);
 	ViewFrame* getView() const { return m_view; }
+	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
+	size_t getMaxUIItems() const { return m_maxUIItems; }
 };
 
 
@@ -301,6 +308,7 @@ class BINARYNINJAUIAPI CrossReferenceItemDelegate: public QStyledItemDelegate
 	int m_baseline, m_charWidth, m_charHeight, m_charOffset;
 	QImage m_xrefTo, m_xrefFrom;
 	bool m_table;
+	size_t m_maxUIItems;
 
 public:
 	CrossReferenceItemDelegate(QWidget* parent, bool table);
@@ -311,6 +319,8 @@ public:
 	virtual void paintTreeRow(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const;
 	virtual void paintTableRow(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const;
 	virtual QImage DrawArrow(bool direction) const;
+	void updateMaxUIItems(size_t count);
+	size_t getMaxUIItems() const { return m_maxUIItems; }
 };
 
 
@@ -366,6 +376,7 @@ public:
 	virtual void updateFonts() = 0;
 	virtual int leafCount() const = 0;
 	virtual int filteredCount() const = 0;
+	virtual void updateMaxUIItems(size_t value) = 0;
 };
 
 
@@ -399,6 +410,7 @@ public:
 	virtual int leafCount() const override;
 	virtual int filteredCount() const override;
 	void updateTextFilter(const QString& filterText);
+	virtual void updateMaxUIItems(size_t count) override;
 
 Q_SIGNALS:
 	void newSelection();
@@ -432,6 +444,8 @@ public:
 	virtual void updateFonts() override;
 	virtual int leafCount() const override;
 	virtual int filteredCount() const override;
+	virtual void updateMaxUIItems(size_t count) override;
+
 public Q_SLOTS:
 	void updateTextFilter(const QString& filterText);
 Q_SIGNALS:
@@ -469,6 +483,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget: public QWidget, public DockContextH
 	bool m_navigating = false;
 	bool m_navToNextOrPrevStarted = false;
 	bool m_pinned;
+	bool m_uiMaxItemsExceeded = false;
 
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* e) override;
@@ -494,6 +509,8 @@ public:
 	virtual bool keyPressHandler(QKeyEvent* e);
 	void useTableView(bool tableView, bool init);
 	bool tableView() const { return m_useTableView; }
+	bool uiMaxItemsExceeded() const { return m_uiMaxItemsExceeded; }
+	void setUIMaxItemsExceeded(bool value) { m_uiMaxItemsExceeded = value; }
 
 private Q_SLOTS:
 	void hoverTimerEvent();

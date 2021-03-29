@@ -844,7 +844,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 		try:
-			return (True, subprocess.check_output(args, startupinfo=si).decode("utf-8"))
+			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT).decode("utf-8"))
 		except subprocess.SubprocessError as se:
 			return (False, str(se))
 

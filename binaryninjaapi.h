@@ -882,7 +882,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool IsSnapshotDataAppliedWithoutError() const;
 
-		bool IsBackedByDatabase() const;
+		bool IsBackedByDatabase(const std::string& binaryViewType = "") const;
 		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
 			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
@@ -1486,7 +1486,6 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool IsModified() const;
 		bool IsAnalysisChanged() const;
-		bool IsBackedByDatabase() const;
 		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
 		bool CreateDatabase(const std::string& path,
 			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
@@ -1599,7 +1598,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void AddUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 		void RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 
-		// References to type 
+		// References to type
 		std::vector<ReferenceSource> GetCodeReferencesForType(const QualifiedName& type);
 		std::vector<uint64_t> GetDataReferencesForType(const QualifiedName& type);
 		std::vector<TypeReferenceSource> GetTypeReferencesForType(const QualifiedName& type);

@@ -1120,12 +1120,6 @@ bool BinaryView::IsAnalysisChanged() const
 }
 
 
-bool BinaryView::IsBackedByDatabase() const
-{
-	return m_file->IsBackedByDatabase();
-}
-
-
 bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
@@ -1865,7 +1859,7 @@ void BinaryView::RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr)
 vector<ReferenceSource> BinaryView::GetCodeReferencesForType(const QualifiedName& type)
 {
 	size_t count;
-	
+
 	BNQualifiedName nameObj = type.GetAPIObject();
 	BNReferenceSource* refs = BNGetCodeReferencesForType(m_object, &nameObj, &count);
 	QualifiedName::FreeAPIObject(&nameObj);
@@ -1902,7 +1896,7 @@ vector<uint64_t> BinaryView::GetDataReferencesForType(const QualifiedName& type)
 vector<TypeReferenceSource> BinaryView::GetTypeReferencesForType(const QualifiedName& type)
 {
 	size_t count;
-	
+
 	BNQualifiedName nameObj = type.GetAPIObject();
 	BNTypeReferenceSource* refs = BNGetTypeReferencesForType(m_object, &nameObj, &count);
 	QualifiedName::FreeAPIObject(&nameObj);

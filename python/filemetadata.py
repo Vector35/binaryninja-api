@@ -201,9 +201,9 @@ class FileMetadata(object):
 		return core.BNIsAnalysisChanged(self.handle)
 
 	@property
-	def has_database(self):
-		"""Whether the FileMetadata is backed by a database (read-only)"""
-		return core.BNIsBackedByDatabase(self.handle)
+	def has_database(self, binary_view_type = ""):
+		"""Whether the FileMetadata is backed by a database, or if specified, a specific BinaryViewType (read-only)"""
+		return core.BNIsBackedByDatabase(self.handle, binary_view_type)
 
 	@property
 	def view(self):

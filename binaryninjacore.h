@@ -28,14 +28,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 2
+#define BN_CURRENT_CORE_ABI_VERSION 3
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 1
+#define BN_MINIMUM_CORE_ABI_VERSION 2
 
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
@@ -2673,7 +2673,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNMarkFileModified(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNMarkFileSaved(BNFileMetadata* file);
 
-	BINARYNINJACOREAPI bool BNIsBackedByDatabase(BNFileMetadata* file);
+	BINARYNINJACOREAPI bool BNIsBackedByDatabase(BNFileMetadata* file, const char* binaryViewType);
+
 	BINARYNINJACOREAPI bool BNCreateDatabase(BNBinaryView* data, const char* path, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNCreateDatabaseWithProgress(BNBinaryView* data, const char* path,
 		void* ctxt, void (*progress)(void* ctxt, size_t progress, size_t total), BNSaveSettings* settings);
@@ -4332,7 +4333,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNType* BNTypeWithReplacedEnumeration(BNType* type, BNEnumeration* from, BNEnumeration* to);
 	BINARYNINJACOREAPI BNType* BNTypeWithReplacedNamedTypeReference(BNType* type, BNNamedTypeReference* from, BNNamedTypeReference* to);
 
-	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens, size_t* tokenCount, 
+	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens, size_t* tokenCount,
 		int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect);
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);

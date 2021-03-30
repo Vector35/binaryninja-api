@@ -157,9 +157,9 @@ void FileMetadata::MarkFileSaved()
 }
 
 
-bool FileMetadata::IsBackedByDatabase() const
+bool FileMetadata::IsBackedByDatabase(const string& binaryViewType) const
 {
-	return BNIsBackedByDatabase(m_object);
+	return BNIsBackedByDatabase(m_object, binaryViewType.c_str());
 }
 
 

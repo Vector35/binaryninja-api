@@ -562,6 +562,7 @@ extern "C"
 
 	enum BNFunctionGraphType
 	{
+		InvalidILViewType = -1,
 		NormalFunctionGraph = 0,
 		LowLevelILFunctionGraph = 1,
 		LiftedILFunctionGraph = 2,

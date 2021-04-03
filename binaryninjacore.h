@@ -585,11 +585,13 @@ extern "C"
 		ShowDefaultRegisterTypes = 5,
 		ShowCallParameterNames = 6,
 		ShowRegisterHighlight = 7,
+		ShowFunctionAddress = 8,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,
 		HighLevelILLinearDisassembly = 65,
 		WaitForIL = 66,
+		IndentHLILBody = 67,
 
 		// Debugging options
 		ShowFlagUsage = 128

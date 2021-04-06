@@ -151,7 +151,7 @@ class TypeReferenceSource(object):
 		self._name = name
 		self._offset = offset
 		self._ref_type = ref_type
-	
+
 	def __str__(self):
 		if self.ref_type == TypeReferenceType.DirectTypeReferenceType:
 			s = 'direct'
@@ -353,20 +353,6 @@ class Symbol(object):
 	@property
 	def auto(self):
 		return core.BNIsSymbolAutoDefined(self.handle)
-
-	@property
-	def aliases(self):
-		"""
-		List of aliases tied to this symbol.
-		Aliases are the names of any other symbols that also happen to be at the same address.
-		"""
-		result = []
-		count = ctypes.c_ulonglong(0)
-		aliases = core.BNGetSymbolAliases(self.handle, count)
-		for i in range(count.value):
-			result.append(aliases[i])
-		core.BNFreeStringList(aliases, count)
-		return result
 
 
 class FunctionParameter(object):

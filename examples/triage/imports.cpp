@@ -56,16 +56,7 @@ QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 	if (index.column() == 0)
 		return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
 	if (index.column() == m_nameCol)
-	{
-		QString name = QString::fromStdString(m_entries[index.row()]->GetFullName());
-		if (name.endsWith("@GOT"))
-			name = name.mid(0, name.size() - (int)strlen("@GOT"));
-		else if (name.endsWith("@PLT"))
-			name = name.mid(0, name.size() - (int)strlen("@PLT"));
-		else if (name.endsWith("@IAT"))
-			name = name.mid(0, name.size() - (int)strlen("@IAT"));
-		return name;
-	}
+		return QString::fromStdString(m_entries[index.row()]->GetFullName());
 	if (index.column() == m_moduleCol)
 		return getNamespace(m_entries[index.row()]);
 	if (index.column() == m_ordinalCol)

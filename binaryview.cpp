@@ -341,20 +341,6 @@ Ref<Symbol> Symbol::ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_
 }
 
 
-vector<string> Symbol::GetAliases() const
-{
-	vector<string> result;
-	size_t count = 0;
-	char** aliases = BNGetSymbolAliases(m_object, &count);
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.push_back(aliases[i]);
-
-	BNFreeStringList(aliases, count);
-	return result;
-}
-
-
 AnalysisCompletionEvent::AnalysisCompletionEvent(BinaryView* view, const std::function<void()>& callback):
 	m_callback(callback)
 {

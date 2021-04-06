@@ -1436,7 +1436,7 @@ class Function(object):
 
 	@property
 	def highest_address(self):
-		"The highest virtual address contained in a function."""
+		"""The highest virtual address contained in a function."""
 		return max(self, key=lambda block:block.end).end - 1
 
 	@property

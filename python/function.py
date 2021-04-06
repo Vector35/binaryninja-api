@@ -904,18 +904,6 @@ class Variable(object):
 
 	@name.setter
 	def name(self, value):
-		if value == None or value == "":
-			if self._source_type == VariableSourceType.StackVariableSourceType:
-				self._function.delete_user_stack_var(self)
-			else:
-				self._function.delete_user_var(self)
-			return
-		if value and value[0] not in string.ascii_lowercase + string.ascii_uppercase + "_?$@" and not ord(value[0]) & 0x80:
-			value = "_" + value
-		if self._source_type == VariableSourceType.StackVariableSourceType:
-			self._function.create_user_stack_var(self._storage, self._type, value)
-		else:
-			self._function.create_user_var(self, self._type, value)
 		self._name = value
 
 	@property

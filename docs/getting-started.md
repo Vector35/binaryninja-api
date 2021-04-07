@@ -437,11 +437,17 @@ To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Nativ
 
 Once loaded, the script console can be docked in different locations or popped out into a stand-alone window. Note that [at this time](https://github.com/Vector35/binaryninja-api/issues/226) window locations are not saved on restart.
 
-Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`
+Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`. You can also force multi-line input with `<SHIFT>-<ENTER>`.
 
-By default the interactive python prompt has a number of convenient helper functions and variables built in:
+The scripting console is not a full IDE, but it has several convenience features that make it more pleasant to use:
 
-- `here` / `current_address`: address of the current selection
+- `<TAB>` offers completion of variables, methods, anything in-scope
+- `<CTRL>-R` allows for reverse-searching your console history
+- `<UP>` and `<DOWN>` can be used to view the command-history
+
+The interactive python prompt also has several built-in functions and variables:
+
+- `here` / `current_address`: address of the current selection (it's settable too and will navigate the UI if changed)
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.BinaryView.html)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.Function.html)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)

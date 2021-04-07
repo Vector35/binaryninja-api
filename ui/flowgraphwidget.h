@@ -156,10 +156,6 @@ protected:
 
 	virtual void scrollContentsBy(int dx, int dy) override;
 
-	bool getNodeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& node);
-	bool getLineForMouseEvent(QMouseEvent* event, CursorPosition& pos);
-	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source,
-		BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 	HighlightTokenState getTokenForMouseEvent(QMouseEvent* event);
 
 	void showContextMenu();
@@ -291,6 +287,14 @@ public:
 	static std::string getPossibleValueSetStateName(BNRegisterValueType state);
 	static std::string getStringForRegisterValue(ArchitectureRef arch, BinaryNinja::RegisterValue value);
 	static std::string getStringForPossibleValueSet(ArchitectureRef arch, const BinaryNinja::PossibleValueSet& values);
+
+// protected:
+	// These APIs are really supposed to be protected but since the bindings need to call them
+	// and they have out parameters (and thus need to be re-implemented) they must be public
+	bool getNodeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& node);
+	bool getLineForMouseEvent(QMouseEvent* event, CursorPosition& pos);
+	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source,
+		BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 
 Q_SIGNALS:
 	void layoutComplete();

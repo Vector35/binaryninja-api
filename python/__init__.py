@@ -155,6 +155,15 @@ def user_plugin_path():
 	"""
 	return core.BNGetUserPluginDirectory()
 
+def user_directory():
+	"""
+		``user_directory`` returns a string containing the path to the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
+
+		:return: current user path
+		:rtype: str, or None on failure
+	"""
+	return core.BNGetUserDirectory()
+
 def core_version():
 	"""
 		``core_version`` returns a string containing the current version

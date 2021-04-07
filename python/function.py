@@ -33,6 +33,7 @@ from binaryninja import associateddatastore  # Required in the main scope due to
 from binaryninja import highlight
 from binaryninja import log
 from binaryninja import types
+from binaryninja import decorators
 from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
@@ -814,7 +815,7 @@ class StackVariableReference(object):
 	def size(self, value):
 		self._size = value
 
-
+@decorators.passive
 class Variable(object):
 	def __init__(self, func, source_type, index, storage, name = None, var_type = None, identifier = None):
 		self._function = func

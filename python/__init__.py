@@ -242,7 +242,7 @@ def get_memory_usage_info():
 
 def open_view(*args, **kwargs):
 	"""
-	`open_view` opens a BinaryView object.
+	`open_view` is a convenience wrapper for :py:class:`get_view_of_file_with_options` that opens a BinaryView object.
 
 	.. note:: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
 

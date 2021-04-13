@@ -86,6 +86,9 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	void makeInt32();
 	void makeInt64();
 	void toggleIntSize();
+	void makeFloat32();
+	void makeFloat64();
+	void toggleFloatSize();
 	void makePtr();
 	void makeString();
 	void changeType();

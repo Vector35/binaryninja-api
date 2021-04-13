@@ -180,6 +180,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void ensureLineVisible(size_t line);
 
 	TypeRef createStructure(BinaryNinja::QualifiedName& name, uint64_t size);
+	TypeRef getInnerType(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerType(TypeRef type, TypeRef baseType, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerPointer(TypeRef type, ArchitectureRef arch, uint64_t baseAddress,
 		uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
@@ -254,6 +255,9 @@ private Q_SLOTS:
 	void makeInt64();
 	void toggleIntSize();
 	void toggleIntSign();
+	void makeFloat32();
+	void makeFloat64();
+	void toggleFloatSize();
 	void makePtr();
 	void makeString();
 	void changeType();

@@ -72,7 +72,6 @@ class Settings(object):
 		"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
 		"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
 		"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
-		"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
 		"maxValue"           number                                   "type" is "number"   Yes        Values less than or equal to INT_MAX infer a spinbox.
 		"precision"          number                                   "type" is "number"   Yes        Specify precision for a QDoubleSpinBox
 		"default"            {array, boolean, number, string, null}   None                 Yes        Specify optimal default value

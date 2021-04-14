@@ -37,6 +37,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [curl-rust] ([curl-rust license] - MIT)
     - [curl] ([curl license] - MIT)
     - [nom] ([nom license] - MIT)
+    - [xxHash] ([xxHash License] - 2-clause BSD)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -132,3 +133,4 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [nom]: https://github.com/Geal/nom
 [QCheckboxCombo]: https://github.com/CuriousCrow/QCheckboxCombo
 [QCheckboxCombo License]: https://github.com/CuriousCrow/QCheckboxCombo/blob/master/LICENSE
+[xxHash license]: https://github.com/Cyan4973/xxHash/blob/release/LICENSE

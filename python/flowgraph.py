@@ -52,6 +52,13 @@ class FlowGraphEdge(object):
 	def __repr__(self):
 		return "<%s: %s>" % (self.type.name, repr(self.target))
 
+	def __eq__(self, other):
+		return (self.type, self.source, self.target, self.points, self.back_edge, self.style) == \
+			(other.type, other.source, other.target, other.points, other.back_edge, other.style)
+
+	def __hash__(self):
+		return hash((self.type, self.source, self.target, self.points, self.back_edge, self.style))
+
 
 class EdgeStyle(object):
 	def __init__(self, style=None, width=None, theme_color=None):
@@ -69,6 +76,13 @@ class EdgeStyle(object):
 	@classmethod
 	def from_core_struct(cls, edge_style):
 		return EdgeStyle(edge_style.style, edge_style.width, edge_style.color)
+
+	def __eq__(self, other):
+		return (self.style, self.width, self.color) == \
+			(other.style, other.width, other.color)
+
+	def __hash__(self):
+		return hash((self.style, self.width, self.color))
 
 class FlowGraphNode(object):
 	def __init__(self, graph = None, handle = None):
@@ -105,6 +119,9 @@ class FlowGraphNode(object):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def __iter__(self):
 		count = ctypes.c_ulonglong()
@@ -408,6 +425,9 @@ class FlowGraph(object):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return not (self == other)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	def __setattr__(self, name, value):
 		try:

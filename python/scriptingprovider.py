@@ -914,6 +914,8 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _install_modules(self, ctx, modules):
 		# This callback should not be called directly it is indirectly
 		# executed binary ninja is executed with --pip option
+		if len(modules.strip()) == 0:
+			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)

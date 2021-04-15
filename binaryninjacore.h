@@ -874,7 +874,8 @@ extern "C"
 		DisablePendingPluginStatus        = 0x00000080,
 		PendingRestartPluginStatus        = 0x00000200,
 		BeingUpdatedPluginStatus          = 0x00000400,
-		BeingDeletedPluginStatus          = 0x00000800
+		BeingDeletedPluginStatus          = 0x00000800,
+		DependenciesBeingInstalledStatus  = 0x00001000
 	};
 
 	enum BNPluginType
@@ -4889,6 +4890,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNPluginIsDisablePending(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsDeletePending(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsUpdateAvailable(BNRepoPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginAreDependenciesBeingInstalled(BNRepoPlugin* p);
 
 	BINARYNINJACOREAPI char* BNPluginGetProjectData(BNRepoPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetLastUpdate(BNRepoPlugin* p);

@@ -235,6 +235,11 @@ class RepoPlugin(object):
 		return core.BNPluginIsUpdateAvailable(self.handle)
 
 	@property
+	def dependencies_being_installed(self):
+		"""Boolean status indicating that the plugin's dependencies are currently being installed"""
+		return core.BNPluginAreDependenciesBeingInstalled(self.handle)
+
+	@property
 	def project_data(self):
 		"""Gets a json object of the project data field"""
 		return json.loads(core.BNPluginGetProjectData(self.handle))

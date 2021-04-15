@@ -196,6 +196,12 @@ bool RepoPlugin::IsUpdateAvailable() const
 }
 
 
+bool RepoPlugin::AreDependenciesBeingInstalled() const
+{
+	return BNPluginAreDependenciesBeingInstalled(m_object);
+}
+
+
 uint64_t RepoPlugin::GetLastUpdate()
 {
 	return BNPluginGetLastUpdate(m_object);

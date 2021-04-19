@@ -28,7 +28,8 @@ enum BINARYNINJAUIAPI TypeDefinitionLineType
 	EnumDefinitionLineType,
 	EnumMemberLineType,
 	EnumDefinitionEndLineType,
-	PaddingLineType
+	PaddingLineType,
+	UndefinedXrefLineType
 };
 
 struct BINARYNINJAUIAPI TypeDefinitionLine
@@ -210,7 +211,7 @@ public:
 
 	virtual ArchitectureRef getOrAskForArchitecture();
 
-	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName, size_t index, TypeRef type, TypeRef parent, int paddingCols);
+	std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName, size_t index, TypeRef type, TypeRef parent, int paddingCols);
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

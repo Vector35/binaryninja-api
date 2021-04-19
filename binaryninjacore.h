@@ -3356,6 +3356,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetCodeReferencesForTypeFieldsFrom(BNBinaryView* view, BNReferenceSource* addr, size_t* count);
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetCodeReferencesForTypeFieldsFromInRange(BNBinaryView* view, BNReferenceSource* addr, uint64_t len, size_t* count);
 
+	BINARYNINJACOREAPI uint64_t* BNGetAllFieldsReferencedByCode(BNBinaryView* view,
+		BNQualifiedName* type, size_t* count);
+
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);
 
 	BINARYNINJACOREAPI bool BNGetStringAtAddress(BNBinaryView* view, uint64_t addr, BNStringReference* strRef);

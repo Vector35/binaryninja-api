@@ -2049,6 +2049,20 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(Refere
 }
 
 
+vector<uint64_t> BinaryView::GetAllFieldsReferencedByCode(const QualifiedName& type)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	uint64_t* fields = BNGetAllFieldsReferencedByCode(m_object, &nameObj, &count);
+
+	vector<uint64_t> result(fields, &fields[count]);
+	// Data refs and the fields above are both an array of uint64_t, so they can be freed in
+	// the same way
+	BNFreeDataReferences(fields);
+	return result;
+}
+
+
 vector<uint64_t> BinaryView::GetCallees(ReferenceSource callSite)
 {
 	size_t count;

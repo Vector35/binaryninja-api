@@ -312,6 +312,8 @@ public:
 	TypeView* getTypesView() { return m_typeView; }
 	TypeFilter* getTypeFilter() { return m_typeFilter; }
 
+	bool navigateToType(const std::string& name, uint64_t offset = 0);
+
 protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
 };

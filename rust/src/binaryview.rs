@@ -385,12 +385,18 @@ pub trait BinaryViewExt: BinaryViewBase {
         };
 
         unsafe {
-            BNDefineAutoSymbolAndVariableOrFunction(
+            let raw_sym = BNDefineAutoSymbolAndVariableOrFunction(
                 self.as_ref().handle,
                 plat.handle,
                 sym.handle,
                 raw_type,
             );
+
+            if raw_sym.is_null() {
+                return Err(());
+            }
+
+            Ok(Ref::new(Symbol::from_raw(raw_sym)))
         }
     }
 

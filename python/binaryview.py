@@ -3956,7 +3956,10 @@ class BinaryView(object):
 		elif sym_type is not None:
 			raise AttributeError("Provided sym_type is not of type `binaryninja.Type`")
 
-		core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
+		sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
+		if sym is None:
+			return None
+		return types.Symbol(None, None, None, handle = sym)
 
 	def undefine_auto_symbol(self, sym):
 		"""

@@ -1625,7 +1625,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<Ref<Symbol>> GetVisibleSymbols(const NameSpace& nameSpace=NameSpace());
 
 		void DefineAutoSymbol(Ref<Symbol> sym);
-		void DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
+		Ref<Symbol> DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
 		void UndefineAutoSymbol(Ref<Symbol> sym);
 
 		void DefineUserSymbol(Ref<Symbol> sym);

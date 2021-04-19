@@ -2211,10 +2211,12 @@ void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 }
 
 
-void BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
+Ref<Symbol> BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
 {
-	BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(),
-		type ? type->GetObject() : nullptr);
+	BNSymbol* result = BNDefineAutoSymbolAndVariableOrFunction(m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(), type ? type->GetObject() : nullptr);
+	if (!result)
+		return nullptr;
+	return new Symbol(result);
 }
 
 

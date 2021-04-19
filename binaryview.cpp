@@ -362,6 +362,8 @@ void AnalysisCompletionEvent::Cancel()
 {
 	unique_lock<recursive_mutex> lock(m_mutex);
 	m_callback = []() {};
+	// This allows the API side to free the BinaryNinja::AnalysisCompletionEvent object
+	BNCancelAnalysisCompletionEvent(m_object);
 }
 
 
@@ -2061,6 +2063,20 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(Refere
 }
 
 
+vector<uint64_t> BinaryView::GetAllFieldsReferencedByCode(const QualifiedName& type)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	uint64_t* fields = BNGetAllFieldsReferencedByCode(m_object, &nameObj, &count);
+
+	vector<uint64_t> result(fields, &fields[count]);
+	// Data refs and the fields above are both an array of uint64_t, so they can be freed in
+	// the same way
+	BNFreeDataReferences(fields);
+	return result;
+}
+
+
 vector<uint64_t> BinaryView::GetCallees(ReferenceSource callSite)
 {
 	size_t count;
@@ -2594,6 +2610,8 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 }
 
 
+// The caller of this function must hold a reference to the returned Ref<AnalysisCompletionEvent>.
+// Otherwise, it can be freed before the callback is triggered, leading to a crash.
 Ref<AnalysisCompletionEvent> BinaryView::AddAnalysisCompletionEvent(const function<void()>& callback)
 {
 	return new AnalysisCompletionEvent(this, callback);

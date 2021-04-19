@@ -28,7 +28,8 @@ enum BINARYNINJAUIAPI TypeDefinitionLineType
 	EnumDefinitionLineType,
 	EnumMemberLineType,
 	EnumDefinitionEndLineType,
-	PaddingLineType
+	PaddingLineType,
+	UndefinedXrefLineType
 };
 
 struct BINARYNINJAUIAPI TypeDefinitionLine
@@ -113,7 +114,8 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> m_typeLines;
 	std::vector<TypeLineIndex> m_types;
 
-	bool m_updatesRequired;
+	BinaryNinja::Ref<BinaryNinja::AnalysisCompletionEvent> m_completionEvent = nullptr;
+	std::atomic_bool m_updatesRequired;
 	QTimer* m_updateTimer;
 
 	Qt::KeyboardModifiers m_ctrl, m_command;
@@ -208,7 +210,9 @@ public:
 
 	virtual ArchitectureRef getOrAskForArchitecture();
 
-	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName, size_t index, TypeRef type, TypeRef parent, int paddingCols);
+	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name,
+		const std::string& varName, size_t index, TypeRef type, TypeRef parent, BinaryViewRef data,
+		int paddingCols);
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

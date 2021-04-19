@@ -3705,6 +3705,32 @@ class BinaryView(object):
 		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
 
 
+	def get_all_type_fields_referenced_by_code(self, name):
+		"""
+		``get_all_type_fields_referenced_by_code`` returns a list of offsets in the QualifiedName
+		specified by name, which are referenced by code.
+
+		:param QualifiedName name: name of type to query for references
+		:return: List of offsets
+		:rtype: list(integer)
+		:Example:
+
+			>>> bv.get_all_type_fields_referenced_by_code('A')
+			['<type D, offset 0x8, direct>', '<type C, offset 0x10, indirect>']
+			>>>
+
+		"""
+		count = ctypes.c_ulonglong(0)
+		name = types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllFieldsReferencedByCode(self.handle, name, count)
+
+		result = []
+		for i in range(0, count.value):
+			result.append(refs[i])
+
+		core.BNFreeDataReferences(refs, count.value)
+		return result
+
 	def get_callers(self, addr):
 		"""
 		``get_callers`` returns a list of ReferenceSource objects (xrefs or cross-references) that call the provided virtual address.

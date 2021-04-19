@@ -1618,6 +1618,8 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src);
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len);
 
+		std::vector<uint64_t> GetAllFieldsReferencedByCode(const QualifiedName& type);
+
 		std::vector<uint64_t> GetCallees(ReferenceSource addr);
 		std::vector<ReferenceSource> GetCallers(uint64_t addr);
 

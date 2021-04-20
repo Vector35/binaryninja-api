@@ -217,13 +217,23 @@ pub fn version() -> string::BnString {
     unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
 }
 
-// TODO : We need to get this from uitypes.h::BN_CURRENT_UI_ABI_VERSION
 pub fn plugin_abi_version() -> u32 {
+    binaryninjacore_sys::BN_CURRENT_CORE_ABI_VERSION
+}
+
+pub fn plugin_abi_minimum_version() -> u32 {
+    binaryninjacore_sys::BN_MINIMUM_CORE_ABI_VERSION
+}
+
+// TODO : We need to get this from uitypes.h::BN_CURRENT_UI_ABI_VERSION
+pub fn plugin_ui_abi_version() -> u32 {
+    //xxxx::BN_CURRENT_UI_ABI_VERSION
     2
 }
 
 // TODO : We need to get this from uitypes.h::BN_MINIMUM_UI_ABI_VERSION
-pub fn plugin_abi_minimum_version() -> u32 {
+pub fn plugin_ui_abi_minimum_version() -> u32 {
+    //xxxx::BN_MINIMUM_UI_ABI_VERSION
     2
 }
 
@@ -235,17 +245,22 @@ pub fn core_abi_minimum_version() -> u32 {
     unsafe { binaryninjacore_sys::BNGetMinimumCoreABIVersion() }
 }
 
+// TODO : We need to get this from uitypes.h::UIPluginABIVersion()
+pub fn ui_plugin_abi_version() -> u32 {
+    //unsafe { xxxx::UIPluginABIVersion() }
+    2
+}
+
 // Provide ABI version automatically so that the core can verify binary compatibility
 #[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginABIVersion() -> u32 {
-    core_abi_version()
+    plugin_abi_version()
 }
 
-// TODO : We need to get this from uitypes.h
 #[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 pub extern "C" fn UIPluginABIVersion() -> u32 {
-    plugin_abi_version()
+    plugin_ui_abi_version()
 }

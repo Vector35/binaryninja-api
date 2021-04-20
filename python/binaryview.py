@@ -392,7 +392,9 @@ class AnalysisProgress(object):
 			return "Analyzing (%d/%d)" % (self._count, self._total)
 		if self._state == AnalysisState.ExtendedAnalyzeState:
 			return "Extended Analysis"
-		return "Idle"
+		if self._state == AnalysisState.IdleState:
+			return "Idle"
+		return "Initial"
 
 	def __repr__(self):
 		return "<progress: %s>" % str(self)

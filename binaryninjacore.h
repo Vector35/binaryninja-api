@@ -2078,6 +2078,7 @@ extern "C"
 
 	enum BNAnalysisState
 	{
+		InitialState,
 		IdleState,
 		DisassembleState,
 		AnalyzeState,

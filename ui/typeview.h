@@ -191,8 +191,6 @@ public:
 	void lineNumberAreaPaintEvent(QPaintEvent *event);
 	int lineNumberAreaWidth();
 
-	int paddingCols() const { return m_paddingCols; }
-
 	virtual bool canCut() override { return false; }
 	virtual bool canCopy() override;
 	virtual bool canCopyWithTransform() override { return false; }
@@ -279,7 +277,7 @@ class BINARYNINJAUIAPI TypeFilter: public QWidget
 	QComboBox* m_showTypes;
 	QLineEdit* m_textFilter;
 
-	bool MatchesAutoFilter(const BinaryNinja::QualifiedName& name);
+	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
 	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
 
 Q_SIGNALS:
@@ -288,7 +286,7 @@ Q_SIGNALS:
 public:
 	TypeFilter(TypesContainer* container);
 
-	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines();
+	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines(BinaryViewRef data, int padding);
 	void showAndFocus();
 };
 
@@ -297,18 +295,14 @@ class BINARYNINJAUIAPI TypesContainer: public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
-	BinaryViewRef m_data;
-	ViewFrame* m_view;
 	TypeView* m_typeView;
 	TypeFilter* m_typeFilter;
 	UIActionHandler m_actionHandler;
-
 
 public:
 	TypesContainer(BinaryViewRef data, ViewFrame* view);
 	virtual View* getView() override { return m_typeView; }
 
-	BinaryViewRef getData() { return m_data; }
 	TypeView* getTypesView() { return m_typeView; }
 	TypeFilter* getTypeFilter() { return m_typeFilter; }
 

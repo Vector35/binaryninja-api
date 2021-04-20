@@ -1499,6 +1499,18 @@ void BinaryView::RemoveUserFunction(Function* func)
 }
 
 
+bool BinaryView::HasInitialAnalysis()
+{
+	return BNHasInitialAnalysis(m_object);
+}
+
+
+void BinaryView::SetAnalysisHold(bool enable)
+{
+	BNSetAnalysisHold(m_object, enable);
+}
+
+
 void BinaryView::UpdateAnalysisAndWait()
 {
 	BNUpdateAnalysisAndWait(m_object);

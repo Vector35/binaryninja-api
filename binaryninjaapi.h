@@ -1561,6 +1561,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveAnalysisFunction(Function* func);
 		void CreateUserFunction(Platform* platform, uint64_t start);
 		void RemoveUserFunction(Function* func);
+		bool HasInitialAnalysis();
+		void SetAnalysisHold(bool enable);
 		void UpdateAnalysisAndWait();
 		void UpdateAnalysis();
 		void AbortAnalysis();

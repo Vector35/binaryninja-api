@@ -386,15 +386,17 @@ class AnalysisProgress(object):
 		self._total = total
 
 	def __str__(self):
+		if self._state == AnalysisState.InitialState:
+			return "Initial"
+		if self._state == AnalysisState.HoldState:
+			return "Hold"
+		if self._state == AnalysisState.IdleState:
+			return "Idle"
 		if self._state == AnalysisState.DisassembleState:
 			return "Disassembling (%d/%d)" % (self._count, self._total)
 		if self._state == AnalysisState.AnalyzeState:
 			return "Analyzing (%d/%d)" % (self._count, self._total)
-		if self._state == AnalysisState.ExtendedAnalyzeState:
-			return "Extended Analysis"
-		if self._state == AnalysisState.IdleState:
-			return "Idle"
-		return "Initial"
+		return "Extended Analysis"
 
 	def __repr__(self):
 		return "<progress: %s>" % str(self)
@@ -3115,6 +3117,24 @@ class BinaryView(object):
 			>>> bv.update_analysis_and_wait()
 		"""
 		core.BNAddAnalysisOption(self.handle, name)
+
+	def has_initial_analysis(self):
+		"""
+		``has_initial_analysis`` check for the presence of an initial analysis in this BinaryView.
+
+		:return: True if the BinaryView has a valid initial analysis, False otherwise
+		:rtype: bool
+		"""
+		return core.BNHasInitialAnalysis(self.handle)
+
+	def set_analysis_hold(self, enable):
+		"""
+		``set_analysis_hold`` control the analysis hold for this BinaryView. Enabling analysis hold defers all future
+		analysis updates, therefore causing :func:`update_analysis` or :func:`update_analysis_and_wait` to take no action.
+
+		:rtype: None
+		"""
+		core.BNSetAnalysisHold(self.handle, enable)
 
 	def update_analysis(self):
 		"""

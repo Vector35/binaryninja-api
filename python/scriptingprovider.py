@@ -30,6 +30,7 @@ import subprocess
 from pathlib import Path, PurePath
 import re
 import os
+import site
 
 # Binary Ninja components
 import binaryninja
@@ -937,13 +938,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])
 
-		args.append("install")
-		args.append("--verbose")
+		args.extend(["install", "--verbose"])
 		venv = settings.Settings().get_string("python.virtualenv")
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
-
+		else:
+			args.extend(["--target", site.getusersitepackages()])
 		args.extend(filter(len, modules.decode("utf-8").split("\n")))
 		log.log_info(f"Running pip {args}")
 		status, result = self._run_args(args)

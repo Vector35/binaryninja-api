@@ -1110,7 +1110,7 @@ class TestBuilder(Builder):
                     line %s' % (addr, match, line))
 
             for addr, line in bv.find_all_constant(bv.start, bv.end, 0x58):
-                retinfo.append('constant 0x58 is found at address 0x%lx with line' %\
+                retinfo.append('constant 0x58 is found at address 0x%lx with line %s' %\
                     (addr, line))
 
             def data_callback(addr, match):
@@ -1123,8 +1123,8 @@ class TestBuilder(Builder):
                 retinfo.append('match found at address: 0x%lx with string %s, line %s' %\
                     (addr, match, line))
 
-            bv.find_all_text(bv.start, bv.end, 'test', None, FindFlag.FindCaseSensitive, None,
-                string_callback)
+            bv.find_all_text(bv.start, bv.end, 'test', None, FindFlag.FindCaseSensitive,
+                FunctionGraphType.NormalFunctionGraph, None, string_callback)
     
             def constant_callback(addr, line):
                 retinfo.append('match found at address: 0x%lx with constant 0x58, line %s'\

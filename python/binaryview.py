@@ -5664,10 +5664,13 @@ class BinaryView(object):
 				(lambda ctxt, cur, total: True)
 
 		if match_callback:
+			# The reason we use `not match_callback(...) is False` is the user tends to happily
+			# deal with the returned data, but forget to return True at the end of the callback.
+			# Then only the first result will be returned.
 			match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p,
 				ctypes.c_ulonglong, ctypes.c_char_p,
 				ctypes.POINTER(core.BNLinearDisassemblyLine))\
-				(lambda ctxt, addr, match, line: match_callback(addr, match,\
+				(lambda ctxt, addr, match, line: not match_callback(addr, match,\
 					self._LinearDisassemblyLine_convertor(line)) is False)
 		
 			return core.BNFindAllTextWithProgress(self.handle, start, end, text,
@@ -5739,11 +5742,11 @@ class BinaryView(object):
 			results = queue.Queue()
 			match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p,\
 				ctypes.c_ulonglong, ctypes.POINTER(core.BNLinearDisassemblyLine))\
-				(lambda ctxt, addr, line: results.put(addr,\
-					self._LinearDisassemblyLine_convertor(line)) or True)
+				(lambda ctxt, addr, line: results.put((addr,\
+					self._LinearDisassemblyLine_convertor(line))) or True)
 
 			t = threading.Thread(target = lambda: core.BNFindAllConstantWithProgress(self.handle,
-				start, end, constant, graph_type, settings.handle, None, progress_func_obj, None,\
+				start, end, constant, settings.handle, graph_type, None, progress_func_obj, None,\
 				match_callback_obj))
 			
 			return self.QueueGenerator(t, results)

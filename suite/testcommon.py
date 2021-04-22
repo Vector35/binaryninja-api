@@ -1136,6 +1136,29 @@ class TestBuilder(Builder):
         self.delete_package("type_xref.bndb")
         return fixOutput(sorted(retinfo))
 
+    def test_hlil_arrays(self):
+        """HLIL array resolution failure"""
+
+        retinfo = []
+        file_name = self.unpackage_file("array_test.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            for func in bv.functions:
+                for line in func.hlil.root.lines:
+                    retinfo.append("Function: {:x} HLIL line: {}".format(func.start, str(line)))
+                for hlilins in func.hlil.instructions:
+                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->LLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.llil)))
+                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.mlil)))
+                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(sorted(list(map(str, hlilins.mlils))))))
+
+        self.delete_package("array_test.bndb")
+        return fixOutput(sorted(retinfo))
+
 class VerifyBuilder(Builder):
     """ The VerifyBuilder is for tests that verify
         Binary Ninja against expected output.

@@ -303,6 +303,8 @@ public:
 	virtual SelectionInfoForXref getSelectionForXref() override;
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual FunctionRef getCurrentFunction() override;
+	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() override;
+	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual size_t getCurrentILInstructionIndex() override;

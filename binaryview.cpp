@@ -2594,6 +2594,8 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 }
 
 
+// The caller of this function must hold a reference to the returned Ref<AnalysisCompletionEvent>.
+// Otherwise, it can be freed before the callback is triggered, leading to a crash.
 Ref<AnalysisCompletionEvent> BinaryView::AddAnalysisCompletionEvent(const function<void()>& callback)
 {
 	return new AnalysisCompletionEvent(this, callback);

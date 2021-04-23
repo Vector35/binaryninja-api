@@ -114,7 +114,8 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> m_typeLines;
 	std::vector<TypeLineIndex> m_types;
 
-	bool m_updatesRequired;
+	BinaryNinja::Ref<BinaryNinja::AnalysisCompletionEvent> m_completionEvent = nullptr;
+	std::atomic_bool m_updatesRequired;
 	QTimer* m_updateTimer;
 
 	Qt::KeyboardModifiers m_ctrl, m_command;

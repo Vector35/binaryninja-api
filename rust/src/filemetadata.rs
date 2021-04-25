@@ -112,12 +112,7 @@ impl FileMetadata {
     pub fn is_database_backed<S: BnStrCompatible>(&self, view_type: S) -> bool {
         let view_type = view_type.as_bytes_with_nul();
 
-        unsafe { 
-            BNIsBackedByDatabase(
-                self.handle, 
-                view_type.as_ref().as_ptr() as *const _
-            ) 
-        }
+        unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
     pub fn begin_undo_actions(&self) {

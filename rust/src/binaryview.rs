@@ -377,7 +377,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         sym: &Symbol,
         plat: &Platform,
         ty: T,
-    ) {
+    ) -> Result<Ref<Symbol>> {
         let raw_type = if let Some(t) = ty.into() {
             t.handle
         } else {

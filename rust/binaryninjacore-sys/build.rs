@@ -3,14 +3,14 @@ extern crate bindgen;
 use std::env;
 use std::path::PathBuf;
 
-#[cfg(any(windows, feature = "headless"))]
+#[cfg(any(not(target_os = "linux"), feature = "headless"))]
 use std::fs::File;
-#[cfg(any(windows, feature = "headless"))]
+#[cfg(any(not(target_os = "linux"), feature = "headless"))]
 use std::io::prelude::*;
-#[cfg(any(windows, feature = "headless"))]
+#[cfg(any(not(target_os = "linux"), feature = "headless"))]
 use std::io::BufReader;
 
-#[cfg(all(target_os = "macos", feature = "headless"))]
+#[cfg(target_os = "macos")]
 static LASTRUN_PATH: (&str, &str) = ("HOME", "Library/Application Support/Binary Ninja/lastrun");
 
 #[cfg(all(target_os = "linux", feature = "headless"))]
@@ -19,7 +19,7 @@ static LASTRUN_PATH: (&str, &str) = ("HOME", ".binaryninja/lastrun");
 #[cfg(windows)]
 static LASTRUN_PATH: (&str, &str) = ("APPDATA", "Binary Ninja\\lastrun");
 
-#[cfg(any(windows, feature = "headless"))]
+#[cfg(any(not(target_os = "linux"), feature = "headless"))]
 fn link_path() -> PathBuf {
     let home = PathBuf::from(env::var(LASTRUN_PATH.0).unwrap());
     let lastrun = PathBuf::from(&home).join(LASTRUN_PATH.1);
@@ -55,7 +55,7 @@ fn main() {
     let llvm_version = env::var("LLVM_VERSION");
     let llvm_install_dir = env::var("LLVM_INSTALL_DIR");
 
-    #[cfg(any(windows, feature = "headless"))]
+    #[cfg(any(not(target_os = "linux"), feature = "headless"))]
     let link_path = env::var("BINARYNINJADIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| link_path());
@@ -143,7 +143,7 @@ fn main() {
         println!("cargo:rustc-link-search={}", out_dir);
     }
 
-    #[cfg(any(windows, feature = "headless"))]
+    #[cfg(any(not(target_os = "linux"), feature = "headless"))]
     {
         println!("cargo:rustc-link-lib=binaryninjacore");
         println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());

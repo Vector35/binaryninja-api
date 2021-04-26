@@ -362,6 +362,8 @@ void AnalysisCompletionEvent::Cancel()
 {
 	unique_lock<recursive_mutex> lock(m_mutex);
 	m_callback = []() {};
+	// This allows the API side to free the BinaryNinja::AnalysisCompletionEvent object
+	BNCancelAnalysisCompletionEvent(m_object);
 }
 
 

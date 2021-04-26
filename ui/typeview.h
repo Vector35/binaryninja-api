@@ -252,6 +252,7 @@ private Q_SLOTS:
 	void setStructureSize();
 	void addUserXref();
 	void togglePackedness();
+	void changeMemberOffset();
 	void updateLineNumberAreaWidth(size_t lineCount);
 	void focusFilter();
 	void toggleCollapseType();

@@ -96,7 +96,10 @@ where
             let view_type = &*(ctxt as *mut T);
             let data = BinaryView::from_raw(data);
 
-            Ref::into_raw(view_type.load_settings_for_data(&data)).handle
+            match view_type.load_settings_for_data(&data) {
+                Ok(settings) => Ref::into_raw(settings).handle,
+                _ => ptr::null_mut() as *mut _,
+            }
         })
     }
 
@@ -138,11 +141,14 @@ where
 pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
     fn is_valid_for(&self, data: &BinaryView) -> bool;
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Ref<Settings> {
-        unsafe {
-            Ref::new(Settings::from_raw(
-                BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle),
-            ))
+    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+        let settings_handle =
+            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            unsafe { Ok(Settings::from_raw(settings_handle)) }
         }
     }
 }
@@ -181,7 +187,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
             return Err(());
         }
 
-        unsafe { Ok(Ref::new(BinaryView::from_raw(handle))) }
+        unsafe { Ok(BinaryView::from_raw(handle)) }
     }
 }
 
@@ -227,12 +233,14 @@ impl BinaryViewTypeBase for BinaryViewType {
         unsafe { BNIsBinaryViewTypeValidForData(self.0, data.handle) }
     }
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Ref<Settings> {
-        unsafe {
-            Ref::new(Settings::from_raw(BNGetBinaryViewLoadSettingsForData(
-                self.0,
-                data.handle,
-            )))
+    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+        let settings_handle =
+            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            unsafe { Ok(Settings::from_raw(settings_handle)) }
         }
     }
 }
@@ -280,7 +288,7 @@ pub struct CustomViewBuilder<'a, T: CustomBinaryViewType + ?Sized> {
 pub unsafe trait CustomBinaryView: 'static + BinaryViewBase + Sync + Sized {
     type Args: Send;
 
-    fn new(handle: BinaryView, args: &Self::Args) -> Result<Self>;
+    fn new(handle: &BinaryView, args: &Self::Args) -> Result<Self>;
     fn init(&self, args: Self::Args) -> Result<()>;
 }
 
@@ -377,7 +385,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                 let context = &mut *(ctxt as *mut CustomViewContext<V>);
                 let handle = BinaryView::from_raw(context.raw_handle);
 
-                if let Ok(v) = V::new(handle, &context.args) {
+                if let Ok(v) = V::new(handle.as_ref(), &context.args) {
                     ptr::write(&mut context.view, v);
                     context.initialized = true;
 
@@ -730,7 +738,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             (*ctxt).raw_handle = res;
 
             Ok(CustomView {
-                handle: Ref::new(BinaryView::from_raw(res)),
+                handle: BinaryView::from_raw(res),
                 _builder: PhantomData,
             })
         }

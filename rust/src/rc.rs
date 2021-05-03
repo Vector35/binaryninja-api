@@ -163,10 +163,7 @@ where
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped;
 }
 
-pub struct Array<P>
-where
-    P: CoreOwnedArrayProvider,
-{
+pub struct Array<P: CoreOwnedArrayProvider> {
     contents: *mut P::Raw,
     count: usize,
     context: P::Context,
@@ -189,8 +186,8 @@ impl<P: CoreOwnedArrayProvider> Array<P> {
     pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
         Self {
             contents: raw,
-            count: count,
-            context: context,
+            count,
+            context,
         }
     }
 

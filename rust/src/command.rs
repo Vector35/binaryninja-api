@@ -53,7 +53,9 @@ where
     {
         ffi_wrap!("Command::action", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.action(&view);
         })
@@ -65,7 +67,9 @@ where
     {
         ffi_wrap!("Command::valid", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.valid(&view)
         })
@@ -119,7 +123,9 @@ where
     {
         ffi_wrap!("AddressCommand::action", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.action(&view, addr);
         })
@@ -131,7 +137,9 @@ where
     {
         ffi_wrap!("AddressCommand::valid", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.valid(&view, addr)
         })
@@ -185,7 +193,9 @@ where
     {
         ffi_wrap!("RangeCommand::action", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.action(&view, addr..addr.wrapping_add(len));
         })
@@ -202,7 +212,9 @@ where
     {
         ffi_wrap!("RangeCommand::valid", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
 
             cmd.valid(&view, addr..addr.wrapping_add(len))
         })
@@ -256,8 +268,12 @@ where
     {
         ffi_wrap!("FunctionCommand::action", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
-            let func = Function::from_raw(func);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
+
+            debug_assert!(!func.is_null());
+            let func = Function { handle: func };
 
             cmd.action(&view, &func);
         })
@@ -273,8 +289,12 @@ where
     {
         ffi_wrap!("FunctionCommand::valid", unsafe {
             let cmd = &*(ctxt as *const C);
-            let view = BinaryView::from_raw(view);
-            let func = Function::from_raw(func);
+
+            debug_assert!(!view.is_null());
+            let view = BinaryView { handle: view };
+
+            debug_assert!(!func.is_null());
+            let func = Function { handle: func };
 
             cmd.valid(&view, &func)
         })

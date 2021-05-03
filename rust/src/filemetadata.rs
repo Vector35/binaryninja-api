@@ -31,6 +31,8 @@ use binaryninjacore_sys::{
     BNMarkFileSaved,
     BNNavigate,
     BNNewFileReference,
+    BNOpenDatabaseForConfiguration,
+    BNOpenExistingDatabase,
     BNRedo,
     BNSetFilename,
     BNUndo,
@@ -168,8 +170,47 @@ impl FileMetadata {
             if res.is_null() {
                 Err(())
             } else {
-                Ok(Ref::new(BinaryView::from_raw(res)))
+                Ok(BinaryView::from_raw(res))
             }
+        }
+    }
+
+    pub fn open_database_for_configuration<S: BnStrCompatible>(
+        &mut self,
+        filename: S,
+    ) -> Result<Ref<BinaryView>, ()> {
+        let filename = filename.as_bytes_with_nul();
+        unsafe {
+            let bv =
+                BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
+
+            if bv.is_null() {
+                Err(())
+            } else {
+                Ok(BinaryView::from_raw(bv))
+            }
+        }
+    }
+
+    pub fn open_database<S: BnStrCompatible>(
+        &mut self,
+        filename: S,
+    ) -> Result<Ref<BinaryView>, ()> {
+        let filename = filename.as_bytes_with_nul();
+        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+
+        let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
+
+        // TODO : add optional progress function
+        // let view = match progress_func {
+        //     None => BNOpenExistingDatabase(self.handle, filename_ptr),
+        //     _ => BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total)))
+        // };
+
+        if view.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { BinaryView::from_raw(view) })
         }
     }
 }
@@ -197,6 +238,4 @@ unsafe impl RefCountable for FileMetadata {
 /*
 BNCreateDatabase,
 BNCreateDatabaseWithProgress,
-BNOpenExistingDatabase,
-BNOpenExistingDatabaseWithProgress,
 */

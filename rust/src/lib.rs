@@ -17,9 +17,7 @@
 
 #[macro_use]
 extern crate log;
-pub extern crate binaryninjacore_sys; // For testing functions and stuff
-#[cfg(feature = "ui")]
-pub extern crate binaryninjaui_sys; // For testing functions and stuff
+pub extern crate binaryninjacore_sys;
 extern crate libc;
 #[cfg(feature = "rayon")]
 extern crate rayon;
@@ -61,6 +59,11 @@ pub mod settings;
 pub mod string;
 pub mod symbol;
 pub mod types;
+
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
@@ -213,6 +216,251 @@ pub mod logger {
     }
 }
 
+pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::BinaryView>, String> {
+    use crate::binaryview::BinaryViewExt;
+    use crate::custombinaryview::BinaryViewTypeExt;
+
+    let filename = filename.as_ref();
+
+    let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
+
+    let mut is_bndb = false;
+    let view = match match filename.ends_with(".bndb") {
+        true => {
+            match File::open(filename) {
+                Ok(mut file) => {
+                    let mut buf = [0; 15];
+                    match file.read_exact(&mut buf) {
+                        Ok(_) => {
+                            let sqlite_string = "SQLite format 3";
+                            if buf != sqlite_string.as_bytes() {
+                                return Err("Not a valid BNDB (invalid magic)".to_string());
+                            }
+                        }
+                        _ => return Err("Not a valid BNDB (too small)".to_string()),
+                    }
+                }
+                _ => return Err("Could not open file".to_string()),
+            }
+            is_bndb = true;
+            metadata.open_database(filename.to_str().unwrap())
+        }
+        false => binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
+    } {
+        Ok(view) => view,
+        _ => return Err("Unable to open file".to_string()),
+    };
+
+    let mut bv = None;
+    for available_view in custombinaryview::BinaryViewType::list_valid_types_for(&view).iter() {
+        // TODO : These weird comparison arguments is probably symptomatic of something we should fix (fix other instance too)
+        if bv.is_none() && **available_view.name() != *"Raw" {
+            if is_bndb {
+                bv = Some(
+                    view.metadata()
+                        .get_view_of_type(available_view.name())
+                        .unwrap(),
+                );
+            } else {
+                // TODO : add log prints
+                // println!("Opening view of type: `{}`", available_view.name());
+                bv = Some(available_view.open(&view).unwrap());
+            }
+            break;
+        }
+    }
+
+    let bv = match bv {
+        None => {
+            if is_bndb {
+                match view.metadata().get_view_of_type("Raw") {
+                    Ok(view) => view,
+                    _ => return Err("Could not get raw view from bndb".to_string()),
+                }
+            } else {
+                match custombinaryview::BinaryViewType::by_name("Raw")
+                    .unwrap()
+                    .open(&view)
+                {
+                    Ok(view) => view,
+                    _ => return Err("Could not open raw view".to_string()),
+                }
+            }
+        }
+        Some(bv) => bv,
+    };
+
+    bv.update_analysis_and_wait();
+    Ok(bv)
+}
+
+pub fn open_view_with_options<F: AsRef<Path>>(
+    filename: F,
+    update_analysis_and_wait: bool,
+    options: Option<HashMap<&str, &str>>,
+) -> Result<rc::Ref<binaryview::BinaryView>, String> {
+    //! This is incomplete, but should work in most cases:
+    //! ```
+    //! let settings = [("analysis.linearSweep.autorun", "false")]
+    //!     .iter()
+    //!     .cloned()
+    //!     .collect();
+    //!
+    //! let bv = binaryninja::open_view_with_options("/bin/cat", true, Some(settings))
+    //!     .expect("Couldn't open `/bin/cat`");
+    //! ```
+
+    use crate::binaryview::BinaryViewExt;
+    use crate::custombinaryview::{BinaryViewTypeBase, BinaryViewTypeExt};
+
+    let filename = filename.as_ref();
+
+    let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
+
+    let mut is_bndb = false;
+    let mut view = match match filename.ends_with(".bndb") {
+        true => {
+            match File::open(filename) {
+                Ok(mut file) => {
+                    let mut buf = [0; 15];
+                    match file.read_exact(&mut buf) {
+                        Ok(_) => {
+                            let sqlite_string = "SQLite format 3";
+                            if buf != sqlite_string.as_bytes() {
+                                return Err("Not a valid BNDB (invalid magic)".to_string());
+                            }
+                        }
+                        _ => return Err("Not a valid BNDB (too small)".to_string()),
+                    }
+                }
+                _ => return Err("Could not open file".to_string()),
+            }
+            is_bndb = true;
+            metadata.open_database_for_configuration(filename.to_str().unwrap())
+        }
+        false => binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
+    } {
+        Ok(view) => view,
+        _ => return Err("Unable to open file".to_string()),
+    };
+
+    let mut universal_view_type = None;
+    let mut view_type = None;
+    for available_view in custombinaryview::BinaryViewType::list_valid_types_for(&view).iter() {
+        if available_view.name().as_ref() == "Universal".as_bytes() {
+            universal_view_type = Some(available_view);
+        } else if view_type.is_none() && **available_view.name() != *"Raw" {
+            view_type = Some(available_view);
+        }
+    }
+
+    let view_type = match view_type {
+        None => custombinaryview::BinaryViewType::by_name("Mapped").unwrap(),
+        Some(view_type) => view_type,
+    };
+
+    // I have no idea why this is needed
+    let setting_id = format!("{}{}", view_type.name(), "_settings");
+    let mut default_settings = settings::Settings::new(setting_id);
+    default_settings.deserialize_schema(settings::Settings::new("").serialize_schema());
+    default_settings.set_resource_id(view_type.name());
+
+    let mut load_settings = match (is_bndb, view.load_settings(view_type.name())) {
+        (true, Ok(settings)) => Some(settings),
+        _ => None,
+    };
+
+    if load_settings.is_none() {
+        // TODO : The Python version has a "fixme" here but I have no idea why
+        if universal_view_type.is_some()
+            && options.is_some()
+            && options
+                .as_ref()
+                .unwrap()
+                .contains_key("files.universal.architecturePreference")
+        {
+            load_settings = match universal_view_type
+                .unwrap()
+                .load_settings_for_data(view.as_ref())
+            {
+                Ok(settings) => Some(settings),
+                _ => return Err("Could not load settings for universal view data".to_string()),
+            }
+
+            // TODO : finish converting this to Rust
+            // arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
+            // arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
+            // if not arch_entry:
+            //     log.log_error(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
+            //     return None
+
+            // let tmp_load_settings = settings::Settings::new(BNGetUniqueIdentifierString());
+            // tmp_load_settings.deserialize_schema(arch_entry[0]['loadSchema']);
+            // load_settings = Some(tmp_load_settings);
+        } else {
+            load_settings = match view_type.load_settings_for_data(view.as_ref()) {
+                Ok(settings) => Some(settings),
+                _ => None,
+            }
+        }
+    }
+    if load_settings.is_none() {
+        // log.log_error(f"Could not get load settings for binary view of type `{bvt.name}`")
+        return Ok(view);
+    }
+    let mut load_settings = load_settings.unwrap();
+    load_settings.set_resource_id(view_type.name());
+    view.set_load_settings(view_type.name(), load_settings.as_ref());
+
+    match options {
+        Some(options) => {
+            for (setting, value) in options {
+                if load_settings.contains(setting) {
+                    if !load_settings.set_json(setting, value, Some(view.as_ref()), None) {
+                        return Err(format!("Setting: {} set operation failed!", setting));
+                    }
+                } else if default_settings.contains(setting) {
+                    if !default_settings.set_json(setting, value, Some(view.as_ref()), None) {
+                        return Err(format!("Setting: {} set operation failed!", setting));
+                    }
+                } else {
+                    return Err(format!("Setting: {} not available!", setting));
+                }
+            }
+        }
+        None => (),
+    }
+
+    if is_bndb {
+        let view = view
+            .metadata()
+            .open_database(filename.to_str().unwrap())
+            .expect("Couldn't open database");
+        let view_type_name = view_type.name();
+        // TODO : handle the case where the view doesn't exist in the bndb
+        let bv = unsafe {
+            binaryview::BinaryView::from_raw(binaryninjacore_sys::BNGetFileViewOfType(
+                view.metadata().handle,
+                view_type_name.as_ref().as_ptr() as *mut _,
+            ))
+        };
+        if update_analysis_and_wait {
+            bv.update_analysis_and_wait();
+        }
+        Ok(bv)
+    } else {
+        match view_type.open(&view) {
+            Ok(bv) => {
+                if update_analysis_and_wait {
+                    bv.update_analysis_and_wait();
+                }
+                Ok(bv)
+            }
+            _ => Ok(view),
+        }
+    }
+}
+
 pub fn version() -> string::BnString {
     unsafe { string::BnString::from_raw(binaryninjacore_sys::BNGetVersionString()) }
 }
@@ -225,18 +473,6 @@ pub fn plugin_abi_minimum_version() -> u32 {
     binaryninjacore_sys::BN_MINIMUM_CORE_ABI_VERSION
 }
 
-// TODO : We need to get this from uitypes.h::BN_CURRENT_UI_ABI_VERSION
-pub fn plugin_ui_abi_version() -> u32 {
-    //xxxx::BN_CURRENT_UI_ABI_VERSION
-    2
-}
-
-// TODO : We need to get this from uitypes.h::BN_MINIMUM_UI_ABI_VERSION
-pub fn plugin_ui_abi_minimum_version() -> u32 {
-    //xxxx::BN_MINIMUM_UI_ABI_VERSION
-    2
-}
-
 pub fn core_abi_version() -> u32 {
     unsafe { binaryninjacore_sys::BNGetCurrentCoreABIVersion() }
 }
@@ -245,21 +481,21 @@ pub fn core_abi_minimum_version() -> u32 {
     unsafe { binaryninjacore_sys::BNGetMinimumCoreABIVersion() }
 }
 
-// TODO : We need to get this from uitypes.h::UIPluginABIVersion()
-pub fn ui_plugin_abi_version() -> u32 {
-    //unsafe { xxxx::UIPluginABIVersion() }
-    2
+pub fn plugin_ui_abi_version() -> u32 {
+    binaryninjacore_sys::BN_CURRENT_UI_ABI_VERSION
+}
+
+pub fn plugin_ui_abi_minimum_version() -> u32 {
+    binaryninjacore_sys::BN_MINIMUM_UI_ABI_VERSION
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility
-#[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginABIVersion() -> u32 {
     plugin_abi_version()
 }
 
-#[cfg(any(windows, not(feature = "headless")))]
 #[no_mangle]
 pub extern "C" fn UIPluginABIVersion() -> u32 {
     plugin_ui_abi_version()

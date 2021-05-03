@@ -130,7 +130,7 @@ impl<C: BlockContext> BasicBlock<C> {
     pub fn function(&self) -> Ref<Function> {
         unsafe {
             let func = BNGetBasicBlockFunction(self.handle);
-            Ref::new(Function::from_raw(func))
+            Function::from_raw(func)
         }
     }
 

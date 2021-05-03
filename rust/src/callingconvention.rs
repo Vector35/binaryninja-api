@@ -130,7 +130,7 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::callee_saved_registers", unsafe {
+        ffi_wrap!("CallingConvention::_callee_saved_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let regs = ctxt.cc.callee_saved_registers();
 
@@ -559,7 +559,7 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
 
 pub struct ConventionBuilder<A: Architecture> {
     caller_saved_registers: Vec<A::Register>,
-    callee_saved_registers: Vec<A::Register>,
+    _callee_saved_registers: Vec<A::Register>,
     int_arg_registers: Vec<A::Register>,
     float_arg_registers: Vec<A::Register>,
 
@@ -626,7 +626,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     pub fn new(arch: &A) -> Self {
         Self {
             caller_saved_registers: Vec::new(),
-            callee_saved_registers: Vec::new(),
+            _callee_saved_registers: Vec::new(),
             int_arg_registers: Vec::new(),
             float_arg_registers: Vec::new(),
 
@@ -649,7 +649,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     }
 
     reg_list!(caller_saved_registers);
-    reg_list!(callee_saved_registers);
+    reg_list!(_callee_saved_registers);
     reg_list!(int_arg_registers);
     reg_list!(float_arg_registers);
 

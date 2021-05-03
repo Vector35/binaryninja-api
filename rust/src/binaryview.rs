@@ -31,6 +31,7 @@ use crate::function::{Function, NativeBlock};
 use crate::platform::Platform;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
+use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
 use crate::types::{QualifiedName, Type};
 use crate::Endianness;
@@ -138,7 +139,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             return Err(());
         }
 
-        unsafe { Ok(Ref::new(BinaryView { handle })) }
+        unsafe { Ok(BinaryView::from_raw(handle)) }
     }
 
     /// Reads up to `len` bytes from address `offset`
@@ -256,7 +257,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_instruction_len<A: Architecture>(&self, arch: &A, addr: u64) -> Option<usize> {
+    fn instruction_len<A: Architecture>(&self, arch: &A, addr: u64) -> Option<usize> {
         unsafe {
             let size = BNGetInstructionLength(self.as_ref().handle, arch.as_ref().0, addr);
 
@@ -533,7 +534,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Ref::new(Function::from_raw(func)))
+            Ok(Function::from_raw(func))
         }
     }
 
@@ -565,7 +566,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Ref::new(Function::from_raw(handle)))
+            Ok(Function::from_raw(handle))
         }
     }
 
@@ -616,6 +617,34 @@ pub trait BinaryViewExt: BinaryViewBase {
             );
         }
     }
+
+    fn load_settings<S: BnStrCompatible>(&self, view_type_name: S) -> Result<Ref<Settings>> {
+        let view_type_name = view_type_name.as_bytes_with_nul();
+        let settings_handle = unsafe {
+            BNBinaryViewGetLoadSettings(
+                self.as_ref().handle,
+                view_type_name.as_ref().as_ptr() as *mut _,
+            )
+        };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { Settings::from_raw(settings_handle) })
+        }
+    }
+
+    fn set_load_settings<S: BnStrCompatible>(&mut self, view_type_name: S, settings: &Settings) {
+        let view_type_name = view_type_name.as_bytes_with_nul();
+
+        unsafe {
+            BNBinaryViewSetLoadSettings(
+                self.as_ref().handle,
+                view_type_name.as_ref().as_ptr() as *mut _,
+                settings.handle,
+            )
+        };
+    }
 }
 
 impl<T: BinaryViewBase> BinaryViewExt for T {}
@@ -626,14 +655,14 @@ pub struct BinaryView {
 }
 
 impl BinaryView {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryView) -> Self {
+    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
-        Self { handle }
+        Ref::new(Self { handle })
     }
 
     pub fn from_filename<S: BnStrCompatible>(
-        meta: &FileMetadata,
+        meta: &mut FileMetadata,
         filename: S,
     ) -> Result<Ref<Self>> {
         let file = filename.as_bytes_with_nul();

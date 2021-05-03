@@ -68,7 +68,7 @@ impl Iterator for NativeBlockIter {
             None
         } else {
             self.bv
-                .get_instruction_len(&self.arch, res)
+                .instruction_len(&self.arch, res)
                 .map(|x| {
                     self.cur += x as u64;
                     res
@@ -112,15 +112,15 @@ impl BlockContext for NativeBlock {
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Function {
-    handle: *mut BNFunction,
+    pub(crate) handle: *mut BNFunction,
 }
 
 unsafe impl Send for Function {}
 unsafe impl Sync for Function {}
 
 impl Function {
-    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Self {
-        Self { handle }
+    pub(crate) unsafe fn from_raw(handle: *mut BNFunction) -> Ref<Self> {
+        Ref::new(Self { handle })
     }
 
     pub fn arch(&self) -> CoreArchitecture {
@@ -140,7 +140,7 @@ impl Function {
     pub fn view(&self) -> Ref<BinaryView> {
         unsafe {
             let view = BNGetFunctionData(self.handle);
-            Ref::new(BinaryView::from_raw(view))
+            BinaryView::from_raw(view)
         }
     }
 
@@ -282,6 +282,6 @@ unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Function {
     type Wrapped = Guard<'a, Function>;
 
     unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
-        Guard::new(Function::from_raw(*raw), context)
+        Guard::new(Function { handle: *raw }, context)
     }
 }

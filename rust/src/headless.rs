@@ -63,9 +63,7 @@ fn binja_path() -> PathBuf {
     PathBuf::from(env::var("PROGRAMFILES").unwrap()).join("Vector35\\BinaryNinja\\")
 }
 
-use binaryninjacore_sys::{
-    BNInitCorePlugins, BNInitRepoPlugins, BNInitUserPlugins, BNSetBundledPluginDirectory,
-};
+use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDirectory};
 
 pub fn init() {
     unsafe {
@@ -73,8 +71,32 @@ pub fn init() {
         let path = CString::new(path.into_string().unwrap()).unwrap();
 
         BNSetBundledPluginDirectory(path.as_ptr());
-        BNInitCorePlugins();
-        BNInitUserPlugins();
+        BNInitPlugins(true);
         BNInitRepoPlugins();
     }
+}
+
+pub fn shutdown() {
+    //! Unloads plugins, stops all worker threads, and closes open logs
+    //! Important! : Must be called at the end of scripts
+
+    unsafe { binaryninjacore_sys::BNShutdown() };
+}
+
+pub fn script_helper(func: fn()) {
+    //! Prelued-postlued helper function:
+    //! ```
+    //! fn main() {
+    //!     binaryninja::headless::script_helper(|| {
+    //!         binaryninja::open_view("/bin/cat")
+    //!             .expect("Couldn't open `/bin/cat`")
+    //!             .iter()
+    //!             .for_each(|func| println!("  `{}`", func.symbol().full_name()));
+    //!     });
+    //! }
+    //! ```
+
+    init();
+    func();
+    shutdown();
 }

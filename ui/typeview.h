@@ -174,7 +174,8 @@ public:
 	virtual void setNavigationMode(std::string mode) override;
 	virtual std::vector<std::string> getNavigationModes() override;
 
-	uint64_t findMatchingLine(const BinaryNinja::QualifiedName& name, uint64_t offset);
+	uint64_t findMatchingLine(const BinaryNinja::QualifiedName& name, uint64_t offset,
+		uint64_t& cursorOffset);
 	bool navigateToType(const std::string& name, uint64_t offset = 0);
 
 	virtual void OnTypeDefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,

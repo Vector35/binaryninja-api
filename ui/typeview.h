@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 #include "binaryninjaapi.h"
 #include "viewframe.h"
 #include "render.h"
@@ -37,6 +38,7 @@ struct BINARYNINJAUIAPI TypeDefinitionLine
 	TypeDefinitionLineType lineType;
 	std::vector<BinaryNinja::InstructionTextToken> tokens;
 	TypeRef type, rootType;
+	std::string rootTypeName;
 	uint64_t offset;
 	size_t fieldIndex;
 };
@@ -91,6 +93,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	BinaryViewRef m_data;
 	ViewFrame* m_view;
 	TypesContainer* m_container;
+	std::unordered_set<std::string> m_collapsedTypes;
 
 	RenderContext m_render;
 	QWidget* m_lineNumberArea;
@@ -154,6 +157,8 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 
 	void checkForValidSelection();
 
+	static TypeDefinitionLine getTypeDefinitionHeaderLine(PlatformRef platform, const std::string& name, TypeRef type);
+
 public:
 	explicit TypeView(BinaryViewRef data, ViewFrame* view, TypesContainer* container);
 	virtual ~TypeView();
@@ -211,9 +216,10 @@ public:
 
 	virtual ArchitectureRef getOrAskForArchitecture();
 
+	bool isTypeCollapsed(const std::string& name) const { return m_collapsedTypes.find(name) != m_collapsedTypes.end(); }
 	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name,
 		const std::string& varName, size_t index, TypeRef type, TypeRef parent, BinaryViewRef data,
-		int paddingCols);
+		int paddingCols, bool collapsed = false);
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
@@ -244,6 +250,7 @@ private Q_SLOTS:
 	void addUserXref();
 	void updateLineNumberAreaWidth(size_t lineCount);
 	void focusFilter();
+	void toggleCollapseType();
 };
 
 

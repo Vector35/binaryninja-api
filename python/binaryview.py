@@ -3039,7 +3039,7 @@ class BinaryView(object):
 		"""
 		if plat is None:
 			plat = self.platform
-		core.BNCreateUserFunction(self.handle, plat.handle, addr)
+		return binaryninja.function.Function(self, core.BNCreateUserFunction(self.handle, plat.handle, addr))
 
 	def remove_user_function(self, func):
 		"""
@@ -5515,21 +5515,21 @@ class BinaryView(object):
 			graph_type):
 			return None
 		return result.value
-	
+
 	class QueueGenerator:
 		def __init__(self, t, results):
 			self.thread = t
 			self.results = results
 			t.start()
-		
+
 		def __iter__(self):
 			return self
-		
+
 		def __next__(self):
 			while True:
 				if not self.results.empty():
 					return self.results.get()
-				
+
 				if (not self.thread.is_alive()) and self.results.empty():
 					raise StopIteration
 
@@ -5672,7 +5672,7 @@ class BinaryView(object):
 				ctypes.POINTER(core.BNLinearDisassemblyLine))\
 				(lambda ctxt, addr, match, line: not match_callback(addr, match,\
 					self._LinearDisassemblyLine_convertor(line)) is False)
-		
+
 			return core.BNFindAllTextWithProgress(self.handle, start, end, text,
 				settings.handle, flags, graph_type, None, progress_func_obj, None, match_callback_obj)
 		else:
@@ -5689,7 +5689,7 @@ class BinaryView(object):
 
 			return self.QueueGenerator(t, results)
 
-	def find_all_constant(self, start, end, constant, settings = None, 
+	def find_all_constant(self, start, end, constant, settings = None,
 		graph_type = FunctionGraphType.NormalFunctionGraph, progress_func = None,
 		match_callback = None):
 		"""
@@ -5748,7 +5748,7 @@ class BinaryView(object):
 			t = threading.Thread(target = lambda: core.BNFindAllConstantWithProgress(self.handle,
 				start, end, constant, settings.handle, graph_type, None, progress_func_obj, None,\
 				match_callback_obj))
-			
+
 			return self.QueueGenerator(t, results)
 
 	def reanalyze(self):

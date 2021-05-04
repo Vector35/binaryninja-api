@@ -3141,7 +3141,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNAddFunctionForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNAddEntryPointForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func);
-	BINARYNINJACOREAPI void BNCreateUserFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
+	BINARYNINJACOREAPI BNFunction* BNCreateUserFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI bool BNHasInitialAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetAnalysisHold(BNBinaryView* view, bool enable);

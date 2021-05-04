@@ -85,6 +85,9 @@ public:
 	void setFunction(uint64_t f) { m_func = f; }
 	void setInFunction(bool inFunc) { m_inFunc = inFunc; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
+
+	virtual Json::Value serialize() const override;
+	virtual bool deserialize(const Json::Value& value) override;
 };
 
 class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
@@ -316,8 +319,8 @@ public:
 	virtual void setNavigationMode(std::string mode) override;
 	virtual std::vector<std::string> getNavigationModes() override;
 
-	virtual HistoryEntry* getHistoryEntry() override;
-	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	virtual void OnBinaryDataWritten(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;

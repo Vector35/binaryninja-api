@@ -46,6 +46,9 @@ public:
 	void setScale(float s) { m_scale = s; }
 	void setCurrentAddress(uint64_t a) { m_addr = a; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
+
+	virtual Json::Value serialize() const override;
+	virtual bool deserialize(const Json::Value& value) override;
 };
 
 class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View, public PreviewScrollHandler,
@@ -164,7 +167,7 @@ protected:
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
 
-	void setGraphInternal(FlowGraphRef graph, FlowGraphHistoryEntry* entry, bool useAddr, uint64_t addr,
+	void setGraphInternal(FlowGraphRef graph, BinaryNinja::Ref<FlowGraphHistoryEntry> entry, bool useAddr, uint64_t addr,
 		bool notify, bool recenterWithPreviousGraph, size_t index = BN_INVALID_EXPR);
 
 	void up(bool selecting, size_t count = 1);
@@ -200,7 +203,7 @@ public:
 	void setGraph(FlowGraphRef graph);
 	void setGraph(FlowGraphRef graph, uint64_t addr);
 	void setGraphAtIndex(FlowGraphRef graph, size_t index);
-	void setGraph(FlowGraphRef graph, FlowGraphHistoryEntry* entry);
+	void setGraph(FlowGraphRef graph, BinaryNinja::Ref<FlowGraphHistoryEntry> entry);
 	void setRelatedGraph(FlowGraphRef graph);
 	void setRelatedGraph(FlowGraphRef graph, uint64_t addr);
 	void updateToGraph(FlowGraphRef graph);
@@ -214,8 +217,8 @@ public:
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
-	bool navigateWithHistoryEntry(uint64_t addr, FlowGraphHistoryEntry* entry);
-	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, FlowGraphHistoryEntry* entry);
+	bool navigateWithHistoryEntry(uint64_t addr, BinaryNinja::Ref<FlowGraphHistoryEntry> entry);
+	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, BinaryNinja::Ref<FlowGraphHistoryEntry> entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }
 
 	virtual void clearRelatedHighlights();
@@ -238,9 +241,9 @@ public:
 
 	virtual void closing() override;
 
-	virtual HistoryEntry* getHistoryEntry() override;
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
 	void populateDefaultHistoryEntry(FlowGraphHistoryEntry* entry);
-	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	virtual FunctionRef getCurrentFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;

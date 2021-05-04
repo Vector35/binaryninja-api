@@ -74,6 +74,9 @@ public:
 	void setSelectionStartOffset(size_t offset) { m_selectionStartOffset = offset; }
 
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
+
+	virtual Json::Value serialize() const override;
+	virtual bool deserialize(const Json::Value& value) override;
 };
 
 class TypesContainer;
@@ -188,8 +191,8 @@ public:
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
 
-	virtual HistoryEntry* getHistoryEntry() override;
-	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	void lineNumberAreaPaintEvent(QPaintEvent *event);
 	int lineNumberAreaWidth();

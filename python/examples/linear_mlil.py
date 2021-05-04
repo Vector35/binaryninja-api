@@ -51,11 +51,11 @@ class LinearMLILView(TokenizedTextView):
 		# Function header
 		result = []
 		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderStartLineType,
-			self.function, None, 0, DisassemblyTextLine([], self.function.start)))
+			self.function, None, DisassemblyTextLine([], self.function.start)))
 		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderLineType,
-			self.function, None, 0, DisassemblyTextLine(self.function.type_tokens, self.function.start)))
+			self.function, None, DisassemblyTextLine(self.function.type_tokens, self.function.start)))
 		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderEndLineType,
-			self.function, None, 0, DisassemblyTextLine([], self.function.start)))
+			self.function, None, DisassemblyTextLine([], self.function.start)))
 
 		# Display IL instructions in order
 		lastAddr = self.function.start
@@ -65,19 +65,19 @@ class LinearMLILView(TokenizedTextView):
 			if lastBlock is not None:
 				# Blank line between basic blocks
 				result.append(LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType,
-					self.function, block, 0, DisassemblyTextLine([], lastAddr)))
+					self.function, block, DisassemblyTextLine([], lastAddr)))
 			for i in block:
 				lines, length = renderer.get_disassembly_text(i.instr_index)
 				lastAddr = i.address
 				lineIndex = 0
 				for line in lines:
 					result.append(LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType,
-						self.function, block, lineIndex, line))
+						self.function, block, line))
 					lineIndex += 1
 			lastBlock = block
 
 		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionEndLineType,
-			self.function, lastBlock, lineIndex, DisassemblyTextLine([], lastAddr)))
+			self.function, lastBlock, DisassemblyTextLine([], lastAddr)))
 
 		return result
 
@@ -104,17 +104,28 @@ class LinearMLILView(TokenizedTextView):
 
 	def getHistoryEntry(self):
 		class LinearMLILHistoryEntry(TokenizedTextViewHistoryEntry):
-			def __init__(self, function):
-				super(LinearMLILHistoryEntry, self).__init__()
-				self.function = function
+			def __init__(self, function_start):
+				TokenizedTextViewHistoryEntry.__init__(self)
+				self.function_start = function_start
 
-		result = LinearMLILHistoryEntry(self.function)
+			def serialize(self):
+				v = TokenizedTextViewHistoryEntry.serialize(self)
+				v["function_start"] = self.function_start
+				return v
+
+			def deserialize(self, v):
+				if not TokenizedTextViewHistoryEntry.deserialize(self, v):
+					return False
+				self.function_start = v["function_start"]
+				return True
+
+		result = LinearMLILHistoryEntry(self.function.start)
 		self.populateDefaultHistoryEntry(result)
 		return result
 
 	def navigateToHistoryEntry(self, entry):
-		if hasattr(entry, 'function'):
-			self.function = entry.function
+		if hasattr(entry, 'function_start'):
+			self.function = self.data.get_functions_at(entry.function_start)[0]
 			self.setFunction(self.function)
 			self.updateLines()
 		super(LinearMLILView, self).navigateToHistoryEntry(entry)

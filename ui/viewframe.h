@@ -14,6 +14,7 @@
 #include <stack>
 #include <utility>
 #include <vector>
+#include <functional>
 #include "binaryninjaapi.h"
 #include "filecontext.h"
 #include "viewtype.h"
@@ -68,6 +69,19 @@ public:
 
 	QString getViewType() const { return m_viewType; }
 	void setViewType(const QString& type) { m_viewType = type; }
+
+	/*!
+	    Serialize to json representation
+	    \return Json representation of history entry. In the Python api, this must be a dict.
+	 */
+	virtual Json::Value serialize() const;
+	/*!
+	    Deserialize from json representation. This method should clear any previously entered data
+	    on the HistoryEntry as if it were newly created.
+	    \param value Json representation of history entry. In the Python api, this will be a dict.
+	    \return If deserialization was successful
+	 */
+	virtual bool deserialize(const Json::Value& value);
 };
 
 
@@ -178,8 +192,8 @@ public:
 	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType);
 	virtual void displayAs(const UIActionContext& context, BNIntegerDisplayType type);
 
-	virtual HistoryEntry* getHistoryEntry();
-	virtual void navigateToHistoryEntry(HistoryEntry* entry);
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry();
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 
 	virtual StatusBarWidget* getStatusBarWidget() { return nullptr; }
 
@@ -204,6 +218,8 @@ public:
 	Menu& contextMenu() { return m_contextMenu; }
 	UIActionHandler* actionHandler() { return &m_actionHandler; }
 	QWidget* widget() { return m_actionHandler.widget(); }
+
+	QString viewType();
 
 	static void registerActions();
 };
@@ -284,7 +300,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 
 private:
 	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createDynamicWidgets = true);
-	HistoryEntry* getHistoryEntry();
+	BinaryNinja::Ref<HistoryEntry> getHistoryEntry();
 
 	FileContext* m_context;
 	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
@@ -296,7 +312,7 @@ private:
 	QVBoxLayout* m_viewLayout;
 	std::map<QString, std::map<QString, QPointer<QWidget>>> m_extViewCache;
 	std::map<QString, QWidget*> m_viewCache;
-	std::stack<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
+	std::list<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
 
@@ -310,6 +326,12 @@ protected:
 	bool gestureEvent(QGestureEvent* event);
 
 	void setView(QWidget* view);
+	/*!
+	    Load one history entry from json representation
+	    \param json Json rep of history entry
+	    \return Entry, if successful, else nullptr
+	 */
+	BinaryNinja::Ref<HistoryEntry> deserializeHistoryEntry(const Json::Value& json);
 
 public:
 	explicit ViewFrame(QWidget* parent, FileContext* file, const QString& type, bool createDynamicWidgets = false);
@@ -354,9 +376,12 @@ public:
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
 	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation,
 		bool addHistoryEntry = true);
+	bool navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 	QString getTypeForView(QWidget* view) const;
 	QString getDataTypeForView(const QString& type) const;
 	QString getDataTypeForView(QWidget* view) const;
+	QWidget* getViewWidgetForType(const QString& type);
+	View* getViewForType(const QString& type);
 
 	bool closeRequest();
 	void closing();
@@ -364,6 +389,17 @@ public:
 	void updateFonts();
 	void updateTheme();
 	void addHistoryEntry();
+	/*!
+	    Parse history entries from the raw data associated with a BinaryView, loading them into the back/forward
+	    navigation stacks, and navigating to the saved position.
+	    \param data View containing history entries
+	 */
+	void readHistoryEntries(BinaryViewRef data);
+	/*!
+	    Serialize history entries and current position, storing them in the raw data associated with a BinaryView.
+	    \param data View for saving history entries
+	 */
+	void writeHistoryEntries(BinaryViewRef data);
 	void back();
 	void forward();
 

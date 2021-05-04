@@ -39,6 +39,9 @@ struct BINARYNINJAUIAPI HighlightTokenState
 	size_t characterIndex;
 
 	HighlightTokenState();
+
+	Json::Value serialize() const;
+	bool deserialize(const Json::Value& value);
 };
 
 

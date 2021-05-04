@@ -24,6 +24,9 @@ class BINARYNINJAUIAPI DisassemblyHistoryEntry: public FlowGraphHistoryEntry
 public:
 	BNFunctionGraphType getGraphType() const { return m_graphType; }
 	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+
+	virtual Json::Value serialize() const override;
+	virtual bool deserialize(const Json::Value& value) override;
 };
 
 class DisassemblyContainer;
@@ -44,8 +47,8 @@ public:
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
 
-	virtual HistoryEntry* getHistoryEntry() override;
-	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
 

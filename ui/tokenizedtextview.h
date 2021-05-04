@@ -22,6 +22,9 @@ public:
 	void setTopLine(size_t line) { m_topLine = line; }
 	void setCursorLine(size_t line) { m_cursorLine = line; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
+
+	virtual Json::Value serialize() const override;
+	virtual bool deserialize(const Json::Value& value) override;
 };
 
 class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
@@ -118,9 +121,9 @@ public:
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual bool navigate(uint64_t pos) override;
 
-	virtual HistoryEntry* getHistoryEntry() override;
+	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
 	void populateDefaultHistoryEntry(TokenizedTextViewHistoryEntry* entry);
-	virtual void navigateToHistoryEntry(HistoryEntry* entry) override;
+	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	virtual void OnBinaryDataWritten(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;

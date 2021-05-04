@@ -1017,9 +1017,10 @@ class IndirectBranchInfo(object):
 
 
 class ParameterVariables(object):
-	def __init__(self, var_list, confidence = types.max_confidence):
+	def __init__(self, var_list, confidence = types.max_confidence, func = None):
 		self._vars = var_list
 		self._confidence = confidence
+		self._func = func
 
 	def __repr__(self):
 		return repr(self._vars)
@@ -1034,8 +1035,13 @@ class ParameterVariables(object):
 	def __getitem__(self, idx):
 		return self._vars[idx]
 
+	def __setitem__(self, idx, value):
+		self._vars[idx] = value
+		if self._func is not None:
+			self._func.parameter_vars = self
+
 	def with_confidence(self, confidence):
-		return ParameterVariables(list(self._vars), confidence = confidence)
+		return ParameterVariables(list(self._vars), confidence, self._func)
 
 	@property
 	def vars(self):
@@ -1099,7 +1105,7 @@ class ILReferenceSource(object):
 			return NotImplemented
 		return (self.function, self.arch, self.address, self.il_type, self.expr_id) ==\
 			(other.address, other.function, other.arch, other.il_type, other.expr_id)
-	
+
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -1125,7 +1131,7 @@ class ILReferenceSource(object):
 		if self.il_type > other.il_type:
 			return False
 		return self.expr_id < other.expr_id
-	
+
 	def __gt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -1205,7 +1211,7 @@ class ILReferenceSource(object):
 	def expr_id(self, value):
 		self._expr_id = value
 
-	
+
 class VariableReferenceSource(object):
 	def __init__(self, var, src):
 		self._var = var
@@ -1223,7 +1229,7 @@ class VariableReferenceSource(object):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return not (self == other)
-	
+
 	def __lt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -2052,7 +2058,7 @@ class Function(object):
 			var_list.append(Variable(self, result.vars[i].type, result.vars[i].index, result.vars[i].storage))
 		confidence = result.confidence
 		core.BNFreeParameterVariables(result)
-		return ParameterVariables(var_list, confidence = confidence)
+		return ParameterVariables(var_list, confidence, self)
 
 	@parameter_vars.setter
 	def parameter_vars(self, value):
@@ -3354,7 +3360,7 @@ class Function(object):
 		This function is related to get_hlil_var_refs(), which returns variable references collected
 		from HLIL. The two can be different in several cases, e.g., multiple variables in MLIL can be merged
 		into a single variable in HLIL.
-		
+
 		:param Variable var: Variable for which to query the xref
 		:return: List of IL References for the given variable
 		:rtype: list(ILReferenceSource)
@@ -3384,7 +3390,7 @@ class Function(object):
 				func, arch, refs[i].addr, refs[i].type, refs[i].exprId))
 		core.BNFreeILReferences(refs, count.value)
 		return result
-	
+
 	def get_mlil_var_refs_from(self, addr, length = None, arch = None):
 		"""
 		``get_mlil_var_refs_from`` returns a list of variables referenced by code in the function ``func``,
@@ -3428,7 +3434,7 @@ class Function(object):
 		``get_hlil_var_refs`` returns a list of ILReferenceSource objects (IL xrefs or cross-references)
 		that reference the given variable. The variable is a local variable that can be either on the stack,
 		in a register, or in a flag.
-		
+
 		:param Variable var: Variable for which to query the xref
 		:return: List of IL References for the given variable
 		:rtype: list(ILReferenceSource)
@@ -3457,7 +3463,7 @@ class Function(object):
 				func, arch, refs[i].addr, refs[i].type, refs[i].exprId))
 		core.BNFreeILReferences(refs, count.value)
 		return result
-	
+
 	def get_hlil_var_refs_from(self, addr, length = None, arch = None):
 		"""
 		``get_hlil_var_refs_from`` returns a list of variables referenced by code in the function ``func``,

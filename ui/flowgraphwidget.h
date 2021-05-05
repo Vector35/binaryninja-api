@@ -161,7 +161,7 @@ protected:
 
 	HighlightTokenState getTokenForMouseEvent(QMouseEvent* event);
 
-	void showContextMenu();
+	virtual void contextMenuEvent(QContextMenuEvent*) override;
 	void bindActions();
 
 	void navigateToAddress(uint64_t addr);

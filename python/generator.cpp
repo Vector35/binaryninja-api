@@ -344,7 +344,8 @@ int main(int argc, char* argv[])
 		{
 			if ((arg.type->GetClass() == PointerTypeClass) &&
 				(arg.type->GetChildType()->GetWidth() == 1) &&
-				(arg.type->GetChildType()->IsSigned()))
+				(arg.type->GetChildType()->IsSigned()) &&
+				(!arg.type->GetChildType()->IsBool()))
 				{
 					stringArgument = true;
 					break;

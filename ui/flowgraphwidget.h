@@ -324,6 +324,7 @@ private Q_SLOTS:
 	void createFunc();
 	void changeType();
 	void inferStructureType();
+	void autoCreateMembers();
 	void comment();
 	void addUserXref();
 	void functionComment();

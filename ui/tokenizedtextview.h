@@ -97,6 +97,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	void makeString();
 	void changeType();
 	void inferStructureType();
+	void autoCreateMembers();
 	size_t getStringLength(uint64_t startAddr);
 
 	void setInstructionHighlight(BNHighlightColor color);

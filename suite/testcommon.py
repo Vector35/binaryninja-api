@@ -1136,6 +1136,45 @@ class TestBuilder(Builder):
         self.delete_package("type_xref.bndb")
         return fixOutput(sorted(retinfo))
 
+    def test_auto_create_struct(self):
+        """Automatically create a structure"""
+        retinfo = []
+        file_name = self.unpackage_file("auto_create_members.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            test_types = ['struct_1', 'struct_2', 'struct_3']
+            for test_type in test_types:
+                offsets = bv.get_all_fields_referenced(test_type)
+                for offset in offsets:
+                    retinfo.append('type %s, offset 0x%x is referenced' %
+                        (test_type, offset))
+
+                refs = bv.get_all_sizes_referenced(test_type)
+                for offset in refs:
+                    sizes = refs[offset]
+                    for size in sizes:
+                        retinfo.append('type %s, offset 0x%x is referenced of size 0x%x'\
+                            % (test_type, offset, size))
+
+                refs = bv.get_all_types_referenced(test_type)
+                for offset in refs:
+                    types = refs[offset]
+                    for refType in types:
+                        retinfo.append('type %s, offset 0x%x is referenced of type %s'\
+                            % (test_type, offset, refType))
+
+                struct = bv.create_structure_from_offset_access(test_type)
+                for member in struct.members:
+                    retinfo.append('type %s, member: %s' % (test_type, member))
+
+        self.delete_package("auto_create_members.bndb")
+        return fixOutput(sorted(retinfo))
+
     def test_hlil_arrays(self):
         """HLIL array resolution failure"""
 

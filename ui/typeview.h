@@ -251,6 +251,7 @@ private Q_SLOTS:
 	void createUnion();
 	void setStructureSize();
 	void addUserXref();
+	void autoCreateMembers();
 	void updateLineNumberAreaWidth(size_t lineCount);
 	void focusFilter();
 	void toggleCollapseType();

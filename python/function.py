@@ -2364,7 +2364,7 @@ class Function(object):
 		name = types.QualifiedName(name)._get_core_struct()
 		core.BNRemoveUserTypeReference(self.handle, from_arch.handle, from_addr, name)
 
-	def add_user_type_field_ref(self, from_addr, name, offset, from_arch=None):
+	def add_user_type_field_ref(self, from_addr, name, offset, from_arch = None, size = 0):
 		"""
 		``add_user_type_field_ref`` places a user-defined type field cross-reference from the
 		instruction at the given address and architecture to the specified type. If the specified
@@ -2375,10 +2375,11 @@ class Function(object):
 		:param QualifiedName name: name of the referenced type
 		:param int offset: offset of the field, relative to the type
 		:param Architecture from_arch: (optional) architecture of the source instruction
+		:param int size: (optional) the size of the access
 		:rtype: None
 		:Example:
 
-			>>> current_function.add_user_type_field_ref(here, 'A'. 0x8)
+			>>> current_function.add_user_type_field_ref(here, 'A', 0x8)
 
 		"""
 
@@ -2386,9 +2387,10 @@ class Function(object):
 			from_arch = self.arch
 
 		name = types.QualifiedName(name)._get_core_struct()
-		core.BNAddUserTypeFieldReference(self.handle, from_arch.handle, from_addr, name, offset)
+		core.BNAddUserTypeFieldReference(self.handle, from_arch.handle, from_addr, name,\
+			offset, size)
 
-	def remove_user_type_field_ref(self, from_addr, name, offset, from_arch=None):
+	def remove_user_type_field_ref(self, from_addr, name, offset, from_arch = None, size = 0):
 		"""
 		``remove_user_type_field_ref`` removes a user-defined type field cross-reference.
 		If the given address is not contained within this function, or if there is no
@@ -2398,6 +2400,7 @@ class Function(object):
 		:param QualifiedName name: name of the referenced type
 		:param int offset: offset of the field, relative to the type
 		:param Architecture from_arch: (optional) architecture of the source instruction
+		:param int size: (optional) the size of the access
 		:rtype: None
 		:Example:
 
@@ -2409,7 +2412,8 @@ class Function(object):
 			from_arch = self.arch
 
 		name = types.QualifiedName(name)._get_core_struct()
-		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, name, offset)
+		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, name,\
+			offset, size)
 
 	def get_low_level_il_at(self, addr, arch=None):
 		"""

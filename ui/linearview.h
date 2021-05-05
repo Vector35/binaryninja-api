@@ -271,6 +271,7 @@ private Q_SLOTS:
 	void createArray();
 	void createStruct();
 	void createNewTypes();
+	void autoCreateMembers();
 
 	size_t getStringLength(uint64_t startAddr);
 

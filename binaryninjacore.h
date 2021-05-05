@@ -1730,6 +1730,14 @@ extern "C"
 		uint64_t addr;
 	};
 
+	struct BNTypeFieldReference
+	{
+		BNFunction* func;
+		BNArchitecture* arch;
+		uint64_t addr;
+		size_t size;
+	};
+
 	struct BNILReferenceSource
 	{
 		BNFunction* func;
@@ -1737,6 +1745,20 @@ extern "C"
 		uint64_t addr;
 		BNFunctionGraphType type;
 		size_t exprId;
+	};
+
+	struct BNTypeFieldReferenceSizeInfo
+	{
+		uint64_t offset;
+		size_t* sizes;
+		size_t count;
+	};
+
+	struct BNTypeFieldReferenceTypeInfo
+	{
+		uint64_t offset;
+		BNTypeWithConfidence* types;
+		size_t count;
 	};
 
 	struct BNVariableReferenceSource
@@ -3192,10 +3214,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI void BNAddUserTypeReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNRemoveUserTypeReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr, BNQualifiedName* name);
-	BINARYNINJACOREAPI void BNAddUserTypeFieldReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr,
-		BNQualifiedName* name, uint64_t offset);
-	BINARYNINJACOREAPI void BNRemoveUserTypeFieldReference(BNFunction* func, BNArchitecture* fromArch, uint64_t fromAddr,
-		BNQualifiedName* name, uint64_t offset);
+	BINARYNINJACOREAPI void BNAddUserTypeFieldReference(BNFunction* func,
+		BNArchitecture* fromArch, uint64_t fromAddr, BNQualifiedName* name, uint64_t offset,
+		size_t size);
+	BINARYNINJACOREAPI void BNRemoveUserTypeFieldReference(BNFunction* func,
+		BNArchitecture* fromArch, uint64_t fromAddr, BNQualifiedName* name, uint64_t offset,
+		size_t size);
 
 	BINARYNINJACOREAPI BNBasicBlock* BNNewBasicBlockReference(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
@@ -3384,6 +3408,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNReferenceSource* BNGetCodeReferencesInRange(BNBinaryView* view, uint64_t addr,
 	                                                                 uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeCodeReferences(BNReferenceSource* refs, size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeFieldReferences(BNTypeFieldReference* refs, size_t count);
 	BINARYNINJACOREAPI void BNFreeILReferences(BNILReferenceSource* refs, size_t count);
 	BINARYNINJACOREAPI uint64_t* BNGetCodeReferencesFrom(BNBinaryView* view, BNReferenceSource* src, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetCodeReferencesFromInRange(BNBinaryView* view, BNReferenceSource* src, uint64_t len, size_t* count);
@@ -3397,6 +3422,13 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeDataReferences(uint64_t* refs);
 
 	BINARYNINJACOREAPI void BNFreeTypeReferences(BNTypeReferenceSource* refs, size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeFieldReferenceSizeInfo(
+		BNTypeFieldReferenceSizeInfo* refs,	size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeFieldReferenceTypeInfo(
+		BNTypeFieldReferenceTypeInfo* refs,	size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeFieldReferenceSizes(size_t* refs, size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeFieldReferenceTypes(BNTypeWithConfidence* refs,
+		size_t count);
 
 	// References to type
 	BINARYNINJACOREAPI BNReferenceSource* BNGetCodeReferencesForType(BNBinaryView* view, BNQualifiedName* type, size_t* count);
@@ -3404,7 +3436,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetTypeReferencesForType(BNBinaryView* view, BNQualifiedName* type, size_t* count);
 
 	// References to type field
-	BINARYNINJACOREAPI BNReferenceSource* BNGetCodeReferencesForTypeField(BNBinaryView* view,
+	BINARYNINJACOREAPI BNTypeFieldReference* BNGetCodeReferencesForTypeField(BNBinaryView* view,
 		BNQualifiedName* type, uint64_t offset, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesForTypeField(BNBinaryView* view,
 		BNQualifiedName* type, uint64_t offset, size_t* count);
@@ -3416,8 +3448,16 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetCodeReferencesForTypeFieldsFrom(BNBinaryView* view, BNReferenceSource* addr, size_t* count);
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetCodeReferencesForTypeFieldsFromInRange(BNBinaryView* view, BNReferenceSource* addr, uint64_t len, size_t* count);
 
-	BINARYNINJACOREAPI uint64_t* BNGetAllFieldsReferencedByCode(BNBinaryView* view,
+	BINARYNINJACOREAPI uint64_t* BNGetAllFieldsReferenced(BNBinaryView* view,
 		BNQualifiedName* type, size_t* count);
+	BINARYNINJACOREAPI BNTypeFieldReferenceSizeInfo* BNGetAllSizesReferenced(
+		BNBinaryView* view, BNQualifiedName* type, size_t* count);
+	BINARYNINJACOREAPI BNTypeFieldReferenceTypeInfo* BNGetAllTypesReferenced(
+		BNBinaryView* view, BNQualifiedName* type, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetSizesReferenced(
+		BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
+	BINARYNINJACOREAPI BNTypeWithConfidence* BNGetTypesReferenced(
+		BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);
 
@@ -4491,11 +4531,12 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNStructureType BNGetStructureBuilderType(BNStructureBuilder* s);
 
 	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, const BNTypeWithConfidence* const type, const char* name);
-	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s, const BNTypeWithConfidence* const type,
-		const char* name, uint64_t offset);
+	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s,
+		const BNTypeWithConfidence* const type,	const char* name, uint64_t offset,
+		bool overwriteExisting);
 	BINARYNINJACOREAPI void BNRemoveStructureBuilderMember(BNStructureBuilder* s, size_t idx);
-	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx, const BNTypeWithConfidence* const type,
-		const char* name);
+	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx,
+		const BNTypeWithConfidence* const type,	const char* name, bool overwriteExisting);
 
 	BINARYNINJACOREAPI BNEnumerationBuilder* BNCreateEnumerationBuilder(void);
 	BINARYNINJACOREAPI BNEnumerationBuilder* BNCreateEnumerationBuilderFromEnumeration(BNEnumeration* e);
@@ -4514,6 +4555,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNAddEnumerationBuilderMemberWithValue(BNEnumerationBuilder* e, const char* name, uint64_t value);
 	BINARYNINJACOREAPI void BNRemoveEnumerationBuilderMember(BNEnumerationBuilder* e, size_t idx);
 	BINARYNINJACOREAPI void BNReplaceEnumerationBuilderMember(BNEnumerationBuilder* e, size_t idx, const char* name, uint64_t value);
+
+	BINARYNINJACOREAPI BNStructure* BNCreateStructureFromOffsetAccess(BNBinaryView* view,
+		BNQualifiedName* name, bool* newMember);
+	BINARYNINJACOREAPI BNTypeWithConfidence BNCreateStructureMemberFromAccess(
+		BNBinaryView* view, BNQualifiedName* name, uint64_t offset);
 
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,

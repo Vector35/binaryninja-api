@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include <inttypes.h>
 
 using namespace BinaryNinja;
 using namespace std;
@@ -1000,6 +1001,33 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 }
 
 
+string Type::GetSizeSuffix(size_t size)
+{
+	char sizeStr[32];
+
+	switch (size)
+	{
+	case 0:
+		return "";
+	case 1:
+		return ".b";
+	case 2:
+		return ".w";
+	case 4:
+		return ".d";
+	case 8:
+		return ".q";
+	case 10:
+		return ".t";
+	case 16:
+		return ".o";
+	default:
+		sprintf(sizeStr, ".%" PRIuPTR, size);
+		return sizeStr;
+	}
+}
+
+
 TypeBuilder::TypeBuilder()
 {
 	m_object = BNCreateVoidTypeBuilder();
@@ -1919,12 +1947,13 @@ StructureBuilder& StructureBuilder::AddMember(const Confidence<Ref<Type>>& type,
 }
 
 
-StructureBuilder& StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type, const string& name, uint64_t offset)
+StructureBuilder& StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type,
+	const string& name, uint64_t offset, bool overwriteExisting)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset);
+	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset, overwriteExisting);
 	return *this;
 }
 
@@ -1936,12 +1965,12 @@ StructureBuilder& StructureBuilder::RemoveMember(size_t idx)
 }
 
 
-StructureBuilder& StructureBuilder::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name)
+StructureBuilder& StructureBuilder::ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNReplaceStructureBuilderMember(m_object, idx, &tc, name.c_str());
+	BNReplaceStructureBuilderMember(m_object, idx, &tc, name.c_str(), overwriteExisting);
 	return *this;
 }
 

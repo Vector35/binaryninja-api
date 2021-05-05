@@ -1163,6 +1163,14 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t addr;
 	};
 
+	struct TypeFieldReference
+	{
+		Ref<Function> func;
+		Ref<Architecture> arch;
+		uint64_t addr;
+		size_t size;
+	};
+
 	struct ILReferenceSource
 	{
 		Ref<Function> func;
@@ -1400,6 +1408,8 @@ __attribute__ ((format (printf, 1, 2)))
 	struct QualifiedNameAndType;
 	struct PossibleValueSet;
 	class Metadata;
+	class Structure;
+
 	class QueryMetadataException: public std::exception
 	{
 		const std::string m_error;
@@ -1609,7 +1619,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TypeReferenceSource> GetTypeReferencesForType(const QualifiedName& type);
 
 		// References to type field
-		std::vector<ReferenceSource> GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+		std::vector<TypeFieldReference> GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
 		std::vector<uint64_t> GetDataReferencesForTypeField(const QualifiedName& type, uint64_t offset);
 		std::vector<TypeReferenceSource> GetTypeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
 
@@ -1618,7 +1628,17 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src);
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len);
 
-		std::vector<uint64_t> GetAllFieldsReferencedByCode(const QualifiedName& type);
+		std::vector<uint64_t> GetAllFieldsReferenced(const QualifiedName& type);
+		std::map<uint64_t, std::vector<size_t>> GetAllSizesReferenced(
+			const QualifiedName& type);
+		std::map<uint64_t, std::vector<Confidence<Ref<Type>>>>
+			GetAllTypesReferenced(const QualifiedName& type);
+		std::vector<size_t> GetSizesReferenced(const QualifiedName& type,
+			uint64_t offset);
+		std::vector<Confidence<Ref<Type>>> GetTypesReferenced(
+			const QualifiedName& type, uint64_t offset);
+
+		Ref<Structure> CreateStructureBasedOnFieldAccesses(const QualifiedName& type);
 
 		std::vector<uint64_t> GetCallees(ReferenceSource addr);
 		std::vector<ReferenceSource> GetCallers(uint64_t addr);
@@ -1828,6 +1848,11 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool ParseExpression(Ref<BinaryView> view, const std::string& expression, uint64_t &offset, uint64_t here, std::string& errorString);
 		bool HasSymbols() const;
 		bool HasDataVariables() const;
+
+		Ref<Structure> CreateStructureFromOffsetAccess(const QualifiedName& type,
+			bool* newMemberAdded) const;
+		Confidence<Ref<Type>> CreateStructureMemberFromAccess(const QualifiedName& name,
+			uint64_t offset) const;
 	};
 
 
@@ -2668,6 +2693,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 			std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+
+		static std::string GetSizeSuffix(size_t size);
 	};
 
 	class TypeBuilder
@@ -2854,9 +2881,10 @@ __attribute__ ((format (printf, 1, 2)))
 		StructureBuilder& SetStructureType(BNStructureType type);
 		BNStructureType GetStructureType() const;
 		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
-		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset);
+		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type,
+			const std::string& name, uint64_t offset, bool overwriteExisting = true);
 		StructureBuilder& RemoveMember(size_t idx);
-		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name);
+		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
 	};
 
 	struct EnumerationMember
@@ -3106,8 +3134,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 		void AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
 		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
-		void AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset);
-		void RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset);
+		void AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
+			const QualifiedName& name, uint64_t offset, size_t size = 0);
+		void RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
+			const QualifiedName& name, uint64_t offset, size_t size = 0);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;

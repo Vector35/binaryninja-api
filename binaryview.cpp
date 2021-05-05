@@ -1917,25 +1917,26 @@ vector<TypeReferenceSource> BinaryView::GetTypeReferencesForType(const Qualified
 }
 
 
-vector<ReferenceSource> BinaryView::GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset)
+vector<TypeFieldReference> BinaryView::GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset)
 {
 	size_t count;
 	BNQualifiedName nameObj = type.GetAPIObject();
-	BNReferenceSource* refs = BNGetCodeReferencesForTypeField(m_object, &nameObj, offset, &count);
+	BNTypeFieldReference* refs = BNGetCodeReferencesForTypeField(m_object, &nameObj, offset, &count);
 	QualifiedName::FreeAPIObject(&nameObj);
 
-	vector<ReferenceSource> result;
+	vector<TypeFieldReference> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
-		ReferenceSource src;
+		TypeFieldReference src;
 		src.func = new Function(BNNewFunctionReference(refs[i].func));
 		src.arch = new CoreArchitecture(refs[i].arch);
 		src.addr = refs[i].addr;
+		src.size = refs[i].size;
 		result.push_back(src);
 	}
 
-	BNFreeCodeReferences(refs, count);
+	BNFreeTypeFieldReferences(refs, count);
 	return result;
 }
 
@@ -2063,16 +2064,103 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(Refere
 }
 
 
-vector<uint64_t> BinaryView::GetAllFieldsReferencedByCode(const QualifiedName& type)
+vector<uint64_t> BinaryView::GetAllFieldsReferenced(const QualifiedName& type)
 {
 	size_t count;
 	BNQualifiedName nameObj = type.GetAPIObject();
-	uint64_t* fields = BNGetAllFieldsReferencedByCode(m_object, &nameObj, &count);
+	uint64_t* fields = BNGetAllFieldsReferenced(m_object, &nameObj, &count);
 
 	vector<uint64_t> result(fields, &fields[count]);
 	// Data refs and the fields above are both an array of uint64_t, so they can be freed in
 	// the same way
 	BNFreeDataReferences(fields);
+	return result;
+}
+
+
+std::map<uint64_t, std::vector<size_t>> BinaryView::GetAllSizesReferenced(
+	const QualifiedName& type)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	BNTypeFieldReferenceSizeInfo* fields = BNGetAllSizesReferenced(m_object,
+		&nameObj, &count);
+
+	std::map<uint64_t, std::vector<size_t>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& sizes = result[fields[i].offset];
+		for (size_t j = 0; j < fields[i].count; j++)
+		{
+			sizes.push_back(fields[i].sizes[j]);
+		}
+	}
+
+	BNFreeTypeFieldReferenceSizeInfo(fields, count);
+	return result;
+}
+
+
+std::map<uint64_t, std::vector<Confidence<Ref<Type>>>>
+	BinaryView::GetAllTypesReferenced(const QualifiedName& type)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	BNTypeFieldReferenceTypeInfo* fields = BNGetAllTypesReferenced(m_object,
+		&nameObj, &count);
+
+	std::map<uint64_t, std::vector<Confidence<Ref<Type>>>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& types = result[fields[i].offset];
+		for (size_t j = 0; j < fields[i].count; j++)
+		{
+			BNTypeWithConfidence tc = fields[i].types[j];
+			Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+			types.push_back(Confidence<Ref<Type>>(type, tc.confidence));
+		}
+	}
+
+	BNFreeTypeFieldReferenceTypeInfo(fields, count);
+	return result;
+}
+
+
+std::vector<size_t> BinaryView::GetSizesReferenced(const QualifiedName& type,
+	uint64_t offset)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	size_t* refs = BNGetSizesReferenced(m_object, &nameObj, offset, &count);
+
+	std::vector<size_t> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result[i] = refs[i];
+
+	BNFreeTypeFieldReferenceSizes(refs, count);
+	return result;
+}
+
+
+std::vector<Confidence<Ref<Type>>> BinaryView::GetTypesReferenced(
+	const QualifiedName& type, uint64_t offset)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	BNTypeWithConfidence* types = BNGetTypesReferenced(m_object, &nameObj, offset,
+		&count);
+
+	std::vector<Confidence<Ref<Type>>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		BNTypeWithConfidence tc = types[i];
+		Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+		result.push_back(Confidence<Ref<Type>>(type, tc.confidence));
+	}
+
+	BNFreeTypeFieldReferenceTypes(types, count);
 	return result;
 }
 
@@ -3462,6 +3550,29 @@ bool BinaryView::ParseExpression(Ref<BinaryView> view, const string& expression,
 		return false;
 	}
 	return true;
+}
+
+
+Ref<Structure> BinaryView::CreateStructureFromOffsetAccess(const QualifiedName& type,
+	bool* newMemberAdded) const
+{
+	BNQualifiedName typeObj = type.GetAPIObject();
+	BNStructure* result = BNCreateStructureFromOffsetAccess(m_object, &typeObj,
+		newMemberAdded);
+	return new Structure(result);
+}
+
+
+Confidence<Ref<Type>> BinaryView::CreateStructureMemberFromAccess(
+	const QualifiedName& name, uint64_t offset) const
+{
+	BNQualifiedName typeObj = name.GetAPIObject();
+	BNTypeWithConfidence type = BNCreateStructureMemberFromAccess(m_object, &typeObj,
+		offset);
+
+	if (type.type)
+		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
+	return nullptr;
 }
 
 

@@ -303,17 +303,20 @@ void Function::RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr
 }
 
 
-void Function::AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset)
+void Function::AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset);
+	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset,
+		size);
 }
 
 
-void Function::RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset)
+void Function::RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
+	const QualifiedName& name, uint64_t offset, size_t size)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset);
+	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj,
+		offset, size);
 }
 
 

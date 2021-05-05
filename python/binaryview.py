@@ -3505,12 +3505,12 @@ class BinaryView(object):
 
 	def get_code_refs_for_type_field(self, name, offset):
 		"""
-		``get_code_refs_for_type`` returns a list of ReferenceSource objects (xrefs or cross-references) that reference the provided type field.
+		``get_code_refs_for_type`` returns a list of TypeFieldReference objects (xrefs or cross-references) that reference the provided type field.
 
 		:param QualifiedName name: name of type to query for references
 		:param int offset: offset of the field, relative to the type
 		:return: List of References for the given type
-		:rtype: list(ReferenceSource)
+		:rtype: list(TypeFieldReference)
 		:Example:
 
 			>>> bv.get_code_refs_for_type_field('A', 0x8)
@@ -3533,8 +3533,9 @@ class BinaryView(object):
 			else:
 				arch = None
 			addr = refs[i].addr
-			result.append(binaryninja.architecture.ReferenceSource(func, arch, addr))
-		core.BNFreeCodeReferences(refs, count.value)
+			size = refs[i].size
+			result.append(binaryninja.architecture.TypeFieldReference(func, arch, addr, size))
+		core.BNFreeTypeFieldReferences(refs, count.value)
 		return result
 
 
@@ -3730,9 +3731,9 @@ class BinaryView(object):
 		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
 
 
-	def get_all_type_fields_referenced_by_code(self, name):
+	def get_all_fields_referenced(self, name):
 		"""
-		``get_all_type_fields_referenced_by_code`` returns a list of offsets in the QualifiedName
+		``get_all_fields_referenced`` returns a list of offsets in the QualifiedName
 		specified by name, which are referenced by code.
 
 		:param QualifiedName name: name of type to query for references
@@ -3740,14 +3741,14 @@ class BinaryView(object):
 		:rtype: list(integer)
 		:Example:
 
-			>>> bv.get_all_type_fields_referenced_by_code('A')
-			['<type D, offset 0x8, direct>', '<type C, offset 0x10, indirect>']
+			>>> bv.get_all_fields_referenced('A')
+			[0, 8, 16, 24, 32, 40]
 			>>>
 
 		"""
 		count = ctypes.c_ulonglong(0)
 		name = types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetAllFieldsReferencedByCode(self.handle, name, count)
+		refs = core.BNGetAllFieldsReferenced(self.handle, name, count)
 
 		result = []
 		for i in range(0, count.value):
@@ -3755,6 +3756,136 @@ class BinaryView(object):
 
 		core.BNFreeDataReferences(refs, count.value)
 		return result
+
+	def get_all_sizes_referenced(self, name):
+		"""
+		``get_all_sizes_referenced`` returns a map from field offset to a list of sizes of
+		the accesses to it.
+
+		:param QualifiedName name: name of type to query for references
+		:return: A map from field offset to the	size of the code accesses to it
+		:rtype: map
+		:Example:
+
+			>>> bv.get_all_sizes_referenced('B')
+			{0: [1, 8], 8: [8], 16: [1, 8]}
+			>>>
+
+		"""
+		count = ctypes.c_ulonglong(0)
+		name = types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllSizesReferenced(self.handle, name, count)
+
+		result = {}
+		for i in range(0, count.value):
+			result[refs[i].offset] = []
+			for j in range(0, refs[i].count):
+				result[refs[i].offset].append(refs[i].sizes[j])
+
+		core.BNFreeTypeFieldReferenceSizeInfo(refs, count.value)
+		return result
+
+	def get_all_types_referenced(self, name):
+		"""
+		``get_all_types_referenced`` returns a map from field offset to a related to the
+		type field access.
+
+		:param QualifiedName name: name of type to query for references
+		:return: A map from field offset to a list of incoming types written to it
+		:rtype: map
+		:Example:
+
+			>>> bv.get_all_types_referenced('B')
+			{0: [<type: char, 0% confidence>], 8: [<type: int64_t, 0% confidence>],
+			16: [<type: char, 0% confidence>, <type: bool>]}
+			>>>
+
+		"""
+		count = ctypes.c_ulonglong(0)
+		name = types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllTypesReferenced(self.handle, name, count)
+
+		result = {}
+		for i in range(0, count.value):
+			result[refs[i].offset] = []
+			for j in range(0, refs[i].count):
+				typeObj = types.Type(core.BNNewTypeReference(refs[i].types[j].type),\
+					confidence = refs[i].types[j].confidence)
+				result[refs[i].offset].append(typeObj)
+
+		core.BNFreeTypeFieldReferenceTypeInfo(refs, count.value)
+		return result
+
+	def get_sizes_referenced(self, name, offset):
+		"""
+		``get_sizes_referenced`` returns a list of sizes of the accesses to it.
+
+		:param QualifiedName name: name of type to query for references
+		:param int offset: offset of the field
+		:return: a list of sizes of the accesses to it.
+		:rtype: list
+		:Example:
+
+			>>> bv.get_sizes_referenced('B', 16)
+			[1, 8]
+			>>>
+
+		"""
+		count = ctypes.c_ulonglong(0)
+		name = types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetSizesReferenced(self.handle, name, offset, count)
+
+		result = []
+		for i in range(0, count.value):
+			result.append(refs[i])
+
+		core.BNFreeTypeFieldReferenceSizes(refs, count.value)
+		return result
+
+	def get_types_referenced(self, name, offset):
+		"""
+		``get_types_referenced`` returns a list of types related to the type field access.
+
+		:param QualifiedName name: name of type to query for references
+		:param int offset: offset of the field
+		:return: a list of types related to the type field access.
+		:rtype: list
+		:Example:
+
+			>>> bv.get_types_referenced('B', 0x10)
+			[<type: bool>, <type: char, 0% confidence>]
+			>>>
+		"""
+		count = ctypes.c_ulonglong(0)
+		name = types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetTypesReferenced(self.handle, name, offset, count)
+
+		result = []
+		for i in range(0, count.value):
+			typeObj = types.Type(core.BNNewTypeReference(refs[i].type),\
+				confidence = refs[i].confidence)
+			result.append(typeObj)
+
+		core.BNFreeTypeFieldReferenceTypes(refs, count.value)
+		return result
+
+	def create_structure_from_offset_access(self, name):
+		newMemberAdded = ctypes.c_bool(False)
+		name = types.QualifiedName(name)._get_core_struct()
+		struct = core.BNCreateStructureFromOffsetAccess(self.handle, name, newMemberAdded)
+		if struct is None:
+			return None
+		return types.Structure(struct)
+
+	@classmethod
+	def create_structure_member_from_access(self, name, offset):
+		name = types.QualifiedName(name)._get_core_struct()
+		result = core.BNCreateStructureMemberFromAccess(self.handle, name, offset)
+		if not result.type:
+			return None
+
+		return types.Type(core.BNNewTypeReference(result.type),\
+			confidence = result.confidence)
 
 	def get_callers(self, addr):
 		"""

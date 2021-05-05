@@ -2808,3 +2808,107 @@ class ReferenceSource(object):
 	@address.setter
 	def address(self, value):
 		self._address = value
+
+
+class TypeFieldReference(object):
+	def __init__(self, func, arch, addr, size):
+		self._function = func
+		self._arch = arch
+		self._address = addr
+		self._size = size
+
+	def __repr__(self):
+		if self._arch:
+			return "<ref: %s@%#x, size: %#x>" % (self._arch.name, self._address, self._size)
+		else:
+			return "<ref: %#x, size: %#x>" % (self._address, self._size)
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self.function, self.arch, self.address, self._size) ==\
+			(other.address, other.function, other.arch, other.size)
+
+	def __ne__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return not (self == other)
+
+	def __lt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		if self.address < other.address:
+			return True
+		elif self.address > other.address:
+			return False
+		else:
+			return self.size < other.size
+
+	def __gt__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		if self.address > other.address:
+			return True
+		elif self.address < other.address:
+			return False
+		else:
+			return self.size > other.size
+
+	def __ge__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		if self.address > other.address:
+			return True
+		elif self.address < other.address:
+			return False
+		else:
+			return self.size >= other.size
+
+	def __le__(self, other):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		if self.address < other.address:
+			return True
+		elif self.address > other.address:
+			return False
+		else:
+			return self.size <= other.size
+
+	def __hash__(self):
+		return hash((self._function, self._arch, self._address, self._size))
+
+	@property
+	def function(self):
+		""" """
+		return self._function
+
+	@function.setter
+	def function(self, value):
+		self._function = value
+
+	@property
+	def arch(self):
+		""" """
+		return self._arch
+
+	@arch.setter
+	def arch(self, value):
+		self._arch = value
+
+	@property
+	def address(self):
+		""" """
+		return self._address
+
+	@address.setter
+	def address(self, value):
+		self._address = value
+
+	@property
+	def size(self):
+		""" """
+		return self._size
+
+	@size.setter
+	def address(self, value):
+		self._size = value

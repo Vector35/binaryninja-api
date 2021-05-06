@@ -3856,7 +3856,7 @@ class BinaryView(object):
 
 		:param int addr: virtual address to query for symbol
 		:return: Symbol for the given virtual address
-		:param NameSpace namespace: the namespace of the symbols to retrieve
+		:param NameSpace namespace: (optional) the namespace of the symbols to retrieve
 		:rtype: Symbol
 		:Example:
 
@@ -3880,7 +3880,7 @@ class BinaryView(object):
 
 		:param str name: raw (mangled) name of Symbol to be retrieved
 		:return: Symbol object corresponding to the provided raw name
-		:param NameSpace namespace: the namespace to search for the given symbol
+		:param NameSpace namespace: (optional) the namespace to search for the given symbol
 		:rtype: Symbol
 		:Example:
 
@@ -3897,13 +3897,15 @@ class BinaryView(object):
 			return None
 		return types.Symbol(None, None, None, handle = sym)
 
-	def get_symbols_by_name(self, name, namespace=None):
+	def get_symbols_by_name(self, name, namespace=None, ordered_filter=[SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol, SymbolType.DataSymbol, SymbolType.ImportedDataSymbol, SymbolType.ImportAddressSymbol, SymbolType.ExternalSymbol]):
 		"""
-		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name.
+		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
 		:param str name: name of Symbol object to be retrieved
+		:param NameSpace namespace: (optional) the namespace to search for the given symbol
+		:param str namespace: (optional) the namespace to search for the given symbol
+		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
 		:return: Symbol object corresponding to the provided name
-		:param NameSpace namespace: the namespace of the symbol
 		:rtype: Symbol
 		:Example:
 
@@ -3921,6 +3923,7 @@ class BinaryView(object):
 		for i in range(0, count.value):
 			result.append(types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
 		core.BNFreeSymbolList(syms, count.value)
+		result = sorted(filter(lambda sym: sym.type in ordered_filter, result), key=lambda sym: ordered_filter.index(sym.type))
 		return result
 
 	def get_symbols(self, start=None, length=None, namespace=None):

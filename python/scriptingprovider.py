@@ -527,7 +527,7 @@ class BlacklistedDict(dict):
 
 	def __setitem__(self, k, v):
 		if self.blacklist_enabled and k in self.__blacklist:
-			log.log_warn('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
+			log.log_error('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
 		super(BlacklistedDict, self).__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):

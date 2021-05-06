@@ -3225,46 +3225,13 @@ class BinaryView(object):
 			result = [func for func in result in func.platform == plat]
 		return result
 
-	def get_function_by_name(self, name, plat=None, precedence=[SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol] ):
-		"""``get_function_by_name`` returns a Function object for the first
-		function with a Symbol of ``name``. In instances where there
-		may be multiple function symbols with the same name, one instance
-		will be returned, but the order is not guaranteed. When multiple symbols
-		exist, setting the optional precedence list can guarantee particular 
-		symbol types if they exist.
-​
-		:param int name: name of the function
-		:param Platform plat: Optional platform
-		:param list(SymbolType) precedence: Optional list of symbols expressing the desired precedence
-		:return: returns a Function object or None
-		:rtype: Function
-		:Example:
-​
-			>>> bv.get_function_by_name("main"))
-			<func: x86_64@0x1587>
-			>>>
-		"""
-		syms = self.get_symbols_by_name(name)
-		if len(syms) == 0:
-			return None
-		for symtype in precedence:
-			for sym in syms:
-				if (sym.type == symtype and self.get_function_at(sym.address, plat)):
-					return self.get_function_at(sym.address, plat)
-		if plat == None:
-			plat = self.platform
-		for sym in syms:
-			for fn in self.get_functions_at(sym.address):
-				if fn.platfrom == plat:
-					return fn
-		return None
-
-	def get_functions_by_name(self, name, plat=None):
-		"""``get_functions_by_name`` returns a list of Function objects 
-		function with a Symbol of ``name``. 
+	def get_functions_by_name(self, name, plat=None, ordered_filter=[SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol]):
+		"""``get_functions_by_name`` returns a list of Function objects
+		function with a Symbol of ``name``.
 ​
 		:param int name: name of the functions
-		:param Platform plat: Optional platform
+		:param Platform plat: (optional) platform
+		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
 		:return: returns a list of Function objects or an empty list
 		:rtype: list(Function)
 		:Example:
@@ -3275,7 +3242,7 @@ class BinaryView(object):
 		"""
 		if plat == None:
 			plat = self.platform
-		syms = self.get_symbols_by_name(name)
+		syms = self.get_symbols_by_name(name, ordered_filter=ordered_filter)
 		fns = []
 		for sym in syms:
 			for fn in self.get_functions_at(sym.address):

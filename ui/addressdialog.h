@@ -34,6 +34,8 @@ class BINARYNINJAUIAPI AddressDialogWithPreview: public QDialog
 	QFont m_defaultFont;
 	QString m_prompt;
 	bool m_initialTextSelection;
+	std::string m_errorString;
+	bool m_resultAmbiguous;
 
 	void commitHistory();
 	void customEvent(QEvent* event);
@@ -43,6 +45,7 @@ private Q_SLOTS:
 	void accepted();
 	void updateRelativeState(int state);
 	void updatePreview();
+	void updatePreviewText();
 	void updatePreviewWithText(QString data);
 
 public:
@@ -69,6 +72,8 @@ class BINARYNINJAUIAPI FileOffsetDialogWithPreview: public QDialog
 	QFont m_defaultFont;
 	QString m_prompt;
 	bool m_initialTextSelection;
+	std::string m_errorString;
+	bool m_resultAmbiguous;
 
 	void commitHistory();
 
@@ -76,6 +81,7 @@ private Q_SLOTS:
 	void updateTimerEvent();
 	void accepted();
 	void updatePreview();
+	void updatePreviewText();
 	void updatePreview(QString data);
 
 public:

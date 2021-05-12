@@ -15,7 +15,9 @@
 use binaryninjacore_sys::{
     BNBeginUndoActions,
     BNCloseFile,
+    BNCloseProject,
     BNCommitUndoActions,
+    BNCreateDatabase,
     BNCreateFileMetadata,
     BNFileMetadata,
     BNFreeFileMetadata,
@@ -27,13 +29,16 @@ use binaryninjacore_sys::{
     BNIsBackedByDatabase,
     //BNSetFileMetadataNavigationHandler,
     BNIsFileModified,
+    BNIsProjectOpen,
     BNMarkFileModified,
     BNMarkFileSaved,
     BNNavigate,
     BNNewFileReference,
     BNOpenDatabaseForConfiguration,
     BNOpenExistingDatabase,
+    BNOpenProject,
     BNRedo,
+    BNSaveAutoSnapshot,
     BNSetFilename,
     BNUndo,
 };
@@ -42,6 +47,8 @@ use crate::binaryview::BinaryView;
 
 use crate::rc::*;
 use crate::string::*;
+
+use std::ptr;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct FileMetadata {
@@ -91,7 +98,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn is_modified(&self) -> bool {
+    pub fn modified(&self) -> bool {
         unsafe { BNIsFileModified(self.handle) }
     }
 
@@ -101,14 +108,14 @@ impl FileMetadata {
         }
     }
 
-    pub fn is_analysis_changed(&self) -> bool {
-        unsafe { BNIsAnalysisChanged(self.handle) }
-    }
-
     pub fn mark_saved(&self) {
         unsafe {
             BNMarkFileSaved(self.handle);
         }
+    }
+
+    pub fn is_analysis_changed(&self) -> bool {
+        unsafe { BNIsAnalysisChanged(self.handle) }
     }
 
     pub fn is_database_backed<S: BnStrCompatible>(&self, view_type: S) -> bool {
@@ -175,6 +182,29 @@ impl FileMetadata {
         }
     }
 
+    pub fn create_database<S: BnStrCompatible>(&self, filename: S) -> bool {
+        let filename = filename.as_bytes_with_nul();
+        let raw = "Raw";
+
+        unsafe {
+            BNCreateDatabase(
+                BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
+                filename.as_ref().as_ptr() as *mut _,
+                ptr::null_mut() as *mut _,
+            )
+        }
+    }
+
+    pub fn save_auto_snapshot(&self) -> bool {
+        let raw = "Raw";
+        unsafe {
+            BNSaveAutoSnapshot(
+                BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
+                ptr::null_mut() as *mut _,
+            )
+        }
+    }
+
     pub fn open_database_for_configuration<S: BnStrCompatible>(
         &self,
         filename: S,
@@ -209,6 +239,20 @@ impl FileMetadata {
         } else {
             Ok(unsafe { BinaryView::from_raw(view) })
         }
+    }
+
+    pub fn open_project(&self) -> bool {
+        unsafe { BNOpenProject(self.handle) }
+    }
+
+    pub fn close_project(&self) {
+        unsafe {
+            BNCloseProject(self.handle);
+        }
+    }
+
+    pub fn is_project_open(&self) -> bool {
+        unsafe { BNIsProjectOpen(self.handle) }
     }
 }
 

@@ -3277,6 +3277,17 @@ class Function(object):
 				self.clear_user_var_value(var, def_site.addr)
 
 	def request_debug_report(self, name):
+		"""
+		``request_debug_report`` can generate interanl debug reports for a variety of analysis.
+		Current list of possible values include:
+
+		- mlil_translator
+		- stack_adjust_graph
+		- high_level_il
+
+		:param str name: Name of the debug report
+		:rtype: None
+		"""
 		core.BNRequestFunctionDebugReport(self.handle, name)
 		self.view.update_analysis()
 

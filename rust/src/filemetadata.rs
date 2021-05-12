@@ -184,7 +184,7 @@ impl FileMetadata {
 
     pub fn create_database<S: BnStrCompatible>(&self, filename: S) -> bool {
         let filename = filename.as_bytes_with_nul();
-        let raw = "Raw";
+        let raw = "Raw".as_bytes_with_nul();
 
         unsafe {
             BNCreateDatabase(
@@ -196,7 +196,7 @@ impl FileMetadata {
     }
 
     pub fn save_auto_snapshot(&self) -> bool {
-        let raw = "Raw";
+        let raw = "Raw".as_bytes_with_nul();
         unsafe {
             BNSaveAutoSnapshot(
                 BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),

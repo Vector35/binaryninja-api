@@ -176,7 +176,7 @@ impl FileMetadata {
     }
 
     pub fn open_database_for_configuration<S: BnStrCompatible>(
-        &mut self,
+        &self,
         filename: S,
     ) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.as_bytes_with_nul();
@@ -192,10 +192,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(
-        &mut self,
-        filename: S,
-    ) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.as_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 

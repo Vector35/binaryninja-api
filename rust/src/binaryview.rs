@@ -634,7 +634,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn set_load_settings<S: BnStrCompatible>(&mut self, view_type_name: S, settings: &Settings) {
+    fn set_load_settings<S: BnStrCompatible>(&self, view_type_name: S, settings: &Settings) {
         let view_type_name = view_type_name.as_bytes_with_nul();
 
         unsafe {

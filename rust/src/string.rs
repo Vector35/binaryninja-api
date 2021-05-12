@@ -111,6 +111,10 @@ impl BnString {
 
         res
     }
+
+    pub fn as_str(&self) -> &str {
+        unsafe { BnStr::from_raw(self.raw).as_str() }
+    }
 }
 
 impl Drop for BnString {

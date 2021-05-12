@@ -318,7 +318,7 @@ pub fn open_view_with_options<F: AsRef<Path>>(
     let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
 
     let mut is_bndb = false;
-    let mut view = match match filename.ends_with(".bndb") {
+    let view = match match filename.ends_with(".bndb") {
         true => {
             match File::open(filename) {
                 Ok(mut file) => {
@@ -359,9 +359,8 @@ pub fn open_view_with_options<F: AsRef<Path>>(
         Some(view_type) => view_type,
     };
 
-    // I have no idea why this is needed
     let setting_id = format!("{}{}", view_type.name(), "_settings");
-    let mut default_settings = settings::Settings::new(setting_id);
+    let default_settings = settings::Settings::new(setting_id);
     default_settings.deserialize_schema(settings::Settings::new("").serialize_schema());
     default_settings.set_resource_id(view_type.name());
 
@@ -385,10 +384,17 @@ pub fn open_view_with_options<F: AsRef<Path>>(
             {
                 Ok(settings) => Some(settings),
                 _ => return Err("Could not load settings for universal view data".to_string()),
-            }
+            };
 
-            // TODO : finish converting this to Rust
-            // arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
+            // let arch_list = load_settings.as_ref().unwrap().get_string(
+            //     "loader.universal.architectures",
+            //     None,
+            //     None,
+            // );
+
+            // TODO : Need json support
+            // let arch_list = arch_list.as_str();
+            // let arch_list = arch_list[1..arch_list.len()].split("'");
             // arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
             // if not arch_entry:
             //     log.log_error(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
@@ -401,14 +407,14 @@ pub fn open_view_with_options<F: AsRef<Path>>(
             load_settings = match view_type.load_settings_for_data(view.as_ref()) {
                 Ok(settings) => Some(settings),
                 _ => None,
-            }
+            };
         }
     }
     if load_settings.is_none() {
         // log.log_error(f"Could not get load settings for binary view of type `{bvt.name}`")
         return Ok(view);
     }
-    let mut load_settings = load_settings.unwrap();
+    let load_settings = load_settings.unwrap();
     load_settings.set_resource_id(view_type.name());
     view.set_load_settings(view_type.name(), load_settings.as_ref());
 
@@ -437,13 +443,12 @@ pub fn open_view_with_options<F: AsRef<Path>>(
             .open_database(filename.to_str().unwrap())
             .expect("Couldn't open database");
         let view_type_name = view_type.name();
-        // TODO : handle the case where the view doesn't exist in the bndb
-        let bv = unsafe {
-            binaryview::BinaryView::from_raw(binaryninjacore_sys::BNGetFileViewOfType(
-                view.metadata().handle,
-                view_type_name.as_ref().as_ptr() as *mut _,
-            ))
+
+        let bv = match view.metadata().get_view_of_type(view_type_name) {
+            Ok(bv) => bv,
+            _ => view,
         };
+
         if update_analysis_and_wait {
             bv.update_analysis_and_wait();
         }

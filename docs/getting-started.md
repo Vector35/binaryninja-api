@@ -166,6 +166,7 @@ Note
  - `[CMD-SHIFT] -` (MacOS) : Graph view zoom out
  - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
+ - Other hotkeys specifically for working with types are in the [type guide](guide/type.md#direct-ui-manipulation)
 
 ### Graph View
 

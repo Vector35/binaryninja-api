@@ -73,6 +73,7 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	void undefineName();
 	void createFunc();
 	void defineFuncName();
+	void editFunctionProperties();
 	void undefineFunc();
 	void reanalyze();
 	void comment();

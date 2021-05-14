@@ -319,6 +319,7 @@ private Q_SLOTS:
 	void setUserVariableValue();
 	void clearUserVariableValue();
 	void defineFuncName();
+	void editFunctionProperties();
 	void undefineFunc();
 	void createFunc();
 	void changeType();

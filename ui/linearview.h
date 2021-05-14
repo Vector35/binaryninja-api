@@ -234,6 +234,7 @@ private Q_SLOTS:
 	void createFunc();
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();
+	void editFunctionProperties();
 	void undefineFunc();
 	void reanalyze();
 	void comment();

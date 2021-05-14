@@ -31,7 +31,7 @@ class SettingsAPI(unittest.TestCase):
 		settings = Settings()
 		assert settings.contains("analysis.linearSweep.autorun"), "test_settings_defaults failed"
 		assert settings.contains("analysis.unicode.blocks"), "test_settings_defaults failed"
-		assert settings.contains("downloadClient.providerName"), "test_settings_defaults failed"
+		assert settings.contains("network.downloadProviderName"), "test_settings_defaults failed"
 		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[0], "test_settings_defaults failed"
 		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[1] == SettingsScope.SettingsDefaultScope, "test_settings_defaults failed"
 

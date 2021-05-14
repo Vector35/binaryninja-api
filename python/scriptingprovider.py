@@ -934,7 +934,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			return False
 
 		args = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
-		proxy_settings = settings.Settings().get_string("downloadClient.httpsProxy")
+		proxy_settings = settings.Settings().get_string("network.httpsProxy")
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])
 

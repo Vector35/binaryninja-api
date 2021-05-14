@@ -634,10 +634,12 @@ Here's a list of all settings currently available from the UI:
 | | |  enum: No subpixel antialiasing at High DPI.|`enum`|`hidpi`| | |
 | | |  enum: No font antialiasing.|`enum`|`none`| | |
 |ui|Bold Fonts|Allow bold fonts.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.bold'>ui.font.bold</a>|
-|ui|Font Name|Font family selection.|`string`|`Source Code Pro`|[`SettingsUserScope`]|<a id='ui.font.name'>ui.font.name</a>|
-|ui|Font Size|Font point size selection.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.size'>ui.font.size</a>|
-|ui|Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.spacing'>ui.font.spacing</a>|
-|ui|Font Style|Font Style selection.|`string`| |[`SettingsUserScope`]|<a id='ui.font.style'>ui.font.style</a>|
+|ui|Application Font Name|UI font family selection.|`string`|`Open Sans`|[`SettingsUserScope`]|<a id='ui.font.app.name'>ui.font.app.name</a>|
+|ui|Application Font Size|UI font point size.|`number`|`11`|[`SettingsUserScope`]|<a id='ui.font.app.size'>ui.font.app.size</a>|
+|ui|View Font Name|Font family selection.|`string`|`Source Code Pro`|[`SettingsUserScope`]|<a id='ui.font.view.name'>ui.font.view.name</a>|
+|ui|View Font Size|Font point size selection.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
+|ui|View Line Spacing|Specify an additional distance between adjacent baselines.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.view.spacing'>ui.font.view.spacing</a>|
+|ui|View Font Style|Font Style selection.|`string`| |[`SettingsUserScope`]|<a id='ui.font.view.style'>ui.font.view.style</a>|
 |ui|Number of history entries to store.|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
 |ui|Maximum UI Log Size|Set the maximum number of lines for the UI log.|`number`|`10000`|[`SettingsUserScope`]|<a id='ui.log.maxSize'>ui.log.maxSize</a>|
 |ui|Minimum UI Log Level|Set the minimum log level for the UI log.|`string`|`InfoLog`|[`SettingsUserScope`]|<a id='ui.log.minLevel'>ui.log.minLevel</a>|

@@ -52,13 +52,12 @@ protected:
 	Menu m_menu;
 	ContextMenuManager* m_contextMenuManager;
 	QTimer* m_timer;
-	bool m_activeOnHover = true;
 	bool m_active;
 	bool m_pressed;
 
 public:
 	MenuHelper() { }
-	MenuHelper(QWidget* parent, bool activeOnHover = true);
+	explicit MenuHelper(QWidget* parent);
 
 	void setBackgroundColorRole(QPalette::ColorRole role);
 	void setActiveBackgroundColorRole(QPalette::ColorRole role);

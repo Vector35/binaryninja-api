@@ -385,6 +385,31 @@ The function list also highlights imports, and functions identified with symbols
 !!! Tip "Tip"
     To search in the function list, just click to make sure it's focused and start typing!
 
+### Edit Function Properties Dialog
+
+![Edit Function Properties Dialog >](img/efp_dialog_diagram.png "Edit Function Properties Dialog")
+
+The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
+
+1. **Function prototype.** The function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
+1. **Function info.** A list of conditionally-shown tags offering information about the function. Possible tags are as follows:
+    - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
+    - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](#analysis.limits.maxFunctionSize))
+    - **Analysis timed out**: Analysis for this function was skipped because it exceeded the maximum allowed time ([`analysis.limits.maxFunctionAnalysisTime`](#analysis.limits.maxFunctionAnalysisTime))
+    - **Analysis was skipped (too many updates)**: Analysis was skipped for this function because it caused too many updates ([`analysis.limits.maxFunctionUpdateCount`](#analysis.limits.maxFunctionUpdateCount))
+    - **Analysis suppressed**: Analysis was suppressed for this function because analysis of auto-discovered functions was disabled ([`analysis.suppressNewAutoFunctionAnalysis`](#analysis.suppressNewAutoFunctionAnalysis))
+    - **Basic analysis only**: This function only received basis analysis ([`analysis.mode`](#analysis.mode) was 'basic')
+    - **Intermediate analysis only**: This function only received intermediate analysis ([`analysis.mode`](#analysis.mode) was 'intermediate')
+    - **Unresolved stack usage**: The function has unresolved stack usage
+    - **GP = 0xABCD1234**: The global pointer value is 0xABCD1234
+1. **Calling convention.** The calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
+1. **Stack adjustment.** How many _extra_ bytes does this function remove from the stack upon return?
+1. **Has variable arguments.** Does this function accept a variable number of arguments?
+1. **Can return.** Does this function return? If not, #8 will be unavailable.
+1. **Clobbered registers.** The list of registers that this function clobbers; individual registers can be checked or unchecked.
+1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
+1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
+
 ### Reflection View
 
 - View BNILs and assembly for the same file side-by-side

@@ -15,6 +15,7 @@
 #ifdef BINARYNINJAUI_BINDINGS
 // QThread has issues working in the bindings on some platforms
 class GetTypesListThread;
+class ParseTypeThread;
 #else
 class BINARYNINJAUIAPI GetTypesListThread: public QThread
 {
@@ -34,6 +35,25 @@ public:
 	void cancel();
 
 	const QStringList& getTypes() const { return m_allTypes; }
+};
+
+Q_DECLARE_METATYPE(BinaryNinja::QualifiedNameAndType);
+
+//! QThread subclass for handling type string parsing to avoid UI interruptions.
+class ParseTypeThread: public QThread {
+	Q_OBJECT
+
+	BinaryViewRef m_view;
+	std::string m_text;
+
+	void run() override;
+
+Q_SIGNALS:
+	void parsingComplete(bool valid, BinaryNinja::QualifiedNameAndType type, QString error);
+
+public:
+	ParseTypeThread(BinaryViewRef view, QString text);
+	void cancel();
 };
 #endif
 
@@ -55,6 +75,9 @@ class BINARYNINJAUIAPI TypeDialog: public QDialog
 	BinaryNinja::QualifiedNameAndType m_type;
 	QPushButton* m_acceptButton;
 	QTimer* m_updateTimer;
+	QTimer* m_parseTimer;
+	bool m_isParsing;
+	std::atomic_bool m_comboBoxTextChanged;
 	QPalette m_defaultPalette;
 	QString m_parseError;
 
@@ -63,7 +86,8 @@ class BINARYNINJAUIAPI TypeDialog: public QDialog
 
 private Q_SLOTS:
 	void accepted();
-	void checkParse(QString text);
+	void checkParse();
+	void typeParsed(bool valid, BinaryNinja::QualifiedNameAndType type, QString error);
 	void updateTimerEvent();
 
 public:

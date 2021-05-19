@@ -3304,11 +3304,11 @@ vector<BNAddressRange> BinaryView::GetAllocatedRanges()
 }
 
 
-void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue)
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue, bool isAuto)
 {
 	if (!inValue)
 		return;
-	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject());
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject(), isAuto);
 }
 
 

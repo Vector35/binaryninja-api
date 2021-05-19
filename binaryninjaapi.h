@@ -1803,7 +1803,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<BNAddressRange> GetAllocatedRanges();
 
-		void StoreMetadata(const std::string& key, Ref<Metadata> value);
+		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		void RemoveMetadata(const std::string& key);
 		std::string GetStringMetadata(const std::string& key);

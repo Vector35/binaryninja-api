@@ -1,6 +1,6 @@
 # Binary Ninja Intermediate Language Series, Part 1: Low Level IL
 
-Make sure to checkout the [BNIL overview](bnil-overview.md) first if you haven't already. Or feel free to skip to [part 2](bnil-mlil.md) which covers MLIL. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family. 
+Make sure to checkout the [BNIL overview](bnil-overview.md) first if you haven't already. Or feel free to skip to [part 2](bnil-mlil.md) which covers MLIL. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family.
 
 If you've already read the introduction, let's get right into the details of LLIL!
 
@@ -10,7 +10,7 @@ The Lifted IL is very similar to the LLIL and is primarily of interest for Archi
 
 ## Introduction by example
 
-Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console. 
+Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console.
 
 ![Low Level IL Option >](../img/llil_option.png)
 
@@ -26,7 +26,7 @@ Next, enter the following in the console:
 >>> for block in current_function.low_level_il:
 ... 	for instr in block:
 ... 		print instr.address, instr.instr_index, instr
-... 
+...
 4196422 0 push(rbp)
 4196423 1 rbp = rsp {var_8}
 4196426 2 rsp = rsp - 0x110
@@ -34,7 +34,7 @@ Next, enter the following in the console:
 ...
 ```
 
-This will print out all the LLIL instructions in the current function. How does this code work? 
+This will print out all the LLIL instructions in the current function. How does this code work?
 
 First we use the global magic variable `current_function` which gives us the python object [`function.Function`](http://api.binary.ninja/function.Function.html) for whatever function is currently selected in the UI. The variable is only usable from the python console, and shouldn't be used for headless plugins. In a script you can either use the function that was passed in if you [registered your plugin](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register_for_function) to handle functions, or you can compute the function based on [a specific address](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=get_functions_at#binaryninja.binaryview.BinaryView.get_functions_at), or maybe even just iterate over all the functions in a BinaryView (`for func in bv.functions:`).
 
@@ -59,7 +59,7 @@ Now that we've established how to access LLIL Functions, Blocks, and Instruction
 
 ```
 eax = eax + ecx * 4
-``` 
+```
 
 The tree for such an instruction would look like:
 
@@ -80,7 +80,7 @@ Now let's get back to the examples. First let's pick an instruction to work with
 >>> instr = current_function.low_level_il[2]
 >>> instr
 <il: rsp = rsp - 0x110>
-``` 
+```
 
 For the above instruction, we have a few operations we can perform:
 
@@ -142,7 +142,7 @@ Now with some knowledge of the `LowLevelIL` class let's try to do something with
 ...  for instr in block:
 ...   if instr.operation == LowLevelILOperation.LLIL_SET_REG and instr.dest.name == 'rdx':
 ...    print instr.address, instr.instr_index, instr
-... 
+...
 4196490 14 rdx = [rax].q
 4196500 16 rdx = [rax + 8].q
 4196511 18 rdx = [rax + 0x10].q
@@ -161,20 +161,20 @@ Going into gross detail on all the instructions is out of scope of this article,
 
 When parsing an instruction tree the terminals are registers, constants and flags. This provide the basis from which all instructions are built.
 
-* **`LLIL_REG`** - A register, terminal
-* **`LLIL_CONST`** - A constant integer value, terminal
-* **`LLIL_SET_REG`** - Sets a register to the results of the IL operation in `src` attribute.
-* **`LLIL_SET_REG_SPLIT`** - Uses a pair of registers as one double sized register, setting both registers at once.
-* **`LLIL_SET_FLAG`** - Sets the specified flag to the IL operation in `src` attribute.
+* `LLIL_REG` - A register, terminal
+* `LLIL_CONST` - A constant integer value, terminal
+* `LLIL_SET_REG` - Sets a register to the results of the IL operation in `src` attribute.
+* `LLIL_SET_REG_SPLIT` - Uses a pair of registers as one double sized register, setting both registers at once.
+* `LLIL_SET_FLAG` - Sets the specified flag to the IL operation in `src` attribute.
 
 ### Memory Load & Store
 
 Reading and writing memory is accomplished through the following instructions.
 
-* **`LLIL_LOAD`** - Load a value from memory.
-* **`LLIL_STORE`** - Store a value to memory.
-* **`LLIL_PUSH`** - Store value to stack; adjusting stack pointer by sizeof(value) after the store.
-* **`LLIL_POP`** - Load value from stack; adjusting stack pointer by sizeof(value) after the store.
+* `LLIL_LOAD` - Load a value from memory.
+* `LLIL_STORE` - Store a value to memory.
+* `LLIL_PUSH` - Store value to stack; adjusting stack pointer by sizeof(value) after the store.
+* `LLIL_POP` - Load value from stack; adjusting stack pointer by sizeof(value) after the store.
 
 
 ### Control Flow & Conditionals
@@ -194,28 +194,28 @@ To translate this instruction to IL we have to first create true and false label
 0 @ 00000002 if (eax == 0) then 1 else 3
 1 @ 00000002 eax = ebx
 2 @ 00000002 goto 3
-``` 
+```
 
-As you can see from the above code, labels are really just used internally and aren't explicitly marked. In addition to `if` and `goto`, the `jump_to` IL instruction is the only other instruction that operates on labels.  The rest of the IL control flow instructions operate on addresses rather than labels, much like actual assembly language instructions. Note that an architecture plugin author should not be emitting `jump_to` IL instructions as those are generated by the analysis automatically. 
+As you can see from the above code, labels are really just used internally and aren't explicitly marked. In addition to `if` and `goto`, the `jump_to` IL instruction is the only other instruction that operates on labels.  The rest of the IL control flow instructions operate on addresses rather than labels, much like actual assembly language instructions. Note that an architecture plugin author should not be emitting `jump_to` IL instructions as those are generated by the analysis automatically.
 
-* **`LLIL_JUMP`** - Branch execution to the result of the IL operation.
-* **`LLIL_JUMP_TO`** - Jump table construct, contains an expression and list of possible targets.
-* **`LLIL_CALL`** - Branch execution to the result of the IL operation.
-* **`LLIL_RET`** - Return execution to the caller.
-* **`LLIL_NORET`** - Instruction emitted automatically after syscall or call instruction which cause the program to terminate.
-* **`LLIL_IF`** - `If` provides conditional execution. If condition is true execution branches to the true label and false label otherwise.
-* **`LLIL_GOTO`** - `Goto` is used to branch to an IL label, this is different than jump since jump can only jump to addresses.
-* **`LLIL_FLAG_COND`** - Returns the flag condition expression for the specified flag condition.
-* **`LLIL_CMP_E`** - equality
-* **`LLIL_CMP_NE`** - not equal
-* **`LLIL_CMP_SLT`** - signed less than
-* **`LLIL_CMP_ULT`** - unsigned less than
-* **`LLIL_CMP_SLE`** - signed less than or equal
-* **`LLIL_CMP_ULE`** - unsigned less than or equal
-* **`LLIL_CMP_SGE`** - signed greater than or equal
-* **`LLIL_CMP_UGE`** - unsigned greater than or equal
-* **`LLIL_CMP_SGT`** - signed greater than
-* **`LLIL_CMP_UGT`** - unsigned greater than
+* `LLIL_JUMP` - Branch execution to the result of the IL operation.
+* `LLIL_JUMP_TO` - Jump table construct, contains an expression and list of possible targets.
+* `LLIL_CALL` - Branch execution to the result of the IL operation.
+* `LLIL_RET` - Return execution to the caller.
+* `LLIL_NORET` - Instruction emitted automatically after syscall or call instruction which cause the program to terminate.
+* `LLIL_IF` - `If` provides conditional execution. If condition is true execution branches to the true label and false label otherwise.
+* `LLIL_GOTO` - `Goto` is used to branch to an IL label, this is different than jump since jump can only jump to addresses.
+* `LLIL_FLAG_COND` - Returns the flag condition expression for the specified flag condition.
+* `LLIL_CMP_E` - equality
+* `LLIL_CMP_NE` - not equal
+* `LLIL_CMP_SLT` - signed less than
+* `LLIL_CMP_ULT` - unsigned less than
+* `LLIL_CMP_SLE` - signed less than or equal
+* `LLIL_CMP_ULE` - unsigned less than or equal
+* `LLIL_CMP_SGE` - signed greater than or equal
+* `LLIL_CMP_UGE` - unsigned greater than or equal
+* `LLIL_CMP_SGT` - signed greater than
+* `LLIL_CMP_UGT` - unsigned greater than
 
 
 ### The Arithmetic & Logical Instructions
@@ -224,45 +224,92 @@ LLIL implements the most common arithmetic as well as a host of more complicated
 
 The double precision instruction multiply, divide, modulus instructions are particularly helpful for instruction sets like x86 whose output/input can be double the size of the input/output.
 
-* **`LLIL_ADD`** - Add
-* **`LLIL_ADC`** - Add with carry
-* **`LLIL_SUB`** - Subtract
-* **`LLIL_SBB`** - Subtract with borrow
-* **`LLIL_AND`** - Bitwise and
-* **`LLIL_OR`** - Bitwise or
-* **`LLIL_XOR`** - Exclusive or
-* **`LLIL_LSL`** - Logical shift left
-* **`LLIL_LSR`** - Logical shift right
-* **`LLIL_ASR`** - Arithmetic shift right
-* **`LLIL_ROL`** - Rotate left
-* **`LLIL_RLC`** - Rotate left with carry
-* **`LLIL_ROR`** - Rotate right
-* **`LLIL_RRC`** - Rotate right with carry
-* **`LLIL_MUL`** - Multiply single precision
-* **`LLIL_MULU_DP`** - Unsigned multiply double precision 
-* **`LLIL_MULS_DP`** - Signed multiply double precision
-* **`LLIL_DIVU`** - Unsigned divide single precision
-* **`LLIL_DIVU_DP`** - Unsigned divide double precision
-* **`LLIL_DIVS`** - Signed divide single precision
-* **`LLIL_DIVS_DP`** - Signed divide double precision
-* **`LLIL_MODU`** - Unsigned modulus single precision
-* **`LLIL_MODU_DP`** - Unsigned modulus double precision
-* **`LLIL_MODS`** - Signed modulus single precision
-* **`LLIL_MODS_DP`** - Signed modulus double precision
-* **`LLIL_NEG`** - Sign negation
-* **`LLIL_NOT`** - Bitwise complement
+* `LLIL_ADD` - Add
+* `LLIL_ADC` - Add with carry
+* `LLIL_SUB` - Subtract
+* `LLIL_SBB` - Subtract with borrow
+* `LLIL_AND` - Bitwise and
+* `LLIL_OR` - Bitwise or
+* `LLIL_XOR` - Exclusive or
+* `LLIL_LSL` - Logical shift left
+* `LLIL_LSR` - Logical shift right
+* `LLIL_ASR` - Arithmetic shift right
+* `LLIL_ROL` - Rotate left
+* `LLIL_RLC` - Rotate left with carry
+* `LLIL_ROR` - Rotate right
+* `LLIL_RRC` - Rotate right with carry
+* `LLIL_MUL` - Multiply single precision
+* `LLIL_MULU_DP` - Unsigned multiply double precision
+* `LLIL_MULS_DP` - Signed multiply double precision
+* `LLIL_DIVU` - Unsigned divide single precision
+* `LLIL_DIVU_DP` - Unsigned divide double precision
+* `LLIL_DIVS` - Signed divide single precision
+* `LLIL_DIVS_DP` - Signed divide double precision
+* `LLIL_MODU` - Unsigned modulus single precision
+* `LLIL_MODU_DP` - Unsigned modulus double precision
+* `LLIL_MODS` - Signed modulus single precision
+* `LLIL_MODS_DP` - Signed modulus double precision
+* `LLIL_NEG` - Sign negation
+* `LLIL_NOT` - Bitwise complement
+
+### Floating Point Operations
+* `LLIL_FLOAT_CONST` - Floating point constant value
+* `LLIL_FADD` - Floating point add
+* `LLIL_FSUB` - Floating point subtraction
+* `LLIL_FMUL` - Floating point multiplication
+* `LLIL_FDIV` - Floating point division
+* `LLIL_FSQRT` - Floating point square root
+* `LLIL_FNEG` - Floating point negate
+* `LLIL_FABS` - Floating point absolute value
+* `LLIL_FLOAT_TO_INT` - Floating point convert a floating point to an integer
+* `LLIL_INT_TO_FLOAT` - Floating point convert an integer to a floating point
+* `LLIL_FLOAT_CONV` - 
+* `LLIL_ROUND_TO_INT` - Rounds to the nearest integer
+* `LLIL_FLOOR` - Returns the floor of a floating point value
+* `LLIL_CEILING` - Returns the ceiling of a floating point value
+* `LLIL_FTRUNC` - Computes the floating point truncation of the IEEE754 number in `src`
+
+### Floating Point Conditionals
+
+These are identical to their native counterparts but are lifted separately so that the operations can impact different flags. See "Control FLow & Conditionals" above.
+
+* `LLIL_FCMP_E ` - 
+* `LLIL_FCMP_NE ` - 
+* `LLIL_FCMP_LT ` - 
+* `LLIL_FCMP_LE ` - 
+* `LLIL_FCMP_GE ` - 
+* `LLIL_FCMP_GT ` - 
+* `LLIL_FCMP_O ` - 
+* `LLIL_FCMP_UO ` - 
 
 ### Special instructions
 
 The rest of the instructions are pretty much self-explanatory to anyone with familiarity with assembly languages.
 
-* **`LLIL_NOP`** - No operation
-* **`LLIL_SX`** - Sign extend
-* **`LLIL_ZX`** - Zero extend
-* **`LLIL_SYSCALL`** - System call instruction
-* **`LLIL_BP`** - Breakpoint instruction
-* **`LLIL_TRAP`** - Trap instruction
-* **`LLIL_UNDEF`** - Undefined instruction
-* **`LLIL_UNIMPL`** - Unimplemented instruction
-* **`LLIL_UNIMPL_MEM`** - Unimplemented memory access instruction
+* `LLIL_BP` - Breakpoint instruction
+* `LLIL_EXTERN_PTR` - A synthesized (fake) pointer to something which doesn't exist within the memory space of the current binary
+* `LLIL_INTRINSIC ` - Intrinsics are operations with `output` and `params` and an `intrinsic` where the exact behavior is not modelled but the dataflow system can be improved by annotating the inputs and outputs. An example intrinsic would CPU AES instructions where the exact behavior is not modelled, but the inputs and outputs are.
+* `LLIL_INTRINSIC_SSA ` - 
+* `LLIL_NOP` - No operation
+* `LLIL_SX` - Sign extend
+* `LLIL_SYSCALL` - System call instruction
+* `LLIL_TRAP` - Trap instruction
+* `LLIL_UNDEF` - Undefined instruction
+* `LLIL_UNIMPL` - Unimplemented instruction
+* `LLIL_UNIMPL_MEM` - Unimplemented memory access instruction
+* `LLIL_ZX` - Zero extend
 
+### Currently Undocumented
+
+* `LLIL_FLAG ` - 
+* `LLIL_LOW_PART ` - 
+* `LLIL_FLAG_BIT ` - 
+* `LLIL_FLAG_GROUP ` - 
+* `LLIL_TAILCALL ` - 
+* `LLIL_BOOL_TO_INT ` - 
+* `LLIL_TEST_BIT ` - 
+* `LLIL_FLAG_SSA ` - 
+* `LLIL_TAILCALL_SSA ` - 
+* `LLIL_FLAG_BIT_SSA ` - 
+* `LLIL_FLAG_PHI ` - 
+* `LLIL_MEM_PHI ` - 

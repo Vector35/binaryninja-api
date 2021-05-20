@@ -1726,3 +1726,46 @@ class VerifyBuilder(Builder):
         binja.Settings().reset("analysis.database.suppressReanalysis")
         self.delete_package("binja_v1.2.1921_bin_ls.bndb")
         return ret
+
+    def test_struct_type_leakage(self):
+        """
+        Define a structure, then assign a variable to it. There should only be NTRs (and not dereffed types) in func.vars
+        See: #2428
+        """
+        file_name = self.unpackage_file("basic_struct")
+
+        ret = True
+        try:
+            with binja.open_view(file_name) as bv:
+                # struct A { uint64_t a; uint64_t b; };
+                s = binja.Structure()
+                s.width = 0x10
+                s.insert(0, binja.Type.int(8, False), "a")
+                s.insert(8, binja.Type.int(8, False), "b")
+                t = binja.Type.structure_type(s)
+                bv.define_user_type("A", t)
+
+                # Find main and the var it sets to malloc(0x10)
+                func = [f for f in bv.functions if f.name == '_main'][0]
+                for v in func.vars:
+                    d = func.mlil.get_var_definitions(v)
+                    if len(d) == 0:
+                        continue
+
+                    if d[0].operation == binja.MediumLevelILOperation.MLIL_CALL:
+                        var = v
+
+                # Change var type to struct A*
+                vt = binja.Type.pointer(bv.arch, binja.Type.named_type_from_registered_type(bv, 'A'))
+                func.create_user_var(var, vt, 'test')
+                bv.update_analysis_and_wait()
+
+                for v in func.vars:
+                    if v.type.type_class == binja.TypeClass.PointerTypeClass:
+                        if v.type.target.type_class == binja.TypeClass.StructureTypeClass:
+                            ret = False
+                            print(f"Found ptr to raw structure: {v.type} {v}")
+        finally:
+            self.delete_package("basic_struct")
+
+        return ret

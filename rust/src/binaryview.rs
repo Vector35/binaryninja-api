@@ -24,6 +24,7 @@ use crate::architecture::Architecture;
 use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::databuffer::DataBuffer;
+use crate::debuginfo::DebugInfo;
 use crate::fileaccessor::FileAccessor;
 use crate::filemetadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
@@ -605,6 +606,18 @@ pub trait BinaryViewExt: BinaryViewBase {
         } else {
             Ok(DataBuffer::from_raw(read_buffer))
         }
+    }
+
+    fn debug_info(&self) -> Ref<DebugInfo> {
+        unsafe { DebugInfo::from_raw(BNGetDebugInfo(self.as_ref().handle)) }
+    }
+
+    fn set_debug_info(&self, debug_info: &DebugInfo) {
+        unsafe { BNSetDebugInfo(self.as_ref().handle, debug_info.handle) }
+    }
+
+    fn apply_debug_info(&self, debug_info: &DebugInfo) {
+        unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
     fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: FlowGraph) {

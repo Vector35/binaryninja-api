@@ -72,7 +72,6 @@ public:
 class BINARYNINJAUIAPI TagTypeList: public QTableView, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
-	Q_INTERFACES(DockContextHandler)
 
 	ViewFrame* m_view;
 	TagTypeListModel* m_list;

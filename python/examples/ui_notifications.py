@@ -77,6 +77,16 @@ class UINotification(UIContextNotification):
         else:
             print(f"py OnAddressChange {location.getOffset()}")
 
+    def GetNameForFile(self, context, file, name):
+        # This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
+        print(f"py GetNameForFile {file.getFilename()} {name}")
+        return False
+
+    def GetNameForPath(self, context, path, name):
+        # This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
+        print(f"py GetNameForPath {path} {name}")
+        return False
+
 
 # Register as a global so it doesn't get destructed
 notif = UINotification()

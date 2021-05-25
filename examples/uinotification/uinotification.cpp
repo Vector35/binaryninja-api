@@ -2,7 +2,8 @@
 #include "uinotification.h"
 #include "filecontext.h"
 #include "viewframe.h"
-#include <QMessageBox>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QFileInfo>
 
 using namespace BinaryNinja;
 
@@ -89,6 +90,23 @@ void NotificationListener::OnViewChange(UIContext* context, ViewFrame* frame, co
 void NotificationListener::OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location)
 {
 	LogInfo("OnAddressChange: 0x%" PRIx64, location.getOffset());
+}
+
+
+bool NotificationListener::GetNameForFile(UIContext* context, FileContext* file, QString& name)
+{
+	LogInfo("GetNameForFile");
+	name = file->getFilename() + " Foo";
+	return true;
+}
+
+
+bool NotificationListener::GetNameForPath(UIContext* context, const QString& path, QString& name)
+{
+	QFileInfo info(path);
+	LogInfo("GetNameForPath");
+	name = info.baseName() + " Foo";
+	return true;
 }
 
 

@@ -18,6 +18,8 @@ public:
 	virtual void OnAfterCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) override;
 	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) override;
 	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) override;
+	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name) override;
+	virtual bool GetNameForPath(UIContext* context, const QString& path, QString& name) override;
 
 	static void init();
 };

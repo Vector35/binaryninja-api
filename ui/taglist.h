@@ -16,7 +16,7 @@
 class BINARYNINJAUIAPI TagListModel: public QAbstractItemModel
 {
 	Q_OBJECT
-	
+
 protected:
 	QWidget* m_owner;
 	BinaryViewRef m_data;

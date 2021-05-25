@@ -69,7 +69,7 @@ public:
 };
 
 
-class BINARYNINJAUIAPI TagTypeList: public QTableView, public DockContextHandler, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI TagTypeList: public QTableView, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 	Q_INTERFACES(DockContextHandler)
@@ -106,7 +106,7 @@ private Q_SLOTS:
 public:
 	TagTypeList(QWidget* parent, ViewFrame* view, BinaryViewRef data, Menu* menu = nullptr);
 	virtual ~TagTypeList();
-	virtual void notifyFontChanged() override;
+	void notifyFontChanged();
 
 	static void registerActions();
 

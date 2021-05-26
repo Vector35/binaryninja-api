@@ -6327,7 +6327,7 @@ class BinaryView(object):
 				- ``[<expression>].d`` - read the dword (4 bytes) at ``<expression>``
 				- ``[<expression>].q`` - read the quadword (8 bytes) at ``<expression>``
 
-			- The ``$here`` keyword can be used in calculations and is defined as the ``here`` parameter
+			- The ``$here`` (or more succintly: ``$``) keyword can be used in calculations and is defined as the ``here`` parameter, or the currently selected addresss
 			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
 
 		:param str expression: Arithmetic expression to be evaluated

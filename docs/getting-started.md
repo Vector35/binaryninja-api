@@ -510,17 +510,35 @@ The scripting console is not a full IDE, but it has several convenience features
 
 The interactive python prompt also has several built-in functions and variables:
 
-- `here` / `current_address`: address of the current selection (it's settable too and will navigate the UI if changed)
+- `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
+- `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
+- `current_file_offset`: the file offset that corresponds the current address. It's settable and will navigate to the corresponding file offset
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
 - `current_llil`: the current [LowLevelILFunction](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)
 - `current_mlil`: the current [MediumLevelILFunction](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILFunction)
 - `current_hlil`: the current [HighLevelILFunction](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction)
-- `current_selection`: a tuple of the start and end addresses of the current selection
-- `current_selection`: a tuple of the start and end addresses of the current selection
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
+- `current_il_index`: the current index of the IL instruction. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
+- `current_il_instruction`: the current IL instruction. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
+- `current_il_function`: the current IL function. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
+- `current_il_basic_block`: the current IL basic block. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
+- `current_token`: the current selected [InstructionTextToken](https://api.binary.ninja/binaryninja.architecture-module.html#binaryninja.architecture.InstructionTextToken). None if no token is selected
+- `current_data_var`: the current selected [DataVariable](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.DataVariable). None if no data variable is selected
+- `current_sections`: the list of [Section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section)s that the current address is in. This the list can be empty 
+- `current_segment`: the [Segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) that the current address is in.
+- `current_comment`: the comment at the current address. Writing to it sets comment at the current address
+- `current_symbol`: the [Symbol](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) at the current address. None if there is no symbol
+- `current_symbols`: the list of [Symbol](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
+- `current_var`: the current selected [Variable](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function. Not to be confused with `current_data_var`
+- `current_ui_context`: the current [UIContext](https://api.binary.ninja/cpp/class_u_i_context.html)
+- `current_ui_view_frame`: the current [ViewFrame](https://api.binary.ninja/cpp/class_view_frame.html)
+- `current_ui_view`: the current [View](https://api.binary.ninja/cpp/class_view.html)
+- `current_ui_action_handler`: the current [UIActionHandler](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
+- `current_ui_view_location`: the current [ViewLocation](https://api.binary.ninja/cpp/class_view_location.html)
+- `current_ui_action_context`: the current [UIActionContext](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
 
 #### startup.py
 

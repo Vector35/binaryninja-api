@@ -621,10 +621,37 @@ class PythonScriptingInstance(ScriptingInstance):
 		def __init__(self, instance):
 			super(PythonScriptingInstance.InterpreterThread, self).__init__()
 			self.instance = instance
-			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programmatically)
+			# Note: "current_address", "here", "current_comment", "current_selection", and "current_file_offset" are
+			# interactive auto-variables (i.e. can be set by user and programmatically)
 			blacklisted_vars = {
-			    "current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil",
-			    "current_mlil", "current_hlil", "dbg"
+				"current_thread",
+				"current_view",
+				"bv",
+				"current_function",
+				"current_basic_block",
+				"current_llil",
+				"current_mlil",
+				"current_hlil",
+				"dbg",
+				"current_data_var",
+				"current_symbol",
+				"current_symbols",
+				"current_segment",
+				"current_sections",
+				"current_comment"
+				"current_ui_context",
+				"current_ui_view_frame",
+				"current_ui_view",
+				"current_ui_action_handler",
+				"current_ui_view_location",
+				"current_ui_action_context",
+				"current_token",
+				"current_variable",
+				"get_selected_data",
+				"write_at_cursor",
+				"current_il_index",
+				"current_il_function",
+				"current_il_instruction"
 			}
 			self.locals = BlacklistedDict(
 			    blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
@@ -649,10 +676,15 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.active_addr = 0
 			self.active_selection_begin = 0
 			self.active_selection_end = 0
+			self.active_file_offset = None
 			self.active_dbg = None
+			self.active_il_index = 0
+			self.active_il_function = None
 
+			self.locals.blacklist_enabled = False
 			self.locals["get_selected_data"] = self.get_selected_data
 			self.locals["write_at_cursor"] = self.write_at_cursor
+			self.locals.blacklist_enabled = True
 
 			self.exit = False
 			self.code = None
@@ -730,34 +762,10 @@ from binaryninja import *
 							for line in _code.split(b'\n'):
 								self.interpreter.push(line.decode("utf-8"))
 
+						self.apply_locals()
+
 						if self.active_view is not None:
-							tryNavigate = True
-							if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
-								try:
-									self.locals["here"] = self.active_view.parse_expression(
-									    self.locals["here"], self.active_addr
-									)
-								except ValueError as e:
-									sys.stderr.write(str(e))
-									tryNavigate = False
-							if tryNavigate:
-								if self.locals["here"] != self.active_addr:
-									if not self.active_view.file.navigate(
-									    self.active_view.file.view, self.locals["here"]
-									):
-										sys.stderr.write(
-										    "Address 0x%x is not valid for the current view\n" % self.locals["here"]
-										)
-								elif self.locals["current_address"] != self.active_addr:
-									if not self.active_view.file.navigate(
-									    self.active_view.file.view, self.locals["current_address"]
-									):
-										sys.stderr.write(
-										    "Address 0x%x is not valid for the current view\n"
-										    % self.locals["current_address"]
-										)
-							if self.active_view is not None:
-								self.active_view.update_analysis()
+							self.active_view.update_analysis()
 					except:
 						traceback.print_exc()
 					finally:
@@ -772,6 +780,10 @@ from binaryninja import *
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
 			self.active_dbg = self.current_dbg
+			if self.active_view:
+				self.active_file_offset = self.active_view.get_data_offset_for_address(self.active_addr)
+			else:
+				self.active_file_offset = None
 
 			self.locals.blacklist_enabled = False
 			self.locals["current_thread"] = self.interpreter
@@ -782,6 +794,7 @@ from binaryninja import *
 			self.locals["current_address"] = self.active_addr
 			self.locals["here"] = self.active_addr
 			self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
+			self.locals["current_file_offset"] = self.active_file_offset
 			self.locals["dbg"] = self.active_dbg
 			if self.active_func is None:
 				self.locals["current_llil"] = None
@@ -791,7 +804,192 @@ from binaryninja import *
 				self.locals["current_llil"] = self.active_func.llil_if_available
 				self.locals["current_mlil"] = self.active_func.mlil_if_available
 				self.locals["current_hlil"] = self.active_func.hlil_if_available
+
+			if self.active_view is not None:
+				self.locals["current_data_var"] = self.active_view.get_data_var_at(self.active_addr)
+				self.locals["current_symbol"] = self.active_view.get_symbol_at(self.active_addr)
+				self.locals["current_symbols"] = self.active_view.get_symbols(self.active_addr, 1)
+				self.locals["current_segment"] = self.active_view.get_segment_at(self.active_addr)
+				self.locals["current_sections"] = self.active_view.get_sections_at(self.active_addr)
+
+				if self.active_func is None:
+					self.locals["current_comment"] = self.active_view.get_comment_at(self.active_addr)
+				else:
+					if self.active_func.get_comment_at(self.active_addr) != '':
+						self.locals["current_comment"] = self.active_func.get_comment_at(self.active_addr)
+					else:
+						self.locals["current_comment"] = self.active_view.get_comment_at(self.active_addr)
+
+			else:
+				self.locals["current_data_var"] = None
+				self.locals["current_symbol"] = None
+				self.locals["current_symbols"] = []
+				self.locals["current_segment"] = None
+				self.locals["current_sections"] = None
+				self.locals["current_comment"] = None
+
+			if binaryninja.core_ui_enabled():
+				from binaryninjaui import UIContext
+				from binaryninja import Variable, FunctionGraphType
+
+				context = UIContext.activeContext()
+				action_handler = context.getCurrentActionHandler()
+				view_frame = context.getCurrentViewFrame()
+				view = context.getCurrentView()
+				view_location = view_frame.getViewLocation() if view_frame is not None else None
+				action_context = view.actionContext() if view is not None else action_handler.actionContext()
+				token_state = action_context.token
+				token = token_state.token if token_state.valid else None
+				var = token_state.localVar if token_state.localVarValid else None
+				if var and self.active_func:
+					var = Variable.from_core_variable(self.active_func, var)
+
+				if view_location.isValid():
+					self.active_il_index = view_location.getInstrIndex()
+					ilType = view_location.getILViewType()
+					if ilType == FunctionGraphType.LowLevelILFunctionGraph:
+						self.active_il_function = self.locals["current_llil"]
+					elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
+						self.active_il_function = self.locals["current_mlil"]
+					elif ilType == FunctionGraphType.HighLevelILFunctionGraph:
+						self.active_il_function = self.locals["current_hlil"]
+					else:
+						self.active_il_function = None
+
+					self.locals["current_il_index"] = self.active_il_index
+					self.locals["current_il_function"] = self.active_il_function
+					if self.active_il_function:
+						try:
+							self.locals["current_il_instruction"] = self.active_il_function[self.active_il_index]
+						except:
+							self.locals["current_il_instruction"] = None
+
+						if self.locals["current_il_instruction"]:
+							self.locals["current_il_basic_block"] = self.locals["current_il_instruction"].il_basic_block
+					else:
+						self.locals["current_il_instruction"] = None
+						self.locals["current_il_basic_block"] = None
+				else:
+					self.locals["current_il_index"] = None
+					self.locals["current_il_function"] = None
+					self.locals["current_il_instruction"] = None
+					self.locals["current_il_basic_block"] = None
+
+				self.locals["current_ui_context"] = context
+				self.locals["current_ui_view_frame"] = view_frame
+				self.locals["current_ui_view"] = view
+				self.locals["current_ui_action_handler"] = action_handler
+				self.locals["current_ui_view_location"] = view_location
+				self.locals["current_ui_action_context"] = action_context
+				self.locals["current_token"] = token
+				self.locals["current_variable"] = var
+			else:
+				self.locals["current_ui_context"] = None
+				self.locals["current_ui_view_frame"] = None
+				self.locals["current_ui_view"] = None
+				self.locals["current_ui_action_handler"] = None
+				self.locals["current_ui_view_location"] = None
+				self.locals["current_ui_action_context"] = None
+				self.locals["current_token"] = None
+				self.locals["current_variable"] = None
+				self.locals["current_il_index"] = None
+				self.locals["current_il_function"] = None
+				self.locals["current_il_instruction"] = None
+				self.locals["current_il_basic_block"] = None
+
 			self.locals.blacklist_enabled = True
+
+		def update_here(self):
+			tryNavigate = True
+			if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
+				try:
+					self.locals["here"] = self.active_view.parse_expression(self.locals["here"], self.active_addr)
+				except ValueError as e:
+					sys.stderr.write(str(e) + '\n')
+					tryNavigate = False
+			if tryNavigate:
+				if self.locals["here"] != self.active_addr:
+					if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
+						binaryninja.mainthread.execute_on_main_thread(
+							lambda: self.locals["current_ui_context"].navigateForBinaryView(
+								self.active_view, self.locals["here"]))
+
+				elif self.locals["current_address"] != self.active_addr:
+					if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
+						binaryninja.mainthread.execute_on_main_thread(
+							lambda: self.locals["current_ui_context"].navigateForBinaryView(
+								self.active_view, self.locals["current_address"]))
+
+		def update_current_file_offset(self):
+			tryNavigate = True
+			if isinstance(self.locals["current_file_offset"], str):
+				try:
+					self.locals["current_file_offset"] =\
+						self.active_view.parse_expression(self.locals["current_file_offset"], self.active_addr)
+				except ValueError as e:
+					sys.stderr.write(str(e) + '\n')
+					tryNavigate = False
+			if tryNavigate:
+				if self.locals["current_file_offset"] != self.active_file_offset:
+					addr = self.active_view.get_address_for_data_offset(self.locals["current_file_offset"])
+					if addr is not None:
+						if not self.active_view.file.navigate(self.active_view.file.view, addr):
+							binaryninja.mainthread.execute_on_main_thread(
+								lambda: self.locals["current_ui_context"].navigateForBinaryView(self.active_view, addr))
+
+		def update_current_comment(self):
+			if self.active_view is None:
+				return
+
+			if self.active_func is None:
+				if self.active_view.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+					self.active_view.set_comment_at(self.active_addr, self.locals["current_comment"])
+			else:
+				if self.active_view.get_comment_at(self.active_addr) != '':
+					# Prefer editing active view comment if one exists
+					if self.active_view.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+						self.active_view.set_comment_at(self.active_addr, self.locals["current_comment"])
+				else:
+					if self.active_func.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+						self.active_func.set_comment_at(self.active_addr, self.locals["current_comment"])
+
+		def update_current_selection(self):
+			if not self.locals["current_ui_view"]:
+				return
+
+			if (not isinstance(self.locals["current_selection"], list)) and \
+					(not isinstance(self.locals["current_selection"], tuple)):
+				return
+
+			tryNavigate = True
+			if isinstance(self.locals["current_selection"][0], str):
+				try:
+					self.locals["current_selection"][0] = self.active_view.parse_expression(
+						self.locals["current_selection"][0], self.active_addr)
+				except ValueError as e:
+					sys.stderr.write(str(e) + '\n')
+					tryNavigate = False
+
+			if tryNavigate and isinstance(self.locals["current_selection"][1], str):
+				try:
+					self.locals["current_selection"][1] = self.active_view.parse_expression(
+						self.locals["current_selection"][1], self.active_addr)
+				except ValueError as e:
+					sys.stderr.write(str(e) + '\n')
+					tryNavigate = False
+
+			if tryNavigate:
+				if self.locals["current_selection"][0] != self.active_selection_begin or \
+						self.locals["current_selection"][1] != self.active_selection_end:
+					new_selection = (self.locals["current_selection"][0], self.locals["current_selection"][1])
+					binaryninja.mainthread.execute_on_main_thread(
+						lambda: self.locals["current_ui_view"].setSelectionOffsets(new_selection))
+
+		def apply_locals(self):
+			self.update_here()
+			self.update_current_file_offset()
+			self.update_current_comment()
+			self.update_current_selection()
 
 		def get_selected_data(self):
 			if self.active_view is None:

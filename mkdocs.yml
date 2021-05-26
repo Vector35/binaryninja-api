@@ -19,7 +19,7 @@ theme:
         previous: 80 # p
         search: 191   # ? / /
 
-copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) Vector 35 Inc'
+        copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) <a href="https://vector35.com/">Vector 35 Inc</a>'
 
 markdown_extensions:
     - codehilite

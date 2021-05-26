@@ -91,10 +91,14 @@ class BINARYNINJAUIAPI CommandListFilter: public QLineEdit
 	CommandPalette* m_palette;
 	CommandList* m_list;
 
+	//! Focus the next or previous results list item.
+	bool cycleSelection(bool forward = true);
+
 public:
 	CommandListFilter(CommandPalette* parent, CommandList* list);
 
 protected:
+	bool event(QEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual void focusOutEvent(QFocusEvent* event) override;
 };
@@ -120,7 +124,9 @@ public:
 	CommandPalette(QWidget* parent, UIActionHandler* handler, const UIActionContext& context);
 
 	void focusInput();
-	void activateFirstItem();
+
+	//! Activate the focused item, or topmost item if there is no selection.
+	void activateFocusedItem();
 	void selectFirstItem();
 	void close();
 

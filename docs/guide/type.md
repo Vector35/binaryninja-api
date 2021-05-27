@@ -147,6 +147,25 @@ We can either update our automatically created structure by pressing `y` to chan
 ![Taped HLIL](../img/taped-hlil.png "Taped HLIL")
 
 
+### Automatically Creating Structure Member(s)
+
+Starting from `dev 2.3.2827` (and the subsequent stable 2.4), we offer a more automated way of creating structure members. You can select a structure or a particular structure offset, and create member(s) based on the accesses to the offset(s). The operation takes into consideration of both incoming and outgoing type information for the accessed offsets and selects the most confident one as the type for the offset.
+
+When no type information can be used to create the structure member, we fall back to creating an integer type based on the size of accesses, similar to what we do for the `s` hotkey (discussed above). In case there are different sizes of accesses, we do not create the member. You will need to examine the conflicting size information and decide how to create a member.
+
+The automatic structure member creation can be triggered in both types view and linear/graph view. In types view, you can right-click a structure definition line and select the "Create Members at Accessed Offsets" to create new members at all offsets that are accessed in the structure.
+
+![Auto Create Members](../img/auto-create-members.png "Auto Create Members")
+
+Alternatively, you can right-click on a padding byte or an access annotation, and select "Create Member At Current Offset", which creates a new structure member at the byte's offset.
+
+![Auto Create One Member](../img/auto-create-one-member.png "Auto Create One Member")
+
+Note, the second action can only be triggered on an offset that does not already have a member. If you wish to run it on an offset that already has a member, you must first undefine the member by pressing `u`.
+
+In graph/linear view, you can select either a token that has a structure name, or a variable that has a structure type, and then right-click and select the menu item. Besides, you can select a token with struct offset, e.g., `__offset(0x10).q` and right-click to automatically create one member.
+
+
 ### Types View
 
 To see all types in a Binary View, use the types view. It can be accessed from the menu `View > Types`. Alternatively, you can access it with the `t` hotkey from most other views, or using `[CMD/CTRL] p` to access the command-palette and typing "types". This is the most common interface for creating structures, unions and types using C-style syntax.
@@ -187,6 +206,13 @@ To use the `__convention` keyword, pass in the convention name as a parameter ar
 ```
 __convention("customconvention")
 ```
+
+
+#### Structure Access Annotations
+
+Types view now annotates code references to structure offsets. It uses the same convention as in the graph/linear view. For example, the `__offset(0x8).q` token means the code references the offset 0x8 of this structure, and the size of the access is a qword. This will make it easier to see which offsets of a structure are being used, and aid in the process of creating structure members.
+
+![Type View Accesses](../img/type-view-accesses.png "Type View Accesses")
 
 
 #### Applying Structures and Types

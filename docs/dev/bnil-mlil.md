@@ -145,7 +145,7 @@ enum IntegerDisplayType
 	FloatDisplayType,
 	DoubleDisplayType
 };
-``
+```
 
 ### FloatTypeClass
 

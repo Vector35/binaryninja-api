@@ -365,7 +365,7 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_SX` - Sign extends the `src` expression
 * `MLIL_ZX` - Zero extends the `src` expression
 * `MLIL_ADD_OVERFLOW` - Calculates overflow of the addition of `left` expression with `right` expression
-* `MLIL_BOOL_TO_INT` - Converts a bool to an integer
+* `MLIL_BOOL_TO_INT` - Converts a bool `src` to an integer
 
 ### Comparison Instructions
 

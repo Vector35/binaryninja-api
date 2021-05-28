@@ -203,6 +203,8 @@ As you can see from the above code, labels are really just used internally and a
 * `LLIL_CALL` - Branch execution to the result of the IL operation.
 * `LLIL_RET` - Return execution to the caller.
 * `LLIL_NORET` - Instruction emitted automatically after syscall or call instruction which cause the program to terminate.
+* `LLIL_SYSCALL` - System call instruction
+* `LLIL_TAILCALL ` - This instruction calls the expression `dest` using `params` as input and `output` for return values
 * `LLIL_IF` - `If` provides conditional execution. If condition is true execution branches to the true label and false label otherwise.
 * `LLIL_GOTO` - `Goto` is used to branch to an IL label, this is different than jump since jump can only jump to addresses.
 * `LLIL_FLAG_COND` - Returns the flag condition expression for the specified flag condition.
@@ -251,6 +253,8 @@ The double precision instruction multiply, divide, modulus instructions are part
 * `LLIL_MODS_DP` - Signed modulus double precision
 * `LLIL_NEG` - Sign negation
 * `LLIL_NOT` - Bitwise complement
+* `LLIL_TEST_BIT ` - Test if bit `right` in expression `left` is set
+* `LLIL_BOOL_TO_INT ` - Converts a bool `src` to an integer
 
 ### Floating Point Operations
 * `LLIL_FLOAT_CONST` - Floating point constant value
@@ -273,14 +277,14 @@ The double precision instruction multiply, divide, modulus instructions are part
 
 These are identical to their native counterparts but are lifted separately so that the operations can impact different flags. See "Control FLow & Conditionals" above.
 
-* `LLIL_FCMP_E ` - 
-* `LLIL_FCMP_NE ` - 
-* `LLIL_FCMP_LT ` - 
-* `LLIL_FCMP_LE ` - 
-* `LLIL_FCMP_GE ` - 
-* `LLIL_FCMP_GT ` - 
-* `LLIL_FCMP_O ` - 
-* `LLIL_FCMP_UO ` - 
+* `LLIL_FCMP_E ` - See above
+* `LLIL_FCMP_NE ` - See above
+* `LLIL_FCMP_LT ` - See above
+* `LLIL_FCMP_LE ` - See above
+* `LLIL_FCMP_GE ` - See above
+* `LLIL_FCMP_GT ` - See above
+* `LLIL_FCMP_O ` - See above
+* `LLIL_FCMP_UO ` - See above
 
 ### Special instructions
 
@@ -289,27 +293,23 @@ The rest of the instructions are pretty much self-explanatory to anyone with fam
 * `LLIL_BP` - Breakpoint instruction
 * `LLIL_EXTERN_PTR` - A synthesized (fake) pointer to something which doesn't exist within the memory space of the current binary
 * `LLIL_INTRINSIC ` - Intrinsics are operations with `output` and `params` and an `intrinsic` where the exact behavior is not modelled but the dataflow system can be improved by annotating the inputs and outputs. An example intrinsic would CPU AES instructions where the exact behavior is not modelled, but the inputs and outputs are.
-* `LLIL_INTRINSIC_SSA ` - 
+* `LLIL_INTRINSIC_SSA ` - SSA form of the `LLIL_INTRINSIC` operation
 * `LLIL_NOP` - No operation
 * `LLIL_SX` - Sign extend
-* `LLIL_SYSCALL` - System call instruction
 * `LLIL_TRAP` - Trap instruction
 * `LLIL_UNDEF` - Undefined instruction
 * `LLIL_UNIMPL` - Unimplemented instruction
 * `LLIL_UNIMPL_MEM` - Unimplemented memory access instruction
 * `LLIL_ZX` - Zero extend
+* `LLIL_MEM_PHI ` - A memory `PHI` represents memory modifications that could have occured down different source basic blocks similar to a `VAR_PHI`.
+* `LLIL_LOW_PART ` - `size` bytes from the low end of `src` expression
 
 ### Currently Undocumented
 
 * `LLIL_FLAG ` - 
-* `LLIL_LOW_PART ` - 
 * `LLIL_FLAG_BIT ` - 
 * `LLIL_FLAG_GROUP ` - 
-* `LLIL_TAILCALL ` - 
-* `LLIL_BOOL_TO_INT ` - 
-* `LLIL_TEST_BIT ` - 
-* `LLIL_FLAG_SSA ` - 
-* `LLIL_TAILCALL_SSA ` - 
 * `LLIL_FLAG_BIT_SSA ` - 
 * `LLIL_FLAG_PHI ` - 
-* `LLIL_MEM_PHI ` - 
+* `LLIL_FLAG_SSA ` - 
+* `LLIL_TAILCALL_SSA ` - 

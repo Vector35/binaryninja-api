@@ -38,6 +38,7 @@ class CallingConvention(object):
 	int_arg_regs = []
 	float_arg_regs = []
 	arg_regs_share_index = False
+	arg_regs_for_varargs = True
 	stack_reserved_for_arg_regs = False
 	stack_adjusted_on_return = False
 	eligible_for_heuristics = True
@@ -64,6 +65,7 @@ class CallingConvention(object):
 			self._cb.getFloatArgumentRegisters = self._cb.getFloatArgumentRegisters.__class__(self._get_float_arg_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(self._arg_regs_share_index)
+			self._cb.areArgumentRegistersUsedForVarArgs = self._cb.areArgumentRegistersUsedForVarArgs.__class__(self._arg_regs_used_for_varargs)
 			self._cb.isStackReservedForArgumentRegisters = self._cb.isStackReservedForArgumentRegisters.__class__(self._stack_reserved_for_arg_regs)
 			self._cb.isStackAdjustedOnReturn = self._cb.isStackAdjustedOnReturn.__class__(self._stack_adjusted_on_return)
 			self._cb.isEligibleForHeuristics = self._cb.isEligibleForHeuristics.__class__(self._eligible_for_heuristics)
@@ -83,6 +85,7 @@ class CallingConvention(object):
 			self.arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(self.handle))
 			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
 			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
+			self.__dict__["arg_regs_for_varargs"] = core.BNAreArgumentRegistersUsedForVarArgs(self.handle)
 			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
 			self.__dict__["stack_adjusted_on_return"] = core.BNIsStackAdjustedOnReturn(self.handle)
 			self.__dict__["eligible_for_heuristics"] = core.BNIsEligibleForHeuristics(self.handle)
@@ -253,6 +256,13 @@ class CallingConvention(object):
 	def _arg_regs_share_index(self, ctxt):
 		try:
 			return self.__class__.arg_regs_share_index
+		except:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def _arg_regs_used_for_varargs(self, ctxt):
+		try:
+			return self.__class__.arg_regs_for_varargs
 		except:
 			log.log_error(traceback.format_exc())
 			return False

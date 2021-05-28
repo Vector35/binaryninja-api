@@ -4756,6 +4756,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 
 		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
+		static bool AreArgumentRegistersUsedForVarArgsCallback(void* ctxt);
 		static bool IsStackReservedForArgumentRegistersCallback(void* ctxt);
 		static bool IsStackAdjustedOnReturnCallback(void* ctxt);
 		static bool IsEligibleForHeuristicsCallback(void* ctxt);
@@ -4784,6 +4785,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters();
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
 		virtual bool AreArgumentRegistersSharedIndex();
+		virtual bool AreArgumentRegistersUsedForVarArgs();
 		virtual bool IsStackReservedForArgumentRegisters();
 		virtual bool IsStackAdjustedOnReturn();
 		virtual bool IsEligibleForHeuristics();
@@ -4812,6 +4814,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters() override;
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters() override;
 		virtual bool AreArgumentRegistersSharedIndex() override;
+		virtual bool AreArgumentRegistersUsedForVarArgs() override;
 		virtual bool IsStackReservedForArgumentRegisters() override;
 		virtual bool IsStackAdjustedOnReturn() override;
 		virtual bool IsEligibleForHeuristics() override;

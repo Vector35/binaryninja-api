@@ -28,14 +28,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 9
+#define BN_CURRENT_CORE_ABI_VERSION 10
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 7
+#define BN_MINIMUM_CORE_ABI_VERSION 10
 
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
@@ -2057,6 +2057,8 @@ extern "C"
 			BNFunction* func, BNVariable* result);
 		void (*getParameterVariableForIncomingVariable)(void* ctxt, const BNVariable* var,
 			BNFunction* func, BNVariable* result);
+
+		bool (*areArgumentRegistersUsedForVarArgs)(void* ctxt);
 	};
 
 	struct BNVariableNameAndType
@@ -4661,6 +4663,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint32_t* BNGetIntegerArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetFloatArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersSharedIndex(BNCallingConvention* cc);
+	BINARYNINJACOREAPI bool BNAreArgumentRegistersUsedForVarArgs(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackReservedForArgumentRegisters(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackAdjustedOnReturn(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsEligibleForHeuristics(BNCallingConvention* cc);

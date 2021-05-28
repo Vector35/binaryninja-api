@@ -41,6 +41,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getFloatArgumentRegisters = GetFloatArgumentRegistersCallback;
 	cc.freeRegisterList = FreeRegisterListCallback;
 	cc.areArgumentRegistersSharedIndex = AreArgumentRegistersSharedIndexCallback;
+	cc.areArgumentRegistersUsedForVarArgs = AreArgumentRegistersUsedForVarArgsCallback;
 	cc.isStackReservedForArgumentRegisters = IsStackReservedForArgumentRegistersCallback;
 	cc.isStackAdjustedOnReturn = IsStackAdjustedOnReturnCallback;
 	cc.isEligibleForHeuristics = IsEligibleForHeuristicsCallback;
@@ -128,6 +129,13 @@ bool CallingConvention::AreArgumentRegistersSharedIndexCallback(void* ctxt)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	return cc->AreArgumentRegistersSharedIndex();
+}
+
+
+bool CallingConvention::AreArgumentRegistersUsedForVarArgsCallback(void* ctxt)
+{
+	CallingConvention* cc = (CallingConvention*)ctxt;
+	return cc->AreArgumentRegistersUsedForVarArgs();
 }
 
 
@@ -280,6 +288,12 @@ bool CallingConvention::AreArgumentRegistersSharedIndex()
 }
 
 
+bool CallingConvention::AreArgumentRegistersUsedForVarArgs()
+{
+	return true;
+}
+
+
 bool CallingConvention::IsStackReservedForArgumentRegisters()
 {
 	return false;
@@ -406,6 +420,12 @@ vector<uint32_t> CoreCallingConvention::GetFloatArgumentRegisters()
 bool CoreCallingConvention::AreArgumentRegistersSharedIndex()
 {
 	return BNAreArgumentRegistersSharedIndex(m_object);
+}
+
+
+bool CoreCallingConvention::AreArgumentRegistersUsedForVarArgs()
+{
+	return BNAreArgumentRegistersUsedForVarArgs(m_object);
 }
 
 

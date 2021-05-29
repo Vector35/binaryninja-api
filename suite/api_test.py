@@ -345,15 +345,17 @@ class PluginManagerTest(unittest.TestCase):
 		assert 'community' in [r.path for r in mgr.repositories]
 		assert 'official' in [r.path for r in mgr.repositories]
 		assert 'Vector35_debugger' in [p.path for p in mgr['official'].plugins]
-		dbg = mgr['official']['Vector35_debugger']
-		assert dbg.dependencies == 'colorama\n'
-		assert dbg.name == 'Debugger'
-		assert not dbg.installed
-		assert not dbg.running
-		assert not dbg.enabled
-		assert not dbg.disable_pending
-		dbg.install()
-		dbg.enable()
-		assert dbg.installed
-		assert dbg.enabled
-		dbg.uninstall()
+		try:
+			dbg = mgr['official']['Vector35_debugger']
+			assert dbg.dependencies == 'colorama\n'
+			assert dbg.name == 'Debugger'
+			assert not dbg.installed
+			assert not dbg.running
+			assert not dbg.enabled
+			assert not dbg.disable_pending
+			dbg.install()
+			dbg.enable()
+			assert dbg.installed
+			assert dbg.enabled
+		finally:
+			dbg.uninstall()

@@ -109,13 +109,17 @@ class BinaryViewTestBuilder(Builder):
     """
     def __init__(self, filename, options=None):
         self.filename = os.path.join(os.path.dirname(__file__), filename)
-        if options is None:
-            self.bv = BinaryViewType.get_view_of_file(self.filename)
-        else:
+        if options:
             self.bv = BinaryViewType.get_view_of_file_with_options(self.filename, options=options)
+        else:
+            self.bv = BinaryViewType.get_view_of_file(self.filename)
         if self.bv is None:
             print("%s is not an executable format" % filename)
             return
+
+    @classmethod
+    def get_root_directory(cls):
+        return os.path.dirname(__file__)
 
     def test_available_types(self):
         """Available types don't match"""
@@ -361,6 +365,8 @@ class BinaryViewTestBuilder(Builder):
         """Function HLIL produced different output"""
         retinfo = []
         for func in self.bv.functions:
+            if func.hlil is None or func.hlil.root is None:
+                continue
             for line in func.hlil.root.lines:
                 retinfo.append("Function: {:x} HLIL line: {}".format(func.start, str(line)))
             for hlilins in func.hlil.instructions:
@@ -1022,7 +1028,7 @@ class TestBuilder(Builder):
                     retinfo.append('type field {}, offset {} is referenced by type {}'.format(type_name, hex(offset), ref))
 
             return retinfo
- 
+
         retinfo = []
         file_name = self.unpackage_file("type_xref.bndb")
         if not os.path.exists(file_name):
@@ -1043,7 +1049,7 @@ class TestBuilder(Builder):
                 t = types[test_type]
                 if not t:
                     continue
-                
+
                 for member in t.structure.members:
                     offset = member.offset
                     code_refs = bv.get_code_refs_for_type_field(test_type, offset)
@@ -1062,7 +1068,7 @@ class TestBuilder(Builder):
             for ref in var_refs:
                 retinfo.append('var {} is referenced at {}'.format(repr(var), repr(ref)))
             return retinfo
- 
+
         retinfo = []
         file_name = self.unpackage_file("type_xref.bndb")
         if not os.path.exists(file_name):
@@ -1125,7 +1131,7 @@ class TestBuilder(Builder):
 
             bv.find_all_text(bv.start, bv.end, 'test', None, FindFlag.FindCaseSensitive,
                 FunctionGraphType.NormalFunctionGraph, None, string_callback)
-    
+
             def constant_callback(addr, line):
                 retinfo.append('match found at address: 0x%lx with constant 0x58, line %s'\
                     % (addr, line))
@@ -1761,7 +1767,7 @@ class VerifyBuilder(Builder):
                 ret = False
             if bv.file.snapshot_data_applied_without_error:
                 ret = True
-        
+
         binja.Settings().reset("analysis.database.suppressReanalysis")
         self.delete_package("binja_v1.2.1921_bin_ls.bndb")
         return ret

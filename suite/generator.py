@@ -23,10 +23,12 @@ from collections import Counter
 
 api_suite_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), {4}))
 sys.path.append(api_suite_path)
+# support direct invocation of configuration unit.py
+commondir = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", ".."))
+sys.path.append(commondir)
 import config
 import testcommon
 import api_test
-import rebasing_test
 
 
 class TestBinaryNinjaAPI(unittest.TestCase):
@@ -91,13 +93,13 @@ class TestBinaryNinjaAPI(unittest.TestCase):
             self.oracle_test_data = pickle.load(open(pickle_path, "rb"))
         self.verifybuilder = testcommon.VerifyBuilder("{3}")
 
-    def run_binary_test(self, testfile, options=None):
+    def run_binary_test(self, testfile, oracle_suffix="", config_settings=None):
         testname = None
         with zipfile.ZipFile(os.path.join(api_suite_path, testfile), "r") as zf:
             testname = zf.namelist()[0]
             zf.extractall(path=api_suite_path)
 
-        pickle_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), testname + ".pkl")
+        pickle_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), testname + oracle_suffix + ".pkl")
         self.assertTrue(pickle_path, "Test pickle doesn't exist")
         try:
             # Python 2 does not have the encodings option
@@ -105,7 +107,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         except TypeError:
             binary_oracle = pickle.load(open(pickle_path, "rb"))
 
-        test_builder = testcommon.BinaryViewTestBuilder(testname, options)
+        test_builder = testcommon.BinaryViewTestBuilder(testname, config_settings)
         for method in test_builder.methods():
             test = getattr(test_builder, method)()
             oracle = binary_oracle[method]
@@ -119,7 +121,7 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         os.unlink(os.path.join(api_suite_path, testname))
 {1}{2}
 
-if __name__ == "__main__":
+def main():
     api_only = False
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
@@ -128,18 +130,24 @@ if __name__ == "__main__":
             elif sys.argv[i] == '--api-only':
                 config.api_only = True
 
-    test_suite = unittest.defaultTestLoader.loadTestsFromModule(rebasing_test)
-    if not config.api_only:
-        test_suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI))
-    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(api_test))
-    runner = unittest.TextTestRunner(verbosity=2)
-    runner.run(test_suite)
+    if config.api_only:
+        runner = unittest.TextTestRunner(verbosity=2)
+        test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
+        runner.run(test_suite)
+    else:
+        runner = unittest.TextTestRunner(verbosity=2)
+        test_suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI)
+        test_suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(api_test))
+        runner.run(test_suite)
+
+if __name__ == "__main__":
+    main()
 """
 
 
 binary_test_string = """
     def test_binary__{0}(self):
-        self.run_binary_test('{1}', options={2})
+        self.run_binary_test('{1}', oracle_suffix='{2}', config_settings={3})
 """
 
 test_string = """
@@ -172,10 +180,6 @@ class OracleTestFile:
 
 
 class UnitTestFile:
-    binary_test_options = {}
-    # binary_test_options provides the ability to test a binary with specific options e.g.:
-    #binary_test_options['binaries/test_corpus/pe_thumb'] = {'analysis.experimental.alternateTypePropagation' : True}
-
     def __init__(self, filename, outdir, test_store):
         self.filename = filename
         self.test_store = test_store
@@ -200,11 +204,11 @@ class UnitTestFile:
     def add_test(self, test_name):
         self.tests += test_string.format(test_name)
 
-    def add_binary_test(self, test_store, binary):
+    def add_binary_test(self, test_store, binary, oracle_suffix="", config_settings=None):
         name = binary[len(test_store):].replace(os.path.sep, "_").replace(".", "_")
         if os.name == 'nt':
             binary = binary.replace(os.sep, '/')
-        self.binary_tests += binary_test_string.format(name, binary + ".zip", UnitTestFile.binary_test_options.get(binary, None))
+        self.binary_tests += binary_test_string.format(name, binary + ".zip", oracle_suffix, config_settings)
 
 
 quiet = False
@@ -215,7 +219,7 @@ def myprint(stuff):
 
 def update_progress(complete, total, description, done=False):
     n = 20
-    maxdesc = 50
+    maxdesc = 70
     if total == 0:
         total, complete = 10, 10
     if len(description) > maxdesc:
@@ -234,9 +238,12 @@ class TestStoreError(Exception):
         Exception.__init__(self, *args, **kwargs)
 
 
-def generate(test_store, outdir, exclude_binaries):
+def generate(test_store, outdir, exclude_binaries, config_settings=None):
     if not os.path.isdir(os.path.join(os.path.dirname(__file__), test_store)):
         raise TestStoreError("Specified test store is not a directory")
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     unittest = UnitTestFile(os.path.join(outdir, "unit.py"), outdir, test_store)
     oracle = OracleTestFile(os.path.join(outdir, "oracle"))
@@ -286,6 +293,7 @@ def generate(test_store, outdir, exclude_binaries):
 
     # Now generate test that involve binaries
     allfiles = sorted(testcommon.get_file_list(test_store))
+    total_progress = len(allfiles)
     for progress, testfile in enumerate(allfiles):
         oraclefile = None
         zip_only = False
@@ -326,15 +334,22 @@ def generate(test_store, outdir, exclude_binaries):
             os.unlink(oraclefile)
             continue
 
-        oraclefile_rel = os.path.relpath(oraclefile, start=os.path.dirname(__file__))
+        testfile_basename = os.path.basename(oraclefile)
+        testfile_rel = os.path.relpath(oraclefile, start=os.path.dirname(__file__))
+        oraclefile_basepath = testfile_rel[:-len(testfile_basename)]
+        oraclefile_rel = os.path.join(oraclefile_basepath, testfile_basename)
+
+        # Create directory for pickle oracle results
+        if not os.path.exists(os.path.join(outdir, oraclefile_basepath)):
+            os.makedirs(os.path.join(outdir, oraclefile_basepath))
 
         # Now generate the oracle data
         update_progress(progress, len(allfiles), oraclefile_rel)
-        unittest.add_binary_test(test_store, oraclefile_rel)
+        unittest.add_binary_test(test_store, testfile_rel, config_settings=config_settings)
         binary_start_time = time.time()
         if exclude_binaries:
             continue
-        test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, UnitTestFile.binary_test_options.get(oraclefile_rel, None))
+        test_data = testcommon.BinaryViewTestBuilder(testfile_rel, config_settings)
         binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel))
         for method in test_data.methods():
             binary_oracle.add_entry(test_data, method)
@@ -342,17 +357,19 @@ def generate(test_store, outdir, exclude_binaries):
         print("{0:.2f}".format(time.time() - binary_start_time))
 
         # Generate oracle data for rebasing tests
-        name = oraclefile_rel[len(test_store):].replace(os.path.sep, "_").replace(".", "_")[1:]
-        if name in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
-            test_data = testcommon.BinaryViewTestBuilder(oraclefile_rel, options={'loader.imageBase' : 0xf00000})
-            binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel) + "_rebasing")
+        if testfile_basename in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
+            oracle_suffix = "_rebasing"
+            rebasing_options = {**config_settings, **{'loader.imageBase' : 0xf00000}}
+            unittest.add_binary_test(test_store, testfile_rel, oracle_suffix, rebasing_options)
+            test_data = testcommon.BinaryViewTestBuilder(testfile_rel, rebasing_options)
+            binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel) + oracle_suffix)
             for method in test_data.methods():
                 binary_oracle.add_entry(test_data, method)
             binary_oracle.close()
 
         os.unlink(oraclefile)
 
-    update_progress(len(allfiles), len(allfiles), "Generating binary unit tests complete", True)
+    update_progress(total_progress, total_progress, "Generating binary unit tests complete", True)
     unittest.close()
     oracle.close()
 
@@ -360,7 +377,7 @@ def generate(test_store, outdir, exclude_binaries):
 def main():
     usage = "usage: %prog [-q] [-x] [-o <dir>] [-i <dir>]"
     parser = OptionParser(usage=usage)
-    default_output = os.path.relpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "suite"))
+    default_output = os.path.relpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "suite", "generated"))
     parser.add_option("-q", "--quiet",
                       dest="quiet", action="store_true",
                       default=False, help="Don't print anything")
@@ -373,22 +390,35 @@ def main():
     parser.add_option("-i", "--inputdir", default=os.path.join("binaries", "test_corpus"),
                       dest="test_store", action="store", type="string",
                       help="input directory containing the binaries you which to generate unit tests from (relative to this file)")
+    parser.add_option("-a", "--analysismodes",
+                      dest="analysis_modes", action="store_true",
+                      default=False, help="Generate additional oracle files to support analysis mode testing")
 
     options, args = parser.parse_args()
-    print("OUTPUT: %s" % options.outputdir)
 
-    myprint("[+] INFO: Using test store: %s" % options.test_store)
+    test_store_location = os.path.relpath(os.path.join(testcommon.BinaryViewTestBuilder.get_root_directory(), options.test_store))
+    myprint(f"[+] INFO: Input Test Corpus: {test_store_location}")
     if len(testcommon.get_file_list(options.test_store)) == 0:
-        myprint("ERROR: No files in the test store %s" % testcommon.get_file_list(options.test_store))
+        myprint(f"ERROR: Test Corpus is empty: {testcommon.get_file_list(options.test_store)}")
         sys.exit(1)
 
-    myprint("[+] INFO: Generating test store")
-    try:
-        generate(options.test_store, options.outputdir, options.exclude_binary)
-    except TestStoreError as te:
-        myprint("[-] ERROR: Failed to generate test store: %s" % te.message)
-        sys.exit(1)
-    myprint("[+] SUCCESS: Generating test store")
+    configurations = {}
+    configurations['default'] = {}
+    if options.analysis_modes:
+        configurations['mode_controlflow'] = {'analysis.mode' : 'controlFlow'}
+        configurations['mode_basic'] = {'analysis.mode' : 'basic'}
+        configurations['mode_intermediate'] = {'analysis.mode' : 'intermediate'}
+
+    myprint("[+] INFO: Generating Automated Unit Tests and Oracle Results")
+    for (name, config_settings) in configurations.items():
+        oracle_target = os.path.join(options.outputdir, name)
+        myprint(f"[+] INFO: Oracle Target Directory: {oracle_target}")
+        try:
+            generate(options.test_store, oracle_target, options.exclude_binary, config_settings)
+            myprint(f"[+] SUCCESS: Generated Results for the '{name}' Configuration")
+        except TestStoreError as te:
+            myprint(f"[-] ERROR: Failed to Generate Results for the '{name}' Configuration: {te.message}")
+            sys.exit(1)
     sys.exit(0)
 
 

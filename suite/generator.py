@@ -31,7 +31,7 @@ import testcommon
 import api_test
 
 
-class TestBinaryNinjaAPI(unittest.TestCase):
+class TestBinaryNinja(unittest.TestCase):
     # Returns a tuple of:
     #   bool   : Two lists are equal
     #   string : The string diff
@@ -121,24 +121,40 @@ class TestBinaryNinjaAPI(unittest.TestCase):
         os.unlink(os.path.join(api_suite_path, testname))
 {1}{2}
 
+def filter_test_suite(suite, keyword):
+    result = unittest.TestSuite()
+    for child in suite._tests:
+        if type(child) == unittest.suite.TestSuite:
+            result.addTest(filter_test_suite(child, keyword))
+        elif keyword.lower() in child._testMethodName.lower():
+            result.addTest(child)
+    return result
+
 def main():
-    api_only = False
+    test_keyword = None
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if sys.argv[i] == '-v' or sys.argv[i] == '-V' or sys.argv[i] == '--verbose':
                 config.verbose = True
             elif sys.argv[i] == '--api-only':
                 config.api_only = True
+            else:
+                # otherwise the argument is taken as a test case search keyword
+                test_keyword = sys.argv[i]
 
     if config.api_only:
         runner = unittest.TextTestRunner(verbosity=2)
         test_suite = unittest.defaultTestLoader.loadTestsFromModule(api_test)
-        runner.run(test_suite)
     else:
         runner = unittest.TextTestRunner(verbosity=2)
-        test_suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinjaAPI)
+        test_suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestBinaryNinja)
         test_suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(api_test))
-        runner.run(test_suite)
+
+    # if test keyword supplied, filter
+    if test_keyword:
+        test_suite = filter_test_suite(test_suite, test_keyword)
+
+    runner.run(test_suite)
 
 if __name__ == "__main__":
     main()

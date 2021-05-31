@@ -192,6 +192,10 @@ public:
 		BinaryNinja::Type* type) override;
 	virtual void OnTypeReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
 		BinaryNinja::Type* type) override;
+	virtual void OnDataVariableAdded(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&);
+	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&);
+	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&);
+	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&);
 
 	void MarkUpdatesRequired() { m_updatesRequired = true; }
 	virtual void updateFonts() override;

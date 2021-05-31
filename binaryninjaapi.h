@@ -955,6 +955,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
+		static void TypeReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 
 	public:
 		BinaryDataNotification();
@@ -984,6 +985,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
 		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
 		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
+		virtual void OnTypeReferenceChanged(BinaryView* data, const QualifiedName&name, Type* type) { (void)data;
+			(void)name; (void)type; }
 	};
 
 	class FileAccessor

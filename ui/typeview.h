@@ -190,6 +190,8 @@ public:
 		BinaryNinja::Type* type) override;
 	virtual void OnTypeUndefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
 		BinaryNinja::Type* type) override;
+	virtual void OnTypeReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
+		BinaryNinja::Type* type) override;
 
 	void MarkUpdatesRequired() { m_updatesRequired = true; }
 	virtual void updateFonts() override;

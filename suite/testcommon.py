@@ -968,6 +968,9 @@ class TestBuilder(Builder):
                     def type_undefined(self, view, name, type):
                         results.append("type undefined: {0}".format(name))
 
+                    def type_ref_changed(self, view, name, type):
+                        results.append("type reference changed: {0}".format(name))            
+
                 test = NotifyTest()
                 bv.register_notification(test)
                 sacrificial_addr = 0x84fc
@@ -999,6 +1002,12 @@ class TestBuilder(Builder):
                 bv.update_analysis_and_wait()
 
                 bv.remove(sacrificial_addr, 4)
+                bv.update_analysis_and_wait()
+
+                type, _ = bv.parse_type_string("struct { uint64_t bar; }")
+                bv.define_user_type('foo', type)
+                func = bv.get_function_at(0x8440)
+                func.return_type = binja.Type.named_type_from_type('foo', type)
                 bv.update_analysis_and_wait()
 
                 bv.unregister_notification(test)

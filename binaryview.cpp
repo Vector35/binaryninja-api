@@ -216,6 +216,15 @@ void BinaryDataNotification::TypeUndefinedCallback(void* ctxt, BNBinaryView* dat
 }
 
 
+void BinaryDataNotification::TypeReferenceChangedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+	notify->OnTypeReferenceChanged(view, QualifiedName::FromAPIObject(name), typeObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -241,6 +250,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.stringRemoved = StringRemovedCallback;
 	m_callbacks.typeDefined = TypeDefinedCallback;
 	m_callbacks.typeUndefined = TypeUndefinedCallback;
+	m_callbacks.typeReferenceChanged = TypeReferenceChangedCallback;
 }
 
 

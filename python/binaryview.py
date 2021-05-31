@@ -127,6 +127,9 @@ class BinaryDataNotification(object):
 	def type_undefined(self, view, name, type):
 		pass
 
+	def type_ref_changed(self, view, name, type):
+		pass
+
 _decodings = {
 	StringType.AsciiString: "ascii",
 	StringType.Utf8String: "utf-8",
@@ -525,6 +528,7 @@ class BinaryDataNotificationCallbacks(object):
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
 		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
 		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
+		self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
 
 	def _register(self):
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -711,6 +715,13 @@ class BinaryDataNotificationCallbacks(object):
 		try:
 			qualified_name = types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_undefined(self._view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+		except:
+			log.log_error(traceback.format_exc())
+
+	def _type_ref_changed(self, ctxt, view, name, type_obj):
+		try:
+			qualified_name = types.QualifiedName._from_core_struct(name[0])
+			self._notify.type_ref_changed(self._view, qualified_name, types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 

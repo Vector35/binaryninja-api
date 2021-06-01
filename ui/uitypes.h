@@ -96,6 +96,8 @@ typedef BinaryNinja::Ref<BinaryNinja::TagType> TagTypeRef;
 typedef BinaryNinja::Ref<BinaryNinja::TemporaryFile> TemporaryFileRef;
 typedef BinaryNinja::Ref<BinaryNinja::Transform> TransformRef;
 typedef BinaryNinja::Ref<BinaryNinja::Type> TypeRef;
+typedef BinaryNinja::Ref<BinaryNinja::WebsocketClient> WebsocketClientRef;
+typedef BinaryNinja::Ref<BinaryNinja::WebsocketProvider> WebsocketProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
 typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;

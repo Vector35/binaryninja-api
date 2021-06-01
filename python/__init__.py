@@ -64,6 +64,7 @@ from binaryninja.settings import *
 from binaryninja.metadata import *
 from binaryninja.flowgraph import *
 from binaryninja.datarender import *
+from binaryninja.websocketprovider import *
 from binaryninja.workflow import *
 
 

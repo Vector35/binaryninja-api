@@ -933,7 +933,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
-		if not self._pip_exists(str(python_bin)):
+		if python_bin is not None and not self._pip_exists(str(python_bin)):
 			log.log_error(f"Pip not installed for configured python: {python_bin}.\n"
 				"Please install pip or switch python versions.")
 			return False

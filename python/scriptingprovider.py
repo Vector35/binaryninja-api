@@ -851,7 +851,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			return (False, str(se))
 
 	def _pip_exists(self, python_bin:str) -> bool:
-		return self._run_args([python_bin, "-m", "pip", "--version"])
+		return self._run_args([python_bin, "-m", "pip", "--version"])[0]
 
 	def _satisfied_dependencies(self, python_bin:str) -> Generator[str, None, None]:
 		success, result = self._run_args([python_bin, "-m", "pip", "freeze"])

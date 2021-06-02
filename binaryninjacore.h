@@ -3483,6 +3483,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeVariableNameAndType(BNVariableNameAndType* var);
 
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetFunctionVariables(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetFunctionILVariables(BNFunction* func, BNFunctionGraphType ilType, size_t* count);
 	BINARYNINJACOREAPI void BNCreateAutoVariable(BNFunction* func, const BNVariable* var, BNTypeWithConfidence* type,
 		const char* name, bool ignoreDisjointUses);
 	BINARYNINJACOREAPI void BNCreateUserVariable(BNFunction* func, const BNVariable* var, BNTypeWithConfidence* type,

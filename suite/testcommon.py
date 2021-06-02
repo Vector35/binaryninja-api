@@ -1302,6 +1302,26 @@ class VerifyBuilder(Builder):
         finally:
             self.delete_package("helloworld")
 
+    def test_get_il_vars(self):
+        file_name = self.unpackage_file("helloworld")
+        try:
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                main_func = bv.get_functions_by_name("main")[0]
+
+                mlil_vars = main_func.get_il_vars(FunctionGraphType.MediumLevelILFunctionGraph)
+                mlil_vars = list(map(lambda v: v.name, mlil_vars))
+                mlil_vars.sort()
+
+                hlil_vars = main_func.get_il_vars(FunctionGraphType.HighLevelILFunctionGraph)
+                hlil_vars = list(map(lambda v: v.name, hlil_vars))
+                hlil_vars.sort()
+
+                assert mlil_vars == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
+                assert hlil_vars == ['argc', 'argv', 'envp']
+                return True
+        finally:
+            self.delete_package("helloworld")
+
     def test_verify_BNDB_round_trip(self):
         """Binary Ninja Database output doesn't match its input"""
         # This will test Binja's ability to save and restore databases

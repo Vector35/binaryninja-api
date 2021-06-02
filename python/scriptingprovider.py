@@ -31,6 +31,7 @@ from pathlib import Path, PurePath
 import re
 import os
 import site
+from typing import Generator
 
 # Binary Ninja components
 import binaryninja
@@ -849,6 +850,18 @@ class PythonScriptingProvider(ScriptingProvider):
 		except subprocess.SubprocessError as se:
 			return (False, str(se))
 
+	def _pip_exists(self, python_bin:str) -> bool:
+		return self._run_args([python_bin, "-m", "pip", "--version"])
+
+	def _satisfied_dependencies(self, python_bin:str) -> Generator[str, None, None]:
+		success, result = self._run_args([python_bin, "-m", "pip", "freeze"])
+		if not success:
+			return None
+		for line in result.splitlines():
+			yield line.split("==", 2)[0]
+
+	def _dependency_satisfied(self, dependency:str, python_bin:str) -> bool:
+		return re.split('>|=|,', dependency.strip(), 1)[0] in self._satisfied_dependencies(python_bin)
 
 	def _bin_version(self, python_bin: str):
 		return self._run_args([str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"])[1]
@@ -920,14 +933,21 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
+		if not self._pip_exists(str(python_bin)):
+			log.log_error(f"Pip not installed for configured python: {python_bin}.\n"
+				"Please install pip or switch python versions.")
+			return False
 		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
-			log.log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status} Please specify a path to a python library in the 'Python Interpreter' setting")
+			log.log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status}\n"
+				"Please specify a path to a python library in the 'Python Interpreter' setting")
 			return False
 		elif python_bin is None:
-			log.log_error(f"Unable to discover python executable required for installing python modules: {status} Please specify a path to a python binary in the 'Python Path Override'")
+			log.log_error(f"Unable to discover python executable required for installing python modules: {status}\n"
+				"Please specify a path to a python binary in the 'Python Path Override'")
 			return False
 
-		python_bin_version = subprocess.check_output([python_bin, "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"]).decode("utf-8")
+		python_bin_version = subprocess.check_output([python_bin, "-c",
+			"import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"]).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
 			log.log_error(f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}")
@@ -944,7 +964,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
-			args.extend(["--target", site.getusersitepackages()])
+			if not python_lib:
+				site_package_dir = Path(binaryninja.user_directory()) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
+				site_package_dir.mkdir(parents=True, exist_ok=True)
+				site_package_dir = str(site_package_dir)
+			else:
+				site_package_dir = site.getusersitepackages()
+			args.extend(["--target", site_package_dir])
 		args.extend(filter(len, modules.decode("utf-8").split("\n")))
 		log.log_info(f"Running pip {args}")
 		status, result = self._run_args(args)

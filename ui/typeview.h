@@ -17,6 +17,7 @@
 #include "render.h"
 #include "menus.h"
 #include "xreflist.h"
+#include "clickablelabel.h"
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
@@ -102,7 +103,11 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	QWidget* m_lineNumberArea;
 	int m_lineNumberAreaWidth = 0;
 	int m_lineCount = 0;
-	int m_cols, m_rows, m_paddingCols;
+	size_t m_systemTypesHidden = 0;
+	std::optional<size_t> m_showSystemTypesLine;
+	size_t m_typesFiltered = 0;
+	std::optional<size_t> m_clearFilterLine;
+	int m_cols, m_rows, m_paddingCols, m_offsetPaddingWidth;
 	uint64_t m_maxOffset;
 	size_t m_offsetWidth;
 	HighlightTokenState m_highlight;
@@ -129,6 +134,8 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	ContextMenuManager* m_contextMenuManager;
 	QAction* m_actionCopy;
 	QAction* m_actionSelectAll;
+
+	bool m_compact;
 
 	void adjustSize(int width, int height);
 
@@ -163,7 +170,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	static TypeDefinitionLine getTypeDefinitionHeaderLine(PlatformRef platform, const std::string& name, TypeRef type);
 
 public:
-	explicit TypeView(BinaryViewRef data, ViewFrame* view, TypesContainer* container);
+	explicit TypeView(BinaryViewRef data, ViewFrame* view, TypesContainer* container, bool compact = false);
 	virtual ~TypeView();
 
 	virtual bool findNextData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, uint64_t& addr, BNFindFlag flags,
@@ -230,6 +237,8 @@ public:
 		const std::string& varName, size_t index, TypeRef type, TypeRef parent, BinaryViewRef data,
 		int paddingCols, bool collapsed = false);
 
+	void showContextMenu(Menu* source = nullptr);
+
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -295,8 +304,7 @@ class BINARYNINJAUIAPI TypeFilter: public QWidget
 	Q_OBJECT
 
 	TypesContainer* m_container;
-	ExpandableGroup* m_group;
-	QComboBox* m_showTypes;
+	ClickableIcon* m_showSystemTypes;
 	QLineEdit* m_textFilter;
 
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
@@ -306,12 +314,15 @@ Q_SIGNALS:
 	void filterChanged();
 
 public:
-	TypeFilter(TypesContainer* container);
+	TypeFilter(TypesContainer* container = nullptr);
+	void setContainer(TypesContainer* container) { m_container = container; }
 
-	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines(BinaryViewRef data, int padding);
+	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines(
+		BinaryViewRef data, int padding, size_t& systemTypesHidden, size_t& typesFiltered);
 	void showAndFocus();
-    uint64_t getCurrentTypeFilter();
-    void setTypeFilter(uint64_t typesToShow);
+    bool areAutoTypesVisible();
+    void setShowAutoTypes(bool showAutoTypes);
+	void clearTextFilter();
 };
 
 
@@ -324,7 +335,8 @@ class BINARYNINJAUIAPI TypesContainer: public QWidget, public ViewContainer
 	UIActionHandler m_actionHandler;
 
 public:
-	TypesContainer(BinaryViewRef data, ViewFrame* view);
+	TypesContainer(BinaryViewRef data, ViewFrame* view,
+		TypeFilter* filter = nullptr, bool compact = false);
 	virtual View* getView() override { return m_typeView; }
 
 	TypeView* getTypesView() { return m_typeView; }
@@ -334,4 +346,33 @@ public:
 
 protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
+};
+
+
+class BINARYNINJAUIAPI TypeViewSidebarWidget: public SidebarWidget
+{
+	Q_OBJECT
+
+	TypesContainer* m_container;
+	QWidget* m_header;
+	Menu m_addMenu;
+
+public:
+	TypeViewSidebarWidget(BinaryViewRef data, ViewFrame* frame);
+
+	TypesContainer* container() const { return m_container; }
+	virtual void focus() override;
+
+	virtual QWidget* headerWidget() override { return m_header; }
+
+private Q_SLOTS:
+	void showAddMenu();
+};
+
+
+class BINARYNINJAUIAPI TypeViewSidebarWidgetType: public SidebarWidgetType
+{
+public:
+	TypeViewSidebarWidgetType();
+	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 };

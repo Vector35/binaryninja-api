@@ -18,29 +18,23 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-#   This is an example UI plugin which demonstrates how to add dock widgets to Binary Ninja.
-# Dock widgets are realized in Binary Ninja with the QDockWidget class provided by Qt.
-# QDockWidgets are container objects that can be docked inside a main window or floated as
-# a top-level window. A UI widget is placed inside a QDockWidget container. In Binary Ninja,
-# QDockWidgets are created and managed internally. Binary Ninja presents two styles of dock widgets.
-#   Static: where one UI widget is placed in the container for the lifetime of the application.
-#   Dynamic: where a UI widget exists for each binary view type instance, and is dynamically
-#      swapped in/out of the container based on the current binary view selection.
-# See .../api/ui/dockhandler.h for interface details.
-# For Static dock widgets, the UI widget operates on multiple binary view instances (notified by notifyViewChanged)
-# For Dynamic dock widgets, the UI widget operates on a single binary view instance
+# This is an example UI plugin which demonstrates how to add sidebar widgets to Binary Ninja.
+# See .../api/ui/sidebar.h for interface details.
 
-from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler
+from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler
 from PySide6 import QtCore
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRectF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QLabel, QWidget
+from PySide6.QtGui import QImage, QPixmap, QPainter, QFont, QColor
 
 instance_id = 0
-class HelloDockWidget(QWidget, DockContextHandler):
-	def __init__(self, parent, name, data):
+
+# Sidebar widgets must derive from SidebarWidget, not QWidget. SidebarWidget is a QWidget but
+# provides callbacks for sidebar events, and must be created with a title.
+class HelloSidebarWidget(SidebarWidget):
+	def __init__(self, name, frame, data):
 		global instance_id
-		QWidget.__init__(self, parent)
-		DockContextHandler.__init__(self, self, name)
+		SidebarWidget.__init__(self, name)
 		self.actionHandler = UIActionHandler()
 		self.actionHandler.setupActionHandler(self)
 		offset_layout = QHBoxLayout()
@@ -71,12 +65,6 @@ class HelloDockWidget(QWidget, DockContextHandler):
 	def notifyOffsetChanged(self, offset):
 		self.offset.setText(hex(offset))
 
-	def shouldBeVisible(self, view_frame):
-		if view_frame is None:
-			return False
-		else:
-			return True
-
 	def notifyViewChanged(self, view_frame):
 		if view_frame is None:
 			self.datatype.setText("None")
@@ -89,19 +77,31 @@ class HelloDockWidget(QWidget, DockContextHandler):
 	def contextMenuEvent(self, event):
 		self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
 
-	@staticmethod
-	def create_widget(name, parent, data = None):
-		return HelloDockWidget(parent, name, data)
+class HelloSidebarWidgetType(SidebarWidgetType):
+	def __init__(self):
+		# Sidebar icons are 28x28 points. Should be at least 56x56 pixels for
+		# HiDPI display compatibility. They will be automatically made theme
+		# aware, so you need only provide a grayscale image, where white is
+		# the color of the shape.
+		icon = QImage(56, 56, QImage.Format_RGB32)
+		icon.fill(0)
 
-def addStaticDockWidget():
-	dock_handler = DockHandler.getActiveDockHandler()
-	parent = dock_handler.parent()
-	dock_widget = HelloDockWidget.create_widget("HelloDockWidget (Static Dock)", parent)
-	dock_handler.addDockWidget(dock_widget, Qt.BottomDockWidgetArea, Qt.Horizontal, True, False)
+		# Render an "H" as the example icon
+		p = QPainter()
+		p.begin(icon)
+		p.setFont(QFont("Open Sans", 56))
+		p.setPen(QColor(255, 255, 255, 255))
+		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "H")
+		p.end()
 
-def addDynamicDockWidget():
-	dock_handler = DockHandler.getActiveDockHandler()
-	dock_handler.addDockWidget("HelloDockWidget (Dynamic Dock)", HelloDockWidget.create_widget, Qt.BottomDockWidgetArea, Qt.Horizontal, True)
+		SidebarWidgetType.__init__(self, icon, "Hello")
 
-addStaticDockWidget()
-addDynamicDockWidget()
+	def createWidget(self, frame, data):
+		# This callback is called when a widget needs to be created for a given context. Different
+		# widgets are created for each unique BinaryView. They are created on demand when the sidebar
+		# widget is visible and the BinaryView becomes active.
+		return HelloSidebarWidget("Hello", frame, data)
+
+# Register the sidebar widget type with Binary Ninja. This will make it appear as an icon in the
+# sidebar and the `createWidget` method will be called when a widget is required.
+Sidebar.addSidebarWidgetType(HelloSidebarWidgetType())

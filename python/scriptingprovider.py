@@ -964,13 +964,9 @@ class PythonScriptingProvider(ScriptingProvider):
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
-			if not python_lib:
-				site_package_dir = Path(binaryninja.user_directory()) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
-				site_package_dir.mkdir(parents=True, exist_ok=True)
-				site_package_dir = str(site_package_dir)
-			else:
-				site_package_dir = site.getusersitepackages()
-			args.extend(["--target", site_package_dir])
+			site_package_dir = Path(binaryninja.user_directory()) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
+			site_package_dir.mkdir(parents=True, exist_ok=True)
+			args.extend(["--target", str(site_package_dir)])
 		args.extend(filter(len, modules.decode("utf-8").split("\n")))
 		log.log_info(f"Running pip {args}")
 		status, result = self._run_args(args)

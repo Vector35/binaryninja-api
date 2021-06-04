@@ -328,7 +328,10 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 
 Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
 {
-	return new LowLevelILFunction(BNGetFunctionLowLevelILIfAvailable(m_object));
+	BNLowLevelILFunction* function = BNGetFunctionLowLevelILIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new LowLevelILFunction(function);
 }
 
 
@@ -579,7 +582,10 @@ Ref<LowLevelILFunction> Function::GetLiftedIL() const
 
 Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
 {
-	return new LowLevelILFunction(BNGetFunctionLiftedILIfAvailable(m_object));
+	BNLowLevelILFunction* function = BNGetFunctionLiftedILIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new LowLevelILFunction(function);
 }
 
 
@@ -659,7 +665,10 @@ Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 
 Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
 {
-	return new MediumLevelILFunction(BNGetFunctionMediumLevelILIfAvailable(m_object));
+	BNMediumLevelILFunction* function = BNGetFunctionMediumLevelILIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new MediumLevelILFunction(function);
 }
 
 
@@ -671,7 +680,10 @@ Ref<HighLevelILFunction> Function::GetHighLevelIL() const
 
 Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
 {
-	return new HighLevelILFunction(BNGetFunctionHighLevelILIfAvailable(m_object));
+	BNHighLevelILFunction* function = BNGetFunctionHighLevelILIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new HighLevelILFunction(function);
 }
 
 

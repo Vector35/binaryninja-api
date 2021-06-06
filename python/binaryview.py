@@ -3229,7 +3229,7 @@ class BinaryView(object):
 		"""``get_functions_by_name`` returns a list of Function objects
 		function with a Symbol of ``name``.
 ​
-		:param int name: name of the functions
+		:param str name: name of the functions
 		:param Platform plat: (optional) platform
 		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
 		:return: returns a list of Function objects or an empty list

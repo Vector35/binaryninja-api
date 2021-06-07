@@ -125,8 +125,8 @@ fn main() {
         let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
         bindings = bindings.clang_arg(llvm_include_path);
     } else if let (false, Ok(llvm_install_dir)) = (is_mac, llvm_install_dir) {
-        let llvm_include_path = format!("-I{}/11.0.0/lib/clang/11.0.0/include", llvm_install_dir);
-        env::set_var("LIBCLANG_PATH", format!("{}/11.0.0/lib", llvm_install_dir));
+        let llvm_include_path = format!("-I{}/12.0.0/lib/clang/12.0.0/include", llvm_install_dir);
+        env::set_var("LIBCLANG_PATH", format!("{}/12.0.0/lib", llvm_install_dir));
         bindings = bindings.clang_arg(llvm_include_path);
     }
 

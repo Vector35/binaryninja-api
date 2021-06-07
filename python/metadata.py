@@ -18,25 +18,21 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
-from __future__ import absolute_import
 import ctypes
+from typing import Union, Optional
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import MetadataType
+from . import _binaryninjacore as core
+from .enums import MetadataType
 
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import pyNativeStr
-import numbers
-
+MetadataValueType = Union[int, bool, str, bytes, float, list, tuple, dict]
 
 class Metadata(object):
-	def __init__(self, value=None, signed=None, raw=None, handle=None):
+	def __init__(self, value:MetadataValueType=None, signed:Optional[bool]=None,
+		raw:Optional[bool]=None, handle:Optional[core.BNMetadata]=None):
 		if handle is not None:
 			self.handle = handle
-		elif isinstance(value, numbers.Integral):
+		elif isinstance(value, int):
 			if signed:
 				self.handle = core.BNCreateMetadataSignedIntegerData(value)
 			else:
@@ -64,7 +60,7 @@ class Metadata(object):
 				md = Metadata(value[elm], signed, raw)
 				core.BNMetadataSetValueForKey(self.handle, str(elm), md.handle)
 		else:
-			raise ValueError("{} doesn't contain type of: int, bool, str, float, list, dict".format(type(value).__name__))
+			raise ValueError(f"{type(value)} doesn't contain type of: int, bool, str, float, list, dict")
 
 	def __len__(self):
 		if self.is_array or self.is_dict or self.is_string or self.is_raw:
@@ -144,10 +140,11 @@ class Metadata(object):
 				yield Metadata(handle=core.BNMetadataGetForIndex(self.handle, i)).value
 		elif self.is_dict:
 			result = core.BNMetadataGetValueStore(self.handle)
+			assert result is not None, "core.BNMetadataGetValueStore returned None"
 			try:
 				for i in range(result.contents.size):
 					if isinstance(result.contents.keys[i], bytes):
-						yield str(pyNativeStr(result.contents.keys[i]))
+						yield result.contents.keys[i].decode("utf-8")
 					else:
 						yield result.contents.keys[i]
 			finally:
@@ -179,6 +176,7 @@ class Metadata(object):
 			length = ctypes.c_ulonglong()
 			length.value = 0
 			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
+			assert native_list is not None, "core.BNMetadataGetRaw returned None"
 			out_list = []
 			for i in range(length.value):
 				out_list.append(native_list[i])

@@ -21,27 +21,17 @@
 import ctypes
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-
-# 2-3 compatibility
-from binaryninja import pyNativeStr
-from binaryninja import cstr
-import numbers
-
+from . import _binaryninjacore as core
 
 class DataBuffer(object):
-	def __init__(self, contents="", handle=None):
+	def __init__(self, contents:bytes=b"", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
-		elif isinstance(contents, int) or isinstance(contents, numbers.Integral):
+		elif isinstance(contents, int) or isinstance(contents, int):
 			self.handle = core.BNCreateDataBuffer(None, contents)
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
 		else:
-			if isinstance(contents, bytes) or isinstance(contents, bytearray) or isinstance(contents, str):
-				contents = cstr(contents)
-			else:
-				raise TypeError("DataBuffer contents must be bytes, bytearray, or str")
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):
@@ -65,7 +55,9 @@ class DataBuffer(object):
 				if stop <= start:
 					return ""
 				buf = ctypes.create_string_buffer(stop - start)
-				ctypes.memmove(buf, core.BNGetDataBufferContentsAt(self.handle, start), stop - start)
+				data = core.BNGetDataBufferContentsAt(self.handle, start)
+				assert data is not None, "core.BNGetDataBufferContentsAt returned None"
+				ctypes.memmove(buf, data, stop - start)
 				return buf.raw
 			else:
 				return bytes(self)[i]
@@ -93,34 +85,44 @@ class DataBuffer(object):
 				core.BNSetDataBufferContents(self.handle, data, len(data))
 			else:
 				value = str(value)
-				buf = ctypes.create_string_buffer(value)
-				ctypes.memmove(core.BNGetDataBufferContentsAt(self.handle, start), buf, len(value))
+				buf = ctypes.create_string_buffer(len(value))
+				data = core.BNGetDataBufferContentsAt(self.handle, start)
+				assert data is not None, "core.BNGetDataBufferContentsAt returned None"
+				ctypes.memmove(data, buf, len(value))
 		elif i < 0:
 			if i >= -len(self):
 				if len(value) != 1:
 					raise ValueError("expected single byte for assignment")
 				value = str(value)
-				buf = ctypes.create_string_buffer(value)
-				ctypes.memmove(core.BNGetDataBufferContentsAt(self.handle, int(len(self) + i)), buf, 1)
+				buf = ctypes.create_string_buffer(len(value))
+				data = core.BNGetDataBufferContentsAt(self.handle, int(len(self) + i))
+				assert data is not None, "core.BNGetDataBufferContentsAt returned None"
+				ctypes.memmove(data, buf, 1)
 			else:
 				raise IndexError("index out of range")
 		elif i < len(self):
 			if len(value) != 1:
 				raise ValueError("expected single byte for assignment")
 			value = str(value)
-			buf = ctypes.create_string_buffer(value)
-			ctypes.memmove(core.BNGetDataBufferContentsAt(self.handle, int(i)), buf, 1)
+			buf = ctypes.create_string_buffer(len(value))
+			data = core.BNGetDataBufferContentsAt(self.handle, int(i))
+			assert data is not None, "core.BNGetDataBufferContentsAt returned None"
+			ctypes.memmove(data, buf, 1)
 		else:
 			raise IndexError("index out of range")
 
 	def __str__(self):
 		buf = ctypes.create_string_buffer(len(self))
-		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
-		return pyNativeStr(buf.raw)
+		data = core.BNGetDataBufferContents(self.handle)
+		assert data is not None, "core.BNGetDataBufferContents returned None"
+		ctypes.memmove(buf, data, len(self))
+		return buf.raw.decode('utf8')
 
 	def __bytes__(self):
 		buf = ctypes.create_string_buffer(len(self))
-		ctypes.memmove(buf, core.BNGetDataBufferContents(self.handle), len(self))
+		data = core.BNGetDataBufferContents(self.handle)
+		assert data is not None, "core.BNGetDataBufferContents returned None"
+		ctypes.memmove(buf, data, len(self))
 		return buf.raw
 
 	def escape(self):

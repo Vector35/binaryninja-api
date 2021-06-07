@@ -24,10 +24,8 @@ from datetime import datetime
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import PluginType, PluginStatus
-# 2-3 compatibility
-from binaryninja import range
+from . import _binaryninjacore as core
+from .enums import PluginType
 
 
 class RepoPlugin(object):
@@ -111,6 +109,7 @@ class RepoPlugin(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetApis(self.handle, count)
+		assert platforms is not None, "core.BNPluginGetApis returned None"
 		for i in range(count.value):
 			result.append(platforms[i].decode("utf-8"))
 		core.BNFreePluginPlatforms(platforms, count)
@@ -152,6 +151,7 @@ class RepoPlugin(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		plugintypes = core.BNPluginGetPluginTypes(self.handle, count)
+		assert plugintypes is not None, "core.BNPluginGetPluginTypes returned None"
 		for i in range(count.value):
 			result.append(PluginType(plugintypes[i]))
 		core.BNFreePluginTypes(plugintypes)
@@ -199,6 +199,7 @@ class RepoPlugin(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetPlatforms(self.handle, count)
+		assert platforms is not None, "core.BNPluginGetPlatforms returned None"
 		for i in range(count.value):
 			result.append(platforms[i].decode("utf-8"))
 		core.BNFreePluginPlatforms(platforms, count)
@@ -294,6 +295,7 @@ class Repository(object):
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
+		assert result is not None, "core.BNRepositoryGetPlugins returned None"
 		for i in range(count.value):
 			pluginlist.append(RepoPlugin(core.BNNewPluginReference(result[i])))
 		core.BNFreeRepositoryPluginList(result, count.value)
@@ -325,6 +327,7 @@ class RepositoryManager(object):
 		result = []
 		count = ctypes.c_ulonglong(0)
 		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
+		assert repos is not None, "core.BNRepositoryManagerGetRepositories returnedNone"
 		for i in range(count.value):
 			result.append(Repository(core.BNNewRepositoryReference(repos[i])))
 		core.BNFreeRepositoryManagerRepositoriesList(repos)

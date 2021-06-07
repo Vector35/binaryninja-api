@@ -21,18 +21,16 @@
 import struct
 import traceback
 import os
+from typing import Callable, List, Any
 
-from binaryninja.architecture import Architecture
+from binaryninja.architecture import Architecture, InstructionInfo, RegisterInfo, RegisterName
 from binaryninja.lowlevelil import LowLevelILLabel, LLIL_TEMP
-from binaryninja.function import RegisterInfo, InstructionInfo, InstructionTextToken
+from binaryninja.function import InstructionTextToken
 from binaryninja.binaryview import BinaryView
 from binaryninja.types import Symbol
 from binaryninja.log import log_error
 from binaryninja.enums import (BranchType, InstructionTextTokenType,
 							LowLevelILOperation, LowLevelILFlagCondition, FlagRole, SegmentFlag, SymbolType)
-
-# 2-3 compatibility
-from binaryninja import range
 
 
 InstructionNames = [
@@ -145,14 +143,14 @@ OperandLengths = [
 	1,  # IND_Y_DEST
 	1,  # REL
 	1,  # ZERO
-	1,  # ZREO_DEST
+	1,  # ZERO_DEST
 	1,  # ZERO_X
 	1,  # ZERO_X_DEST
 	1,  # ZERO_Y
 	1   # ZERO_Y_DEST
 ]
 
-OperandTokens = [
+OperandTokens:List[Callable[[int], List[InstructionTextToken]]] = [
 	lambda value: [],  # NONE
 	lambda value: [InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)],  # ABS
 	lambda value: [InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, "$%.4x" % value, value)],  # ABS_DEST
@@ -248,7 +246,7 @@ OperandIL = [
 def cond_branch(il, cond, dest):
 	t = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		t = il.get_label_for_address(Architecture['6502'], il[dest].constant)
+		t = il.get_label_for_address(Architecture['6502'], il[dest].constant)  # type: ignore
 	if t is None:
 		t = LowLevelILLabel()
 		indirect = True
@@ -266,7 +264,7 @@ def cond_branch(il, cond, dest):
 def jump(il, dest):
 	label = None
 	if il[dest].operation == LowLevelILOperation.LLIL_CONST:
-		label = il.get_label_for_address(Architecture['6502'], il[dest].constant)
+		label = il.get_label_for_address(Architecture['6502'], il[dest].constant)  # type: ignore
 	if label is None:
 		il.append(il.jump(dest))
 	else:
@@ -374,10 +372,10 @@ class M6502(Architecture):
 	instr_alignment = 1
 	max_instr_length = 3
 	regs = {
-		"a": RegisterInfo("a", 1),
-		"x": RegisterInfo("x", 1),
-		"y": RegisterInfo("y", 1),
-		"s": RegisterInfo("s", 1)
+		"a": RegisterInfo(RegisterName("a"), 1),
+		"x": RegisterInfo(RegisterName("x"), 1),
+		"y": RegisterInfo(RegisterName("y"), 1),
+		"s": RegisterInfo(RegisterName("s"), 1)
 	}
 	stack_pointer = "s"
 	flags = ["c", "z", "i", "d", "b", "v", "s"]
@@ -451,7 +449,7 @@ class M6502(Architecture):
 
 	def get_instruction_text(self, data, addr):
 		instr, operand, length, value = self.decode_instruction(data, addr)
-		if instr is None:
+		if instr is None or operand is None or length is None or value is None:
 			return None
 
 		tokens = []
@@ -461,7 +459,7 @@ class M6502(Architecture):
 
 	def get_instruction_low_level_il(self, data, addr, il):
 		instr, operand, length, value = self.decode_instruction(data, addr)
-		if instr is None:
+		if instr is None or operand is None or length is None or value is None:
 			return None
 
 		operand = OperandIL[operand](il, value)
@@ -518,26 +516,27 @@ class M6502(Architecture):
 	def skip_and_return_value(self, data, addr, value):
 		if (data[0:1] != b"\x20") or (len(data) != 3):
 			return None
-		return b"\xa9" + chr(value & 0xff) + b"\xea"
+		return b"\xa9" + (value & 0xff).to_bytes(1, "little") + b"\xea"
 
 
 class NESView(BinaryView):
 	name = "NES"
 	long_name = "NES ROM"
-
+	bank = None
 	def __init__(self, data):
 		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
-		self.platform = Architecture['6502'].standalone_platform
+		self.platform = Architecture['6502'].standalone_platform  # type: ignore
 
 	@classmethod
-	def is_valid_for_data(self, data):
+	def is_valid_for_data(cls, data):
 		hdr = data.read(0, 16)
 		if len(hdr) < 16:
 			return False
 		if hdr[0:4] != b"NES\x1a":
 			return False
 		rom_banks = struct.unpack("B", hdr[4:5])[0]
-		if rom_banks < (self.bank + 1):
+		assert cls.bank is not None
+		if rom_banks < (cls.bank + 1):
 			return False
 		return True
 
@@ -558,6 +557,7 @@ class NESView(BinaryView):
 			self.add_auto_segment(0, 0x8000, 0, 0, SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable)
 
 			# Add ROM mappings
+			assert self.__class__.bank is not None
 			self.add_auto_segment(0x8000, 0x4000, self.rom_offset + (self.__class__.bank * 0x4000), 0x4000,
 				SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 			self.add_auto_segment(0xc000, 0x4000, self.rom_offset + self.rom_length - 0x4000, 0x4000,
@@ -632,7 +632,7 @@ class NESView(BinaryView):
 		return True
 
 	def perform_get_entry_point(self):
-		return struct.unpack("<H", str(self.perform_read(0xfffc, 2)))[0]
+		return struct.unpack("<H", self.perform_read(0xfffc, 2))[0]
 
 
 banks = []

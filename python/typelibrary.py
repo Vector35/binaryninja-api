@@ -18,24 +18,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import struct
-import traceback
 import ctypes
-import abc
-import numbers
+from typing import Optional
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
 import binaryninja
-from binaryninja import log
-from binaryninja import types
-from binaryninja import metadata
-from binaryninja import platform
-from binaryninja import architecture
+from . import _binaryninjacore as core
+from . import types
+from . import metadata
+from . import platform
+from . import architecture
 
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import with_metaclass
 
 class TypeLibrary(object):
 	def __init__(self, handle):
@@ -47,8 +40,8 @@ class TypeLibrary(object):
 	def __repr__(self):
 		return "<typelib '{}':{}>".format(self.name, self.arch.name)
 
-	@classmethod
-	def new(cls, arch, name):
+	@staticmethod
+	def new(arch, name):
 		"""
 		Creates an empty type library object with a random GUID and
 		the provided name.
@@ -60,8 +53,8 @@ class TypeLibrary(object):
 		handle = core.BNNewTypeLibrary(arch.handle, name)
 		return TypeLibrary(handle)
 
-	@classmethod
-	def load_from_file(cls, path):
+	@staticmethod
+	def load_from_file(path):
 		"""
 		Loads a finalized type library instance from file
 
@@ -82,8 +75,8 @@ class TypeLibrary(object):
 		"""
 		core.BNWriteTypeLibraryToFile(self.handle, path)
 
-	@classmethod
-	def from_name(cls, arch, name):
+	@staticmethod
+	def from_name(arch, name):
 		"""
 		`from_name` looks up the first type library found with a matching name. Keep
 		in mind that names are not necessarily unique.
@@ -97,8 +90,8 @@ class TypeLibrary(object):
 			return None
 		return TypeLibrary(handle)
 
-	@classmethod
-	def from_guid(cls, arch, guid):
+	@staticmethod
+	def from_guid(arch, guid):
 		"""
 		`from_guid` attempts to grab a type library associated with the provided
 		Architecture and GUID pair
@@ -113,12 +106,11 @@ class TypeLibrary(object):
 		return TypeLibrary(handle)
 
 	@property
-	def arch(self):
+	def arch(self) -> 'architecture.Architecture':
 		"""The Architecture this type library is associated with"""
 		arch = core.BNGetTypeLibraryArchitecture(self.handle)
-		if arch is None:
-			return None
-		return binaryninja.architecture.CoreArchitecture._from_cache(handle=arch)
+		assert arch is not None, "core.BNGetTypeLibraryArchitecture returned None"
+		return architecture.CoreArchitecture._from_cache(handle=arch)
 
 	@property
 	def name(self):
@@ -165,6 +157,7 @@ class TypeLibrary(object):
 		count = ctypes.c_ulonglong(0)
 		result = []
 		names = core.BNGetTypeLibraryAlternateNames(self.handle, count)
+		assert names is not None, "core.BNGetTypeLibraryAlternateNames returned None"
 		for i in range(0, count.value):
 			result.append(names[i])
 		core.BNFreeStringList(names, count.value)
@@ -186,6 +179,7 @@ class TypeLibrary(object):
 		count = ctypes.c_ulonglong(0)
 		result = []
 		platforms = core.BNGetTypeLibraryPlatforms(self.handle, count)
+		assert platforms is not None, "core.BNGetTypeLibraryPlatforms returned None"
 		for i in range(0, count.value):
 			result.append(platforms[i])
 		core.BNFreeStringList(platforms, count.value)
@@ -349,6 +343,7 @@ class TypeLibrary(object):
 		count = ctypes.c_ulonglong(0)
 		result = {}
 		named_types = core.BNGetTypeLibraryNamedObjects(self.handle, count)
+		assert named_types is not None, "core.BNGetTypeLibraryNamedObjects returned None"
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(named_types[i].name)
 			result[name] = types.Type(core.BNNewTypeReference(named_types[i].type))
@@ -363,6 +358,7 @@ class TypeLibrary(object):
 		count = ctypes.c_ulonglong(0)
 		result = {}
 		named_types = core.BNGetTypeLibraryNamedTypes(self.handle, count)
+		assert named_types is not None, "core.BNGetTypeLibraryNamedTypes returned None"
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(named_types[i].name)
 			result[name] = types.Type(core.BNNewTypeReference(named_types[i].type))

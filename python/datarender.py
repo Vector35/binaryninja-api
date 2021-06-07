@@ -23,14 +23,14 @@ import traceback
 import ctypes
 
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import filemetadata
-from binaryninja import binaryview
-from binaryninja import function
-from binaryninja import enums
-from binaryninja import log
-from binaryninja import types
-from binaryninja import highlight
+from . import _binaryninjacore as core
+from . import filemetadata
+from . import binaryview
+from . import function
+from . import enums
+from . import log
+from . import types
+from . import highlight
 
 
 class TypeContext(object):
@@ -92,9 +92,9 @@ class DataRenderer(object):
 		self._cb.getLinesForData = self._cb.getLinesForData.__class__(self._get_lines_for_data)
 		self.handle = core.BNCreateDataRenderer(self._cb)
 
-	@classmethod
-	def is_type_of_struct_name(cls, type, name, context):
-		return (type.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
+	@staticmethod
+	def is_type_of_struct_name(t, name, context):
+		return (t.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
 			and context[-1].type.type_class == enums.TypeClass.NamedTypeReferenceClass and
 			context[-1].type.named_type_reference.name == name)
 
@@ -131,7 +131,7 @@ class DataRenderer(object):
 			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
 			type = types.Type(handle=core.BNNewTypeReference(type))
 
-			prefixTokens = function.InstructionTextToken.get_instruction_lines(prefix, prefixCount)
+			prefixTokens = function.InstructionTextToken._from_core_struct(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
 				pycontext.append(TypeContext(types.Type(core.BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset))
@@ -161,7 +161,7 @@ class DataRenderer(object):
 					line_buf[i].instrIndex = 0xffffffffffffffff
 
 				line_buf[i].count = len(line.tokens)
-				line_buf[i].tokens = function.InstructionTextToken.get_instruction_lines(line.tokens)
+				line_buf[i].tokens = function.InstructionTextToken._get_core_struct(line.tokens)
 
 			return ctypes.cast(line_buf, ctypes.c_void_p).value
 		except:

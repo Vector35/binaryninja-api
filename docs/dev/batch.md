@@ -22,7 +22,7 @@ Let's try a simple example script (note that this script will work identically o
 #!/usr/bin/env python3
 import binaryninja
 with binaryninja.open_view("/bin/ls") as bv:
-	print(f"Opening {bv.file.filename} which has {len(bv.functions)} functions")
+	print(f"Opening {bv.file.filename} which has {len(list(bv.functions))} functions")
 ```
 
 If we run it, we'll see:
@@ -48,7 +48,7 @@ from binaryninja import open_view
 from glob import glob
 for bin in glob("/bin/*"):
 	with open_view(bin, update_analysis=False) as bv:
-		print(f"Opening {bv.file.filename} which has {len(bv.functions)} functions")
+		print(f"Opening {bv.file.filename} which has {len(list(bv.functions))} functions")
 ```
  
 Now let's run it and notice it's fast enough to parse all of `/bin/*` in just a few seconds:
@@ -97,7 +97,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 def spawn(filename):
     binaryninja.set_worker_thread_count(1)
     with binaryninja.open_view(filename, update_analysis=False) as bv:
-        print(f"Binary {bv.file.filename} has {len(bv.functions)} functions.")
+        print(f"Binary {bv.file.filename} has {len(list(bv.functions))} functions.")
 
 if __name__ == '__main__':
     set_start_method("spawn")

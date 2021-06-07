@@ -185,10 +185,10 @@ int main(int argc, char* argv[])
 	FILE* out = fopen(argv[2], "w");
 	FILE* enums = fopen(argv[3], "w");
 
-	fprintf(out, "from __future__ import absolute_import\n");
 	fprintf(out, "import ctypes, os\n\n");
+	fprintf(out, "from typing import Optional");
 	fprintf(enums, "import enum");
-
+	
 	fprintf(out, "# Load core module\n");
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
@@ -206,7 +206,16 @@ int main(int argc, char* argv[])
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n\n");
 
-	fprintf(out, "from binaryninja import cstr, pyNativeStr\n\n\n");
+	fprintf(out, "def cstr(var) -> Optional[str]:\n");
+	fprintf(out, "	if var is None:\n");
+	fprintf(out, "		return None\n");
+	fprintf(out, "	return var.encode(\"utf-8\")\n");
+
+	fprintf(out, "def pyNativeStr(arg):\n");
+	fprintf(out, "	if isinstance(arg, str):\n");
+	fprintf(out, "		return arg\n");
+	fprintf(out, "	else:\n");
+	fprintf(out, "		return arg.decode('utf8')\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -513,22 +522,13 @@ int main(int argc, char* argv[])
 		fprintf(out, "\n");
 	}
 
+	fprintf(out, "\nmax_confidence = %d\n", BN_FULL_CONFIDENCE);
+
 	fprintf(out, "\n# Helper functions\n");
 	fprintf(out, "def handle_of_type(value, handle_type):\n");
 	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
 	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
 	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
-
-	// The following method is addapted from python/enum/__init__.py, lines 25-36
-	fprintf(out, "\ntry:\n");
-	fprintf(out, "\tbasestring\n");
-	fprintf(out, "\tunicode\n");
-	fprintf(out, "except NameError:\n");
-	fprintf(out, "\t# In Python 2 basestring is the ancestor of both str and unicode\n");
-	fprintf(out, "\t# in Python 3 it's just str, but was missing in 3.1\n");
-	fprintf(out, "\t# In Python 3 unicode no longer exists (it's just str)\n");
-	fprintf(out, "\tbasestring = str\n");
-	fprintf(out, "\tunicode = str\n");
 
 	fprintf(out, "\n# Set path for core plugins\n");
 	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");

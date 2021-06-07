@@ -38,7 +38,7 @@ binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "with_metaclass", "cstr", "fnsignature", "get_class_members", "datetime", "inspect", "subprocess")))
+	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature", "get_class_members", "datetime", "inspect", "subprocess")))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)

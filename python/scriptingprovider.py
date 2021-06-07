@@ -27,22 +27,21 @@ import threading
 import abc
 import sys
 import subprocess
-from pathlib import Path, PurePath
+from pathlib import Path
 import re
 import os
-import site
-from typing import Generator
+from typing import Generator, Optional, List, Tuple
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import bncompleter, log
-from binaryninja import _binaryninjacore as core
-from binaryninja import settings
-from binaryninja.pluginmanager import RepositoryManager
-from binaryninja.enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-
-# 2-3 compatibility
-from binaryninja import with_metaclass
+from . import bncompleter, log
+from . import _binaryninjacore as core
+from . import settings
+from . import binaryview
+from . import basicblock
+from . import function
+from .pluginmanager import RepositoryManager
+from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 
 
 class _ThreadActionContext(object):
@@ -155,7 +154,7 @@ class ScriptingInstance(object):
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
-				view = binaryninja.binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)
@@ -165,7 +164,7 @@ class ScriptingInstance(object):
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = binaryninja.function.Function(handle = core.BNNewFunctionReference(func))
+				func = function.Function(handle = core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
@@ -179,8 +178,10 @@ class ScriptingInstance(object):
 				if func is None:
 					block = None
 				else:
-					block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(block),
-						binaryninja.binaryview.BinaryView(handle = core.BNGetFunctionData(func)))
+					core_block = core.BNNewBasicBlockReference(block)
+					assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+					block = basicblock.BasicBlock(core_block,
+						binaryview.BinaryView(handle = core.BNGetFunctionData(func)))
 					core.BNFreeFunction(func)
 			else:
 				block = None
@@ -204,10 +205,10 @@ class ScriptingInstance(object):
 		try:
 			if not isinstance(text, str):
 				text = text.decode("charmap")
-			return ctypes.cast(binaryninja.cstr(self.perform_complete_input(text, state)), ctypes.c_void_p).value
+			return ctypes.cast(self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p).value  # type: ignore
 		except:
 			log.log_error(traceback.format_exc())
-			return ctypes.cast(binaryninja.cstr(""), ctypes.c_void_p).value
+			return "".encode("utf-8")
 
 	@abc.abstractmethod
 	def perform_destroy_instance(self):
@@ -223,27 +224,27 @@ class ScriptingInstance(object):
 
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
-		raise NotImplementedError
+		return NotImplemented
 
 	@abc.abstractmethod
 	def perform_set_current_function(self, func):
-		raise NotImplementedError
+		return NotImplemented
 
 	@abc.abstractmethod
 	def perform_set_current_basic_block(self, block):
-		raise NotImplementedError
+		return NotImplemented
 
 	@abc.abstractmethod
 	def perform_set_current_address(self, addr):
-		raise NotImplementedError
+		return NotImplemented
 
 	@abc.abstractmethod
 	def perform_set_current_selection(self, begin, end):
-		raise NotImplementedError
+		return NotImplemented
 
 	@abc.abstractmethod
-	def perform_complete_input(self, text, state):
-		raise NotImplementedError
+	def perform_complete_input(self, text:str, state) -> str:
+		return NotImplemented
 
 	@property
 	def input_ready_state(self):
@@ -308,93 +309,72 @@ class ScriptingInstance(object):
 
 
 class _ScriptingProviderMetaclass(type):
-
-	@property
-	def list(self):
-		"""List all ScriptingProvider types (read-only)"""
+	def __iter__(self) -> Generator['ScriptingProvider', None, None]:
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		types = core.BNGetScriptingProviderList(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(ScriptingProvider(types[i]))
-		core.BNFreeScriptingProviderList(types)
-		return result
-
-	def __iter__(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		types = core.BNGetScriptingProviderList(count)
+		assert types is not None, "core.BNGetScriptingProviderList returned None"
 		try:
 			for i in range(0, count.value):
 				yield ScriptingProvider(types[i])
 		finally:
 			core.BNFreeScriptingProviderList(types)
 
-	def __getitem__(self, value):
+	def __getitem__(self, value) -> 'ScriptingProvider':
 		binaryninja._init_plugins()
 		provider = core.BNGetScriptingProviderByName(str(value))
 		if provider is None:
 			raise KeyError("'%s' is not a valid scripting provider" % str(value))
 		return ScriptingProvider(provider)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
 
-
-class ScriptingProvider(with_metaclass(_ScriptingProviderMetaclass, object)):
+class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 	_registered_providers = []
+	name = ''
+	apiName = ''
+	instance_class: Optional['ScriptingInstance'] = None
 
 	def __init__(self, handle = None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNScriptingProvider)
 			self.__dict__["name"] = core.BNGetScriptingProviderName(handle)
 
-	@property
-	def name(self):
-		return NotImplemented
-
-	@property
-	def instance_class(self):
-		return NotImplemented
-
-	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
-
-	def register(self):
+	def register(self) -> None:
 		self._cb = core.BNScriptingProviderCallbacks()
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
 		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
 		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
+		self._cb.moduleInstalled = self._cb.installModules.__class__(self._module_installed)
 		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
 		try:
-			result = self.__class__.instance_class(self)
+			assert self.__class__.instance_class is not None
+			result = self.__class__.instance_class(self)  # type: ignore
 			if result is None:
 				return None
-			return ctypes.cast(core.BNNewScriptingInstanceReference(result.handle), ctypes.c_void_p).value
+			script_instance = core.BNNewScriptingInstanceReference(result.handle)
+			assert script_instance is not None, "core.BNNewScriptingInstanceReference returned None"
+			return ctypes.cast(script_instance, ctypes.c_void_p).value
 		except:
 			log.log_error(traceback.format_exc())
 			return None
 
-	def create_instance(self):
+	def create_instance(self) -> Optional[ScriptingInstance]:
 		result = core.BNCreateScriptingProviderInstance(self.handle)
 		if result is None:
 			return None
 		return ScriptingInstance(self, handle = result)
 
-	def _load_plugin(self, ctx, repo_path, plugin_path, force):
+	def _load_module(self, ctx, repo_path:str, plugin_path:str, force:bool) -> bool:
 		return False
 
-	def _install_modules(self, ctx, modules):
+	def _install_modules(self, ctx, modules:str) -> bool:
+		return False
+
+	def _module_installed(self, ctx, module:str) -> bool:
 		return False
 
 
@@ -670,22 +650,23 @@ from binaryninja import *
 						for line in code.split(b'\n'):
 							self.interpreter.push(line.decode('charmap'))
 
-						tryNavigate = True
-						if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
-							try:
-								self.locals["here"] = self.active_view.parse_expression(self.locals["here"], self.active_addr)
-							except ValueError as e:
-								sys.stderr.write(e)
-								tryNavigate = False
-						if tryNavigate:
-							if self.locals["here"] != self.active_addr:
-								if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
-									sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
-							elif self.locals["current_address"] != self.active_addr:
-								if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
-									sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
 						if self.active_view is not None:
-							self.active_view.update_analysis()
+							tryNavigate = True
+							if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
+								try:
+										self.locals["here"] = self.active_view.parse_expression(self.locals["here"], self.active_addr)
+								except ValueError as e:
+									sys.stderr.write(str(e))
+									tryNavigate = False
+							if tryNavigate:
+								if self.locals["here"] != self.active_addr:
+									if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
+										sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
+								elif self.locals["current_address"] != self.active_addr:
+									if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
+										sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+							if self.active_view is not None:
+								self.active_view.update_analysis()
 					except:
 						traceback.print_exc()
 					finally:
@@ -701,6 +682,7 @@ from binaryninja import *
 			self.active_selection_end = self.current_selection_end
 
 			self.locals.blacklist_enabled = False
+			self.locals["current_thread"] = self.interpreter
 			self.locals["current_view"] = self.active_view
 			self.locals["bv"] = self.active_view
 			self.locals["current_function"] = self.active_func
@@ -776,7 +758,7 @@ from binaryninja import *
 
 	@abc.abstractmethod
 	def perform_cancel_script_input(self):
-		for tid, tobj in threading._active.items():
+		for tid, tobj in threading._active.items():  # type: ignore
 			if tobj is self.interpreter:
 				if ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(KeyboardInterrupt)) != 1:
 					ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), None)
@@ -816,6 +798,13 @@ class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
 	apiName = f"python{sys.version_info.major}" # Used for plugin compatibility testing
 	instance_class = PythonScriptingInstance
+
+	@property
+	def _python_bin(self) -> Optional[str]:
+		python_lib = settings.Settings().get_string("python.interpreter")
+		python_bin_override = settings.Settings().get_string("python.binaryOverride")
+		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
+		return python_bin
 
 	def _load_module(self, ctx, repo_path, module, force):
 		try:
@@ -865,19 +854,18 @@ class PythonScriptingProvider(ScriptingProvider):
 		return self._run_args([python_bin, "-m", "pip", "--version"])[0]
 
 	def _satisfied_dependencies(self, python_bin:str) -> Generator[str, None, None]:
+		if python_bin is None:
+			return None
 		success, result = self._run_args([python_bin, "-m", "pip", "freeze"])
 		if not success:
 			return None
 		for line in result.splitlines():
 			yield line.split("==", 2)[0]
 
-	def _dependency_satisfied(self, dependency:str, python_bin:str) -> bool:
-		return re.split('>|=|,', dependency.strip(), 1)[0] in self._satisfied_dependencies(python_bin)
-
 	def _bin_version(self, python_bin: str):
 		return self._run_args([str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"])[1]
 
-	def _get_executable_for_libpython(self, python_lib: str, python_bin: str):
+	def _get_executable_for_libpython(self, python_lib: str, python_bin: str) -> Tuple[Optional[str], str]:
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if python_bin is not None and python_bin != "":
 			python_bin_version = self._bin_version(python_bin)
@@ -891,7 +879,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			if using_bundled_python:
 				return (None, "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again")
 
-			python_bin = Path(python_lib).parent / f"bin/python{python_lib_version}"
+			python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
 		elif sys.platform == "linux":
 			class Dl_info(ctypes.Structure):
 				_fields_ = [
@@ -936,7 +924,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		return (python_bin, "Success")
 
-	def _install_modules(self, ctx, modules):
+	def _install_modules(self, ctx, modules: str) -> bool:
 		# This callback should not be called directly it is indirectly
 		# executed binary ninja is executed with --pip option
 		if len(modules.strip()) == 0:
@@ -975,15 +963,23 @@ class PythonScriptingProvider(ScriptingProvider):
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
-			site_package_dir = Path(binaryninja.user_directory()) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
+			user_dir = binaryninja.user_directory()
+			if user_dir is None:
+				raise Exception("Unable to find user directory.")
+			site_package_dir = Path(user_dir) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
-		args.extend(filter(len, modules.decode("utf-8").split("\n")))
+		args.extend(list(filter(len, modules.split("\n"))))
 		log.log_info(f"Running pip {args}")
 		status, result = self._run_args(args)
 		if not status:
 			log.log_error(f"Error while attempting to install requirements {result}")
 		return status
+
+	def _module_installed(self, ctx, module:str) -> bool:
+		if self._python_bin is None:
+			return False
+		return re.split('>|=|,', module.strip(), 1)[0] in self._satisfied_dependencies(self._python_bin)
 
 
 PythonScriptingProvider().register()

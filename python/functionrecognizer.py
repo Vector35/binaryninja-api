@@ -21,13 +21,13 @@
 import traceback
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja import function
-from binaryninja import filemetadata
-from binaryninja import binaryview
-from binaryninja import lowlevelil
-from binaryninja import log
-from binaryninja import mediumlevelil
+from . import _binaryninjacore as core
+from . import function
+from . import filemetadata
+from . import binaryview
+from . import lowlevelil
+from . import log
+from . import mediumlevelil
 
 
 class FunctionRecognizer(object):

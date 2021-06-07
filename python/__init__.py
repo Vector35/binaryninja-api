@@ -22,50 +22,49 @@
 import atexit
 import sys
 import ctypes
-from time import gmtime
+from time import gmtime, struct_time
 import os
-
-from binaryninja.compatibility import *
+from typing import Mapping, Optional
 
 
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
-
-from binaryninja.enums import *
-from binaryninja.databuffer import *
-from binaryninja.filemetadata import *
-from binaryninja.fileaccessor import *
-from binaryninja.binaryview import *
-from binaryninja.debuginfo import *
-from binaryninja.transform import *
-from binaryninja.architecture import *
-from binaryninja.basicblock import *
-from binaryninja.function import *
-from binaryninja.log import *
-from binaryninja.lowlevelil import *
-from binaryninja.mediumlevelil import *
-from binaryninja.highlevelil import *
-from binaryninja.types import *
-from binaryninja.typelibrary import *
-from binaryninja.functionrecognizer import *
-from binaryninja.update import *
-from binaryninja.plugin import *
-from binaryninja.callingconvention import *
-from binaryninja.platform import *
-from binaryninja.demangle import *
-from binaryninja.mainthread import *
-from binaryninja.interaction import *
-from binaryninja.lineardisassembly import *
-from binaryninja.highlight import *
-from binaryninja.scriptingprovider import *
-from binaryninja.downloadprovider import *
-from binaryninja.pluginmanager import *
-from binaryninja.settings import *
-from binaryninja.metadata import *
-from binaryninja.flowgraph import *
-from binaryninja.datarender import *
-from binaryninja.websocketprovider import *
-from binaryninja.workflow import *
+import binaryninja
+from .enums import *
+from .databuffer import *
+from .filemetadata import *
+from .fileaccessor import *
+from .binaryview import *
+from .transform import *
+from .architecture import *
+from .basicblock import *
+from .function import *
+from .log import *
+from .lowlevelil import *
+from .mediumlevelil import *
+from .highlevelil import *
+from .types import *
+from .typelibrary import *
+from .functionrecognizer import *
+from .update import *
+from .plugin import *
+from .callingconvention import *
+from .platform import *
+from .demangle import *
+from .mainthread import *
+from .interaction import *
+from .lineardisassembly import *
+from .highlight import *
+from .scriptingprovider import *
+from .downloadprovider import *
+from .pluginmanager import *
+from .settings import *
+from .metadata import *
+from .flowgraph import *
+from .datarender import *
+from .variable import *
+from .websocketprovider import *
+from .workflow import *
 
 
 def shutdown():
@@ -101,13 +100,13 @@ class _DestructionCallbackHandler(object):
 		core.BNRegisterObjectDestructionCallbacks(self._cb)
 
 	def destruct_binary_view(self, ctxt, view):
-		BinaryView._unregister(view)
+		binaryninja.binaryview.BinaryView._unregister(view)
 
 	def destruct_file_metadata(self, ctxt, f):
-		FileMetadata._unregister(f)
+		binaryninja.filemetadata.FileMetadata._unregister(f)
 
 	def destruct_function(self, ctxt, func):
-		Function._unregister(func)
+		binaryninja.function.Function._unregister(func)
 
 
 _enable_default_log = True
@@ -134,13 +133,13 @@ def _init_plugins():
 _destruct_callbacks = _DestructionCallbackHandler()
 
 
-def disable_default_log():
+def disable_default_log() -> None:
 	'''Disable default logging in headless mode for the current session. By default, logging in headless operation is controlled by the 'python.log.minLevel' settings.'''
 	global _enable_default_log
 	_enable_default_log = False
 	close_logs()
 
-def bundled_plugin_path():
+def bundled_plugin_path() -> Optional[str]:
 	"""
 		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/getting-started.html#binary-path>`_
 
@@ -149,7 +148,7 @@ def bundled_plugin_path():
 	"""
 	return core.BNGetBundledPluginDirectory()
 
-def user_plugin_path():
+def user_plugin_path() -> Optional[str]:
 	"""
 		``user_plugin_path`` returns a string containing the current plugin path inside the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
 
@@ -158,7 +157,7 @@ def user_plugin_path():
 	"""
 	return core.BNGetUserPluginDirectory()
 
-def user_directory():
+def user_directory() -> Optional[str]:
 	"""
 		``user_directory`` returns a string containing the path to the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
 
@@ -167,7 +166,7 @@ def user_directory():
 	"""
 	return core.BNGetUserDirectory()
 
-def core_version():
+def core_version() -> Optional[str]:
 	"""
 		``core_version`` returns a string containing the current version
 
@@ -176,7 +175,7 @@ def core_version():
 	"""
 	return core.BNGetVersionString()
 
-def core_build_id():
+def core_build_id() -> int:
 	"""
 		``core_build_id`` returns a integer containing the current build id
 
@@ -185,7 +184,7 @@ def core_build_id():
 	"""
 	return core.BNGetBuildId()
 
-def core_serial():
+def core_serial() -> Optional[str]:
 	"""
 		``core_serial`` returns a string containing the current serial number
 
@@ -194,28 +193,28 @@ def core_serial():
 	"""
 	return core.BNGetSerialNumber()
 
-def core_expires():
+def core_expires() -> struct_time:
 	'''License Expiration'''
 	return gmtime(core.BNGetLicenseExpirationTime())
 
-def core_product():
+def core_product() -> Optional[str]:
 	'''Product string from the license file'''
 	return core.BNGetProduct()
 
-def core_product_type():
+def core_product_type() -> Optional[str]:
 	'''Product type from the license file'''
 	return core.BNGetProductType()
 
-def core_license_count():
+def core_license_count() -> int:
 	'''License count from the license file'''
 	return core.BNGetLicenseCount()
 
-def core_ui_enabled():
+def core_ui_enabled() -> bool:
 	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
 	return core.BNIsUIEnabled()
 
 
-def core_set_license(licenseData):
+def core_set_license(licenseData:str) -> None:
 	'''
 		``core_set_license`` is used to initialize the core with a license file that doesn't necessarily reside on a file system. This is especially useful for headless environments such as docker where loading the license file via an environment variable allows for greater security of the license file itself.
 
@@ -227,15 +226,16 @@ def core_set_license(licenseData):
 			>>> import os
 			>>> core_set_license(os.environ['BNLICENSE']) #Do this before creating any BinaryViews
 			>>> with open_view("/bin/ls") as bv:
-			...		print(len(bv.functions))
+			...		print(len(list(bv.functions)))
 			128
 	'''
 	core.BNSetLicense(licenseData)
 
 
-def get_memory_usage_info():
+def get_memory_usage_info() -> Mapping[str, int]:
 	count = ctypes.c_ulonglong()
 	info = core.BNGetMemoryUsageInfo(count)
+	assert info is not None, "core.BNGetMemoryUsageInfo returned None"
 	result = {}
 	for i in range(0, count.value):
 		result[info[i].name] = info[i].value
@@ -243,7 +243,7 @@ def get_memory_usage_info():
 	return result
 
 
-def open_view(*args, **kwargs):
+def open_view(*args, **kwargs) -> Optional[BinaryView]:
 	"""
 	`open_view` is a convenience wrapper for :py:class:`get_view_of_file_with_options` that opens a BinaryView object.
 
@@ -259,7 +259,7 @@ def open_view(*args, **kwargs):
 	:Example:
 		>>> from binaryninja import *
 		>>> with open_view("/bin/ls") as bv:
-		...     print(len(bv.functions))
+		...     print(len(list(bv.functions)))
 		...
 		128
 

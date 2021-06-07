@@ -24,15 +24,14 @@ import threading
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import PluginCommandType
-from binaryninja import filemetadata
-from binaryninja import binaryview
-from binaryninja import function
-
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import with_metaclass
+from . import _binaryninjacore as core
+from .enums import PluginCommandType
+from . import filemetadata
+from . import binaryview
+from . import function
+from . import log
+from . import lowlevelil
+from . import mediumlevelil
 
 
 class PluginCommandContext(object):
@@ -48,7 +47,6 @@ class PluginCommandContext(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -57,7 +55,6 @@ class PluginCommandContext(object):
 
 	@property
 	def address(self):
-		""" """
 		return self._address
 
 	@address.setter
@@ -66,7 +63,6 @@ class PluginCommandContext(object):
 
 	@property
 	def length(self):
-		""" """
 		return self._length
 
 	@length.setter
@@ -75,7 +71,6 @@ class PluginCommandContext(object):
 
 	@property
 	def function(self):
-		""" """
 		return self._function
 
 	@function.setter
@@ -84,7 +79,6 @@ class PluginCommandContext(object):
 
 	@property
 	def instruction(self):
-		""" """
 		return self._instruction
 
 	@instruction.setter
@@ -93,35 +87,19 @@ class PluginCommandContext(object):
 
 
 class _PluginCommandMetaClass(type):
-	@property
-	def list(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		commands = core.BNGetAllPluginCommands(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(PluginCommand(commands[i]))
-		core.BNFreePluginCommandList(commands)
-		return result
-
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		commands = core.BNGetAllPluginCommands(count)
+		assert commands is not None, "core.BNGetAllPluginCommands returned None"
 		try:
 			for i in range(0, count.value):
 				yield PluginCommand(commands[i])
 		finally:
 			core.BNFreePluginCommandList(commands)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
 
-
-class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
+class PluginCommand(metaclass=_PluginCommandMetaClass):
 	_registered_commands = []
 
 	def __init__(self, cmd):
@@ -131,195 +109,190 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		self._description = str(cmd.description)
 		self._type = PluginCommandType(cmd.type)
 
-	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
-
-	@classmethod
-	def _default_action(cls, view, action):
+	@staticmethod
+	def _default_action(view, action):
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _address_action(cls, view, addr, action):
+	@staticmethod
+	def _address_action(view, addr, action):
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _range_action(cls, view, addr, length, action):
+	@staticmethod
+	def _range_action(view, addr, length, action):
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr, length)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _function_action(cls, view, func, action):
+	@staticmethod
+	def _function_action(view, func, action):
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _low_level_il_function_action(cls, view, func, action):
+	@staticmethod
+	def _low_level_il_function_action(view, func, action):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _low_level_il_instruction_action(cls, view, func, instr, action):
+	@staticmethod
+	def _low_level_il_instruction_action(view, func, instr, action):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _medium_level_il_function_action(cls, view, func, action):
+	@staticmethod
+	def _medium_level_il_function_action(view, func, action):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _medium_level_il_instruction_action(cls, view, func, instr, action):
+	@staticmethod
+	def _medium_level_il_instruction_action(view, func, instr, action):
 		try:
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
-	@classmethod
-	def _default_is_valid(cls, view, is_valid):
+	@staticmethod
+	def _default_is_valid(view, is_valid):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _address_is_valid(cls, view, addr, is_valid):
+	@staticmethod
+	def _address_is_valid(view, addr, is_valid):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _range_is_valid(cls, view, addr, length, is_valid):
+	@staticmethod
+	def _range_is_valid(view, addr, length, is_valid):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr, length)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _function_is_valid(cls, view, func, is_valid):
+	@staticmethod
+	def _function_is_valid(view, func, is_valid):
 		try:
 			if is_valid is None:
 				return True
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _low_level_il_function_is_valid(cls, view, func, is_valid):
+	@staticmethod
+	def _low_level_il_function_is_valid(view, func, is_valid):
 		try:
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _low_level_il_instruction_is_valid(cls, view, func, instr, is_valid):
+	@staticmethod
+	def _low_level_il_instruction_is_valid(view, func, instr, is_valid):
 		try:
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetLowLevelILOwnerFunction(func))
-			func_obj = binaryninja.lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
+			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _medium_level_il_function_is_valid(cls, view, func, is_valid):
+	@staticmethod
+	def _medium_level_il_function_is_valid(view, func, is_valid):
 		try:
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
-	@classmethod
-	def _medium_level_il_instruction_is_valid(cls, view, func, instr, is_valid):
+	@staticmethod
+	def _medium_level_il_instruction_is_valid(view, func, instr, is_valid):
 		try:
 			if is_valid is None:
 				return True
 			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
-			func_obj = binaryninja.mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -329,8 +302,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` as an argument
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` as an argument
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -348,8 +321,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and address as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and address as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_address`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -367,8 +340,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and :class:`~binaryninja.binaryview.AddressRange` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and :class:`~binaryview.AddressRange` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_range`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -386,8 +359,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.function.Function` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~function.Function` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -405,8 +378,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILFunction` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.LowLevelILFunction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -424,8 +397,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.LowLevelILInstruction` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.LowLevelILInstruction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -443,8 +416,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILFunction` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.MediumLevelILFunction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -462,8 +435,8 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~binaryninja.binaryview.BinaryView` and a :class:`~binaryninja.mediumlevelil.MediumLevelILInstruction` as arguments
-		:param callback is_valid: optional argument of a function passed a :class:`~binaryninja.binaryview.BinaryView` to determine whether the plugin should be enabled for that view
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.MediumLevelILInstruction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -477,7 +450,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 	@classmethod
 	def get_valid_list(cls, context):
 		"""Dict of registered plugins"""
-		commands = cls.list
+		commands = list(cls)
 		result = {}
 		for cmd in commands:
 			if cmd.is_valid(context):
@@ -516,7 +489,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		elif self._command.type == PluginCommandType.LowLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
-			if not isinstance(context.instruction, binaryninja.lowlevelil.LowLevelILInstruction):
+			if not isinstance(context.instruction, lowlevelil.LowLevelILInstruction):
 				return False
 			if not self._command.lowLevelILInstructionIsValid:
 				return True
@@ -531,7 +504,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		elif self._command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
 			if context.instruction is None:
 				return False
-			if not isinstance(context.instruction, binaryninja.mediumlevelil.MediumLevelILInstruction):
+			if not isinstance(context.instruction, mediumlevelil.MediumLevelILInstruction):
 				return False
 			if not self._command.mediumLevelILInstructionIsValid:
 				return True
@@ -543,7 +516,7 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 		r"""
 		``execute`` Execute a Plugin
 
-		:param str context: PluginCommandContext to pass the PluginCommamnd
+		:param str context: PluginCommandContext to pass the PluginCommand
 		:rtype: None
 
 			>>> ctx = PluginCommandContext(bv);
@@ -576,7 +549,6 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@property
 	def command(self):
-		""" """
 		return self._command
 
 	@command.setter
@@ -585,7 +557,6 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@property
 	def name(self):
-		""" """
 		return self._name
 
 	@name.setter
@@ -594,7 +565,6 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@property
 	def description(self):
-		""" """
 		return self._description
 
 	@description.setter
@@ -603,7 +573,6 @@ class PluginCommand(with_metaclass(_PluginCommandMetaClass, object)):
 
 	@property
 	def type(self):
-		""" """
 		return self._type
 
 	@type.setter
@@ -645,28 +614,18 @@ class MainThreadActionHandler(object):
 		try:
 			self.add_action(MainThreadAction(action))
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def add_action(self, action):
 		pass
 
 
 class _BackgroundTaskMetaclass(type):
-	@property
-	def list(self):
-		"""List all running background tasks (read-only)"""
-		count = ctypes.c_ulonglong()
-		tasks = core.BNGetRunningBackgroundTasks(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i])))
-		core.BNFreeBackgroundTaskList(tasks, count.value)
-		return result
-
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		tasks = core.BNGetRunningBackgroundTasks(count)
+		assert tasks is not None, "core.BNGetRunningBackgroundTasks returned None"
 		try:
 			for i in range(0, count.value):
 				yield BackgroundTask(handle=core.BNNewBackgroundTaskReference(tasks[i]))
@@ -674,7 +633,7 @@ class _BackgroundTaskMetaclass(type):
 			core.BNFreeBackgroundTaskList(tasks, count.value)
 
 
-class BackgroundTask(with_metaclass(_BackgroundTaskMetaclass, object)):
+class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
 	def __init__(self, initial_progress_text = "", can_cancel = False, handle = None):
 		if handle is None:
 			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
@@ -683,11 +642,6 @@ class BackgroundTask(with_metaclass(_BackgroundTaskMetaclass, object)):
 
 	def __del__(self):
 		core.BNFreeBackgroundTask(self.handle)
-
-	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
 
 	@property
 	def progress(self):
@@ -731,13 +685,15 @@ class BackgroundTask(with_metaclass(_BackgroundTaskMetaclass, object)):
 
 
 class BackgroundTaskThread(BackgroundTask):
-	def __init__(self, initial_progress_text = "", can_cancel = False):
+	def __init__(self, initial_progress_text:str="", can_cancel:bool=False):
 		class _Thread(threading.Thread):
-			def __init__(self, task):
+			def __init__(self, task:'BackgroundTaskThread'):
 				threading.Thread.__init__(self)
 				self.task = task
 
 			def run(self):
+				if self.task is None:
+					raise Exception("Can not call run more than once per thread")
 				self.task.run()
 				self.task.finish()
 				self.task = None

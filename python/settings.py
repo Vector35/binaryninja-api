@@ -21,12 +21,8 @@
 import ctypes
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import pyNativeStr
-from binaryninja.enums import SettingsScope
+from . import _binaryninjacore as core
+from .enums import SettingsScope
 
 
 class Settings(object):
@@ -122,23 +118,26 @@ class Settings(object):
 		True
 
 	"""
-	handle = core.BNCreateSettings("default")
+	default_handle = core.BNCreateSettings("default")
 
-	def __init__(self, instance_id = "default", handle = None):
+	def __init__(self, instance_id:str="default", handle=None):
 		if handle is None:
 			if instance_id is None or instance_id == "":
 				instance_id = "default"
 			self._instance_id = instance_id
 			if instance_id == "default":
-				self.handle = Settings.handle
+				assert Settings.default_handle is not None
+				_handle = Settings.default_handle
 			else:
-				self.handle = core.BNCreateSettings(instance_id)
+				_handle = core.BNCreateSettings(instance_id)
 		else:
 			instance_id = core.BNGetUniqueIdentifierString()
-			self.handle = handle
+			_handle = handle
+		assert _handle is not None
+		self.handle = _handle
 
 	def __del__(self):
-		if self.handle is not Settings.handle and self.handle is not None:
+		if self.handle is not Settings.default_handle and self.handle is not None:
 			core.BNFreeSettings(self.handle)
 
 	def __eq__(self, other):
@@ -237,18 +236,20 @@ class Settings(object):
 		"""
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsKeysList(self.handle, ctypes.byref(length))
+		assert result is not None, "core.BNSettingsKeysList returned None"
 		out_list = []
 		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
+			out_list.append(result[i].decode('utf8'))
 		core.BNFreeStringList(result, length)
 		return out_list
 
 	def query_property_string_list(self, key, property_name):
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsQueryPropertyStringList(self.handle, key, property_name, ctypes.byref(length))
+		assert result is not None, "core.BNSettingsQueryPropertyStringList returned None"
 		out_list = []
 		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
+			out_list.append(result[i].decode('utf8'))
 		core.BNFreeStringList(result, length)
 		return out_list
 
@@ -306,9 +307,10 @@ class Settings(object):
 			view = view.handle
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsGetStringList(self.handle, key, view, None, ctypes.byref(length))
+		assert result is not None, "core.BNSettingsGetStringList returned None"
 		out_list = []
 		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
+			out_list.append(result[i].decode('utf8'))
 		core.BNFreeStringList(result, length)
 		return out_list
 
@@ -351,9 +353,10 @@ class Settings(object):
 		c_scope = core.SettingsScopeEnum(scope)
 		length = ctypes.c_ulonglong()
 		result = core.BNSettingsGetStringList(self.handle, key, view, ctypes.byref(c_scope), ctypes.byref(length))
+		assert result is not None, "core.BNSettingsGetStringList returned None"
 		out_list = []
 		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
+			out_list.append(result[i].decode('utf8'))
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
 

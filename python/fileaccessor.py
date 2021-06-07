@@ -22,8 +22,8 @@ import traceback
 import ctypes
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja import log
+from . import _binaryninjacore as core
+from . import log
 
 class FileAccessor(object):
 	def __init__(self):
@@ -32,6 +32,15 @@ class FileAccessor(object):
 		self._cb.getLength = self._cb.getLength.__class__(self._get_length)
 		self._cb.read = self._cb.read.__class__(self._read)
 		self._cb.write = self._cb.write.__class__(self._write)
+
+	def get_length(self):
+		return NotImplemented
+
+	def read(self, offset, length):
+		return NotImplemented
+
+	def write(self, offset:int, data:bytes):
+		return NotImplemented
 
 	def __len__(self):
 		return self.get_length()
@@ -83,5 +92,5 @@ class CoreFileAccessor(FileAccessor):
 
 	def write(self, offset, value):
 		value = str(value)
-		data = ctypes.create_string_buffer(value)
+		data = ctypes.create_string_buffer(len(value))
 		return self._cb.write(self._cb.context, offset, data, len(value))

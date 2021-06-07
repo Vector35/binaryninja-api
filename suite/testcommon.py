@@ -333,13 +333,12 @@ class BinaryViewTestBuilder(Builder):
             func.create_user_stack_var(0, binja.Type.int(4), "testuservar")
             func.create_auto_stack_var(4, binja.Type.int(4), "testautovar")
 
-            sl = func.stack_layout
-            for i in range(len(sl)):
-                funcinfo.append("Function: {:x} Stack position {}: ".format(func.start, i) + str(sl[i]))
+            for i, var in enumerate(func.stack_layout):
+                funcinfo.append(f"Function: {func.start:x} Stack position {i}: {var}")
 
-            funcinfo.append("Function: {:x} Stack content sample: {}".format(func.start, str(func.get_stack_contents_at(func.start + 0x10, 0, 0x10))))
-            funcinfo.append("Function: {:x} Stack content range sample: {}".format(func.start, str(func.get_stack_contents_after(func.start + 0x10, 0, 0x10))))
-            funcinfo.append("Function: {:x} Sample stack var: {}".format(func.start, str(func.get_stack_var_at_frame_offset(0, 0))))
+            funcinfo.append(f"Function: {func.start:x} Stack content sample: {func.get_stack_contents_at(func.start + 0x10, 0, 0x10)}")
+            funcinfo.append(f"Function: {func.start:x} Stack content range sample: {func.get_stack_contents_after(func.start + 0x10, 0, 0x10)}")
+            funcinfo.append(f"Function: {func.start:x} Sample stack var: {func.get_stack_var_at_frame_offset(0, 0)}")
             func.delete_user_stack_var(0)
             func.delete_auto_stack_var(0)
         return funcinfo
@@ -369,11 +368,11 @@ class BinaryViewTestBuilder(Builder):
             if func.hlil is None or func.hlil.root is None:
                 continue
             for line in func.hlil.root.lines:
-                retinfo.append("Function: {:x} HLIL line: {}".format(func.start, str(line)))
+                retinfo.append(f"Function: {func.start:x} HLIL line: {str(line)}")
             for hlilins in func.hlil.instructions:
-                retinfo.append("Function: {:x} Instruction: {:x} HLIL->LLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.llil)))
-                retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.mlil)))
-                retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(sorted(list(map(str, hlilins.mlils))))))
+                retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->LLIL instruction: {str(hlilins.llil)}")
+                retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLIL instruction: {str(hlilins.mlil)}")
+                retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {str(sorted(list(map(str, hlilins.mlils))))}")
         return fixOutput(retinfo)
 
     def test_functions_attributes(self):
@@ -476,7 +475,7 @@ class TestBuilder(Builder):
 
     def test_BinaryViewType_list(self):
         """BinaryViewType list doesnt match"""
-        return ["BinaryViewType: " + x.name for x in binja.BinaryViewType.list]
+        return ["BinaryViewType: " + x.name for x in binja.BinaryViewType]
 
     def test_deprecated_BinaryViewType(self):
         """deprecated BinaryViewType list doesnt match"""
@@ -497,53 +496,20 @@ class TestBuilder(Builder):
 
     def test_Architecture_list(self):
         """Architecture list doesnt match"""
-        return ["Arch name: " + x.name for x in binja.Architecture.list]
+        return ["Arch name: " + arch.name for arch in binja.Architecture]
 
     def test_Assemble(self):
         """unexpected assemble result"""
         result = []
-        # success cases
 
-        strResult = binja.Architecture["x86"].assemble("xor eax, eax")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("x86 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("x86 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["x86_64"].assemble("xor rax, rax")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("x86_64 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("x86_64 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["mips32"].assemble("move $ra, $zero")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("mips32 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("mips32 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["mipsel32"].assemble("move $ra, $zero")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("mipsel32 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("mipsel32 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["armv7"].assemble("str r2, [sp,  #-0x4]!")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("armv7 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("armv7 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["aarch64"].assemble("mov x0, x0")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("aarch64 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("aarch64 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["thumb2"].assemble("ldr r4, [r4]")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("thumb2 assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("thumb2 assembly: " + repr(str(strResult)))
-        strResult = binja.Architecture["thumb2eb"].assemble("ldr r4, [r4]")
-        if sys.version_info.major == 3 and not strResult[0] is None:
-            result.append("thumb2eb assembly: " + "'" + str(strResult)[2:-1] + "'")
-        else:
-            result.append("thumb2eb assembly: " + repr(str(strResult)))
+        # success cases
+        result.append(f"x86 assembly: {binja.Architecture['x86'].assemble('xor eax, eax')}")
+        result.append(f"x86_64 assembly: {binja.Architecture['x86_64'].assemble('xor rax, rax')}")
+        result.append(f"mips32 assembly: {binja.Architecture['mips32'].assemble('move $ra, $zero')}")
+        result.append(f"armv7 assembly: {binja.Architecture['armv7'].assemble('str r2, [sp,  #-0x4]!')}")
+        result.append(f"aarch64 assembly: {binja.Architecture['aarch64'].assemble('mov x0, x0')}")
+        result.append(f"thumb2 assembly: {binja.Architecture['thumb2'].assemble('ldr r4, [r4]')}")
+        result.append(f"thumb2eb assembly: {binja.Architecture['thumb2eb'].assemble('ldr r4, [r4]')}")
 
         # fail cases
         try:
@@ -900,18 +866,18 @@ class TestBuilder(Builder):
                 for func in bv.functions:
                     for bb in func.mlil.basic_blocks:
                         for ins in bb:
-                            retinfo.append("MLIL stack begin var: " + str(ins.get_var_for_stack_location(0)))
-                            retinfo.append("MLIL first stack element: " + str(ins.get_stack_contents(0, 1)))
-                            retinfo.append("MLIL second stack element: " + str(ins.get_stack_contents_after(0, 1)))
-                            retinfo.append("MLIL possible first stack element: " + str(ins.get_possible_stack_contents(0, 1)))
-                            retinfo.append("MLIL possible second stack element: " + str(ins.get_possible_stack_contents_after(0, 1)))
+                            retinfo.append(f"MLIL stack begin var: {ins.get_var_for_stack_location(0)}")
+                            retinfo.append(f"MLIL first stack element: {ins.get_stack_contents(0, 1)}")
+                            retinfo.append(f"MLIL second stack element: {ins.get_stack_contents_after(0, 1)}")
+                            retinfo.append(f"MLIL possible first stack element: {ins.get_possible_stack_contents(0, 1)}")
+                            retinfo.append(f"MLIL possible second stack element: {ins.get_possible_stack_contents_after(0, 1)}")
 
                             for reg in reg_list:
-                                retinfo.append("MLIL reg {} var at {}: {}".format(reg, hex(ins.address), str(ins.get_var_for_reg(reg))))
-                                retinfo.append("MLIL reg {} value at {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value(reg))))
-                                retinfo.append("MLIL reg {} value after {}: {}".format(reg, hex(ins.address), str(ins.get_reg_value_after(reg))))
-                                retinfo.append("MLIL reg {} possible value at {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values(reg)))))
-                                retinfo.append("MLIL reg {} possible value after {}: {}".format(reg, hex(ins.address), fixSet(str(ins.get_possible_reg_values_after(reg)))))
+                                retinfo.append(f"MLIL reg {reg} var at {ins.address:#x}: {ins.get_var_for_reg(reg)}")
+                                retinfo.append(f"MLIL reg {reg} value at {ins.address:#x}: {ins.get_reg_value(reg)}")
+                                retinfo.append(f"MLIL reg {reg} value after {ins.address:#x}: {ins.get_reg_value_after(reg)}")
+                                retinfo.append(f"MLIL reg {reg} possible value at {ins.address:#x}: {ins.get_possible_reg_values(reg)}")
+                                retinfo.append(f"MLIL reg {reg} possible value after {ins.address:#x}: {ins.get_possible_reg_values_after(reg)}")
 
                             for flag in flag_list:
                                 retinfo.append("MLIL flag {} value at {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value(flag))))
@@ -1097,11 +1063,11 @@ class TestBuilder(Builder):
 
             mlil_range_var_refs = func.get_mlil_var_refs_from(0x1175, 0x8c)
             for ref in mlil_range_var_refs:
-                retinfo.append("var {} is referenced at {}".format(ref.var, ref.src))
+                retinfo.append(f"var {ref.var} is referenced at {ref.src}")
 
             hlil_range_var_refs = func.get_hlil_var_refs_from(0x1175, 0x8c)
             for ref in hlil_range_var_refs:
-                retinfo.append("var {} is referenced at {}".format(ref.var, ref.src))
+                retinfo.append(f"var {ref.var} is referenced at {ref.src}")
 
         self.delete_package("type_xref.bndb")
         return fixOutput(sorted(retinfo))
@@ -1205,11 +1171,11 @@ class TestBuilder(Builder):
 
             for func in bv.functions:
                 for line in func.hlil.root.lines:
-                    retinfo.append("Function: {:x} HLIL line: {}".format(func.start, str(line)))
+                    retinfo.append(f"Function: {func.start:x} HLIL line: {line}")
                 for hlilins in func.hlil.instructions:
-                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->LLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.llil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLIL instruction: {}".format(func.start, hlilins.address, str(hlilins.mlil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} HLIL->MLILS instruction: {}".format(func.start, hlilins.address, str(sorted(list(map(str, hlilins.mlils))))))
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->LLIL instruction: {hlilins.llil}")
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLIL instruction: {hlilins.mlil}")
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {sorted(list(map(str, hlilins.mlils)))}")
 
         self.delete_package("array_test.bndb")
         return fixOutput(sorted(retinfo))
@@ -1230,7 +1196,7 @@ class VerifyBuilder(Builder):
         return [x.start for x in bv.functions]
 
     def get_comments(self, bv):
-        return bv.functions[0].comments
+        return next(bv.functions).comments
 
     def test_possiblevalueset_parse(self):
         """ Failed to parse PossibleValueSet from string"""
@@ -1350,9 +1316,10 @@ class VerifyBuilder(Builder):
                 # Make some modifications to the binary view
 
                 # Add a comment
-                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                f = next(bv.functions)
+                f.set_comment(f.start, "Function start")
                 # Add a new function
-                bv.add_function(bv.functions[0].start + 4)
+                bv.add_function(f.start + 4)
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
 
                 comments = self.get_comments(bv)
@@ -1383,7 +1350,8 @@ class VerifyBuilder(Builder):
                 bv.update_analysis_and_wait()
 
                 bv.begin_undo_actions()
-                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                f = next(bv.functions)
+                f.set_comment(f.start, "Function start")
                 bv.commit_undo_actions()
 
                 bv.update_analysis_and_wait()
@@ -1391,7 +1359,7 @@ class VerifyBuilder(Builder):
                 functions = self.get_functions(bv)
 
                 bv.begin_undo_actions()
-                bv.functions[0].set_comment(bv.functions[0].start, "Function start!")
+                f.set_comment(f.start, "Function start!")
                 bv.commit_undo_actions()
 
                 bv.begin_undo_actions()
@@ -1429,7 +1397,7 @@ class VerifyBuilder(Builder):
             # in the core. If we directly free the view, the teardown will happen in a worker thread and
             # we will not be able to get a reliable object count. By keeping a reference in a different
             # object in the core, the teardown will occur immediately upon freeing the other object.
-            graph = bv.functions[0].create_graph()
+            graph = next(bv.functions).create_graph()
             bv.file.close()
             del bv
             import gc
@@ -1442,7 +1410,7 @@ class VerifyBuilder(Builder):
             # Analyze the binary again
             bv = binja.BinaryViewType['ELF'].open(file_name)
             bv.update_analysis_and_wait()
-            graph = bv.functions[0].create_graph()
+            graph = next(bv.functions).create_graph()
             bv.file.close()
             del bv
             gc.collect()
@@ -1478,7 +1446,8 @@ class VerifyBuilder(Builder):
                 assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x1000)
 
                 # save temp bndb for round trip testing
-                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                f = next(bv.functions)
+                f.set_comment(f.start, "Function start")
                 comments = self.get_comments(bv)
                 functions = self.get_functions(bv)
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
@@ -1537,7 +1506,8 @@ class VerifyBuilder(Builder):
                 assert(bv.get_load_settings("Mach-O").get_integer("loader.macho.universalImageOffset") == 0x4c000)
 
                 # save temp bndb for round trip testing
-                bv.functions[0].set_comment(bv.functions[0].start, "Function start")
+                f = next(bv.functions)
+                f.set_comment(f.start, "Function start")
                 comments = self.get_comments(bv)
                 functions = self.get_functions(bv)
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"

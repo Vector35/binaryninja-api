@@ -20,8 +20,8 @@
 
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import HighlightColorStyle, HighlightStandardColor
+from . import _binaryninjacore as core
+from .enums import HighlightColorStyle, HighlightStandardColor
 
 
 class HighlightColor(object):
@@ -49,7 +49,6 @@ class HighlightColor(object):
 
 	@property
 	def alpha(self):
-		""" """
 		return self._alpha
 
 	@alpha.setter
@@ -58,7 +57,6 @@ class HighlightColor(object):
 
 	@property
 	def mix(self):
-		""" """
 		return self._mix
 
 	@mix.setter
@@ -67,7 +65,6 @@ class HighlightColor(object):
 
 	@property
 	def mix_color(self):
-		""" """
 		return self._mix_color
 
 	@mix_color.setter
@@ -76,7 +73,6 @@ class HighlightColor(object):
 
 	@property
 	def color(self):
-		""" """
 		return self._color
 
 	@color.setter
@@ -85,7 +81,6 @@ class HighlightColor(object):
 
 	@property
 	def style(self):
-		""" """
 		return self._style
 
 	@style.setter
@@ -94,7 +89,6 @@ class HighlightColor(object):
 
 	@property
 	def green(self):
-		""" """
 		return self._green
 
 	@green.setter
@@ -103,7 +97,6 @@ class HighlightColor(object):
 
 	@property
 	def red(self):
-		""" """
 		return self._red
 
 	@red.setter
@@ -112,7 +105,6 @@ class HighlightColor(object):
 
 	@property
 	def blue(self):
-		""" """
 		return self._blue
 
 	@blue.setter
@@ -192,3 +184,4 @@ class HighlightColor(object):
 		elif color.style == HighlightColorStyle.CustomHighlightColor:
 			return HighlightColor(red=color.r, green=color.g, blue=color.b, alpha=color.alpha)
 		return HighlightColor(color=HighlightStandardColor.NoHighlightColor)
+

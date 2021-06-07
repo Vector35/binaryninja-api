@@ -18,25 +18,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import os
 import ctypes
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import types
-
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import with_metaclass
-import os
+from . import _binaryninjacore as core
+from . import types
+from . import callingconvention
+from . import typelibrary
+from . import architecture
 
 
 class _PlatformMetaClass(type):
-
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformList(count)
+		assert platforms is not None, "core.BNGetPlatformList returned None"
 		try:
 			for i in range(0, count.value):
 				yield Platform(handle = core.BNNewPlatformReference(platforms[i]))
@@ -50,45 +49,8 @@ class _PlatformMetaClass(type):
 			raise KeyError("'%s' is not a valid platform" % str(value))
 		return Platform(handle = platform)
 
-	@property
-	def list(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		platforms = core.BNGetPlatformList(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
-		core.BNFreePlatformList(platforms, count.value)
-		return result
 
-	@property
-	def os_list(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		platforms = core.BNGetPlatformOSList(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(str(platforms[i]))
-		core.BNFreePlatformOSList(platforms, count.value)
-		return result
-
-	def get_list(cls, os = None, arch = None):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		if os is None:
-			platforms = core.BNGetPlatformList(count)
-		elif arch is None:
-			platforms = core.BNGetPlatformListByOS(os)
-		else:
-			platforms = core.BNGetPlatformListByArchitecture(os, arch.handle)
-		result = []
-		for i in range(0, count.value):
-			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
-		core.BNFreePlatformList(platforms, count.value)
-		return result
-
-
-class Platform(with_metaclass(_PlatformMetaClass, object)):
+class Platform(metaclass=_PlatformMetaClass):
 	"""
 	``class Platform`` contains all information related to the execution environment of the binary, mainly the
 	calling conventions used.
@@ -97,23 +59,29 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 	type_file_path = None # path to platform types file
 	type_include_dirs = [] # list of directories available to #include from type_file_path
 
-	def __init__(self, arch = None, handle = None):
+	def __init__(self, arch:'architecture.Architecture'=None, handle=None):
 		if handle is None:
 			if arch is None:
-				self.handle = None
 				raise ValueError("platform must have an associated architecture")
-			self._arch = arch
+			_arch = arch
 			if self.__class__.type_file_path is None:
-				self.handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+				_handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
 			else:
 				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
 				for (i, dir) in enumerate(self.__class__.type_include_dirs):
 					dir_buf[i] = dir.encode('charmap')
-				self.handle = core.BNCreatePlatformWithTypes(arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf, len(self.__class__.type_include_dirs))
+				_handle = core.BNCreatePlatformWithTypes(arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf, len(self.__class__.type_include_dirs))
 		else:
-			self.handle = handle
-			self.__dict__["name"] = core.BNGetPlatformName(self.handle)
-			self._arch = binaryninja.architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(self.handle))
+			_handle = handle
+			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
+		assert _handle is not None
+		assert _arch is not None
+		self.handle = _handle
+		self._arch = _arch
+
+	@property
+	def name(self):
+		return core.BNGetPlatformName(self.handle)
 
 	def __del__(self):
 		if self.handle is not None:
@@ -135,10 +103,40 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 			return NotImplemented
 		return not (self == other)
 
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
 	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
+	@classmethod
+	def os_list(cls):
+		binaryninja._init_plugins()
+		count = ctypes.c_ulonglong()
+		platforms = core.BNGetPlatformOSList(count)
+		assert platforms is not None, "core.BNGetPlatformOSList returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(str(platforms[i]))
+		core.BNFreePlatformOSList(platforms, count.value)
+		return result
+
+	@classmethod
+	def get_list(cls, os = None, arch = None):
+		binaryninja._init_plugins()
+		count = ctypes.c_ulonglong()
+		if os is None:
+			platforms = core.BNGetPlatformList(count)
+			assert platforms is not None, "core.BNGetPlatformList returned None"
+		elif arch is None:
+			platforms = core.BNGetPlatformListByOS(os)
+			assert platforms is not None, "core.BNGetPlatformListByOS returned None"
+		else:
+			platforms = core.BNGetPlatformListByArchitecture(os, arch.handle)
+			assert platforms is not None, "core.BNGetPlatformListByArchitecture returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
+		core.BNFreePlatformList(platforms, count.value)
+		return result
 
 	@property
 	def default_calling_convention(self):
@@ -152,7 +150,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetPlatformDefaultCallingConvention(self.handle)
 		if result is None:
 			return None
-		return binaryninja.callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@default_calling_convention.setter
 	def default_calling_convention(self, value):
@@ -166,7 +164,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetPlatformCdeclCallingConvention(self.handle)
 		if result is None:
 			return None
-		return binaryninja.callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@cdecl_calling_convention.setter
 	def cdecl_calling_convention(self, value):
@@ -183,7 +181,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetPlatformStdcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return binaryninja.callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@stdcall_calling_convention.setter
 	def stdcall_calling_convention(self, value):
@@ -200,7 +198,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetPlatformFastcallCallingConvention(self.handle)
 		if result is None:
 			return None
-		return binaryninja.callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@fastcall_calling_convention.setter
 	def fastcall_calling_convention(self, value):
@@ -217,7 +215,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		result = core.BNGetPlatformSystemCallConvention(self.handle)
 		if result is None:
 			return None
-		return binaryninja.callingconvention.CallingConvention(handle=result)
+		return callingconvention.CallingConvention(handle=result)
 
 	@system_call_convention.setter
 	def system_call_convention(self, value):
@@ -236,9 +234,10 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""
 		count = ctypes.c_ulonglong()
 		cc = core.BNGetPlatformCallingConventions(self.handle, count)
+		assert cc is not None, "core.BNGetPlatformCallingConventions returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(binaryninja.callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i])))
+			result.append(callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i])))
 		core.BNFreeCallingConventionList(cc, count.value)
 		return result
 
@@ -247,6 +246,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""List of platform-specific types (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformTypes(self.handle, count)
+		assert type_list is not None, "core.BNGetPlatformTypes returned None"
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
@@ -259,6 +259,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""List of platform-specific variable definitions (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformVariables(self.handle, count)
+		assert type_list is not None, "core.BNGetPlatformVariables returned None"
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
@@ -271,6 +272,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""List of platform-specific function definitions (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetPlatformFunctions(self.handle, count)
+		assert type_list is not None, "core.BNGetPlatformFunctions returned None"
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
@@ -283,6 +285,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		"""List of system calls for this platform (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		call_list = core.BNGetPlatformSystemCalls(self.handle, count)
+		assert call_list is not None, "core.BNGetPlatformSystemCalls returned None"
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(call_list[i].name)
@@ -295,18 +298,20 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 	def type_libraries(self):
 		count = ctypes.c_ulonglong(0)
 		libs = core.BNGetPlatformTypeLibraries(self.handle, count)
+		assert libs is not None, "core.BNGetPlatformTypeLibraries returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
 		core.BNFreeTypeLibraryList(libs, count.value)
 		return result
 
 	def get_type_libraries_by_name(self, name):
 		count = ctypes.c_ulonglong(0)
 		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
+		assert libs is not None, "core.BNGetPlatformTypeLibrariesByName returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(binaryninja.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
+			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
 		core.BNFreeTypeLibraryList(libs, count.value)
 		return result
 
@@ -406,7 +411,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 		if filename is None:
 			filename = "input"
-		if not (isinstance(source, str) or isinstance(source, unicode)):
+		if not isinstance(source, str):
 			raise AttributeError("Source must be a string")
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
@@ -415,6 +420,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
 			len(include_dirs), auto_type_source)
+		assert errors.value is not None, "core.BNParseTypesFromSource returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
@@ -464,6 +470,7 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 		errors = ctypes.c_char_p()
 		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
 			len(include_dirs), auto_type_source)
+		assert errors.value is not None, "core.BNParseTypesFromSourceFile returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 		if not result:
@@ -485,7 +492,6 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 
 	@property
 	def arch(self):
-		""" """
 		return self._arch
 
 	@arch.setter

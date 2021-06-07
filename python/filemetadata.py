@@ -18,20 +18,23 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from __future__ import absolute_import
 import traceback
 import ctypes
+from typing import Any, Callable, Optional, List
 
 # Binary Ninja Components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import associateddatastore #required for _FileMetadataAssociatedDataStore
-from binaryninja import log
-from binaryninja.enums import SaveOption
-from binaryninja import pyNativeStr
+from . import _binaryninjacore as core
+from .enums import SaveOption
+from . import associateddatastore #required for _FileMetadataAssociatedDataStore
+from . import log
+from . import binaryview
+
+ProgressFuncType = Callable[[int, int], bool]
+ViewName = str
 
 class NavigationHandler(object):
-	def _register(self, handle):
+	def _register(self, handle) -> None:
 		self._cb = core.BNNavigationHandler()
 		self._cb.context = 0
 		self._cb.getCurrentView = self._cb.getCurrentView.__class__(self._get_current_view)
@@ -39,7 +42,7 @@ class NavigationHandler(object):
 		self._cb.navigate = self._cb.navigate.__class__(self._navigate)
 		core.BNSetFileMetadataNavigationHandler(handle, self._cb)
 
-	def _get_current_view(self, ctxt):
+	def _get_current_view(self, ctxt:Any):
 		try:
 			view = self.get_current_view()
 		except:
@@ -47,19 +50,28 @@ class NavigationHandler(object):
 			view = ""
 		return core.BNAllocString(view)
 
-	def _get_current_offset(self, ctxt):
+	def _get_current_offset(self, ctxt:Any) -> int:
 		try:
 			return self.get_current_offset()
 		except:
 			log.log_error(traceback.format_exc())
 			return 0
 
-	def _navigate(self, ctxt, view, offset):
+	def _navigate(self, ctxt:Any, view:ViewName, offset:int) -> bool:
 		try:
 			return self.navigate(view, offset)
 		except:
 			log.log_error(traceback.format_exc())
 			return False
+
+	def get_current_view(self) -> str:
+		return NotImplemented
+
+	def get_current_offset(self) -> int:
+		return NotImplemented
+
+	def navigate(self, view:ViewName, offset:int) -> bool:
+		return NotImplemented
 
 
 class SaveSettings(object):
@@ -67,7 +79,7 @@ class SaveSettings(object):
 	``class SaveSettings`` is used to specify actions and options that apply to saving a database (.bndb).
 	"""
 
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is None:
 			self.handle = core.BNCreateSaveSettings()
 		else:
@@ -76,12 +88,12 @@ class SaveSettings(object):
 	def __del__(self):
 		core.BNFreeSaveSettings(self.handle)
 
-	def is_option_set(self, option):
+	def is_option_set(self, option:SaveOption) -> bool:
 		if isinstance(option, str):
 			option = SaveOption[option]
 		return core.BNIsSaveSettingsOptionSet(self.handle, option)
 
-	def set_option(self, option, state = True):
+	def set_option(self, option:SaveOption, state:bool=True):
 		"""
 		Set a SaveOption in this instance.
 
@@ -122,7 +134,7 @@ class FileMetadata(object):
 			self.handle = core.BNCreateFileMetadata()
 			if filename is not None:
 				core.BNSetFilename(self.handle, str(filename))
-		self._nav = None
+		self._nav:Optional[NavigationHandler] = None
 
 	def __repr__(self):
 		return "<FileMetadata: %s>" % self.filename
@@ -135,6 +147,8 @@ class FileMetadata(object):
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
+		assert self.handle is not None
+		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -143,16 +157,15 @@ class FileMetadata(object):
 		return not (self == other)
 
 	def __hash__(self):
+		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
-	def nav(self):
-		"""
-		"""
+	def nav(self) -> Optional[NavigationHandler]:
 		return self._nav
 
 	@nav.setter
-	def nav(self, value):
+	def nav(self, value:NavigationHandler) -> None:
 		self._nav = value
 
 	@classmethod
@@ -161,100 +174,102 @@ class FileMetadata(object):
 		if handle.value in cls._associated_data:
 			del cls._associated_data[handle.value]
 
-	@classmethod
-	def set_default_session_data(cls, name, value):
+	@staticmethod
+	def set_default_session_data(name:str, value:Any) -> None:
 		_FileMetadataAssociatedDataStore.set_default(name, value)
 
 	@property
-	def original_filename(self):
+	def original_filename(self) -> str:
 		"""The original name of the binary opened if a bndb, otherwise reads or sets the current filename (read/write)"""
 		return core.BNGetOriginalFilename(self.handle)
 
 	@original_filename.setter
-	def original_filename(self, value):
+	def original_filename(self, value:str) -> None:
 		core.BNSetOriginalFilename(self.handle, str(value))
 
 	@property
-	def filename(self):
+	def filename(self) -> str:
 		"""The name of the open bndb or binary filename (read/write)"""
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter
-	def filename(self, value):
+	def filename(self, value:str) -> None:
 		core.BNSetFilename(self.handle, str(value))
 
 	@property
-	def modified(self):
+	def modified(self) -> bool:
 		"""Boolean result of whether the file is modified (Inverse of 'saved' property) (read/write)"""
 		return core.BNIsFileModified(self.handle)
 
 	@modified.setter
-	def modified(self, value):
+	def modified(self, value:bool) -> None:
 		if value:
 			core.BNMarkFileModified(self.handle)
 		else:
 			core.BNMarkFileSaved(self.handle)
 
 	@property
-	def analysis_changed(self):
+	def analysis_changed(self) -> bool:
 		"""Boolean result of whether the auto-analysis results have changed (read-only)"""
 		return core.BNIsAnalysisChanged(self.handle)
 
 	@property
-	def has_database(self, binary_view_type = ""):
+	def has_database(self, binary_view_type:ViewName="") -> bool:
 		"""Whether the FileMetadata is backed by a database, or if specified, a specific BinaryViewType (read-only)"""
 		return core.BNIsBackedByDatabase(self.handle, binary_view_type)
 
 	@property
-	def view(self):
+	def view(self) -> ViewName:
 		return core.BNGetCurrentView(self.handle)
 
 	@view.setter
-	def view(self, value):
+	def view(self, value:ViewName) -> None:
 		core.BNNavigate(self.handle, str(value), core.BNGetCurrentOffset(self.handle))
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		"""The current offset into the file (read/write)"""
 		return core.BNGetCurrentOffset(self.handle)
 
 	@offset.setter
-	def offset(self, value):
+	def offset(self, value:int) -> None:
 		core.BNNavigate(self.handle, core.BNGetCurrentView(self.handle), value)
 
 	@property
-	def raw(self):
+	def raw(self) -> Optional['binaryview.BinaryView']:
 		"""Gets the "Raw" BinaryView of the file"""
 		view = core.BNGetFileViewOfType(self.handle, "Raw")
 		if view is None:
 			return None
-		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryview.BinaryView(file_metadata = self, handle = view)
 
 	@property
-	def saved(self):
+	def saved(self) -> bool:
 		"""Boolean result of whether the file has been saved (Inverse of 'modified' property) (read/write)"""
 		return not core.BNIsFileModified(self.handle)
 
 	@saved.setter
-	def saved(self, value):
+	def saved(self, value:bool) -> None:
 		if value:
 			core.BNMarkFileSaved(self.handle)
 		else:
 			core.BNMarkFileModified(self.handle)
 
 	@property
-	def navigation(self):
+	def navigation(self) -> Optional[NavigationHandler]:
 		"""Alias for nav"""
 		return self._nav
 
 	@navigation.setter
-	def navigation(self, value):
+	def navigation(self, value:NavigationHandler) -> None:
+		assert self.handle is not None
 		value._register(self.handle)
 		self._nav = value
 
 	@property
-	def session_data(self):
+	def session_data(self) -> Any:
 		"""Dictionary object where plugins can store arbitrary data associated with the file"""
+		assert self.handle is not None, "Attempting to set session_data when handle is None"
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in FileMetadata._associated_data:
 			obj = _FileMetadataAssociatedDataStore()
@@ -264,17 +279,17 @@ class FileMetadata(object):
 			return FileMetadata._associated_data[handle.value]
 
 	@property
-	def snapshot_data_applied_without_error(self):
+	def snapshot_data_applied_without_error(self) -> bool:
 		return core.BNIsSnapshotDataAppliedWithoutError(self.handle)
 
-	def close(self):
+	def close(self) -> None:
 		"""
 		Closes the underlying file handle. It is recommended that this is done in a
 		`finally` clause to avoid handle leaks.
 		"""
 		core.BNCloseFile(self.handle)
 
-	def begin_undo_actions(self):
+	def begin_undo_actions(self) -> None:
 		"""
 		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
 
@@ -296,7 +311,7 @@ class FileMetadata(object):
 		"""
 		core.BNBeginUndoActions(self.handle)
 
-	def commit_undo_actions(self):
+	def commit_undo_actions(self) -> None:
 		"""
 		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
 
@@ -318,7 +333,7 @@ class FileMetadata(object):
 		"""
 		core.BNCommitUndoActions(self.handle)
 
-	def undo(self):
+	def undo(self) -> None:
 		"""
 		``undo`` undo the last committed action in the undo database.
 
@@ -343,7 +358,7 @@ class FileMetadata(object):
 		"""
 		core.BNUndo(self.handle)
 
-	def redo(self):
+	def redo(self) -> None:
 		"""
 		``redo`` redo the last committed action in the undo database.
 
@@ -368,7 +383,7 @@ class FileMetadata(object):
 		"""
 		core.BNRedo(self.handle)
 
-	def navigate(self, view, offset):
+	def navigate(self, view:ViewName, offset:int) -> bool:
 		"""
 		``navigate`` navigates the UI to the specified virtual address
 
@@ -381,12 +396,12 @@ class FileMetadata(object):
 		:Example:
 
 			>>> import random
-			>>> bv.navigate(bv.view, random.choice(bv.functions).start)
+			>>> bv.navigate(bv.view, random.choice(list(bv.functions)).start)
 			True
 		"""
 		return core.BNNavigate(self.handle, str(view), offset)
 
-	def create_database(self, filename, progress_func = None, settings = None):
+	def create_database(self, filename:str, progress_func:Optional[ProgressFuncType]= None, settings:SaveSettings=None):
 		"""
 		``create_database`` writes the current database (.bndb) out to the specified file.
 
@@ -400,17 +415,20 @@ class FileMetadata(object):
 			>>> bv.file.create_database(f"{bv.file.filename}.bndb", None, settings)
 			True
 		"""
+		_settings = None
 		if settings is not None:
-			settings = settings.handle
+			_settings = settings.handle
 
+		assert self.raw is not None, "BinaryView.create_database called when raw view is None"
 		if progress_func is None:
-			return core.BNCreateDatabase(self.raw.handle, str(filename), settings)
+			return core.BNCreateDatabase(self.raw.handle, str(filename), _settings)
 		else:
+			_progress_func = progress_func
 			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)), settings)
+					lambda ctxt, cur, total: _progress_func(cur, total)), settings)
 
-	def open_existing_database(self, filename, progress_func = None):
+	def open_existing_database(self, filename:str, progress_func:Callable[[int, int], bool]=None):
 		if progress_func is None:
 			view = core.BNOpenExistingDatabase(self.handle, str(filename))
 		else:
@@ -419,56 +437,62 @@ class FileMetadata(object):
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
-		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryview.BinaryView(file_metadata = self, handle = view)
 
-	def open_database_for_configuration(self, filename):
+	def open_database_for_configuration(self, filename:str) -> Optional['binaryview.BinaryView']:
 		view = core.BNOpenDatabaseForConfiguration(self.handle, str(filename))
 		if view is None:
 			return None
-		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryview.BinaryView(file_metadata = self, handle = view)
 
-	def save_auto_snapshot(self, progress_func = None, settings = None):
+	def save_auto_snapshot(self, progress_func:Optional[ProgressFuncType]=None, settings:SaveSettings=None):
+		_settings = None
 		if settings is not None:
-			settings = settings.handle
+			_settings = settings.handle
 
+		assert self.raw is not None, "BinaryView.save_auto_snapshot called when raw view is None"
 		if progress_func is None:
-			return core.BNSaveAutoSnapshot(self.raw.handle, settings)
+			return core.BNSaveAutoSnapshot(self.raw.handle, _settings)
 		else:
+			_progress_func = progress_func
 			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
 				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
-					lambda ctxt, cur, total: progress_func(cur, total)), settings)
+					lambda ctxt, cur, total: _progress_func(cur, total)), _settings)
 
-	def merge_user_analysis(self, path, progress_func = None):
+	def merge_user_analysis(self, path:str, progress_func:ProgressFuncType):
 		return core.BNMergeUserAnalysis(self.handle, str(path), None,
 			ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 			lambda ctxt, cur, total: progress_func(cur, total)))
 
-	def get_view_of_type(self, name):
+	def get_view_of_type(self, name:str) -> Optional['binaryview.BinaryView']:
 		view = core.BNGetFileViewOfType(self.handle, str(name))
 		if view is None:
 			view_type = core.BNGetBinaryViewTypeByName(str(name))
 			if view_type is None:
 				return None
+
+			assert self.raw is not None, "BinaryView.save_auto_snapshot called when raw view is None"
 			view = core.BNCreateBinaryViewOfType(view_type, self.raw.handle)
 			if view is None:
 				return None
-		return binaryninja.binaryview.BinaryView(file_metadata = self, handle = view)
+		return binaryview.BinaryView(file_metadata = self, handle = view)
 
-	def open_project(self):
+	def open_project(self) -> bool:
 		return core.BNOpenProject(self.handle)
 
-	def close_project(self):
+	def close_project(self) -> None:
 		core.BNCloseProject(self.handle)
 
-	def is_project_open(self):
+	def is_project_open(self) -> bool:
 		return core.BNIsProjectOpen(self.handle)
 
 	@property
-	def existing_views(self):
+	def existing_views(self) -> List[ViewName]:
 		length = ctypes.c_ulonglong()
 		result = core.BNGetExistingViews(self.handle, ctypes.byref(length))
+		assert result is not None, "core.BNGetExistingViews returned None"
 		views = []
 		for i in range(length.value):
-			views.append(pyNativeStr(result[i]))
+			views.append(result[i].decode("utf-8"))
 		core.BNFreeStringList(result, length)
 		return views

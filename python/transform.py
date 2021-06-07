@@ -24,44 +24,23 @@ import abc
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import log
-from binaryninja import databuffer
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import TransformType
-
-# 2-3 compatibility
-import numbers
-from binaryninja import range
-from binaryninja import with_metaclass
+from . import log
+from . import databuffer
+from . import _binaryninjacore as core
+from .enums import TransformType
 
 
 class _TransformMetaClass(type):
-	@property
-	def list(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		xforms = core.BNGetTransformTypeList(count)
-		result = []
-		for i in range(0, count.value):
-			result.append(Transform(xforms[i]))
-		core.BNFreeTransformTypeList(xforms)
-		return result
-
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		xforms = core.BNGetTransformTypeList(count)
+		assert xforms is not None, "core.BNGetTransformTypeList returned None"
 		try:
 			for i in range(0, count.value):
 				yield Transform(xforms[i])
 		finally:
 			core.BNFreeTransformTypeList(xforms)
-
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __getitem__(cls, name):
 		binaryninja._init_plugins()
@@ -69,20 +48,6 @@ class _TransformMetaClass(type):
 		if xform is None:
 			raise KeyError("'%s' is not a valid transform" % str(name))
 		return Transform(xform)
-
-	def register(cls):
-		binaryninja._init_plugins()
-		if cls.name is None:
-			raise ValueError("transform 'name' is not defined")
-		if cls.long_name is None:
-			cls.long_name = cls.name
-		if cls.transform_type is None:
-			raise ValueError("transform 'transform_type' is not defined")
-		if cls.group is None:
-			cls.group = ""
-		xform = cls(None)
-		cls._registered_cb = xform._cb
-		xform.handle = core.BNRegisterTransformType(cls.transform_type, cls.name, cls.long_name, cls.group, xform._cb)
 
 
 class TransformParameter(object):
@@ -115,10 +80,10 @@ class TransformParameter(object):
 		return self._fixed_length
 
 
-class Transform(with_metaclass(_TransformMetaClass, object)):
+class Transform(metaclass=_TransformMetaClass):
 	"""
-	``class Transform`` is an implementation of the TransformMetaClass that implements custom transformations. New 
-	transformations may be added at runtime, so an instance of a transform is created like::
+	``class Transform`` allows users to implement custom transformations. New transformations may be added at runtime,
+	so an instance of a transform is created like::
 
 		>>> list(Transform)
 		[<transform: Zlib>, <transform: StringEscape>, <transform: RawHex>, <transform: HexDump>, <transform: Base64>, <transform: Reverse>, <transform: CArray08>, <transform: CArrayA16>, <transform: CArrayA32>, <transform: CArrayA64>, <transform: CArrayB16>, <transform: CArrayB32>, <transform: CArrayB64>, <transform: IntList08>, <transform: IntListA16>, <transform: IntListA32>, <transform: IntListA64>, <transform: IntListB16>, <transform: IntListB32>, <transform: IntListB64>, <transform: MD4>, <transform: MD5>, <transform: SHA1>, <transform: SHA224>, <transform: SHA256>, <transform: SHA384>, <transform: SHA512>, <transform: AES-128 ECB>, <transform: AES-128 CBC>, <transform: AES-256 ECB>, <transform: AES-256 CBC>, <transform: DES ECB>, <transform: DES CBC>, <transform: Triple DES ECB>, <transform: Triple DES CBC>, <transform: RC2 ECB>, <transform: RC2 CBC>, <transform: Blowfish ECB>, <transform: Blowfish CBC>, <transform: CAST ECB>, <transform: CAST CBC>, <transform: RC4>, <transform: XOR>]
@@ -153,6 +118,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			self._pending_param_lists = {}
 			self.type = self.__class__.transform_type
 			if not isinstance(self.type, str):
+				assert self.type is not None, "Transform Type is None"
 				self.type = TransformType(self.type)
 			self.name = self.__class__.name
 			self.long_name = self.__class__.long_name
@@ -166,6 +132,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			self.group = core.BNGetTransformGroup(self.handle)
 			count = ctypes.c_ulonglong()
 			params = core.BNGetTransformParameterList(self.handle, count)
+			assert params is not None, "core.BNGetTransformParameterList returned None"
 			self.parameters = []
 			for i in range(0, count.value):
 				self.parameters.append(TransformParameter(params[i].name, params[i].longName, params[i].fixedLength))
@@ -186,6 +153,21 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
+
+	@classmethod
+	def register(cls):
+		binaryninja._init_plugins()
+		if cls.name is None:
+			raise ValueError("transform 'name' is not defined")
+		if cls.long_name is None:
+			cls.long_name = cls.name
+		if cls.transform_type is None:
+			raise ValueError("transform 'transform_type' is not defined")
+		if cls.group is None:
+			cls.group = ""
+		xform = cls(None)
+		cls._registered_cb = xform._cb
+		xform.handle = core.BNRegisterTransformType(cls.transform_type, cls.name, cls.long_name, cls.group, xform._cb)
 
 	def _get_parameters(self, ctxt, count):
 		try:
@@ -246,11 +228,6 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 			log.log_error(traceback.format_exc())
 			return False
 
-	@property
-	def list(self):
-		"""Allow tab completion to discover metaclass list property"""
-		pass
-
 	@abc.abstractmethod
 	def perform_decode(self, data, params):
 		if self.type == TransformType.InvertingTransform:
@@ -262,7 +239,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return None
 
 	def decode(self, input_buf, params = {}):
-		if isinstance(input_buf, int) or isinstance(input_buf, numbers.Integral):
+		if isinstance(input_buf, int) or isinstance(input_buf, int):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()
@@ -278,7 +255,7 @@ class Transform(with_metaclass(_TransformMetaClass, object)):
 		return bytes(output_buf)
 
 	def encode(self, input_buf, params = {}):
-		if isinstance(input_buf, int) or isinstance(input_buf, numbers.Integral):
+		if isinstance(input_buf, int) or isinstance(input_buf, int):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)
 		output_buf = databuffer.DataBuffer()

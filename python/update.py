@@ -22,47 +22,20 @@ import traceback
 import ctypes
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja import log
-
 import binaryninja
-from binaryninja.enums import UpdateResult
+from . import _binaryninjacore as core
+from .enums import UpdateResult
+from . import log
 
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import with_metaclass
 
 
 class _UpdateChannelMetaClass(type):
-	@property
-	def list(self):
-		binaryninja._init_plugins()
-		count = ctypes.c_ulonglong()
-		errors = ctypes.c_char_p()
-		channels = core.BNGetUpdateChannels(count, errors)
-		if errors:
-			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
-			raise IOError(error_str)
-		result = []
-		for i in range(0, count.value):
-			result.append(UpdateChannel(channels[i].name, channels[i].description, channels[i].latestVersion))
-		core.BNFreeUpdateChannelList(channels, count.value)
-		return result
-
-	@property
-	def active(self):
-		return core.BNGetActiveUpdateChannel()
-
-	@active.setter
-	def active(self, value):
-		return core.BNSetActiveUpdateChannel(value)
-
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
+		assert channels is not None, "core.BNGetUpdateChannels returned None"
 		if errors:
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
@@ -73,17 +46,12 @@ class _UpdateChannelMetaClass(type):
 		finally:
 			core.BNFreeUpdateChannelList(channels, count.value)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
 	def __getitem__(cls, name):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		channels = core.BNGetUpdateChannels(count, errors)
+		assert channels is not None, "core.BNGetUpdateChannels returned None"
 		if errors:
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
@@ -112,8 +80,15 @@ class UpdateProgressCallback(object):
 		except:
 			log.log_error(traceback.format_exc())
 
+	@property
+	def active(cls):
+		return core.BNGetActiveUpdateChannel()
 
-class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
+	@active.setter
+	def active(cls, value:str) -> None:
+		return core.BNSetActiveUpdateChannel(value)
+
+class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 	def __init__(self, name, desc, ver):
 		self._name = name
 		self._description = desc
@@ -125,6 +100,7 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		versions = core.BNGetUpdateChannelVersions(self._name, count, errors)
+		assert versions is not None, "core.BNGetUpdateChannelVersions returned None"
 		if errors:
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
@@ -141,6 +117,7 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 		count = ctypes.c_ulonglong()
 		errors = ctypes.c_char_p()
 		versions = core.BNGetUpdateChannelVersions(self._name, count, errors)
+		assert versions is not None, "core.BNGetUpdateChannelVersions returned None"
 		if errors:
 			error_str = errors.value
 			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
@@ -188,7 +165,6 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 
 	@property
 	def name(self):
-		""" """
 		return self._name
 
 	@name.setter
@@ -197,7 +173,6 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 
 	@property
 	def description(self):
-		""" """
 		return self._description
 
 	@description.setter
@@ -206,7 +181,6 @@ class UpdateChannel(with_metaclass(_UpdateChannelMetaClass, object)):
 
 	@property
 	def latest_version_num(self):
-		""" """
 		return self._latest_version_num
 
 	@latest_version_num.setter
@@ -239,7 +213,6 @@ class UpdateVersion(object):
 
 	@property
 	def channel(self):
-		""" """
 		return self._channel
 
 	@channel.setter
@@ -248,7 +221,6 @@ class UpdateVersion(object):
 
 	@property
 	def version(self):
-		""" """
 		return self._version
 
 	@version.setter
@@ -257,7 +229,6 @@ class UpdateVersion(object):
 
 	@property
 	def notes(self):
-		""" """
 		return self._notes
 
 	@notes.setter
@@ -266,7 +237,6 @@ class UpdateVersion(object):
 
 	@property
 	def time(self):
-		""" """
 		return self._time
 
 	@time.setter
@@ -298,7 +268,7 @@ def get_time_since_last_update_check():
 	"""
 	``get_time_since_last_update_check`` returns the time stamp for the last time updates were checked.
 
-	:return: time stacmp for last update check
+	:return: time stamp for last update check
 	:rtype: int
 	"""
 	return core.BNGetTimeSinceLastUpdateCheck()

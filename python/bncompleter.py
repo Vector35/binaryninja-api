@@ -44,6 +44,7 @@ import atexit
 import __main__
 import inspect
 import sys
+from typing import Optional
 
 __all__ = ["Completer"]
 
@@ -92,7 +93,7 @@ class Completer:
 			self.use_main_ns = 0
 			self.namespace = namespace
 
-	def complete(self, text, state):
+	def complete(self, text:str, state) -> Optional[str]:
 		"""Return the next possible completion for 'text'.
 
 		This is called successively with state == 0, 1, 2, ... until it

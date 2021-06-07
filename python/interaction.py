@@ -20,23 +20,21 @@
 
 import ctypes
 import traceback
+from typing import Optional
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult, ReportType
-from binaryninja import binaryview
-from binaryninja import log
-from binaryninja import flowgraph
-
-# 2-3 compatibility
-from binaryninja import range
+from . import _binaryninjacore as core
+from .enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult, ReportType
+from . import binaryview
+from . import log
+from . import flowgraph
 
 
 class LabelField(object):
 	"""
 	``LabelField`` adds a text label to the display.
 	"""
-	def __init__(self, text):
+	def __init__(self, text:str):
 		self._text = text
 
 	def _fill_core_struct(self, value):
@@ -51,12 +49,11 @@ class LabelField(object):
 		pass
 
 	@property
-	def text(self):
-		""" """
+	def text(self) -> str:
 		return self._text
 
 	@text.setter
-	def text(self, value):
+	def text(self, value:str) -> None:
 		self._text = value
 
 
@@ -99,7 +96,6 @@ class TextLineField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -108,7 +104,6 @@ class TextLineField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -141,7 +136,6 @@ class MultilineTextField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -150,7 +144,6 @@ class MultilineTextField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -182,7 +175,6 @@ class IntegerField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -191,7 +183,6 @@ class IntegerField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -234,7 +225,6 @@ class AddressField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -243,7 +233,6 @@ class AddressField(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -252,7 +241,6 @@ class AddressField(object):
 
 	@property
 	def current_address(self):
-		""" """
 		return self._current_address
 
 	@current_address.setter
@@ -261,7 +249,6 @@ class AddressField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -303,7 +290,6 @@ class ChoiceField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -312,7 +298,6 @@ class ChoiceField(object):
 
 	@property
 	def choices(self):
-		""" """
 		return self._choices
 
 	@choices.setter
@@ -321,7 +306,6 @@ class ChoiceField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -355,7 +339,6 @@ class OpenFileNameField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -364,7 +347,6 @@ class OpenFileNameField(object):
 
 	@property
 	def ext(self):
-		""" """
 		return self._ext
 
 	@ext.setter
@@ -373,7 +355,6 @@ class OpenFileNameField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -409,7 +390,6 @@ class SaveFileNameField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -418,7 +398,6 @@ class SaveFileNameField(object):
 
 	@property
 	def ext(self):
-		""" """
 		return self._ext
 
 	@ext.setter
@@ -427,7 +406,6 @@ class SaveFileNameField(object):
 
 	@property
 	def default_name(self):
-		""" """
 		return self._default_name
 
 	@default_name.setter
@@ -436,7 +414,6 @@ class SaveFileNameField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -471,7 +448,6 @@ class DirectoryNameField(object):
 
 	@property
 	def prompt(self):
-		""" """
 		return self._prompt
 
 	@prompt.setter
@@ -480,7 +456,6 @@ class DirectoryNameField(object):
 
 	@property
 	def default_name(self):
-		""" """
 		return self._default_name
 
 	@default_name.setter
@@ -489,7 +464,6 @@ class DirectoryNameField(object):
 
 	@property
 	def result(self):
-		""" """
 		return self._result
 
 	@result.setter
@@ -756,7 +730,6 @@ class PlainTextReport(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -765,7 +738,6 @@ class PlainTextReport(object):
 
 	@property
 	def title(self):
-		""" """
 		return self._title
 
 	@title.setter
@@ -774,7 +746,6 @@ class PlainTextReport(object):
 
 	@property
 	def contents(self):
-		""" """
 		return self._contents
 
 	@contents.setter
@@ -797,7 +768,6 @@ class MarkdownReport(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -806,7 +776,6 @@ class MarkdownReport(object):
 
 	@property
 	def title(self):
-		""" """
 		return self._title
 
 	@title.setter
@@ -815,7 +784,6 @@ class MarkdownReport(object):
 
 	@property
 	def contents(self):
-		""" """
 		return self._contents
 
 	@contents.setter
@@ -824,7 +792,6 @@ class MarkdownReport(object):
 
 	@property
 	def plaintext(self):
-		""" """
 		return self._plaintext
 
 	@plaintext.setter
@@ -847,7 +814,6 @@ class HTMLReport(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -856,7 +822,6 @@ class HTMLReport(object):
 
 	@property
 	def title(self):
-		""" """
 		return self._title
 
 	@title.setter
@@ -865,7 +830,6 @@ class HTMLReport(object):
 
 	@property
 	def contents(self):
-		""" """
 		return self._contents
 
 	@contents.setter
@@ -874,7 +838,6 @@ class HTMLReport(object):
 
 	@property
 	def plaintext(self):
-		""" """
 		return self._plaintext
 
 	@plaintext.setter
@@ -893,7 +856,6 @@ class FlowGraphReport(object):
 
 	@property
 	def view(self):
-		""" """
 		return self._view
 
 	@view.setter
@@ -902,7 +864,6 @@ class FlowGraphReport(object):
 
 	@property
 	def title(self):
-		""" """
 		return self._title
 
 	@title.setter
@@ -911,7 +872,6 @@ class FlowGraphReport(object):
 
 	@property
 	def graph(self):
-		""" """
 		return self._graph
 
 	@graph.setter
@@ -1188,7 +1148,7 @@ def get_choice_input(prompt, title, choices):
 	return value.value
 
 
-def get_open_filename_input(prompt, ext=""):
+def get_open_filename_input(prompt:str, ext:str="") -> Optional[str]:
 	"""
 	``get_open_filename_input`` prompts the user for a file name to open
 
@@ -1197,25 +1157,26 @@ def get_open_filename_input(prompt, ext=""):
 
 	Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be specified by using a space within the parenthesis.
 
-	Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
+	Also, a simple selector of "*.extension" by itself may also be used instead of specifying the description.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
 	:Example:
 		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
-		b'foo.exe'
+		'foo.exe'
 		>>> get_open_filename_input("filename:", "*.py")
-		b'test.py'
+		'test.py'
 	"""
 	value = ctypes.c_char_p()
 	if not core.BNGetOpenFileNameInput(value, prompt, ext):
 		return None
 	result = value.value
+	assert result is not None
 	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
-	return result
+	return result.decode("utf-8")
 
 
-def get_save_filename_input(prompt, ext="", default_name=""):
+def get_save_filename_input(prompt:str, ext:str="", default_name:str="") -> Optional[str]:
 	"""
 	``get_save_filename_input`` prompts the user for a file name to save as, optionally providing a file extension and \
 	default_name
@@ -1235,11 +1196,12 @@ def get_save_filename_input(prompt, ext="", default_name=""):
 	if not core.BNGetSaveFileNameInput(value, prompt, ext, default_name):
 		return None
 	result = value.value
+	assert result is not None
 	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
-	return result
+	return result.decode("utf-8")
 
 
-def get_directory_name_input(prompt, default_name=""):
+def get_directory_name_input(prompt:str, default_name:str=""):
 	"""
 	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name
 
@@ -1257,8 +1219,9 @@ def get_directory_name_input(prompt, default_name=""):
 	if not core.BNGetDirectoryNameInput(value, prompt, default_name):
 		return None
 	result = value.value
+	assert result is not None
 	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
-	return result
+	return result.decode("utf-8")
 
 
 def get_form_input(fields, title):
@@ -1275,7 +1238,7 @@ def get_form_input(fields, title):
 	SeparatorField        Vertical spacing
 	TextLineField         Prompt for a string value
 	MultilineTextField    Prompt for multi-line string value
-	IntegerFieldch        Prompt for an integer
+	IntegerField          Prompt for an integer
 	AddressField          Prompt for an address
 	ChoiceField           Prompt for a choice from provided options
 	OpenFileNameField     Prompt for file to open

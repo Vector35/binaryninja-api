@@ -43,8 +43,8 @@ class MappedView(BinaryView):
 	def __init__(self, data):
 		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
 
-	@classmethod
-	def is_valid_for_data(cls, data):
+	@staticmethod
+	def is_valid_for_data(data):
 		# Insert code that looks for a magic identifier and return True if this BinaryViewType can handle/parse the binary
 		return True
 
@@ -64,12 +64,14 @@ class MappedView(BinaryView):
 			# Optionally, perform light-weight parsing of the 'Raw' BinaryView to extract required information for load settings generation.
 			# This allows finer control of the settings provided as well as their default values.
 			# For example, the view.relocatable property could be used to control the read-only attribute of "loader.imageBase"
-			view = cls.registered_view_type.parse(data)
-
+			registered_view = cls.registered_view_type
+			assert registered_view is not None
+			view = registered_view.parse(data)
+			assert view is not None
 			# Populate settings container with default load settings
 			# Note: `get_default_load_settings_for_data` automatically tries to parse the input if the `data` BinaryViewType name does not match the
 			# cls BinaryViewType name. In this case a parsed view is already being passed.
-			load_settings = cls.registered_view_type.get_default_load_settings_for_data(view)
+			load_settings = registered_view.get_default_load_settings_for_data(view)
 
 			# Specify default load settings that can be overridden (from the UI).
 			overrides = ["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
@@ -113,8 +115,9 @@ class MappedView(BinaryView):
 			load_settings = self.get_load_settings(self.name)
 			if load_settings is None:
 				if self.parse_only is True:
-					self.arch = Architecture['x86']
-					self.platform = Architecture['x86'].standalone_platform
+					self.arch = Architecture['x86']  # type: ignore
+					self.platform = Architecture['x86'].standalone_platform # type: ignore
+					assert self.parent_view is not None
 					self.add_auto_segment(0, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable)
 					return True
 				else:
@@ -123,8 +126,8 @@ class MappedView(BinaryView):
 					load_settings = self.__class__.get_load_settings_for_data(self.parent_view)
 
 			arch = load_settings.get_string("loader.architecture", self)
-			self.arch = Architecture[arch]
-			self.platform = Architecture[arch].standalone_platform
+			self.arch = Architecture[arch] # type: ignore
+			self.platform = Architecture[arch].standalone_platform # type: ignore
 			self.load_address = load_settings.get_integer("loader.imageBase", self)
 			self.add_auto_segment(self.load_address, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 			if load_settings.contains("loader.entryPointOffset"):

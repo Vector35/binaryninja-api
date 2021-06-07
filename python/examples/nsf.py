@@ -39,10 +39,10 @@ class NSFView(BinaryView):
 
 	def __init__(self, data):
 		BinaryView.__init__(self, parent_view=data, file_metadata=data.file)
-		self.platform = Architecture["6502"].standalone_platform
+		self.platform = Architecture["6502"].standalone_platform  # type: ignore
 
-	@classmethod
-	def is_valid_for_data(self, data):
+	@staticmethod
+	def is_valid_for_data(data):
 		hdr = data.read(0, 128)
 		if len(hdr) < 128:
 			return False
@@ -57,25 +57,25 @@ class NSFView(BinaryView):
 	def init(self):
 		try:
 			hdr = self.parent_view.read(0, 128)
-			self.version = struct.unpack("B", hdr[5])[0]
-			self.song_count = struct.unpack("B", hdr[6])[0]
-			self.starting_song = struct.unpack("B", hdr[7])[0]
+			self.version = int(hdr[5])
+			self.song_count = int(hdr[6])
+			self.starting_song = int(hdr[7])
 			self.load_address = struct.unpack("<H", hdr[8:10])[0]
 			self.init_address = struct.unpack("<H", hdr[10:12])[0]
 			self.play_address = struct.unpack("<H", hdr[12:14])[0]
-			self.song_name = hdr[15].split('\0')[0]
-			self.artist_name = hdr[46].split('\0')[0]
-			self.copyright_name = hdr[78].split('\0')[0]
+			self.song_name = int(hdr[15])
+			self.artist_name = int(hdr[46])
+			self.copyright_name = int(hdr[78])
 			self.play_speed_ntsc = struct.unpack("<H", hdr[110:112])[0]
 			self.bank_switching = hdr[112:120]
 			self.play_speed_pal = struct.unpack("<H", hdr[120:122])[0]
-			self.pal_ntsc_bits = struct.unpack("B", hdr[122])[0]
+			self.pal_ntsc_bits = int(hdr[122])
 			self.pal = True if (self.pal_ntsc_bits & 1) == 1 else False
 			self.ntsc = not self.pal
 			if self.pal_ntsc_bits & 2 == 2:
 				self.pal = True
 				self.ntsc = True
-			self.extra_sound_bits = struct.unpack("B", hdr[123])[0]
+			self.extra_sound_bits = int(hdr[123])
 
 			if self.bank_switching == "\0" * 8:
 				# no bank switching
@@ -139,7 +139,7 @@ class NSFView(BinaryView):
 		return True
 
 	def perform_get_entry_point(self):
-		return struct.unpack("<H", str(self.perform_read(0x0a, 2)))[0]
+		return struct.unpack("<H", self.perform_read(0x0a, 2))[0]
 
 
 NSFView.register()

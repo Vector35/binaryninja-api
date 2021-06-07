@@ -19,16 +19,16 @@
 # IN THE SOFTWARE.
 
 import copy
-
+from typing import Any
 
 class _AssociatedDataStore(dict):
 	_defaults = {}
 
 	@classmethod
-	def set_default(cls, name, value):
+	def set_default(cls, name:str, value:Any):
 		cls._defaults[name] = value
 
-	def __getattr__(self, name):
+	def __getattr__(self, name:str) -> Any:
 		if name in self.__dict__:
 			return self.__dict__[name]
 		if name not in self:
@@ -38,8 +38,8 @@ class _AssociatedDataStore(dict):
 				return result
 		return self.__getitem__(name)
 
-	def __setattr__(self, name, value):
+	def __setattr__(self, name:str, value:Any):
 		self.__setitem__(name, value)
 
-	def __delattr__(self, name):
+	def __delattr__(self, name:str):
 		self.__delitem__(name)

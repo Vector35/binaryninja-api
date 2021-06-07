@@ -27,9 +27,6 @@ from binaryninja.log import log_error
 import struct
 import traceback
 
-# 2-3 compatibility
-from binaryninja import range
-
 
 def crc16(data):
     crc = 0xffff
@@ -48,8 +45,8 @@ class DSView(BinaryView):
         BinaryView.__init__(self, file_metadata = data.file, parent_view = data)
         self.raw = data
 
-    @classmethod
-    def is_valid_for_data(self, data):
+    @staticmethod
+    def is_valid_for_data(data):
         hdr = data.read(0, 0x160)
         if len(hdr) < 0x160:
             return False
@@ -60,7 +57,7 @@ class DSView(BinaryView):
         return True
 
     def init_common(self):
-        self.platform = Architecture["armv7"].standalone_platform
+        self.platform = Architecture["armv7"].standalone_platform  # type: ignore
         self.hdr = self.raw.read(0, 0x160)
 
     def init_arm9(self):
@@ -72,7 +69,7 @@ class DSView(BinaryView):
             self.arm9_size = struct.unpack("<L", self.hdr[0x2C:0x30])[0]
             self.add_auto_segment(self.arm9_load_addr, self.arm9_size, self.arm9_offset, self.arm9_size,
                 SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
-            self.add_entry_point(Architecture['armv7'].standalone_platform, self.arm_entry_addr)
+            self.add_entry_point(Architecture['armv7'].standalone_platform, self.arm_entry_addr)  # type: ignore
             return True
         except:
             log_error(traceback.format_exc())
@@ -87,7 +84,7 @@ class DSView(BinaryView):
             self.arm7_size = struct.unpack("<L", self.hdr[0x3C:0x40])[0]
             self.add_auto_segment(self.arm7_load_addr, self.arm7_size, self.arm7_offset, self.arm7_size,
                 SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
-            self.add_entry_point(Architecture['armv7'].standalone_platform, self.arm_entry_addr)
+            self.add_entry_point(Architecture['armv7'].standalone_platform, self.arm_entry_addr)  # type: ignore
             return True
         except:
             log_error(traceback.format_exc())

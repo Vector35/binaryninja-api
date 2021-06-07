@@ -22,19 +22,6 @@ try:
 except ImportError:
     OrderedDict = None
 
-try:
-    basestring
-except NameError:
-    # In Python 2 basestring is the ancestor of both str and unicode
-    # in Python 3 it's just str, but was missing in 3.1
-    basestring = str
-
-try:
-    unicode
-except NameError:
-    # In Python 3 unicode no longer exists (it's just str)
-    unicode = str
-
 class _RouteClassAttributeToGetattr(object):
     """Route attribute access on a class to __getattr__.
 

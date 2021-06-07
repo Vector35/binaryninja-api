@@ -21,11 +21,11 @@
 import ctypes
 
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import highlight
-from binaryninja import function
-from binaryninja import basicblock
-from binaryninja.enums import LinearViewObjectIdentifierType
+from . import _binaryninjacore as core
+from . import highlight
+from . import function
+from . import basicblock
+from .enums import LinearViewObjectIdentifierType
 
 
 class LinearDisassemblyLine(object):
@@ -115,8 +115,8 @@ class LinearViewObjectIdentifier(object):
 	def has_range(self):
 		return self._start is not None and self._end is not None
 
-	@classmethod
-	def _from_api_object(cls, obj):
+	@staticmethod
+	def _from_api_object(obj):
 		if obj.type == LinearViewObjectIdentifierType.AddressLinearViewObject:
 			result = LinearViewObjectIdentifier(obj.name, obj.start)
 		elif obj.type == LinearViewObjectIdentifierType.AddressRangeLinearViewObject:
@@ -244,19 +244,22 @@ class LinearViewObject(object):
 
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetLinearViewObjectLines(self.handle, prev_obj, next_obj, count)
+		assert lines is not None, "core.BNGetLinearViewObjectLines returned None"
 
 		result = []
 		for i in range(0, count.value):
 			func = None
 			block = None
 			if lines[i].function:
-				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
+				func = function.Function(None, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
-				block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(lines[i].block), self)
+				core_block = core.BNNewBasicBlockReference(lines[i].block)
+				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+				block = basicblock.BasicBlock(core_block, None)
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
-			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
-			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
+			tokens = function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
+			contents = function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
 
 		core.BNFreeLinearDisassemblyLines(lines, count.value)
@@ -265,62 +268,62 @@ class LinearViewObject(object):
 	def ordering_index_for_child(self, child):
 		return core.BNGetLinearViewObjectOrderingIndexForChild(self.handle, child.handle)
 
-	@classmethod
-	def disassembly(cls, view, settings = None):
+	@staticmethod
+	def disassembly(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewDisassembly(view.handle, settings))
 
-	@classmethod
-	def lifted_il(cls, view, settings = None):
+	@staticmethod
+	def lifted_il(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLiftedIL(view.handle, settings))
 
-	@classmethod
-	def llil(cls, view, settings = None):
+	@staticmethod
+	def llil(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLowLevelIL(view.handle, settings))
 
-	@classmethod
-	def llil_ssa_form(cls, view, settings = None):
+	@staticmethod
+	def llil_ssa_form(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLowLevelILSSAForm(view.handle, settings))
 
-	@classmethod
-	def mlil(cls, view, settings = None):
+	@staticmethod
+	def mlil(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMediumLevelIL(view.handle, settings))
 
-	@classmethod
-	def mlil_ssa_form(cls, view, settings = None):
+	@staticmethod
+	def mlil_ssa_form(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMediumLevelILSSAForm(view.handle, settings))
 
-	@classmethod
-	def mmlil(cls, view, settings = None):
+	@staticmethod
+	def mmlil(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelIL(view.handle, settings))
 
-	@classmethod
-	def mmlil_ssa_form(cls, view, settings = None):
+	@staticmethod
+	def mmlil_ssa_form(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, settings))
 
-	@classmethod
-	def hlil(cls, view, settings = None):
+	@staticmethod
+	def hlil(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewHighLevelIL(view.handle, settings))
 
-	@classmethod
-	def hlil_ssa_form(cls, view, settings = None):
+	@staticmethod
+	def hlil_ssa_form(view, settings = None):
 		if settings is not None:
 			settings = settings.handle
 		return LinearViewObject(core.BNCreateLinearViewHighLevelILSSAForm(view.handle, settings))
@@ -393,6 +396,7 @@ class LinearViewCursor(object):
 	def current_object(self):
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPathObjects(self.handle, count)
+		assert path is not None, "core.BNGetLinearViewCursorPathObjects returned None"
 		result = None
 		for i in range(0, count.value):
 			result = LinearViewObject(core.BNNewLinearViewObjectReference(path[i]), result)
@@ -403,6 +407,7 @@ class LinearViewCursor(object):
 	def path(self):
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPath(self.handle, count)
+		assert path is not None, "core.BNGetLinearViewCursorPath returned None"
 		result = []
 		for i in range(0, count.value):
 			result.append(LinearViewObjectIdentifier._from_api_object(path[i]))
@@ -413,6 +418,7 @@ class LinearViewCursor(object):
 	def path_objects(self):
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPathObjects(self.handle, count)
+		assert path is not None, "core.BNGetLinearViewCursorPathObjects returned None"
 		result = []
 		parent = None
 		for i in range(0, count.value):
@@ -464,19 +470,22 @@ class LinearViewCursor(object):
 	def lines(self):
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetLinearViewCursorLines(self.handle, count)
+		assert lines is not None, "core.BNGetLinearViewCursorLines returned None"
 
 		result = []
 		for i in range(0, count.value):
 			func = None
 			block = None
 			if lines[i].function:
-				func = binaryninja.function.Function(self, core.BNNewFunctionReference(lines[i].function))
+				func = function.Function(None, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
-				block = binaryninja.basicblock.BasicBlock(core.BNNewBasicBlockReference(lines[i].block), self)
+				core_block = core.BNNewBasicBlockReference(lines[i].block)
+				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+				block = basicblock.BasicBlock(core_block, None)
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
-			tokens = binaryninja.function.InstructionTextToken.get_instruction_lines(lines[i].contents.tokens, lines[i].contents.count)
-			contents = binaryninja.function.DisassemblyTextLine(tokens, addr, color = color)
+			tokens = function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
+			contents = function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
 
 		core.BNFreeLinearDisassemblyLines(lines, count.value)
@@ -485,6 +494,6 @@ class LinearViewCursor(object):
 	def duplicate(self):
 		return LinearViewCursor(None, handle = core.BNDuplicateLinearViewCursor(self.handle))
 
-	@classmethod
-	def compare(cls, a, b):
+	@staticmethod
+	def compare(a, b):
 		return core.BNCompareLinearViewCursors(a.handle, b.handle)

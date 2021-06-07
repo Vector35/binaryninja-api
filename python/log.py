@@ -20,8 +20,8 @@
 
 
 # Binary Ninja components
-from binaryninja import _binaryninjacore as core
-from binaryninja.enums import LogLevel
+from . import _binaryninjacore as core
+from .enums import LogLevel
 
 
 _output_to_log = False

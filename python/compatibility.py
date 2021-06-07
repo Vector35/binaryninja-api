@@ -18,75 +18,23 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-# 2-3 compatibility
 import sys
 
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
-PY34 = sys.version_info[0:2] >= (3, 4)
+def pyNativeStr(arg):
+	if isinstance(arg, str):
+		return arg
+	else:
+		return arg.decode('utf8')
 
 
-if PY2:
-  def range(*args):
-    return xrange(*args)
-
-  def valid_import(mod_name):
-    import imp
-    try:
-      imp.find_module(mod_name)
-      found = True
-    except ImportError:
-      found = False
-    return found
-
-  def pyNativeStr(arg):
-    return arg
+def valid_import(mod_name):
+	if sys.version_info[0:2] >= (3, 4):
+		import importlib.util
+		return importlib.util.find_spec(mod_name) is not None
+	else:
+		import importlib
+		mod_loader = importlib.find_loader(mod_name)
+		found = mod_loader is not None
+		return found
 
 
-if PY3:
-  range = range  # Range needs to explicitly be defined or it's an error
-
-  def valid_import(mod_name):
-    import importlib
-    mod_loader = importlib.find_loader(mod_name)
-    found = mod_loader is not None
-    return found
-
-  def pyNativeStr(arg):
-    if isinstance(arg, str):
-      return arg
-    else:
-      try:
-        return arg.decode('utf8')
-      except UnicodeDecodeError:
-        return arg.decode('charmap')
-
-
-if PY34:
-  def valid_import(mod_name):
-    import importlib.util
-    return importlib.util.find_spec(mod_name) is not None
-
-
-def with_metaclass(meta, *bases):
-  """Create a base class with a metaclass."""
-  class metaclass(type):
-    def __new__(cls, name, this_bases, d):
-      return meta(name, bases, d)
-
-    @classmethod
-    def __prepare__(cls, name, this_bases):
-      return meta.__prepare__(name, bases)
-  return type.__new__(metaclass, 'temporary_class', (), {})
-
-
-def cstr(arg):
-  if isinstance(arg, bytes) or arg is None:
-    return arg
-  elif isinstance(arg, bytearray):
-    return bytes(arg)
-  else:
-    try:
-      return arg.encode('charmap')
-    except UnicodeEncodeError:
-      return arg.encode('utf8')

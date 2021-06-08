@@ -762,6 +762,7 @@ Here's a list of all settings currently available from the UI:
 |ui|Reflection View IL Synchronization|Reflection view follows main view IL changes according to the Reflection View IL Map.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.view.reflection.ilSync'>ui.view.reflection.ilSync</a>|
 |ui|Reflection View Location Synchronization|Reflection view follows navigation actions in the main view.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.view.reflection.locationSync'>ui.view.reflection.locationSync</a>|
 |ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
+|ui|Default filter for types view|Default type filter to use in types view.|`enum`|`all`|[`SettingsUserScope`]|<a id='ui.view.types.defaultTypeFilter'>ui.view.types.defaultTypeFilter</a>|
 |ui|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
 |updates|Active Content|Allow Binary Ninja to connect to the update server to check for updates and release notes.|`boolean`|`True`|[`SettingsUserScope`]|<a id='updates.activeContent'>updates.activeContent</a>|
 |updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|

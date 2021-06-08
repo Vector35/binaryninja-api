@@ -247,7 +247,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return None;
             }
 
-            Some(Ref::new(Platform::from_raw(raw)))
+            Some(Platform::ref_from_raw(raw))
         }
     }
 

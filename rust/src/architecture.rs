@@ -1233,7 +1233,7 @@ pub trait ArchitectureExt: Architecture {
                 return None;
             }
 
-            Some(Ref::new(Platform::from_raw(handle)))
+            Some(Platform::ref_from_raw(handle))
         }
     }
 }

@@ -133,7 +133,7 @@ impl Function {
     pub fn platform(&self) -> Ref<Platform> {
         unsafe {
             let plat = BNGetFunctionPlatform(self.handle);
-            Ref::new(Platform::from_raw(plat))
+            Platform::ref_from_raw(plat)
         }
     }
 

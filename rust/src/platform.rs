@@ -64,10 +64,10 @@ macro_rules! cc_func {
 }
 
 impl Platform {
-    pub(crate) unsafe fn from_raw(handle: *mut BNPlatform) -> Self {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
-        Self { handle }
+        Ref::new(Self { handle })
     }
 
     pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
@@ -360,6 +360,7 @@ unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Platform {
     type Wrapped = Guard<'a, Platform>;
 
     unsafe fn wrap_raw(raw: &'a *mut BNPlatform, context: &'a ()) -> Guard<'a, Platform> {
-        Guard::new(Platform::from_raw(*raw), context)
+        debug_assert!(!raw.is_null());
+        Guard::new(Platform { handle: *raw }, context)
     }
 }

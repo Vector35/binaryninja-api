@@ -340,7 +340,7 @@ where
     ) where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::incoming_var_for_param", unsafe {
+        ffi_wrap!("CallingConvention::incoming_param_for_var", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             ptr::write(
                 param,

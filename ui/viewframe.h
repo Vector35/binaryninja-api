@@ -140,12 +140,12 @@ public:
 	virtual bool findAllData(uint64_t start, uint64_t end, const BinaryNinja::DataBuffer& data, BNFindFlag flags,
 		const std::function<bool (size_t current, size_t total)>& cb,
 		const std::function<bool (uint64_t addr, const BinaryNinja::DataBuffer& match)>& matchCallback);
-	virtual bool findAllText(uint64_t start, uint64_t end, const std::string& data, 
+	virtual bool findAllText(uint64_t start, uint64_t end, const std::string& data,
 		DisassemblySettingsRef settings, BNFindFlag flags, BNFunctionGraphType graph,
 		const std::function<bool (size_t current, size_t total)>& cb,
 		const std::function<bool (uint64_t addr, const std::string& match,
 			const BinaryNinja::LinearDisassemblyLine& line)>& matchCallback);
-	virtual bool findAllConstant(uint64_t start, uint64_t end, uint64_t constant, 
+	virtual bool findAllConstant(uint64_t start, uint64_t end, uint64_t constant,
 		DisassemblySettingsRef settings, BNFunctionGraphType graph,
 		const std::function<bool (size_t current, size_t total)>& cb,
 		const std::function<bool (uint64_t addr,
@@ -435,6 +435,9 @@ public:
 	void nextCrossReference();
 	void prevCrossReference();
 
+	void updateVariableList();
+
+	void showTags();
 	void editTag(TagRef tag);
 	void nextTag();
 	void prevTag();

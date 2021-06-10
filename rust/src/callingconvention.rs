@@ -50,6 +50,7 @@ pub trait CallingConventionBase: Sync {
     fn global_pointer_reg(&self) -> Option<<Self::Arch as Architecture>::Register>;
 
     fn implicitly_defined_registers(&self) -> Vec<<Self::Arch as Architecture>::Register>;
+    fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
 pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CallingConvention<A>>
@@ -348,6 +349,17 @@ where
         })
     }
 
+    extern "C" fn cb_are_argument_registers_used_for_var_args<C>(ctxt: *mut c_void) -> bool
+    where
+        C: CallingConventionBase,
+    {
+        ffi_wrap!("CallingConvention::are_argument_registers_used_for_var_args", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+
+            ctxt.cc.are_argument_registers_used_for_var_args()
+        })
+    }
+
     let name = name.as_bytes_with_nul();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: ptr::null_mut(),
@@ -379,6 +391,8 @@ where
         getIncomingFlagValue: Some(cb_incoming_flag_value::<C>),
         getIncomingVariableForParameterVariable: Some(cb_incoming_var_for_param::<C>),
         getParameterVariableForIncomingVariable: Some(cb_incoming_param_for_var::<C>),
+
+        areArgumentRegistersUsedForVarArgs: Some(cb_are_argument_registers_used_for_var_args::<C>),
     };
 
     unsafe {
@@ -533,6 +547,10 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     fn implicitly_defined_registers(&self) -> Vec<A::Register> {
         Vec::new()
     }
+
+    fn are_argument_registers_used_for_var_args(&self) -> bool {
+        unsafe { BNAreArgumentRegistersUsedForVarArgs(self.handle) }
+    }
 }
 
 impl<A: Architecture> ToOwned for CallingConvention<A> {
@@ -575,6 +593,8 @@ pub struct ConventionBuilder<A: Architecture> {
     global_pointer_reg: Option<A::Register>,
 
     implicitly_defined_registers: Vec<A::Register>,
+
+    are_argument_registers_used_for_var_args: bool,
 
     arch_handle: A::Handle,
     _arch: PhantomData<*const A>,
@@ -643,6 +663,8 @@ impl<A: Architecture> ConventionBuilder<A> {
 
             implicitly_defined_registers: Vec::new(),
 
+            are_argument_registers_used_for_var_args: false,
+
             arch_handle: arch.handle(),
             _arch: PhantomData,
         }
@@ -665,6 +687,8 @@ impl<A: Architecture> ConventionBuilder<A> {
     reg!(global_pointer_reg);
 
     reg_list!(implicitly_defined_registers);
+    
+    bool_arg!(are_argument_registers_used_for_var_args);
 
     pub fn register(self, name: &str) -> Ref<CallingConvention<A>> {
         let arch = self.arch_handle.clone();
@@ -726,5 +750,9 @@ impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
 
     fn implicitly_defined_registers(&self) -> Vec<A::Register> {
         self.implicitly_defined_registers.clone()
+    }
+
+    fn are_argument_registers_used_for_var_args(&self) -> bool {
+        self.are_argument_registers_used_for_var_args
     }
 }

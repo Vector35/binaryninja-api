@@ -1228,7 +1228,7 @@ impl StructureBuilder {
         t: T,
         name: S,
         offset: u64,
-        overwrite_existing: bool
+        overwrite_existing: bool,
     ) -> &'a mut Self {
         let name = name.as_bytes_with_nul();
         unsafe {
@@ -1237,7 +1237,7 @@ impl StructureBuilder {
                 &t.into().into(),
                 name.as_ref().as_ptr() as _,
                 offset,
-                overwrite_existing
+                overwrite_existing,
             );
         }
 

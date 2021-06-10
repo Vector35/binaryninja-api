@@ -353,11 +353,14 @@ where
     where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::are_argument_registers_used_for_var_args", unsafe {
-            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+        ffi_wrap!(
+            "CallingConvention::are_argument_registers_used_for_var_args",
+            unsafe {
+                let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
 
-            ctxt.cc.are_argument_registers_used_for_var_args()
-        })
+                ctxt.cc.are_argument_registers_used_for_var_args()
+            }
+        )
     }
 
     let name = name.as_bytes_with_nul();
@@ -687,7 +690,7 @@ impl<A: Architecture> ConventionBuilder<A> {
     reg!(global_pointer_reg);
 
     reg_list!(implicitly_defined_registers);
-    
+
     bool_arg!(are_argument_registers_used_for_var_args);
 
     pub fn register(self, name: &str) -> Ref<CallingConvention<A>> {

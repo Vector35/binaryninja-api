@@ -54,7 +54,7 @@ def demangle_ms(arch, mangled_name, options = False):
 
 	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
 	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
-	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directally
+	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
 	:type options: Tuple[bool, BinaryView, None]
 	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
 	:rtype: Tuple
@@ -84,7 +84,7 @@ def demangle_gnu3(arch, mangled_name, options = None):
 
 	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
 	:param str mangled_name: a mangled GNU3 name
-	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directally
+	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
 	:type options: Tuple[bool, BinaryView, None]
 	:return: returns tuple of (Type, demangled_name) or (None, mangled_name) on error
 	:rtype: Tuple

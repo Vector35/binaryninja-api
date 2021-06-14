@@ -2752,7 +2752,7 @@ class ReferenceSource(object):
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.function, self.arch, self.address) == (other.address, other.function, other.arch)
+		return (self.function, self.arch, self.address) == (other.function, other.arch, other.address)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
@@ -2827,7 +2827,7 @@ class TypeFieldReference(object):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return (self.function, self.arch, self.address, self._size) ==\
-			(other.address, other.function, other.arch, other.size)
+			(other.function, other.arch, other.address, other.size)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):

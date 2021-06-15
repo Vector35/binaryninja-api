@@ -1961,6 +1961,9 @@ vector<TypeFieldReference> BinaryView::GetCodeReferencesForTypeField(const Quali
 		src.arch = new CoreArchitecture(refs[i].arch);
 		src.addr = refs[i].addr;
 		src.size = refs[i].size;
+		BNTypeWithConfidence& tc = refs[i].incomingType;
+		Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+		src.incomingType = Confidence<Ref<Type>>(type, tc.confidence);
 		result.push_back(src);
 	}
 

@@ -2811,23 +2811,25 @@ class ReferenceSource(object):
 
 
 class TypeFieldReference(object):
-	def __init__(self, func, arch, addr, size):
+	def __init__(self, func, arch, addr, size, t):
 		self._function = func
 		self._arch = arch
 		self._address = addr
 		self._size = size
+		self._incomingType = t
 
 	def __repr__(self):
 		if self._arch:
-			return "<ref: %s@%#x, size: %#x>" % (self._arch.name, self._address, self._size)
+			return "<ref: %s@%#x, size: %#x, type: %s>" % (self._arch.name, self._address, self._size,\
+				self._incomingType)
 		else:
-			return "<ref: %#x, size: %#x>" % (self._address, self._size)
+			return "<ref: %#x, size: %#x, type: %s>" % (self._address, self._size, self._incomingType)
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.function, self.arch, self.address, self._size) ==\
-			(other.function, other.arch, other.address, other.size)
+		return (self.function, self.arch, self.address, self._size, self._incomingType) ==\
+			(other.function, other.arch, other.address, other.size, other.incomingType)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
@@ -2875,7 +2877,7 @@ class TypeFieldReference(object):
 			return self.size <= other.size
 
 	def __hash__(self):
-		return hash((self._function, self._arch, self._address, self._size))
+		return hash((self._function, self._arch, self._address, self._size, self._incomingType))
 
 	@property
 	def function(self):
@@ -2910,5 +2912,14 @@ class TypeFieldReference(object):
 		return self._size
 
 	@size.setter
-	def address(self, value):
+	def size(self, value):
 		self._size = value
+
+	@property
+	def incomingType(self):
+		""" """
+		return self._incomingType
+
+	@size.setter
+	def incomingType(self, value):
+		self._incomingType = value

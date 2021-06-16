@@ -22,6 +22,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [sourcecodepro] ([sourcecodepro license] - SIL open font license)
     - [rlcompleter] ([python license] - Python Software Foundation License 2)
     - [QCheckboxCombo] ([QCheckboxCombo License] - MIT)
+    - [NotoColorEmoji] ([NotoColorEmoji License] - SIL open font license)
 
 * Core
     - [discount] ([discount license] - BSD)
@@ -101,6 +102,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [rlcompleter]: https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 [sourcecodepro license]:  https://github.com/adobe-fonts/source-code-pro/blob/master/LICENSE.md
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
+[NotoColorEmoji license]:  https://github.com/googlefonts/noto-emoji/blob/main/fonts/LICENSE
+[NotoColorEmoji]: https://github.com/googlefonts/noto-emoji
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html

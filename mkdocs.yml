@@ -46,6 +46,7 @@ nav:
         - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
         - Writing Plugins: 'dev/plugins.md'
         - Flag Guide: 'dev/flags.md'
+        - Creating Themes: 'dev/themes.md'
         #- API: 'dev/api.md'
     - About:
         - License: 'about/license.md'

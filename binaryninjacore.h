@@ -2344,6 +2344,11 @@ extern "C"
 		uint64_t addressResult;
 		char* stringResult;
 		size_t indexResult;
+		bool hasDefault;
+		int64_t intDefault;
+		uint64_t addressDefault;
+		const char* stringDefault;
+		size_t indexDefault;
 	};
 
 	struct BNInteractionHandlerCallbacks

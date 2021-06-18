@@ -41,6 +41,7 @@ class LabelField(object):
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.LabelFormField
+		value.hasDefault = False
 		value.prompt = self._text
 
 	def _fill_core_result(self, value):
@@ -65,6 +66,7 @@ class SeparatorField(object):
 	"""
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.SeparatorFormField
+		value.hasDefault = False
 
 	def _fill_core_result(self, value):
 		pass
@@ -77,13 +79,17 @@ class TextLineField(object):
 	"""
 	``TextLineField`` Adds prompt for text string input. Result is stored in self.result as a string on completion.
 	"""
-	def __init__(self, prompt):
+	def __init__(self, prompt, default=None):
 		self._prompt = prompt
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.TextLineFormField
 		value.prompt = self._prompt
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.stringDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self._result))
@@ -115,13 +121,17 @@ class MultilineTextField(object):
 	``MultilineTextField`` add multi-line text string input field. Result is stored in self.result
 	as a string. This option is not supported on the command-line.
 	"""
-	def __init__(self, prompt):
+	def __init__(self, prompt, default=None):
 		self._prompt = prompt
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.MultilineTextFormField
 		value.prompt = self._prompt
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.stringDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self._result))
@@ -152,13 +162,17 @@ class IntegerField(object):
 	"""
 	``IntegerField`` add prompt for integer. Result is stored in self.result as an int.
 	"""
-	def __init__(self, prompt):
+	def __init__(self, prompt, default=None):
 		self._prompt = prompt
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.IntegerFormField
 		value.prompt = self._prompt
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.intDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.intResult = self._result
@@ -194,10 +208,11 @@ class AddressField(object):
 	disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be \
 	specified.
 	"""
-	def __init__(self, prompt, view=None, current_address=0):
+	def __init__(self, prompt, view=None, current_address=0, default=None):
 		self._prompt = prompt
 		self._view = view
 		self._current_address = current_address
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
@@ -207,6 +222,9 @@ class AddressField(object):
 		if self._view is not None:
 			value.view = self._view.handle
 		value.currentAddress = self._current_address
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.addressDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.addressResult = self._result
@@ -258,11 +276,11 @@ class ChoiceField(object):
 
 	:attr str prompt: prompt to be presented to the user
 	:attr list(str) choices: list of choices to choose from
-
 	"""
-	def __init__(self, prompt, choices):
+	def __init__(self, prompt, choices, default=None):
 		self._prompt = prompt
 		self._choices = choices
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
@@ -273,6 +291,9 @@ class ChoiceField(object):
 			choice_buf[i] = self._choices[i].encode('charmap')
 		value.choices = choice_buf
 		value.count = len(self._choices)
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.indexDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.indexResult = self._result
@@ -312,15 +333,19 @@ class OpenFileNameField(object):
 	"""
 	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
 	"""
-	def __init__(self, prompt, ext=""):
+	def __init__(self, prompt, ext="", default=None):
 		self._prompt = prompt
 		self._ext = ext
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.OpenFileNameFormField
 		value.prompt = self._prompt
 		value.ext = self._ext
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.stringDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self.result))
@@ -360,10 +385,11 @@ class SaveFileNameField(object):
 	"""
 	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a string.
 	"""
-	def __init__(self, prompt, ext="", default_name=""):
+	def __init__(self, prompt, ext="", default_name="", default=None):
 		self._prompt = prompt
 		self._ext = ext
 		self._default_name = default_name
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
@@ -371,6 +397,9 @@ class SaveFileNameField(object):
 		value.prompt = self._prompt
 		value.ext = self._ext
 		value.defaultName = self._default_name
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.stringDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self._result))
@@ -420,15 +449,19 @@ class DirectoryNameField(object):
 	``DirectoryNameField`` prompts the user to specify a directory name to open. Result is stored in self.result as
 	a string.
 	"""
-	def __init__(self, prompt, default_name=""):
+	def __init__(self, prompt, default_name="", default=None):
 		self._prompt = prompt
 		self._default_name = default_name
+		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.DirectoryNameFormField
 		value.prompt = self._prompt
 		value.defaultName = self._default_name
+		value.hasDefault = self._default is not None
+		if self._default is not None:
+			value.stringDefault = self._default
 
 	def _fill_core_result(self, value):
 		value.stringResult = core.BNAllocString(str(self._result))
@@ -621,27 +654,27 @@ class InteractionHandler(object):
 				elif fields[i].type == FormInputFieldType.SeparatorFormField:
 					field_objs.append(SeparatorField())
 				elif fields[i].type == FormInputFieldType.TextLineFormField:
-					field_objs.append(TextLineField(fields[i].prompt))
+					field_objs.append(TextLineField(fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.MultilineTextFormField:
-					field_objs.append(MultilineTextField(fields[i].prompt))
+					field_objs.append(MultilineTextField(fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.IntegerFormField:
-					field_objs.append(IntegerField(fields[i].prompt))
+					field_objs.append(IntegerField(fields[i].prompt, default=fields[i].intDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.AddressFormField:
 					view = None
 					if fields[i].view:
 						view = binaryview.BinaryView(handle = core.BNNewViewReference(fields[i].view))
-					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress))
+					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress, default=fields[i].addressDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.ChoiceFormField:
 					choices = []
 					for j in range(0, fields[i].count):
 						choices.append(fields[i].choices[j])
-					field_objs.append(ChoiceField(fields[i].prompt, choices))
+					field_objs.append(ChoiceField(fields[i].prompt, choices, default=fields[i].choiceDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.OpenFileNameFormField:
-					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext))
+					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext, default=fields[i].stringDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
-					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName))
+					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName, default=fields[i].stringDefault if fields[i].hasDefault else None))
 				elif fields[i].type == FormInputFieldType.DirectoryNameFormField:
-					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName))
+					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName, default=fields[i].stringDefault if fields[i].hasDefault else None))
 				else:
 					field_objs.append(LabelField(fields[i].prompt))
 			if not self.get_form_input(field_objs, title):

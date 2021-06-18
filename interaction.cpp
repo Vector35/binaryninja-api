@@ -11,6 +11,7 @@ FormInputField FormInputField::Label(const string& text)
 	FormInputField result;
 	result.type = LabelFormField;
 	result.prompt = text;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -19,6 +20,7 @@ FormInputField FormInputField::Separator()
 {
 	FormInputField result;
 	result.type = SeparatorFormField;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -28,6 +30,7 @@ FormInputField FormInputField::TextLine(const string& prompt)
 	FormInputField result;
 	result.type = TextLineFormField;
 	result.prompt = prompt;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -37,6 +40,7 @@ FormInputField FormInputField::MultilineText(const string& prompt)
 	FormInputField result;
 	result.type = MultilineTextFormField;
 	result.prompt = prompt;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -46,6 +50,7 @@ FormInputField FormInputField::Integer(const string& prompt)
 	FormInputField result;
 	result.type = IntegerFormField;
 	result.prompt = prompt;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -57,6 +62,7 @@ FormInputField FormInputField::Address(const std::string& prompt, BinaryView* vi
 	result.prompt = prompt;
 	result.view = view;
 	result.currentAddress = currentAddress;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -67,6 +73,7 @@ FormInputField FormInputField::Choice(const string& prompt, const vector<string>
 	result.type = ChoiceFormField;
 	result.prompt = prompt;
 	result.choices = choices;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -77,6 +84,7 @@ FormInputField FormInputField::OpenFileName(const string& prompt, const string& 
 	result.type = OpenFileNameFormField;
 	result.prompt = prompt;
 	result.ext = ext;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -88,6 +96,7 @@ FormInputField FormInputField::SaveFileName(const string& prompt, const string& 
 	result.prompt = prompt;
 	result.ext = ext;
 	result.defaultName = defaultName;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -98,6 +107,7 @@ FormInputField FormInputField::DirectoryName(const string& prompt, const string&
 	result.type = DirectoryNameFormField;
 	result.prompt = prompt;
 	result.defaultName = defaultName;
+	result.hasDefault = false;
 	return result;
 }
 
@@ -338,6 +348,31 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			fields.push_back(FormInputField::Label(fieldBuf[i].prompt));
 			break;
 		}
+		fields.back().hasDefault = fieldBuf[i].hasDefault;
+		if (fieldBuf[i].hasDefault)
+		{
+			switch (fieldBuf[i].type)
+			{
+			case TextLineFormField:
+			case MultilineTextFormField:
+			case OpenFileNameFormField:
+			case SaveFileNameFormField:
+			case DirectoryNameFormField:
+				fields.back().stringDefault = fieldBuf[i].stringDefault;
+				break;
+			case IntegerFormField:
+				fields.back().intDefault = fieldBuf[i].intDefault;
+				break;
+			case AddressFormField:
+				fields.back().addressDefault = fieldBuf[i].addressDefault;
+				break;
+			case ChoiceFormField:
+				fields.back().indexDefault = fieldBuf[i].indexDefault;
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
 	if (!handler->GetFormInput(fields, title))
@@ -546,6 +581,31 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 			break;
 		default:
 			break;
+		}
+		fieldBuf[i].hasDefault = fields[i].hasDefault;
+		if (fields[i].hasDefault)
+		{
+			switch (fields[i].type)
+			{
+			case TextLineFormField:
+			case MultilineTextFormField:
+			case OpenFileNameFormField:
+			case SaveFileNameFormField:
+			case DirectoryNameFormField:
+				fieldBuf[i].stringDefault = fields[i].stringDefault.c_str();
+				break;
+			case IntegerFormField:
+				fieldBuf[i].intDefault = fields[i].intDefault;
+				break;
+			case AddressFormField:
+				fieldBuf[i].addressDefault = fields[i].addressDefault;
+				break;
+			case ChoiceFormField:
+				fieldBuf[i].indexDefault = fields[i].indexDefault;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 

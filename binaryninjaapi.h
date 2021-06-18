@@ -5136,6 +5136,11 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t addressResult;
 		std::string stringResult;
 		size_t indexResult;
+		bool hasDefault;
+		int64_t intDefault;
+		uint64_t addressDefault;
+		std::string stringDefault;
+		size_t indexDefault;
 
 		static FormInputField Label(const std::string& text);
 		static FormInputField Separator();

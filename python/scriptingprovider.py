@@ -609,6 +609,20 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.completer = bncompleter.Completer(namespace = self.locals)
 
 			self.interpreter.push("from binaryninja import *")
+			
+			startup_file = os.path.join(binaryninja.user_directory(), "startup.py")
+			if os.path.isfile(startup_file):
+				with open(startup_file, 'r') as f:
+					for line in f.readlines():
+						self.interpreter.push(line)
+				# Finish input in case the file does not end with a newline
+				self.interpreter.push('\n')
+
+			else:
+				with open(startup_file, 'w') as f:
+					f.write("# Commands in this file will be run in the interactive python console on startup\n")
+					f.write("from binaryninja import *\n")
+					f.write("\n")
 
 		def execute(self, code):
 			self.code = code

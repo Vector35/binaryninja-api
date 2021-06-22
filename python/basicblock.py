@@ -485,7 +485,7 @@ class BasicBlock(object):
 		return self.get_disassembly_text()
 
 	@property
-	def highlight(self) -> 'binaryninja.highlightHighlightColor':
+	def highlight(self) -> 'binaryninja.highlight.HighlightColor':
 		"""Gets or sets the highlight color for basic block
 
 		:Example:
@@ -494,10 +494,10 @@ class BasicBlock(object):
 			>>> current_basic_block.highlight
 			<color: blue>
 		"""
-		return binaryninja.highlightHighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
+		return binaryninja.highlight.HighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
 
 	@highlight.setter
-	def highlight(self, value:'binaryninja.highlightHighlightColor') -> None:
+	def highlight(self, value:'binaryninja.highlight.HighlightColor') -> None:
 		self.set_user_highlight(value)
 
 	@property
@@ -560,13 +560,13 @@ class BasicBlock(object):
 				il_instr = self.il_function[lines[i].instrIndex] # type: ignore
 			else:
 				il_instr = None
-			color = binaryninja.highlightHighlightColor._from_core_struct(lines[i].highlight)
+			color = binaryninja.highlight.HighlightColor._from_core_struct(lines[i].highlight)
 			tokens = binaryninja.function.InstructionTextToken._from_core_struct(lines[i].tokens, lines[i].count)
 			result.append(binaryninja.function.DisassemblyTextLine(tokens, addr, il_instr, color))
 		core.BNFreeDisassemblyTextLines(lines, count.value)
 		return result
 
-	def set_auto_highlight(self, color:'binaryninja.highlightHighlightColor') -> None:
+	def set_auto_highlight(self, color:'binaryninja.highlight.HighlightColor') -> None:
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 
@@ -574,13 +574,13 @@ class BasicBlock(object):
 
 		:param HighlightStandardColor or HighlightColor color: Color value to use for highlighting
 		"""
-		if not isinstance(color, HighlightStandardColor) and not isinstance(color, HighlightColor):
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, binaryninja.highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
-			color = binaryninja.highlightHighlightColor(color)
+			color = binaryninja.highlight.HighlightColor(color)
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
 
-	def set_user_highlight(self, color:'binaryninja.highlightHighlightColor') -> None:
+	def set_user_highlight(self, color:'binaryninja.highlight.HighlightColor') -> None:
 		"""
 		``set_user_highlight`` highlights the current BasicBlock with the supplied color
 
@@ -590,10 +590,10 @@ class BasicBlock(object):
 			>>> current_basic_block.set_user_highlight(HighlightColor(red=0xff, blue=0xff, green=0))
 			>>> current_basic_block.set_user_highlight(HighlightStandardColor.BlueHighlightColor)
 		"""
-		if not isinstance(color, HighlightStandardColor) and not isinstance(color, binaryninja.highlightHighlightColor):
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, binaryninja.highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
-			color = binaryninja.highlightHighlightColor(color)
+			color = binaryninja.highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
 
 	def get_instruction_containing_address(self, addr:int) -> Tuple[bool, int]:

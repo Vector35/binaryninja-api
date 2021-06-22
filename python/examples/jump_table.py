@@ -20,6 +20,7 @@
 
 # This plugin will attempt to resolve simple jump tables (an array of code pointers) and add the destinations
 # as indirect branch targets so that the flow graph reflects the jump table's control flow.
+from binaryninja.function import InstructionContext
 from binaryninja.plugin import PluginCommand
 from binaryninja.enums import InstructionTextTokenType
 import struct
@@ -30,15 +31,16 @@ def find_jump_table(bv, addr):
 		func = block.function
 		arch = func.arch
 		addrsize = arch.address_size
+		context = InstructionContext(bv=bv)
 
 		# Grab the instruction tokens so that we can look for the table's starting address
-		tokens, length = arch.get_instruction_text(bv.read(addr, 16), addr)
+		tokens, length = arch.get_instruction_text(bv.read(addr, 16), addr, context)
 
 		# Look for the next jump instruction, which may be the current instruction. Some jump tables will
 		# compute the address first then jump to the computed address as a separate instruction.
 		jump_addr = addr
 		while jump_addr < block.end:
-			info = arch.get_instruction_info(bv.read(jump_addr, 16), jump_addr)
+			info = arch.get_instruction_info(bv.read(jump_addr, 16), jump_addr, context)
 			if len(info.branches) != 0:
 				break
 			jump_addr += info.length

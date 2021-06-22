@@ -1482,6 +1482,11 @@ extern "C"
 		uint8_t confidence;
 	};
 
+	struct BNInstructionContext
+	{
+		BNBinaryView* binaryView;
+	};
+
 	struct BNCustomArchitecture
 	{
 		void* context;
@@ -1493,11 +1498,11 @@ extern "C"
 		size_t (*getMaxInstructionLength)(void* ctxt);
 		size_t (*getOpcodeDisplayLength)(void* ctxt);
 		BNArchitecture* (*getAssociatedArchitectureByAddress)(void* ctxt, uint64_t* addr);
-		bool (*getInstructionInfo)(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
-		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
+		bool (*getInstructionInfo)(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionContext* insnCtxt, BNInstructionInfo* result);
+		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNInstructionContext* insnCtxt,
 		                           BNInstructionTextToken** result, size_t* count);
 		void (*freeInstructionText)(BNInstructionTextToken* tokens, size_t count);
-		bool (*getInstructionLowLevelIL)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
+		bool (*getInstructionLowLevelIL)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNInstructionContext* insnCtxt, BNLowLevelILFunction* il);
 		char* (*getRegisterName)(void* ctxt, uint32_t reg);
 		char* (*getFlagName)(void* ctxt, uint32_t flag);
 		char* (*getFlagWriteTypeName)(void* ctxt, uint32_t flags);
@@ -3166,11 +3171,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
-		size_t maxLen, BNInstructionInfo* result);
+		size_t maxLen, BNInstructionContext* insnCtxt, BNInstructionInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
-	                                             size_t* len, BNInstructionTextToken** result, size_t* count);
+	                                             size_t* len, BNInstructionContext* insnCtxt, BNInstructionTextToken** result, size_t* count);
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(BNArchitecture* arch, const uint8_t* data, uint64_t addr,
-	                                                   size_t* len, BNLowLevelILFunction* il);
+	                                                   size_t* len, BNInstructionContext* insnCtxt, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI void BNFreeInstructionText(BNInstructionTextToken* tokens, size_t count);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterName(BNArchitecture* arch, uint32_t reg);

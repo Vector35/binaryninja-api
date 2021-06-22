@@ -2282,6 +2282,11 @@ __attribute__ ((format (printf, 1, 2)))
 		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
 	};
 
+	struct InstructionContext
+	{
+		Ref<BinaryView> binaryView;
+	};
+
 	class LowLevelILFunction;
 	class MediumLevelILFunction;
 	class FunctionRecognizer;
@@ -2310,12 +2315,12 @@ __attribute__ ((format (printf, 1, 2)))
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t maxLen, BNInstructionInfo* result);
+		                                       size_t maxLen, BNInstructionContext* insnCtxt, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t* len, BNInstructionTextToken** result, size_t* count);
+		                                       size_t* len, BNInstructionContext* insnCtxt, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                             size_t* len, BNLowLevelILFunction* il);
+		                                             size_t* len, BNInstructionContext* insnCtxt, BNLowLevelILFunction* il);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -2374,6 +2379,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual void Register(BNCustomArchitecture* callbacks);
 
+		friend class ArchitectureExtension;
+
 	public:
 		Architecture(const std::string& name);
 
@@ -2393,18 +2400,27 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
 
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
+	protected:
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result);
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) = 0;
+		                                std::vector<InstructionTextToken>& result);
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
+
+	public:
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result);
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,InstructionContext context,
+		                                std::vector<InstructionTextToken>& result);
 
 		/*! GetInstructionLowLevelIL
 			Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
 			\param data pointer to the instruction data to be translated
 			\param addr address of the instruction data to be translated
 			\param len length of the instruction data to be translated
+			\param context structure containing context of instruction eg BinaryView
 			\param il the LowLevelILFunction which
 		*/
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il);
+
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
@@ -2558,10 +2574,16 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
+	protected:
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) override;
+			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+	public:
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+		                                std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -2635,10 +2657,16 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
+	protected:
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) override;
+			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+	public:
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+		                                std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;

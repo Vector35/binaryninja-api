@@ -1,4 +1,4 @@
-use binaryninja::architecture::Architecture;
+use binaryninja::architecture::{Architecture, InstructionContext};
 use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
 
 fn main() {
@@ -18,11 +18,13 @@ fn main() {
             // TODO : This is intended to be refactored to be more nice to work with soon(TM)
             for addr in basic_block.as_ref() {
                 print!("    {}  ", addr);
+                let ctxt = InstructionContext::new(bv.clone());
                 match func.arch().instruction_text(
                     bv.read_buffer(addr, func.arch().max_instr_len())
                         .unwrap()
                         .get_data(),
                     addr,
+                    Some(ctxt),
                 ) {
                     Some((_, tokens)) => {
                         tokens

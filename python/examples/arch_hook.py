@@ -1,9 +1,9 @@
 from binaryninja.architecture import Architecture, ArchitectureHook
 
 class X86ReturnHook(ArchitectureHook):
-    def get_instruction_text(self, data, addr):
+    def get_instruction_text(self, data, addr, context):
         # Call the original implementation's method by calling the superclass
-        result, length = super(X86ReturnHook, self).get_instruction_text(data, addr)
+        result, length = super(X86ReturnHook, self).get_instruction_text(data, addr, context)
 
         # Patch the name of the 'retn' instruction to 'ret'
         if len(result) > 0 and result[0].text == 'retn':

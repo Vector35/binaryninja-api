@@ -514,11 +514,18 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			log.log_error(traceback.format_exc())
 			return ctypes.cast(self.handle, ctypes.c_void_p).value
 
-	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
+	def _get_instruction_info(self, ctxt, data, addr, max_len, insn_ctxt, result):
 		try:
+			context = binaryninja.function.InstructionContext()
+			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
+				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
 			buf = ctypes.create_string_buffer(max_len)
 			ctypes.memmove(buf, data, max_len)
-			info = self.get_instruction_info(buf.raw, addr)
+			# Support both with and without context param (for source backwards compatibility)
+			try:
+				info = self.get_instruction_info(buf.raw, addr, context)
+			except TypeError:
+				info = self.get_instruction_info(buf.raw, addr)
 			if info is None:
 				return False
 			result[0].length = info.length
@@ -540,11 +547,18 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			log.log_error(traceback.format_exc())
 			return False
 
-	def _get_instruction_text(self, ctxt, data, addr, length, result, count):
+	def _get_instruction_text(self, ctxt, data, addr, length, insn_ctxt, result, count):
 		try:
+			context = binaryninja.function.InstructionContext()
+			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
+				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
-			info = self.get_instruction_text(buf.raw, addr)
+			# Support both with and without context param (for source backwards compatibility)
+			try:
+				info = self.get_instruction_text(buf.raw, addr, context)
+			except TypeError:
+				info = self.get_instruction_text(buf.raw, addr)
 			if info is None:
 				return False
 			tokens = info[0]
@@ -568,12 +582,20 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		except KeyError:
 			log.log_error(traceback.format_exc())
 
-	def _get_instruction_low_level_il(self, ctxt, data, addr, length, il):
+	def _get_instruction_low_level_il(self, ctxt, data, addr, length, insn_ctxt, il):
 		try:
+			context = binaryninja.function.InstructionContext()
+			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
+				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
-			result = self.get_instruction_low_level_il(buf.raw, addr,
-				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+			# Support both with and without context param (for source backwards compatibility)
+			try:
+				result = self.get_instruction_low_level_il(buf.raw, addr,
+					lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)), context)
+			except TypeError:
+				result = self.get_instruction_low_level_il(buf.raw, addr,
+					lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 			if result is None:
 				return False
 			length[0] = result
@@ -1221,37 +1243,40 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		return self, addr
 
 	@abc.abstractmethod
-	def perform_get_instruction_info(self, data, addr):
+	def perform_get_instruction_info(self, data, addr, context=None):
 		"""
 		Deprecated method provided for compatibility. Architecture plugins should override :func:`get_instruction_info`.
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:return: a :py:class:`InstructionInfo` object containing the length and branch types for the given instruction
 		:rtype: InstructionInfo
 		"""
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def perform_get_instruction_text(self, data, addr):
+	def perform_get_instruction_text(self, data, addr, context=None):
 		"""
 		Deprecated method provided for compatibility. Architecture plugins should override :func:`get_instruction_text`.
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:return: a tuple of list(InstructionTextToken) and length of instruction decoded
 		:rtype: tuple(list(InstructionTextToken), int)
 		"""
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def perform_get_instruction_low_level_il(self, data, addr, il):
+	def perform_get_instruction_low_level_il(self, data, addr, il, context=None):
 		"""
 		Deprecated method provided for compatibility. Architecture plugins should override :func:`get_instruction_low_level_il`.
 
 		:param str data: bytes to be interpreted as low-level IL instructions
 		:param int addr: virtual address of start of ``data``
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:rtype: length of bytes read on success, None on failure
 		"""
 		raise NotImplementedError
@@ -1441,7 +1466,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 	def get_associated_arch_by_address(self, addr):
 		return self.perform_get_associated_arch_by_address(addr)
 
-	def get_instruction_info(self, data, addr):
+	def get_instruction_info(self, data, addr, context=None):
 		"""
 		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address
 		``addr`` with data ``data``.
@@ -1468,12 +1493,15 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:return: the InstructionInfo for the current instruction
 		:rtype: InstructionInfo
 		"""
-		return self.perform_get_instruction_info(data, addr)
+		if context is None:
+			context = binaryninja.function.InstructionContext()
+		return self.perform_get_instruction_info(data, addr, context)
 
-	def get_instruction_text(self, data, addr):
+	def get_instruction_text(self, data, addr, context=None):
 		"""
 		``get_instruction_text`` returns a tuple containing a list of decoded InstructionTextToken objects and the bytes used at the given virtual
 		address ``addr`` with data ``data``.
@@ -1482,18 +1510,24 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:return: a tuple containing the InstructionTextToken list and length of bytes decoded
 		:rtype: tuple(list(InstructionTextToken), int)
 		"""
-		return self.perform_get_instruction_text(data, addr)
+		if context is None:
+			context = binaryninja.function.InstructionContext()
+		return self.perform_get_instruction_text(data, addr, context)
 
-	def get_instruction_low_level_il_instruction(self, bv, addr):
+	def get_instruction_low_level_il_instruction(self, bv, addr, context=None):
 		il = lowlevelil.LowLevelILFunction(self)
 		data = bv.read(addr, self.max_instr_length)
-		self.get_instruction_low_level_il(data, addr, il)
+		if context is None:
+			context = binaryninja.function.InstructionContext()
+		context.binaryView = bv
+		self.get_instruction_low_level_il(data, addr, il, context)
 		return il[0]
 
-	def get_instruction_low_level_il(self, data, addr, il):
+	def get_instruction_low_level_il(self, data, addr, il, context=None):
 		"""
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
@@ -1505,18 +1539,22 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction
 		:rtype: int
 		"""
-		return self.perform_get_instruction_low_level_il(data, addr, il)
+		if context is None:
+			context = binaryninja.function.InstructionContext()
+		return self.perform_get_instruction_low_level_il(data, addr, il, context)
 
-	def get_low_level_il_from_bytes(self, data, addr):
+	def get_low_level_il_from_bytes(self, data, addr, context=None):
 		"""
 		``get_low_level_il_from_bytes`` converts the instruction in bytes to ``il`` at the given virtual address
 
 		:param str data: the bytes of the instruction
 		:param int addr: virtual address of bytes in ``data``
+		:param InstructionContext context: structure containing context information eg the BinaryView
 		:return: the instruction
 		:rtype: LowLevelILInstruction
 		:Example:
@@ -1525,8 +1563,10 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			<il: jump(0x40dead)>
 			>>>
 		"""
+		if context is None:
+			context = binaryninja.function.InstructionContext()
 		func = lowlevelil.LowLevelILFunction(self)
-		self.get_instruction_low_level_il(data, addr, func)
+		self.get_instruction_low_level_il(data, addr, func, context)
 		return func[0]
 
 	def get_reg_name(self, reg):
@@ -2315,7 +2355,7 @@ class CoreArchitecture(Architecture):
 		result = core.BNGetAssociatedArchitectureByAddress(self.handle, new_addr)
 		return CoreArchitecture._from_cache(handle = result), new_addr.value
 
-	def get_instruction_info(self, data, addr):
+	def get_instruction_info(self, data, addr, context=None):
 		"""
 		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address
 		``addr`` with data ``data``.
@@ -2331,7 +2371,11 @@ class CoreArchitecture(Architecture):
 		info = core.BNInstructionInfo()
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), info):
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), info):
 			return None
 		result = binaryninja.function.InstructionInfo()
 		result.length = info.length
@@ -2346,13 +2390,14 @@ class CoreArchitecture(Architecture):
 			result.add_branch(BranchType(info.branchType[i]), target, arch)
 		return result
 
-	def get_instruction_text(self, data, addr):
+	def get_instruction_text(self, data, addr, context=None):
 		"""
 		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
 		address ``addr`` with data ``data``.
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
+		:param InstructionContext context: structure with context information
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
@@ -2367,13 +2412,17 @@ class CoreArchitecture(Architecture):
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if not core.BNGetInstructionText(self.handle, buf, addr, length, tokens, count):
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), tokens, count):
 			return None, 0
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
-	def get_instruction_low_level_il(self, data, addr, il):
+	def get_instruction_low_level_il(self, data, addr, il, context=None):
 		"""
 		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
@@ -2391,7 +2440,11 @@ class CoreArchitecture(Architecture):
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), il.handle)
 		return length.value
 
 	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):

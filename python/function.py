@@ -4197,6 +4197,19 @@ class InstructionBranch(object):
 		self._arch = value
 
 
+class InstructionContext(object):
+	def __init__(self, bv=None):
+		self._bv = bv
+
+	@property
+	def bv(self):
+		return self._bv
+
+	@bv.setter
+	def bv(self, value):
+		self._bv = value
+
+
 class InstructionInfo(object):
 	def __init__(self):
 		self.length = 0

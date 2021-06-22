@@ -149,19 +149,20 @@ class BasicBlock(object):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __iter__(self):
+		context = binaryninja.function.InstructionContext(bv=self.view)
 		if self._instStarts is None:
 			# don't add instruction start cache--the object is likely ephemeral
 			idx = self.start
 			while idx < self.end:
 				data = self._view.read(idx, min(self.arch.max_instr_length, self.end - idx))
-				inst_text = self.arch.get_instruction_text(data, idx)
+				inst_text = self.arch.get_instruction_text(data, idx, context)
 				if inst_text[1] == 0:
 					break
 				yield inst_text
 				idx += inst_text[1]
 		else:
 			for start, length in zip(self._instStarts, self._instLengths):
-				inst_text = self.arch.get_instruction_text(self._view.read(start, length), start)
+				inst_text = self.arch.get_instruction_text(self._view.read(start, length), start, context)
 				if inst_text[1] == 0:
 					break
 				yield inst_text
@@ -173,7 +174,8 @@ class BasicBlock(object):
 		start = self._instStarts[i]
 		length = self._instLengths[i]
 		data = self._view.read(start, length)
-		return self.arch.get_instruction_text(data, start)
+		context = binaryninja.function.InstructionContext(bv=self.view)
+		return self.arch.get_instruction_text(data, start, context)
 
 	def _buildStartCache(self):
 		if self._instStarts is None:

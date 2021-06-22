@@ -2322,7 +2322,8 @@ class BinaryView(object):
 		"""
 		if arch is None:
 			arch = self.arch
-		txt, size = arch.get_instruction_text(self.read(addr, arch.max_instr_length), addr)
+		context = binaryninja.function.InstructionContext(bv=self)
+		txt, size = arch.get_instruction_text(self.read(addr, arch.max_instr_length), addr, context)
 		self.next_address = addr + size
 		if txt is None:
 			return None
@@ -2352,7 +2353,8 @@ class BinaryView(object):
 			arch = self.arch
 		if self.next_address is None:
 			self.next_address = self.entry_point
-		txt, size = arch.get_instruction_text(self.read(self.next_address, arch.max_instr_length), self.next_address)
+		context = binaryninja.function.InstructionContext(bv=self)
+		txt, size = arch.get_instruction_text(self.read(self.next_address, arch.max_instr_length), self.next_address, context)
 		self.next_address += size
 		if txt is None:
 			return None

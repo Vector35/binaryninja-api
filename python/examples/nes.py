@@ -427,7 +427,7 @@ class M6502(Architecture):
 
 		return instr, operand, length, value
 
-	def get_instruction_info(self, data, addr):
+	def get_instruction_info(self, data, addr, context):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
@@ -449,7 +449,7 @@ class M6502(Architecture):
 			result.add_branch(BranchType.FalseBranch, addr + 2)
 		return result
 
-	def get_instruction_text(self, data, addr):
+	def get_instruction_text(self, data, addr, context):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None
@@ -459,7 +459,7 @@ class M6502(Architecture):
 		tokens += OperandTokens[operand](value)
 		return tokens, length
 
-	def get_instruction_low_level_il(self, data, addr, il):
+	def get_instruction_low_level_il(self, data, addr, il, context):
 		instr, operand, length, value = self.decode_instruction(data, addr)
 		if instr is None:
 			return None

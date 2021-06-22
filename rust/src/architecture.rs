@@ -26,6 +26,7 @@ use std::ops::Drop;
 use std::ptr;
 use std::slice;
 
+use crate::binaryview::BinaryView;
 use crate::callingconvention::CallingConvention;
 use crate::platform::Platform;
 use crate::{BranchType, Endianness};
@@ -83,6 +84,20 @@ impl<'a> Iterator for BranchIter<'a> {
             }
             _ => None,
         }
+    }
+}
+
+#[repr(C)]
+pub struct InstructionContext(BNInstructionContext);
+impl InstructionContext {
+    pub fn new(binary_view: Ref<BinaryView>) -> Self {
+        InstructionContext(BNInstructionContext {
+            binaryView: binary_view.handle
+        })
+    }
+
+    pub fn binary_view(&self) -> Ref<BinaryView> {
+        unsafe { BinaryView::from_raw(self.0.binaryView) }
     }
 }
 
@@ -404,16 +419,18 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture;
 
-    fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
+    fn instruction_info(&self, data: &[u8], addr: u64, ctxt: Option<InstructionContext>) -> Option<InstructionInfo>;
     fn instruction_text(
         &self,
         data: &[u8],
         addr: u64,
+        ctxt: Option<InstructionContext>,
     ) -> Option<(usize, Self::InstructionTextContainer)>;
     fn instruction_llil(
         &self,
         data: &[u8],
         addr: u64,
+        ctxt: Option<InstructionContext>,
         il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)>;
 
@@ -874,7 +891,7 @@ impl Architecture for CoreArchitecture {
         CoreArchitecture(arch)
     }
 
-    fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
+    fn instruction_info(&self, data: &[u8], addr: u64, ctxt: Option<InstructionContext>) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
         let success = unsafe {
             BNGetInstructionInfo(
@@ -882,6 +899,7 @@ impl Architecture for CoreArchitecture {
                 data.as_ptr(),
                 addr,
                 data.len(),
+                ctxt.map_or(ptr::null_mut(), |mut ctxt| &mut ctxt.0 as *mut _),
                 &mut (info.0) as *mut _,
             )
         };
@@ -897,6 +915,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
+        ctxt: Option<InstructionContext>,
     ) -> Option<(usize, InstructionTextTokenList)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
@@ -908,6 +927,7 @@ impl Architecture for CoreArchitecture {
                 data.as_ptr(),
                 addr,
                 &mut consumed as *mut _,
+                ctxt.map_or(ptr::null_mut(), |mut ctxt| &mut ctxt.0 as *mut _),
                 &mut result as *mut _,
                 &mut count as *mut _,
             ) {
@@ -922,6 +942,7 @@ impl Architecture for CoreArchitecture {
         &self,
         _data: &[u8],
         _addr: u64,
+        _ctxt: Option<InstructionContext>,
         _il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)> {
         None
@@ -1344,6 +1365,7 @@ where
         data: *const u8,
         addr: u64,
         len: usize,
+        insn_ctxt: *mut BNInstructionContext,
         result: *mut BNInstructionInfo,
     ) -> bool
     where
@@ -1351,9 +1373,10 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
+        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
         let result = unsafe { &mut *(result as *mut InstructionInfo) };
 
-        match custom_arch.instruction_info(data, addr) {
+        match custom_arch.instruction_info(data, addr, insn_ctxt) {
             Some(info) => {
                 result.0 = info.0;
                 true
@@ -1367,6 +1390,7 @@ where
         data: *const u8,
         addr: u64,
         len: *mut usize,
+        insn_ctxt: *mut BNInstructionContext,
         result: *mut *mut BNInstructionTextToken,
         count: *mut usize,
     ) -> bool
@@ -1375,9 +1399,10 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, *len) };
+        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
         let result = unsafe { &mut *result };
 
-        match custom_arch.instruction_text(data, addr) {
+        match custom_arch.instruction_text(data, addr, insn_ctxt) {
             Some((res_size, res_tokens)) => {
                 unsafe {
                     let mut res_tokens = res_tokens.into();
@@ -1406,6 +1431,7 @@ where
         data: *const u8,
         addr: u64,
         len: *mut usize,
+        insn_ctxt: *mut BNInstructionContext,
         il: *mut BNLowLevelILFunction,
     ) -> bool
     where
@@ -1417,9 +1443,10 @@ where
         };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
+        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        match custom_arch.instruction_llil(data, addr, &mut lifter) {
+        match custom_arch.instruction_llil(data, addr, insn_ctxt, &mut lifter) {
             Some((res_len, res_value)) => {
                 unsafe { *len = res_len };
                 res_value

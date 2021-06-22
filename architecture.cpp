@@ -213,25 +213,31 @@ BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* c
 }
 
 
-bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen,
+bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionContext* insnCtxt,
 	BNInstructionInfo* result)
 {
 	Architecture* arch = (Architecture*)ctxt;
 
+	InstructionContext context;
+	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+
 	InstructionInfo info;
-	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
+	bool ok = arch->GetInstructionInfo(data, addr, maxLen, context, info);
 	*result = info;
 	return ok;
 }
 
 
 bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-                                              size_t* len, BNInstructionTextToken** result, size_t* count)
+                                              size_t* len, BNInstructionContext* insnCtxt, BNInstructionTextToken** result, size_t* count)
 {
 	Architecture* arch = (Architecture*)ctxt;
 
+	InstructionContext context;
+	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+
 	vector<InstructionTextToken> tokens;
-	bool ok = arch->GetInstructionText(data, addr, *len, tokens);
+	bool ok = arch->GetInstructionText(data, addr, *len, context, tokens);
 	if (!ok)
 	{
 		*result = nullptr;
@@ -259,11 +265,15 @@ void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, s
 
 
 bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-                                                    size_t* len, BNLowLevelILFunction* il)
+                                                    size_t* len, BNInstructionContext* insnCtxt, BNLowLevelILFunction* il)
 {
 	Architecture* arch = (Architecture*)ctxt;
+
+	InstructionContext context;
+	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
-	return arch->GetInstructionLowLevelIL(data, addr, *len, *func);
+	return arch->GetInstructionLowLevelIL(data, addr, *len, context, *func);
 }
 
 
@@ -868,10 +878,40 @@ Ref<Architecture> Architecture::GetAssociatedArchitectureByAddress(uint64_t&)
 }
 
 
+bool Architecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
+{
+	return false;
+}
+
+
+bool Architecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+{
+	return GetInstructionInfo(data, addr, maxLen, result);
+}
+
+
+bool Architecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result)
+{
+	return false;
+}
+
+
+bool Architecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, std::vector<InstructionTextToken>& result)
+{
+	return GetInstructionText(data, addr, len, result);
+}
+
+
 bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, LowLevelILFunction& il)
 {
 	il.AddInstruction(il.Undefined());
 	return false;
+}
+
+
+bool Architecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+{
+	return GetInstructionLowLevelIL(data, addr, len, il);
 }
 
 
@@ -1403,15 +1443,21 @@ Ref<Architecture> CoreArchitecture::GetAssociatedArchitectureByAddress(uint64_t&
 
 bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
 {
-	return BNGetInstructionInfo(m_object, data, addr, maxLen, &result);
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = nullptr;
+
+	return BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
 }
 
 
 bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result)
 {
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = nullptr;
+
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
-	if (!BNGetInstructionText(m_object, data, addr, &len, &tokens, &count))
+	if (!BNGetInstructionText(m_object, data, addr, &len, &insnCtxt, &tokens, &count))
 		return false;
 
 	result = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
@@ -1421,7 +1467,41 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
 {
-	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, il.GetObject());
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = nullptr;
+	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
+}
+
+
+bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+{
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+
+	return BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
+}
+
+
+bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, std::vector<InstructionTextToken>& result)
+{
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+
+	BNInstructionTextToken* tokens = nullptr;
+	size_t count = 0;
+	if (!BNGetInstructionText(m_object, data, addr, &len, &insnCtxt, &tokens, &count))
+		return false;
+
+	result = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+	return true;
+}
+
+
+bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+{
+	BNInstructionContext insnCtxt;
+	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
 }
 
 
@@ -1928,6 +2008,25 @@ bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64
 }
 
 
+bool ArchitectureExtension::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+{
+	return m_base->GetInstructionInfo(data, addr, maxLen, context, result);
+}
+
+
+bool ArchitectureExtension::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+	vector<InstructionTextToken>& result)
+{
+	return m_base->GetInstructionText(data, addr, len, context, result);
+}
+
+
+bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+{
+	return m_base->GetInstructionLowLevelIL(data, addr, len, context, il);
+}
+
+
 string ArchitectureExtension::GetRegisterName(uint32_t reg)
 {
 	return m_base->GetRegisterName(reg);
@@ -2206,12 +2305,12 @@ ArchitectureHook::ArchitectureHook(Architecture* base): CoreArchitecture(nullptr
 	//     }
 	//
 	//     virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len,
-	//         LowLevelILFunction& il) override
+	//         InstructionContext context, LowLevelILFunction& il) override
 	//     {
 	//         // Perform extra lifting here
 	//         // ...
 	//         // For unhandled cases, call the original architecture's implementation
-	//         return ArchitectureHook::GetInstructionLowLevelIL(data, addr, len, il);
+	//         return ArchitectureHook::GetInstructionLowLevelIL(data, addr, len, context, il);
 	//     }
 	// };
 }

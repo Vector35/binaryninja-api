@@ -603,11 +603,12 @@ class TestBuilder(Builder):
         retinfo.append("Reg return address: " + str(reg.return_address()))
 
         bv.update_analysis_and_wait()
+        context = binja.function.InstructionContext(bv=bv)
         for func in bv.functions:
             for bb in func.low_level_il.basic_blocks:
                 for ins in bb:
-                    retinfo.append("Instruction info: " + str(bv.platform.arch.get_instruction_info(0x10, ins.address)))
-                    retinfo.append("Instruction test: " + str(bv.platform.arch.get_instruction_text(0x10, ins.address)))
+                    retinfo.append("Instruction info: " + str(bv.platform.arch.get_instruction_info(0x10, ins.address, context)))
+                    retinfo.append("Instruction test: " + str(bv.platform.arch.get_instruction_text(0x10, ins.address, context)))
                     retinfo.append("Instruction: " + str(ins))
         return retinfo
 

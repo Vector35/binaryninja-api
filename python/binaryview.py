@@ -1609,7 +1609,7 @@ class BinaryView(object):
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def new(data:Optional['BinaryView']=None, file_metadata:Optional['filemetadata.FileMetadata']=None) -> Optional['BinaryView']:
+	def new(data:bytes=None, file_metadata:Optional['filemetadata.FileMetadata']=None) -> Optional['BinaryView']:
 		binaryninja._init_plugins()
 		if file_metadata is None:
 			file_metadata = filemetadata.FileMetadata()
@@ -5944,7 +5944,7 @@ class BinaryView(object):
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
 		"""
-		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
+		if not isinstance(data, bytes):
 			raise TypeError("Must be bytes, bytearray, or str")
 		else:
 			buf = databuffer.DataBuffer(data)
@@ -6054,7 +6054,7 @@ class BinaryView(object):
 		can return a boolean value that decides whether the search should continue or stop
 		:rtype bool: whether any (one or more) match is found for the search
 		"""
-		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
+		if not isinstance(data, bytes):
 			raise TypeError("data parameter must be bytes, bytearray, or str")
 		else:
 			buf = databuffer.DataBuffer(data)

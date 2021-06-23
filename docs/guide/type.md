@@ -16,7 +16,7 @@ There are two main ways to interact with types from within a binary view. The fi
 
 The simplest way to directly manipulate types in disassembly is by viewing an existing variable or sequence of bytes in linear view and using the following hotkeys:
 
- - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey. 
+ - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey.
  - `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
  - `-`: To quickly toggle integers between signed and unsigned integers, you can use the `-` hotkey.
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
@@ -24,7 +24,7 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
  - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements.
  - `s`: `s` is a magic hotkey described in the next section in greater detail
 
- Note that you can apply these types to a region of memory as well, not just a single variable. So selecting a large block of bytes and pressing `2` `*` for example will create an array of `int16_t` sized elements. 
+ Note that you can apply these types to a region of memory as well, not just a single variable. So selecting a large block of bytes and pressing `2` `*` for example will create an array of `int16_t` sized elements.
 
 ### Smart Structures Workflow
 
@@ -186,7 +186,7 @@ From within the Types view, you can use the following hotkeys to create new type
 
 The shortcuts for editing existing elements are:
 
-* `y` - Edit type / field 
+* `y` - Edit type / field
 * `n` - Rename type / field
 * `l` - Set structure size
 * `u` - undefine field
@@ -222,7 +222,7 @@ Types view now annotates code references to structure offsets. It uses the same 
 Once you've created your structures, you can apply them to your disassembly. Simply select an appropriate token (variable or memory address), and press `y` to bring up the change type dialog. Types can be applied on both disassembly and all levels of IL. Any variables that are shared between the ILs will be updated as types are applied.
 
 
-#### Examples 
+#### Examples
 
 ``` C
 enum _flags
@@ -246,7 +246,7 @@ struct Header __packed
 
 ## Using the API
 
-Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples. 
+Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples.
 
 ### Create a new type
 
@@ -262,7 +262,7 @@ There are two main ways to create a type with the API. The first is to use [one 
 >>>
 ```
 
-For more complicated types that are already in C syntax, you may want to take advantage of the [parse_types_*](https://api.binary.ninja/search.html?q=parse_types&check_keywords=yes&area=default) APIs. 
+For more complicated types that are already in C syntax, you may want to take advantage of the [parse_types_*](https://api.binary.ninja/search.html?q=parse_types&check_keywords=yes&area=default) APIs.
 
 ``` py
 >>> bv.platform.parse_types_from_source('''
@@ -318,7 +318,7 @@ And we can verify the type shows up in the types view as expected:
 
 This makes the type available to the user to apply more easily and is appropriate for named structures, but is not required if you simply with to set a type as shown in the next step.
 
-#### Applying 
+#### Applying
 
 Of course, having the type available doesn't actually apply it to anything in the binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string (like the one at `0x8049f34`) and create a data variable using our new type:
 
@@ -372,10 +372,95 @@ current_function.function_type = types.Type.function(old.return_value, new_param
 old.calling_convention, old.has_variable_arguments, old.stack_adjustment)
 ```
 
-
 ## Type Library
 
-_coming soon..._
+A type library is a database of type information stored in a file with extension .bntl.
+
+Relative to the binaryninja executable, the type library location is `../Resources/typelib` on MacOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture.
+
+### How Binja Loads
+
+When a binary is opened, its platform is determined, all .bntl's are processed, and those matching the platform of the loaded binary are registered. A debug log will show:
+
+```
+Registered library 'libc.so.6' with platform 'linux-x86_64'
+```
+
+Then, those with either a filename or an alternative name matching the exact text of the binary's import command are imported. For example, in ELF, the .dynstr entry is used.
+
+```
+elf: searching for 'libc.so.6' in type libraries
+Type library 'libc.so.6' imported
+```
+
+Type libraries for linux are ideally named after their realname, preserving the library minor version from which they were generated, and the soname in the alternatives list. In practice, naming them after their soname suffices. Using the linkname with no alternatives will prevent your library from loading.
+
+### Acquiring a Handles
+
+The platform class exposes handles to these imported type libraries with its `type_libraries` list and its `get_type_libraries_by_name()` function:
+
+```python
+>>> bv.platform.type_libraries
+[<typelib 'libm.so.6':x86_64':x86_64>, <typelib 'SYSCALLS':x86_64]
+>>> bv.platform.get_type_libraries_by_name('libm.so.6')
+[<typelib 'libm.so.6':x86_64>]
+```
+
+That requires the type library having been loaded. A more direct way is to load from a file path with the `load_from_file()` from `Typelibrary` class from `typelibrary` module:
+
+```python
+>>> typelibrary.TypeLibrary.load_from_file('/path/to/libm_x86_64.so.6.bntl')
+<typelib 'libm_x86_64.so.6':x86_64>
+```
+
+### Contents of Libraries
+
+The following demonstrates attributes of interest on a loaded type library in variable `tl`:
+
+```python
+	print('           name: %s' % tl.name)
+	print('           arch: %s' % tl.arch)
+	print('           guid: %s' % tl.guid)
+	print('dependency_name: %s' % tl.dependency_name)
+	print('alternate_names: %s' % tl.alternate_names)
+	print(' platform_names: %s' % tl.platform_names)
+
+	print('  named_objects: %d' % len(tl.named_objects))
+	for (key, val) in tl.named_objects.items():
+		print('\t"%s" %s' % (str(key), str(val)))
+
+	print('    named_types: %d' % len(tl.named_types))
+	for (key,val) in tl.named_types.items():
+		print('\t"%s" %s' % (str(key), str(val)))
+```
+
+Named objects (via dictionary `.named_objects` are functions signatures and a module's exported variables. Named types (via dictionary `.named_types`) are the textual named you might use to declare a variable. For example,
+
+For example, `.named_objects['fegetexceptionflag']` looks up its function prototype: `int32_t (fexcept_t* flagp)` and `.named_types['fexcept_t']` looks up `uint16_t`, its typedef.
+
+### Creating
+
+Type libraries bundled with Binary Ninja are created with internal tooling.
+
+Types entered by manual entry can be exported from the binary view using `export_type_to_library()`.
+
+Manual creation is achieved by creating a new type library, associating the correct platform and architecture, adding types, finalizing, and writing to a file. Example:
+
+```python
+arch = binaryninja.Architecture['x86_64']
+
+struct = Structure()
+struct.append(Type.pointer(arch, Type.char()), 'name')
+struct.append(Type.int(4), 'age')
+struct.append(Type.int(4), 'height')
+struct.append(Type.int(4), 'weight')
+
+typelib = binaryninja.typelibrary.TypeLibrary.new(arch, 'test.so.1.4')
+typelib.add_named_type('human', binaryninja.types.Type.structure_type(struct))
+typelib.add_alternate_name('test.so.1')
+typelib.finalize()
+typelib.write_to_file('test.so.1.bntl')
+```
 
 ## Signature Library
 
@@ -427,7 +512,7 @@ For a text-based approach, you can also export your signature libraries to JSON 
 
 ## Symbols
 
-Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, this couldn't be simpler. Just select the function, variable, member, register, or whatever you want to change the symbol of and press `n`. 
+Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, this couldn't be simpler. Just select the function, variable, member, register, or whatever you want to change the symbol of and press `n`.
 
 ![Rename a function >](../img/rename.png "Renaming a function")
 
@@ -454,12 +539,12 @@ Note that `here` and `bv` are used in many of the previous examples. These short
 
 Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
 
-| SymbolType | Description | 
+| SymbolType | Description |
 | ---------- | ----------- |
-	| FunctionSymbol |            Symbol for function that exists in the current binary |
-	| ImportAddressSymbol |       Symbol defined in the Import Address Table |
-	| ImportedFunctionSymbol |    Symbol for a function that is not defined in the current binary |
-	| DataSymbol |                Symbol for data in the current binary |
-	| ImportedDataSymbol |        Symbol for data that is not defined in the current binary |
-	| ExternalSymbol |            Symbols for data and code that reside outside the BinaryView |
-	| LibraryFunctionSymbol |     Symbols for external functions outside the library |
+| FunctionSymbol |            Symbol for function that exists in the current binary |
+| ImportAddressSymbol |       Symbol defined in the Import Address Table |
+| ImportedFunctionSymbol |    Symbol for a function that is not defined in the current binary |
+| DataSymbol |                Symbol for data in the current binary |
+| ImportedDataSymbol |        Symbol for data that is not defined in the current binary |
+| ExternalSymbol |            Symbols for data and code that reside outside the BinaryView |
+| LibraryFunctionSymbol |     Symbols for external functions outside the library |

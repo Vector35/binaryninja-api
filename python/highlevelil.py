@@ -624,10 +624,7 @@ class HighLevelILInstruction(object):
 		return core.BNGetHighLevelILSSAMemoryVersionAtILInstruction(self._function.handle, self._instr_index)
 
 	def get_ssa_var_version(self, var:'variable.Variable') -> int:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		return core.BNGetHighLevelILSSAVarVersionAtILInstruction(self._function.handle, var_data, self._instr_index)
 
 
@@ -837,10 +834,7 @@ class HighLevelILFunction(object):
 		return core.BNGetHighLevelILNonSSAInstructionIndex(self.handle, instr)
 
 	def get_ssa_var_definition(self, ssa_var:'mediumlevelil.SSAVariable') -> Optional[HighLevelILInstruction]:
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		result = core.BNGetHighLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
 		if result >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
@@ -854,10 +848,7 @@ class HighLevelILFunction(object):
 
 	def get_ssa_var_uses(self, ssa_var:'mediumlevelil.SSAVariable') -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		instrs = core.BNGetHighLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)
 		assert instrs is not None, "core.BNGetHighLevelILSSAVarUses returned None"
 		result = []
@@ -884,18 +875,12 @@ class HighLevelILFunction(object):
 		:return: whether the variable is live at any point in the function
 		:rtype: bool
 		"""
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		return core.BNIsHighLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
 
 	def get_var_definitions(self, var:'variable.Variable') -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		instrs = core.BNGetHighLevelILVariableDefinitions(self.handle, var_data, count)
 		assert instrs is not None, "core.BNGetHighLevelILVariableDefinitions returned None"
 		result = []
@@ -906,10 +891,7 @@ class HighLevelILFunction(object):
 
 	def get_var_uses(self, var:'variable.Variable') -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		instrs = core.BNGetHighLevelILVariableUses(self.handle, var_data, count)
 		assert instrs is not None, "core.BNGetHighLevelILVariableUses returned None"
 		result = []

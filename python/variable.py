@@ -683,21 +683,76 @@ class StackVariableReference(object):
 
 
 @decorators.passive
-class Variable(object):
-	def __init__(self, func, source_type, index, storage, name = None, var_type = None, identifier = None):
+@dataclass(frozen=True, order=True)
+class CoreVariable:
+	_source_type:int
+	index:int
+	storage:int
+
+	@property
+	def identifier(self) -> int:
+		return core.BNToVariableIdentifier(self.to_BNVariable())
+
+	@property
+	def source_type(self) -> VariableSourceType:
+		return VariableSourceType(self._source_type)
+
+	def to_BNVariable(self):
+		v = core.BNVariable()
+		v.type = self._source_type
+		v.index = self.index
+		v.storage = self.storage
+		return v
+
+	@classmethod
+	def from_BNVariable(cls, var:core.BNVariable):
+		return cls(var.type, var.index, var.storage)
+
+	@classmethod
+	def from_identifier(cls, identifier):
+		var = core.BNFromVariableIdentifier(identifier)
+		return cls(var.type, var.index, var.storage)
+
+@decorators.passive
+@dataclass(frozen=True, order=True)
+class VariableNameAndType(CoreVariable):
+	name:str
+	type:'binaryninja.types.Type'
+
+	@classmethod
+	def from_identifier(cls, identifier, name, type):
+		var = core.BNFromVariableIdentifier(identifier)
+		return cls(name, type, var.type, var.index, var.storage)
+
+	@classmethod
+	def from_core_variable(cls, var, name, type):
+		return cls(name, type, var.type, var.index, var.storage)
+
+
+class Variable:
+	def __init__(self, func:'binaryninja.function.Function', source_type:VariableSourceType, index:int, storage:int):
 		self._function = func
-		self._source_type = source_type
-		self._index = index
-		self._storage = storage
-		self._identifier = identifier
-		self._name = name
-		self._type = var_type
+		self._var = CoreVariable(source_type, index, storage)
+
+	@classmethod
+	def from_variable_name_and_type(cls, func:'binaryninja.function.Function', var:VariableNameAndType):
+		return cls(func, VariableSourceType(var.type), var.index, var.storage)
+
+	@classmethod
+	def from_core_variable(cls, func:'binaryninja.function.Function', var:CoreVariable):
+		return cls(func, var.source_type, var.index, var.storage)
+
+	@classmethod
+	def from_BNVariable(cls, func:'binaryninja.function.Function', var:core.BNVariable):
+		return cls(func, var.type, var.index, var.storage)
+
+	@classmethod
+	def from_identifier(cls, func:'binaryninja.function.Function', identifier:int):
+		var = core.BNFromVariableIdentifier(identifier)
+		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
 	def __repr__(self):
-		if self.type is not None:
-			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
-		else:
-			return f"<var {self.name}>"
+		return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
 
 	def __str__(self):
 		return self.name
@@ -705,7 +760,7 @@ class Variable(object):
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self.function) == (other.identifier, other.function)
+		return (self.identifier, self._function) == (other.identifier, other._function)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
@@ -715,108 +770,83 @@ class Variable(object):
 	def __lt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self.function) < (other.identifier, other.function)
+		return (self.identifier, self._function) < (other.identifier, other._function)
 
 	def __gt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self.function) > (other.identifier, other.function)
+		return (self.identifier, self._function) > (other.identifier, other._function)
 
 	def __le__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self.function) <= (other.identifier, other.function)
+		return (self.identifier, self._function) <= (other.identifier, other._function)
 
 	def __ge__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self.function) >= (other.identifier, other.function)
+		return (self.identifier, self._function) >= (other.identifier, other._function)
 
 	def __hash__(self):
-		return hash((self.identifier, self.function))
-
-	@property
-	def function(self) -> 'binaryninja.function.Function':
-		"""Function where the variable is defined"""
-		return self._function
-
-	@function.setter
-	def function(self, value:'binaryninja.function.Function'):
-		self._function = value
+		return hash((self.identifier))
 
 	@property
 	def source_type(self) -> VariableSourceType:
-		""":class:`~enums.VariableSourceType`"""
-		if not isinstance(self._source_type, VariableSourceType):
-			self._source_type = VariableSourceType(self._source_type)
-
-		return self._source_type
-
-	@source_type.setter
-	def source_type(self, value:VariableSourceType) -> None:
-		self._source_type = value
+		return self._var.source_type
 
 	@property
 	def index(self) -> int:
-		return self._index
-
-	@index.setter
-	def index(self, value:int) -> None:
-		self._index = value
+		return self._var.index
 
 	@property
 	def storage(self) -> int:
 		"""Stack offset for StackVariableSourceType, register index for RegisterVariableSourceType"""
-		return self._storage
-
-	@storage.setter
-	def storage(self, value:int) -> None:
-		self._storage = value
+		return self._var.storage
 
 	@property
 	def identifier(self) -> int:
-		if self._identifier is None:
-			self._identifier = core.BNToVariableIdentifier(self.to_BNVariable())
-		return self._identifier
+		return self._var.identifier
+
+	@property
+	def core_var(self) -> CoreVariable:
+		return self._var
+
+	@property
+	def var_name_and_type(self) -> VariableNameAndType:
+		return VariableNameAndType.from_core_variable(self._var, self.name, self.type)
 
 	@property
 	def name(self):
 		"""Name of the variable"""
-		if self._name is None:
-			if self._function is not None:
-				self._name = core.BNGetVariableName(self._function.handle, self.to_BNVariable())
-		return self._name
+		return core.BNGetVariableName(self._function.handle, self._var.to_BNVariable())
+
+	@name.setter
+	def name(self, name:Optional[str]) -> None:
+		if name is None:
+			name = ""
+		self._function.create_user_var(self, self.type, name)
 
 	@property
-	def type(self) -> Optional['binaryninja.types.Type']:
-		if self._type is None:
-			if self._function is not None:
-				var_type_conf = core.BNGetVariableType(self._function.handle, self.to_BNVariable())
-				if var_type_conf.type:
-					self._type = binaryninja.types.Type(var_type_conf.type, platform = self._function.platform, confidence = var_type_conf.confidence)
-		return self._type
+	def type(self) -> 'binaryninja.types.Type':
+		var_type_conf = core.BNGetVariableType(self._function.handle, self._var.to_BNVariable())
+		assert var_type_conf.type
+		_type = binaryninja.types.Type(var_type_conf.type, self._function.platform, var_type_conf.confidence)
+		return _type
 
-	def to_BNVariable(self):
-		v = core.BNVariable()
-		v.type = self.source_type
-		v.index = self._index
-		v.storage = self._storage
-		return v
+	@type.setter
+	def type(self, new_type:'binaryninja.types.Type') -> None:
+		self._function.create_user_var(self, new_type, self.name)
 
 	@property
 	def dead_store_elimination(self):
-		if self._function is not None and self._identifier is not None:
-			return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable()))
-		return None
+		return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self._var.to_BNVariable()))
 
 	@dead_store_elimination.setter
 	def dead_store_elimination(self, value):
-		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
+		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self._var.to_BNVariable(), value)
 
-	@staticmethod
-	def from_identifier(func, identifier, name=None, var_type=None):
-		var = core.BNFromVariableIdentifier(identifier)
-		return Variable(func, VariableSourceType(var.type), var.index, var.storage, name, var_type, identifier)
+	def to_BNVariable(self):
+		return self._var.to_BNVariable()
 
 @decorators.passive
 class ConstantReference(object):

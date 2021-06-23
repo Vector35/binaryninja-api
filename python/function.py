@@ -858,8 +858,19 @@ class Function(object):
 		assert v is not None, "core.BNGetStackLayout returned None"
 		try:
 			for i in range(0, count.value):
-				yield variable.Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-					types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence))
+				yield variable.Variable.from_BNVariable(self, v[i].var)
+		finally:
+			core.BNFreeVariableNameAndTypeList(v, count.value)
+
+	@property
+	def core_var_stack_layout(self) -> Generator['variable.CoreVariable', None, None]:
+		"""List of function stack variables (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetStackLayout(self.handle, count)
+		assert v is not None, "core.BNGetStackLayout returned None"
+		try:
+			for i in range(0, count.value):
+				yield variable.CoreVariable.from_BNVariable(v[i].var)
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
@@ -871,8 +882,19 @@ class Function(object):
 		assert v is not None, "core.BNGetFunctionVariables returned None"
 		try:
 			for i in range(0, count.value):
-				yield variable.Variable(self, v[i].var.type, v[i].var.index, v[i].var.storage, v[i].name,
-					types.Type(handle = core.BNNewTypeReference(v[i].type), platform = self.platform, confidence = v[i].typeConfidence))
+				yield variable.Variable.from_BNVariable(self, v[i].var)
+		finally:
+			core.BNFreeVariableNameAndTypeList(v, count.value)
+
+	@property
+	def core_vars(self) -> Generator['variable.CoreVariable', None, None]:
+		"""Generator of CoreVariable objects"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetFunctionVariables(self.handle, count)
+		assert v is not None, "core.BNGetFunctionVariables returned None"
+		try:
+			for i in range(0, count.value):
+				yield variable.CoreVariable.from_BNVariable(v[i].var)
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
@@ -1005,7 +1027,7 @@ class Function(object):
 		result = core.BNGetFunctionParameterVariables(self.handle)
 		var_list = []
 		for i in range(0, result.count):
-			var_list.append(variable.Variable(self, result.vars[i].type, result.vars[i].index, result.vars[i].storage))
+			var_list.append(variable.Variable.from_BNVariable(self, result.vars[i]))
 		confidence = result.confidence
 		core.BNFreeParameterVariables(result)
 		return variable.ParameterVariables(var_list, confidence, self)
@@ -1919,8 +1941,8 @@ class Function(object):
 		result = []
 		for i in range(0, count.value):
 			var_type = types.Type(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
-			result.append(variable.StackVariableReference(refs[i].sourceOperand, var_type,
-				refs[i].name, variable.Variable.from_identifier(self, refs[i].varIdentifier, refs[i].name, var_type),
+			var = variable.Variable.from_identifier(self, refs[i].varIdentifier)
+			result.append(variable.StackVariableReference(refs[i].sourceOperand, var_type, refs[i].name, var,
 				refs[i].referencedOffset, refs[i].size))
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
@@ -2499,46 +2521,26 @@ class Function(object):
 
 	def create_auto_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
 		tc = core.BNTypeWithConfidence()
 		tc.type = var_type.handle
 		tc.confidence = var_type.confidence
-		core.BNCreateAutoVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
+		core.BNCreateAutoVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def create_user_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
 		tc = core.BNTypeWithConfidence()
 		tc.type = var_type.handle
 		tc.confidence = var_type.confidence
-		core.BNCreateUserVariable(self.handle, var_data, tc, name, ignore_disjoint_uses)
+		core.BNCreateUserVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def delete_auto_var(self, var:'variable.Variable') -> None:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		core.BNDeleteAutoVariable(self.handle, var_data)
+		core.BNDeleteAutoVariable(self.handle, var.to_BNVariable())
 
 	def delete_user_var(self, var:'variable.Variable') -> None:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		core.BNDeleteUserVariable(self.handle, var_data)
+		core.BNDeleteUserVariable(self.handle, var.to_BNVariable())
 
 	def is_var_user_defined(self, var:'variable.Variable') -> bool:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		return core.BNIsVariableUserDefined(self.handle, var_data)
+		return core.BNIsVariableUserDefined(self.handle, var.to_BNVariable())
 
 	def get_stack_var_at_frame_offset(self, offset:int, addr:int, arch:Optional['architecture.Architecture']=None) -> \
 		Optional['variable.Variable']:
@@ -2549,9 +2551,7 @@ class Function(object):
 		found_var = core.BNVariableNameAndType()
 		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
 			return None
-		result = variable.Variable(self, found_var.var.type, found_var.var.index, found_var.var.storage,
-			found_var.name, types.Type(handle = core.BNNewTypeReference(found_var.type), platform = self.platform,
-			confidence = found_var.typeConfidence))
+		result = variable.Variable.from_BNVariable(self, found_var.var)
 		core.BNFreeVariableNameAndType(found_var)
 		return result
 
@@ -2576,7 +2576,7 @@ class Function(object):
 			raise Exception("can not get_reg_value_at_exit if Function.arch is")
 
 		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
-		return variable.RegisterValue(self.arch, result.value, confidence = result.confidence)
+		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	def set_auto_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.SizeWithConfidence'],\
 		arch:Optional['architecture.Architecture']=None) -> None:
@@ -2764,11 +2764,7 @@ class Function(object):
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
 
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		core.BNSetUserVariableValue(self.handle, var_data, def_site, value._to_api_object())
+		core.BNSetUserVariableValue(self.handle, var.to_BNVariable(), def_site, value._to_api_object())
 
 	def clear_user_var_value(self, var:'variable.Variable', def_addr:int) -> None:
 		"""
@@ -2795,11 +2791,7 @@ class Function(object):
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
 
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		core.BNClearUserVariableValue(self.handle, var_data, def_site)
+		core.BNClearUserVariableValue(self.handle, var.to_BNVariable(), def_site)
 
 	def get_all_user_var_values(self) -> \
 		Mapping['variable.Variable', Mapping['ArchAndAddr', 'variable.PossibleValueSet']]:
@@ -2816,7 +2808,7 @@ class Function(object):
 		i = 0
 		for i in range(count.value):
 			var_val = var_values[i]
-			var = variable.Variable(self, var_val.var.type, var_val.var.index, var_val.var.storage)
+			var = variable.Variable.from_BNVariable(self, var_val.var)
 			if var not in result:
 				result[var] = {}
 			def_site = ArchAndAddr(var_val.defSite.arch, var_val.defSite.address)
@@ -2948,11 +2940,7 @@ class Function(object):
 			>>> current_function.get_mlil_var_refs(var)
 		"""
 		count = ctypes.c_ulonglong(0)
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		refs = core.BNGetMediumLevelILVariableReferences(self.handle, var_data, count)
+		refs = core.BNGetMediumLevelILVariableReferences(self.handle, var.to_BNVariable(), count)
 		assert refs is not None, "core.BNGetMediumLevelILVariableReferences returned None"
 		result = []
 		for i in range(0, count.value):
@@ -3002,7 +2990,7 @@ class Function(object):
 			refs = core.BNGetMediumLevelILVariableReferencesInRange(self.handle, arch.handle, addr, length, count)
 			assert refs is not None, "core.BNGetMediumLevelILVariableReferencesInRange returned None"
 		for i in range(0, count.value):
-			var = variable.Variable(self, refs[i].var.type, refs[i].var.index, refs[i].var.storage)
+			var = variable.Variable.from_BNVariable(self, refs[i].var)
 			if refs[i].source.func:
 				func = Function(self.view, core.BNNewFunctionReference(refs[i].source.func))
 			else:
@@ -3032,11 +3020,7 @@ class Function(object):
 			>>> current_function.get_hlil_var_refs(var)
 		"""
 		count = ctypes.c_ulonglong(0)
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		refs = core.BNGetHighLevelILVariableReferences(self.handle, var_data, count)
+		refs = core.BNGetHighLevelILVariableReferences(self.handle, var.to_BNVariable(), count)
 		assert refs is not None, "core.BNGetHighLevelILVariableReferences returned None"
 		result = []
 		for i in range(0, count.value):
@@ -3080,7 +3064,7 @@ class Function(object):
 			refs = core.BNGetHighLevelILVariableReferencesInRange(self.handle, arch.handle, addr, length, count)
 			assert refs is not None, "core.BNGetHighLevelILVariableReferencesInRange returned None"
 		for i in range(0, count.value):
-			var = variable.Variable(self, refs[i].var.type, refs[i].var.index, refs[i].var.storage)
+			var = variable.Variable.from_BNVariable(self, refs[i].var)
 			if refs[i].source.func:
 				func = Function(self.view, core.BNNewFunctionReference(refs[i].source.func))
 			else:

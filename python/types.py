@@ -19,7 +19,8 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Generator, List, Union
+from typing import Generator, List, Union, Mapping, Tuple, Optional
+from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -28,6 +29,7 @@ from . import callingconvention
 from . import function
 from . import variable
 from . import architecture
+from . import types
 from . import log
 
 QualifiedNameType = Union[List[str], str, 'QualifiedName', List[bytes]]
@@ -588,7 +590,7 @@ class Type(object):
 					name = self._platform.arch.get_reg_name(params[i].location.storage)
 				elif params[i].location.type == VariableSourceType.StackVariableSourceType:
 					name = "arg_%x" % params[i].location.storage
-				param_location = variable.Variable(None, params[i].location.type, params[i].location.index,
+				param_location = variable.VariableNameAndType(params[i].location.type, params[i].location.index,
 					params[i].location.storage, name, param_type)
 			result.append(FunctionParameter(param_type, params[i].name, param_location))
 		core.BNFreeTypeParameterList(params, count.value)

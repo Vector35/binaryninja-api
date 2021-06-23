@@ -629,10 +629,7 @@ class MediumLevelILInstruction(object):
 		return result
 
 	def get_ssa_var_possible_values(self, ssa_var:SSAVariable, options:List[DataFlowQueryOption]=[]):
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		option_array = (ctypes.c_int * len(options))()
 		idx = 0
 		for option in options:
@@ -645,25 +642,22 @@ class MediumLevelILInstruction(object):
 		return result
 
 	def get_ssa_var_version(self, var:variable.Variable) -> int:
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		return core.BNGetMediumLevelILSSAVarVersionAtILInstruction(self._function.handle, var_data, self._instr_index)
 
 	def get_var_for_reg(self, reg:'architecture.RegisterType') -> variable.Variable:
 		reg = self._function.arch.get_reg_index(reg)
 		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self._function.handle, reg, self._instr_index)
-		return variable.Variable(self._function.source_function, result.type, result.index, result.storage)
+		return variable.Variable.from_BNVariable(self._function.source_function, result)
 
 	def get_var_for_flag(self, flag:'architecture.FlagType') -> variable.Variable:
 		flag = self._function.arch.get_flag_index(flag)
 		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self._function.handle, flag, self._instr_index)
-		return variable.Variable(self._function.source_function, result.type, result.index, result.storage)
+		return variable.Variable.from_BNVariable(self._function.source_function, result)
 
 	def get_var_for_stack_location(self, offset:int) -> variable.Variable:
 		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self._function.handle, offset, self._instr_index)
-		return variable.Variable(self._function.source_function, result.type, result.index, result.storage)
+		return variable.Variable.from_BNVariable(self._function.source_function, result)
 
 	def get_reg_value(self, reg:'architecture.RegisterType') -> 'variable.RegisterValue':
 		reg = self._function.arch.get_reg_index(reg)
@@ -1113,10 +1107,7 @@ class MediumLevelILFunction(object):
 		return core.BNGetMediumLevelILNonSSAInstructionIndex(self.handle, instr)
 
 	def get_ssa_var_definition(self, ssa_var:SSAVariable) -> Optional[MediumLevelILInstruction]:
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		result = core.BNGetMediumLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
 			return None
@@ -1130,10 +1121,7 @@ class MediumLevelILFunction(object):
 
 	def get_ssa_var_uses(self, ssa_var:SSAVariable) -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)
 		assert instrs is not None, "core.BNGetMediumLevelILSSAVarUses returned None"
 		result = []
@@ -1160,18 +1148,12 @@ class MediumLevelILFunction(object):
 		:return: whether the variable is live at any point in the function
 		:rtype: bool
 		"""
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		return core.BNIsMediumLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
 
 	def get_var_definitions(self, var:'variable.Variable') -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
 		assert instrs is not None, "core.BNGetMediumLevelILVariableDefinitions returned None"
 		result = []
@@ -1182,10 +1164,7 @@ class MediumLevelILFunction(object):
 
 	def get_var_uses(self, var:'variable.Variable') -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
 		assert instrs is not None, "core.BNGetMediumLevelILVariableDefinitions returned None"
 		result = []
@@ -1195,10 +1174,7 @@ class MediumLevelILFunction(object):
 		return result
 
 		count = ctypes.c_ulonglong()
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
+		var_data = var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
 		result = []
 		for i in range(0, count.value):
@@ -1207,10 +1183,7 @@ class MediumLevelILFunction(object):
 		return result
 
 	def get_ssa_var_value(self, ssa_var:SSAVariable) -> 'variable.RegisterValue':
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
+		var_data = ssa_var.var.to_BNVariable()
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, ssa_var.version)
 		result = variable.RegisterValue(self._arch, value)
 		return result

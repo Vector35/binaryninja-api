@@ -372,7 +372,7 @@ class CallingConvention(object):
 				func_obj = None
 			else:
 				func_obj = function.Function(handle = core.BNNewFunctionReference(func))
-			in_var_obj = variable.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			in_var_obj = variable.CoreVariable.from_BNVariable(in_var[0])
 			out_var = self.perform_get_incoming_var_for_parameter_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
 			result[0].index = out_var.index
@@ -389,7 +389,7 @@ class CallingConvention(object):
 				func_obj = None
 			else:
 				func_obj = function.Function(handle = core.BNNewFunctionReference(func))
-			in_var_obj = variable.Variable(func_obj, in_var[0].type, in_var[0].index, in_var[0].storage)
+			in_var_obj = variable.CoreVariable.from_BNVariable(in_var[0])
 			out_var = self.perform_get_parameter_var_for_incoming_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
 			result[0].index = out_var.index
@@ -408,28 +408,19 @@ class CallingConvention(object):
 		return variable.RegisterValue()
 
 	def perform_get_incoming_flag_value(self, reg, func):
-		return variable.RegisterValue()
+		return variable.Undetermined()
 
-	def perform_get_incoming_var_for_parameter_var(self, in_var, func):
-		in_buf = core.BNVariable()
-		in_buf.type = in_var.source_type
-		in_buf.index = in_var.index
-		in_buf.storage = in_var.storage
-		out_var = core.BNGetDefaultIncomingVariableForParameterVariable(self.handle, in_buf)
-		name = None
-		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
-			name = func.arch.get_reg_name(out_var.storage)
-		return variable.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+	def perform_get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable',
+		func:Optional['function.Function']=None):
+		out_var = core.BNGetDefaultIncomingVariableForParameterVariable(self.handle, in_var.to_BNVariable())
+		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def perform_get_parameter_var_for_incoming_var(self, in_var, func):
-		in_buf = core.BNVariable()
-		in_buf.type = in_var.source_type
-		in_buf.index = in_var.index
-		in_buf.storage = in_var.storage
-		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_buf)
-		return variable.Variable(func, out_var.type, out_var.index, out_var.storage)
+	def perform_get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable',
+		func:Optional['function.Function']=None):
+		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_var.to_BNVariable())
+		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def with_confidence(self, confidence):
+	def with_confidence(self, confidence:int):
 		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
 			confidence = confidence)
 
@@ -447,32 +438,23 @@ class CallingConvention(object):
 			func_handle = func.handle
 		return variable.RegisterValue(self.arch, core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle))
 
-	def get_incoming_var_for_parameter_var(self, in_var, func):
-		in_buf = core.BNVariable()
-		in_buf.type = in_var.source_type
-		in_buf.index = in_var.index
-		in_buf.storage = in_var.storage
+	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:'function.Function'):
+		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
 		else:
 			func_obj = func.handle
 		out_var = core.BNGetIncomingVariableForParameterVariable(self.handle, in_buf, func_obj)
-		name = None
-		if (func is not None) and (out_var.type == VariableSourceType.RegisterVariableSourceType):
-			name = func.arch.get_reg_name(out_var.storage)
-		return variable.Variable(func, out_var.type, out_var.index, out_var.storage, name)
+		return variable.Variable.from_BNVariable(func, out_var)
 
-	def get_parameter_var_for_incoming_var(self, in_var, func):
-		in_buf = core.BNVariable()
-		in_buf.type = in_var.source_type
-		in_buf.index = in_var.index
-		in_buf.storage = in_var.storage
+	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:'function.Function'):
+		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
 		else:
 			func_obj = func.handle
 		out_var = core.BNGetParameterVariableForIncomingVariable(self.handle, in_buf, func_obj)
-		return variable.Variable(func, out_var.type, out_var.index, out_var.storage)
+		return variable.Variable.from_BNVariable(func, out_var)
 
 	@property
 	def arch(self):

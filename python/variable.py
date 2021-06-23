@@ -21,217 +21,161 @@
 
 import ctypes
 from typing import List, Generator, Optional, Union, Set, Mapping
+from dataclasses import dataclass
 
 import binaryninja
 from . import _binaryninjacore as core
 from . import decorators
 from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination
 
-
-@decorators.passive
+@dataclass(frozen=True)
 class LookupTableEntry(object):
-	def __init__(self, from_values:List[int], to_value):
-		self._from_values = from_values
-		self._to_value = to_value
+	from_values:List[int]
+	to_value:int
 
 	def __repr__(self):
 		return f"[{', '.join([f'{i:#x}' for i in self.from_values])}] -> {self.to_value:#x}"
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._from_values, self._to_value) == (other._from_values, other._to_value)
+	def type(self):
+		return RegisterValueType.LookupTableValue
 
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
+@dataclass(frozen=True)
+class Confidence:
+	confidence:int=core.max_confidence
 
-	def __hash__(self):
-		return hash((self._from_values, self._to_value))
-
-	@property
-	def from_values(self):
-		return self._from_values
-
-	@property
-	def to_value(self):
-		return self._to_value
-
-
-@decorators.passive
-class RegisterValue(object):
-	def __init__(self, arch:Optional['binaryninja.architecture.Architecture']=None,
-		value:core.BNRegisterValue=None, confidence:int=core.max_confidence):
-		self._is_constant = False
-		self._value = None
-		self._arch = None
-		# self._reg:Optional[Union[binaryninja.architecture.RegisterName, binaryninja.architecture.RegisterIndex]] = None
-		self._is_constant = False
-		self._offset = None
-		if value is None:
-			self._type = RegisterValueType.UndeterminedValue
-		else:
-			assert isinstance(value.value, int), "BNRegisterValue.value isn't an integer"
-			self._type = RegisterValueType(value.state)
-			if value.state == RegisterValueType.EntryValue:
-				self._arch = arch
-				if arch is not None:
-					self._value = arch.get_reg_name(binaryninja.architecture.RegisterIndex(value.value))
-				else:
-					self._value = value.value
-			elif (value.state == RegisterValueType.ConstantValue) or (value.state == RegisterValueType.ConstantPointerValue):
-				self._value = value.value
-				self._is_constant = True
-			elif value.state == RegisterValueType.StackFrameOffset:
-				self._offset = value.value
-			elif value.state == RegisterValueType.ImportedAddressValue:
-				self._value = value.value
-		self._confidence = confidence
-
-	def __repr__(self):
-		if self._type == RegisterValueType.EntryValue:
-			return f"<entry {self._value:s}>"
-		if self._type == RegisterValueType.ConstantValue:
-			return f"<const {self._value:#x}>"
-		if self._type == RegisterValueType.ConstantPointerValue:
-			return f"<const ptr {self._value:#x}>"
-		if self._type == RegisterValueType.StackFrameOffset:
-			return f"<stack frame offset {self._offset:#x}>"
-		if self._type == RegisterValueType.ReturnAddressValue:
-			return "<return address>"
-		if self._type == RegisterValueType.ImportedAddressValue:
-			return f"<imported address from entry {self._value:#x}>"
-		return "<undetermined>"
-
-	def __hash__(self):
-		if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue, RegisterValueType.EntryValue]:
-			return hash(self._value)
-		elif self._type == RegisterValueType.StackFrameOffset:
-			return hash(self._offset)
-
-	def __eq__(self, other):
-		if self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and isinstance(other, int):
-			return self._value == other
-		elif self._type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue, RegisterValueType.ImportedAddressValue, RegisterValueType.ReturnAddressValue] and hasattr(other, 'type') and other.type == self._type:
-			return self._value == other.value
-		elif self._type == RegisterValueType.EntryValue and hasattr(other, "type") and other.type == self._type:
-			return self._value == other.reg
-		elif self._type == RegisterValueType.StackFrameOffset and hasattr(other, 'type') and other.type == self._type:
-			return self._offset == other.offset
-		elif self._type == RegisterValueType.StackFrameOffset and isinstance(other, int):
-			return self._offset == other
-		return NotImplemented
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
+@dataclass(frozen=True)
+class RegisterValue:
+	value:int
+	offset:int
+	type:RegisterValueType = RegisterValueType.UndeterminedValue
+	confidence:int=core.max_confidence
 
 	def _to_api_object(self):
 		result = core.BNRegisterValue()
-		result.type = self._type
-		result._value = 0
-		if self._type == RegisterValueType.EntryValue:
-			if isinstance(self._value, binaryninja.architecture.RegisterName):
-				if self._arch is None:
-					raise Exception("Can not convert Variable to API object without an Architecture set")
-				result._value = self._arch.get_reg_index(self._value)
-			else:
-				result._value = self._value
-		elif (self._type == RegisterValueType.ConstantValue) or (self._type == RegisterValueType.ConstantPointerValue):
-			result._value = self._value
-		elif self._type == RegisterValueType.StackFrameOffset:
-			result._value = self._offset
-		elif self._type == RegisterValueType.ImportedAddressValue:
-			result._value = self._value
+		result.type = self.type
+		result._value = self.value
+		result.offset = self.offset
 		return result
+
+	def _to_api_object_with_confidence(self):
+		result = core.BNRegisterValue()
+		result.type = self.type
+		result._value = self.value
+		result.offset = self.offset
+		result.confidence = self.confidence
+		return result
+
+	def __bool__(self):
+		return self.value != 0
+
+	def __int__(self):
+		return self.value
+
+	def __eq__(self, other):
+		if isinstance(other, int):
+			return int(self) == other
+		elif isinstance(other, bool):
+			return bool(self) == other
+		elif isinstance(other, self.__class__):
+			return (self.type, self.offset, self.type, self.confidence) == \
+				(other.type, other.offset, other.type, other.confidence)
+		assert False, f"no comparison for types {repr(self)} and {repr(other)}"
 
 	@classmethod
-	def undetermined(cls):
-		return RegisterValue()
+	def from_BNRegisterValue(cls, reg_value:Union[core.BNRegisterValue, core.BNRegisterValueWithConfidence],
+		arch:Optional['binaryninja.architecture.Architecture']=None) -> 'RegisterValue':
+		confidence = core.max_confidence
+		if isinstance(reg_value, core.BNRegisterValueWithConfidence):
+			confidence = reg_value.confidence
+		if reg_value.state == RegisterValueType.EntryValue:
+			reg = None
+			if arch is not None:
+				reg = arch.get_reg_name(binaryninja.architecture.RegisterIndex(reg_value.value))
+			return EntryRegisterValue(reg_value.value, reg=reg, confidence=confidence)
+		elif reg_value.state == RegisterValueType.ConstantValue:
+			return ConstantRegisterValue(reg_value.value, confidence=confidence)
+		elif reg_value.state == RegisterValueType.ConstantValue:
+			return ConstantPointerRegisterValue(reg_value.value, confidence=confidence)
+		elif reg_value.state == RegisterValueType.StackFrameOffset:
+			return StackFrameOffsetRegisterValue(reg_value.value, reg_value.offset, confidence=confidence)
+		elif reg_value.state == RegisterValueType.ImportedAddressValue:
+			return ImportedAddressRegisterValue(reg_value.value, confidence=confidence)
+		elif reg_value.state == RegisterValueType.UndeterminedValue:
+			return Undetermined()
+		assert False, f"RegisterValueType {reg_value.state} not handled"
+
+
+@dataclass(frozen=True, eq=False)
+class Undetermined(RegisterValue):
+	value:int = 0
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.UndeterminedValue
+
+
+@dataclass(frozen=True, eq=False)
+class ConstantRegisterValue(RegisterValue):
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.ConstantValue
+
+	def __repr__(self):
+		return f"<const {self.value:#x}>"
+
+
+@dataclass(frozen=True, eq=False)
+class ConstantPointerRegisterValue(RegisterValue):
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.ConstantPointerValue
+
+	def __repr__(self):
+		return f"<const ptr {self.value:#x}>"
+
+
+@dataclass(frozen=True, eq=False)
+class ImportedAddressRegisterValue(RegisterValue):
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.ImportedAddressValue
+
+	def __repr__(self):
+		return f"<imported address from entry {self.value:#x}>"
+
+
+@dataclass(frozen=True, eq=False)
+class ReturnAddressRegisterValue(RegisterValue):
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.ReturnAddressValue
+
+	def __repr__(self):
+		return "<return address>"
+
+
+@dataclass(frozen=True, eq=False)
+class EntryRegisterValue(RegisterValue):
+	value:int = 0
+	offset:int = 0
+	type:RegisterValueType = RegisterValueType.EntryValue
+	reg:Optional['binaryninja.architecture.RegisterName'] = None
+
+	def __repr__(self):
+		return f"<entry {self.value}>"
 
 	@classmethod
-	def entry_value(cls, arch:'binaryninja.architecture.Architecture', reg:'binaryninja.architecture.RegisterName') -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.EntryValue
-		result._arch = arch
-		result._value = reg
-		return result
+	def from_BNRegisterValue(cls, value:core.BNRegisterValue):
+		cls(value.state, value.value, value.offset)
 
-	@staticmethod
-	def constant(value:int) -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.ConstantValue
-		result._value = value
-		result._is_constant = True
-		return result
 
-	@staticmethod
-	def constant_ptr(value:int) -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.ConstantPointerValue
-		result._value = value
-		result._is_constant = True
-		return result
+@dataclass(frozen=True, eq=False)
+class StackFrameOffsetRegisterValue(RegisterValue):
+	type:RegisterValueType = RegisterValueType.StackFrameOffset
 
-	@staticmethod
-	def stack_frame_offset(offset:int) -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.StackFrameOffset
-		result._offset = offset
-		return result
+	def __repr__(self):
+		return f"<stack frame offset {self.offset:#x}>"
 
-	@staticmethod
-	def imported_address(value) -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.ImportedAddressValue
-		result._value = value
-		return result
+@dataclass(frozen=True, eq=False)
+class ExternalPointerRegisterValue(RegisterValue):
+	type:RegisterValueType = RegisterValueType.ExternalPointerValue
 
-	@staticmethod
-	def return_address() -> 'RegisterValue':
-		result = RegisterValue()
-		result._type = RegisterValueType.ReturnAddressValue
-		return result
-
-	@property
-	def is_constant(self) -> bool:
-		"""Boolean for whether the RegisterValue is known to be constant (read-only)"""
-		return self._is_constant
-
-	@property
-	def type(self) -> RegisterValueType:
-		""":class:`~enums.RegisterValueType` (read-only)"""
-		return self._type
-
-	@property
-	def arch(self) -> Optional['binaryninja.architecture.Architecture']:
-		"""Architecture where it exists, None otherwise (read-only)"""
-		return self._arch
-
-	@property
-	def reg(self) -> 'binaryninja.architecture.RegisterName':
-		"""Register Name where the Architecture exists raises exception otherwise (read-only)"""
-		if not isinstance(self._value, binaryninja.architecture.RegisterName):
-			raise Exception("Attempting to access register when property doesn't exist")
-		return self._value
-
-	@property
-	def value(self) -> Optional[Union[int, 'binaryninja.architecture.RegisterName']]:
-		"""Value where it exists, None otherwise (read-only)"""
-		return self._value
-
-	@property
-	def offset(self) -> Optional[int]:
-		"""Offset where it exists, None otherwise (read-only)"""
-		return self._offset
-
-	@property
-	def confidence(self) -> Optional[int]:
-		"""Confidence where it exists, None otherwise (read-only)"""
-		return self._confidence
-
+	def __repr__(self):
+		return f"<external {self.value:#x} + offset {self.offset:#x}>"
 
 @decorators.passive
 class ValueRange(object):

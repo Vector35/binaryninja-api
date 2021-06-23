@@ -351,7 +351,7 @@ class CallingConvention(object):
 			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = variable.RegisterValue()._to_api_object()
+			api_obj = variable.Undetermined()._to_api_object()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
@@ -362,7 +362,7 @@ class CallingConvention(object):
 			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = variable.RegisterValue()._to_api_object()
+			api_obj = variable.Undetermined()._to_api_object()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
@@ -400,12 +400,12 @@ class CallingConvention(object):
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
 
-	def perform_get_incoming_reg_value(self, reg, func):
+	def perform_get_incoming_reg_value(self, reg:'architecture.RegisterName', func:'function.Function'):
 		reg_stack = self.arch.get_reg_stack_for_reg(reg)
 		if reg_stack is not None:
 			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
-				return variable.RegisterValue.constant(0)
-		return variable.RegisterValue()
+				return variable.ConstantRegisterValue(0)
+		return variable.Undetermined()
 
 	def perform_get_incoming_flag_value(self, reg, func):
 		return variable.Undetermined()
@@ -424,19 +424,19 @@ class CallingConvention(object):
 		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
 			confidence = confidence)
 
-	def get_incoming_reg_value(self, reg, func):
+	def get_incoming_reg_value(self, reg:'architecture.RegisterType', func):
 		reg_num = self.arch.get_reg_index(reg)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return variable.RegisterValue(self.arch, core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle))
+		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle), self.arch)
 
 	def get_incoming_flag_value(self, flag, func):
 		reg_num = self.arch.get_flag_index(flag)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return variable.RegisterValue(self.arch, core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle))
+		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle), self.arch)
 
 	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:'function.Function'):
 		in_buf = in_var.to_BNVariable()

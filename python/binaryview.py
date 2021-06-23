@@ -2074,7 +2074,7 @@ class BinaryView(object):
 	def global_pointer_value(self):
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
-		return variable.RegisterValue(self.arch, result.value, confidence = result.confidence)
+		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	@property
 	def parameters_for_analysis(self):

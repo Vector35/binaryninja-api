@@ -954,7 +954,7 @@ class LowLevelILInstruction(object):
 	def value(self) -> 'variable.RegisterValue':
 		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetLowLevelILExprValue(self._function.handle, self.expr_index)
-		return variable.RegisterValue(self._function.arch, value)
+		return variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 
 	@property
 	def possible_values(self) -> 'variable.PossibleValueSet':
@@ -1005,14 +1005,14 @@ class LowLevelILInstruction(object):
 			raise Exception("Can not call get_reg_value on function with Architecture set to None")
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAtInstruction(self._function.handle, reg, self._instr_index)
-		return variable.RegisterValue(self._function.arch, value)
+		return variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 
 	def get_reg_value_after(self, reg:'architecture.RegisterType') -> variable.RegisterValue:
 		if self._function.arch is None:
 			raise Exception("Can not call get_reg_value_after on function with Architecture set to None")
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAfterInstruction(self._function.handle, reg, self._instr_index)
-		return variable.RegisterValue(self._function.arch, value)
+		return variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 
 	def get_possible_reg_values(self, reg:'architecture.RegisterType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
 		if self._function.arch is None:
@@ -1049,7 +1049,7 @@ class LowLevelILInstruction(object):
 			raise Exception("Can not call get_flag_value on function with Architecture set to None")
 		flag = self._function.arch.get_flag_index(flag)
 		value = core.BNGetLowLevelILFlagValueAtInstruction(self._function.handle, flag, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_flag_value_after(self, flag:'architecture.FlagType') -> 'variable.RegisterValue':
@@ -1057,7 +1057,7 @@ class LowLevelILInstruction(object):
 			raise Exception("Can not call get_flag_value_after on function with Architecture set to None")
 		flag = self._function.arch.get_flag_index(flag)
 		value = core.BNGetLowLevelILFlagValueAfterInstruction(self._function.handle, flag, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_possible_flag_values(self, flag:'architecture.FlagType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
@@ -1092,12 +1092,12 @@ class LowLevelILInstruction(object):
 
 	def get_stack_contents(self, offset:int, size:int) -> 'variable.RegisterValue':
 		value = core.BNGetLowLevelILStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_stack_contents_after(self, offset:int, size:int) -> 'variable.RegisterValue':
 		value = core.BNGetLowLevelILStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_possible_stack_contents(self, offset:int, size:int, options:List[DataFlowQueryOption]=[]) -> variable.PossibleValueSet:
@@ -3076,13 +3076,13 @@ class LowLevelILFunction(object):
 	def get_ssa_reg_value(self, reg_ssa:SSARegister) -> 'variable.RegisterValue':
 		reg = self.arch.get_reg_index(reg_ssa.reg)
 		value = core.BNGetLowLevelILSSARegisterValue(self.handle, reg, reg_ssa.version)
-		result = variable.RegisterValue(self._arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
 
 	def get_ssa_flag_value(self, flag_ssa:SSAFlag) -> 'variable.RegisterValue':
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, flag_ssa.version)
-		result = variable.RegisterValue(self._arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
 
 	def get_medium_level_il_instruction_index(self, instr:InstructionIndex) -> Optional['mediumlevelil.InstructionIndex']:

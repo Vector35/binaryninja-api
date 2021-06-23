@@ -1155,7 +1155,7 @@ class Function(object):
 	def global_pointer_value(self) -> variable.RegisterValue:
 		"""Discovered value of the global pointer register, if the function uses one (read-only)"""
 		result = core.BNGetFunctionGlobalPointerValue(self.handle)
-		return variable.RegisterValue(self.arch, result.value, confidence = result.confidence)
+		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
 	@property
 	def comment(self) -> str:
@@ -1525,7 +1525,7 @@ class Function(object):
 			arch = self.arch
 		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
-		result = variable.RegisterValue(arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
 		return result
 
 	@property
@@ -1590,7 +1590,7 @@ class Function(object):
 			arch = self.arch
 		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
-		result = variable.RegisterValue(arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
 		return result
 
 	def get_auto_address_tags_at(self, addr, arch=None):
@@ -1819,7 +1819,7 @@ class Function(object):
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
-		result = variable.RegisterValue(arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
 		return result
 
 	def get_stack_contents_after(self, addr:int, offset:int, size:int,
@@ -1829,7 +1829,7 @@ class Function(object):
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
-		result = variable.RegisterValue(arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
 		return result
 
 	def get_parameter_at(self, addr:int, func_type:Optional['types.Type'], i:int,
@@ -1843,7 +1843,7 @@ class Function(object):
 		if func_type is not None:
 			_func_type = func_type.handle
 		value = core.BNGetParameterValueAtInstruction(self.handle, arch.handle, addr, _func_type, i)
-		result = variable.RegisterValue(arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
 		return result
 
 	def remove_user_address_tags_of_type(self, addr, tag_type, arch=None):
@@ -1868,7 +1868,7 @@ class Function(object):
 		if func_type is not None:
 			_func_type = func_type.handle
 		value = core.BNGetParameterValueAtLowLevelILInstruction(self.handle, instr, _func_type, i)
-		result = variable.RegisterValue(self.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self.arch)
 		return result
 
 	def get_regs_read_by(self, addr:int, arch:Optional['architecture.Architecture']=None) -> List['architecture.RegisterName']:

@@ -454,7 +454,7 @@ class MediumLevelILInstruction(object):
 	def value(self) -> variable.RegisterValue:
 		"""Value of expression if constant or a known value (read-only)"""
 		value = core.BNGetMediumLevelILExprValue(self._function.handle, self._expr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	@property
@@ -662,13 +662,13 @@ class MediumLevelILInstruction(object):
 	def get_reg_value(self, reg:'architecture.RegisterType') -> 'variable.RegisterValue':
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILRegisterValueAtInstruction(self._function.handle, reg, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_reg_value_after(self, reg:'architecture.RegisterType') -> 'variable.RegisterValue':
 		reg = self._function.arch.get_reg_index(reg)
 		value = core.BNGetMediumLevelILRegisterValueAfterInstruction(self._function.handle, reg, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_possible_reg_values(self, reg:'architecture.RegisterType',
@@ -702,13 +702,13 @@ class MediumLevelILInstruction(object):
 	def get_flag_value(self, flag:'architecture.FlagType') -> 'variable.RegisterValue':
 		flag = self._function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILFlagValueAtInstruction(self._function.handle, flag, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_flag_value_after(self, flag:'architecture.FlagType') -> 'variable.RegisterValue':
 		flag = self._function.arch.get_flag_index(flag)
 		value = core.BNGetMediumLevelILFlagValueAfterInstruction(self._function.handle, flag, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_possible_flag_values(self, flag:'architecture.FlagType',
@@ -741,12 +741,12 @@ class MediumLevelILInstruction(object):
 
 	def get_stack_contents(self, offset:int, size:int) -> 'variable.RegisterValue':
 		value = core.BNGetMediumLevelILStackContentsAtInstruction(self._function.handle, offset, size, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_stack_contents_after(self, offset:int, size:int) -> 'variable.RegisterValue':
 		value = core.BNGetMediumLevelILStackContentsAfterInstruction(self._function.handle, offset, size, self._instr_index)
-		result = variable.RegisterValue(self._function.arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._function.arch)
 		return result
 
 	def get_possible_stack_contents(self, offset:int, size:int,
@@ -1185,7 +1185,7 @@ class MediumLevelILFunction(object):
 	def get_ssa_var_value(self, ssa_var:SSAVariable) -> 'variable.RegisterValue':
 		var_data = ssa_var.var.to_BNVariable()
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, ssa_var.version)
-		result = variable.RegisterValue(self._arch, value)
+		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
 
 	def get_low_level_il_instruction_index(self, instr:InstructionIndex) -> Optional['lowlevelil.InstructionIndex']:

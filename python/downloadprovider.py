@@ -397,7 +397,7 @@ try:
 			if b"Content-Length" in headers:
 				del headers[b"Content-Length"]
 
-			r = requests.request(pyNativeStr(method), pyNativeStr(url), headers=headers, data=data_generator, proxies=proxies, stream=True)
+			r = requests.request(method.decode('utf8'), url.decode('utf8'), headers=headers, data=data_generator, proxies=proxies, stream=True)
 
 			total_size = 0
 			for (key, value) in r.headers.items():

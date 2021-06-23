@@ -590,7 +590,7 @@ class HighLevelILInstruction(object):
 		"""Value of expression if constant or a known value (read-only)"""
 		mlil = self.mlil
 		if mlil is None:
-			return variable.RegisterValue()
+			return variable.Undetermined()
 		return mlil.value
 
 	@property

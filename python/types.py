@@ -1662,10 +1662,12 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 	output = ctypes.c_char_p()
 	errors = ctypes.c_char_p()
 	result = core.BNPreprocessSource(source, filename, output, errors, dir_buf, len(include_dirs))
-	output_str = output.value
-	error_str = errors.value
-	core.BNFreeString(ctypes.cast(output, ctypes.POINTER(ctypes.c_byte)))
-	core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+	assert output.value is not None
+	assert errors.value is not None
+	output_str = output.value.decode('utf-8')
+	error_str = errors.value.decode('utf-8')
+	core.free_string(output)
+	core.free_string(errors)
 	if result:
 		return (output_str, error_str)
 	return (None, error_str)

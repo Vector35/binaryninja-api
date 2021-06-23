@@ -209,13 +209,16 @@ int main(int argc, char* argv[])
 	fprintf(out, "def cstr(var) -> Optional[str]:\n");
 	fprintf(out, "	if var is None:\n");
 	fprintf(out, "		return None\n");
-	fprintf(out, "	return var.encode(\"utf-8\")\n");
+	fprintf(out, "	return var.encode(\"utf-8\")\n\n");
 
 	fprintf(out, "def pyNativeStr(arg):\n");
 	fprintf(out, "	if isinstance(arg, str):\n");
 	fprintf(out, "		return arg\n");
 	fprintf(out, "	else:\n");
-	fprintf(out, "		return arg.decode('utf8')\n");
+	fprintf(out, "		return arg.decode('utf8')\n\n");
+
+	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
+	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
@@ -245,6 +248,8 @@ int main(int argc, char* argv[])
 
 			if (!stringField)
 				fprintf(out, "\tpass\n");
+
+			fprintf(out, "%sPointer = ctypes.POINTER(%s)\n", name.c_str(), name.c_str());
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
@@ -305,7 +310,6 @@ int main(int argc, char* argv[])
 
 				if (requiresDependency)
 					continue;
-
 				fprintf(out, "%s._fields_ = [\n", name.c_str());
 				for (auto& j : type->GetStructure()->GetMembers())
 				{

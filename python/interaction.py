@@ -1072,7 +1072,7 @@ def get_text_line_input(prompt, title):
 	if not core.BNGetTextLineInput(value, prompt, title):
 		return None
 	result = value.value
-	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	core.free_string(value)
 	return result
 
 
@@ -1172,7 +1172,7 @@ def get_open_filename_input(prompt:str, ext:str="") -> Optional[str]:
 		return None
 	result = value.value
 	assert result is not None
-	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	core.free_string(value)
 	return result.decode("utf-8")
 
 
@@ -1197,7 +1197,7 @@ def get_save_filename_input(prompt:str, ext:str="", default_name:str="") -> Opti
 		return None
 	result = value.value
 	assert result is not None
-	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	core.free_string(value)
 	return result.decode("utf-8")
 
 
@@ -1220,7 +1220,7 @@ def get_directory_name_input(prompt:str, default_name:str=""):
 		return None
 	result = value.value
 	assert result is not None
-	core.BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
+	core.free_string(value)
 	return result.decode("utf-8")
 
 

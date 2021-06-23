@@ -38,7 +38,7 @@ class _UpdateChannelMetaClass(type):
 		assert channels is not None, "core.BNGetUpdateChannels returned None"
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		try:
 			for i in range(0, count.value):
@@ -54,7 +54,7 @@ class _UpdateChannelMetaClass(type):
 		assert channels is not None, "core.BNGetUpdateChannels returned None"
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		result = None
 		for i in range(0, count.value):
@@ -103,7 +103,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 		assert versions is not None, "core.BNGetUpdateChannelVersions returned None"
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		result = []
 		for i in range(0, count.value):
@@ -120,7 +120,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 		assert versions is not None, "core.BNGetUpdateChannelVersions returned None"
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		result = None
 		for i in range(0, count.value):
@@ -137,7 +137,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 		result = core.BNAreUpdatesAvailable(self._name, None, None, errors)
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		return result
 
@@ -159,7 +159,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 		result = core.BNUpdateToLatestVersion(self._name, errors, cb.cb, None)
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		return UpdateResult(result)
 
@@ -207,7 +207,7 @@ class UpdateVersion(object):
 		result = core.BNUpdateToVersion(self._channel.name, self._version, errors, cb.cb, None)
 		if errors:
 			error_str = errors.value
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise IOError(error_str)
 		return UpdateResult(result)
 
@@ -294,7 +294,7 @@ def install_pending_update():
 	core.BNInstallPendingUpdate(errors)
 	if errors:
 		error_str = errors.value
-		core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+		core.free_string(errors)
 		raise IOError(error_str)
 
 

@@ -5497,7 +5497,7 @@ class BinaryView(object):
 		if not core.BNParseTypeString(self.handle, text, result, errors, type_list):
 			assert errors.value is not None, "core.BNParseTypeString returned 'errors' set to None"
 			error_str = errors.value.decode("utf-8")
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise SyntaxError(error_str)
 		type_obj = _types.Type(core.BNNewTypeReference(result.type), platform = self.platform)
 		name = _types.QualifiedName._from_core_struct(result.name)
@@ -5530,7 +5530,7 @@ class BinaryView(object):
 		if not core.BNParseTypesString(self.handle, text, parse, errors, type_list):
 			assert errors.value is not None, "core.BNParseTypesString returned errors set to None"
 			error_str = errors.value.decode("utf-8")
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise SyntaxError(error_str)
 
 		type_dict = {}
@@ -5591,7 +5591,7 @@ class BinaryView(object):
 			else:
 				error_str = "Error parsing specified PossibleValueSet"
 			core.BNFreePossibleValueSet(result)
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
 
@@ -6685,7 +6685,7 @@ class BinaryView(object):
 		if not core.BNParseExpression(self.handle, expression, offset, here, errors):
 			assert errors.value is not None, "core.BNParseExpression returned errors set to None"
 			error_str = errors.value.decode("utf-8")
-			core.BNFreeString(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
+			core.free_string(errors)
 			raise ValueError(error_str)
 		return offset.value
 

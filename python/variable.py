@@ -21,7 +21,7 @@
 
 import ctypes
 from typing import List, Generator, Optional, Union, Set, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import binaryninja
 from . import _binaryninjacore as core
@@ -39,9 +39,6 @@ class LookupTableEntry(object):
 	def type(self):
 		return RegisterValueType.LookupTableValue
 
-@dataclass(frozen=True)
-class Confidence:
-	confidence:int=core.max_confidence
 
 @dataclass(frozen=True)
 class RegisterValue:
@@ -52,16 +49,14 @@ class RegisterValue:
 
 	def _to_api_object(self):
 		result = core.BNRegisterValue()
-		result.type = self.type
-		result._value = self.value
+		result.state = self.type
+		result.value = self.value
 		result.offset = self.offset
 		return result
 
 	def _to_api_object_with_confidence(self):
-		result = core.BNRegisterValue()
-		result.type = self.type
-		result._value = self.value
-		result.offset = self.offset
+		result = core.BNRegisterValueWithConfidence()
+		result.value = self._to_api_object()
 		result.confidence = self.confidence
 		return result
 
@@ -87,6 +82,7 @@ class RegisterValue:
 		confidence = core.max_confidence
 		if isinstance(reg_value, core.BNRegisterValueWithConfidence):
 			confidence = reg_value.confidence
+			reg_value = reg_value.value
 		if reg_value.state == RegisterValueType.EntryValue:
 			reg = None
 			if arch is not None:
@@ -94,14 +90,18 @@ class RegisterValue:
 			return EntryRegisterValue(reg_value.value, reg=reg, confidence=confidence)
 		elif reg_value.state == RegisterValueType.ConstantValue:
 			return ConstantRegisterValue(reg_value.value, confidence=confidence)
-		elif reg_value.state == RegisterValueType.ConstantValue:
+		elif reg_value.state == RegisterValueType.ConstantPointerValue:
 			return ConstantPointerRegisterValue(reg_value.value, confidence=confidence)
 		elif reg_value.state == RegisterValueType.StackFrameOffset:
-			return StackFrameOffsetRegisterValue(reg_value.value, reg_value.offset, confidence=confidence)
+			return StackFrameOffsetRegisterValue(reg_value.value, confidence=confidence)
 		elif reg_value.state == RegisterValueType.ImportedAddressValue:
 			return ImportedAddressRegisterValue(reg_value.value, confidence=confidence)
 		elif reg_value.state == RegisterValueType.UndeterminedValue:
 			return Undetermined()
+		elif reg_value.state == RegisterValueType.ReturnAddressValue:
+			return ReturnAddressRegisterValue(reg_value.value, confidence=confidence)
+		elif reg_value.state == RegisterValueType.ExternalPointerValue:
+			return ExternalPointerRegisterValue(reg_value.value, reg_value.offset, confidence=confidence)
 		assert False, f"RegisterValueType {reg_value.state} not handled"
 
 
@@ -110,6 +110,9 @@ class Undetermined(RegisterValue):
 	value:int = 0
 	offset:int = 0
 	type:RegisterValueType = RegisterValueType.UndeterminedValue
+
+	def __repr__(self):
+		return "<undetermined>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -156,19 +159,18 @@ class EntryRegisterValue(RegisterValue):
 	reg:Optional['binaryninja.architecture.RegisterName'] = None
 
 	def __repr__(self):
+		if self.reg is not None:
+			return f"<entry {self.reg}>"
 		return f"<entry {self.value}>"
-
-	@classmethod
-	def from_BNRegisterValue(cls, value:core.BNRegisterValue):
-		cls(value.state, value.value, value.offset)
 
 
 @dataclass(frozen=True, eq=False)
 class StackFrameOffsetRegisterValue(RegisterValue):
+	offset:int = 0
 	type:RegisterValueType = RegisterValueType.StackFrameOffset
 
 	def __repr__(self):
-		return f"<stack frame offset {self.offset:#x}>"
+		return f"<stack frame offset {self.value:#x}>"
 
 @dataclass(frozen=True, eq=False)
 class ExternalPointerRegisterValue(RegisterValue):
@@ -177,39 +179,22 @@ class ExternalPointerRegisterValue(RegisterValue):
 	def __repr__(self):
 		return f"<external {self.value:#x} + offset {self.offset:#x}>"
 
-@decorators.passive
+
+@dataclass(frozen=True)
 class ValueRange(object):
-	def __init__(self, start, end, step):
-		self._start = start
-		self._end = end
-		self._step = step
+	start:int
+	end:int
+	step:int
 
 	def __repr__(self):
 		if self.step == 1:
 			return f"<range: {self.start:#x} to {self.end:#x}>"
 		return f"<range: {self.start:#x} to {self.end:#x}, step {self.step:#x}>"
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self.start == other.start and self.end == other.end and self.step == other.step
-
 	def __contains__(self, other):
 		if not isinstance(other, int):
 			return NotImplemented
-		return other in range(self._start, self._end, self._step)
-
-	@property
-	def start(self):
-		return self._start
-
-	@property
-	def end(self):
-		return self._end
-
-	@property
-	def step(self):
-		return self._step
+		return other in range(self.start, self.end, self.step)
 
 
 @decorators.passive
@@ -390,7 +375,8 @@ class PossibleValueSet(object):
 			for value in self.values:
 				values[i] = value
 				i += 1
-			result.valueSet = ctypes.cast(values, ctypes.POINTER(ctypes.c_longlong))
+			int_ptr = ctypes.POINTER(ctypes.c_longlong)
+			result.valueSet = ctypes.cast(values, int_ptr)
 			result.count = self.count
 		return result
 
@@ -566,67 +552,31 @@ class PossibleValueSet(object):
 		return result
 
 
-@decorators.passive
+@dataclass(frozen=True)
 class StackVariableReference(object):
-	def __init__(self, src_operand, t, name, var, ref_ofs, size):
-		self._source_operand = src_operand
-		self._type = t
-		self._name = name
-		self._var = var
-		self._referenced_offset = ref_ofs
-		self._size = size
-		if self._source_operand == 0xffffffff:
-			self._source_operand = None
+	_source_operand:Optional[int]
+	type:'binaryninja.types.Type'
+	name:str
+	var:'Variable'
+	referenced_offset:int
+	size:int
 
 	def __repr__(self):
-		if self._source_operand is None:
-			if self._referenced_offset != self._var.storage:
-				return "<ref to %s%+#x>" % (self._name, self._referenced_offset - self._var.storage)
-			return "<ref to %s>" % self._name
-		if self._referenced_offset != self._var.storage:
-			return "<operand %d ref to %s%+#x>" % (self._source_operand, self._name, self._var.storage)
-		return "<operand %d ref to %s>" % (self._source_operand, self._name)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._source_operand, self._type, self._name, self._var, self._referenced_offset, self._size) == \
-			(other._source_operand, other._type, other._name, other._var, other._referenced_offset, other._size)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._source_operand, self._type, self._name, self._var, self._referenced_offset, self._size))
+		if self.source_operand is None:
+			if self.referenced_offset != self.var.storage:
+				return f"<ref to {self.name}{self.referenced_offset - self.var.storage:+#x}>"
+			return f"<ref to {self.name}>"
+		if self.referenced_offset != self.var.storage:
+			return f"<operand {self.source_operand} ref to {self.var.storage}{self.var.storage:+#x}>"
+		return f"<operand {self.source_operand} ref to {self.name}>"
 
 	@property
 	def source_operand(self):
+		if self._source_operand == 0xffffffff:
+			return None
 		return self._source_operand
 
-	@property
-	def type(self):
-		return self._type
 
-	@property
-	def name(self):
-		return self._name
-
-	@property
-	def var(self):
-		return self._var
-
-	@property
-	def referenced_offset(self):
-		return self._referenced_offset
-
-	@property
-	def size(self):
-		return self._size
-
-
-@decorators.passive
 @dataclass(frozen=True, order=True)
 class CoreVariable:
 	_source_type:int
@@ -657,7 +607,7 @@ class CoreVariable:
 		var = core.BNFromVariableIdentifier(identifier)
 		return cls(var.type, var.index, var.storage)
 
-@decorators.passive
+
 @dataclass(frozen=True, order=True)
 class VariableNameAndType(CoreVariable):
 	name:str
@@ -792,13 +742,12 @@ class Variable:
 	def to_BNVariable(self):
 		return self._var.to_BNVariable()
 
-@decorators.passive
+@dataclass(frozen=True)
 class ConstantReference(object):
-	def __init__(self, val, size, ptr, intermediate):
-		self._value = val
-		self._size = size
-		self._pointer = ptr
-		self._intermediate = intermediate
+	value:int
+	size:int
+	pointer:bool
+	intermediate:bool
 
 	def __repr__(self):
 		if self.pointer:
@@ -807,45 +756,17 @@ class ConstantReference(object):
 			return "<constant %#x>" % self.value
 		return "<constant %#x size %d>" % (self.value, self.size)
 
-	@property
-	def value(self):
-		return self._value
 
-	@property
-	def size(self):
-		return self._size
-
-	@property
-	def pointer(self):
-		return self._pointer
-
-	@property
-	def intermediate(self):
-		return self._intermediate
-
-
-@decorators.passive
-class UserVariableValueInfo(object):
-	def __init__(self, var, def_site, value):
-		self.var = var
-		self.def_site = def_site
-		self.value = value
-
-	def __repr__(self):
-		return "<user value for %s @ %s:%#x -> %s>" % (self.var, self.def_site.arch.name, self.def_site.addr, self.value)
-
-
-@decorators.passive
+@dataclass(frozen=True)
 class IndirectBranchInfo(object):
-	def __init__(self, source_arch, source_addr, dest_arch, dest_addr, auto_defined):
-		self.source_arch = source_arch
-		self.source_addr = source_addr
-		self.dest_arch = dest_arch
-		self.dest_addr = dest_addr
-		self.auto_defined = auto_defined
+	source_arch:'binaryninja.architecture.Architecture'
+	source_addr:int
+	dest_arch:'binaryninja.architecture.Architecture'
+	dest_addr:int
+	auto_defined:bool
 
 	def __repr__(self):
-		return "<branch %s:%#x -> %s:%#x>" % (self.source_arch.name, self.source_addr, self.dest_arch.name, self.dest_addr)
+		return f"<branch {self.source_arch.name}:{self.source_addr:#x} -> {self.dest_arch.name}:{self.dest_addr:#x}>"
 
 
 @decorators.passive
@@ -889,39 +810,10 @@ class ParameterVariables(object):
 		return self._func
 
 
-@decorators.passive
+@dataclass(frozen=True, order=True)
 class AddressRange(object):
-	def __init__(self, start:int, end:int):
-		self._start = start
-		self._end = end
+	start:int
+	end:int
 
 	def __repr__(self):
-		return "<%#x-%#x>" % (self._start, self._end)
-
-	def __len__(self):
-		return self._end - self.start
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._start, self._end) == (other._start, other._end)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._start, self._end))
-
-	@property
-	def length(self) -> int:
-		return self._end - self._start
-
-	@property
-	def start(self) -> int:
-		return self._start
-
-	@property
-	def end(self) -> int:
-		return self._end
+		return f"<{self.start:#x}-{self.end:#x}>"

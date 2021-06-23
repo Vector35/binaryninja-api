@@ -21,6 +21,7 @@
 import traceback
 import ctypes
 from typing import Generator, Union, List, Optional, Mapping, Tuple, NewType
+from dataclasses import dataclass
 
 # Binary Ninja components
 import binaryninja
@@ -61,258 +62,86 @@ SemanticGroupType = Union[SemanticGroupName, 'lowlevelil.ILSemanticFlagGroup', S
 IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
 
 
-
+@dataclass(frozen=False)
 class RegisterInfo(object):
-	def __init__(self, full_width_reg:RegisterName, size:int, offset:int=0,
-		extend:ImplicitRegisterExtend=ImplicitRegisterExtend.NoExtend, index:RegisterIndex=None):
-		self._full_width_reg = full_width_reg
-		self._offset = offset
-		self._size = size
-		self._extend = extend
-		self._index = index
+	full_width_reg:RegisterName
+	offset:int
+	size:int = 0
+	extend:ImplicitRegisterExtend = ImplicitRegisterExtend.NoExtend
+	index:Optional[RegisterIndex] = None
 
 	def __repr__(self):
-		if self._extend == ImplicitRegisterExtend.ZeroExtendToFullWidth:
+		if self.extend == ImplicitRegisterExtend.ZeroExtendToFullWidth:
 			extend = ", zero extend"
-		elif self._extend == ImplicitRegisterExtend.SignExtendToFullWidth:
+		elif self.extend == ImplicitRegisterExtend.SignExtendToFullWidth:
 			extend = ", sign extend"
 		else:
 			extend = ""
-		return "<reg: size %d, offset %d in %s%s>" % (self._size, self._offset, self._full_width_reg, extend)
-
-	@property
-	def full_width_reg(self) -> RegisterName:
-		return self._full_width_reg
-
-	@full_width_reg.setter
-	def full_width_reg(self, value:RegisterName) -> None:
-		self._full_width_reg = value
-
-	@property
-	def offset(self) -> int:
-		return self._offset
-
-	@offset.setter
-	def offset(self, value:int) -> None:
-		self._offset = value
-
-	@property
-	def size(self) -> int:
-		return self._size
-
-	@size.setter
-	def size(self, value:int) -> None:
-		self._size = value
-
-	@property
-	def extend(self) -> ImplicitRegisterExtend:
-		return self._extend
-
-	@extend.setter
-	def extend(self, value:ImplicitRegisterExtend) -> None:
-		self._extend = value
-
-	@property
-	def index(self) -> Optional[RegisterIndex]:
-		return self._index
-
-	@index.setter
-	def index(self, value:RegisterIndex) -> None:
-		self._index = value
+		return "<reg: size %d, offset %d in %s%s>" % (self.size, self.offset, self.full_width_reg, extend)
 
 
+@dataclass(frozen=False)
 class RegisterStackInfo(object):
-	def __init__(self, storage_regs:List[RegisterName], top_relative_regs:List[RegisterName],
-		stack_top_reg:RegisterName, index:RegisterStackIndex=None):
-		self._storage_regs = storage_regs
-		self._top_relative_regs = top_relative_regs
-		self._stack_top_reg = stack_top_reg
-		self._index = index
+	storage_regs:List[RegisterName]
+	top_relative_regs:List[RegisterName]
+	stack_top_reg:RegisterName
+	index:Optional[RegisterStackIndex] = None
 
 	def __repr__(self):
-		return "<reg stack: %d regs, stack top in %s>" % (len(self._storage_regs), self._stack_top_reg)
-
-	@property
-	def storage_regs(self) -> List[RegisterName]:
-		return self._storage_regs
-
-	@storage_regs.setter
-	def storage_regs(self, value:List[RegisterName]) -> None:
-		self._storage_regs = value
-
-	@property
-	def top_relative_regs(self) -> List[RegisterName]:
-		return self._top_relative_regs
-
-	@top_relative_regs.setter
-	def top_relative_regs(self, value:List[RegisterName]) -> None:
-		self._top_relative_regs = value
-
-	@property
-	def stack_top_reg(self) -> RegisterName:
-		return self._stack_top_reg
-
-	@stack_top_reg.setter
-	def stack_top_reg(self, value:RegisterName) -> None:
-		self._stack_top_reg = value
-
-	@property
-	def index(self) -> Optional[RegisterStackIndex]:
-		return self._index
-
-	@index.setter
-	def index(self, value:RegisterStackIndex) -> None:
-		self._index = value
+		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)
 
 
+@dataclass(frozen=True)
 class IntrinsicInput(object):
-	def __init__(self, type_obj, name=""):
-		self._name = name
-		self._type = type_obj
+	type:'types.Type'
+	name:str = ""
 
 	def __repr__(self):
-		if len(self._name) == 0:
-			return "<input: %s>" % str(self._type)
-		return "<input: %s %s>" % (str(self._type), self._name)
-
-	@property
-	def name(self):
-		return self._name
-
-	@name.setter
-	def name(self, value):
-		self._name = value
-
-	@property
-	def type(self):
-		return self._type
-
-	@type.setter
-	def type(self, value):
-		self._type = value
+		if len(self.name) == 0:
+			return "<input: %s>" % str(self.type)
+		return "<input: %s %s>" % (str(self.type), self.name)
 
 
+@dataclass(frozen=True)
 class IntrinsicInfo(object):
-	def __init__(self, inputs, outputs, index=None):
-		self._inputs = inputs
-		self._outputs = outputs
-		self._index = index
+	inputs:List[IntrinsicInput]
+	outputs:List['types.Type']
+	index:Optional[int] = None
 
 	def __repr__(self):
-		return "<intrinsic: %s -> %s>" % (repr(self._inputs), repr(self._outputs))
-
-	@property
-	def inputs(self):
-		return self._inputs
-
-	@inputs.setter
-	def inputs(self, value):
-		self._inputs = value
-
-	@property
-	def outputs(self):
-		return self._outputs
-
-	@outputs.setter
-	def outputs(self, value):
-		self._outputs = value
-
-	@property
-	def index(self):
-		return self._index
-
-	@index.setter
-	def index(self, value):
-		self._index = value
+		return f"<intrinsic: {repr(self.inputs)} -> {repr(self.outputs)}>"
 
 
+@dataclass(frozen=True)
 class InstructionBranch(object):
-	def __init__(self, branch_type, target = 0, arch = None):
-		self._type = branch_type
-		self._target = target
-		self._arch = arch
+	type:BranchType
+	target:int
+	arch:'Architecture'
 
 	def __repr__(self):
-		branch_type = self._type
-		if self._arch is not None:
-			return "<%s: %s@%#x>" % (branch_type.name, self._arch.name, self._target)
-		return "<%s: %#x>" % (branch_type, self._target)
-
-	@property
-	def type(self):
-		return self._type
-
-	@type.setter
-	def type(self, value):
-		self._type = value
-
-	@property
-	def target(self):
-		return self._target
-
-	@target.setter
-	def target(self, value):
-		self._target = value
-
-	@property
-	def arch(self):
-		return self._arch
-
-	@arch.setter
-	def arch(self, value):
-		self._arch = value
+		if self.arch is not None:
+			return f"<{self.type.name}: {self.arch.name}@{self.target:#x}>"
+		return f"<{self.type}: {self.target:#x}>"
 
 
+@dataclass(frozen=False)
 class InstructionInfo(object):
-	def __init__(self):
-		self.length = 0
-		self.arch_transition_by_target_addr = False
-		self.branch_delay = False
-		self.branches = []
+	length:int = 0
+	arch_transition_by_target_addr:bool = False
+	branch_delay:bool = False
+	branches:List[InstructionBranch] = []
 
 	def add_branch(self, branch_type, target = 0, arch = None):
-		self._branches.append(InstructionBranch(branch_type, target, arch))
+		self.branches.append(InstructionBranch(branch_type, target, arch))
 
 	def __len__(self):
-		return self._length
+		return self.length
 
 	def __repr__(self):
 		branch_delay = ""
-		if self._branch_delay:
+		if self.branch_delay:
 			branch_delay = ", delay slot"
-		return "<instr: %d bytes%s, %s>" % (self._length, branch_delay, repr(self._branches))
-
-	@property
-	def length(self):
-		return self._length
-
-	@length.setter
-	def length(self, value):
-		self._length = value
-
-	@property
-	def arch_transition_by_target_addr(self):
-		return self._arch_transition_by_target_addr
-
-	@arch_transition_by_target_addr.setter
-	def arch_transition_by_target_addr(self, value):
-		self._arch_transition_by_target_addr = value
-
-	@property
-	def branch_delay(self):
-		return self._branch_delay
-
-	@branch_delay.setter
-	def branch_delay(self, value):
-		self._branch_delay = value
-
-	@property
-	def branches(self):
-		return self._branches
-
-	@branches.setter
-	def branches(self, value):
-		self._branches = value
+		return f"<instr: {self.length} bytes{branch_delay}, {repr(self.branches)}>"
 
 
 class _ArchitectureMetaClass(type):

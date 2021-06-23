@@ -22,6 +22,7 @@ import ctypes
 from enum import Flag
 import struct
 from typing import Generator, List, Optional, Any, Mapping, Union, Tuple, NewType
+from dataclasses import dataclass
 
 # Binary Ninja components
 from .enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType, DataFlowQueryOption, FunctionGraphType
@@ -45,6 +46,7 @@ ILRegisterType = Union[str, 'ILRegister', int]
 LLILInstructionsType = Generator['LowLevelILInstruction', None, None]
 LLILBasicBlocksType = Generator['LowLevelILBasicBlock', None, None]
 
+
 class LowLevelILLabel(object):
 	def __init__(self, handle:core.BNLowLevelILLabel=None):
 		if handle is None:
@@ -53,434 +55,203 @@ class LowLevelILLabel(object):
 		else:
 			self.handle = handle
 
-
-# TODO : It would be nice to add a `.versions` to IL vars (regs, stack regs, flags) to see all the SSA versions of the given variable.  Would need to associate the source function
+@dataclass(frozen=True)
 class ILRegister(object):
-	def __init__(self, arch:'architecture.Architecture', reg:'architecture.RegisterIndex'):
-		self._arch = arch
-		self._index = reg
-		self._temp = (self._index & 0x80000000) != 0
-		if self._temp:
-			self._name = architecture.RegisterName("temp%d" % (self._index & 0x7fffffff))
-		else:
-			self._name = architecture.RegisterName(self._arch.get_reg_name(self._index))
+	arch:'architecture.Architecture'
+	index:'architecture.RegisterIndex'
+
+	def __repr__(self):
+		return f"<reg {self.name}>"
+
+	def __str__(self):
+		return self.name
+
+	def __int__(self):
+		return self.index
+
+	def __eq__(self, other):
+		if isinstance(other, architecture.RegisterName) and other in self.arch.regs:
+			index = self.arch.regs[other].index
+			assert index is not None
+			other = ILRegister(self.arch, index)
+		elif not isinstance(other, self.__class__):
+			return NotImplemented
+		return (self.arch, self.index) == (other.arch, other.index)
 
 	@property
 	def info(self) -> 'architecture.RegisterInfo':
-		return self._arch.regs[self._name]
-
-	def __repr__(self):
-		return f"<reg {self._name}>"
-
-	def __str__(self):
-		return self._name
-
-	def __eq__(self, other):
-		if isinstance(other, architecture.RegisterName) and other in self._arch.regs:
-			index = self._arch.regs[other].index
-			assert index is not None
-			other = ILRegister(self._arch, index)
-		elif not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, (self.__class__, str)):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
-
-	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def index(self) -> 'architecture.RegisterIndex':
-		return self._index
+		return self.arch.regs[self.name]
 
 	@property
 	def temp(self) -> bool:
-		return self._temp
+		return (self.index & 0x80000000) != 0
 
 	@property
-	def name(self) -> str:
-		return self._name
-
-
-class ILRegisterStack(object):
-	def __init__(self, arch:'architecture.Architecture', reg_stack:'architecture.RegisterStackIndex'):
-		self._arch = arch
-		self._index = reg_stack
-		self._name = self._arch.get_reg_stack_name(self._index)
-
-	@property
-	def info(self):
-		return self._arch.reg_stacks[self._name]
-
-	def __repr__(self):
-		return f"<reg-stack {self._name}>"
-
-	def __str__(self):
-		return self._name
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
-
-	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def index(self) -> 'architecture.RegisterStackIndex':
-		return self._index
-
-	@property
-	def name(self) -> str:
-		return self._name
-
-
-class ILFlag(object):
-	def __init__(self, arch:'architecture.Architecture', flag:'architecture.FlagIndex'):
-		self._arch = arch
-		self._index = flag
-		self._temp = (self._index & 0x80000000) != 0
-		if self._temp:
-			self._name = "cond:%d" % (self._index & 0x7fffffff)
+	def name(self) -> architecture.RegisterName:
+		if self.temp:
+			return architecture.RegisterName(f"temp{self.index & 0x7fffffff}")
 		else:
-			self._name = self._arch.get_flag_name(self._index)
+			return architecture.RegisterName(self.arch.get_reg_name(self.index))
+
+
+@dataclass(frozen=True)
+class ILRegisterStack(object):
+	arch:'architecture.Architecture'
+	index:'architecture.RegisterStackIndex'
 
 	def __repr__(self):
-		return f"<flag {self._name}>"
+		return f"<reg-stack {self.name}>"
 
 	def __str__(self):
-		return self._name
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
+		return self.name
 
 	def __int__(self):
-		return self._index
+		return self.index
 
 	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
+	def info(self) -> 'architecture.RegisterStackInfo':
+		return self.arch.reg_stacks[self.name]
 
 	@property
-	def index(self) -> 'architecture.FlagIndex':
-		return self._index
+	def name(self) -> 'architecture.RegisterStackName':
+		return self.arch.get_reg_stack_name(self.index)
+
+
+@dataclass(frozen=True)
+class ILFlag(object):
+	arch:'architecture.Architecture'
+	index:'architecture.FlagIndex'
+
+	def __repr__(self):
+		return f"<flag {self.name}>"
+
+	def __str__(self):
+		return self.name
+
+	def __int__(self):
+		return self.index
 
 	@property
 	def temp(self):
-		return self._temp
+		return (self.index & 0x80000000) != 0
 
 	@property
-	def name(self) -> str:
-		return self._name
+	def name(self) -> 'architecture.FlagName':
+		if self.temp:
+			return architecture.FlagName(f"cond:{(self.index & 0x7fffffff)}")
+		else:
+			return architecture.FlagName(self.arch.get_flag_name(self.index))
 
 
+@dataclass(frozen=True)
 class ILSemanticFlagClass(object):
-	def __init__(self, arch:'architecture.Architecture', sem_class:'architecture.SemanticClassIndex'):
-		self._arch = arch
-		self._index = sem_class
-		self._name = self._arch.get_semantic_flag_class_name(self._index)
+	arch:'architecture.Architecture'
+	index:'architecture.SemanticClassIndex'
 
 	def __repr__(self):
-		return self._name
+		return self.name
 
 	def __str__(self):
-		return self._name
+		return self.name
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
+	def __int__(self):
+		return self.index
 
 	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def index(self) -> 'architecture.SemanticClassIndex':
-		return self._index
-
-	@property
-	def name(self) -> str:
-		return self._name
+	def name(self) -> 'architecture.SemanticClassName':
+		return self.arch.get_semantic_flag_class_name(self.index)
 
 
+@dataclass(frozen=True)
 class ILSemanticFlagGroup(object):
-	def __init__(self, arch:'architecture.Architecture', sem_group:'architecture.SemanticGroupIndex'):
-		self._arch = arch
-		self._index = sem_group
-		self._name = self._arch.get_semantic_flag_group_name(self._index)
+	arch:'architecture.Architecture'
+	index:'architecture.SemanticGroupIndex'
 
 	def __repr__(self):
-		return self._name
+		return self.name
 
 	def __str__(self):
-		return self._name
+		return self.name
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
-
-	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def index(self) -> 'architecture.SemanticGroupIndex':
-		return self._index
+	def __int__(self):
+		return self.index
 
 	@property
 	def name(self) -> 'architecture.SemanticGroupName':
-		return self._name
+		return self.arch.get_semantic_flag_group_name(self.index)
 
 
+@dataclass(frozen=True)
 class ILIntrinsic(object):
-	def __init__(self, arch:'architecture.Architecture', intrinsic:'architecture.IntrinsicIndex'):
-		self._arch = arch
-		self._index = intrinsic
-		self._name = self._arch.get_intrinsic_name(self._index)
-		if self._name in self._arch.intrinsics:
-			self._inputs = self._arch.intrinsics[self._name].inputs
-			self._outputs = self._arch.intrinsics[self._name].outputs
+	arch:'architecture.Architecture'
+	index:'architecture.IntrinsicIndex'
 
 	def __repr__(self):
-		return self._name
+		return self.name
 
 	def __str__(self):
-		return self._name
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._arch, self._index, self._name) == (other._arch, other._index, other._name)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._arch, self._index, self._name))
+		return self.name
 
 	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def index(self) -> 'architecture.IntrinsicIndex':
-		return self._index
-
-	@property
-	def name(self) -> str:
-		return self._name
+	def name(self) -> 'architecture.IntrinsicName':
+		return self.arch.get_intrinsic_name(self.index)
 
 	@property
 	def inputs(self) -> List['architecture.IntrinsicInput']:
 		"""``inputs`` is only available if the IL intrinsic is an Architecture intrinsic """
-		return self._inputs
+		return self.arch.intrinsics[self.name].inputs
 
 	@property
 	def outputs(self) -> List['types.Type']:
 		"""``outputs`` is only available if the IL intrinsic is an Architecture intrinsic """
-		return self._outputs
+		return self.arch.intrinsics[self.name].outputs
 
 
+@dataclass(frozen=True)
 class SSARegister(object):
-	def __init__(self, reg:ILRegister, version:int):
-		self._reg = reg
-		self._version = version
+	reg:ILRegister
+	version:int
 
 	def __repr__(self):
-		return "<ssa %s version %d>" % (repr(self._reg), self._version)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._reg, self._version) == (other._reg, other._version)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._reg, self._version))
-
-	@property
-	def reg(self) -> ILRegister:
-		return self._reg
-
-	@property
-	def version(self) -> int:
-		return self._version
-
-	@version.setter
-	def version(self, value):
-		self._version = value
+		return f"<ssa {self.reg} version {self.version}>"
 
 
+@dataclass(frozen=True)
 class SSARegisterStack(object):
-	def __init__(self, reg_stack:ILRegisterStack, version:int):
-		self._reg_stack = reg_stack
-		self._version = version
+	reg_stack:ILRegisterStack
+	version:int
 
 	def __repr__(self):
-		return "<ssa %s version %d>" % (repr(self._reg_stack), self._version)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._reg_stack, self._version) == (other._reg_stack, other._version)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._reg_stack, self._version))
-
-	@property
-	def reg_stack(self) -> ILRegisterStack:
-		return self._reg_stack
-
-	@property
-	def version(self) -> int:
-		return self._version
+		return f"<ssa {self.reg_stack} version {self.version}>"
 
 
+@dataclass(frozen=True)
 class SSAFlag(object):
-	def __init__(self, flag:ILFlag, version:int):
-		self._flag = flag
-		self._version = version
+	flag:ILFlag
+	version:int
 
 	def __repr__(self):
-		return "<ssa %s version %d>" % (repr(self._flag), self._version)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._flag, self._version) == (other._flag, other._version)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._flag, self._version))
-
-	@property
-	def flag(self) -> ILFlag:
-		return self._flag
-
-	@property
-	def version(self) -> int:
-		return self._version
+		return f"<ssa {self.flag} version {self.version}>"
 
 
+@dataclass(frozen=True)
 class SSARegisterOrFlag(object):
-	def __init__(self, reg_or_flag:Union[ILRegister, ILFlag], version:int):
-		self._reg_or_flag = reg_or_flag
-		self._version = version
+	reg_or_flag:Union[ILRegister, ILFlag]
+	version:int
 
 	def __repr__(self):
-		return "<ssa %s version %d>" % (repr(self._reg_or_flag), self._version)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._reg_or_flag == other._reg_or_flag) and (self._version == other._version)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._reg_or_flag, self._version))
-
-	@property
-	def reg_or_flag(self) -> Union[ILRegister, ILFlag]:
-				return self._reg_or_flag
-
-	@property
-	def version(self) -> int:
-		return self._version
+		return f"<ssa {self.reg_or_flag} version {self.version}>"
 
 
+@dataclass(frozen=True)
 class LowLevelILOperationAndSize(object):
-	def __init__(self, operation:'LowLevelILOperation', size:int):
-		self._operation = operation
-		self._size = size
+	operation:'LowLevelILOperation'
+	size:int
 
 	def __repr__(self):
-		if self._size == 0:
-			return "<%s>" % self._operation.name
-		return "<%s %d>" % (self._operation.name, self._size)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._operation, self._size) == (other._operation, other._size)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._operation, self._size))
-
-	@property
-	def operation(self) -> 'LowLevelILOperation':
-		return self._operation
-
-	@property
-	def size(self) -> int:
-		return self._size
+		if self.size == 0:
+			return f"<{self.operation.name}>"
+		return "<{self.operation.name} {self.size}>"
 
 
 class LowLevelILInstruction(object):
@@ -876,7 +647,7 @@ class LowLevelILInstruction(object):
 		"""IL basic block object containing this expression (read-only) (only available on finalized functions)"""
 		assert self._function.source_function is not None
 		view = self._function.source_function.view
-		core_block = core.BNGetLowLevelILBasicBlockForInstruction(self._function.handle, self._instr_index)
+		core_block = core.BNGetLowLevelILBasicBlockForInstruction(self._function.handle, self._insstr_index)
 		assert core_block is not None, "BNGetLowLevelILBasicBlockForInstruction returned None"
 		return LowLevelILBasicBlock(view, core_block, self._function)
 
@@ -1161,6 +932,7 @@ class LowLevelILInstruction(object):
 		return self._operands
 
 
+@dataclass(frozen=True)
 class LowLevelILExpr(object):
 	"""
 	``class LowLevelILExpr`` hold the index of IL Expressions.
@@ -1168,15 +940,10 @@ class LowLevelILExpr(object):
 	.. note:: This class shouldn't be instantiated directly. Rather the helper members of LowLevelILFunction should be \
 	used instead.
 	"""
-	def __init__(self, index:ExpressionIndex):
-		self._index = index
+	index:ExpressionIndex
 
 	def __int__(self) -> int:
-		return self._index
-
-	@property
-	def index(self):
-		return self._index
+		return self.index
 
 
 class LowLevelILFunction(object):

@@ -218,6 +218,7 @@ class TypeReferenceSource(object):
 	def __hash__(self):
 		return hash(str(self))
 
+
 class NameSpace(QualifiedName):
 	def __str__(self):
 		return ":".join(self.name)
@@ -346,41 +347,16 @@ class Symbol(object):
 	def auto(self):
 		return core.BNIsSymbolAutoDefined(self.handle)
 
-
+@dataclass(frozen=True)
 class FunctionParameter(object):
-	def __init__(self, param_type, name = "", location = None):
-		self._type = param_type
-		self._name = name
-		self._location = location
+	type:'types.Type'
+	name:str = ""
+	location:Optional['variable.VariableNameAndType'] = None
 
 	def __repr__(self):
-		if (self._location is not None) and (self._location.name != self._name):
-			return "%s %s%s @ %s" % (self._type.get_string_before_name(), self._name, self._type.get_string_after_name(), self._location.name)
-		return "%s %s%s" % (self._type.get_string_before_name(), self._name, self._type.get_string_after_name())
-
-	@property
-	def type(self):
-		return self._type
-
-	@type.setter
-	def type(self, value):
-		self._type = value
-
-	@property
-	def name(self):
-		return self._name
-
-	@name.setter
-	def name(self, value):
-		self._name = value
-
-	@property
-	def location(self):
-		return self._location
-
-	@location.setter
-	def location(self, value):
-		self._location = value
+		if (self.location is not None) and (self.location.name != self.name):
+			return "%s %s%s @ %s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name(), self.location.name)
+		return "%s %s%s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
 
 
 class Type(object):
@@ -997,166 +973,50 @@ class Type(object):
 		return Type(handle = core.BNTypeWithReplacedNamedTypeReference(self._handle, from_ref.handle, to_ref.handle))
 
 
+@dataclass(frozen=True)
 class BoolWithConfidence(object):
-	def __init__(self, value, confidence = core.max_confidence):
-		self._value = value
-		self._confidence = confidence
-
-	def __str__(self):
-		return str(self._value)
-
-	def __repr__(self):
-		return repr(self._value)
+	value:bool
+	confidence:int=core.max_confidence
 
 	def __bool__(self):
-		return self._value
-
-	def __nonzero__(self):
-		return self._value
-
-	@property
-	def value(self):
-		return self._value
-
-	@value.setter
-	def value(self, value):
-		self._value = value
-
-	@property
-	def confidence(self):
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value):
-		self._confidence = value
+		return self.value
 
 
+@dataclass(frozen=True)
 class SizeWithConfidence(object):
-	def __init__(self, value:int, confidence:int=core.max_confidence):
-		self._value = value
-		self._confidence = confidence
-
-	def __str__(self):
-		return str(self._value)
-
-	def __repr__(self):
-		return repr(self._value)
+	value:int
+	confidence:int=core.max_confidence
 
 	def __int__(self):
-		return self._value
-
-	@property
-	def value(self) -> int:
-		return self._value
-
-	@value.setter
-	def value(self, value:int) -> None:
-		self._value = value
-
-	@property
-	def confidence(self) -> int:
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value:int) -> None:
-		self._confidence = value
+		return self.value
 
 
+@dataclass(frozen=True)
 class RegisterStackAdjustmentWithConfidence(object):
-	def __init__(self, value:int, confidence:int=core.max_confidence):
-		self._value = value
-		self._confidence = confidence
-
-	def __str__(self):
-		return str(self._value)
-
-	def __repr__(self):
-		return repr(self._value)
+	value:int
+	confidence:int=core.max_confidence
 
 	def __int__(self):
-		return self._value
-
-	@property
-	def value(self) -> int:
-		return self._value
-
-	@value.setter
-	def value(self, value:int) -> None:
-		self._value = value
-
-	@property
-	def confidence(self) -> int:
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value:int) -> None:
-		self._confidence = value
+		return self.value
 
 
+@dataclass(frozen=True)
 class RegisterSet(object):
-	def __init__(self, reg_list:List['architecture.RegisterName'], confidence:int=core.max_confidence):
-		self._regs = reg_list
-		self._confidence = confidence
-
-	def __repr__(self):
-		return repr(self._regs)
+	regs:List['architecture.RegisterName']
+	confidence:int=core.max_confidence
 
 	def __iter__(self) -> Generator['architecture.RegisterName', None, None]:
-		for reg in self._regs:
+		for reg in self.regs:
 			yield reg
 
 	def __getitem__(self, idx):
-		return self._regs[idx]
+		return self.regs[idx]
 
 	def __len__(self):
-		return len(self._regs)
+		return len(self.regs)
 
 	def with_confidence(self, confidence):
-		return RegisterSet(list(self._regs), confidence = confidence)
-
-	@property
-	def regs(self) -> List['architecture.RegisterName']:
-		return self._regs
-
-	@regs.setter
-	def regs(self, value:List['architecture.RegisterName']) -> None:
-		self._regs = value
-
-	@property
-	def confidence(self) -> int:
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value:int) -> None:
-		self._confidence = value
-
-
-class ReferenceTypeWithConfidence(object):
-	def __init__(self, value, confidence = core.max_confidence):
-		self._value = value
-		self._confidence = confidence
-
-	def __str__(self):
-		return str(self._value)
-
-	def __repr__(self):
-		return repr(self._value)
-
-	@property
-	def value(self):
-		return self._value
-
-	@value.setter
-	def value(self, value):
-		self._value = value
-
-	@property
-	def confidence(self):
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value):
-		self._confidence = value
+		return RegisterSet(list(self.regs), confidence=confidence)
 
 
 class NamedTypeReference(object):
@@ -1223,75 +1083,17 @@ class NamedTypeReference(object):
 		return NamedTypeReference(type_class, type_id, name)
 
 
+@dataclass(frozen=True)
 class StructureMember(object):
-	def __init__(self, t, name, offset):
-		self._type = t
-		self._name = name
-		self._offset = offset
+	type:'types.Type'
+	name:str
+	offset:int
 
 	def __repr__(self):
-		if len(self._name) == 0:
-			return "<member: %s, offset %#x>" % (str(self._type), self._offset)
-		return "<%s %s%s, offset %#x>" % (self._type.get_string_before_name(), self._name,
-							 self._type.get_string_after_name(), self._offset)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._type, self._name, self._offset) == (other._type, other._name, other._offset)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __lt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self._offset < other._offset
-
-	def __gt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self._offset > other._offset
-
-	def __le__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self._offset <= other._offset
-
-	def __ge__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self._offset >= other._offset
-
-	def __hash__(self):
-		return hash((self._type, self._name, self._offset))
-
-	@property
-	def type(self):
-		return self._type
-
-	@type.setter
-	def type(self, value):
-		self._type = value
-
-	@property
-	def name(self):
-		return self._name
-
-	@name.setter
-	def name(self, value):
-		self._name = value
-
-	@property
-	def offset(self):
-		return self._offset
-
-	@offset.setter
-	def offset(self, value):
-		self._offset = value
-
+		if len(self.name) == 0:
+			return f"<member: {self.type}, offset {self.offset:#x}>"
+		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}" + \
+			", offset {self.offset:#x}>"
 
 class Structure(object):
 	def __init__(self, handle=None):
@@ -1326,30 +1128,34 @@ class Structure(object):
 	def __hash__(self):
 		return hash(ctypes.addressof(self._handle.contents))
 
-	def __getitem__(self, name):
+	def __getitem__(self, name:str) -> StructureMember:
 		member = None
 		try:
 			if self._mutable:
 				member = core.BNGetStructureBuilderMemberByName(self._handle, name)
-				assert member is not None, "core.BNGetStructureBuilderMemberByName returned None"
+				if member is None:
+					raise ValueError(f"Member {name} is not part of structure")
 			else:
 				member = core.BNGetStructureMemberByName(self._handle, name)
-				assert member is not None, "core.BNGetStructureMemberByName returned None"
+				if member is None:
+					raise ValueError(f"Member {name} is not part of structure")
 			return StructureMember(Type(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 					member.contents.name, member.contents.offset)
 		finally:
 			if member is not None:
 				core.BNFreeStructureMember(member)
 
-	def member_at_offset(self, offset):
+	def member_at_offset(self, offset:int) -> StructureMember:
 		member = None
 		try:
 			if self._mutable:
 				member = core.BNGetStructureBuilderMemberAtOffset(self._handle, offset, None)
-				assert member is not None, "core.BNGetStructureBuilderMemberAtOffset returned None"
+				if member is None:
+					raise ValueError(f"No member exists a offset {offset}")
 			else:
 				member = core.BNGetStructureMemberAtOffset(self._handle, offset, None)
-				assert member is not None, "core.BNGetStructureMemberAtOffset returned None"
+				if member is None:
+					raise ValueError(f"No member exists a offset {offset}")
 			return StructureMember(Type(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 					member.contents.name, member.contents.offset)
 		finally:
@@ -1485,38 +1291,14 @@ class Structure(object):
 		return Structure(core.BNStructureWithReplacedNamedTypeReference(self._handle, from_ref.handle, to_ref.handle))
 
 
+@dataclass(frozen=True)
 class EnumerationMember(object):
-	def __init__(self, name, value, default):
-		self.name = name
-		self.value = value
-		self.default = default
+	name:str
+	value:int
+	default:bool
 
 	def __repr__(self):
-		return "<%s = %#x>" % (self.name, self.value)
-
-	@property
-	def value(self):
-		return self._value
-
-	@value.setter
-	def value(self, value):
-		self._value = value
-
-	@property
-	def name(self):
-		return self._name
-
-	@name.setter
-	def name(self, value):
-		self._name = value
-
-	@property
-	def default(self):
-		return self._default
-
-	@default.setter
-	def default(self, value):
-		self._default = value
+		return f"<{self.name} = {self.value:#x}>"
 
 
 class Enumeration(object):
@@ -1603,18 +1385,15 @@ class Enumeration(object):
 		return Enumeration(core.BNCreateEnumerationBuilderFromEnumeration(self._handle))
 
 
+@dataclass(frozen=True)
 class TypeParserResult(object):
-	def __init__(self, types, variables, functions):
-		self._types = types
-		self._variables = variables
-		self._functions = functions
+	types:Mapping[QualifiedName, Type]
+	variables:Mapping[QualifiedName, Type]
+	functions:Mapping[QualifiedName, Type]
 
 	def __repr__(self):
-		return "<types: %s, variables: %s, functions: %s>" % (self._types, self._variables, self._functions)
+		return "<types: %s, variables: %s, functions: %s>" % (self.types, self.variables, self.functions)
 
-	@property
-	def types(self):
-		return self._types
 
 	@types.setter
 	def types(self, value):
@@ -1673,102 +1452,16 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 	return (None, error_str)
 
 
+@dataclass(frozen=True)
 class TypeFieldReference(object):
-	def __init__(self, func, arch, addr, size):
-		self._function = func
-		self._arch = arch
-		self._address = addr
-		self._size = size
+	func:Optional['function.Function']
+	arch:Optional['architecture.Architecture']
+	address:int
+	size:int
+	incomingType:Type
 
 	def __repr__(self):
-		if self._arch:
-			return "<ref: %s@%#x, size: %#x>" % (self._arch.name, self._address, self._size)
+		if self.arch:
+			return "<ref: %s@%#x, size: %#x>" % (self.arch.name, self.address, self.size)
 		else:
-			return "<ref: %#x, size: %#x>" % (self._address, self._size)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self.function, self.arch, self.address, self._size) ==\
-			(other.address, other.function, other.arch, other.size)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __lt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		if self.address < other.address:
-			return True
-		elif self.address > other.address:
-			return False
-		else:
-			return self.size < other.size
-
-	def __gt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		if self.address > other.address:
-			return True
-		elif self.address < other.address:
-			return False
-		else:
-			return self.size > other.size
-
-	def __ge__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		if self.address > other.address:
-			return True
-		elif self.address < other.address:
-			return False
-		else:
-			return self.size >= other.size
-
-	def __le__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		if self.address < other.address:
-			return True
-		elif self.address > other.address:
-			return False
-		else:
-			return self.size <= other.size
-
-	def __hash__(self):
-		return hash((self._function, self._arch, self._address, self._size))
-
-	@property
-	def function(self):
-		return self._function
-
-	@function.setter
-	def function(self, value):
-		self._function = value
-
-	@property
-	def arch(self):
-		return self._arch
-
-	@arch.setter
-	def arch(self, value):
-		self._arch = value
-
-	@property
-	def address(self):
-		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
-
-	@property
-	def size(self):
-		return self._size
-
-	@size.setter
-	def size(self, value):
-		self._size = value
-
+			return "<ref: %#x, size: %#x>" % (self.address, self.size)

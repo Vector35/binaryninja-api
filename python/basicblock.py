@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
+from dataclasses import dataclass
 from typing import Generator, Optional, List, Tuple
 
 # Binary Ninja components
@@ -30,75 +31,21 @@ from .enums import BranchType, HighlightStandardColor
 # from . import binaryview
 # from . import architecture
 
-class BasicBlockEdge(object):
-	def __init__(self, branch_type:BranchType, source:'BasicBlock', target:'BasicBlock', back_edge:bool, fall_through:bool):
-		self._type = branch_type
-		self._source = source
-		self._target = target
-		self._back_edge = back_edge
-		self._fall_through = fall_through
+@dataclass
+class BasicBlockEdge:
+	type:BranchType
+	source:'BasicBlock'
+	target:'BasicBlock'
+	back_edge:bool
+	fall_through:bool
 
 	def __repr__(self):
-		if self._type == BranchType.UnresolvedBranch:
-			return "<%s>" % BranchType(self._type).name
-		elif self._target.arch:
-			return "<%s: %s@%#x>" % (BranchType(self._type).name, self._target.arch.name, self._target.start)
+		if self.type == BranchType.UnresolvedBranch:
+			return f"<{self.type.name}>"
+		elif self.target.arch:
+			return f"<{self.type.name}: {self.target.arch.name}@{self.target.start:#x}>"
 		else:
-			return "<%s: %#x>" % (BranchType(self._type).name, self._target.start)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self._type, self._source, self._target, self._back_edge, self._fall_through) == \
-			(other._type, other._source, other._target, other._back_edge, other._fall_through)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._type, self._source, self._target, self.back_edge, self.fall_through))
-
-	@property
-	def type(self) -> BranchType:
-		return self._type
-
-	@type.setter
-	def type(self, value:BranchType) -> None:
-		self._type = value
-
-	@property
-	def source(self) -> 'BasicBlock':
-		return self._source
-
-	@source.setter
-	def source(self, value:'BasicBlock') -> None:
-		self._source = value
-
-	@property
-	def target(self) -> 'BasicBlock':
-		return self._target
-
-	@target.setter
-	def target(self, value:'BasicBlock') -> None:
-		self._target = value
-
-	@property
-	def back_edge(self) -> bool:
-		return self._back_edge
-
-	@back_edge.setter
-	def back_edge(self, value:bool) -> None:
-		self._back_edge = value
-
-	@property
-	def fall_through(self) -> bool:
-		return self._fall_through
-
-	@fall_through.setter
-	def fall_through(self, value:bool) -> None:
-		self._fall_through = value
+			return f"<{self.type.name}: {self.target.start:#x}>"
 
 
 

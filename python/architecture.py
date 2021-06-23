@@ -618,7 +618,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result[0].branchCount = len(info.branches)
 			for i in range(0, len(info.branches)):
 				if isinstance(info.branches[i].type, str):
-					result[0].branchType[i] = BranchType[info.branches[i].type]
+					result[0].branchType[i] = BranchType[info.branches[i].type.name]
 				else:
 					result[0].branchType[i] = info.branches[i].type
 				result[0].branchTarget[i] = info.branches[i].target

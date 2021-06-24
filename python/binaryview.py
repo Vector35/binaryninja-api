@@ -30,6 +30,7 @@ import inspect
 import os
 from pathlib import Path
 from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping
+from dataclasses import dataclass
 
 from collections import defaultdict, OrderedDict
 
@@ -526,30 +527,21 @@ class BinaryDataNotificationCallbacks(object):
 		except:
 			log.log_error(traceback.format_exc())
 
-	def _data_var_added(self, ctxt, view:core.BNBinaryView, var:core.BNVariable) -> None:
+	def _data_var_added(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
-			address = var[0].address
-			var_type = _types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
-			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_added(self._view, DataVariable(address, var_type, auto_discovered, self._view))
+			self._notify.data_var_added(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
-	def _data_var_removed(self, ctxt, view:core.BNBinaryView, var:core.BNVariable) -> None:
+	def _data_var_removed(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
-			address = var[0].address
-			var_type = _types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
-			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_removed(self._view, DataVariable(address, var_type, auto_discovered, self._view))
+			self._notify.data_var_removed(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
-	def _data_var_updated(self, ctxt, view:core.BNBinaryView, var:core.BNVariable) -> None:
+	def _data_var_updated(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
-			address = var[0].address
-			var_type = _types.Type(core.BNNewTypeReference(var[0].type), platform = self._view.platform, confidence = var[0].typeConfidence)
-			auto_discovered = var[0].autoDiscovered
-			self._notify.data_var_updated(self._view, DataVariable(address, var_type, auto_discovered, self._view))
+			self._notify.data_var_updated(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -1971,10 +1963,7 @@ class BinaryView(object):
 		assert var_list is not None, "core.BNGetDataVariables returned None"
 		result = {}
 		for i in range(0, count.value):
-			addr = var_list[i].address
-			var_type = _types.Type(core.BNNewTypeReference(var_list[i].type), platform = self.platform, confidence = var_list[i].typeConfidence)
-			auto_discovered = var_list[i].autoDiscovered
-			result[addr] = DataVariable(addr, var_type, auto_discovered, self)
+			result[var_list[i].address] = DataVariable.from_core_struct(var_list[i], self)
 		core.BNFreeDataVariables(var_list, count.value)
 		return result
 
@@ -3205,7 +3194,7 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable(var.address, _types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+		return DataVariable.from_core_struct(var, self)
 
 	def get_functions_containing(self, addr, plat=None):
 		"""
@@ -5219,7 +5208,7 @@ class BinaryView(object):
 				addr = var.address + core.BNGetTypeWidth(var.type)
 				continue
 			break
-		return DataVariable(var.address, _types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+		return DataVariable.from_core_struct(var, self)
 
 	def get_next_data_var_start_after(self, addr):
 		"""
@@ -5329,7 +5318,7 @@ class BinaryView(object):
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, prev_data_var_start, var):
 			return None
-		return DataVariable(var.address, _types.Type(var.type, platform = self.platform, confidence = var.typeConfidence), var.autoDiscovered, self)
+		return DataVariable.from_core_struct(var, self)
 
 	def get_previous_data_var_start_before(self, addr):
 		"""
@@ -7264,6 +7253,7 @@ class BinaryWriter(object):
 		"""
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
+
 class StructuredDataValue(object):
 	def __init__(self, type, address, value, endian):
 		self._type = type
@@ -7444,72 +7434,100 @@ class StructuredDataView(object):
 			self._members[m.name] = m
 
 
+@dataclass(frozen=True)
+class CoreDataVariable:
+	address:int
+	type:'_types.Type'
+	auto_discovered:bool
+
 
 class DataVariable(object):
-	def __init__(self, addr:int, var_type:'_types.Type', auto_discovered:bool, view:Optional['BinaryView']=None):
-		self._address = addr
-		self._type = var_type
-		self._auto_discovered = auto_discovered
+	def __init__(self, var:CoreDataVariable, view:'BinaryView'):
+		self._var = var
 		self._view = view
+
+	@classmethod
+	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView'):
+		var_type = _types.Type(core.BNNewTypeReference(var.type), platform=view.platform,
+			confidence=var.typeConfidence)
+		return cls(CoreDataVariable(var.address, var_type, var.autoDiscovered), view)
 
 	@property
 	def data_refs_from(self) -> Optional[Generator[int, None, None]]:
 		"""data cross references from this data variable (read-only)"""
-		if self._view is None:
-			return None
-		return self._view.get_data_refs_from(self._address, max(1, len(self)))
+		return self._view.get_data_refs_from(self.address, max(1, len(self)))
 
 	@property
 	def data_refs(self) -> Optional[Generator[int, None, None]]:
 		"""data cross references to this data variable (read-only)"""
-		if self._view is None:
-			return None
-		return self._view.get_data_refs(self._address, max(1, len(self)))
+		return self._view.get_data_refs(self.address, max(1, len(self)))
 
 	@property
-	def code_refs(self):
+	def code_refs(self) -> Generator['ReferenceSource', None, None]:
 		"""code references to this data variable (read-only)"""
-		if self._view is None:
-			return None
-		return self._view.get_code_refs(self._address, max(1, len(self)))
+		return self._view.get_code_refs(self.address, max(1, len(self)))
 
 	def __len__(self):
-		return len(self._type)
+		return len(self._var.type)
 
 	def __repr__(self):
-		return "<var 0x%x: %s>" % (self._address, str(self._type))
+		return f"<var {self.address:#x}: {self.type}>"
 
 	@property
-	def address(self):
-		return self._address
-
-	@address.setter
-	def address(self, value):
-		self._address = value
+	def address(self) -> int:
+		return self._var.address
 
 	@property
-	def type(self):
-		return self._type
+	def type(self) -> '_types.Type':
+		return self._var.type
 
 	@type.setter
-	def type(self, value):
-		self._type = value
+	def type(self, value:Optional['_types.Type']) -> None:  # type: ignore
+		self._view.define_user_data_var(self.address, value)
+		if value is None:
+			self._var = CoreDataVariable(self.address, _types.Type.void(), False)
+		else:
+			self._var = CoreDataVariable(self.address, value, False)
 
 	@property
-	def auto_discovered(self):
-		return self._auto_discovered
-
-	@auto_discovered.setter
-	def auto_discovered(self, value):
-		self._auto_discovered = value
+	def auto_discovered(self) -> bool:
+		return self._var.auto_discovered
 
 	@property
-	def view(self):
+	def view(self) -> BinaryView:
 		return self._view
 
 	@view.setter
 	def view(self, value):
 		self._view = value
+
+	@property
+	def symbol(self) -> Optional['_types.Symbol']:
+		return self._view.get_symbol_at(self.address)
+
+	@symbol.setter
+	def symbol(self, value:Optional[Union[str, '_types.Symbol']]) -> None:  # type: ignore
+		if value is None or value == "":
+			if self.symbol is not None:
+				self.view.undefine_user_symbol(self.symbol)
+		elif isinstance(value, str):
+			symbol = _types.Symbol(SymbolType.DataSymbol, self.address, value)
+			self.view.define_user_symbol(symbol)
+		elif isinstance(value, _types.Symbol):
+			self.view.define_user_symbol(value)
+		else:
+			raise ValueError("Unknown supported for symbol assignment")
+
+	@property
+	def name(self) -> Optional[str]:
+		if self.symbol is None:
+			return None
+		return self.symbol.name
+
+	@name.setter
+	def name(self, value:str) -> None:
+		self.symbol = value
+
 
 class DataVariableAndName(DataVariable):
 	def __init__(self, addr: int, var_type: types.Type, var_name: str, auto_discovered: bool, view: "BinaryView" = None) -> None:

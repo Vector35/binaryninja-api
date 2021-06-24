@@ -42,7 +42,7 @@ MLILInstructionsType = Generator['MediumLevelILInstruction', None, None]
 MLILBasicBlocksType = Generator['MediumLevelILBasicBlock', None, None]
 
 
-class SSAVariable(object):
+class SSAVariable:
 	def __init__(self, var:'variable.Variable', version:int):
 		self._var = var
 		self._version = version
@@ -80,7 +80,7 @@ class SSAVariable(object):
 		self._version = value
 
 
-class MediumLevelILLabel(object):
+class MediumLevelILLabel:
 	def __init__(self, handle:Optional[core.BNMediumLevelILLabel]=None):
 		if handle is None:
 			self.handle = (core.BNMediumLevelILLabel * 1)()
@@ -89,7 +89,7 @@ class MediumLevelILLabel(object):
 			self.handle = handle
 
 
-class MediumLevelILOperationAndSize(object):
+class MediumLevelILOperationAndSize:
 	def __init__(self, operation:MediumLevelILOperation, size:int):
 		self._operation = operation
 		self._size = size
@@ -123,7 +123,7 @@ class MediumLevelILOperationAndSize(object):
 		return self._size
 
 
-class MediumLevelILInstruction(object):
+class MediumLevelILInstruction:
 	"""
 	``class MediumLevelILInstruction`` Medium Level Intermediate Language Instructions are infinite length tree-based
 	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.
@@ -811,7 +811,7 @@ class MediumLevelILInstruction(object):
 		return self._operands
 
 
-class MediumLevelILExpr(object):
+class MediumLevelILExpr:
 	"""
 	``class MediumLevelILExpr`` hold the index of IL Expressions.
 
@@ -830,7 +830,7 @@ class MediumLevelILExpr(object):
 		self._index = value
 
 
-class MediumLevelILFunction(object):
+class MediumLevelILFunction:
 	"""
 	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a function. MediumLevelILExpr
 	objects can be added to the MediumLevelILFunction by calling :func:`append` and passing the result of the various class

@@ -30,7 +30,7 @@ from . import log
 from . import mediumlevelil
 
 
-class FunctionRecognizer(object):
+class FunctionRecognizer:
 
 	_instance = None
 

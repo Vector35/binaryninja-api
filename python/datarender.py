@@ -33,7 +33,7 @@ from . import types
 from . import highlight
 
 
-class TypeContext(object):
+class TypeContext:
 	def __init__(self, _type, _offset):
 		self._type = _type
 		self._offset = _offset
@@ -48,7 +48,7 @@ class TypeContext(object):
 		"""The offset into the given type object"""
 		return self._offset
 
-class DataRenderer(object):
+class DataRenderer:
 	"""
 	DataRenderer objects tell the Linear View how to render specific types.
 

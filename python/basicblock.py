@@ -48,9 +48,8 @@ class BasicBlockEdge:
 			return f"<{self.type.name}: {self.target.start:#x}>"
 
 
-
-class BasicBlock(object):
-	def __init__(self, handle:core.BNBasicBlock, view:Optional['binaryninja.binaryview.BinaryView']=None):
+class BasicBlock:
+	def __init__(self, handle:core.BNBasicBlockHandle, view:Optional['binaryninja.binaryview.BinaryView']=None):
 		self._view = view
 		self.handle = core.handle_of_type(handle, core.BNBasicBlock)
 		self._arch = None

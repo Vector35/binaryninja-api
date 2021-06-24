@@ -47,7 +47,7 @@ LLILInstructionsType = Generator['LowLevelILInstruction', None, None]
 LLILBasicBlocksType = Generator['LowLevelILBasicBlock', None, None]
 
 
-class LowLevelILLabel(object):
+class LowLevelILLabel:
 	def __init__(self, handle:core.BNLowLevelILLabel=None):
 		if handle is None:
 			self.handle = (core.BNLowLevelILLabel * 1)()
@@ -56,7 +56,7 @@ class LowLevelILLabel(object):
 			self.handle = handle
 
 @dataclass(frozen=True)
-class ILRegister(object):
+class ILRegister:
 	arch:'architecture.Architecture'
 	index:'architecture.RegisterIndex'
 
@@ -95,7 +95,7 @@ class ILRegister(object):
 
 
 @dataclass(frozen=True)
-class ILRegisterStack(object):
+class ILRegisterStack:
 	arch:'architecture.Architecture'
 	index:'architecture.RegisterStackIndex'
 
@@ -118,7 +118,7 @@ class ILRegisterStack(object):
 
 
 @dataclass(frozen=True)
-class ILFlag(object):
+class ILFlag:
 	arch:'architecture.Architecture'
 	index:'architecture.FlagIndex'
 
@@ -144,7 +144,7 @@ class ILFlag(object):
 
 
 @dataclass(frozen=True)
-class ILSemanticFlagClass(object):
+class ILSemanticFlagClass:
 	arch:'architecture.Architecture'
 	index:'architecture.SemanticClassIndex'
 
@@ -163,7 +163,7 @@ class ILSemanticFlagClass(object):
 
 
 @dataclass(frozen=True)
-class ILSemanticFlagGroup(object):
+class ILSemanticFlagGroup:
 	arch:'architecture.Architecture'
 	index:'architecture.SemanticGroupIndex'
 
@@ -182,7 +182,7 @@ class ILSemanticFlagGroup(object):
 
 
 @dataclass(frozen=True)
-class ILIntrinsic(object):
+class ILIntrinsic:
 	arch:'architecture.Architecture'
 	index:'architecture.IntrinsicIndex'
 
@@ -208,7 +208,7 @@ class ILIntrinsic(object):
 
 
 @dataclass(frozen=True)
-class SSARegister(object):
+class SSARegister:
 	reg:ILRegister
 	version:int
 
@@ -217,7 +217,7 @@ class SSARegister(object):
 
 
 @dataclass(frozen=True)
-class SSARegisterStack(object):
+class SSARegisterStack:
 	reg_stack:ILRegisterStack
 	version:int
 
@@ -226,7 +226,7 @@ class SSARegisterStack(object):
 
 
 @dataclass(frozen=True)
-class SSAFlag(object):
+class SSAFlag:
 	flag:ILFlag
 	version:int
 
@@ -235,7 +235,7 @@ class SSAFlag(object):
 
 
 @dataclass(frozen=True)
-class SSARegisterOrFlag(object):
+class SSARegisterOrFlag:
 	reg_or_flag:Union[ILRegister, ILFlag]
 	version:int
 
@@ -244,7 +244,7 @@ class SSARegisterOrFlag(object):
 
 
 @dataclass(frozen=True)
-class LowLevelILOperationAndSize(object):
+class LowLevelILOperationAndSize:
 	operation:'LowLevelILOperation'
 	size:int
 
@@ -254,7 +254,7 @@ class LowLevelILOperationAndSize(object):
 		return "<{self.operation.name} {self.size}>"
 
 
-class LowLevelILInstruction(object):
+class LowLevelILInstruction:
 	"""
 	``class LowLevelILInstruction`` Low Level Intermediate Language Instructions are infinite length tree-based
 	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.
@@ -933,7 +933,7 @@ class LowLevelILInstruction(object):
 
 
 @dataclass(frozen=True)
-class LowLevelILExpr(object):
+class LowLevelILExpr:
 	"""
 	``class LowLevelILExpr`` hold the index of IL Expressions.
 
@@ -946,7 +946,7 @@ class LowLevelILExpr(object):
 		return self.index
 
 
-class LowLevelILFunction(object):
+class LowLevelILFunction:
 	"""
 	``class LowLevelILFunction`` contains the list of LowLevelILExpr objects that make up a function. LowLevelILExpr
 	objects can be added to the LowLevelILFunction by calling :func:`append` and passing the result of the various class

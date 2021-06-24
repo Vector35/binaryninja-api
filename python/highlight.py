@@ -24,7 +24,7 @@ from . import _binaryninjacore as core
 from .enums import HighlightColorStyle, HighlightStandardColor
 
 
-class HighlightColor(object):
+class HighlightColor:
 	def __init__(self, color = None, mix_color = None, mix = None, red = None, green = None, blue = None, alpha = 255):
 		if (red is not None) and (green is not None) and (blue is not None):
 			self._style = HighlightColorStyle.CustomHighlightColor

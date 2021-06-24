@@ -67,7 +67,7 @@ class _UpdateChannelMetaClass(type):
 		return result
 
 
-class UpdateProgressCallback(object):
+class UpdateProgressCallback:
 	def __init__(self, func):
 		self.cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(self.callback)
 		self.func = func
@@ -188,7 +188,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 		self._latest_version_num = value
 
 
-class UpdateVersion(object):
+class UpdateVersion:
 	def __init__(self, channel, ver, notes, t):
 		self._channel = channel
 		self._version = ver

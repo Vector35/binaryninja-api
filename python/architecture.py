@@ -63,7 +63,7 @@ IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
 
 
 @dataclass(frozen=False)
-class RegisterInfo(object):
+class RegisterInfo:
 	full_width_reg:RegisterName
 	offset:int
 	size:int = 0
@@ -81,7 +81,7 @@ class RegisterInfo(object):
 
 
 @dataclass(frozen=False)
-class RegisterStackInfo(object):
+class RegisterStackInfo:
 	storage_regs:List[RegisterName]
 	top_relative_regs:List[RegisterName]
 	stack_top_reg:RegisterName
@@ -92,7 +92,7 @@ class RegisterStackInfo(object):
 
 
 @dataclass(frozen=True)
-class IntrinsicInput(object):
+class IntrinsicInput:
 	type:'types.Type'
 	name:str = ""
 
@@ -103,7 +103,7 @@ class IntrinsicInput(object):
 
 
 @dataclass(frozen=True)
-class IntrinsicInfo(object):
+class IntrinsicInfo:
 	inputs:List[IntrinsicInput]
 	outputs:List['types.Type']
 	index:Optional[int] = None
@@ -113,7 +113,7 @@ class IntrinsicInfo(object):
 
 
 @dataclass(frozen=True)
-class InstructionBranch(object):
+class InstructionBranch:
 	type:BranchType
 	target:int
 	arch:'Architecture'
@@ -125,7 +125,7 @@ class InstructionBranch(object):
 
 
 @dataclass(frozen=False)
-class InstructionInfo(object):
+class InstructionInfo:
 	length:int = 0
 	arch_transition_by_target_addr:bool = False
 	branch_delay:bool = False

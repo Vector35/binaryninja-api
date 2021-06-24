@@ -90,7 +90,7 @@ def get_install_directory():
 	return core.BNGetInstallDirectory()
 
 
-class _DestructionCallbackHandler(object):
+class _DestructionCallbackHandler:
 	def __init__(self):
 		self._cb = core.BNObjectDestructionCallbacks()
 		self._cb.context = 0

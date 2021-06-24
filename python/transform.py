@@ -50,7 +50,7 @@ class _TransformMetaClass(type):
 		return Transform(xform)
 
 
-class TransformParameter(object):
+class TransformParameter:
 	def __init__(self, name, long_name = None, fixed_length = 0):
 		self._name = name
 		if long_name is None:

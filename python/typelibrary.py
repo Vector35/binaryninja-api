@@ -30,7 +30,7 @@ from . import platform
 from . import architecture
 
 
-class TypeLibrary(object):
+class TypeLibrary:
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNTypeLibrary)
 

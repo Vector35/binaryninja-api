@@ -25,7 +25,7 @@ from . import _binaryninjacore as core
 from .enums import SettingsScope
 
 
-class Settings(object):
+class Settings:
 	"""
 	:class:`Settings` provides a way to define and access settings in a hierarchical fashion. The value of a setting can \
 	be defined for each hierarchical level, where each level overrides the preceding level. The backing-store for setting \

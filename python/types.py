@@ -34,7 +34,7 @@ from . import log
 
 QualifiedNameType = Union[List[str], str, 'QualifiedName', List[bytes]]
 
-class QualifiedName(object):
+class QualifiedName:
 	def __init__(self, name:QualifiedNameType=[]):
 		self._name:List[str] = []
 		if isinstance(name, str):
@@ -139,7 +139,7 @@ class QualifiedName(object):
 		self._name = value
 
 
-class TypeReferenceSource(object):
+class TypeReferenceSource:
 	def __init__(self, name, offset, ref_type):
 		self._name = name
 		self._offset = offset
@@ -240,7 +240,7 @@ class NameSpace(QualifiedName):
 		return NameSpace(result)
 
 
-class Symbol(object):
+class Symbol:
 	"""
 	Symbols are defined as one of the following types:
 
@@ -348,7 +348,7 @@ class Symbol(object):
 		return core.BNIsSymbolAutoDefined(self.handle)
 
 @dataclass(frozen=True)
-class FunctionParameter(object):
+class FunctionParameter:
 	type:'types.Type'
 	name:str = ""
 	location:Optional['variable.VariableNameAndType'] = None
@@ -359,7 +359,7 @@ class FunctionParameter(object):
 		return "%s %s%s" % (self.type.get_string_before_name(), self.name, self.type.get_string_after_name())
 
 
-class Type(object):
+class Type:
 	"""
 	``class Type`` allows you to interact with the Binary Ninja type system. Note that the ``repr`` and ``str``
 	handlers respond differently on type objects.
@@ -974,7 +974,7 @@ class Type(object):
 
 
 @dataclass(frozen=True)
-class BoolWithConfidence(object):
+class BoolWithConfidence:
 	value:bool
 	confidence:int=core.max_confidence
 
@@ -983,7 +983,7 @@ class BoolWithConfidence(object):
 
 
 @dataclass(frozen=True)
-class SizeWithConfidence(object):
+class SizeWithConfidence:
 	value:int
 	confidence:int=core.max_confidence
 
@@ -992,7 +992,7 @@ class SizeWithConfidence(object):
 
 
 @dataclass(frozen=True)
-class RegisterStackAdjustmentWithConfidence(object):
+class RegisterStackAdjustmentWithConfidence:
 	value:int
 	confidence:int=core.max_confidence
 
@@ -1001,7 +1001,7 @@ class RegisterStackAdjustmentWithConfidence(object):
 
 
 @dataclass(frozen=True)
-class RegisterSet(object):
+class RegisterSet:
 	regs:List['architecture.RegisterName']
 	confidence:int=core.max_confidence
 
@@ -1019,7 +1019,7 @@ class RegisterSet(object):
 		return RegisterSet(list(self.regs), confidence=confidence)
 
 
-class NamedTypeReference(object):
+class NamedTypeReference:
 	def __init__(self, type_class = NamedTypeReferenceClass.UnknownNamedTypeClass, type_id = None, name = None, handle = None):
 		if handle is None:
 			if name is not None:
@@ -1084,7 +1084,7 @@ class NamedTypeReference(object):
 
 
 @dataclass(frozen=True)
-class StructureMember(object):
+class StructureMember:
 	type:'types.Type'
 	name:str
 	offset:int
@@ -1095,7 +1095,7 @@ class StructureMember(object):
 		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}" + \
 			", offset {self.offset:#x}>"
 
-class Structure(object):
+class Structure:
 	def __init__(self, handle=None):
 		if handle is None:
 			_handle = core.BNCreateStructureBuilder()
@@ -1292,7 +1292,7 @@ class Structure(object):
 
 
 @dataclass(frozen=True)
-class EnumerationMember(object):
+class EnumerationMember:
 	name:str
 	value:int
 	default:bool
@@ -1301,7 +1301,7 @@ class EnumerationMember(object):
 		return f"<{self.name} = {self.value:#x}>"
 
 
-class Enumeration(object):
+class Enumeration:
 	def __init__(self, handle=None):
 		if handle is None:
 			_handle = core.BNCreateEnumerationBuilder()
@@ -1386,7 +1386,7 @@ class Enumeration(object):
 
 
 @dataclass(frozen=True)
-class TypeParserResult(object):
+class TypeParserResult:
 	types:Mapping[QualifiedName, Type]
 	variables:Mapping[QualifiedName, Type]
 	functions:Mapping[QualifiedName, Type]
@@ -1453,7 +1453,7 @@ def preprocess_source(source, filename=None, include_dirs=[]):
 
 
 @dataclass(frozen=True)
-class TypeFieldReference(object):
+class TypeFieldReference:
 	func:Optional['function.Function']
 	arch:Optional['architecture.Architecture']
 	address:int

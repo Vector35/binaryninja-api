@@ -28,7 +28,7 @@ from . import basicblock
 from .enums import LinearViewObjectIdentifierType
 
 
-class LinearDisassemblyLine(object):
+class LinearDisassemblyLine:
 	def __init__(self, line_type, func, block, contents):
 		self.type = line_type
 		self.function = func
@@ -42,7 +42,7 @@ class LinearDisassemblyLine(object):
 		return str(self.contents)
 
 
-class LinearViewObjectIdentifier(object):
+class LinearViewObjectIdentifier:
 	def __init__(self, name, start = None, end = None):
 		self._name = name
 		self._start = start
@@ -126,7 +126,7 @@ class LinearViewObjectIdentifier(object):
 		return result
 
 
-class LinearViewObject(object):
+class LinearViewObject:
 	def __init__(self, handle, parent = None):
 		self.handle = handle
 		self._parent = parent
@@ -329,7 +329,7 @@ class LinearViewObject(object):
 		return LinearViewObject(core.BNCreateLinearViewHighLevelILSSAForm(view.handle, settings))
 
 
-class LinearViewCursor(object):
+class LinearViewCursor:
 	def __init__(self, root_object, handle = None):
 		if handle is not None:
 			self.handle = handle

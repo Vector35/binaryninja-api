@@ -38,7 +38,7 @@ from . import highlight
 from . import interaction
 
 
-class FlowGraphEdge(object):
+class FlowGraphEdge:
 	def __init__(self, branch_type, source, target, points, back_edge, style):
 		self.type = BranchType(branch_type)
 		self.source = source
@@ -58,7 +58,7 @@ class FlowGraphEdge(object):
 		return hash((self.type, self.source, self.target, self.points, self.back_edge, self.style))
 
 
-class EdgeStyle(object):
+class EdgeStyle:
 	def __init__(self, style=None, width=None, theme_color=None):
 		self.style = style if style is not None else EdgePenStyle.SolidLine
 		self.width = width if width is not None else 0
@@ -82,7 +82,7 @@ class EdgeStyle(object):
 	def __hash__(self):
 		return hash((self.style, self.width, self.color))
 
-class FlowGraphNode(object):
+class FlowGraphNode:
 	def __init__(self, graph = None, handle = None):
 		if handle is None:
 			if graph is None:
@@ -335,7 +335,7 @@ class FlowGraphNode(object):
 		return core.BNIsNodeValidForFlowGraph(graph.handle, self.handle)
 
 
-class FlowGraphLayoutRequest(object):
+class FlowGraphLayoutRequest:
 	def __init__(self, graph, callback = None):
 		self.on_complete = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
@@ -367,7 +367,7 @@ class FlowGraphLayoutRequest(object):
 		self.on_complete = None
 
 
-class FlowGraph(object):
+class FlowGraph:
 	"""
 	``class FlowGraph`` implements a directed flow graph to be shown in the UI. This class allows plugins to
 	create custom flow graphs and render them in the UI using the flow graph report API.

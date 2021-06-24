@@ -25,7 +25,7 @@ import ctypes
 from . import _binaryninjacore as core
 from . import log
 
-class FileAccessor(object):
+class FileAccessor:
 	def __init__(self):
 		self._cb = core.BNFileAccessor()
 		self._cb.context = 0

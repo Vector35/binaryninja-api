@@ -29,7 +29,7 @@ from . import decorators
 from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination
 
 @dataclass(frozen=True)
-class LookupTableEntry(object):
+class LookupTableEntry:
 	from_values:List[int]
 	to_value:int
 
@@ -181,7 +181,7 @@ class ExternalPointerRegisterValue(RegisterValue):
 
 
 @dataclass(frozen=True)
-class ValueRange(object):
+class ValueRange:
 	start:int
 	end:int
 	step:int
@@ -198,7 +198,7 @@ class ValueRange(object):
 
 
 @decorators.passive
-class PossibleValueSet(object):
+class PossibleValueSet:
 	"""
 	`class PossibleValueSet` PossibleValueSet is used to define possible values
 	that a variable can take. It contains methods to instantiate different
@@ -553,7 +553,7 @@ class PossibleValueSet(object):
 
 
 @dataclass(frozen=True)
-class StackVariableReference(object):
+class StackVariableReference:
 	_source_operand:Optional[int]
 	type:'binaryninja.types.Type'
 	name:str
@@ -743,7 +743,7 @@ class Variable:
 		return self._var.to_BNVariable()
 
 @dataclass(frozen=True)
-class ConstantReference(object):
+class ConstantReference:
 	value:int
 	size:int
 	pointer:bool
@@ -758,7 +758,7 @@ class ConstantReference(object):
 
 
 @dataclass(frozen=True)
-class IndirectBranchInfo(object):
+class IndirectBranchInfo:
 	source_arch:'binaryninja.architecture.Architecture'
 	source_addr:int
 	dest_arch:'binaryninja.architecture.Architecture'
@@ -770,7 +770,7 @@ class IndirectBranchInfo(object):
 
 
 @decorators.passive
-class ParameterVariables(object):
+class ParameterVariables:
 	def __init__(self, var_list:List[Variable], confidence:int=core.max_confidence, func:Optional['binaryninja.function.Function']=None):
 		self._vars = var_list
 		self._confidence = confidence
@@ -811,7 +811,7 @@ class ParameterVariables(object):
 
 
 @dataclass(frozen=True, order=True)
-class AddressRange(object):
+class AddressRange:
 	start:int
 	end:int
 

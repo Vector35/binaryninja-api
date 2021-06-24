@@ -34,7 +34,7 @@ from . import lowlevelil
 from . import mediumlevelil
 
 
-class PluginCommandContext(object):
+class PluginCommandContext:
 	def __init__(self, view):
 		self._view = view
 		self._address = 0
@@ -580,7 +580,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		self._type = value
 
 
-class MainThreadAction(object):
+class MainThreadAction:
 	def __init__(self, handle):
 		self.handle = handle
 
@@ -598,7 +598,7 @@ class MainThreadAction(object):
 		core.BNWaitForMainThreadAction(self.handle)
 
 
-class MainThreadActionHandler(object):
+class MainThreadActionHandler:
 	_main_thread = None
 
 	def __init__(self):

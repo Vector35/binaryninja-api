@@ -23,7 +23,7 @@ import ctypes
 # Binary Ninja components
 from . import _binaryninjacore as core
 
-class DataBuffer(object):
+class DataBuffer:
 	def __init__(self, contents:bytes=b"", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)

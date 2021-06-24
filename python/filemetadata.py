@@ -33,7 +33,7 @@ from . import binaryview
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
 
-class NavigationHandler(object):
+class NavigationHandler:
 	def _register(self, handle) -> None:
 		self._cb = core.BNNavigationHandler()
 		self._cb.context = 0
@@ -74,7 +74,7 @@ class NavigationHandler(object):
 		return NotImplemented
 
 
-class SaveSettings(object):
+class SaveSettings:
 	"""
 	``class SaveSettings`` is used to specify actions and options that apply to saving a database (.bndb).
 	"""
@@ -112,7 +112,7 @@ class _FileMetadataAssociatedDataStore(associateddatastore._AssociatedDataStore)
 	_defaults = {}
 
 
-class FileMetadata(object):
+class FileMetadata:
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.

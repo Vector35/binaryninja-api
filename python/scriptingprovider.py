@@ -44,7 +44,7 @@ from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 
 
-class _ThreadActionContext(object):
+class _ThreadActionContext:
 	_actions = []
 
 	def __init__(self, func):
@@ -67,7 +67,7 @@ class _ThreadActionContext(object):
 			self.__class__._actions.remove(self)
 
 
-class ScriptingOutputListener(object):
+class ScriptingOutputListener:
 	def _register(self, handle):
 		self._cb = core.BNScriptingOutputListener()
 		self._cb.context = 0
@@ -107,7 +107,7 @@ class ScriptingOutputListener(object):
 		pass
 
 
-class ScriptingInstance(object):
+class ScriptingInstance:
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNScriptingInstanceCallbacks()
@@ -378,7 +378,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		return False
 
 
-class _PythonScriptingInstanceOutput(object):
+class _PythonScriptingInstanceOutput:
 	def __init__(self, orig, is_error):
 		self.orig = orig
 		self.is_error = is_error
@@ -460,7 +460,7 @@ class _PythonScriptingInstanceOutput(object):
 				PythonScriptingInstance._interpreter.value = interpreter
 
 
-class _PythonScriptingInstanceInput(object):
+class _PythonScriptingInstanceInput:
 	def __init__(self, orig):
 		self.orig = orig
 

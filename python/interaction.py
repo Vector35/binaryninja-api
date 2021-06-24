@@ -30,7 +30,7 @@ from . import log
 from . import flowgraph
 
 
-class LabelField(object):
+class LabelField:
 	"""
 	``LabelField`` adds a text label to the display.
 	"""
@@ -57,7 +57,7 @@ class LabelField(object):
 		self._text = value
 
 
-class SeparatorField(object):
+class SeparatorField:
 	"""
 	``SeparatorField`` adds vertical separation to the display.
 	"""
@@ -72,7 +72,7 @@ class SeparatorField(object):
 		pass
 
 
-class TextLineField(object):
+class TextLineField:
 	"""
 	``TextLineField`` Adds prompt for text string input. Result is stored in self.result as a string on completion.
 	"""
@@ -111,7 +111,7 @@ class TextLineField(object):
 		self._result = value
 
 
-class MultilineTextField(object):
+class MultilineTextField:
 	"""
 	``MultilineTextField`` add multi-line text string input field. Result is stored in self.result
 	as a string. This option is not supported on the command-line.
@@ -151,7 +151,7 @@ class MultilineTextField(object):
 		self._result = value
 
 
-class IntegerField(object):
+class IntegerField:
 	"""
 	``IntegerField`` add prompt for integer. Result is stored in self.result as an int.
 	"""
@@ -190,7 +190,7 @@ class IntegerField(object):
 		self._result = value
 
 
-class AddressField(object):
+class AddressField:
 	"""
 	``AddressField`` prompts the user for an address. By passing the optional view and current_address parameters
 	offsets can be used instead of just an address. The result is stored as in int in self.result.
@@ -256,7 +256,7 @@ class AddressField(object):
 		self._result = value
 
 
-class ChoiceField(object):
+class ChoiceField:
 	"""
 	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored
 	in self.result as an index in to the choices array.
@@ -313,7 +313,7 @@ class ChoiceField(object):
 		self._result = value
 
 
-class OpenFileNameField(object):
+class OpenFileNameField:
 	"""
 	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
 	"""
@@ -362,7 +362,7 @@ class OpenFileNameField(object):
 		self._result = value
 
 
-class SaveFileNameField(object):
+class SaveFileNameField:
 	"""
 	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a string.
 	"""
@@ -421,7 +421,7 @@ class SaveFileNameField(object):
 		self._result = value
 
 
-class DirectoryNameField(object):
+class DirectoryNameField:
 	"""
 	``DirectoryNameField`` prompts the user to specify a directory name to open. Result is stored in self.result as
 	a string.
@@ -471,7 +471,7 @@ class DirectoryNameField(object):
 		self._result = value
 
 
-class InteractionHandler(object):
+class InteractionHandler:
 	_interaction_handler = None
 
 	def __init__(self):
@@ -716,7 +716,7 @@ class InteractionHandler(object):
 		return MessageBoxButtonResult.CancelButton
 
 
-class PlainTextReport(object):
+class PlainTextReport:
 	def __init__(self, title, contents, view = None):
 		self._view = view
 		self._title = title
@@ -753,7 +753,7 @@ class PlainTextReport(object):
 		self._contents = value
 
 
-class MarkdownReport(object):
+class MarkdownReport:
 	def __init__(self, title, contents, plaintext = "", view = None):
 		self._view = view
 		self._title = title
@@ -799,7 +799,7 @@ class MarkdownReport(object):
 		self._plaintext = value
 
 
-class HTMLReport(object):
+class HTMLReport:
 	def __init__(self, title, contents, plaintext = "", view = None):
 		self._view = view
 		self._title = title
@@ -845,7 +845,7 @@ class HTMLReport(object):
 		self._plaintext = value
 
 
-class FlowGraphReport(object):
+class FlowGraphReport:
 	def __init__(self, title, graph, view = None):
 		self._view = view
 		self._title = title
@@ -879,7 +879,7 @@ class FlowGraphReport(object):
 		self._graph = value
 
 
-class ReportCollection(object):
+class ReportCollection:
 	def __init__(self, handle = None):
 		if handle is None:
 			self.handle = core.BNCreateReportCollection()

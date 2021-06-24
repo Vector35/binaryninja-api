@@ -59,7 +59,7 @@ ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.Med
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
 
-class ArchAndAddr(object):
+class ArchAndAddr:
 	def __init__(self, arch:Optional['architecture.Architecture']=None, addr:int=0):
 		self._arch = architecture.CoreArchitecture._from_cache(arch)
 		self._addr = addr
@@ -80,7 +80,7 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
 
-class DisassemblySettings(object):
+class DisassemblySettings:
 	def __init__(self, handle:core.BNDisassemblySettings=None):
 		if handle is None:
 			self.handle = core.BNCreateDisassemblySettings()
@@ -117,7 +117,7 @@ class DisassemblySettings(object):
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 
-class ILReferenceSource(object):
+class ILReferenceSource:
 	def __init__(self, func:Optional['Function'], arch:Optional['architecture.Architecture'], addr:int,
 		il_type:FunctionGraphType, expr_id:ExpressionIndex):
 		self._function = func
@@ -212,7 +212,7 @@ class ILReferenceSource(object):
 		self._expr_id = value
 
 
-class VariableReferenceSource(object):
+class VariableReferenceSource:
 	def __init__(self, var:'variable.Variable', src:ILReferenceSource):
 		self._var = var
 		self._src = src
@@ -247,7 +247,7 @@ class VariableReferenceSource(object):
 		self._src = value
 
 
-class Function(object):
+class Function:
 	_associated_data = {}
 
 	def __init__(self, view:Optional['binaryview.BinaryView']=None, handle:Optional[core.BNFunction]=None):
@@ -3092,7 +3092,7 @@ class Function(object):
 		return None
 
 
-class AdvancedFunctionAnalysisDataRequestor(object):
+class AdvancedFunctionAnalysisDataRequestor:
 	def __init__(self, func:'Function'=None):
 		self._function = func
 		if self._function is not None:
@@ -3120,7 +3120,7 @@ class AdvancedFunctionAnalysisDataRequestor(object):
 		self._function = None
 
 
-class DisassemblyTextLine(object):
+class DisassemblyTextLine:
 	def __init__(self, tokens:List['InstructionTextToken'], address:int=None, il_instr:ILInstructionType=None,
 		color:Union['_highlight.HighlightColor', HighlightStandardColor]=None):
 		self._address = address
@@ -3176,7 +3176,7 @@ class DisassemblyTextLine(object):
 		self._highlight = value
 
 
-class DisassemblyTextRenderer(object):
+class DisassemblyTextRenderer:
 	def __init__(self, func:AnyFunctionType=None, settings:'DisassemblySettings'=None,
 		handle:core.BNDisassemblySettings=None):
 		if handle is None:
@@ -3441,7 +3441,7 @@ class DisassemblyTextRenderer(object):
 		core.BNFreeDisassemblyTextLines(new_lines, count.value)
 
 
-class InstructionTextToken(object):
+class InstructionTextToken:
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
 

@@ -27,7 +27,7 @@ from .enums import MetadataType
 
 MetadataValueType = Union[int, bool, str, bytes, float, list, tuple, dict]
 
-class Metadata(object):
+class Metadata:
 	def __init__(self, value:MetadataValueType=None, signed:Optional[bool]=None,
 		raw:Optional[bool]=None, handle:Optional[core.BNMetadata]=None):
 		if handle is not None:

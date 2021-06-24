@@ -21,7 +21,7 @@
 import traceback
 import ctypes
 from typing import Generator, Union, List, Optional, Mapping, Tuple, NewType
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Binary Ninja components
 import binaryninja
@@ -129,7 +129,7 @@ class InstructionInfo(object):
 	length:int = 0
 	arch_transition_by_target_addr:bool = False
 	branch_delay:bool = False
-	branches:List[InstructionBranch] = []
+	branches:List[InstructionBranch] = field(default_factory=list)
 
 	def add_branch(self, branch_type, target = 0, arch = None):
 		self.branches.append(InstructionBranch(branch_type, target, arch))

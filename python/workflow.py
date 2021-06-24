@@ -19,48 +19,45 @@
 # IN THE SOFTWARE.
 
 import ctypes
-import json
-import random
+import traceback
+from typing import List, Union, Callable, Optional, Any
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import BranchType
-from binaryninja.flowgraph import EdgeStyle, EdgePenStyle, FlowGraph, FlowGraphNode, ThemeColor
-from typing import List, Union
+from . import log
+from . import _binaryninjacore as core
+from .flowgraph import FlowGraph, CoreFlowGraph
 
-# 2-3 compatibility
-from binaryninja import range
-from binaryninja import pyNativeStr
-
-_action_callbacks = {}
+ActivityType = Union['Activity', str]
 
 class Activity(object):
 	"""
 	:class:`Activity`
 	"""
 
-	def __init__(self, name = "", handle = None, action = None):
+	_action_callbacks = {}
+	def __init__(self, name:str = "", handle:Optional[core.BNActivityHandle] = None, action:Optional[Callable[[Any], None]] = None):
 		if handle is None:
 			#cls._notify(ac, callback)
 			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
-			self.handle = core.BNCreateActivity(name, None, action_callback)
+			_handle = core.BNCreateActivity(name, None, action_callback)
 			self.action = action
-			global _action_callbacks
-			_action_callbacks[len(_action_callbacks)] = action_callback
+			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
 		else:
-			self.handle = handle
-		self.__dict__["name"] = name
+			_handle = handle
+		assert _handle is not None, "Activity instantiation failed"
+		self.handle = _handle
+		self._name = name
 
-	def _action(self, ac):
+	def _action(self, ac:Any):
 		try:
 			if self.action is not None:
 				self.action(ac)
 		except:
-			binaryninja.log.log_error(traceback.format_exc())
+			log.log_error(traceback.format_exc())
 
 	def __del__(self):
-		binaryninja.log.log_error("Activity DEL called!")
+		log.log_error("Activity DEL called!")
 		if self.handle is not None:
 			core.BNFreeActivity(self.handle)
 
@@ -81,35 +78,44 @@ class Activity(object):
 		return not (self == other)
 
 	def __hash__(self):
-		return hash((self.instance_id, ctypes.addressof(self.handle.contents)))
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def name(self):
 		"""Activity name (read-only)"""
+		if self._name != "":
+			return self._name
 		return core.BNActivityGetName(self.handle)
 
 
 class _WorkflowMetaclass(type):
-
 	@property
-	def list(self):
+	def list(self) -> List['Workflow']:
 		"""List all Workflows (read-only)"""
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		workflows = core.BNGetWorkflowList(count)
+		assert workflows is not None, "core.BNGetWorkflowList returned None"
 		result = []
-		for i in range(0, count.value):
-			result.append(Workflow(handle = core.BNNewWorkflowReference(workflows[i])))
-		core.BNFreeWorkflowList(workflows, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewWorkflowReference(workflows[i])
+				assert handle is not None, "core.BNNewWorkflowReference returned None"
+				result.append(Workflow(handle = handle))
+			return result
+		finally:
+			core.BNFreeWorkflowList(workflows, count.value)
 
 	def __iter__(self):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		workflows = core.BNGetWorkflowList(count)
+		assert workflows is not None, "core.BNGetWorkflowList returned None"
 		try:
 			for i in range(0, count.value):
-				yield Workflow(handle = core.BNNewWorkflowReference(workflows[i]))
+				handle = core.BNNewWorkflowReference(workflows[i])
+				assert handle is not None, "core.BNNewWorkflowReference returned None"
+				yield Workflow(handle = handle)
 		finally:
 			core.BNFreeWorkflowList(workflows, count.value)
 
@@ -118,14 +124,8 @@ class _WorkflowMetaclass(type):
 		workflow = core.BNWorkflowInstance(str(value))
 		return Workflow(handle = workflow)
 
-	def __setattr__(self, name, value):
-		try:
-			type.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
 
-
-class Workflow(object, metaclass=_WorkflowMetaclass):
+class Workflow(metaclass=_WorkflowMetaclass):
 	"""
 	:class:`Workflow` A Binary Ninja Workflow is an abstraction of a computational binary analysis pipeline and it provides the extensibility \
 	mechanism needed for tailored binary analysis and decompilation. More specifically, a Workflow is a repository of activities along with a \
@@ -158,7 +158,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 
 		>>> pwf = Workflow().clone("PythonLogWarnWorkflow")
 		>>> pwf.show_topology()
-		>>> pwf.register_activity(Activity("PythonLogWarn", action=lambda analysis_context: binaryninja.log.log_warn("PythonLogWarn Called!")))
+		>>> pwf.register_activity(Activity("PythonLogWarn", action=lambda analysis_context: log.log_warn("PythonLogWarn Called!")))
 		>>> pwf.insert("core.function.basicBlockAnalysis", ["PythonLogWarn"])
 		>>> pwf.register()
 
@@ -167,15 +167,17 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		>>> Workflow().show_documentation()
 	"""
 
-	def __init__(self, name = "", handle = None, query_registry = True):
+	def __init__(self, name:str = "", handle:core.BNWorkflowHandle = None, query_registry:bool = True):
 		if handle is None:
 			if query_registry:
-				self.handle = core.BNWorkflowInstance(str(name))
+				_handle = core.BNWorkflowInstance(str(name))
 			else:
-				self.handle = core.BNCreateWorkflow(name)
+				_handle = core.BNCreateWorkflow(name)
 		else:
-			self.handle = handle
-		self.__dict__["name"] = core.BNGetWorkflowName(self.handle)
+			_handle = handle
+		assert _handle is not None
+		self.handle = _handle
+		self._name = core.BNGetWorkflowName(self.handle)
 
 	def __del__(self):
 		if self.handle is not None:
@@ -193,6 +195,10 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 	def __str__(self):
 		return self.name
 
+	@property
+	def name(self) -> str:
+		return self._name
+
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -204,9 +210,9 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		return not (self == other)
 
 	def __hash__(self):
-		return hash((self.instance_id, ctypes.addressof(self.handle.contents)))
+		return hash(ctypes.addressof(self.handle.contents))
 
-	def register(self, description = "") -> bool:
+	def register(self, description:str = "") -> bool:
 		"""
 		``register`` Register this Workflow, making it immutable and available for use.
 
@@ -216,7 +222,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNRegisterWorkflow(self.handle, str(description))
 
-	def clone(self, name, activity = "") -> "Workflow":
+	def clone(self, name:str, activity:ActivityType = "") -> "Workflow":
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
@@ -228,7 +234,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle = workflow)
 
-	def register_activity(self, activity, subactivities = [], description = "") -> bool:
+	def register_activity(self, activity:Activity, subactivities:List[ActivityType] = [], description:str = "") -> Optional[bool]:
 		"""
 		``register_activity`` Register an Activity with this Workflow.
 
@@ -245,21 +251,21 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 			input_list[i] = binaryninja.cstr(str(subactivities[i]))
 		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities), str(description))
 
-	def contains(self, activity) -> bool:
+	def contains(self, activity:ActivityType) -> bool:
 		"""
 		``contains`` Determine if an Activity exists in this Workflow.
 
-		:param str activity: the Activity name
+		:param ActivityType activity: the Activity name
 		:return: True if the Activity exists, False otherwise
 		:rtype: bool
 		"""
-		return core.BNWorkflowContains(self.handle, str(name))
+		return core.BNWorkflowContains(self.handle, str(activity))
 
-	def configuration(self, activity = "") -> str:
+	def configuration(self, activity:ActivityType = "") -> str:
 		"""
 		``configuration`` Retrieve the configuration as an adjacency list in JSON for the Workflow, or if specified just for the given ``activity``.
 
-		:param str activity: if specified, return the configuration for the ``activity``
+		:param ActivityType activity: if specified, return the configuration for the ``activity``
 		:return: an adjacency list representation of the configuration in JSON
 		:rtype: str
 		"""
@@ -274,7 +280,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowIsRegistered(self.handle)
 
-	def get_activity(self, activity) -> Union[None, Activity]:
+	def get_activity(self, activity:ActivityType) -> Optional[Activity]:
 		"""
 		``get_activity`` Retrieve the Activity object for the specified ``activity``.
 
@@ -285,9 +291,9 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		handle = core.BNWorkflowGetActivity(self.handle, str(activity))
 		if handle is None:
 			return None
-		return Activity(activity, handle)
+		return Activity(str(activity), handle)
 
-	def activity_roots(self, activity = "") -> List[str]:
+	def activity_roots(self, activity:ActivityType = "") -> List[str]:
 		"""
 		``activity_roots`` Retrieve the list of activity roots for the Workflow, or if specified just for the given ``activity``.
 
@@ -297,13 +303,16 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		length = ctypes.c_ulonglong()
 		result = core.BNWorkflowGetActivityRoots(self.handle, str(activity), ctypes.byref(length))
+		assert result is not None, "core.BNWorkflowGetActivityRoots returned None"
 		out_list = []
-		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
-		core.BNFreeStringList(result, length)
-		return out_list
+		try:
+			for i in range(length.value):
+				out_list.append(result[i].decode('utf-8'))
+			return out_list
+		finally:
+			core.BNFreeStringList(result, length)
 
-	def subactivities(self, activity = "", immediate = True) -> List[str]:
+	def subactivities(self, activity:ActivityType = "", immediate:bool = True) -> List[str]:
 		"""
 		``subactivities`` Retrieve the list of all activities, or optionally a filtered list.
 
@@ -314,13 +323,16 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		length = ctypes.c_ulonglong()
 		result = core.BNWorkflowGetSubactivities(self.handle, str(activity), immediate, ctypes.byref(length))
+		assert result is not None, "core.BNWorkflowGetSubactivities returned None"
 		out_list = []
-		for i in range(length.value):
-			out_list.append(pyNativeStr(result[i]))
-		core.BNFreeStringList(result, length)
-		return out_list
+		try:
+			for i in range(length.value):
+				out_list.append(result[i].decode('utf-8'))
+			return out_list
+		finally:
+			core.BNFreeStringList(result, length)
 
-	def assign_subactivities(self, activity, activities) -> bool:
+	def assign_subactivities(self, activity:Activity, activities:List[str]) -> bool:
 		"""
 		``assign_subactivities`` Assign the list of ``activities`` as the new set of children for the specified ``activity``.
 
@@ -343,7 +355,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowClear(self.handle)
 
-	def insert(self, activity, activities) -> bool:
+	def insert(self, activity:ActivityType, activities:List[str]) -> bool:
 		"""
 		``insert`` Insert the list of ``activities`` before the specified ``activity`` and at the same level.
 
@@ -357,7 +369,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 			input_list[i] = binaryninja.cstr(str(activities[i]))
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
 
-	def remove(self, activity) -> bool:
+	def remove(self, activity:ActivityType) -> bool:
 		"""
 		``remove`` Remove the specified ``activity``.
 
@@ -367,7 +379,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowRemove(self.handle, str(activity))
 
-	def replace(self, activity, new_activity) -> bool:
+	def replace(self, activity:ActivityType, new_activity:List[str]) -> bool:
 		"""
 		``replace`` Replace the specified ``activity``.
 
@@ -378,7 +390,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowReplace(self.handle, str(activity), str(new_activity))
 
-	def graph(self, activity = "", sequential = False, show = True) -> Union[None, FlowGraph]:
+	def graph(self, activity:ActivityType = "", sequential:bool = False, show:bool = True) -> Optional[FlowGraph]:
 		"""
 		``graph`` Generate a FlowGraph object for the current Workflow and optionally show it in the UI.
 
@@ -391,7 +403,7 @@ class Workflow(object, metaclass=_WorkflowMetaclass):
 		graph = core.BNWorkflowGetGraph(self.handle, str(activity), sequential)
 		if not graph:
 			return None
-		graph = binaryninja.flowgraph.CoreFlowGraph(graph)
+		graph = CoreFlowGraph(graph)
 		if show:
 			core.BNShowGraphReport(None, f'{self.name} <{activity}>' if activity else self.name, graph.handle)
 		return graph

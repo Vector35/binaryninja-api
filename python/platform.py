@@ -20,6 +20,7 @@
 
 import os
 import ctypes
+from typing import Mapping
 
 # Binary Ninja components
 import binaryninja
@@ -425,9 +426,9 @@ class Platform(metaclass=_PlatformMetaClass):
 		core.free_string(errors)
 		if not result:
 			raise SyntaxError(error_str)
-		type_dict = {}
-		variables = {}
-		functions = {}
+		type_dict:Mapping[types.QualifiedName, types.Type] = {}
+		variables:Mapping[types.QualifiedName, types.Type] = {}
+		functions:Mapping[types.QualifiedName, types.Type] = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
 			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)

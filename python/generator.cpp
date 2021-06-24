@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 			if (!stringField)
 				fprintf(out, "\tpass\n");
 
-			fprintf(out, "%sPointer = ctypes.POINTER(%s)\n", name.c_str(), name.c_str());
+			fprintf(out, "%sHandle = ctypes.POINTER(%s)\n", name.c_str(), name.c_str());
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{

@@ -84,13 +84,13 @@ class EdgeStyle:
 
 class FlowGraphNode:
 	def __init__(self, graph = None, handle = None):
-		if handle is None:
+		_handle = handle
+		if _handle is None:
 			if graph is None:
-				self.handle = None
 				raise ValueError("flow graph node must be associated with a graph")
-			handle = core.BNCreateFlowGraphNode(graph.handle)
-		self.handle = handle
-		assert self.handle is not None, "core.BNCreateFlowGraphNode returned None"
+			_handle = core.BNCreateFlowGraphNode(graph.handle)
+		assert _handle is not None
+		self.handle = _handle
 		self._graph = graph
 		if self._graph is None:
 			self._graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
@@ -112,9 +112,6 @@ class FlowGraphNode:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -123,7 +120,6 @@ class FlowGraphNode:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	def __iter__(self):
@@ -411,6 +407,7 @@ class FlowGraph:
 			self._ext_cb.externalRefTaken = self._ext_cb.externalRefTaken.__class__(self._external_ref_taken)
 			self._ext_cb.externalRefReleased = self._ext_cb.externalRefReleased.__class__(self._external_ref_released)
 			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
+		assert handle is not None
 		self.handle = handle
 
 	def __del__(self):
@@ -425,8 +422,6 @@ class FlowGraph:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):

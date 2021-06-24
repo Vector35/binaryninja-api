@@ -20,6 +20,7 @@
 
 import traceback
 import ctypes
+from typing import Optional
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -49,10 +50,9 @@ class CallingConvention:
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch=None, name=None, handle=None, confidence=core.max_confidence):
+	def __init__(self, arch:'architecture.Architecture'=None, name:str=None, handle=None, confidence:int=core.max_confidence):
 		if handle is None:
 			if arch is None or name is None:
-				self.handle = None
 				raise ValueError("Must specify either handle or architecture and name")
 			self._arch = arch
 			self._pending_reg_lists = {}
@@ -77,20 +77,20 @@ class CallingConvention:
 			self._cb.getIncomingFlagValue = self._cb.getIncomingFlagValue.__class__(self._get_incoming_flag_value)
 			self._cb.getIncomingVariableForParameterVariable = self._cb.getIncomingVariableForParameterVariable.__class__(self._get_incoming_var_for_parameter_var)
 			self._cb.getParameterVariableForIncomingVariable = self._cb.getParameterVariableForIncomingVariable.__class__(self._get_parameter_var_for_incoming_var)
-			self.handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
+			_handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
-			self.handle = handle
-			self.arch = architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(self.handle))
-			self.__dict__["name"] = core.BNGetCallingConventionName(self.handle)
-			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(self.handle)
-			self.__dict__["arg_regs_for_varargs"] = core.BNAreArgumentRegistersUsedForVarArgs(self.handle)
-			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(self.handle)
-			self.__dict__["stack_adjusted_on_return"] = core.BNIsStackAdjustedOnReturn(self.handle)
-			self.__dict__["eligible_for_heuristics"] = core.BNIsEligibleForHeuristics(self.handle)
+			_handle = handle
+			self.arch = architecture.CoreArchitecture._from_cache(core.BNGetCallingConventionArchitecture(_handle))
+			self.__dict__["name"] = core.BNGetCallingConventionName(_handle)
+			self.__dict__["arg_regs_share_index"] = core.BNAreArgumentRegistersSharedIndex(_handle)
+			self.__dict__["arg_regs_for_varargs"] = core.BNAreArgumentRegistersUsedForVarArgs(_handle)
+			self.__dict__["stack_reserved_for_arg_regs"] = core.BNIsStackReservedForArgumentRegisters(_handle)
+			self.__dict__["stack_adjusted_on_return"] = core.BNIsStackAdjustedOnReturn(_handle)
+			self.__dict__["eligible_for_heuristics"] = core.BNIsEligibleForHeuristics(_handle)
 
 			count = ctypes.c_ulonglong()
-			regs = core.BNGetCallerSavedRegisters(self.handle, count)
+			regs = core.BNGetCallerSavedRegisters(_handle, count)
 			assert regs is not None, "core.BNGetCallerSavedRegisters returned None"
 			result = []
 			arch = self.arch
@@ -100,7 +100,7 @@ class CallingConvention:
 			self.__dict__["caller_saved_regs"] = result
 
 			count = ctypes.c_ulonglong()
-			regs = core.BNGetCalleeSavedRegisters(self.handle, count)
+			regs = core.BNGetCalleeSavedRegisters(_handle, count)
 			assert regs is not None, "core.BNGetCalleeSavedRegisters returned None"
 			result = []
 			arch = self.arch
@@ -110,7 +110,7 @@ class CallingConvention:
 			self.__dict__["callee_saved_regs"] = result
 
 			count = ctypes.c_ulonglong()
-			regs = core.BNGetIntegerArgumentRegisters(self.handle, count)
+			regs = core.BNGetIntegerArgumentRegisters(_handle, count)
 			assert regs is not None, "core.BNGetIntegerArgumentRegisters returned None"
 			result = []
 			arch = self.arch
@@ -120,7 +120,7 @@ class CallingConvention:
 			self.__dict__["int_arg_regs"] = result
 
 			count = ctypes.c_ulonglong()
-			regs = core.BNGetFloatArgumentRegisters(self.handle, count)
+			regs = core.BNGetFloatArgumentRegisters(_handle, count)
 			assert regs is not None, "core.BNGetFloatArgumentRegisters returned None"
 			result = []
 			arch = self.arch
@@ -129,32 +129,32 @@ class CallingConvention:
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["float_arg_regs"] = result
 
-			reg = core.BNGetIntegerReturnValueRegister(self.handle)
+			reg = core.BNGetIntegerReturnValueRegister(_handle)
 			if reg == 0xffffffff:
 				self.__dict__["int_return_reg"] = None
 			else:
 				self.__dict__["int_return_reg"] = self.arch.get_reg_name(reg)
 
-			reg = core.BNGetHighIntegerReturnValueRegister(self.handle)
+			reg = core.BNGetHighIntegerReturnValueRegister(_handle)
 			if reg == 0xffffffff:
 				self.__dict__["high_int_return_reg"] = None
 			else:
 				self.__dict__["high_int_return_reg"] = self.arch.get_reg_name(reg)
 
-			reg = core.BNGetFloatReturnValueRegister(self.handle)
+			reg = core.BNGetFloatReturnValueRegister(_handle)
 			if reg == 0xffffffff:
 				self.__dict__["float_return_reg"] = None
 			else:
 				self.__dict__["float_return_reg"] = self.arch.get_reg_name(reg)
 
-			reg = core.BNGetGlobalPointerRegister(self.handle)
+			reg = core.BNGetGlobalPointerRegister(_handle)
 			if reg == 0xffffffff:
 				self.__dict__["global_pointer_reg"] = None
 			else:
 				self.__dict__["global_pointer_reg"] = self.arch.get_reg_name(reg)
 
 			count = ctypes.c_ulonglong()
-			regs = core.BNGetImplicitlyDefinedRegisters(self.handle, count)
+			regs = core.BNGetImplicitlyDefinedRegisters(_handle, count)
 			assert regs is not None, "core.BNGetImplicitlyDefinedRegisters returned None"
 			result = []
 			arch = self.arch
@@ -162,7 +162,8 @@ class CallingConvention:
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs, count.value)
 			self.__dict__["implicitly_defined_regs"] = result
-
+		assert _handle is not None
+		self.handle = _handle
 		self.confidence = confidence
 
 	def __del__(self):
@@ -178,8 +179,6 @@ class CallingConvention:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -188,7 +187,6 @@ class CallingConvention:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	def _get_caller_saved_regs(self, ctxt, count):
@@ -297,6 +295,9 @@ class CallingConvention:
 
 	def _get_int_return_reg(self, ctxt):
 		try:
+			if not isinstance(self.__class__.int_return_reg, str):
+				log.log_error(traceback.format_exc())
+				return False
 			return self.arch.regs[self.__class__.int_return_reg].index
 		except:
 			log.log_error(traceback.format_exc())

@@ -253,7 +253,8 @@ class Function:
 	def __init__(self, view:Optional['binaryview.BinaryView']=None, handle:Optional[core.BNFunction]=None):
 		self._advanced_analysis_requests = 0
 		assert handle is not None, "creation of standalone 'Function' objects is not implemented"
-		self.handle = core.handle_of_type(handle, core.BNFunction)
+		FunctionHandle = ctypes.POINTER(core.BNFunction)
+		self.handle = ctypes.cast(handle, FunctionHandle)
 		if view is None:
 			self._view = binaryview.BinaryView(handle = core.BNGetFunctionData(self.handle))
 		else:
@@ -930,7 +931,7 @@ class Function:
 	@property
 	def session_data(self) -> Any:
 		"""Dictionary object where plugins can store arbitrary data associated with the function"""
-		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)  # type: ignore
 		if handle.value not in Function._associated_data:
 			obj = _FunctionAssociatedDataStore()
 			Function._associated_data[handle.value] = obj

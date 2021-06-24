@@ -806,10 +806,10 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
 		return python_bin
 
-	def _load_module(self, ctx, repo_path, module, force):
+	def _load_module(self, ctx, _repo_path:bytes, _module:bytes, force:bool):
+		repo_path = _repo_path.decode("utf-8")
+		module = _module.decode("utf-8")
 		try:
-			repo_path = repo_path.decode("utf-8")
-			module = module.decode("utf-8")
 			repo = RepositoryManager()[repo_path]
 			plugin = repo[module]
 

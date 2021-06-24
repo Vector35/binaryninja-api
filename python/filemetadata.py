@@ -120,7 +120,7 @@ class FileMetadata:
 
 	_associated_data = {}
 
-	def __init__(self, filename = None, handle = None):
+	def __init__(self, filename:Optional[str]=None, handle:Optional[core.BNFileMetadataHandle]=None):
 		"""
 		Instantiates a new FileMetadata class.
 
@@ -128,13 +128,16 @@ class FileMetadata:
 		:param handle: A handle to the underlying C FileMetadata object. Defaults to None.
 		"""
 		if handle is not None:
-			self.handle = core.handle_of_type(handle, core.BNFileMetadata)
+			_type = core.BNFileMetadataHandle
+			_handle = ctypes.cast(handle, _type)
 		else:
 			binaryninja._init_plugins()
-			self.handle = core.BNCreateFileMetadata()
+			_handle = core.BNCreateFileMetadata()
 			if filename is not None:
-				core.BNSetFilename(self.handle, str(filename))
+				core.BNSetFilename(_handle, str(filename))
 		self._nav:Optional[NavigationHandler] = None
+		assert _handle is not None
+		self.handle = _handle
 
 	def __repr__(self):
 		return "<FileMetadata: %s>" % self.filename
@@ -147,8 +150,6 @@ class FileMetadata:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -157,7 +158,6 @@ class FileMetadata:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
@@ -270,7 +270,7 @@ class FileMetadata:
 	def session_data(self) -> Any:
 		"""Dictionary object where plugins can store arbitrary data associated with the file"""
 		assert self.handle is not None, "Attempting to set session_data when handle is None"
-		handle = ctypes.cast(self.handle, ctypes.c_void_p)
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)  # type: ignore
 		if handle.value not in FileMetadata._associated_data:
 			obj = _FileMetadataAssociatedDataStore()
 			FileMetadata._associated_data[handle.value] = obj

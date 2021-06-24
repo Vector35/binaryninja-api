@@ -466,17 +466,18 @@ class HighLevelILInstruction:
 		finally:
 			core.BNHighLevelILFreeOperandList(operand_list)
 
-	def get_expr_list(self, operand_index1:int, operand_index2:int) -> List[variable.Variable]:
+	def get_expr_list(self, operand_index1:int, operand_index2:int) -> List['HighLevelILInstruction']:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNHighLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
 		assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
-		value:List[variable.Variable] = []
+		value:List[HighLevelILInstruction] = []
 		try:
 			for j in range(count.value):
-				value.append(variable.Variable.from_identifier(self.function.source_function, operand_list[j]))
+				value.append(HighLevelILInstruction.create(self.function, operand_list[j], self.as_ast))
 			return value
 		finally:
 			core.BNHighLevelILFreeOperandList(operand_list)
+
 
 	def get_var_ssa_list(self, operand_index1:int, _:int) -> List['mediumlevelil.SSAVariable']:
 		count = ctypes.c_ulonglong()
@@ -644,27 +645,28 @@ class HighLevelILBlock(HighLevelILInstruction):
 	operand_names = tuple(["body"])
 
 	@property
-	def body(self):
+	def body(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
-	def __iter__(self):
+	def __iter__(self) -> Generator['HighLevelILInstruction', None, None]:
 		for expr in self.body:
 			yield expr
+
 
 @dataclass(frozen=True, repr=False)
 class HighLevelILIf(ControlFlow):
 	operand_names = tuple(["condition", "true", "false"])
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def true(self):
+	def true(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def false(self):
+	def false(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -673,11 +675,11 @@ class HighLevelILWhile(Loop):
 	operand_names = tuple(["condition", "body"])
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -686,15 +688,15 @@ class HighLevelILWhile_ssa(Loop, SSA):
 	operand_names = tuple(["condition_phi", "condition", "body"])
 
 	@property
-	def condition_phi(self):
+	def condition_phi(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -703,11 +705,11 @@ class HighLevelILDo_while(Loop):
 	operand_names = tuple(["body", "condition"])
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -716,15 +718,15 @@ class HighLevelILDo_while_ssa(Loop, SSA):
 	operand_names = tuple(["body", "condition_phi", "condition"])
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def condition_phi(self):
+	def condition_phi(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -733,19 +735,19 @@ class HighLevelILFor(Loop):
 	operand_names = tuple(["init", "condition", "update", "body"])
 
 	@property
-	def init(self):
+	def init(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def update(self):
+	def update(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(3)
 
 
@@ -754,23 +756,23 @@ class HighLevelILFor_ssa(Loop, SSA):
 	operand_names = tuple(["init", "condition_phi", "condition", "update"])
 
 	@property
-	def init(self):
+	def init(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def condition_phi(self):
+	def condition_phi(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 	@property
-	def update(self):
+	def update(self) -> HighLevelILInstruction:
 		return self.get_expr(3)
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(3)
 
 
@@ -779,15 +781,15 @@ class HighLevelILSwitch(ControlFlow):
 	operand_names = tuple(["condition", "default", "cases"])
 
 	@property
-	def condition(self):
+	def condition(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def default(self):
+	def default(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def cases(self):
+	def cases(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(2, 3)
 
 
@@ -796,11 +798,11 @@ class HighLevelILCase(HighLevelILInstruction):
 	operand_names = tuple(["values", "body"])
 
 	@property
-	def values(self):
+	def values(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 	@property
-	def body(self):
+	def body(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -819,7 +821,7 @@ class HighLevelILJump(Terminal):
 	operand_names = tuple(["dest"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -828,7 +830,7 @@ class HighLevelILRet(ControlFlow):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 
@@ -842,7 +844,7 @@ class HighLevelILGoto(Terminal):
 	operand_names = tuple(["target"])
 
 	@property
-	def target(self):
+	def target(self) -> GotoLabel:
 		return self.get_label(0)
 
 
@@ -851,7 +853,7 @@ class HighLevelILLabel(HighLevelILInstruction):
 	operand_names = tuple(["target"])
 
 	@property
-	def target(self):
+	def target(self) -> GotoLabel:
 		return self.get_label(0)
 
 
@@ -860,7 +862,7 @@ class HighLevelILVar_declare(HighLevelILInstruction):
 	operand_names = tuple(["var"])
 
 	@property
-	def var(self):
+	def var(self) -> variable.Variable:
 		return self.get_var(0)
 
 
@@ -869,11 +871,11 @@ class HighLevelILVar_init(HighLevelILInstruction):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> variable.Variable:
 		return self.get_var(0)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -882,11 +884,11 @@ class HighLevelILVar_init_ssa(SSA):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -895,11 +897,11 @@ class HighLevelILAssign(HighLevelILInstruction):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -908,11 +910,11 @@ class HighLevelILAssign_unpack(HighLevelILInstruction):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -921,19 +923,19 @@ class HighLevelILAssign_mem_ssa(SSA):
 	operand_names = tuple(["dest", "dest_memory", "src", "src_memory"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def dest_memory(self):
+	def dest_memory(self) -> int:
 		return self.get_int(1)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(3)
 
 
@@ -942,19 +944,19 @@ class HighLevelILAssign_unpack_mem_ssa(SSA):
 	operand_names = tuple(["dest", "dest_memory", "src", "src_memory"])
 
 	@property
-	def dest(self):
+	def dest(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 	@property
-	def dest_memory(self):
+	def dest_memory(self) -> int:
 		return self.get_int(2)
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(3)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(4)
 
 
@@ -963,7 +965,7 @@ class HighLevelILVar(HighLevelILInstruction):
 	operand_names = tuple(["var"])
 
 	@property
-	def var(self):
+	def var(self) -> variable.Variable:
 		return self.get_var(0)
 
 
@@ -972,7 +974,7 @@ class HighLevelILVar_ssa(SSA):
 	operand_names = tuple(["var"])
 
 	@property
-	def var(self):
+	def var(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
 
 
@@ -981,11 +983,11 @@ class HighLevelILVar_phi(SSA):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)
 
 	@property
-	def src(self):
+	def src(self) -> List['mediumlevelil.SSAVariable']:
 		return self.get_var_ssa_list(2, 3)
 
 
@@ -994,11 +996,11 @@ class HighLevelILMem_phi(Memory):
 	operand_names = tuple(["dest", "src"])
 
 	@property
-	def dest(self):
+	def dest(self) -> int:
 		return self.get_int(0)
 
 	@property
-	def src(self):
+	def src(self) -> List[int]:
 		return self.get_int_list(1)
 
 
@@ -1007,15 +1009,15 @@ class HighLevelILStruct_field(HighLevelILInstruction):
 	operand_names = tuple(["src", "offset", "member_index"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		return self.get_int(1)
 
 	@property
-	def member_index(self):
+	def member_index(self) -> Optional[int]:
 		return self.get_member_index(2)
 
 
@@ -1024,11 +1026,11 @@ class HighLevelILArray_index(HighLevelILInstruction):
 	operand_names = tuple(["src", "index"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def index(self):
+	def index(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1037,15 +1039,15 @@ class HighLevelILArray_index_ssa(SSA):
 	operand_names = tuple(["src", "src_memory", "index"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(1)
 
 	@property
-	def index(self):
+	def index(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -1054,11 +1056,11 @@ class HighLevelILSplit(HighLevelILInstruction):
 	operand_names = tuple(["high", "low"])
 
 	@property
-	def high(self):
+	def high(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def low(self):
+	def low(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1067,7 +1069,7 @@ class HighLevelILDeref(HighLevelILInstruction):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1076,15 +1078,15 @@ class HighLevelILDeref_field(HighLevelILInstruction):
 	operand_names = tuple(["src", "offset", "member_index"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		return self.get_int(1)
 
 	@property
-	def member_index(self):
+	def member_index(self) -> Optional[int]:
 		return self.get_member_index(2)
 
 
@@ -1093,11 +1095,11 @@ class HighLevelILDeref_ssa(SSA):
 	operand_names = tuple(["src", "src_memory"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(1)
 
 
@@ -1106,19 +1108,19 @@ class HighLevelILDeref_field_ssa(SSA):
 	operand_names = tuple(["src", "src_memory", "offset", "member_index"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(1)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		return self.get_int(2)
 
 	@property
-	def member_index(self):
+	def member_index(self) -> Optional[int]:
 		return self.get_member_index(3)
 
 
@@ -1127,7 +1129,7 @@ class HighLevelILAddress_of(HighLevelILInstruction):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1136,7 +1138,7 @@ class HighLevelILConst(Constant):
 	operand_names = tuple(["constant"])
 
 	@property
-	def constant(self):
+	def constant(self) -> int:
 		return self.get_int(0)
 
 
@@ -1145,7 +1147,7 @@ class HighLevelILConst_ptr(Constant):
 	operand_names = tuple(["constant"])
 
 	@property
-	def constant(self):
+	def constant(self) -> int:
 		return self.get_int(0)
 
 
@@ -1154,11 +1156,11 @@ class HighLevelILExtern_ptr(Constant):
 	operand_names = tuple(["constant", "offset"])
 
 	@property
-	def constant(self):
+	def constant(self) -> int:
 		return self.get_int(0)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		return self.get_int(1)
 
 
@@ -1167,7 +1169,7 @@ class HighLevelILFloat_const(Constant):
 	operand_names = tuple(["constant"])
 
 	@property
-	def constant(self):
+	def constant(self) -> float:
 		return self.get_float(0)
 
 
@@ -1176,7 +1178,7 @@ class HighLevelILImport(Constant):
 	operand_names = tuple(["constant"])
 
 	@property
-	def constant(self):
+	def constant(self) -> int:
 		return self.get_int(0)
 
 
@@ -1240,15 +1242,15 @@ class HighLevelILRlc(Arithmetic, BinaryOperation):
 	operand_names = tuple(["left", "right", "carry"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 	@property
-	def carry(self):
+	def carry(self) -> HighLevelILInstruction:
 		return self.get_expr(2)
 
 
@@ -1272,11 +1274,11 @@ class HighLevelILMulu_dp(BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1285,11 +1287,11 @@ class HighLevelILMuls_dp(Signed, BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1303,11 +1305,11 @@ class HighLevelILDivu_dp(BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1321,11 +1323,11 @@ class HighLevelILDivs_dp(Signed, BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1339,11 +1341,11 @@ class HighLevelILModu_dp(BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1357,11 +1359,11 @@ class HighLevelILMods_dp(Signed, BinaryOperation, DoublePrecision):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1370,7 +1372,7 @@ class HighLevelILNeg(Arithmetic, UnaryOperation):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1379,7 +1381,7 @@ class HighLevelILNot(Arithmetic, UnaryOperation):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1388,7 +1390,7 @@ class HighLevelILSx(Arithmetic, UnaryOperation):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1397,7 +1399,7 @@ class HighLevelILZx(Arithmetic, UnaryOperation):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1406,7 +1408,7 @@ class HighLevelILLow_part(Arithmetic, UnaryOperation):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1415,11 +1417,11 @@ class HighLevelILCall(Call):
 	operand_names = tuple(["dest", "params"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(1, 2)
 
 
@@ -1428,19 +1430,19 @@ class HighLevelILCall_ssa(Call, SSA):
 	operand_names = tuple(["dest", "params", "dest_memory", "src_memory"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(1, 2)
 
 	@property
-	def dest_memory(self):
+	def dest_memory(self) -> int:
 		return self.get_int(3)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(4)
 
 
@@ -1449,11 +1451,11 @@ class HighLevelILCmp_e(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1462,11 +1464,11 @@ class HighLevelILCmp_ne(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1475,11 +1477,11 @@ class HighLevelILCmp_slt(Comparison, Signed):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1488,11 +1490,11 @@ class HighLevelILCmp_ult(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1501,11 +1503,11 @@ class HighLevelILCmp_sle(Comparison, Signed):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1514,11 +1516,11 @@ class HighLevelILCmp_ule(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1527,11 +1529,11 @@ class HighLevelILCmp_sge(Comparison, Signed):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1540,11 +1542,11 @@ class HighLevelILCmp_uge(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1553,11 +1555,11 @@ class HighLevelILCmp_sgt(Comparison, Signed):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1566,11 +1568,11 @@ class HighLevelILCmp_ugt(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1579,11 +1581,11 @@ class HighLevelILTest_bit(Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1592,7 +1594,7 @@ class HighLevelILBool_to_int(HighLevelILInstruction):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1606,7 +1608,7 @@ class HighLevelILSyscall(Call):
 	operand_names = tuple(["params"])
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 
@@ -1615,15 +1617,15 @@ class HighLevelILSyscall_ssa(Call, SSA):
 	operand_names = tuple(["params", "dest_memory", "src_memory"])
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)
 
 	@property
-	def dest_memory(self):
+	def dest_memory(self) -> int:
 		return self.get_int(2)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(3)
 
 
@@ -1632,11 +1634,11 @@ class HighLevelILTailcall(Tailcall):
 	operand_names = tuple(["dest", "params"])
 
 	@property
-	def dest(self):
+	def dest(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(1, 2)
 
 
@@ -1650,7 +1652,7 @@ class HighLevelILTrap(Terminal):
 	operand_names = tuple(["vector"])
 
 	@property
-	def vector(self):
+	def vector(self) -> int:
 		return self.get_int(0)
 
 
@@ -1659,11 +1661,11 @@ class HighLevelILIntrinsic(HighLevelILInstruction):
 	operand_names = tuple(["intrinsic", "params"])
 
 	@property
-	def intrinsic(self):
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
 		return self.get_intrinsic(0)
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(1, 2)
 
 
@@ -1672,19 +1674,19 @@ class HighLevelILIntrinsic_ssa(SSA):
 	operand_names = tuple(["intrinsic", "params", "dest_memory", "src_memory"])
 
 	@property
-	def intrinsic(self):
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
 		return self.get_intrinsic(0)
 
 	@property
-	def params(self):
+	def params(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(1, 2)
 
 	@property
-	def dest_memory(self):
+	def dest_memory(self) -> int:
 		return self.get_int(2)
 
 	@property
-	def src_memory(self):
+	def src_memory(self) -> int:
 		return self.get_int(3)
 
 
@@ -1703,7 +1705,7 @@ class HighLevelILUnimpl_mem(Memory):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1712,11 +1714,11 @@ class HighLevelILFadd(FloatingPoint):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1725,11 +1727,11 @@ class HighLevelILFsub(FloatingPoint):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1738,11 +1740,11 @@ class HighLevelILFmul(FloatingPoint):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1751,11 +1753,11 @@ class HighLevelILFdiv(FloatingPoint):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1764,7 +1766,7 @@ class HighLevelILFsqrt(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1773,7 +1775,7 @@ class HighLevelILFneg(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1782,7 +1784,7 @@ class HighLevelILFabs(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1791,7 +1793,7 @@ class HighLevelILFloat_to_int(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1800,7 +1802,7 @@ class HighLevelILInt_to_float(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1809,7 +1811,7 @@ class HighLevelILFloat_conv(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1818,7 +1820,7 @@ class HighLevelILRound_to_int(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1827,7 +1829,7 @@ class HighLevelILFloor(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1836,7 +1838,7 @@ class HighLevelILCeil(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1845,7 +1847,7 @@ class HighLevelILFtrunc(FloatingPoint):
 	operand_names = tuple(["src"])
 
 	@property
-	def src(self):
+	def src(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 
@@ -1854,11 +1856,11 @@ class HighLevelILFcmp_e(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1867,11 +1869,11 @@ class HighLevelILFcmp_ne(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1880,11 +1882,11 @@ class HighLevelILFcmp_lt(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1893,11 +1895,11 @@ class HighLevelILFcmp_le(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1906,11 +1908,11 @@ class HighLevelILFcmp_ge(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1919,11 +1921,11 @@ class HighLevelILFcmp_gt(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1932,11 +1934,11 @@ class HighLevelILFcmp_o(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -1945,11 +1947,11 @@ class HighLevelILFcmp_uo(FloatingPoint, Comparison):
 	operand_names = tuple(["left", "right"])
 
 	@property
-	def left(self):
+	def left(self) -> HighLevelILInstruction:
 		return self.get_expr(0)
 
 	@property
-	def right(self):
+	def right(self) -> HighLevelILInstruction:
 		return self.get_expr(1)
 
 
@@ -2101,23 +2103,25 @@ class HighLevelILFunction:
 		self._arch = arch
 		self._source_function = source_func
 		if handle is not None:
-			self.handle = core.handle_of_type(handle, core.BNHighLevelILFunction)
+			HLILHandle = ctypes.POINTER(core.BNHighLevelILFunction)
+			_handle = ctypes.cast(handle, HLILHandle)
 			if self._source_function is None:
-				self._source_function = function.Function(handle = core.BNGetHighLevelILOwnerFunction(self.handle))
+				self._source_function = function.Function(handle = core.BNGetHighLevelILOwnerFunction(_handle))
 			if self._arch is None:
 				self._arch = self._source_function.arch
 		else:
 			if self._source_function is None:
-				self.handle = None
 				raise ValueError("IL functions must be created with an associated function")
 			if self._arch is None:
 				self._arch = self._source_function.arch
 				if self._arch is None:
 					raise ValueError("IL functions must be created with an associated Architecture")
 			func_handle = self._source_function.handle
-			self.handle = core.BNCreateHighLevelILFunction(self._arch.handle, func_handle)
+			_handle = core.BNCreateHighLevelILFunction(self._arch.handle, func_handle)
 		assert self._source_function is not None
 		assert self._arch is not None
+		assert _handle is not None
+		self.handle = _handle
 
 	def __del__(self):
 		if self.handle is not None:
@@ -2133,8 +2137,6 @@ class HighLevelILFunction:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -2487,7 +2489,7 @@ class HighLevelILFunction:
 
 
 class HighLevelILBasicBlock(basicblock.BasicBlock):
-	def __init__(self, view:Optional['binaryview.BinaryView'], handle:core.BNBasicBlock, owner:HighLevelILFunction):
+	def __init__(self, view:Optional['binaryview.BinaryView'], handle:core.BNBasicBlockHandle, owner:HighLevelILFunction):
 		super(HighLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
@@ -2506,7 +2508,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
-	def _create_instance(self, handle:core.BNBasicBlock, view:'binaryview.BinaryView'):
+	def _create_instance(self, handle:core.BNBasicBlockHandle, view:'binaryview.BinaryView'):
 		"""Internal method by super to instantiate child instances"""
 		return HighLevelILBasicBlock(view, handle, self.il_function)
 

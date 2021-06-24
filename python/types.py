@@ -258,7 +258,8 @@ class Symbol:
 	"""
 	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None, ordinal=0):
 		if handle is not None:
-			_handle = core.handle_of_type(handle, core.BNSymbol)
+			SymbolPointer = ctypes.POINTER(core.BNSymbol)
+			_handle = ctypes.cast(handle, SymbolPointer)
 		else:
 			if isinstance(sym_type, str):
 				sym_type = SymbolType[sym_type]
@@ -1093,7 +1094,7 @@ class StructureMember:
 		if len(self.name) == 0:
 			return f"<member: {self.type}, offset {self.offset:#x}>"
 		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}" + \
-			", offset {self.offset:#x}>"
+			f", offset {self.offset:#x}>"
 
 class Structure:
 	def __init__(self, handle=None):
@@ -1395,28 +1396,7 @@ class TypeParserResult:
 		return "<types: %s, variables: %s, functions: %s>" % (self.types, self.variables, self.functions)
 
 
-	@types.setter
-	def types(self, value):
-		self._types = value
-
-	@property
-	def variables(self):
-		return self._variables
-
-	@variables.setter
-	def variables(self, value):
-		self._variables = value
-
-	@property
-	def functions(self):
-		return self._functions
-
-	@functions.setter
-	def functions(self, value):
-		self._functions = value
-
-
-def preprocess_source(source, filename=None, include_dirs=[]):
+def preprocess_source(source:str, filename:str=None, include_dirs:List[str]=[]) -> Tuple[Optional[str], str]:
 	"""
 	``preprocess_source`` run the C preprocessor on the given source or source filename.
 

@@ -146,10 +146,10 @@ class Completer:
 					word = word + ' '
 				matches.append(word)
 		#Not sure why in the console builtins becomes a dict but this works for now.
-		if hasattr(__builtins__, '__dict__'):
-			builtins =  __builtins__.__dict__
+		if hasattr(__builtins__, '__dict__'):  # type: ignore  remove this ignore > pyright 1.1.149
+			builtins =  __builtins__.__dict__  # type: ignore  remove this ignore > pyright 1.1.149
 		else:
-			builtins =  __builtins__
+			builtins =  __builtins__  # type: ignore  remove this ignore > pyright 1.1.149
 		for nspace in [self.namespace, builtins]:
 			for word, val in nspace.items():
 				if word[:n] == text and word not in seen:

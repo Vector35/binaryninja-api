@@ -399,7 +399,7 @@ class LowLevelILInstruction:
 		view = self.function.source_function.view
 		core_block = core.BNGetLowLevelILBasicBlockForInstruction(self.function.handle, self.instr_index)
 		assert core_block is not None, "BNGetLowLevelILBasicBlockForInstruction returned None"
-		return LowLevelILBasicBlock(view, core_block, self.function)
+		return LowLevelILBasicBlock(core_block, self.function, view)
 
 	@property
 	def ssa_form(self) -> 'LowLevelILInstruction':
@@ -2417,10 +2417,10 @@ class LowLevelILFunction:
 		self._arch = arch
 		self._source_function = source_func
 		if handle is not None:
-			self.handle = core.handle_of_type(handle, core.BNLowLevelILFunction)
-			assert self.handle is not None
+			LLILHandle = ctypes.POINTER(core.BNLowLevelILFunction)
+			_handle = ctypes.cast(handle, LLILHandle)
 			if self._source_function is None:
-				source_handle = core.BNGetLowLevelILOwnerFunction(self.handle)
+				source_handle = core.BNGetLowLevelILOwnerFunction(_handle)
 				if source_handle:
 					self._source_function = function.Function(handle = source_handle)
 				else:
@@ -2439,8 +2439,9 @@ class LowLevelILFunction:
 				func_handle = None
 			else:
 				func_handle = self._source_function.handle
-			self.handle = core.BNCreateLowLevelILFunction(self._arch.handle, func_handle)
-			assert self.handle is not None
+			_handle = core.BNCreateLowLevelILFunction(self._arch.handle, func_handle)
+		assert _handle is not None
+		self.handle = _handle
 		assert self._arch is not None
 		assert self._source_function is not None
 
@@ -2462,8 +2463,6 @@ class LowLevelILFunction:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self.handle is not None
-		assert other.handle is not None
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
 	def __ne__(self, other):
@@ -2472,7 +2471,6 @@ class LowLevelILFunction:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	def __getitem__(self, i):
@@ -2497,8 +2495,8 @@ class LowLevelILFunction:
 		try:
 			for i in range(0, count.value):
 				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None
-				yield LowLevelILBasicBlock(view, core_block, self)
+				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+				yield LowLevelILBasicBlock(core_block, self, view)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -2541,8 +2539,8 @@ class LowLevelILFunction:
 		try:
 			for i in range(0, count.value):
 				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None
-				yield LowLevelILBasicBlock(view, core_block, self)
+				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+				yield LowLevelILBasicBlock(core_block, self, view)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -4356,7 +4354,7 @@ class LowLevelILFunction:
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
-	def __init__(self, view:Optional['binaryview.BinaryView'], handle:core.BNBasicBlock, owner:'LowLevelILFunction'):
+	def __init__(self, handle:core.BNBasicBlockHandle, owner:LowLevelILFunction, view:Optional['binaryview.BinaryView']):
 		super(LowLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
@@ -4392,7 +4390,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 
 	def _create_instance(self, handle, view):
 		"""Internal method by super to instantiate child instances"""
-		return LowLevelILBasicBlock(view, handle, self._il_function)
+		return LowLevelILBasicBlock(handle, self._il_function, view)
 
 	@property
 	def instruction_count(self) -> int:

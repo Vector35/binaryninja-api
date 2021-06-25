@@ -310,6 +310,8 @@ public:
 
 	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines(BinaryViewRef data, int padding);
 	void showAndFocus();
+    uint64_t getCurrentTypeFilter();
+    void setTypeFilter(uint64_t typesToShow);
 };
 
 

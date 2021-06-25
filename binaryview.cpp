@@ -2496,6 +2496,24 @@ size_t BinaryView::GetAllTagReferencesOfTypeCount(Ref<TagType> tagType)
 }
 
 
+std::map<Ref<TagType>, size_t> BinaryView::GetAllTagReferenceTypeCounts()
+{
+	BNTagType** types;
+	size_t* counts;
+	size_t count;
+	BNGetAllTagReferenceTypeCounts(m_object, &types, &counts, &count);
+
+	std::map<Ref<TagType>, size_t> result;
+	for (size_t i = 0; i < count; i ++)
+	{
+		result[new TagType(BNNewTagTypeReference(types[i]))] = counts[i];
+	}
+
+	BNFreeTagReferenceTypeCounts(types, counts);
+	return result;
+}
+
+
 size_t BinaryView::GetTagReferencesOfTypeCount(Ref<TagType> tagType)
 {
 	return BNGetTagReferencesOfTypeCount(m_object, tagType->GetObject());

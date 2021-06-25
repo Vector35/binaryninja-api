@@ -1683,6 +1683,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
 		size_t GetAllTagReferencesOfTypeCount(Ref<TagType> tagType);
+		std::map<Ref<TagType>, size_t> GetAllTagReferenceTypeCounts();
 
 		std::vector<TagReference> GetDataTagReferences();
 		std::vector<Ref<Tag>> GetDataTags(uint64_t addr);
@@ -3290,7 +3291,6 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<TagReference> GetAllTagReferences();
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
-		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetAddressTagReferences();
 		std::vector<Ref<Tag>> GetAddressTags(Architecture* arch, uint64_t addr);

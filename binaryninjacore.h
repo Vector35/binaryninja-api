@@ -3725,6 +3725,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeTagType(BNTagType* tagType);
 	BINARYNINJACOREAPI void BNFreeTagTypeList(BNTagType** tagTypes, size_t count);
 	BINARYNINJACOREAPI BNBinaryView* BNTagTypeGetView(BNTagType* tagType);
+	BINARYNINJACOREAPI char* BNTagTypeGetId(BNTagType* tagType);
 	BINARYNINJACOREAPI char* BNTagTypeGetName(BNTagType* tagType);
 	BINARYNINJACOREAPI void BNTagTypeSetName(BNTagType* tagType, const char* name);
 	BINARYNINJACOREAPI char* BNTagTypeGetIcon(BNTagType* tagType);
@@ -3747,6 +3748,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNRemoveTagType(BNBinaryView* view, BNTagType* tagType);
 	BINARYNINJACOREAPI BNTagType* BNGetTagType(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI BNTagType* BNGetTagTypeWithType(BNBinaryView* view, const char* name, BNTagTypeType type);
+	BINARYNINJACOREAPI BNTagType* BNGetTagTypeById(BNBinaryView* view, const char* id);
+	BINARYNINJACOREAPI BNTagType* BNGetTagTypeByIdWithType(BNBinaryView* view, const char* id, BNTagTypeType type);
 	BINARYNINJACOREAPI BNTagType** BNGetTagTypes(BNBinaryView* view, size_t* count);
 
 	BINARYNINJACOREAPI void BNAddTag(BNBinaryView* view, BNTag* tag, bool user);

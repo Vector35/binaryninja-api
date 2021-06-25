@@ -1311,6 +1311,7 @@ __attribute__ ((format (printf, 1, 2)))
 		TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible = true, Type type = UserTagType);
 
 		BinaryView* GetView() const;
+		std::string GetId() const;
 		std::string GetName() const;
 		void SetName(const std::string& name);
 		std::string GetIcon() const;
@@ -1669,6 +1670,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveTagType(Ref<TagType> tagType);
 		Ref<TagType> GetTagType(const std::string& name);
 		Ref<TagType> GetTagType(const std::string& name, TagType::Type type);
+		Ref<TagType> GetTagTypeByName(const std::string& name);
+		Ref<TagType> GetTagTypeByName(const std::string& name, TagType::Type type);
+		Ref<TagType> GetTagTypeById(const std::string& id);
+		Ref<TagType> GetTagTypeById(const std::string& id, TagType::Type type);
 		std::vector<Ref<TagType>> GetTagTypes();
 
 		void AddTag(Ref<Tag> tag, bool user = false);

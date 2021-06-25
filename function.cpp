@@ -1647,7 +1647,7 @@ void Function::RemoveUserFunctionTag(Ref<Tag> tag)
 
 Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -1677,7 +1677,7 @@ Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<T
 
 Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -1706,7 +1706,7 @@ Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, Ref<T
 
 Ref<Tag> Function::CreateAutoFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -1736,7 +1736,7 @@ Ref<Tag> Function::CreateAutoFunctionTag(Ref<TagType> tagType, const std::string
 
 Ref<Tag> Function::CreateUserFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 

@@ -405,6 +405,15 @@ BinaryView* TagType::GetView() const
 }
 
 
+std::string TagType::GetId() const
+{
+	char* str = BNTagTypeGetId(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
 std::string TagType::GetName() const
 {
 	char* str = BNTagTypeGetName(m_object);
@@ -2393,6 +2402,18 @@ void BinaryView::RemoveTagType(Ref<TagType> tagType)
 
 Ref<TagType> BinaryView::GetTagType(const std::string& name)
 {
+	return GetTagTypeByName(name);
+}
+
+
+Ref<TagType> BinaryView::GetTagType(const std::string& name, TagType::Type type)
+{
+	return GetTagTypeByName(name, type);
+}
+
+
+Ref<TagType> BinaryView::GetTagTypeByName(const std::string& name)
+{
 	BNTagType* tagType = BNGetTagType(m_object, name.c_str());
 	if (!tagType)
 		return nullptr;
@@ -2401,9 +2422,29 @@ Ref<TagType> BinaryView::GetTagType(const std::string& name)
 }
 
 
-Ref<TagType> BinaryView::GetTagType(const std::string& name, TagType::Type type)
+Ref<TagType> BinaryView::GetTagTypeByName(const std::string& name, TagType::Type type)
 {
 	BNTagType* tagType = BNGetTagTypeWithType(m_object, name.c_str(), type);
+	if (!tagType)
+		return nullptr;
+
+	return Ref<TagType>(new TagType(tagType));
+}
+
+
+Ref<TagType> BinaryView::GetTagTypeById(const std::string& name)
+{
+	BNTagType* tagType = BNGetTagTypeById(m_object, name.c_str());
+	if (!tagType)
+		return nullptr;
+
+	return Ref<TagType>(new TagType(tagType));
+}
+
+
+Ref<TagType> BinaryView::GetTagTypeById(const std::string& name, TagType::Type type)
+{
+	BNTagType* tagType = BNGetTagTypeByIdWithType(m_object, name.c_str(), type);
 	if (!tagType)
 		return nullptr;
 
@@ -2584,7 +2625,7 @@ void BinaryView::RemoveTagReference(const TagReference& ref)
 
 Ref<Tag> BinaryView::CreateAutoDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -2594,7 +2635,7 @@ Ref<Tag> BinaryView::CreateAutoDataTag(uint64_t addr, const std::string& tagType
 
 Ref<Tag> BinaryView::CreateUserDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetTagType(tagTypeName);
+	Ref<TagType> tagType = GetTagTypeByName(tagTypeName);
 	if (!tagType)
 		return nullptr;
 

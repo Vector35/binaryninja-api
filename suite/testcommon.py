@@ -317,11 +317,11 @@ class BinaryViewTestBuilder(Builder):
                     instruction = instruction.ssa_form
                     for var in (instruction.vars_read + instruction.vars_written):
                         if hasattr(var, "var"):
-                            varlist.append("Function: {:x} Instruction {:x} SSA var definition: {}".format (func.source_function.start, instruction.address, str(getattr(func.get_ssa_var_definition(var), 'instr_index', None))))
-                            varlist.append("Function: {:x} Instruction {:x} SSA var uses:  {}".format (func.source_function.start, instruction.address, str(list(map(lambda instr: instr.instr_index, func.get_ssa_var_uses(var))))))
-                            varlist.append("Function: {:x} Instruction {:x} SSA var value: {}".format (func.source_function.start, instruction.address, str(func.get_ssa_var_value(var))))
-                            varlist.append("Function: {:x} Instruction {:x} SSA var possible values: {}".format (func.source_function.start, instruction.address, fixSet(str(instruction.get_ssa_var_possible_values(var)))))
-                            varlist.append("Function: {:x} Instruction {:x} SSA var version: {}".format (func.source_function.start, instruction.address, str(instruction.get_ssa_var_version(var.var))))
+                            varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var definition: {getattr(func.get_ssa_var_definition(var), 'instr_index', None)}")
+                            varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var uses:  {list(map(lambda instr: instr.instr_index, func.get_ssa_var_uses(var)))}")
+                            varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var value: {func.get_ssa_var_value(var)}")
+                            varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var possible values: {fixSet(str(instruction.get_ssa_var_possible_values(var)))}")
+                            varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var version: {instruction.get_ssa_var_version(var.var)}")
         return fixOutput(varlist)
 
     def test_function_stack(self):

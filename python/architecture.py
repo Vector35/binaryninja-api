@@ -929,7 +929,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				else:
 					operand_list.append(lowlevelil.ILRegister(self, operands[i].reg))
 			return self.get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
-				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except (KeyError, OSError):
 			log.log_error(traceback.format_exc())
 			return False
@@ -941,7 +941,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			else:
 				sem_class_name = None
 			return self.get_flag_condition_low_level_il(cond, sem_class_name,
-				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except OSError:
 			log.log_error(traceback.format_exc())
 			return 0
@@ -953,7 +953,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			else:
 				sem_group_name = None
 			return self.get_semantic_flag_group_low_level_il(sem_group_name,
-				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))).index
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except OSError:
 			log.log_error(traceback.format_exc())
 			return 0
@@ -1361,7 +1361,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def get_instruction_low_level_il(self, data:bytes, addr:int, il:'lowlevelil.LowLevelILFunction') -> int:
 		"""
-		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
+		``get_instruction_low_level_il`` appends lowlevelil.ExpressionIndex objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
 
 		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
@@ -1603,7 +1603,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		return FlagRole.SpecialFlagRole
 
 	def get_flag_write_low_level_il(self, op:LowLevelILOperation, size:int, write_type:Optional[FlagWriteTypeName], flag:FlagType,
-		operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
@@ -1611,7 +1611,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:param operands: a list of either items that are either string register names or constant integer values
 		:type operands: list(str) or list(int)
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr
+		:rtype: lowlevelil.ExpressionIndex
 		"""
 		flag = self.get_flag_index(flag)
 		if flag not in self._flag_roles:
@@ -1619,7 +1619,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		return self.get_default_flag_write_low_level_il(op, size, self._flag_roles[flag], operands, il)
 
 	def get_default_flag_write_low_level_il(self, op:'lowlevelil.LowLevelILOperation', size:int, role:FlagRole,
-		operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
@@ -1627,7 +1627,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:param operands: a list of either items that are either string register names or constant integer values
 		:type operands: list(str) or list(int)
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr index
+		:rtype: ExpressionIndex index
 		"""
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in range(len(operands)):
@@ -1641,39 +1641,39 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operand
-		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size,
+		return lowlevelil.ExpressionIndex(core.BNGetDefaultArchitectureFlagWriteLowLevelIL(self.handle, op, size,
 			role, operand_list, len(operand_list), il.handle))
 
 	def get_flag_condition_low_level_il(self, cond:'lowlevelil.LowLevelILFlagCondition', sem_class:Optional[SemanticClassType],
-		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILFlagCondition cond: Flag condition to be computed
 		:param SemanticClassType sem_class: Semantic class to be used (None for default semantics)
-		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:rtype: LowLevelILExpr
+		:param LowLevelILFunction il: LowLevelILFunction object to append ExpressionIndex objects to
+		:rtype: ExpressionIndex
 		"""
 		return self.get_default_flag_condition_low_level_il(cond, sem_class, il)
 
 	def get_default_flag_condition_low_level_il(self, cond:'lowlevelil.LowLevelILFlagCondition',
-		sem_class:Optional[SemanticClassType], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		sem_class:Optional[SemanticClassType], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILFlagCondition cond:
 		:param SemanticClassType sem_class:
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		_class_index = None
 		if sem_class is not None:
 			_class_index = self.get_semantic_flag_class_index(sem_class)
-		return lowlevelil.LowLevelILExpr(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond,
+		return lowlevelil.ExpressionIndex(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond,
 			_class_index, il.handle))
 
 	def get_semantic_flag_group_low_level_il(self, sem_group:Optional[SemanticGroupType],
-		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param Optional[SemanticGroupType] sem_group:
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr
+		:rtype: lowlevelil.ExpressionIndex
 		"""
 		return il.unimplemented()
 
@@ -2306,7 +2306,7 @@ class CoreArchitecture(Architecture):
 
 	def get_instruction_low_level_il(self, data:Union[bytes, str], addr:int, il:lowlevelil.LowLevelILFunction) -> int:
 		"""
-		``get_instruction_low_level_il`` appends LowLevelILExpr objects to ``il`` for the instruction at the given
+		``get_instruction_low_level_il`` appends lowlevelil.ExpressionIndex objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
 
 		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
@@ -2332,7 +2332,7 @@ class CoreArchitecture(Architecture):
 		return length.value
 
 	def get_flag_write_low_level_il(self, op:LowLevelILOperation, size:int, write_type:FlagWriteTypeName,
-		flag:FlagType, operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		flag:FlagType, operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILOperation op:
 		:param int size:
@@ -2340,7 +2340,7 @@ class CoreArchitecture(Architecture):
 		:param operands: a list of either items that are either string register names or constant integer values
 		:type operands: list(str) or list(int)
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		flag = self.get_flag_index(flag)
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
@@ -2355,30 +2355,30 @@ class CoreArchitecture(Architecture):
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operand
-		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size,
+		return lowlevelil.ExpressionIndex(core.BNGetArchitectureFlagWriteLowLevelIL(self.handle, op, size,
 		        self._flag_write_types[write_type], flag, operand_list, len(operand_list), il.handle))
 
 	def get_flag_condition_low_level_il(self, cond:LowLevelILFlagCondition, sem_class:SemanticClassType,
-		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param LowLevelILFlagCondition cond: Flag condition to be computed
 		:param str sem_class: Semantic class to be used (None for default semantics)
-		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:rtype: LowLevelILExpr
+		:param LowLevelILFunction il: LowLevelILFunction object to append ExpressionIndex objects to
+		:rtype: ExpressionIndex
 		"""
 		class_index = self.get_semantic_flag_class_index(sem_class)
-		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond,
+		return lowlevelil.ExpressionIndex(core.BNGetArchitectureFlagConditionLowLevelIL(self.handle, cond,
 			class_index, il.handle))
 
 	def get_semantic_flag_group_low_level_il(self, sem_group:SemanticGroupName,
-		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.LowLevelILExpr':
+		il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':
 		"""
 		:param str sem_group:
 		:param LowLevelILFunction il:
-		:rtype: LowLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		group_index = self.get_semantic_flag_group_index(sem_group)
-		return lowlevelil.LowLevelILExpr(core.BNGetArchitectureSemanticFlagGroupLowLevelIL(self.handle, group_index, il.handle))
+		return lowlevelil.ExpressionIndex(core.BNGetArchitectureSemanticFlagGroupLowLevelIL(self.handle, group_index, il.handle))
 
 	def assemble(self, code:str, addr:int=0) -> bytes:
 		"""

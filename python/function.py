@@ -3530,7 +3530,7 @@ class InstructionTextToken:
 		return result
 
 	@staticmethod
-	def _get_core_struct(tokens:List['InstructionTextToken']) -> ctypes.Array[core.BNInstructionTextToken]:
+	def _get_core_struct(tokens:List['InstructionTextToken']) -> 'ctypes.Array[core.BNInstructionTextToken]':
 		""" Helper method for converting between core.BNInstructionTextToken and InstructionTextToken lists """
 		result = (core.BNInstructionTextToken * len(tokens))()
 		for j in range(len(tokens)):

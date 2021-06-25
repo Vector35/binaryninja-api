@@ -20,12 +20,12 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, Any, NewType
+from typing import Optional, Generator, List, Union, Any, NewType, Tuple
+from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import HighLevelILOperation, InstructionTextTokenType, DataFlowQueryOption, FunctionGraphType
-from .variable import Variable
+from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType
 from . import function
 from . import binaryview
 from . import architecture
@@ -42,53 +42,36 @@ ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
 HLILInstructionsType = Generator['HighLevelILInstruction', None, None]
 HLILBasicBlocksType = Generator['HighLevelILBasicBlock', None, None]
+OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex]
+HighLevelILOperandType = Union[
+	'HighLevelILInstruction',
+	'lowlevelil.ILIntrinsic',
+	variable.Variable,
+	'mediumlevelil.SSAVariable',
+	List[int],
+	List[variable.Variable],
+	List['mediumlevelil.SSAVariable'],
+	Optional[int],
+	float,
+	'GotoLabel'
+]
 
+
+@dataclass(frozen=True)
 class HighLevelILOperationAndSize:
-	def __init__(self, operation, size):
-		self._operation = operation
-		self._size = size
+	operation:HighLevelILOperation
+	size:int
 
 	def __repr__(self):
-		if self._size == 0:
-			return "<%s>" % self._operation.name
-		return "<%s %d>" % (self._operation.name, self._size)
-
-	def __eq__(self, other):
-		if isinstance(other, HighLevelILOperation):
-			return other == self._operation
-		if isinstance(other, self.__class__):
-			return other.size == self._size and other.operation == self._operation
-		return NotImplemented
-
-	def __ne__(self, other):
-		if isinstance(other, self.__class__) or isinstance(other, HighLevelILOperation):
-			return not (self == other)
-		return NotImplemented
-
-	def __hash__(self):
-		return hash((self._operation, self._size))
-
-	@property
-	def operation(self):
-		return self._operation
-
-	@operation.setter
-	def operation(self, value):
-		self._operation = value
-
-	@property
-	def size(self):
-		return self._size
-
-	@size.setter
-	def size(self, value):
-		self._size = value
+		if self.size == 0:
+			return "<%s>" % self.operation.name
+		return "<%s %d>" % (self.operation.name, self.size)
 
 
+@dataclass(frozen=True)
 class GotoLabel:
-	def __init__(self, function, id):
-		self._function = function
-		self._id = id
+	function:'HighLevelILFunction'
+	id:int
 
 	def __repr__(self):
 		return "<label: %s>" % self.name
@@ -98,236 +81,63 @@ class GotoLabel:
 
 	@property
 	def label_id(self):
-		return self._id
+		return self.id
 
 	@property
 	def name(self):
-		return core.BNGetGotoLabelName(self._function.source_function.handle, self._id)
+		return core.BNGetGotoLabelName(self.function.source_function.handle, self.id)
 
 	@name.setter
 	def name(self, value):
-		core.BNSetUserGotoLabelName(self._function.source_function.handle, self._id, value)
+		core.BNSetUserGotoLabelName(self.function.source_function.handle, self.id, value)
 
 	@property
 	def definition(self):
-		return self._function.get_label(self._id)
+		return self.function.get_label(self.id)
 
 	@property
 	def uses(self):
-		return self._function.get_label_uses(self._id)
+		return self.function.get_label_uses(self.id)
 
 
+@dataclass(frozen=True, order=True)
+class CoreHighLevelILInstruction:
+	operation:HighLevelILOperation
+	source_operand:int
+	size:int
+	operands:OperandsType
+	address:int
+	parent:ExpressionIndex
+
+	@classmethod
+	def from_BNHighLevelILInstruction(cls, instr:core.BNHighLevelILInstruction) -> 'CoreHighLevelILInstruction':
+		operands:OperandsType = tuple([ExpressionIndex(instr.operands[i]) for i in range(5)])  # type: ignore
+		return cls(HighLevelILOperation(instr.operation), instr.sourceOperand, instr.size, operands, instr.address, instr.parent)
+
+
+@dataclass(frozen=True)
 class HighLevelILInstruction:
 	"""
 	``class HighLevelILInstruction`` High Level Intermediate Language Instructions form an abstract syntax tree of
 	the code. Control flow structures are present as high level constructs in the HLIL tree.
 	"""
+	function:'HighLevelILFunction'
+	expr_index:ExpressionIndex
+	core_instr:CoreHighLevelILInstruction
+	as_ast:bool
+	instr_index:InstructionIndex
+	operand_names = tuple()
 
-	ILOperations = {
-		HighLevelILOperation.HLIL_NOP: [],
-		HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
-		HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"), ("false", "expr")],
-		HighLevelILOperation.HLIL_WHILE: [("condition", "expr"), ("body", "expr")],
-		HighLevelILOperation.HLIL_WHILE_SSA: [("condition_phi", "expr"), ("condition", "expr"), ("body", "expr")],
-		HighLevelILOperation.HLIL_DO_WHILE: [("body", "expr"), ("condition", "expr")],
-		HighLevelILOperation.HLIL_DO_WHILE_SSA: [("body", "expr"), ("condition_phi", "expr"), ("condition", "expr")],
-		HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
-		HighLevelILOperation.HLIL_FOR_SSA: [("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
-		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
-		HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
-		HighLevelILOperation.HLIL_BREAK: [],
-		HighLevelILOperation.HLIL_CONTINUE: [],
-		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
-		HighLevelILOperation.HLIL_RET: [("src", "expr_list")],
-		HighLevelILOperation.HLIL_NORET: [],
-		HighLevelILOperation.HLIL_GOTO: [("target", "label")],
-		HighLevelILOperation.HLIL_LABEL: [("target", "label")],
-		HighLevelILOperation.HLIL_VAR_DECLARE: [("var", "var")],
-		HighLevelILOperation.HLIL_VAR_INIT: [("dest", "var"), ("src", "expr")],
-		HighLevelILOperation.HLIL_VAR_INIT_SSA: [("dest", "var_ssa"), ("src", "expr")],
-		HighLevelILOperation.HLIL_ASSIGN: [("dest", "expr"), ("src", "expr")],
-		HighLevelILOperation.HLIL_ASSIGN_UNPACK: [("dest", "expr_list"), ("src", "expr")],
-		HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: [("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_VAR: [("var", "var")],
-		HighLevelILOperation.HLIL_VAR_SSA: [("var", "var_ssa")],
-		HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
-		HighLevelILOperation.HLIL_MEM_PHI: [("dest", "int"), ("src", "int_list")],
-		HighLevelILOperation.HLIL_STRUCT_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
-		HighLevelILOperation.HLIL_ARRAY_INDEX: [("src", "expr"), ("index", "expr")],
-		HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: [("src", "expr"), ("src_memory", "int"), ("index", "expr")],
-		HighLevelILOperation.HLIL_SPLIT: [("high", "expr"), ("low", "expr")],
-		HighLevelILOperation.HLIL_DEREF: [("src", "expr")],
-		HighLevelILOperation.HLIL_DEREF_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
-		HighLevelILOperation.HLIL_DEREF_SSA: [("src", "expr"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index")],
-		HighLevelILOperation.HLIL_ADDRESS_OF: [("src", "expr")],
-		HighLevelILOperation.HLIL_CONST: [("constant", "int")],
-		HighLevelILOperation.HLIL_CONST_PTR: [("constant", "int")],
-		HighLevelILOperation.HLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
-		HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")],
-		HighLevelILOperation.HLIL_IMPORT: [("constant", "int")],
-		HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		HighLevelILOperation.HLIL_AND: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_OR: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_XOR: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_LSL: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_LSR: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_ASR: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_ROL: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		HighLevelILOperation.HLIL_ROR: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		HighLevelILOperation.HLIL_MUL: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_DIVU: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_DIVS: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MODU: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MODS: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_NEG: [("src", "expr")],
-		HighLevelILOperation.HLIL_NOT: [("src", "expr")],
-		HighLevelILOperation.HLIL_SX: [("src", "expr")],
-		HighLevelILOperation.HLIL_ZX: [("src", "expr")],
-		HighLevelILOperation.HLIL_LOW_PART: [("src", "expr")],
-		HighLevelILOperation.HLIL_CALL: [("dest", "expr"), ("params", "expr_list")],
-		HighLevelILOperation.HLIL_CALL_SSA: [("dest", "expr"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_CMP_E: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_BOOL_TO_INT: [("src", "expr")],
-		HighLevelILOperation.HLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_SYSCALL: [("params", "expr_list")],
-		HighLevelILOperation.HLIL_SYSCALL_SSA: [("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_TAILCALL: [("dest", "expr"), ("params", "expr_list")],
-		HighLevelILOperation.HLIL_BP: [],
-		HighLevelILOperation.HLIL_TRAP: [("vector", "int")],
-		HighLevelILOperation.HLIL_INTRINSIC: [("intrinsic", "intrinsic"), ("params", "expr_list")],
-		HighLevelILOperation.HLIL_INTRINSIC_SSA: [("intrinsic", "intrinsic"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
-		HighLevelILOperation.HLIL_UNDEF: [],
-		HighLevelILOperation.HLIL_UNIMPL: [],
-		HighLevelILOperation.HLIL_UNIMPL_MEM: [("src", "expr")],
-		HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FSUB: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FDIV: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FSQRT: [("src", "expr")],
-		HighLevelILOperation.HLIL_FNEG: [("src", "expr")],
-		HighLevelILOperation.HLIL_FABS: [("src", "expr")],
-		HighLevelILOperation.HLIL_FLOAT_TO_INT: [("src", "expr")],
-		HighLevelILOperation.HLIL_INT_TO_FLOAT: [("src", "expr")],
-		HighLevelILOperation.HLIL_FLOAT_CONV: [("src", "expr")],
-		HighLevelILOperation.HLIL_ROUND_TO_INT: [("src", "expr")],
-		HighLevelILOperation.HLIL_FLOOR: [("src", "expr")],
-		HighLevelILOperation.HLIL_CEIL: [("src", "expr")],
-		HighLevelILOperation.HLIL_FTRUNC: [("src", "expr")],
-		HighLevelILOperation.HLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
-		HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
-	}
-
-	def __init__(self, func:'HighLevelILFunction', expr_index:ExpressionIndex, as_ast:bool = True,
-		instr_index:InstructionIndex = None):
+	@classmethod
+	def create(cls, func:'HighLevelILFunction', expr_index:ExpressionIndex, as_ast:bool=True, instr_index:Optional[InstructionIndex]=None) -> 'HighLevelILInstruction':
+		assert func.arch is not None, "Attempted to create IL instruction with function missing an Architecture"
 		instr = core.BNGetHighLevelILByIndex(func.handle, expr_index, as_ast)
-		self._function = func
-		if func.arch is None:
-			raise Exception("HighLevelILFunction architecture must not be None")
-		self._expr_index = expr_index
+		assert instr is not None, "core.BNGetHighLevelILByIndex returned None"
+		core_instr = CoreHighLevelILInstruction.from_BNHighLevelILInstruction(instr)
 		if instr_index is None:
-			self._instr_index = core.BNGetHighLevelILInstructionForExpr(func.handle, expr_index)
-		else:
-			self._instr_index = instr_index
-		self._operation = HighLevelILOperation(instr.operation)
-		self._size = instr.size
-		self._address = instr.address
-		self._source_operand = instr.sourceOperand
-		self._parent = instr.parent
-		self._as_ast = as_ast
-		operands = HighLevelILInstruction.ILOperations[instr.operation]
-		self._operands = []
-		i = 0
-		for operand in operands:
-			name, operand_type = operand
-			value = None
-			if operand_type == "int":
-				value = instr.operands[i]
-				value = (value & ((1 << 63) - 1)) - (value & (1 << 63))
-			elif operand_type == "float":
-				if instr.size == 4:
-					value = struct.unpack("f", struct.pack("I", instr.operands[i] & 0xffffffff))[0]
-				elif instr.size == 8:
-					value = struct.unpack("d", struct.pack("Q", instr.operands[i]))[0]
-				else:
-					value = instr.operands[i]
-			elif operand_type == "expr":
-				value = HighLevelILInstruction(func, instr.operands[i], self._as_ast)
-			elif operand_type == "intrinsic":
-				value = lowlevelil.ILIntrinsic(func.arch, instr.operands[i])
-			elif operand_type == "var":
-				value = variable.Variable.from_identifier(self._function.source_function, instr.operands[i])
-			elif operand_type == "var_ssa":
-				var = variable.Variable.from_identifier(self._function.source_function, instr.operands[i])
-				version = instr.operands[i + 1]
-				i += 1
-				value = mediumlevelil.SSAVariable(var, version)
-			elif operand_type == "int_list":
-				count = ctypes.c_ulonglong()
-				operand_list = core.BNHighLevelILGetOperandList(func.handle, self._expr_index, i, count)
-				assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
-				value = []
-				for j in range(count.value):
-					value.append(operand_list[j])
-				core.BNHighLevelILFreeOperandList(operand_list)
-			elif operand_type == "expr_list":
-				count = ctypes.c_ulonglong()
-				operand_list = core.BNHighLevelILGetOperandList(func.handle, self._expr_index, i, count)
-				assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
-				i += 1
-				value = []
-				for j in range(count.value):
-					value.append(HighLevelILInstruction(func, operand_list[j], self._as_ast))
-				core.BNHighLevelILFreeOperandList(operand_list)
-			elif operand_type == "var_ssa_list":
-				count = ctypes.c_ulonglong()
-				operand_list = core.BNHighLevelILGetOperandList(func.handle, self._expr_index, i, count)
-				assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
-				i += 1
-				value = []
-				for j in range(count.value // 2):
-					var_id = operand_list[j * 2]
-					var_version = operand_list[(j * 2) + 1]
-					value.append(mediumlevelil.SSAVariable(variable.Variable.from_identifier(self._function.source_function,
-						var_id), var_version))
-				core.BNHighLevelILFreeOperandList(operand_list)
-			elif operand_type == "member_index":
-				value = instr.operands[i]
-				if (value & (1 << 63)) != 0:
-					value = None
-			elif operand_type == "label":
-				value = GotoLabel(self.function, instr.operands[i])
-			self._operands.append(value)
-			self.__dict__[name] = value
-			i += 1
+			instr_index = core.BNGetHighLevelILInstructionForExpr(func.handle, expr_index)
+			assert instr_index is not None, "core.BNGetHighLevelILInstructionForExpr returned None"
+		return ILInstruction[instr.operation](func, expr_index, core_instr, as_ast, instr_index)
 
 	def __str__(self):
 		lines = self.lines
@@ -352,52 +162,47 @@ class HighLevelILInstruction:
 				first_line += token.text
 			if len(list(lines)) > 1:
 				continuation = "..."
-		return "<%s: %s%s>" % (self._operation.name, first_line, continuation)
+		return "<%s: %s%s>" % (self.operation.name, first_line, continuation)
 
-	def __eq__(self, other):
+	def __eq__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return core.BNHighLevelILExprEqual(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
+		return self.function == other.function and self.expr_index == other.expr_index
 
-	def __ne__(self, other):
+	def __lt__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return not core.BNHighLevelILExprEqual(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
+		return self.function == other.function and self.expr_index < other.expr_index
 
-	def __lt__(self, other):
+	def __le__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return core.BNHighLevelILExprLessThan(self._function.handle, self._expr_index, other._function.handle, other._expr_index)
+		return self.function == other.function and self.expr_index <= other.expr_index
 
-	def __le__(self, other):
+	def __gt__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return not core.BNHighLevelILExprLessThan(other._function.handle, other._expr_index, self._function.handle, self._expr_index)
+		return self.function == other.function and self.expr_index > other.expr_index
 
-	def __gt__(self, other):
+	def __ge__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return core.BNHighLevelILExprLessThan(other._function.handle, other._expr_index, self._function.handle, self._expr_index)
-
-	def __ge__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not core.BNHighLevelILExprLessThan(self._function.handle, self._expr_index, other._function, other._expr_index)
+		return self.function == other.function and self.expr_index >= other.expr_index
 
 	def __hash__(self):
-		return hash((self._function, self._expr_index))
+		return hash((self.function, self.expr_index))
 
 	@property
 	def lines(self) -> LinesType:
 		"""HLIL text lines (read-only)"""
 		count = ctypes.c_ulonglong()
-		lines = core.BNGetHighLevelILExprText(self._function.handle, self._expr_index, self._as_ast, count, None)
+		lines = core.BNGetHighLevelILExprText(self.function.handle, self.expr_index, self.as_ast, count, None)
 		assert lines is not None, "core.BNGetHighLevelILExprText returned None"
 		try:
 			for i in range(0, count.value):
 				addr = lines[i].addr
 				if lines[i].instrIndex != 0xffffffffffffffff:
-					il_instr = self._function[lines[i].instrIndex]
+					il_instr = self.function[lines[i].instrIndex]
 				else:
 					il_instr = None
 				color = highlight.HighlightColor._from_core_struct(lines[i].highlight)
@@ -407,137 +212,123 @@ class HighLevelILInstruction:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
 	@property
-	def prefix_operands(self) -> List[Any]:
+	def prefix_operands(self) -> List[Union[HighLevelILOperandType, HighLevelILOperationAndSize]]:
 		"""All operands in the expression tree in prefix order"""
-		result = [HighLevelILOperationAndSize(self._operation, self._size)]
-		for operand in self._operands:
+		result:List[Union[HighLevelILOperandType, HighLevelILOperationAndSize]] = [
+			HighLevelILOperationAndSize(self.operation, self.size)]
+		for operand in self.operands:
 			if isinstance(operand, HighLevelILInstruction):
-				result += operand.prefix_operands
+				result.extend(operand.prefix_operands)
 			else:
 				result.append(operand)
 		return result
 
 	@property
-	def postfix_operands(self) -> List[Any]:
+	def postfix_operands(self) -> List[Union[HighLevelILOperandType, HighLevelILOperationAndSize]]:
 		"""All operands in the expression tree in postfix order"""
-		result = []
-		for operand in self._operands:
+		result:List[Union[HighLevelILOperandType, HighLevelILOperationAndSize]] = []
+		for operand in self.operands:
 			if isinstance(operand, HighLevelILInstruction):
-				result += operand.postfix_operands
+				result.extend(operand.postfix_operands)
 			else:
 				result.append(operand)
-		result.append(HighLevelILOperationAndSize(self._operation, self._size))
+		result.append(HighLevelILOperationAndSize(self.operation, self.size))
 		return result
-
-	@property
-	def function(self) -> 'HighLevelILFunction':
-		return self._function
-
-	@property
-	def expr_index(self) -> ExpressionIndex:
-		return self._expr_index
-
-	@expr_index.setter
-	def expr_index(self, value:ExpressionIndex) -> None:
-		self._expr_index = value
-
-	@property
-	def instr_index(self) -> int:
-		"""Index of the statement that this expression belongs to (read-only)"""
-		return core.BNGetHighLevelILInstructionForExpr(self._function.handle, self._expr_index)
 
 	@property
 	def instr(self) -> 'HighLevelILInstruction':
 		"""The statement that this expression belongs to (read-only)"""
-		return self._function[self.instr_index]
+		return self.function[self.instr_index]
 
 	@property
 	def ast(self) -> 'HighLevelILInstruction':
 		"""This expression with full AST printing (read-only)"""
-		if self._as_ast:
+		if self.as_ast:
 			return self
-		return HighLevelILInstruction(self._function, self._expr_index, True)
+		return HighLevelILInstruction.create(self.function, self.expr_index, True)
 
 	@property
 	def non_ast(self) -> 'HighLevelILInstruction':
 		"""This expression without full AST printing (read-only)"""
-		if not self._as_ast:
+		if not self.as_ast:
 			return self
-		return HighLevelILInstruction(self._function, self._expr_index, False)
+		return HighLevelILInstruction.create(self.function, self.expr_index, False)
 
 	@property
 	def operation(self) -> HighLevelILOperation:
-		return self._operation
-
-	@operation.setter
-	def operation(self, value:HighLevelILOperation) -> None:
-		self._operation = value
+		return self.core_instr.operation
 
 	@property
 	def size(self) -> int:
-		return self._size
-
-	@size.setter
-	def size(self, value:int) -> None:
-		self._size = value
+		return self.core_instr.size
 
 	@property
 	def address(self) -> int:
-		return self._address
-
-	@address.setter
-	def address(self, value:int) -> None:
-		self._address = value
+		return self.core_instr.address
 
 	@property
 	def source_operand(self):
-				return self._source_operand
-
-	@source_operand.setter
-	def source_operand(self, value):
-		self._source_operand = value
+		return self.core_instr.source_operand
 
 	@property
-	def operands(self) -> Any:
-		return self._operands
+	def core_operands(self) -> Any:
+		return self.core_instr.operands
 
-	@operands.setter
-	def operands(self, value: Any):
-		self._operands = value
+	@property
+	def vars_written(self) -> List[Union[variable.Variable, 'mediumlevelil.SSAVariable']]:
+		"""List of variables written by instruction"""
+		return []
+
+	@property
+	def operands(self) -> Generator[HighLevelILOperandType, None, None]:
+		for operand_name in self.operand_names:
+			assert hasattr(self, operand_name), f"No operand '{operand_name}' for instruction {repr(self)}({self.operation})"
+			yield self.__getattribute__(operand_name)
+
+	@property
+	def vars_read(self) -> List[Union[variable.Variable, 'mediumlevelil.SSAVariable']]:
+		"""List of variables read by instruction"""
+		result = []
+		for operand in self.operands:
+			if (isinstance(operand, variable.Variable)) or (isinstance(operand, mediumlevelil.SSAVariable)):
+				result.append(operand)
+			elif isinstance(operand, HighLevelILInstruction):
+				result += operand.vars_read
+		return result
 
 	@property
 	def parent(self) -> Optional['HighLevelILInstruction']:
-		if self._parent >= core.BNGetHighLevelILExprCount(self._function.handle):
+		if self.core_instr.parent >= core.BNGetHighLevelILExprCount(self.function.handle):
 			return None
-		return HighLevelILInstruction(self._function, self._parent, self._as_ast)
+		return HighLevelILInstruction.create(self.function, self.core_instr.parent, self.as_ast)
 
 	@property
 	def ssa_form(self) -> 'HighLevelILInstruction':
 		"""SSA form of expression (read-only)"""
-		assert self._function.ssa_form is not None
-		return HighLevelILInstruction(self._function.ssa_form,
-			core.BNGetHighLevelILSSAExprIndex(self._function.handle, self._expr_index), self._as_ast)
+		assert self.function.ssa_form is not None
+		return HighLevelILInstruction.create(self.function.ssa_form,
+			core.BNGetHighLevelILSSAExprIndex(self.function.handle, self.expr_index), self.as_ast)
 
 	@property
 	def non_ssa_form(self) -> Optional['HighLevelILInstruction']:
 		"""Non-SSA form of expression (read-only)"""
-		if self._function.non_ssa_form is None:
+		if self.function.non_ssa_form is None:
 			return None
-		return HighLevelILInstruction(self._function.non_ssa_form,
-			core.BNGetHighLevelILNonSSAExprIndex(self._function.handle, self._expr_index), self._as_ast)
+		return HighLevelILInstruction.create(self.function.non_ssa_form,
+			core.BNGetHighLevelILNonSSAExprIndex(self.function.handle, self.expr_index), self.as_ast)
 
 	@property
 	def medium_level_il(self) -> Optional['mediumlevelil.MediumLevelILInstruction']:
 		"""Medium level IL form of this expression"""
-		expr = self._function.get_medium_level_il_expr_index(self._expr_index)
+		expr = self.function.get_medium_level_il_expr_index(self.expr_index)
 		if expr is None:
 			return None
-		mlil = self._function.medium_level_il
+		mlil = self.function.medium_level_il
 		if mlil is None:
 			return None
 		ssa_func = mlil.ssa_form
 		assert ssa_func is not None, "medium_level_il.ssa_form is None"
-		return mediumlevelil.MediumLevelILInstruction(ssa_func, expr)
+		return mediumlevelil.MediumLevelILInstruction.create(ssa_func, expr)
 
 	@property
 	def mlil(self) -> Optional['mediumlevelil.MediumLevelILInstruction']:
@@ -546,13 +337,13 @@ class HighLevelILInstruction:
 
 	@property
 	def mlils(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
-		for expr in self._function.get_medium_level_il_expr_indexes(self._expr_index):
-			mlil = self._function.medium_level_il
+		for expr in self.function.get_medium_level_il_expr_indexes(self.expr_index):
+			mlil = self.function.medium_level_il
 			if mlil is None:
 				return
 			ssa_func = mlil.ssa_form
 			assert ssa_func is not None, "medium_level_il.ssa_form is None"
-			yield mediumlevelil.MediumLevelILInstruction(ssa_func, expr)
+			yield mediumlevelil.MediumLevelILInstruction.create(ssa_func, expr)
 
 	@property
 	def low_level_il(self) -> Optional['lowlevelil.LowLevelILInstruction']:
@@ -567,7 +358,7 @@ class HighLevelILInstruction:
 		return self.low_level_il
 
 	@property
-	def llils(self) -> List['lowlevelil.LowLevelILExpr']:
+	def llils(self) -> List['lowlevelil.ExpressionIndex']:
 		result = set()
 		for mlil_expr in self.mlils:
 			for llil_expr in mlil_expr.llils:
@@ -580,10 +371,10 @@ class HighLevelILInstruction:
 		IL basic block object containing this expression (read-only) (only available on finalized functions).
 		Returns None for HLIL_BLOCK expressions as these can contain multiple basic blocks.
 		"""
-		block = core.BNGetHighLevelILBasicBlockForInstruction(self._function.handle, self._instr_index)
-		if not block or self._function.source_function is None:
+		block = core.BNGetHighLevelILBasicBlockForInstruction(self.function.handle, self.instr_index)
+		if not block or self.function.source_function is None:
 			return None
-		return HighLevelILBasicBlock(self._function.source_function.view, block, self._function)
+		return HighLevelILBasicBlock(self.function.source_function.view, block, self.function)
 
 	@property
 	def value(self) -> 'variable.RegisterValue':
@@ -604,11 +395,11 @@ class HighLevelILInstruction:
 	@property
 	def expr_type(self) -> Optional['types.Type']:
 		"""Type of expression"""
-		result = core.BNGetHighLevelILExprType(self._function.handle, self._expr_index)
+		result = core.BNGetHighLevelILExprType(self.function.handle, self.expr_index)
 		if result.type:
 			platform = None
-			if self._function.source_function:
-				platform = self._function.source_function.platform
+			if self.function.source_function:
+				platform = self.function.source_function.platform
 			return types.Type(result.type, platform = platform, confidence = result.confidence)
 		return None
 
@@ -621,12 +412,1669 @@ class HighLevelILInstruction:
 	@property
 	def ssa_memory_version(self) -> int:
 		"""Version of active memory contents in SSA form for this instruction"""
-		return core.BNGetHighLevelILSSAMemoryVersionAtILInstruction(self._function.handle, self._instr_index)
+		return core.BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.instr_index)
 
 	def get_ssa_var_version(self, var:'variable.Variable') -> int:
 		var_data = var.to_BNVariable()
-		return core.BNGetHighLevelILSSAVarVersionAtILInstruction(self._function.handle, var_data, self._instr_index)
+		return core.BNGetHighLevelILSSAVarVersionAtILInstruction(self.function.handle, var_data, self.instr_index)
 
+	def get_int(self, operand_index:int) -> int:
+		value = self.core_instr.operands[operand_index]
+		return (value & ((1 << 63) - 1)) - (value & (1 << 63))
+
+	def get_float(self, operand_index:int) -> float:
+		value = self.core_instr.operands[operand_index]
+		if self.core_instr.size == 4:
+			return struct.unpack("f", struct.pack("I", value & 0xffffffff))[0]
+		elif self.core_instr.size == 8:
+			return struct.unpack("d", struct.pack("Q", value))[0]
+		else:
+			return float(value)
+
+	def get_expr(self, operand_index:int) -> 'HighLevelILInstruction':
+		return HighLevelILInstruction.create(self.function,
+			ExpressionIndex(self.core_instr.operands[operand_index]))
+
+	def get_intrinsic(self, operand_index:int) -> 'lowlevelil.ILIntrinsic':
+		assert self.function.arch is not None, "Attempting to create ILIntrinsic from function with no Architecture"
+		return lowlevelil.ILIntrinsic(self.function.arch,
+			architecture.IntrinsicIndex(self.core_instr.operands[operand_index]))
+
+	def get_var(self, operand_index:int) -> variable.Variable:
+		value = self.core_instr.operands[operand_index]
+		return variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index])
+
+	def get_var_ssa(self, operand_index1:int, operand_index2:int) -> 'mediumlevelil.SSAVariable':
+		var = variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index1])
+		version = self.core_instr.operands[operand_index2]
+		return mediumlevelil.SSAVariable(var, version)
+
+	def get_var_ssa_dest_and_src(self, operand_index1:int, operand_index2:int) -> 'mediumlevelil.SSAVariable':
+		var = variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index1])
+		dest_version = self.core_instr.operands[operand_index2]
+		return mediumlevelil.SSAVariable(var, dest_version)
+
+	def get_int_list(self, operand_index:int) -> List[int]:
+		count = ctypes.c_ulonglong()
+		operand_list = core.BNHighLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
+		assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
+		value:List[int] = []
+		try:
+			for j in range(count.value):
+				value.append(operand_list[j])
+			return value
+		finally:
+			core.BNHighLevelILFreeOperandList(operand_list)
+
+	def get_expr_list(self, operand_index1:int, operand_index2:int) -> List[variable.Variable]:
+		count = ctypes.c_ulonglong()
+		operand_list = core.BNHighLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
+		assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
+		value:List[variable.Variable] = []
+		try:
+			for j in range(count.value):
+				value.append(variable.Variable.from_identifier(self.function.source_function, operand_list[j]))
+			return value
+		finally:
+			core.BNHighLevelILFreeOperandList(operand_list)
+
+	def get_var_ssa_list(self, operand_index1:int, _:int) -> List['mediumlevelil.SSAVariable']:
+		count = ctypes.c_ulonglong()
+		operand_list = core.BNHighLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
+		assert operand_list is not None, "core.BNHighLevelILGetOperandList returned None"
+		value = []
+		try:
+			for j in range(count.value // 2):
+				var_id = operand_list[j * 2]
+				var_version = operand_list[(j * 2) + 1]
+				value.append(mediumlevelil.SSAVariable(variable.Variable.from_identifier(self.function.source_function,
+					var_id), var_version))
+			return value
+		finally:
+			core.BNMediumLevelILFreeOperandList(operand_list)
+
+	def get_member_index(self, operand_index:int) -> Optional[int]:
+		value = self.core_instr.operands[operand_index]
+		if (value & (1 << 63)) != 0:
+			value = None
+		return value
+
+	def get_label(self, operand_index:int) -> GotoLabel:
+		return GotoLabel(self.function, self.core_instr.operands[operand_index])
+
+
+@dataclass(frozen=True, repr=False)
+class Arithmetic(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Memory(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class ControlFlow(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Loop(ControlFlow):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Call(ControlFlow):
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return NotImplemented
+
+	@property
+	def vars_read(self) -> List[Union['mediumlevelil.SSAVariable', variable.Variable]]:
+		result = []
+		for param in self.params:
+			if isinstance(param, HighLevelILInstruction):
+				result.extend(param.vars_read)
+			else:
+				assert False, "Call.params returned object other than Variable, SSAVariable or MediumLevelILInstruction"
+		return result
+
+@dataclass(frozen=True, repr=False)
+class UnaryOperation(HighLevelILInstruction):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class BinaryOperation(HighLevelILInstruction):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self) -> HighLevelILInstruction:
+		return self.get_expr(0)
+
+	@property
+	def right(self) -> HighLevelILInstruction:
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class Carry(Arithmetic):
+	operand_names = tuple(["left", "right", "carry"])
+
+	@property
+	def left(self) -> HighLevelILInstruction:
+		return self.get_expr(0)
+
+	@property
+	def right(self) -> HighLevelILInstruction:
+		return self.get_expr(1)
+
+	@property
+	def carry(self) -> HighLevelILInstruction:
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class Comparison(BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Constant(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class SSA(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Phi(SSA):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class FloatingPoint(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Terminal(ControlFlow):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Return(Terminal):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Signed(HighLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class DoublePrecision(Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Syscall(Call):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class Tailcall(Call):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILNop(HighLevelILInstruction):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILBlock(HighLevelILInstruction):
+	operand_names = tuple(["body"])
+
+	@property
+	def body(self):
+		return self.get_expr_list(0, 1)
+
+	def __iter__(self):
+		for expr in self.body:
+			yield expr
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILIf(ControlFlow):
+	operand_names = tuple(["condition", "true", "false"])
+
+	@property
+	def condition(self):
+		return self.get_expr(0)
+
+	@property
+	def true(self):
+		return self.get_expr(1)
+
+	@property
+	def false(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILWhile(Loop):
+	operand_names = tuple(["condition", "body"])
+
+	@property
+	def condition(self):
+		return self.get_expr(0)
+
+	@property
+	def body(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILWhile_ssa(Loop, SSA):
+	operand_names = tuple(["condition_phi", "condition", "body"])
+
+	@property
+	def condition_phi(self):
+		return self.get_expr(0)
+
+	@property
+	def condition(self):
+		return self.get_expr(1)
+
+	@property
+	def body(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDo_while(Loop):
+	operand_names = tuple(["body", "condition"])
+
+	@property
+	def body(self):
+		return self.get_expr(0)
+
+	@property
+	def condition(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDo_while_ssa(Loop, SSA):
+	operand_names = tuple(["body", "condition_phi", "condition"])
+
+	@property
+	def body(self):
+		return self.get_expr(0)
+
+	@property
+	def condition_phi(self):
+		return self.get_expr(1)
+
+	@property
+	def condition(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFor(Loop):
+	operand_names = tuple(["init", "condition", "update", "body"])
+
+	@property
+	def init(self):
+		return self.get_expr(0)
+
+	@property
+	def condition(self):
+		return self.get_expr(1)
+
+	@property
+	def update(self):
+		return self.get_expr(2)
+
+	@property
+	def body(self):
+		return self.get_expr(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFor_ssa(Loop, SSA):
+	operand_names = tuple(["init", "condition_phi", "condition", "update"])
+
+	@property
+	def init(self):
+		return self.get_expr(0)
+
+	@property
+	def condition_phi(self):
+		return self.get_expr(1)
+
+	@property
+	def condition(self):
+		return self.get_expr(2)
+
+	@property
+	def update(self):
+		return self.get_expr(3)
+
+	@property
+	def body(self):
+		return self.get_expr(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSwitch(ControlFlow):
+	operand_names = tuple(["condition", "default", "cases"])
+
+	@property
+	def condition(self):
+		return self.get_expr(0)
+
+	@property
+	def default(self):
+		return self.get_expr(1)
+
+	@property
+	def cases(self):
+		return self.get_expr_list(2, 3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCase(HighLevelILInstruction):
+	operand_names = tuple(["values", "body"])
+
+	@property
+	def values(self):
+		return self.get_expr_list(0, 1)
+
+	@property
+	def body(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILBreak(Terminal):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILContinue(ControlFlow):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILJump(Terminal):
+	operand_names = tuple(["dest"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRet(ControlFlow):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr_list(0, 1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILNoret(Terminal):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILGoto(Terminal):
+	operand_names = tuple(["target"])
+
+	@property
+	def target(self):
+		return self.get_label(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILLabel(HighLevelILInstruction):
+	operand_names = tuple(["target"])
+
+	@property
+	def target(self):
+		return self.get_label(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar_declare(HighLevelILInstruction):
+	operand_names = tuple(["var"])
+
+	@property
+	def var(self):
+		return self.get_var(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar_init(HighLevelILInstruction):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_var(0)
+
+	@property
+	def src(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar_init_ssa(SSA):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_var_ssa(0, 1)
+
+	@property
+	def src(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAssign(HighLevelILInstruction):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+	@property
+	def src(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAssign_unpack(HighLevelILInstruction):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_expr_list(0, 1)
+
+	@property
+	def src(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAssign_mem_ssa(SSA):
+	operand_names = tuple(["dest", "dest_memory", "src", "src_memory"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+	@property
+	def dest_memory(self):
+		return self.get_int(1)
+
+	@property
+	def src(self):
+		return self.get_expr(2)
+
+	@property
+	def src_memory(self):
+		return self.get_int(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAssign_unpack_mem_ssa(SSA):
+	operand_names = tuple(["dest", "dest_memory", "src", "src_memory"])
+
+	@property
+	def dest(self):
+		return self.get_expr_list(0, 1)
+
+	@property
+	def dest_memory(self):
+		return self.get_int(2)
+
+	@property
+	def src(self):
+		return self.get_expr(3)
+
+	@property
+	def src_memory(self):
+		return self.get_int(4)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar(HighLevelILInstruction):
+	operand_names = tuple(["var"])
+
+	@property
+	def var(self):
+		return self.get_var(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar_ssa(SSA):
+	operand_names = tuple(["var"])
+
+	@property
+	def var(self):
+		return self.get_var_ssa(0, 1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILVar_phi(SSA):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_var_ssa(0, 1)
+
+	@property
+	def src(self):
+		return self.get_var_ssa_list(2, 3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMem_phi(Memory):
+	operand_names = tuple(["dest", "src"])
+
+	@property
+	def dest(self):
+		return self.get_int(0)
+
+	@property
+	def src(self):
+		return self.get_int_list(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILStruct_field(HighLevelILInstruction):
+	operand_names = tuple(["src", "offset", "member_index"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def offset(self):
+		return self.get_int(1)
+
+	@property
+	def member_index(self):
+		return self.get_member_index(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILArray_index(HighLevelILInstruction):
+	operand_names = tuple(["src", "index"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def index(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILArray_index_ssa(SSA):
+	operand_names = tuple(["src", "src_memory", "index"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def src_memory(self):
+		return self.get_int(1)
+
+	@property
+	def index(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSplit(HighLevelILInstruction):
+	operand_names = tuple(["high", "low"])
+
+	@property
+	def high(self):
+		return self.get_expr(0)
+
+	@property
+	def low(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDeref(HighLevelILInstruction):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDeref_field(HighLevelILInstruction):
+	operand_names = tuple(["src", "offset", "member_index"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def offset(self):
+		return self.get_int(1)
+
+	@property
+	def member_index(self):
+		return self.get_member_index(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDeref_ssa(SSA):
+	operand_names = tuple(["src", "src_memory"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def src_memory(self):
+		return self.get_int(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDeref_field_ssa(SSA):
+	operand_names = tuple(["src", "src_memory", "offset", "member_index"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+	@property
+	def src_memory(self):
+		return self.get_int(1)
+
+	@property
+	def offset(self):
+		return self.get_int(2)
+
+	@property
+	def member_index(self):
+		return self.get_member_index(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAddress_of(HighLevelILInstruction):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILConst(Constant):
+	operand_names = tuple(["constant"])
+
+	@property
+	def constant(self):
+		return self.get_int(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILConst_ptr(Constant):
+	operand_names = tuple(["constant"])
+
+	@property
+	def constant(self):
+		return self.get_int(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILExtern_ptr(Constant):
+	operand_names = tuple(["constant", "offset"])
+
+	@property
+	def constant(self):
+		return self.get_int(0)
+
+	@property
+	def offset(self):
+		return self.get_int(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFloat_const(Constant):
+	operand_names = tuple(["constant"])
+
+	@property
+	def constant(self):
+		return self.get_float(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILImport(Constant):
+	operand_names = tuple(["constant"])
+
+	@property
+	def constant(self):
+		return self.get_int(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAdd(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAdc(Carry):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSub(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSbb(Carry):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAnd(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILOr(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILXor(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILLsl(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILLsr(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAsr(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRol(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRlc(Arithmetic, BinaryOperation):
+	operand_names = tuple(["left", "right", "carry"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+	@property
+	def carry(self):
+		return self.get_expr(2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRor(Carry):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRrc(Carry):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMul(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMulu_dp(BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMuls_dp(Signed, BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDivu(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDivu_dp(BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDivs(Signed, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILDivs_dp(Signed, BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILModu(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILModu_dp(BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMods(Signed, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILMods_dp(Signed, BinaryOperation, DoublePrecision):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILNeg(Arithmetic, UnaryOperation):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILNot(Arithmetic, UnaryOperation):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSx(Arithmetic, UnaryOperation):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILZx(Arithmetic, UnaryOperation):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILLow_part(Arithmetic, UnaryOperation):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCall(Call):
+	operand_names = tuple(["dest", "params"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+	@property
+	def params(self):
+		return self.get_expr_list(1, 2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCall_ssa(Call, SSA):
+	operand_names = tuple(["dest", "params", "dest_memory", "src_memory"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+	@property
+	def params(self):
+		return self.get_expr_list(1, 2)
+
+	@property
+	def dest_memory(self):
+		return self.get_int(3)
+
+	@property
+	def src_memory(self):
+		return self.get_int(4)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_e(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_ne(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_slt(Comparison, Signed):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_ult(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_sle(Comparison, Signed):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_ule(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_sge(Comparison, Signed):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_uge(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_sgt(Comparison, Signed):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCmp_ugt(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILTest_bit(Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILBool_to_int(HighLevelILInstruction):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILAdd_overflow(Arithmetic, BinaryOperation):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSyscall(Call):
+	operand_names = tuple(["params"])
+
+	@property
+	def params(self):
+		return self.get_expr_list(0, 1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILSyscall_ssa(Call, SSA):
+	operand_names = tuple(["params", "dest_memory", "src_memory"])
+
+	@property
+	def params(self):
+		return self.get_expr_list(0, 1)
+
+	@property
+	def dest_memory(self):
+		return self.get_int(2)
+
+	@property
+	def src_memory(self):
+		return self.get_int(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILTailcall(Tailcall):
+	operand_names = tuple(["dest", "params"])
+
+	@property
+	def dest(self):
+		return self.get_expr(0)
+
+	@property
+	def params(self):
+		return self.get_expr_list(1, 2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILBp(Terminal):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILTrap(Terminal):
+	operand_names = tuple(["vector"])
+
+	@property
+	def vector(self):
+		return self.get_int(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILIntrinsic(HighLevelILInstruction):
+	operand_names = tuple(["intrinsic", "params"])
+
+	@property
+	def intrinsic(self):
+		return self.get_intrinsic(0)
+
+	@property
+	def params(self):
+		return self.get_expr_list(1, 2)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILIntrinsic_ssa(SSA):
+	operand_names = tuple(["intrinsic", "params", "dest_memory", "src_memory"])
+
+	@property
+	def intrinsic(self):
+		return self.get_intrinsic(0)
+
+	@property
+	def params(self):
+		return self.get_expr_list(1, 2)
+
+	@property
+	def dest_memory(self):
+		return self.get_int(2)
+
+	@property
+	def src_memory(self):
+		return self.get_int(3)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILUndef(Terminal):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILUnimpl(HighLevelILInstruction):
+	operand_names = tuple()
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILUnimpl_mem(Memory):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFadd(FloatingPoint):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFsub(FloatingPoint):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFmul(FloatingPoint):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFdiv(FloatingPoint):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFsqrt(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFneg(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFabs(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFloat_to_int(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILInt_to_float(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFloat_conv(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILRound_to_int(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFloor(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILCeil(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFtrunc(FloatingPoint):
+	operand_names = tuple(["src"])
+
+	@property
+	def src(self):
+		return self.get_expr(0)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_e(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_ne(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_lt(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_le(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_ge(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_gt(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_o(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+@dataclass(frozen=True, repr=False)
+class HighLevelILFcmp_uo(FloatingPoint, Comparison):
+	operand_names = tuple(["left", "right"])
+
+	@property
+	def left(self):
+		return self.get_expr(0)
+
+	@property
+	def right(self):
+		return self.get_expr(1)
+
+
+ILInstruction = {
+	HighLevelILOperation.HLIL_NOP:HighLevelILNop,                                      #  ,
+	HighLevelILOperation.HLIL_BLOCK:HighLevelILBlock,                                  #  ("body", "expr_list"),
+	HighLevelILOperation.HLIL_IF:HighLevelILIf,                                        #  ("condition", "expr"), ("true", "expr"), ("false", "expr"),
+	HighLevelILOperation.HLIL_WHILE:HighLevelILWhile,                                  #  ("condition", "expr"), ("body", "expr"),
+	HighLevelILOperation.HLIL_WHILE_SSA:HighLevelILWhile_ssa,                          #  ("condition_phi", "expr"), ("condition", "expr"), ("body", "expr"),
+	HighLevelILOperation.HLIL_DO_WHILE:HighLevelILDo_while,                            #  ("body", "expr"), ("condition", "expr"),
+	HighLevelILOperation.HLIL_DO_WHILE_SSA:HighLevelILDo_while_ssa,                    #  ("body", "expr"), ("condition_phi", "expr"), ("condition", "expr"),
+	HighLevelILOperation.HLIL_FOR:HighLevelILFor,                                      #  ("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr"),
+	HighLevelILOperation.HLIL_FOR_SSA:HighLevelILFor_ssa,                              #  ("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr"),
+	HighLevelILOperation.HLIL_SWITCH:HighLevelILSwitch,                                #  ("condition", "expr"), ("default", "expr"), ("cases", "expr_list"),
+	HighLevelILOperation.HLIL_CASE:HighLevelILCase,                                    #  ("values", "expr_list"), ("body", "expr"),
+	HighLevelILOperation.HLIL_BREAK:HighLevelILBreak,                                  #  ,
+	HighLevelILOperation.HLIL_CONTINUE:HighLevelILContinue,                            #  ,
+	HighLevelILOperation.HLIL_JUMP:HighLevelILJump,                                    #  ("dest", "expr"),
+	HighLevelILOperation.HLIL_RET:HighLevelILRet,                                      #  ("src", "expr_list"),
+	HighLevelILOperation.HLIL_NORET:HighLevelILNoret,                                  #  ,
+	HighLevelILOperation.HLIL_GOTO:HighLevelILGoto,                                    #  ("target", "label"),
+	HighLevelILOperation.HLIL_LABEL:HighLevelILLabel,                                  #  ("target", "label"),
+	HighLevelILOperation.HLIL_VAR_DECLARE:HighLevelILVar_declare,                      #  ("var", "var"),
+	HighLevelILOperation.HLIL_VAR_INIT:HighLevelILVar_init,                            #  ("dest", "var"), ("src", "expr"),
+	HighLevelILOperation.HLIL_VAR_INIT_SSA:HighLevelILVar_init_ssa,                    #  ("dest", "var_ssa"), ("src", "expr"),
+	HighLevelILOperation.HLIL_ASSIGN:HighLevelILAssign,                                #  ("dest", "expr"), ("src", "expr"),
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK:HighLevelILAssign_unpack,                  #  ("dest", "expr_list"), ("src", "expr"),
+	HighLevelILOperation.HLIL_ASSIGN_MEM_SSA:HighLevelILAssign_mem_ssa,                #  ("dest", "expr"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA:HighLevelILAssign_unpack_mem_ssa,  #  ("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_VAR:HighLevelILVar,                                      #  ("var", "var"),
+	HighLevelILOperation.HLIL_VAR_SSA:HighLevelILVar_ssa,                              #  ("var", "var_ssa"),
+	HighLevelILOperation.HLIL_VAR_PHI:HighLevelILVar_phi,                              #  ("dest", "var_ssa"), ("src", "var_ssa_list"),
+	HighLevelILOperation.HLIL_MEM_PHI:HighLevelILMem_phi,                              #  ("dest", "int"), ("src", "int_list"),
+	HighLevelILOperation.HLIL_STRUCT_FIELD:HighLevelILStruct_field,                    #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
+	HighLevelILOperation.HLIL_ARRAY_INDEX:HighLevelILArray_index,                      #  ("src", "expr"), ("index", "expr"),
+	HighLevelILOperation.HLIL_ARRAY_INDEX_SSA:HighLevelILArray_index_ssa,              #  ("src", "expr"), ("src_memory", "int"), ("index", "expr"),
+	HighLevelILOperation.HLIL_SPLIT:HighLevelILSplit,                                  #  ("high", "expr"), ("low", "expr"),
+	HighLevelILOperation.HLIL_DEREF:HighLevelILDeref,                                  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_DEREF_FIELD:HighLevelILDeref_field,                      #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
+	HighLevelILOperation.HLIL_DEREF_SSA:HighLevelILDeref_ssa,                          #  ("src", "expr"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_DEREF_FIELD_SSA:HighLevelILDeref_field_ssa,              #  ("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index"),
+	HighLevelILOperation.HLIL_ADDRESS_OF:HighLevelILAddress_of,                        #  ("src", "expr"),
+	HighLevelILOperation.HLIL_CONST:HighLevelILConst,                                  #  ("constant", "int"),
+	HighLevelILOperation.HLIL_CONST_PTR:HighLevelILConst_ptr,                          #  ("constant", "int"),
+	HighLevelILOperation.HLIL_EXTERN_PTR:HighLevelILExtern_ptr,                        #  ("constant", "int"), ("offset", "int"),
+	HighLevelILOperation.HLIL_FLOAT_CONST:HighLevelILFloat_const,                      #  ("constant", "float"),
+	HighLevelILOperation.HLIL_IMPORT:HighLevelILImport,                                #  ("constant", "int"),
+	HighLevelILOperation.HLIL_ADD:HighLevelILAdd,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_ADC:HighLevelILAdc,                                      #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
+	HighLevelILOperation.HLIL_SUB:HighLevelILSub,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_SBB:HighLevelILSbb,                                      #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
+	HighLevelILOperation.HLIL_AND:HighLevelILAnd,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_OR:HighLevelILOr,                                        #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_XOR:HighLevelILXor,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_LSL:HighLevelILLsl,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_LSR:HighLevelILLsr,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_ASR:HighLevelILAsr,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_ROL:HighLevelILRol,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_RLC:HighLevelILRlc,                                      #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
+	HighLevelILOperation.HLIL_ROR:HighLevelILRor,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_RRC:HighLevelILRrc,                                      #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
+	HighLevelILOperation.HLIL_MUL:HighLevelILMul,                                      #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MULU_DP:HighLevelILMulu_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MULS_DP:HighLevelILMuls_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_DIVU:HighLevelILDivu,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_DIVU_DP:HighLevelILDivu_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_DIVS:HighLevelILDivs,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_DIVS_DP:HighLevelILDivs_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MODU:HighLevelILModu,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MODU_DP:HighLevelILModu_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MODS:HighLevelILMods,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_MODS_DP:HighLevelILMods_dp,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_NEG:HighLevelILNeg,                                      #  ("src", "expr"),
+	HighLevelILOperation.HLIL_NOT:HighLevelILNot,                                      #  ("src", "expr"),
+	HighLevelILOperation.HLIL_SX:HighLevelILSx,                                        #  ("src", "expr"),
+	HighLevelILOperation.HLIL_ZX:HighLevelILZx,                                        #  ("src", "expr"),
+	HighLevelILOperation.HLIL_LOW_PART:HighLevelILLow_part,                            #  ("src", "expr"),
+	HighLevelILOperation.HLIL_CALL:HighLevelILCall,                                    #  ("dest", "expr"), ("params", "expr_list"),
+	HighLevelILOperation.HLIL_CALL_SSA:HighLevelILCall_ssa,                            #  ("dest", "expr"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_CMP_E:HighLevelILCmp_e,                                  #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_NE:HighLevelILCmp_ne,                                #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_SLT:HighLevelILCmp_slt,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_ULT:HighLevelILCmp_ult,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_SLE:HighLevelILCmp_sle,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_ULE:HighLevelILCmp_ule,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_SGE:HighLevelILCmp_sge,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_UGE:HighLevelILCmp_uge,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_SGT:HighLevelILCmp_sgt,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_CMP_UGT:HighLevelILCmp_ugt,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_TEST_BIT:HighLevelILTest_bit,                            #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_BOOL_TO_INT:HighLevelILBool_to_int,                      #  ("src", "expr"),
+	HighLevelILOperation.HLIL_ADD_OVERFLOW:HighLevelILAdd_overflow,                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_SYSCALL:HighLevelILSyscall,                              #  ("params", "expr_list"),
+	HighLevelILOperation.HLIL_SYSCALL_SSA:HighLevelILSyscall_ssa,                      #  ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_TAILCALL:HighLevelILTailcall,                            #  ("dest", "expr"), ("params", "expr_list"),
+	HighLevelILOperation.HLIL_BP:HighLevelILBp,                                        #  ,
+	HighLevelILOperation.HLIL_TRAP:HighLevelILTrap,                                    #  ("vector", "int"),
+	HighLevelILOperation.HLIL_INTRINSIC:HighLevelILIntrinsic,                          #  ("intrinsic", "intrinsic"), ("params", "expr_list"),
+	HighLevelILOperation.HLIL_INTRINSIC_SSA:HighLevelILIntrinsic_ssa,                  #  ("intrinsic", "intrinsic"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
+	HighLevelILOperation.HLIL_UNDEF:HighLevelILUndef,                                  #  ,
+	HighLevelILOperation.HLIL_UNIMPL:HighLevelILUnimpl,                                #  ,
+	HighLevelILOperation.HLIL_UNIMPL_MEM:HighLevelILUnimpl_mem,                        #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FADD:HighLevelILFadd,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FSUB:HighLevelILFsub,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FMUL:HighLevelILFmul,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FDIV:HighLevelILFdiv,                                    #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FSQRT:HighLevelILFsqrt,                                  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FNEG:HighLevelILFneg,                                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FABS:HighLevelILFabs,                                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FLOAT_TO_INT:HighLevelILFloat_to_int,                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_INT_TO_FLOAT:HighLevelILInt_to_float,                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FLOAT_CONV:HighLevelILFloat_conv,                        #  ("src", "expr"),
+	HighLevelILOperation.HLIL_ROUND_TO_INT:HighLevelILRound_to_int,                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FLOOR:HighLevelILFloor,                                  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_CEIL:HighLevelILCeil,                                    #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FTRUNC:HighLevelILFtrunc,                                #  ("src", "expr"),
+	HighLevelILOperation.HLIL_FCMP_E:HighLevelILFcmp_e,                                #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_NE:HighLevelILFcmp_ne,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_LT:HighLevelILFcmp_lt,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_LE:HighLevelILFcmp_le,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_GE:HighLevelILFcmp_ge,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_GT:HighLevelILFcmp_gt,                              #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_O:HighLevelILFcmp_o,                                #  ("left", "expr"), ("right", "expr"),
+	HighLevelILOperation.HLIL_FCMP_UO:HighLevelILFcmp_uo,                              #  ("left", "expr"), ("right", "expr"),
+}
 
 class HighLevelILExpr:
 	"""
@@ -641,7 +2089,6 @@ class HighLevelILExpr:
 	@property
 	def index(self) -> ExpressionIndex:
 		return self._index
-
 
 
 class HighLevelILFunction:
@@ -701,19 +2148,16 @@ class HighLevelILFunction:
 	def __len__(self):
 		return int(core.BNGetHighLevelILInstructionCount(self.handle))
 
-	def __getitem__(self, i:Union[HighLevelILExpr, HighLevelILInstruction, int]) -> HighLevelILInstruction:
+	def __getitem__(self, i:Union[HighLevelILExpr, int]) -> HighLevelILInstruction:
 		if isinstance(i, slice) or isinstance(i, tuple):
 			raise IndexError("expected integer instruction index")
 		if isinstance(i, HighLevelILExpr):
-			return HighLevelILInstruction(self, i.index)
-		# for backwards compatibility
-		if isinstance(i, HighLevelILInstruction):
-			return i
+			return HighLevelILInstruction.create(self, i.index)
 		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
 		if i < 0:
 			i = len(self) + i
-		return HighLevelILInstruction(self, core.BNGetHighLevelILIndexForInstruction(self.handle, i), False,
+		return HighLevelILInstruction.create(self, core.BNGetHighLevelILIndexForInstruction(self.handle, i), False,
 			InstructionIndex(i))
 
 	def __setitem__(self, i, j):
@@ -757,7 +2201,7 @@ class HighLevelILFunction:
 		expr_index = core.BNGetHighLevelILRootExpr(self.handle)
 		if expr_index >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
-		return HighLevelILInstruction(self, expr_index)
+		return HighLevelILInstruction.create(self, expr_index)
 
 	@root.setter
 	def root(self, value:HighLevelILInstruction) -> None:
@@ -838,13 +2282,13 @@ class HighLevelILFunction:
 		result = core.BNGetHighLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
 		if result >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
-		return HighLevelILInstruction(self, result)
+		return HighLevelILInstruction.create(self, result)
 
 	def get_ssa_memory_definition(self, version:int) -> Optional[HighLevelILInstruction]:
 		result = core.BNGetHighLevelILSSAMemoryDefinition(self.handle, version)
 		if result >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
-		return HighLevelILInstruction(self, result)
+		return HighLevelILInstruction.create(self, result)
 
 	def get_ssa_var_uses(self, ssa_var:'mediumlevelil.SSAVariable') -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()
@@ -853,7 +2297,7 @@ class HighLevelILFunction:
 		assert instrs is not None, "core.BNGetHighLevelILSSAVarUses returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(HighLevelILInstruction(self, instrs[i]))
+			result.append(HighLevelILInstruction.create(self, instrs[i]))
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -863,7 +2307,7 @@ class HighLevelILFunction:
 		assert instrs is not None, "core.BNGetHighLevelILSSAMemoryUses returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(HighLevelILInstruction(self, instrs[i]))
+			result.append(HighLevelILInstruction.create(self, instrs[i]))
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -885,7 +2329,7 @@ class HighLevelILFunction:
 		assert instrs is not None, "core.BNGetHighLevelILVariableDefinitions returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(HighLevelILInstruction(self, instrs[i]))
+			result.append(HighLevelILInstruction.create(self, instrs[i]))
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -896,7 +2340,7 @@ class HighLevelILFunction:
 		assert instrs is not None, "core.BNGetHighLevelILVariableUses returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(HighLevelILInstruction(self, instrs[i]))
+			result.append(HighLevelILInstruction.create(self, instrs[i]))
 		core.BNFreeILInstructionList(instrs)
 		return result
 
@@ -1029,7 +2473,7 @@ class HighLevelILFunction:
 		result = core.BNGetHighLevelILExprIndexForLabel(self.handle, label_idx)
 		if result >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
-		return HighLevelILInstruction(self, result)
+		return HighLevelILInstruction.create(self, result)
 
 	def get_label_uses(self, label_idx:int) -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()
@@ -1037,7 +2481,7 @@ class HighLevelILFunction:
 		assert uses is not None, "core.BNGetHighLevelILUsesForLabel returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(HighLevelILInstruction(self, uses[i]))
+			result.append(HighLevelILInstruction.create(self, uses[i]))
 		core.BNFreeILInstructionList(uses)
 		return result
 

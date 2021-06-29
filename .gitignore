@@ -63,7 +63,7 @@ Makefile
 
 # Make
 python/examples/binaryninja/
-python/plugins/ 
+python/plugins/
 python/types/
 suite/binaryninja/
 

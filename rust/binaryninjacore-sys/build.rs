@@ -6,11 +6,74 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+#[cfg(target_os = "macos")]
+static LASTRUN_PATH: (&str, &str) = ("HOME", "Library/Application Support/Binary Ninja/lastrun");
+
+#[cfg(target_os = "linux")]
+static LASTRUN_PATH: (&str, &str) = ("HOME", ".binaryninja/lastrun");
+
+#[cfg(windows)]
+static LASTRUN_PATH: (&str, &str) = ("APPDATA", "Binary Ninja\\lastrun");
+
+// Check last run location for path to BinaryNinja; Otherwise check the default install locations
+fn link_path() -> PathBuf {
+    use std::io::prelude::*;
+
+    let home = PathBuf::from(env::var(LASTRUN_PATH.0).unwrap());
+    let lastrun = PathBuf::from(&home).join(LASTRUN_PATH.1);
+
+    File::open(lastrun)
+        .and_then(|f| {
+            let mut binja_path = String::new();
+            let mut reader = BufReader::new(f);
+
+            reader.read_line(&mut binja_path)?;
+            Ok(PathBuf::from(binja_path.trim()))
+        })
+        .unwrap_or_else(|_| {
+            #[cfg(target_os = "macos")]
+            return PathBuf::from("/Applications/Binary Ninja.app/Contents/MacOS");
+
+            #[cfg(target_os = "linux")]
+            return home.join("binaryninja");
+
+            #[cfg(windows)]
+            return PathBuf::from(env::var("PROGRAMFILES").unwrap())
+                .join("Vector35\\BinaryNinja\\");
+        })
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=../../binaryninjacore.h");
 
     //Cargo's output directory
     let out_dir = env::var("OUT_DIR").unwrap();
+
+    let link_path = env::var("BINARYNINJADIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| link_path());
+
+    // Linux builds of binaryninja ship with libbinaryninjacore.so.1 in the
+    // application folder and no symlink. The linker will attempt to link with
+    // libbinaryninjacore.so. Since this is likely going to fail, we detect this
+    // ahead of time and create an appropriately named symlink inside of OUT_DIR
+    // and add it to the library search path.
+    #[cfg(target_os = "linux")]
+    {
+        let symlink_target = PathBuf::from(&out_dir).join("libbinaryninjacore.so");
+        if !link_path.join("libbinaryninjacore.so").exists() && !symlink_target.exists() {
+            use std::os::unix::fs;
+            fs::symlink(
+                link_path.join("libbinaryninjacore.so.1"),
+                PathBuf::from(&out_dir).join("libbinaryninjacore.so"),
+            )
+            .expect("failed to create required symlink");
+        }
+        println!("cargo:rustc-link-search={}", out_dir);
+    }
+
+    println!("cargo:rustc-link-lib=binaryninjacore");
+    println!("cargo:rustc-link-search={}", link_path.to_str().unwrap());
 
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";

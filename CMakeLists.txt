@@ -4,6 +4,8 @@ project(binaryninjaapi)
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
+set(CARGO_API_VERSION nightly-2021-06-27)
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)
         message(FATAL_ERROR "Binary Ninja is 64-bit only (try -G \"${CMAKE_GENERATOR} Win64\")")

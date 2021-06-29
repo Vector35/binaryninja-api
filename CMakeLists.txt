@@ -118,4 +118,5 @@ endfunction()
 
 if(BN_API_BUILD_EXAMPLES)
     add_subdirectory(examples)
+    add_subdirectory(rust/examples/basic_script)
 endif()

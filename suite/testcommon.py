@@ -1843,3 +1843,69 @@ class VerifyBuilder(Builder):
             self.delete_package("basic_struct")
 
         return ret
+
+    def test_old_tags(self):
+        """
+        New builds use string-based ids for tags, whereas older builds used integers. Make sure the old builds still work
+        """
+
+        file_name = self.unpackage_file("old_tags.bndb")
+        ret = True
+        try:
+            binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
+            with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
+                if bv is None:
+                    ret = False
+                    raise Exception("File load error")
+                if not bv.file.snapshot_data_applied_without_error:
+                    ret = False
+                    raise Exception("Snapshot apply error")
+
+                # Make sure the tags exist and are where we expect them
+                _start = bv.get_function_at(bv.start + 0x1060)
+                sub_1012 = bv.get_function_at(bv.start + 0x1012)
+
+                assert len(bv.get_data_tags_at(bv.start + 0x6030)) == 1
+                assert bv.get_data_tags_at(bv.start + 0x6030)[0].type.name == 'Bookmarks'
+                assert bv.get_data_tags_at(bv.start + 0x6030)[0].data == '2'
+                assert bv.get_data_tags_at(bv.start + 0x6030)[0].id == '7'
+
+                assert len(bv.get_data_tags_at(bv.start + 0x6040)) == 2
+                assert bv.get_data_tags_at(bv.start + 0x6040)[0].type.name == 'Crashes'
+                assert bv.get_data_tags_at(bv.start + 0x6040)[0].data == 'New Tag'
+                assert bv.get_data_tags_at(bv.start + 0x6040)[0].id == '8'
+                assert bv.get_data_tags_at(bv.start + 0x6040)[1].type.name == 'Library'
+                assert bv.get_data_tags_at(bv.start + 0x6040)[1].data == 'New Tag'
+                assert bv.get_data_tags_at(bv.start + 0x6040)[1].id == '9'
+
+                assert len(_start.function_tags) == 1
+                assert _start.function_tags[0].type.name == 'Library'
+                assert _start.function_tags[0].data == 'New Tag'
+                assert _start.function_tags[0].id == '1'
+
+                assert len(sub_1012.function_tags) == 2
+                assert sub_1012.function_tags[0].type.name == 'Library'
+                assert sub_1012.function_tags[0].data == 'New Tag'
+                assert sub_1012.function_tags[0].id == '3'
+                assert sub_1012.function_tags[1].type.name == 'Bugs'
+                assert sub_1012.function_tags[1].data == 'New Tag'
+                assert sub_1012.function_tags[1].id == '10'
+
+                assert len(_start.get_address_tags_at(bv.start + 0x1097)) == 1
+                assert _start.get_address_tags_at(bv.start + 0x1097)[0].type.name == 'Important'
+                assert _start.get_address_tags_at(bv.start + 0x1097)[0].data == 'New Tag'
+                assert _start.get_address_tags_at(bv.start + 0x1097)[0].id == '4'
+
+                assert len(_start.get_address_tags_at(bv.start + 0x1116)) == 2
+                assert _start.get_address_tags_at(bv.start + 0x1116)[0].type.name == 'Crashes'
+                assert _start.get_address_tags_at(bv.start + 0x1116)[0].data == 'New Tag'
+                assert _start.get_address_tags_at(bv.start + 0x1116)[0].id == '5'
+                assert _start.get_address_tags_at(bv.start + 0x1116)[1].type.name == 'Needs Analysis'
+                assert _start.get_address_tags_at(bv.start + 0x1116)[1].data == 'New Tag'
+                assert _start.get_address_tags_at(bv.start + 0x1116)[1].id == '6'
+
+            binja.Settings().reset("analysis.database.suppressReanalysis")
+        finally:
+            self.delete_package("old_tags.bndb")
+
+        return ret

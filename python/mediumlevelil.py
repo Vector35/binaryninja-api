@@ -1613,13 +1613,15 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction):
 
 	@property
 	def vars_read(self) -> List[variable.Variable]:
-		#return self.params
-		return []
+		result:List[variable.Variable] = []
+		for i in self.params:
+			result.extend(i.vars_read)  # type: ignore
+		return result
 
 	@property
 	def vars_written(self) -> List[variable.Variable]:
-		#return self.output
-		return []
+		return self.output
+
 
 
 @dataclass(frozen=True, repr=False)
@@ -1640,13 +1642,15 @@ class MediumLevelILIntrinsic_ssa(SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		# return self.params
-		return []
+		result:List[SSAVariable] = []
+		for i in self.params:
+			result.extend(i.vars_read)  # type: ignore
+		return result
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
-		# return self.output
-		return []
+		return self.output
+
 
 @dataclass(frozen=True, repr=False)
 class MediumLevelILSet_var_ssa_field(SetVar):

@@ -69,7 +69,7 @@ class BINARYNINJAUIAPI TagItemDelegate: public QStyledItemDelegate
 	Q_OBJECT
 
 protected:
-	QFont m_font;
+	QFont m_font, m_emojiFont;
 	int m_baseline, m_charWidth, m_charHeight, m_charOffset;
 
 	void initFont();

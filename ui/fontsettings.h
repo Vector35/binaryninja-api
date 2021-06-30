@@ -16,6 +16,10 @@ QFont BINARYNINJAUIAPI getDefaultMonospaceFont();
 QFont BINARYNINJAUIAPI getMonospaceFont(QWidget* widget);
 void BINARYNINJAUIAPI setMonospaceFont(const QFont& font);
 
+QFont BINARYNINJAUIAPI getDefaultEmojiFont();
+QFont BINARYNINJAUIAPI getEmojiFont(QWidget* widget);
+void BINARYNINJAUIAPI setEmojiFont(const QFont& font);
+
 int BINARYNINJAUIAPI getDefaultExtraFontSpacing();
 int BINARYNINJAUIAPI getExtraFontSpacing();
 void BINARYNINJAUIAPI setExtraFontSpacing(int spacing);

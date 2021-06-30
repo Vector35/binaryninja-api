@@ -39,7 +39,7 @@ struct BINARYNINJAUIAPI HexEditorHighlightState
 class BINARYNINJAUIAPI FontParameters
 {
 	QWidget* m_owner;
-	QFont m_font;
+	QFont m_font, m_emojiFont;
 	int m_baseline, m_charWidth, m_charHeight, m_charOffset;
 	float m_fontScale;
 	bool m_customFont;
@@ -49,7 +49,9 @@ public:
 	void update();
 
 	QFont& getFont() { return m_font; }
+	QFont& getEmojiFont() { return m_emojiFont; }
 	void setFont(const QFont& font);
+	void setEmojiFont(const QFont& emojiFont);
 	int getBaseline() const { return m_baseline; }
 	int getWidth() const { return m_charWidth; }
 	int getHeight() const { return m_charHeight; }

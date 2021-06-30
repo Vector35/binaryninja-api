@@ -53,6 +53,7 @@ class BINARYNINJAUIAPI TagTypeItemDelegate: public QItemDelegate
 	Q_OBJECT
 
 	QFont m_font;
+	QFont m_emojiFont;
 	int m_baseline, m_charWidth, m_charHeight, m_charOffset;
 
 	void initFont();

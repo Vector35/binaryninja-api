@@ -347,18 +347,18 @@ class BinaryViewTestBuilder(Builder):
         """Function LLIL produced different output"""
         retinfo = []
         for func in self.bv.functions:
-            for llilbb in func.llil_basic_blocks:
-                retinfo.append("Function: {:x} LLIL basic block: {}".format(func.start, str(llilbb)))
-            for llilins in func.llil.instructions:
-                retinfo.append("Function: {:x} Instruction: {:x} LLIL instruction: {}".format(func.start, llilins.address, str(llilins)))
-            for mlilbb in func.mlil_basic_blocks:
-                retinfo.append("Function: {:x} MLIL basic block: {}".format(func.start, str(mlilbb)))
-            for mlilins in func.mlil.instructions:
-                retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction: {}".format(func.start, mlilins.address, str(mlilins)))
-            for hlilins in func.hlil.instructions:
-                retinfo.append("Function: {:x} Instruction: {:x} HLIL instruction: {}".format(func.start, hlilins.address, str(hlilins)))
+            for llil_bb in func.llil_basic_blocks:
+                retinfo.append(f"Function: {func.start:x} LLIL basic block: {llil_bb}")
+            for llil_ins in func.llil.instructions:
+                retinfo.append(f"Function: {func.start:x} Instruction: {llil_ins.address:x} LLIL instruction: {llil_ins}")
+            for mlil_bb in func.mlil_basic_blocks:
+                retinfo.append(f"Function: {func.start:x} MLIL basic block: {mlil_bb}")
+            for mlil_ins in func.mlil.instructions:
+                retinfo.append(f"Function: {func.start:x} Instruction: {mlil_ins.address:x} MLIL instruction: {mlil_ins}")
+            for hlil_ins in func.hlil.instructions:
+                retinfo.append(f"Function: {func.start:x} Instruction: {hlil_ins.address:x} HLIL instruction: {hlil_ins}")
             for ins in func.instructions:
-                retinfo.append("Function: {:x} Instruction: {}: {}".format(func.start, hex(ins[1]), ''.join([str(i) for i in ins[0]])))
+                retinfo.append(f"Function: {func.start:x} Instruction: {ins[1]:#x}: {''.join([str(i) for i in ins[0]])}")
         return fixOutput(retinfo)
 
     def test_function_hlil(self):

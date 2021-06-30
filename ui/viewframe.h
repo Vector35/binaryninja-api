@@ -436,6 +436,7 @@ public:
 	void prevCrossReference();
 
 	void updateVariableList();
+	void updateStackView();
 
 	void showTags();
 	void editTag(TagRef tag);

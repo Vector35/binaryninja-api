@@ -723,7 +723,7 @@ class Variable:
 	@property
 	def type(self) -> 'binaryninja.types.Type':
 		var_type_conf = core.BNGetVariableType(self._function.handle, self._var.to_BNVariable())
-		assert var_type_conf.type
+		assert var_type_conf.type is not None, "core.BNGetVariableType returned None"
 		_type = binaryninja.types.Type(var_type_conf.type, self._function.platform, var_type_conf.confidence)
 		return _type
 

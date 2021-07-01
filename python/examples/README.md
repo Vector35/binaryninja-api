@@ -25,6 +25,8 @@ These plugins require the UI to be running
 * jump_table.py - heuristic based jump table detection for when the data-flow based computation fails, triggered by right-clicking on the location where the jump value is computed
 * angr_plugin.py - a plugin to demonstrate both background threads,  the simplified plugin UI elements, and highlighting
 * export_svg.py - exports the graph view of a function to an SVG file for including in reports
+* [Snippets](https://github.com/Vector35/snippets) - powerful code-editing plugin for writing and managing python code-snippets with syntax highlightingd, hotkey binding and other features
+* [Kaitai](https://github.com/Vector35/kaitai) - allows you to browse a hex dump within Binary Ninja with a tree view informed by [Kaitai Struct](https://kaitai.io).
 
 ## Both
 

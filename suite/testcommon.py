@@ -2,6 +2,7 @@ import tempfile
 import pickle
 import os
 import sys
+import platform
 import time
 import zipfile
 import inspect
@@ -1909,3 +1910,43 @@ class VerifyBuilder(Builder):
             self.delete_package("old_tags.bndb")
 
         return ret
+    
+    def test_get_paths(self):
+        """Get install directory and bundled plugin directory"""
+        core_platform = platform.system()
+
+        install_dir = binja.get_install_directory()
+        if not os.path.isdir(install_dir):
+            return False
+
+        files = os.listdir(install_dir)
+        if core_platform == "Darwin":
+            if not 'libbinaryninjacore.dylib' in files:
+                return False
+        elif core_platform == "Linux":
+            if not 'libbinaryninjacore.so.1' in files:
+                return False
+        elif core_platform == "Windows":
+            if not 'binaryninjacore.dll' in files:
+                return False
+        else:
+            return False
+
+        plugin_dir = binja.bundled_plugin_path()
+        if not os.path.isdir(plugin_dir):
+            return False
+
+        files = os.listdir(plugin_dir)
+        if core_platform == "Darwin":
+            if not 'libarch_x86.dylib' in files:
+                return False
+        elif core_platform == "Linux":
+            if not 'libarch_x86.so' in files:
+                return False
+        elif core_platform == "Windows":
+            if not 'arch_x86.dll' in files:
+                return False
+        else:
+            return False
+
+        return True

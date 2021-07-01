@@ -3237,7 +3237,7 @@ class BinaryView(object):
 			result.append(binaryninja.function.Function(self, core.BNNewFunctionReference(funcs[i])))
 		core.BNFreeFunctionList(funcs, count.value)
 		if not plat is None:
-			result = [func for func in result in func.platform == plat]
+			result = [func for func in result if func.platform == plat]
 		return result
 
 	def get_functions_by_name(self, name, plat=None, ordered_filter=[SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol]):

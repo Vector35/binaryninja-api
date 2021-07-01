@@ -1,17 +1,14 @@
 import tempfile
-import pickle
 import os
 import sys
-import platform
-import time
 import zipfile
 import inspect
 import binaryninja as binja
 from binaryninja.binaryview import BinaryViewType, BinaryView
-from binaryninja.filemetadata import FileMetadata, SaveSettings
+from binaryninja.filemetadata import FileMetadata
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
-from binaryninja.enums import InstructionTextTokenType, SaveOption, FindFlag,\
+from binaryninja.enums import InstructionTextTokenType, FindFlag,\
     FunctionGraphType
 import subprocess
 import re
@@ -368,7 +365,7 @@ class BinaryViewTestBuilder(Builder):
             if func.hlil is None or func.hlil.root is None:
                 continue
             for line in func.hlil.root.lines:
-                retinfo.append(f"Function: {func.start:x} HLIL line: {str(line)}")
+                retinfo.append(f"Function: {func.start:x} HLIL line: {line}")
             for hlilins in func.hlil.instructions:
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->LLIL instruction: {str(hlilins.llil)}")
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLIL instruction: {str(hlilins.mlil)}")

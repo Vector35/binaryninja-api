@@ -125,8 +125,8 @@ color:
 {
   "colors": {
     "red": "#ff0000",
-	"blue": [0, 0, 255],
-	"purple": ["+", "red", "blue"]
+    "blue": [0, 0, 255],
+    "purple": ["+", "red", "blue"],
     "slightPink": ["~", "white", "red", 20],
     "quitePink":  ["~", "white", "red", 200],
   }
@@ -144,9 +144,9 @@ mixes some `red` into `white` then averages the result with `yellow`:
 {
   "colors": {
     "red": "#ff0000",
-	"white": [255, 255, 255],
-	"yellow": "#ffff00",
-	"slightPinkYellow": ["+", "~", "white", "red", 20, "yellow"],
+    "white": [255, 255, 255],
+    "yellow": "#ffff00",
+    "slightPinkYellow": ["+", "~", "white", "red", 20, "yellow"],
   }
 }
 ```
@@ -228,7 +228,7 @@ Don't forget about the alternate colors for users with color blind mode enabled!
 1. `backgroundHighlightLightColor` - Used as the background color for bytes of
   value `0xFF`
 
-	Each byte in hex view is given a background color based on its value. Values in between `0x00` and `0xFF` will use a color interpolated between the
+    Each byte in hex view is given a background color based on its value. Values in between `0x00` and `0xFF` will use a color interpolated between the
 two colors above.<br><br>
 
 1. `alphanumericHighlightColor` - Used to highlight alphanumeric characters in

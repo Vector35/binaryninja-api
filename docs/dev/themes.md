@@ -9,8 +9,6 @@ effectively being the following:
 - Windows: `%APPDATA%\Binary Ninja\{themes,community-themes}`
 - Linux: `~/.binaryninja/{themes,community-themes}`
 
-
-
 To get started, create a new `.bntheme` file in the themes folder for your
 platform. You may want to copy one of the [example
 themes](https://github.com/Vector35/binaryninja-api/tree/dev/themes) to start
@@ -160,122 +158,103 @@ are described below.
 
 #### Tokens
 
-The following colors are used to highlight tokens in code views:
+![Tokens Diagram](../img/themedocs-tokens.png)
 
-- `addressColor` - Used to highlight memory addresses, e.g. `0x100003c5b`
-- `registerColor` - Used to highlight register names in code views, e.g. `rax`
-- `numberColor` - Used to highlight number literals in code view, e.g. `0xf0`
-- `codeSymbolColor` - Used to highlight local function names in code views, e.g. `sub_100003c50`
-- `dataSymbolColor` - Used to highlight data symbols in code views, e.g. `data_100003e2c`
-- `stackVariableColor` - Used to highlight stack variables in code views, e.g `var_8`
-- `importColor` - Used to highlight imported function names in code views, e.g. `printf`
-- `stringColor` - Used to highlight string literals in code views, e.g. `"Hello, world!"`
-- `typeNameColor` - Used to highlight user-defined type names in code views, e.g. `my_struct`
-- `fieldNameColor` - Used to highlight structure member names in code views
-- `keywordColor` - Used to highlight keywords in code views, e.g. `for` in HLIL
-- `uncertainColor` - Used to highlight uncertain data in code views, such as variable types with low confidence
-- `annotationColor` - Used to highlight annotations, such as hints and comments
-- `opcodeColor` - Used to highlight instruction opcodes in code views
+1. `addressColor` - Used to highlight memory addresses, e.g. `0x100003c5b`
+1. `registerColor` - Used to highlight register names in code views, e.g. `rax`
+1. `numberColor` - Used to highlight number literals in code view, e.g. `0xf0`
+1. `codeSymbolColor` - Used to highlight local function names in code views, e.g. `sub_100003c50`
+1. `dataSymbolColor` - Used to highlight data symbols in code views, e.g. `data_100003e2c`
+1. `stackVariableColor` - Used to highlight stack variables in code views, e.g `var_8`
+1. `importColor` - Used to highlight imported function names in code views, e.g. `printf`
+1. `stringColor` - Used to highlight string literals in code views, e.g. `"Hello, world!"`
+1. `typeNameColor` - Used to highlight user-defined type names in code views, e.g. `my_struct`
+1. `fieldNameColor` - Used to highlight structure member names in code views
+1. `keywordColor` - Used to highlight keywords in code views, e.g. `for` in HLIL
+1. `uncertainColor` - Used to highlight uncertain data in code views, such as variable types with low confidence
+1. `annotationColor` - Used to highlight annotations, such as hints and comments
+1. `opcodeColor` - Used to highlight instruction opcodes in code views
 
 #### Graph View
 
-##### Background
+![Graph View Diagram](../img/themedocs-graphview.png)
 
-The graph view background is controlled by the following two colors:
-
-- `graphBackgroundDarkColor` - Used as the bottom-right gradient stop in the
+1. `graphBackgroundDarkColor` - Used as the bottom-right gradient stop in the
   graph view background
-- `graphBackgroundLightColor` - Used as the upper-left gradient stop in the
+2. `graphBackgroundLightColor` - Used as the upper-left gradient stop in the
   graph view background
 
-For a flat background, set both colors to the same value. For a diagonal
-gradient, assign a unique color to each.
+    For a flat background, set both colors to the same value, like they are in
+the image above. For a diagonal gradient, assign a unique color to each.<br><br>
 
-##### Nodes
+3. `graphNodeDarkColor` - Used as the bottom gradient stop in graph node backgrounds
+4. `graphNodeLightColor` - Used as the upper gradient stop in graph node backgrounds
+5. `graphNodeOutlineColor` - Used to color the border of graph nodes
 
-Node appearance can be configured with the following colors:
+    Similar to the graph background, a gradient appearance can be achieved by using
+unique colors for both background colors.<br><br>
 
-- `graphNodeDarkColor` - Used as the bottom gradient stop in graph node backgrounds
-- `graphNodeLightColor` - Used as the upper gradient stop in graph node backgrounds
-- `graphNodeOutlineColor` - Used to color the border of graph nodes
-
-Similar to the graph background, a gradient appearance can be achieved by using
-unique colors for both background colors
-
-##### Branches
-
-The color of branches between nodes can be adjusted with the following colors:
-
-- `trueBranchColor` - Used to color branches taken when a comparison is true
-- `falseBranchColor` - Used to color branches taken when a comparison is false
-- `unconditionalBranchColor` - Used to color branches that are always taken
-- `altTrueBranchColor` - Same as `trueBranchColor`, but used when color blind
+6. `trueBranchColor` - Used to color branches taken when a comparison is true
+7. `falseBranchColor` - Used to color branches taken when a comparison is false
+8. `unconditionalBranchColor` - Used to color branches that are always taken
+9. `altTrueBranchColor` - Same as `trueBranchColor`, but used when color blind
   mode is enabled
-- `altFalseBranchColor` - Same as `falseBranchColor`, but used when color blind
+10. `altFalseBranchColor` - Same as `falseBranchColor`, but used when color blind
   mode is enabled
-- `altUnconditionalBranchColor` - Same as `unconditionalBranchColor`, but used
+11. `altUnconditionalBranchColor` - Same as `unconditionalBranchColor`, but used
   when color blind mode is enabled
 
 Don't forget about the alternate colors for users with color blind mode enabled!
 
 #### Linear View
 
-The appearance of linear view can be tweaked via the following colors:
+![Linear View Diagram](../img/themedocs-linearview.png)
 
-- `linearDisassemblyFunctionHeaderColor` - Used as the background for function
+1. `linearDisassemblyFunctionHeaderColor` - Used as the background for function
   headers in linear view
-- `linearDisassemblyBlockColor` - Used as the background for function bodies in
+1. `linearDisassemblyBlockColor` - Used as the background for function bodies in
   linear view
-- `linearDisassemblyNoteColor` - Used as the background color for note blocks in
+1. `linearDisassemblyNoteColor` - Used as the background color for note blocks in
   linear view, such as the info block found at the start of linear view
-- `linearDisassemblySeparatorColor` - Used as the separator/border color between
+1. `linearDisassemblySeparatorColor` - Used as the separator/border color between
   major elements in linear view
 
 #### Hex View
 
-##### Foreground
+![Hex View Diagram](../img/themedocs-hexview.png)
 
-Byte values corresponding to alphanumeric and printable ASCII values are given
-special highlighting controlled by the folowing colors:
-
-- `alphanumericHighlightColor` - Used to highlight alphanumeric characters in
-  hex views, takes precedence over printableHighlightColor
-- `printableHighlightColor` - Used to highlight printable characters in hex views
-
-##### Background
-
-Each byte in hex view is given a background color based on its value. The
-following two colors control the color of each extreme:
-
-- `backgroundHighlightDarkColor` - Used as the background color for bytes of
+1. `backgroundHighlightDarkColor` - Used as the background color for bytes of
   value `0x00`
-- `backgroundHighlightLightColor` - Used as the background color for bytes of
+1. `backgroundHighlightLightColor` - Used as the background color for bytes of
   value `0xFF`
 
-Values in between `0x00` and `0xFF` will use a color interpolated between the
-two colors above.
+	Each byte in hex view is given a background color based on its value. Values in between `0x00` and `0xFF` will use a color interpolated between the
+two colors above.<br><br>
+
+1. `alphanumericHighlightColor` - Used to highlight alphanumeric characters in
+  hex views, takes precedence over printableHighlightColor
+1. `printableHighlightColor` - Used to highlight printable characters in hex views
+
 
 #### Script Console
 
-Different types of text inside the scripting console can be themed via the
-following colors:
+![Hex View Diagram](../img/themedocs-console.png)
 
-- `scriptConsoleOutputColor` - Used to color normal output in the console
-- `scriptConsoleWarningColor` - Used to color warnings in the console
-- `scriptConsoleErrorColor` - Used to color errors in the console
-- `scriptConsoleEchoColor` - Used to color user input in the console
+1. `scriptConsoleOutputColor` - Used to color normal output in the console
+1. `scriptConsoleWarningColor` - Used to color warnings in the console
+1. `scriptConsoleErrorColor` - Used to color errors in the console
+1. `scriptConsoleEchoColor` - Used to color user input in the console
 
 #### Highlighting
 
-The following colors are used when the user wishes to highlight an instruction
-or graph node:
+![Highlighting Diagram](../img/themedocs-highlighting.png)
 
-- `blueStandardHighlightColor`
-- `greenStandardHighlightColor`
-- `cyanStandardHighlightColor`
-- `redStandardHighlightColor`
-- `magentaStandardHighlightColor`
-- `yellowStandardHighlightColor`
-- `orangeStandardHighlightColor`
-- `whiteStandardHighlightColor`
-- `blackStandardHighlightColor`
+1. `blackStandardHighlightColor`
+1. `blueStandardHighlightColor`
+1. `cyanStandardHighlightColor`
+1. `greenStandardHighlightColor`
+1. `magentaStandardHighlightColor`
+1. `orangeStandardHighlightColor`
+1. `redStandardHighlightColor`
+1. `whiteStandardHighlightColor`
+1. `yellowStandardHighlightColor`

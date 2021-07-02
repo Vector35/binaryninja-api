@@ -1246,6 +1246,11 @@ class TagType(object):
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
+	def id(self):
+		"""Unique id of the TagType"""
+		return core.BNTagTypeGetId(self.handle)
+
+	@property
 	def name(self):
 		"""Name of the TagType"""
 		return core.BNTagTypeGetName(self.handle)
@@ -4230,6 +4235,39 @@ class BinaryView(object):
 		core.BNFreeTagTypeList(types, count.value)
 		return result
 
+	def get_tag_type(self, name):
+		"""
+		Get a tag type by its name. Shorthand for get_tag_type_by_name()
+		:param name: Name of the tag type
+		:return: The relevant tag type, if it exists
+		:rtype: TagType
+		"""
+		return self.get_tag_type_by_name(name)
+
+	def get_tag_type_by_name(self, name):
+		"""
+		Get a tag type by its name
+		:param name: Name of the tag type
+		:return: The relevant tag type, if it exists
+		:rtype: TagType
+		"""
+		tag_type = core.BNGetTagType(self.handle, name)
+		if tag_type is None:
+			return None
+		return TagType(tag_type)
+
+	def get_tag_type_by_id(self, id):
+		"""
+		Get a tag type by its id
+		:param id: Id of the tag type
+		:return: The relevant tag type, if it exists
+		:rtype: TagType
+		"""
+		tag_type = core.BNGetTagTypeById(self.handle, id)
+		if tag_type is None:
+			return None
+		return TagType(tag_type)
+
 	def create_user_tag(self, type, data):
 		return self.create_tag(type, data, True)
 
@@ -4256,6 +4294,18 @@ class BinaryView(object):
 		tag = Tag(core.BNCreateTag(type.handle, data))
 		core.BNAddTag(self.handle, tag.handle, user)
 		return tag
+
+	def get_tag(self, id):
+		"""
+		Get a tag by its id. Note this does not tell you anything about where it is used.
+		:param id: Tag id
+		:return: The relevant tag, if it exists
+		:rtype: Tag
+		"""
+		tag = core.BNGetTag(self.handle, id)
+		if tag is None:
+			return None
+		return Tag(tag)
 
 	@property
 	def data_tags(self):

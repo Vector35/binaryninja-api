@@ -1614,12 +1614,48 @@ class Function(object):
 		core.BNFreeTagReferences(tags, count.value)
 		return result
 
+	@property
+	def auto_address_tags(self):
+		"""
+		``auto_address_tags`` gets a list of all auto-defined address Tags in the function.
+		Tags are returned as a list of (arch, address, Tag) tuples.
+
+		:rtype: list((Architecture, int, Tag))
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tags[i].arch)
+			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i].tag))
+			result.append((arch, tags[i].addr, tag))
+		core.BNFreeTagReferences(tags, count.value)
+		return result
+
+	@property
+	def user_address_tags(self):
+		"""
+		``user_address_tags`` gets a list of all user address Tags in the function.
+		Tags are returned as a list of (arch, address, Tag) tuples.
+
+		:rtype: list((Architecture, int, Tag))
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserAddressTagReferences(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			arch = binaryninja.architecture.CoreArchitecture._from_cache(tags[i].arch)
+			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i].tag))
+			result.append((arch, tags[i].addr, tag))
+		core.BNFreeTagReferences(tags, count.value)
+		return result
+
 	def get_address_tags_at(self, addr, arch=None):
 		"""
 		``get_address_tags_at`` gets a list of all Tags in the function at a given address.
 
 		:param int addr: Address to get tags at
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
 		:return: A list of Tags
 		:rtype: list(Tag)
 		"""
@@ -1633,10 +1669,173 @@ class Function(object):
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	def get_auto_address_tags_at(self, addr, arch=None):
+		"""
+		``get_auto_address_tags_at`` gets a list of all auto-defined Tags in the function at a given address.
+
+		:param int addr: Address to get tags at
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:return: A list of Tags
+		:rtype: list(Tag)
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoAddressTags(self.handle, arch.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_user_address_tags_at(self, addr, arch=None):
+		"""
+		``get_user_address_tags_at`` gets a list of all user Tags in the function at a given address.
+
+		:param int addr: Address to get tags at
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:return: A list of Tags
+		:rtype: list(Tag)
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserAddressTags(self.handle, arch.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_address_tags_of_type(self, addr, tag_type, arch=None):
+		"""
+		``get_address_tags_of_type`` gets a list of all Tags in the function at a given address with a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		if arch is None:
+				arch = self.arch
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_auto_address_tags_of_type(self, addr, tag_type, arch=None):
+		"""
+		``get_auto_address_tags_of_type`` gets a list of all auto-defined Tags in the function at a given address with a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_user_address_tags_of_type(self, addr, tag_type, arch=None):
+		"""
+		``get_user_address_tags_of_type`` gets a list of all user Tags in the function at a given address with a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_address_tags_in_range(self, address_range, arch=None):
+		"""
+		``get_address_tags_in_range`` gets a list of all Tags in the function at a given address.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:return: A list of (arch, address, Tag) tuples
+		:rtype: list((Architecture, int, Tag))
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((arch, refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	def get_auto_address_tags_in_range(self, address_range, arch=None):
+		"""
+		``get_auto_address_tags_in_range`` gets a list of all auto-defined Tags in the function at a given address.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:return: A list of (arch, address, Tag) tuples
+		:rtype: list((Architecture, int, Tag))
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetAutoAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((arch, refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	def get_user_address_tags_in_range(self, address_range, arch=None):
+		"""
+		``get_user_address_tags_in_range`` gets a list of all user Tags in the function at a given address.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:return: A list of (arch, address, Tag) tuples
+		:rtype: list((Architecture, int, Tag))
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetUserAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = binaryninja.binaryview.Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((arch, refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
 	def add_user_address_tag(self, addr, tag, arch=None):
 		"""
 		``add_user_address_tag`` adds an already-created Tag object at a given address.
 		Since this adds a user tag, it will be added to the current undo buffer.
+		If you want want to create the tag as well, consider using
+		:meth:`create_user_address_tag <binaryninja.function.Function.create_user_address_tag>`
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
@@ -1679,18 +1878,34 @@ class Function(object):
 		``remove_user_address_tag`` removes a Tag object at a given address.
 		Since this removes a user tag, it will be added to the current undo buffer.
 
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
+		:param int addr: Address at which to remove the tag
+		:param Tag tag: Tag object to be removed
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
 		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
+	def remove_user_address_tags_of_type(self, addr, tag_type, arch=None):
+		"""
+		``remove_user_address_tags_of_type`` removes all tags at the given address of the given type.
+		Since this removes user tags, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to remove the tag
+		:param Tag tag_type: TagType object to match for removing
+		:param Architecture arch: Architecture for the block in which the Tags is located (optional)
+		:rtype: None
+		"""
+		if arch is None:
+			arch = self.arch
+		core.BNRemoveUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
+
 	def add_auto_address_tag(self, addr, tag, arch=None):
 		"""
 		``add_auto_address_tag`` adds an already-created Tag object at a given address.
+		If you want want to create the tag as well, consider using
+		:meth:`create_auto_address_tag <binaryninja.function.Function.create_auto_address_tag>`
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
@@ -1729,14 +1944,27 @@ class Function(object):
 		"""
 		``remove_auto_address_tag`` removes a Tag object at a given address.
 
-		:param int addr: Address at which to add the tag
+		:param int addr: Address at which to remove the tag
 		:param Tag tag: Tag object to be added
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
 		:rtype: None
 		"""
 		if arch is None:
 			arch = self.arch
 		core.BNRemoveAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
+
+	def remove_auto_address_tags_of_type(self, addr, tag_type, arch=None):
+		"""
+		``remove_auto_address_tags_of_type`` removes all tags at the given address of the given type.
+
+		:param int addr: Address at which to remove the tags
+		:param Tag tag_type: TagType object to match for removing
+		:param Architecture arch: Architecture for the block in which the Tags is located (optional)
+		:rtype: None
+		"""
+		if arch is None:
+			arch = self.arch
+		core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
 	@property
 	def function_tags(self):
@@ -1753,10 +1981,90 @@ class Function(object):
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	@property
+	def auto_function_tags(self):
+		"""
+		``auto_function_tags`` gets a list of all auto-defined function Tags for the function.
+
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoFunctionTags(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	@property
+	def user_function_tags(self):
+		"""
+		``user_function_tags`` gets a list of all user function Tags for the function.
+
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserFunctionTags(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_function_tags_of_type(self, tag_type):
+		"""
+		``get_function_tags_of_type`` gets a list of all function Tags with a given type.
+
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetFunctionTagsOfType(self.handle, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_auto_function_tags_of_type(self, tag_type):
+		"""
+		``get_auto_function_tags_of_type`` gets a list of all auto-defined function Tags with a given type.
+
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoFunctionTagsOfType(self.handle, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_user_function_tags_of_type(self, tag_type):
+		"""
+		``get_user_function_tags_of_type`` gets a list of all user function Tags with a given type.
+
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(binaryninja.binaryview.Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
 	def add_user_function_tag(self, tag):
 		"""
 		``add_user_function_tag`` adds an already-created Tag object as a function tag.
 		Since this adds a user tag, it will be added to the current undo buffer.
+		If you want want to create the tag as well, consider using
+		:meth:`create_user_function_tag <binaryninja.function.Function.create_user_function_tag>`
 
 		:param Tag tag: Tag object to be added
 		:rtype: None
@@ -1788,14 +2096,26 @@ class Function(object):
 		``remove_user_function_tag`` removes a Tag object as a function tag.
 		Since this removes a user tag, it will be added to the current undo buffer.
 
-		:param Tag tag: Tag object to be added
+		:param Tag tag: Tag object to be removed
 		:rtype: None
 		"""
 		core.BNRemoveUserFunctionTag(self.handle, tag.handle)
 
+	def remove_user_function_tags_of_type(self, tag_type):
+		"""
+		``remove_user_function_tags_of_type`` removes all function Tag objects on a function of a given type
+		Since this removes user tags, it will be added to the current undo buffer.
+
+		:param TagType tag_type: TagType object to match for removing
+		:rtype: None
+		"""
+		core.BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle)
+
 	def add_auto_function_tag(self, tag):
 		"""
 		``add_user_function_tag`` adds an already-created Tag object as a function tag.
+		If you want want to create the tag as well, consider using
+		:meth:`create_auto_function_tag <binaryninja.function.Function.create_auto_function_tag>`
 
 		:param Tag tag: Tag object to be added
 		:rtype: None
@@ -1825,10 +2145,19 @@ class Function(object):
 		"""
 		``remove_user_function_tag`` removes a Tag object as a function tag.
 
-		:param Tag tag: Tag object to be added
+		:param Tag tag: Tag object to be removed
 		:rtype: None
 		"""
 		core.BNRemoveAutoFunctionTag(self.handle, tag.handle)
+
+	def remove_auto_function_tags_of_type(self, tag_type):
+		"""
+		``remove_user_function_tags_of_type`` removes all function Tag objects on a function of a given type
+
+		:param TagType tag_type: TagType object to match for removing
+		:rtype: None
+		"""
+		core.BNRemoveAutoFunctionTagsOfType(self.handle, tag_type.handle)
 
 	@property
 	def low_level_il(self):

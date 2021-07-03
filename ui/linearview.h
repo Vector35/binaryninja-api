@@ -140,6 +140,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
 	BNFunctionGraphType m_ilViewType;
+	HexEditorHighlightState m_highlightState;
 
 	InstructionEdit* m_instrEdit;
 
@@ -334,7 +335,9 @@ public:
 	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView* view, uint64_t offset) override;
+	virtual void OnTagAdded(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
+	virtual void OnTagRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 
 	virtual void updateFonts() override;
 
@@ -351,6 +354,10 @@ public:
 
 	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
 	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
+
+	void setHighlightMode(HexEditorHighlightMode mode);
+	void setColorMode(HexEditorColorMode mode);
+	void setContrast(HexEditorHighlightContrast mode);
 
 	void toggleOption(BNDisassemblyOption option);
 

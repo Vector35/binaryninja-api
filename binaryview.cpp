@@ -2569,10 +2569,42 @@ std::vector<TagReference> BinaryView::GetDataTagReferences()
 }
 
 
+std::vector<TagReference> BinaryView::GetAutoDataTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAutoDataTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetUserDataTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetUserDataTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
 std::vector<Ref<Tag>> BinaryView::GetDataTags(uint64_t addr)
 {
 	size_t count;
 	BNTag** tags = BNGetDataTags(m_object, addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetAutoDataTags(uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetAutoDataTags(m_object, addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetUserDataTags(uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetUserDataTags(m_object, addr, &count);
 	return Tag::ConvertAndFreeTagList(tags, count);
 }
 
@@ -2585,11 +2617,43 @@ std::vector<Ref<Tag>> BinaryView::GetDataTagsOfType(uint64_t addr, Ref<TagType> 
 }
 
 
-std::vector<Ref<Tag>> BinaryView::GetDataTagsInRange(uint64_t start, uint64_t end)
+std::vector<Ref<Tag>> BinaryView::GetAutoDataTagsOfType(uint64_t addr, Ref<TagType> tagType)
 {
 	size_t count;
-	BNTag** tags = BNGetDataTagsInRange(m_object, start, end, &count);
+	BNTag** tags = BNGetAutoDataTagsOfType(m_object, addr, tagType->GetObject(), &count);
 	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> BinaryView::GetUserDataTagsOfType(uint64_t addr, Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetUserDataTagsOfType(m_object, addr, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetDataTagsInRange(uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetDataTagsInRange(m_object, start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetAutoDataTagsInRange(uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetAutoDataTagsInRange(m_object, start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> BinaryView::GetUserDataTagsInRange(uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetUserDataTagsInRange(m_object, start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
 }
 
 
@@ -2605,6 +2669,12 @@ void BinaryView::RemoveAutoDataTag(uint64_t addr, Ref<Tag> tag)
 }
 
 
+void BinaryView::RemoveAutoDataTagsOfType(uint64_t addr, Ref<TagType> tagType)
+{
+	BNRemoveAutoDataTagsOfType(m_object, addr, tagType->GetObject());
+}
+
+
 void BinaryView::AddUserDataTag(uint64_t addr, Ref<Tag> tag)
 {
 	BNAddUserDataTag(m_object, addr, tag->GetObject());
@@ -2614,6 +2684,12 @@ void BinaryView::AddUserDataTag(uint64_t addr, Ref<Tag> tag)
 void BinaryView::RemoveUserDataTag(uint64_t addr, Ref<Tag> tag)
 {
 	BNRemoveUserDataTag(m_object, addr, tag->GetObject());
+}
+
+
+void BinaryView::RemoveUserDataTagsOfType(uint64_t addr, Ref<TagType> tagType)
+{
+	BNRemoveUserDataTagsOfType(m_object, addr, tagType->GetObject());
 }
 
 

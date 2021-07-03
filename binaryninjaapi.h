@@ -1695,20 +1695,30 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TagReference> GetAllAddressTagReferences();
 		std::vector<TagReference> GetAllFunctionTagReferences();
 		std::vector<TagReference> GetAllTagReferencesOfType(Ref<TagType> tagType);
-		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
 
+		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
 		size_t GetTagReferencesOfTypeCount(Ref<TagType> tagType);
 		size_t GetAllTagReferencesOfTypeCount(Ref<TagType> tagType);
 		std::map<Ref<TagType>, size_t> GetAllTagReferenceTypeCounts();
 
 		std::vector<TagReference> GetDataTagReferences();
+		std::vector<TagReference> GetAutoDataTagReferences();
+		std::vector<TagReference> GetUserDataTagReferences();
 		std::vector<Ref<Tag>> GetDataTags(uint64_t addr);
+		std::vector<Ref<Tag>> GetAutoDataTags(uint64_t addr);
+		std::vector<Ref<Tag>> GetUserDataTags(uint64_t addr);
 		std::vector<Ref<Tag>> GetDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
-		std::vector<Ref<Tag>> GetDataTagsInRange(uint64_t start, uint64_t end);
+		std::vector<Ref<Tag>> GetAutoDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetUserDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
+		std::vector<TagReference> GetDataTagsInRange(uint64_t start, uint64_t end);
+		std::vector<TagReference> GetAutoDataTagsInRange(uint64_t start, uint64_t end);
+		std::vector<TagReference> GetUserDataTagsInRange(uint64_t start, uint64_t end);
 		void AddAutoDataTag(uint64_t addr, Ref<Tag> tag);
 		void RemoveAutoDataTag(uint64_t addr, Ref<Tag> tag);
+		void RemoveAutoDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
 		void AddUserDataTag(uint64_t addr, Ref<Tag> tag);
 		void RemoveUserDataTag(uint64_t addr, Ref<Tag> tag);
+		void RemoveUserDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
 		void RemoveTagReference(const TagReference& ref);
 
 		Ref<Tag> CreateAutoDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
@@ -3309,20 +3319,39 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
 
 		std::vector<TagReference> GetAddressTagReferences();
+		std::vector<TagReference> GetAutoAddressTagReferences();
+		std::vector<TagReference> GetUserAddressTagReferences();
 		std::vector<Ref<Tag>> GetAddressTags(Architecture* arch, uint64_t addr);
+		std::vector<Ref<Tag>> GetAutoAddressTags(Architecture* arch, uint64_t addr);
+		std::vector<Ref<Tag>> GetUserAddressTags(Architecture* arch, uint64_t addr);
 		std::vector<Ref<Tag>> GetAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetAutoAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetUserAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
+		std::vector<TagReference> GetAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end);
+		std::vector<TagReference> GetAutoAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end);
+		std::vector<TagReference> GetUserAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end);
 		void AddAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
 		void RemoveAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+		void RemoveAutoAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
 		void AddUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
 		void RemoveUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag);
+		void RemoveUserAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType);
 
 		std::vector<TagReference> GetFunctionTagReferences();
+		std::vector<TagReference> GetAutoFunctionTagReferences();
+		std::vector<TagReference> GetUserFunctionTagReferences();
 		std::vector<Ref<Tag>> GetFunctionTags();
+		std::vector<Ref<Tag>> GetAutoFunctionTags();
+		std::vector<Ref<Tag>> GetUserFunctionTags();
 		std::vector<Ref<Tag>> GetFunctionTagsOfType(Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetAutoFunctionTagsOfType(Ref<TagType> tagType);
+		std::vector<Ref<Tag>> GetUserFunctionTagsOfType(Ref<TagType> tagType);
 		void AddAutoFunctionTag(Ref<Tag> tag);
 		void RemoveAutoFunctionTag(Ref<Tag> tag);
+		void RemoveAutoFunctionTagsOfType(Ref<TagType> tagType);
 		void AddUserFunctionTag(Ref<Tag> tag);
 		void RemoveUserFunctionTag(Ref<Tag> tag);
+		void RemoveUserFunctionTagsOfType(Ref<TagType> tagType);
 
 		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);

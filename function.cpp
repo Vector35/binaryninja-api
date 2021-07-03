@@ -1557,10 +1557,42 @@ std::vector<TagReference> Function::GetAddressTagReferences()
 }
 
 
+std::vector<TagReference> Function::GetAutoAddressTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAutoAddressTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetUserAddressTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetUserAddressTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
 std::vector<Ref<Tag>> Function::GetAddressTags(Architecture* arch, uint64_t addr)
 {
 	size_t count;
 	BNTag** tags = BNGetAddressTags(m_object, arch->GetObject(), addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetAutoAddressTags(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetAutoAddressTags(m_object, arch->GetObject(), addr, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetUserAddressTags(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNTag** tags = BNGetUserAddressTags(m_object, arch->GetObject(), addr, &count);
 	return Tag::ConvertAndFreeTagList(tags, count);
 }
 
@@ -1570,6 +1602,46 @@ std::vector<Ref<Tag>> Function::GetAddressTagsOfType(Architecture* arch, uint64_
 	size_t count;
 	BNTag** tags = BNGetAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject(), &count);
 	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetAutoAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetAutoAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetUserAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetUserAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<TagReference> Function::GetAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetAddressTagsInRange(m_object, arch->GetObject(), start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetAutoAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetAutoAddressTagsInRange(m_object, arch->GetObject(), start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetUserAddressTagsInRange(Architecture* arch, uint64_t start, uint64_t end)
+{
+	size_t count;
+	BNTagReference* refs = BNGetUserAddressTagsInRange(m_object, arch->GetObject(), start, end, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
 }
 
 
@@ -1585,6 +1657,12 @@ void Function::RemoveAutoAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> 
 }
 
 
+void Function::RemoveAutoAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType)
+{
+	BNRemoveAutoAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject());
+}
+
+
 void Function::AddUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> tag)
 {
 	BNAddUserAddressTag(m_object, arch->GetObject(), addr, tag->GetObject());
@@ -1597,10 +1675,32 @@ void Function::RemoveUserAddressTag(Architecture* arch, uint64_t addr, Ref<Tag> 
 }
 
 
+void Function::RemoveUserAddressTagsOfType(Architecture* arch, uint64_t addr, Ref<TagType> tagType)
+{
+	BNRemoveUserAddressTagsOfType(m_object, arch->GetObject(), addr, tagType->GetObject());
+}
+
+
 std::vector<TagReference> Function::GetFunctionTagReferences()
 {
 	size_t count;
 	BNTagReference* refs = BNGetFunctionTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetAutoFunctionTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetAutoFunctionTagReferences(m_object, &count);
+	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
+}
+
+
+std::vector<TagReference> Function::GetUserFunctionTagReferences()
+{
+	size_t count;
+	BNTagReference* refs = BNGetUserFunctionTagReferences(m_object, &count);
 	return TagReference::ConvertAndFreeTagReferenceList(refs, count);
 }
 
@@ -1613,10 +1713,42 @@ std::vector<Ref<Tag>> Function::GetFunctionTags()
 }
 
 
+std::vector<Ref<Tag>> Function::GetAutoFunctionTags()
+{
+	size_t count;
+	BNTag** tags = BNGetAutoFunctionTags(m_object, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetUserFunctionTags()
+{
+	size_t count;
+	BNTag** tags = BNGetUserFunctionTags(m_object, &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
 std::vector<Ref<Tag>> Function::GetFunctionTagsOfType(Ref<TagType> tagType)
 {
 	size_t count;
 	BNTag** tags = BNGetFunctionTagsOfType(m_object, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetAutoFunctionTagsOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetAutoFunctionTagsOfType(m_object, tagType->GetObject(), &count);
+	return Tag::ConvertAndFreeTagList(tags, count);
+}
+
+
+std::vector<Ref<Tag>> Function::GetUserFunctionTagsOfType(Ref<TagType> tagType)
+{
+	size_t count;
+	BNTag** tags = BNGetUserFunctionTagsOfType(m_object, tagType->GetObject(), &count);
 	return Tag::ConvertAndFreeTagList(tags, count);
 }
 
@@ -1633,6 +1765,12 @@ void Function::RemoveAutoFunctionTag(Ref<Tag> tag)
 }
 
 
+void Function::RemoveAutoFunctionTagsOfType(Ref<TagType> tagType)
+{
+	BNRemoveAutoFunctionTagsOfType(m_object, tagType->GetObject());
+}
+
+
 void Function::AddUserFunctionTag(Ref<Tag> tag)
 {
 	BNAddUserFunctionTag(m_object, tag->GetObject());
@@ -1642,6 +1780,12 @@ void Function::AddUserFunctionTag(Ref<Tag> tag)
 void Function::RemoveUserFunctionTag(Ref<Tag> tag)
 {
 	BNRemoveUserFunctionTag(m_object, tag->GetObject());
+}
+
+
+void Function::RemoveUserFunctionTagsOfType(Ref<TagType> tagType)
+{
+	BNRemoveUserFunctionTagsOfType(m_object, tagType->GetObject());
 }
 
 

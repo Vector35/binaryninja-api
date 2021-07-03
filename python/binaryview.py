@@ -4325,12 +4325,46 @@ class BinaryView(object):
 		:type: list(int, Tag)
 		"""
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTagReferences(self.handle, count)
+		refs = core.BNGetDataTagReferences(self.handle, count)
 		result = []
 		for i in range(0, count.value):
-			tag = Tag(core.BNNewTagReference(tags[i].tag))
-			result.append((tags[i].addr, tag))
-		core.BNFreeTagReferences(tags, count.value)
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	@property
+	def auto_data_tags(self):
+		"""
+		``auto_data_tags`` gets a list of all auto-defined data Tags in the view.
+		Tags are returned as a list of (address, Tag) pairs.
+
+		:type: list(int, Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetAutoDataTagReferences(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	@property
+	def user_data_tags(self):
+		"""
+		``user_data_tags`` gets a list of all user data Tags in the view.
+		Tags are returned as a list of (address, Tag) pairs.
+
+		:type: list(int, Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetUserDataTagReferences(self.handle, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
 		return result
 
 	def get_data_tags_at(self, addr):
@@ -4349,27 +4383,149 @@ class BinaryView(object):
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	def get_data_tags_in_range(self, address_range):
+	def get_auto_data_tags_at(self, addr):
 		"""
-		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
-		Range is inclusive at the start, exclusive at the end.
+		``get_auto_data_tags_at`` gets a list of all auto-defined Tags for a data address.
 
-		:param AddressRange address_range: Address range from which to get tags
+		:param int addr: Address to get tags at
 		:return: A list of data Tags
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		tags = core.BNGetAutoDataTags(self.handle, addr, count)
 		result = []
 		for i in range(0, count.value):
 			result.append(Tag(core.BNNewTagReference(tags[i])))
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	def get_user_data_tags_at(self, addr):
+		"""
+		``get_user_data_tags_at`` gets a list of all user Tags for a data address.
+
+		:param int addr: Address to get tags at
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserDataTags(self.handle, addr, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_data_tags_of_type(self, addr, tag_type):
+		"""
+		``get_data_tags_of_type`` gets a list of all Tags for a data address of a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetDataTagsOfType(self.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_auto_data_tags_of_type(self, addr, tag_type):
+		"""
+		``get_auto_data_tags_of_type`` gets a list of all auto-defined Tags for a data address of a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_user_data_tags_of_type(self, addr, tag_type):
+		"""
+		``get_user_data_tags_of_type`` gets a list of all user Tags for a data address of a given type.
+
+		:param int addr: Address to get tags at
+		:param TagType tag_type: TagType object to match in searching
+		:return: A list of data Tags
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+		tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
+		result = []
+		for i in range(0, count.value):
+			result.append(Tag(core.BNNewTagReference(tags[i])))
+		core.BNFreeTagList(tags, count.value)
+		return result
+
+	def get_data_tags_in_range(self, address_range):
+		"""
+		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:return: A list of (address, data tag) tuples
+		:rtype: list((int, Tag))
+		"""
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	def get_auto_data_tags_in_range(self, address_range):
+		"""
+		``get_auto_data_tags_in_range`` gets a list of all auto-defined data Tags in a given range.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:return: A list of (address, data tag) tuples
+		:rtype: list((int, Tag))
+		"""
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetAutoDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
+	def get_user_data_tags_in_range(self, address_range):
+		"""
+		``get_user_data_tags_in_range`` gets a list of all user data Tags in a given range.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:return: A list of (address, data tag) tuples
+		:rtype: list((int, Tag))
+		"""
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetUserDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		result = []
+		for i in range(0, count.value):
+			tag = Tag(core.BNNewTagReference(refs[i].tag))
+			result.append((refs[i].addr, tag))
+		core.BNFreeTagReferences(refs, count.value)
+		return result
+
 	def add_user_data_tag(self, addr, tag):
 		"""
 		``add_user_data_tag`` adds an already-created Tag object at a data address.
 		Since this adds a user tag, it will be added to the current undo buffer.
+		If you want want to create the tag as well, consider using
+		:meth:`create_user_data_tag <binaryninja.binaryview.BinaryView.create_user_data_tag>`
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
@@ -4414,15 +4570,28 @@ class BinaryView(object):
 		``remove_user_data_tag`` removes a Tag object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
 
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
+		:param int addr: Address at which to remove the tag
+		:param Tag tag: Tag object to be removed
 		:rtype: None
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
 
+	def remove_user_data_tags_of_type(self, addr, tag_type):
+		"""
+		``remove_user_data_tags_of_type`` removes all data tags at the given address of the given type.
+		Since this removes user tags, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tags
+		:param TagType tag_type: TagType object to match for removing
+		:rtype: None
+		"""
+		core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
+
 	def add_auto_data_tag(self, addr, tag):
 		"""
 		``add_auto_data_tag`` adds an already-created Tag object at a data address.
+		If you want want to create the tag as well, consider using
+		:meth:`create_auto_data_tag <binaryninja.binaryview.BinaryView.create_auto_data_tag>`
 
 		:param int addr: Address at which to add the tag
 		:param Tag tag: Tag object to be added
@@ -4456,11 +4625,22 @@ class BinaryView(object):
 		``remove_auto_data_tag`` removes a Tag object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
 
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
+		:param int addr: Address at which to remove the tag
+		:param Tag tag: Tag object to be removed
 		:rtype: None
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
+
+	def remove_auto_data_tags_of_type(self, addr, tag_type):
+		"""
+		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
+		Since this removes user tags, it will be added to the current undo buffer.
+
+		:param int addr: Address at which to add the tags
+		:param TagType tag_type: TagType object to match for removing
+		:rtype: None
+		"""
+		core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
 
 	def can_assemble(self, arch=None):
 		"""

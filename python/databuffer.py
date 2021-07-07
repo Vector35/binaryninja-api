@@ -35,7 +35,8 @@ class DataBuffer:
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):
-		core.BNFreeDataBuffer(self.handle)
+		if core is not None:
+			core.BNFreeDataBuffer(self.handle)
 
 	def __len__(self):
 		return int(core.BNGetDataBufferLength(self.handle))

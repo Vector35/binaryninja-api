@@ -401,7 +401,7 @@ class HighLevelILInstruction:
 			platform = None
 			if self.function.source_function:
 				platform = self.function.source_function.platform
-			return types.Type(result.type, platform = platform, confidence = result.confidence)
+			return types.Type.create(core.BNNewTypeReference(result.type), platform = platform, confidence = result.confidence)
 		return None
 
 	def get_possible_values(self, options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':

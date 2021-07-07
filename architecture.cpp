@@ -849,7 +849,7 @@ size_t Architecture::GetInstructionAlignment() const
 
 size_t Architecture::GetMaxInstructionLength() const
 {
-	return BN_DEFAULT_NSTRUCTION_LENGTH;
+	return BN_DEFAULT_INSTRUCTION_LENGTH;
 }
 
 

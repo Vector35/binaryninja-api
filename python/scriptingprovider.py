@@ -129,7 +129,8 @@ class ScriptingInstance:
 		self.listeners = []
 
 	def __del__(self):
-		core.BNFreeScriptingInstance(self.handle)
+		if core is not None:
+			core.BNFreeScriptingInstance(self.handle)
 
 	def _destroy_instance(self, ctxt):
 		try:

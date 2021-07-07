@@ -2820,7 +2820,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
-		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
+		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool isSigned = false);
+		static Ref<Type> EnumerationType(Enumeration* enm, size_t width, bool isSigned = false);
 		static Ref<Type> PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
@@ -3044,7 +3045,7 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t GetAlignment() const;
 		bool IsPacked() const;
 		bool IsUnion() const;
-		BNStructureType GetStructureType() const;
+		BNStructureVariant GetStructureType() const;
 
 		Ref<Structure> WithReplacedStructure(Structure* from, Structure* to);
 		Ref<Structure> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
@@ -3058,7 +3059,7 @@ __attribute__ ((format (printf, 1, 2)))
 	public:
 		StructureBuilder();
 		StructureBuilder(BNStructureBuilder* s);
-		StructureBuilder(BNStructureType type, bool packed = false);
+		StructureBuilder(BNStructureVariant type, bool packed = false);
 		StructureBuilder(const StructureBuilder& s);
 		StructureBuilder(StructureBuilder&& s);
 		StructureBuilder(Structure* s);
@@ -3081,8 +3082,8 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsPacked() const;
 		StructureBuilder& SetPacked(bool packed);
 		bool IsUnion() const;
-		StructureBuilder& SetStructureType(BNStructureType type);
-		BNStructureType GetStructureType() const;
+		StructureBuilder& SetStructureType(BNStructureVariant type);
+		BNStructureVariant GetStructureType() const;
 		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type,
 			const std::string& name, uint64_t offset, bool overwriteExisting = true);

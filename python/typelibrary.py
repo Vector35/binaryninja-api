@@ -35,10 +35,11 @@ class TypeLibrary:
 		self.handle = core.handle_of_type(handle, core.BNTypeLibrary)
 
 	def __del__(self):
-		core.BNFreeTypeLibrary(self.handle)
+		if core is not None:
+			core.BNFreeTypeLibrary(self.handle)
 
 	def __repr__(self):
-		return "<typelib '{}':{}>".format(self.name, self.arch.name)
+		return f"<typelib '{self.name}':{self.arch.name}>"
 
 	@staticmethod
 	def new(arch, name):
@@ -263,7 +264,7 @@ class TypeLibrary:
 		"""
 		core.BNTypeLibraryRemoveMetadata(self.handle, key)
 
-	def add_named_object(self, name, t):
+	def add_named_object(self, name:'types.QualifiedName', type:'types.Type') -> None:
 		"""
 		`add_named_object` directly inserts a named object into the type library's object store.
 		This is not done recursively, so care should be taken that types referring to other types
@@ -279,11 +280,13 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		if not isinstance(t, types.Type):
-			raise ValueError("t must be a Type")
-		core.BNAddTypeLibraryNamedObject(self.handle, name._get_core_struct(), t.handle)
+		if isinstance(type, types.MutableType):
+			type = type.immutable_copy()
+		if not isinstance(type, types.Type):
+			raise ValueError("type must be a Type")
+		core.BNAddTypeLibraryNamedObject(self.handle, name._get_core_struct(), type.handle)
 
-	def add_named_type(self, name, t):
+	def add_named_type(self, name:'types.QualifiedName', type:'types.Type') -> None:
 		"""
 		`add_named_type` directly inserts a named object into the type library's object store.
 		This is not done recursively, so care should be taken that types referring to other types
@@ -299,9 +302,11 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		if not isinstance(t, types.Type):
-			raise ValueError("t must be a Type")
-		core.BNAddTypeLibraryNamedType(self.handle, name._get_core_struct(), t.handle)
+		if isinstance(type, types.MutableType):
+			type = type.immutable_copy()
+		if not isinstance(type, types.Type):
+			raise ValueError("parameter type must be a Type")
+		core.BNAddTypeLibraryNamedType(self.handle, name._get_core_struct(), type.handle)
 
 	def get_named_object(self, name):
 		"""
@@ -317,7 +322,7 @@ class TypeLibrary:
 		t = core.BNGetTypeLibraryNamedObject(self.handle, name._get_core_struct())
 		if t is None:
 			return None
-		return types.Type(t)
+		return types.Type.create(t)
 
 	def get_named_type(self, name):
 		"""
@@ -333,7 +338,7 @@ class TypeLibrary:
 		t = core.BNGetTypeLibraryNamedType(self.handle, name._get_core_struct())
 		if t is None:
 			return None
-		return types.Type(t)
+		return types.Type.create(t)
 
 	@property
 	def named_objects(self):
@@ -346,7 +351,7 @@ class TypeLibrary:
 		assert named_types is not None, "core.BNGetTypeLibraryNamedObjects returned None"
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(named_types[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(named_types[i].type))
+			result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
 		core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
 		return result
 
@@ -361,7 +366,7 @@ class TypeLibrary:
 		assert named_types is not None, "core.BNGetTypeLibraryNamedTypes returned None"
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(named_types[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(named_types[i].type))
+			result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
 		core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
 		return result
 

@@ -758,6 +758,12 @@ Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t wid
 }
 
 
+Ref<Type> Type::EnumerationType(Enumeration* enm, size_t width, bool isSigned)
+{
+	return new Type(BNCreateEnumerationTypeOfWidth(enm->GetObject(), width, isSigned));
+}
+
+
 Ref<Type> Type::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 	const Confidence<bool>& cnst, const Confidence<bool>& vltl, BNReferenceType refType)
 {
@@ -1431,7 +1437,7 @@ TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
 
 TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
 {
-	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
+	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch ? arch->GetObject() : nullptr, enm->GetObject(), width, isSigned));
 }
 
 
@@ -1795,7 +1801,7 @@ bool Structure::IsUnion() const
 }
 
 
-BNStructureType Structure::GetStructureType() const
+BNStructureVariant Structure::GetStructureType() const
 {
 	return BNGetStructureType(m_object);
 }
@@ -1849,7 +1855,7 @@ StructureBuilder::StructureBuilder(BNStructureBuilder* s)
 }
 
 
-StructureBuilder::StructureBuilder(BNStructureType type, bool packed)
+StructureBuilder::StructureBuilder(BNStructureVariant type, bool packed)
 {
 	m_object = BNCreateStructureBuilderWithOptions(type, packed);
 }
@@ -2016,14 +2022,14 @@ bool StructureBuilder::IsUnion() const
 }
 
 
-StructureBuilder& StructureBuilder::SetStructureType(BNStructureType t)
+StructureBuilder& StructureBuilder::SetStructureType(BNStructureVariant t)
 {
 	BNSetStructureBuilderType(m_object, t);
 	return *this;
 }
 
 
-BNStructureType StructureBuilder::GetStructureType() const
+BNStructureVariant StructureBuilder::GetStructureType() const
 {
 	return BNGetStructureBuilderType(m_object);
 }

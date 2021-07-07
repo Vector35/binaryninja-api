@@ -59,7 +59,8 @@ class BasicBlock:
 		self._instLengths:Optional[List[int]] = None
 
 	def __del__(self):
-		core.BNFreeBasicBlock(self.handle)
+		if core is not None:
+			core.BNFreeBasicBlock(self.handle)
 
 	def __repr__(self):
 		arch = self.arch

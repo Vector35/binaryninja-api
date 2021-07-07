@@ -585,7 +585,8 @@ class MainThreadAction:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeMainThreadAction(self.handle)
+		if core is not None:
+			core.BNFreeMainThreadAction(self.handle)
 
 	def execute(self):
 		core.BNExecuteMainThreadAction(self.handle)
@@ -641,7 +642,8 @@ class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeBackgroundTask(self.handle)
+		if core is not None:
+			core.BNFreeBackgroundTask(self.handle)
 
 	@property
 	def progress(self):

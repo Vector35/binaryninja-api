@@ -88,7 +88,8 @@ class DisassemblySettings:
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeDisassemblySettings(self.handle)
+		if core is not None:
+			core.BNFreeDisassemblySettings(self.handle)
 
 	@property
 	def width(self) -> int:
@@ -842,7 +843,7 @@ class Function:
 		Function type object, can be set with either a string representing the function prototype
 		(`str(function)` shows examples) or a :py:class:`Type` object
 		"""
-		return types.Type(core.BNGetFunctionType(self.handle), platform = self.platform)
+		return types.Type.create(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
 	def function_type(self, value:'types.Type') -> None:
@@ -961,7 +962,7 @@ class Function:
 		result = core.BNGetFunctionReturnType(self.handle)
 		if not result.type:
 			return None
-		return types.Type(result.type, platform = self.platform, confidence = result.confidence)
+		return types.Type.create(core.BNNewTypeReference(result.type), platform = self.platform, confidence = result.confidence)
 
 	@return_type.setter
 	def return_type(self, value:'types.Type') -> None:
@@ -1941,7 +1942,7 @@ class Function:
 		assert refs is not None, "core.BNGetStackVariablesReferencedByInstruction returned None"
 		result = []
 		for i in range(0, count.value):
-			var_type = types.Type(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
+			var_type = types.Type.create(core.BNNewTypeReference(refs[i].type), platform = self.platform, confidence = refs[i].typeConfidence)
 			var = variable.Variable.from_identifier(self, refs[i].varIdentifier)
 			result.append(variable.StackVariableReference(refs[i].sourceOperand, var_type, refs[i].name, var,
 				refs[i].referencedOffset, refs[i].size))
@@ -2503,15 +2504,11 @@ class Function:
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
 
 	def create_auto_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNCreateAutoStackVariable(self.handle, offset, tc, name)
 
 	def create_user_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNCreateUserStackVariable(self.handle, offset, tc, name)
 
 	def delete_auto_stack_var(self, offset:int) -> None:
@@ -2522,16 +2519,12 @@ class Function:
 
 	def create_auto_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNCreateAutoVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def create_user_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNCreateUserVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def delete_auto_var(self, var:'variable.Variable') -> None:
@@ -2628,9 +2621,7 @@ class Function:
 		if adjust_type is None:
 			tc = None
 		else:
-			tc = core.BNTypeWithConfidence()
-			tc.type = adjust_type.handle
-			tc.confidence = adjust_type.confidence
+			tc = adjust_type.to_core_struct()
 		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
 
 	def set_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.SizeWithConfidence'],
@@ -2683,7 +2674,7 @@ class Function:
 		if not result.type:
 			return None
 		platform = self.platform
-		return types.Type(result.type, platform = platform, confidence = result.confidence)
+		return types.Type.create(core.BNNewTypeReference(result.type), platform = platform, confidence = result.confidence)
 
 	def get_call_stack_adjustment(self, addr:int, arch:Optional['architecture.Architecture']=None) -> 'types.SizeWithConfidence':
 		if arch is None:
@@ -3200,7 +3191,8 @@ class DisassemblyTextRenderer:
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeDisassemblyTextRenderer(self.handle)
+		if core is not None:
+			core.BNFreeDisassemblyTextRenderer(self.handle)
 
 	@property
 	def function(self) -> 'Function':

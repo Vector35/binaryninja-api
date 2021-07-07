@@ -71,7 +71,7 @@ pub use binaryninjacore_sys::BNEndianness as Endianness;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
-// const BN_DEFAULT_NSTRUCTION_LENGTH: u64 = 16;
+// const BN_DEFAULT_INSTRUCTION_LENGTH: u64 = 16;
 // const BN_DEFAULT_OPCODE_DISPLAY: u64 = 8;
 // const BN_MAX_INSTRUCTION_BRANCHES: u64 = 3;
 // const BN_MAX_STORED_DATA_LENGTH: u64 = 0x3fffffff;

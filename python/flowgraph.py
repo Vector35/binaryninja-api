@@ -162,8 +162,8 @@ class FlowGraphNode:
 		func = function.Function(view, func_handle)
 
 		if core.BNIsLowLevelILBasicBlock(block):
-			block = lowlevelil.LowLevelILBasicBlock(view, block,
-				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func))
+			block = lowlevelil.LowLevelILBasicBlock(block,
+				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func), view)
 		elif core.BNIsMediumLevelILBasicBlock(block):
 			mlil_func = mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func)
 			block = mediumlevelil.MediumLevelILBasicBlock(block, mlil_func, view)
@@ -338,6 +338,8 @@ class FlowGraphLayoutRequest:
 		self.handle = core.BNStartFlowGraphLayout(graph.handle, None, self._cb)
 
 	def __del__(self):
+		if core is None:
+			return
 		self.abort()
 		core.BNFreeFlowGraphLayoutRequest(self.handle)
 
@@ -411,7 +413,8 @@ class FlowGraph:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeFlowGraph(self.handle)
+		if core is not None:
+			core.BNFreeFlowGraph(self.handle)
 
 	def __repr__(self):
 		function = self.function

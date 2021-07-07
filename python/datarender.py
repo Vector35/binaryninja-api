@@ -31,6 +31,7 @@ from . import enums
 from . import log
 from . import types
 from . import highlight
+from . import types
 
 
 class TypeContext:
@@ -95,8 +96,7 @@ class DataRenderer:
 	@staticmethod
 	def is_type_of_struct_name(t, name, context):
 		return (t.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
-			and context[-1].type.type_class == enums.TypeClass.NamedTypeReferenceClass and
-			context[-1].type.named_type_reference.name == name)
+			and isinstance(context[-1].type, types.NamedTypeReferenceType) and context[-1].type.name == name)
 
 	def register_type_specific(self):
 		core.BNRegisterTypeSpecificDataRenderer(core.BNGetDataRendererContainer(), self.handle)
@@ -116,10 +116,10 @@ class DataRenderer:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
-			type = types.Type(handle=core.BNNewTypeReference(type))
+			type = types.Type.create(handle=core.BNNewTypeReference(type))
 			pycontext = []
 			for i in range(0, ctxCount):
-				pycontext.append(TypeContext(types.Type(core.BNNewTypeReference(context[i].type)), context[i].offset))
+				pycontext.append(TypeContext(types.Type.create(core.BNNewTypeReference(context[i].type)), context[i].offset))
 			return self.perform_is_valid_for_data(ctxt, view, addr, type, pycontext)
 		except:
 			log.log_error(traceback.format_exc())
@@ -129,12 +129,12 @@ class DataRenderer:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
-			type = types.Type(handle=core.BNNewTypeReference(type))
+			type = types.Type.create(handle=core.BNNewTypeReference(type))
 
 			prefixTokens = function.InstructionTextToken._from_core_struct(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
-				pycontext.append(TypeContext(types.Type(core.BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset))
+				pycontext.append(TypeContext(types.Type.create(core.BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset))
 
 			result = self.perform_get_lines_for_data(ctxt, view, addr, type, prefixTokens, width, pycontext)
 

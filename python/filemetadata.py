@@ -86,7 +86,8 @@ class SaveSettings:
 			self.handle = handle
 
 	def __del__(self):
-		core.BNFreeSaveSettings(self.handle)
+		if core is not None:
+			core.BNFreeSaveSettings(self.handle)
 
 	def is_option_set(self, option:SaveOption) -> bool:
 		if isinstance(option, str):

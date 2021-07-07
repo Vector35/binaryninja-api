@@ -70,7 +70,7 @@ def demangle_ms(arch, mangled_name, options = False):
 		for i in range(outSize.value):
 			names.append(outName[i].decode('utf8'))  # type: ignore
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
-		return (types.Type(handle), names)
+		return (types.Type.create(core.BNNewTypeReference(handle)), names)
 	return (None, mangled_name)
 
 
@@ -97,7 +97,7 @@ def demangle_gnu3(arch, mangled_name, options = None):
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		if not handle:
 			return (None, names)
-		return (types.Type(handle), names)
+		return (types.Type.create(core.BNNewTypeReference(handle)), names)
 	return (None, mangled_name)
 
 

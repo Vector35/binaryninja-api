@@ -251,7 +251,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -264,7 +264,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -277,7 +277,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -290,7 +290,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(call_list[i].name)
-			t = types.Type(core.BNNewTypeReference(call_list[i].type), platform = self)
+			t = types.Type.create(core.BNNewTypeReference(call_list[i].type), platform = self)
 			result[call_list[i].number] = (name, t)
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
@@ -354,21 +354,21 @@ class Platform(metaclass=_PlatformMetaClass):
 		obj = core.BNGetPlatformTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj, platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
 
 	def get_variable_by_name(self, name):
 		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformVariableByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type(obj, platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
 
 	def get_function_by_name(self, name, exactMatch=False):
 		name = types.QualifiedName(name)._get_core_struct()
 		obj = core.BNGetPlatformFunctionByName(self.handle, name, exactMatch)
 		if not obj:
 			return None
-		return types.Type(obj, platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
 
 	def get_system_call_name(self, number):
 		return core.BNGetPlatformSystemCallName(self.handle, number)
@@ -377,7 +377,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		obj = core.BNGetPlatformSystemCallType(self.handle, number)
 		if not obj:
 			return None
-		return types.Type(obj, platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
 
 	def generate_auto_platform_type_id(self, name):
 		name = types.QualifiedName(name)._get_core_struct()
@@ -431,13 +431,13 @@ class Platform(metaclass=_PlatformMetaClass):
 		functions:Mapping[types.QualifiedName, types.Type] = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self)
 		for i in range(0, parse.variableCount):
 			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform = self)
 		for i in range(0, parse.functionCount):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
@@ -481,13 +481,13 @@ class Platform(metaclass=_PlatformMetaClass):
 		functions = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self)
 		for i in range(0, parse.variableCount):
 			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform = self)
 		for i in range(0, parse.functionCount):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform = self)
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 

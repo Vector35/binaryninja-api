@@ -2210,7 +2210,7 @@ class CoreArchitecture(Architecture):
 			input_list = []
 			for j in range(0, input_count.value):
 				input_name = inputs[j].name
-				type_obj = types.Type(core.BNNewTypeReference(inputs[j].type), confidence = inputs[j].typeConfidence)
+				type_obj = types.Type.create(core.BNNewTypeReference(inputs[j].type), confidence = inputs[j].typeConfidence)
 				input_list.append(IntrinsicInput(type_obj, input_name))
 			core.BNFreeNameAndTypeList(inputs, input_count.value)
 			output_count = ctypes.c_ulonglong()
@@ -2218,7 +2218,7 @@ class CoreArchitecture(Architecture):
 			assert outputs is not None, "core.BNGetArchitectureIntrinsicOutputs returned None"
 			output_list = []
 			for j in range(output_count.value):
-				output_list.append(types.Type(core.BNNewTypeReference(outputs[j].type), confidence = outputs[j].confidence))
+				output_list.append(types.Type.create(core.BNNewTypeReference(outputs[j].type), confidence = outputs[j].confidence))
 			core.BNFreeOutputTypeList(outputs, output_count.value)
 			self._intrinsics_info[name] = IntrinsicInfo(input_list, output_list)
 			self._intrinsics[name] = intrinsics[i]

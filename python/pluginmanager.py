@@ -37,7 +37,8 @@ class RepoPlugin:
 		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
 
 	def __del__(self):
-		core.BNFreePlugin(self.handle)
+		if core is not None:
+			core.BNFreePlugin(self.handle)
 
 	def __repr__(self):
 		return "<{} {}/{}>".format(self.path, "installed" if self.installed else "not-installed", "enabled" if self.enabled else "disabled")
@@ -263,7 +264,8 @@ class Repository:
 		self.handle = core.handle_of_type(handle, core.BNRepository)
 
 	def __del__(self):
-		core.BNFreeRepository(self.handle)
+		if core is not None:
+			core.BNFreeRepository(self.handle)
 
 	def __repr__(self):
 		return "<{}>".format(self.path)

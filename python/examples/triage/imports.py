@@ -147,7 +147,7 @@ def find_dynamically_linked_funcs(bv):
 			output_var = call.output.vars_written[0]
 			symbol_name = bv.get_ascii_string_at(symbol_name_addr.value).value
 			#Add confidence to both the args and the return of zero
-			symbol_type = Type.pointer(bv.arch, bv.parse_type_string("void foo()")[0])
+			symbol_type = Type.pointer(bv.parse_type_string("void foo()")[0], arch=bv.arch)
 
 			if len(symbol_name) == 0:
 				continue

@@ -29,8 +29,8 @@ import json
 import inspect
 import os
 from pathlib import Path
-from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping
-from dataclasses import dataclass
+from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any
+from dataclasses import dataclass, make_dataclass
 
 from collections import defaultdict, OrderedDict
 
@@ -68,6 +68,7 @@ from . import platform as _platform
 PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
 NotificationType = Mapping['BinaryDataNotification', 'BinaryDataNotificationCallbacks']
+ProgressFuncType = Callable[[int, int], bool]
 
 class ReferenceSource:
 	def __init__(self, func:Optional['_function.Function'], arch:Optional['architecture.Architecture'],
@@ -285,7 +286,8 @@ class AnalysisCompletionEvent:
 	def __del__(self):
 		if id(self) in self.__class__._pending_analysis_completion_events:
 			del self.__class__._pending_analysis_completion_events[id(self)]
-		core.BNFreeAnalysisCompletionEvent(self.handle)
+		if core is not None:
+			core.BNFreeAnalysisCompletionEvent(self.handle)
 
 	def _notify(self, ctxt):
 		if id(self) in self.__class__._pending_analysis_completion_events:
@@ -656,21 +658,21 @@ class BinaryDataNotificationCallbacks:
 	def _type_defined(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
-			self._notify.type_defined(self._view, qualified_name, _types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+			self._notify.type_defined(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
-			self._notify.type_undefined(self._view, qualified_name, _types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+			self._notify.type_undefined(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_ref_changed(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
-			self._notify.type_ref_changed(self._view, qualified_name, _types.Type(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+			self._notify.type_ref_changed(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -763,7 +765,8 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return self.create(data)
 
 	@classmethod
-	def get_view_of_file(cls, filename:PathType, update_analysis:bool=True, progress_func:Callable[[int, int], bool]=None):
+	def get_view_of_file(cls, filename:PathType, update_analysis:bool=True,
+		progress_func:Optional[ProgressFuncType]=None) -> Optional['BinaryView']:
 		"""
 		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view is available
 
@@ -807,7 +810,8 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return bv
 
 	@classmethod
-	def get_view_of_file_with_options(cls, filename, update_analysis=True, progress_func=None, options={}):
+	def get_view_of_file_with_options(cls, filename:str, update_analysis:Optional[bool]=True,
+		progress_func:Optional[ProgressFuncType]=None, options:Mapping[str, Any]={}) -> Optional['BinaryView']:
 		"""
 		``get_view_of_file_with_options`` opens, generates default load options (which are overridable), and returns the first available \
 		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
@@ -1013,7 +1017,8 @@ class Segment:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeSegment(self.handle)
+		if core is not None:
+			core.BNFreeSegment(self.handle)
 
 	def __repr__(self):
 		r ="r" if self.readable else "-"
@@ -1110,7 +1115,8 @@ class Section:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeSection(self.handle)
+		if core is not None:
+			core.BNFreeSection(self.handle)
 
 	def __repr__(self):
 		return "<section {self.name}: {self.start:#x}-{self.end:#x}>"
@@ -1181,7 +1187,8 @@ class TagType:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeTagType(self.handle)
+		if core is not None:
+			core.BNFreeTagType(self.handle)
 
 	def __repr__(self):
 		return f"<tag type {self.name}: {self.icon}>"
@@ -1246,7 +1253,8 @@ class Tag:
 		self.handle = handle
 
 	def __del__(self):
-		core.BNFreeTag(self.handle)
+		if core is not None:
+			core.BNFreeTag(self.handle)
 
 	def __repr__(self):
 		return "<tag {self.type.icon} {self.type.name}: {self.data}>"
@@ -1401,6 +1409,8 @@ class BinaryView:
 		self.file.close()
 
 	def __del__(self):
+		if core is None:
+			return
 		for i in self._notifications.values():
 			i._unregister()
 		core.BNFreeBinaryView(self.handle)
@@ -1966,20 +1976,20 @@ class BinaryView:
 		return result
 
 	@property
-	def types(self):
-		"""List of defined types (read-only)"""
+	def types(self) -> Mapping['_types.QualifiedName', '_types.Type']:
+		"""Mapping of type names and types (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		type_list = core.BNGetAnalysisTypeList(self.handle, count)
 		assert type_list is not None, "core.BNGetAnalysisTypeList returned None"
 		result = {}
 		for i in range(0, count.value):
 			name = _types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = _types.Type(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
+			result[name] = _types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
 	@property
-	def type_names(self):
+	def type_names(self) -> List['_types.Type']:
 		"""List of defined type names (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		name_list = core.BNGetAnalysisTypeNames(self.handle, count, "")
@@ -2730,12 +2740,29 @@ class BinaryView:
 			>>> #Opening a x86_64 Mach-O binary
 			>>> bv = BinaryViewType['Raw'].open("/bin/ls") #note that we are using open instead of get_view_of_file to get the raw view
 			>>> bv.read(0,4)
-			\'\\xcf\\xfa\\xed\\xfe\'
+			b\'\\xcf\\xfa\\xed\\xfe\'
 		"""
 		if (addr < 0) or (length < 0):
 			raise ValueError("length and address must both be positive")
 		buf = databuffer.DataBuffer(handle=core.BNReadViewBuffer(self.handle, addr, length))
 		return bytes(buf)
+
+	def read_int(self, address:int, size:int, sign:bool=True, endian:Optional[Endianness]=None) -> int:
+		_endian = self.endianness
+		if endian is not None:
+			_endian = endian
+		data = self.read(address, size)
+		if len(data) != size:
+			raise ValueError(f"Couldn't read {size} bytes from address: {address:#x}")
+		return StructuredDataValue.int_from_bytes(data, size, sign, _endian)
+
+	def read_pointer(self, address:int, size=None) -> int:
+		_size = size
+		if size is None:
+			if self.arch is None:
+				raise ValueError("Can't read pointer for BinaryView without an architecture")
+			_size = self.arch.address_size
+		return self.read_int(address, _size, False, self.endianness)
 
 	def write(self, addr:int, data:bytes) -> int:
 		"""
@@ -2748,11 +2775,11 @@ class BinaryView:
 		:Example:
 
 			>>> bv.read(0,4)
-			'BBBB'
-			>>> bv.write(0, "AAAA")
+			b'BBBB'
+			>>> bv.write(0, b"AAAA")
 			4
 			>>> bv.read(0,4)
-			'AAAA'
+			b'AAAA'
 		"""
 		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
 			raise TypeError("Must be bytes, bytearray, or str")
@@ -3122,9 +3149,7 @@ class BinaryView:
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNDefineDataVariable(self.handle, addr, tc)
 
 	def define_user_data_var(self, addr, var_type):
@@ -3142,9 +3167,7 @@ class BinaryView:
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		tc = core.BNTypeWithConfidence()
-		tc.type = var_type.handle
-		tc.confidence = var_type.confidence
+		tc = var_type.to_core_struct()
 		core.BNDefineUserDataVariable(self.handle, addr, tc)
 
 	def undefine_data_var(self, addr):
@@ -3830,8 +3853,8 @@ class BinaryView:
 		for i in range(0, count.value):
 			result[refs[i].offset] = []
 			for j in range(0, refs[i].count):
-				typeObj = _types.Type(core.BNNewTypeReference(refs[i].types[j].type),\
-					confidence = refs[i].types[j].confidence)
+				typeObj = _types.Type.create(core.BNNewTypeReference(refs[i].types[j].type),
+					self.platform, refs[i].types[j].confidence)
 				result[refs[i].offset].append(typeObj)
 
 		core.BNFreeTypeFieldReferenceTypeInfo(refs, count.value)
@@ -3864,7 +3887,7 @@ class BinaryView:
 		core.BNFreeTypeFieldReferenceSizes(refs, count.value)
 		return result
 
-	def get_types_referenced(self, name, offset):
+	def get_types_referenced(self, name:'_types.QualifiedName', offset:int) -> List['_types.Type']:
 		"""
 		``get_types_referenced`` returns a list of types related to the type field access.
 
@@ -3879,37 +3902,37 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetTypesReferenced(self.handle, name, offset, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetTypesReferenced(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetTypesReferenced returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				typeObj = _types.Type.create(core.BNNewTypeReference(refs[i].type),\
+					confidence = refs[i].confidence)
+				result.append(typeObj)
+			return result
+		finally:
+			core.BNFreeTypeFieldReferenceTypes(refs, count.value)
 
-		result = []
-		for i in range(0, count.value):
-			typeObj = _types.Type(core.BNNewTypeReference(refs[i].type),\
-				confidence = refs[i].confidence)
-			result.append(typeObj)
-
-		core.BNFreeTypeFieldReferenceTypes(refs, count.value)
-		return result
-
-	def create_structure_from_offset_access(self, name):
+	def create_structure_from_offset_access(self, name:'_types.QualifiedName') -> '_types.StructureType':
 		newMemberAdded = ctypes.c_bool(False)
-		name = _types.QualifiedName(name)._get_core_struct()
-		struct = core.BNCreateStructureFromOffsetAccess(self.handle, name, newMemberAdded)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		struct = core.BNCreateStructureFromOffsetAccess(self.handle, _name, newMemberAdded)
 		if struct is None:
-			return None
-		return _types.Structure(struct)
+			raise Exception("BNCreateStructureFromOffsetAccess failed to create struct from offsets")
+		return _types.StructureType.from_core_struct(struct)
 
-	def create_structure_member_from_access(self, name, offset):
-		name = _types.QualifiedName(name)._get_core_struct()
-		result = core.BNCreateStructureMemberFromAccess(self.handle, name, offset)
+	def create_structure_member_from_access(self, name:'_types.QualifiedName', offset:int) -> '_types.Type':
+		_name = _types.QualifiedName(name)._get_core_struct()
+		result = core.BNCreateStructureMemberFromAccess(self.handle, _name, offset)
 		if not result.type:
-			return None
+			raise Exception("BNCreateStructureMemberFromAccess failed to create struct member offsets")
 
-		return _types.Type(core.BNNewTypeReference(result.type),\
+		return _types.Type.create(core.BNNewTypeReference(result.type),\
 			confidence = result.confidence)
 
-	def get_callers(self, addr):
+	def get_callers(self, addr:int) -> Generator[ReferenceSource, None, None]:
 		"""
 		``get_callers`` returns a list of ReferenceSource objects (xrefs or cross-references) that call the provided virtual address.
 		In this case, tail calls, jumps, and ordinary calls are considered.
@@ -3942,7 +3965,7 @@ class BinaryView:
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
-	def get_callees(self, addr, func=None, arch=None):
+	def get_callees(self, addr:int, func:'_function.Function'=None, arch:'architecture.Architecture'=None) -> List[int]:
 		"""
 		``get_callees`` returns a list of virtual addresses called by the call site in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, call sites from
@@ -3970,7 +3993,6 @@ class BinaryView:
 				result.append(refs[i])
 			core.BNFreeAddressList(refs)
 		return result
-
 
 	def get_symbol_at(self, addr, namespace=None):
 		"""
@@ -5497,7 +5519,7 @@ class BinaryView:
 			error_str = errors.value.decode("utf-8")
 			core.free_string(errors)
 			raise SyntaxError(error_str)
-		type_obj = _types.Type(core.BNNewTypeReference(result.type), platform = self.platform)
+		type_obj = _types.Type.create(core.BNNewTypeReference(result.type), platform = self.platform)
 		name = _types.QualifiedName._from_core_struct(result.name)
 		core.BNFreeQualifiedNameAndType(result)
 		return type_obj, name
@@ -5536,13 +5558,13 @@ class BinaryView:
 		functions:Mapping[_types.QualifiedName, _types.Type] = {}
 		for i in range(0, parse.typeCount):
 			name = _types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = _types.Type(core.BNNewTypeReference(parse.types[i].type), platform = self.platform)
+			type_dict[name] = _types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self.platform)
 		for i in range(0, parse.variableCount):
 			name = _types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = _types.Type(core.BNNewTypeReference(parse.variables[i].type), platform = self.platform)
+			variables[name] = _types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform = self.platform)
 		for i in range(0, parse.functionCount):
 			name = _types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = _types.Type(core.BNNewTypeReference(parse.functions[i].type), platform = self.platform)
+			functions[name] = _types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform = self.platform)
 		core.BNFreeTypeParserResult(parse)
 		return _types.TypeParserResult(type_dict, variables, functions)
 
@@ -5612,7 +5634,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return _types.Type(obj, platform = self.platform)
+		return _types.Type.create(obj, platform = self.platform)
 
 	def get_type_by_id(self, id):
 		"""
@@ -5633,7 +5655,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeById(self.handle, id)
 		if not obj:
 			return None
-		return _types.Type(obj, platform = self.platform)
+		return _types.Type.create(obj, platform = self.platform)
 
 	def get_type_name_by_id(self, id):
 		"""
@@ -5723,7 +5745,7 @@ class BinaryView:
 		name = _types.QualifiedName(name)._get_core_struct()
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
 
-	def define_type(self, type_id, default_name, type_obj):
+	def define_type(self, type_id:str, default_name:'_types.QualifiedName', type_obj:'_types.Type'):
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
 		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
@@ -5746,7 +5768,7 @@ class BinaryView:
 		core.BNFreeQualifiedName(reg_name)
 		return result
 
-	def define_user_type(self, name, type_obj):
+	def define_user_type(self, name:Union[str,'_types.QualifiedName'], type_obj:'_types.Type') -> None:
 		"""
 		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
 		types for the current :py:Class:`BinaryView`.
@@ -5761,8 +5783,9 @@ class BinaryView:
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		name = _types.QualifiedName(name)._get_core_struct()
-		core.BNDefineUserAnalysisType(self.handle, name, type_obj.handle)
+		if isinstance(name, str):
+			name = _types.QualifiedName(name)
+		core.BNDefineUserAnalysisType(self.handle, name._get_core_struct(), type_obj.handle)
 
 	def undefine_type(self, type_id):
 		"""
@@ -5848,7 +5871,7 @@ class BinaryView:
 		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
 		if handle is None:
 			return None
-		return _types.Type(handle, platform = self.platform)
+		return _types.Type.create(handle, platform = self.platform)
 
 	def import_library_object(self, name, lib = None):
 		"""
@@ -5869,7 +5892,7 @@ class BinaryView:
 		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
 		if handle is None:
 			return None
-		return _types.Type(handle, platform = self.platform)
+		return _types.Type.create(handle, platform = self.platform)
 
 	def export_type_to_library(self, lib, name, type_obj):
 		"""
@@ -6725,7 +6748,8 @@ class BinaryReader:
 		print(self._handle)
 
 	def __del__(self):
-		core.BNFreeBinaryReader(self._handle)
+		if core is not None:
+			core.BNFreeBinaryReader(self._handle)
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -7046,7 +7070,8 @@ class BinaryWriter:
 			core.BNSetBinaryWriterEndianness(self._handle, endian)
 
 	def __del__(self):
-		core.BNFreeBinaryWriter(self._handle)
+		if core is not None:
+			core.BNFreeBinaryWriter(self._handle)
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -7263,184 +7288,195 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
 
+@dataclass
 class StructuredDataValue:
-	def __init__(self, type, address, value, endian):
-		self._type = type
-		self._address = address
-		self._value = value
-		self._endian = endian
+	type:'_types.Type'
+	value:bytes
+	endian:Endianness
 
 	def __str__(self):
-		decode_str = "{}B".format(self._type.width)
-		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
+		decode_str = "{}B".format(self.type.width)
+		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self.value)])
 
 	def __repr__(self):
-		return f"<StructuredDataValue type:{self._type} value:{self}>"
+		return f"<StructuredDataValue type:{self.type} value:{self}>"
 
 	def __int__(self):
-		if self._type.width == 1:
-			if self._endian == Endianness.LittleEndian:
-				code = "<B"
-			else:
-				code = ">B"
-		elif self._type.width == 2:
-			if self._endian == Endianness.LittleEndian:
-				code = "<H"
-			else:
-				code = ">H"
-		elif self._type.width == 4:
-			if self._endian == Endianness.LittleEndian:
-				code = "<I"
-			else:
-				code = ">I"
-		elif self._type.width == 8:
-			if self._endian == Endianness.LittleEndian:
-				code = "<Q"
-			else:
-				code = ">Q"
+		if isinstance(self.type, _types.PointerType):
+			return self.int_from_bytes(self.value, self.type.width, False, self.endian)
+		elif isinstance(self.type, (_types.IntegerType, _types.EnumerationType)):
+			return self.int_from_bytes(self.value, self.type.width, bool(self.type.signed), self.endian)
+		raise Exception("Attempting to coerce non integral type to an integer")
+
+	@staticmethod
+	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None):
+		if width == 1:
+			code = "B"
+		elif width == 2:
+			code = "H"
+		elif width == 4:
+			code = "I"
+		elif width == 8:
+			code = "Q"
 		else:
-			raise Exception("Could not convert to integer with width {}".format(self._type.width))
+			raise Exception("Could not convert to integer with width {}".format(width))
 
-		return struct.unpack(code, self._value)[0]
+		_endian = "<" if endian == Endianness.LittleEndian else ">"
+		if sign:
+			code = code.lower()
+		return struct.unpack(f"{_endian}{code}", data)[0]
 
-	@property
-	def type(self):
-		return self._type
-
-	@property
-	def width(self):
-		return self._type.width
-
-	@property
-	def address(self):
-		return self._address
-
-	@property
-	def value(self):
-		return self._value
+	def __float__(self):
+		if not isinstance(self.type, _types.FloatType):
+			raise Exception("Attempting to coerce non float type to a float")
+		endian = "<" if self.endian == Endianness.LittleEndian else ">"
+		if self.type.width == 2:
+			code = "e"
+		elif self.type.width == 4:
+			code = "f"
+		elif self.type.width == 8:
+			code = "d"
+		else:
+			raise Exception("Could not convert to float with width {}".format(self.type.width))
+		return struct.unpack(f"{endian}{code}", self.value)[0]
 
 	@property
 	def int(self):
 		return int(self)
 
 	@property
-	def str(self):
-		return str(self)
+	def float(self):
+		return float(self)
 
+# class StructuredDataView:
+# 	@staticmethod
+# 	def create(view:'BinaryView', structure_name:str, address:int, endian:Optional[Endianness]=None):
+# 		s = view.get_type_by_name(structure_name)
+# 		if s is None:
+# 			raise Exception(f"Could not find structure with name: {structure_name}")
 
-class StructuredDataView:
-	"""
-		``class StructuredDataView`` is a convenience class for reading structured binary data.
+# 		if s.type_class == TypeClass.NamedTypeReferenceClass:
+# 			s = view.get_type_by_id(s.named_type_reference.id)
+# 		if s.type_class != TypeClass.StructureTypeClass:
+# 			raise Exception(f"{self.structure_name} is not a StructureTypeClass, got: {s.type_class}")
 
-		StructuredDataView can be instantiated as follows:
+# 		self._structure = s.structure
 
-			>>> from binaryninja import *
-			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
-			>>> structure = "Elf64_Header"
-			>>> address = bv.start
-			>>> elf = StructuredDataView(bv, structure, address)
-			>>>
+# 		return make_dataclass(f"{structure_name}_{address}_{endian}", fields)
 
-		Once instantiated, members can be accessed:
+# class StructuredDataView:
+	# """
+	# 	``class StructuredDataView`` is a convenience class for reading structured binary data.
 
-			>>> print("{:x}".format(elf.machine))
-			003e
-			>>>
+	# 	StructuredDataView can be instantiated as follows:
 
-		"""
-	_structure = None
-	_structure_name = None
-	_address = 0
-	_bv = None
+	# 		>>> from binaryninja import *
+	# 		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+	# 		>>> structure = "Elf64_Header"
+	# 		>>> address = bv.start
+	# 		>>> elf = StructuredDataView(bv, structure, address)
+	# 		>>>
 
-	def __init__(self, bv:'BinaryView', structure_name:str, address:int, endian:Optional[Endianness]=None):
-		self._bv = bv
-		if endian is None:
-			if bv.arch is not None:
-				endian = bv.arch.endianness
-			else:
-				raise Exception("Can not instantiate StructuredDataView without specifying and Endianness")
-		self._structure_name = structure_name
-		self._address = address
-		self._members = OrderedDict()
-		self._endian = endian
-		self._lookup_structure()
-		self._define_members()
+	# 	Once instantiated, members can be accessed:
 
-	def __repr__(self):
-		return "<StructuredDataView type:{self._structure_name} " + \
-			"size:{self._structure.width:#x} address:{self._address:#x}>"
+	# 		>>> print("{:x}".format(elf.machine))
+	# 		003e
+	# 		>>>
 
-	def __len__(self):
-		assert self._structure is not None, "self._structure is None"
-		return self._structure.width
+	# 	"""
+	# _structure = None
+	# _structure_name = None
+	# _address = 0
+	# _bv = None
 
-	def __getattr__(self, key):
-		m = self._members.get(key, None)
-		if m is None:
-			return self.__getattribute__(key)
+	# def __init__(self, bv:'BinaryView', structure_name:str, address:int, endian:Optional[Endianness]=None):
+	# 	self._bv = bv
+	# 	if endian is None:
+	# 		if bv.arch is not None:
+	# 			endian = bv.arch.endianness
+	# 		else:
+	# 			raise Exception("Can not instantiate StructuredDataView without specifying and Endianness")
+	# 	self._structure_name = structure_name
+	# 	self._address = address
+	# 	self._members = OrderedDict()
+	# 	self._endian = endian
+	# 	self._lookup_structure()
+	# 	self._define_members()
 
-		return self[key]
+	# def __repr__(self):
+	# 	return f"<StructuredDataView type:{self._structure_name} " + \
+	# 		f"size:{self._structure.width:#x} address:{self._address:#x}>"
 
-	def __getitem__(self, key):
-		m = self._members.get(key, None)
-		if m is None:
-			return m
+	# def __len__(self):
+	# 	assert self._structure is not None, "self._structure is None"
+	# 	return self._structure.width
 
-		ty = m.type
-		offset = m.offset
-		width = ty.width
+	# def __getattr__(self, key):
+	# 	m = self._members.get(key, None)
+	# 	if m is None:
+	# 		return self.__getattribute__(key)
 
-		value = self.view.read(self._address + offset, width)
-		return StructuredDataValue(ty, self._address + offset, value, self._endian)
+	# 	return self[key]
 
-	@property
-	def view(self) -> 'BinaryView':
-		assert self._bv is not None
-		return self._bv
+	# def __getitem__(self, key):
+	# 	m = self._members.get(key, None)
+	# 	if m is None:
+	# 		return m
 
-	@property
-	def structure(self) -> '_types.Structure':
-		assert self._structure is not None
-		return self._structure
+	# 	ty = m.type
+	# 	offset = m.offset
+	# 	width = ty.width
 
-	def __str__(self):
-		rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
-		for k in self._members:
-			m = self._members[k]
+	# 	value = self.view.read(self._address + offset, width)
+	# 	return StructuredDataValue(ty, value, self._endian)
 
-			ty = m.type
-			offset = m.offset
+	# @property
+	# def view(self) -> 'BinaryView':
+	# 	assert self._bv is not None
+	# 	return self._bv
 
-			formatted_offset = "{:=+x}".format(offset)
-			formatted_type = "{:s} {:s}".format(str(ty), k)
+	# @property
+	# def structure(self) -> '_types.Structure':
+	# 	assert self._structure is not None
+	# 	return self._structure
 
-			value = self[k]
-			assert value is not None
-			if value.width in (1, 2, 4, 8):
-				formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
-			else:
-				formatted_value = str(value)
+	# def __str__(self):
+	# 	rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
+	# 	for k in self._members:
+	# 		m = self._members[k]
 
-			rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
+	# 		ty = m.type
+	# 		offset = m.offset
 
-		rv += "}\n"
+	# 		formatted_offset = "{:=+x}".format(offset)
+	# 		formatted_type = "{:s} {:s}".format(str(ty), k)
 
-		return rv
+	# 		value = self[k]
+	# 		assert value is not None
+	# 		if value.width in (1, 2, 4, 8):
+	# 			formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
+	# 		else:
+	# 			formatted_value = str(value)
 
-	def _lookup_structure(self):
-		s = self.view.get_type_by_name(self._structure_name)
-		if s is None:
-			raise Exception(f"Could not find structure with name: {self._structure_name}")
+	# 		rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
 
-		if s.type_class != TypeClass.StructureTypeClass:
-			raise Exception(f"{self._structure_name} is not a StructureTypeClass, got: {s.type_class}")
+	# 	rv += "}\n"
 
-		self._structure = s.structure
+	# 	return rv
 
-	def _define_members(self):
-		for m in self.structure.members:
-			self._members[m.name] = m
+	# def _lookup_structure(self):
+	# 	s = self.view.get_type_by_name(self._structure_name)
+	# 	if s is None:
+	# 		raise Exception(f"Could not find structure with name: {self._structure_name}")
+
+	# 	if s.type_class != TypeClass.StructureTypeClass:
+	# 		raise Exception(f"{self._structure_name} is not a StructureTypeClass, got: {s.type_class}")
+
+	# 	self._structure = s.structure
+
+	# def _define_members(self):
+	# 	for m in self.structure.members:
+	# 		self._members[m.name] = m
 
 
 @dataclass(frozen=True)
@@ -7450,61 +7486,123 @@ class CoreDataVariable:
 	auto_discovered:bool
 
 
+@dataclass
 class DataVariable:
-	def __init__(self, var:CoreDataVariable, view:'BinaryView'):
-		self._var = var
-		self._view = view
+	core_data_var:CoreDataVariable
+	view:'BinaryView'
 
 	@classmethod
 	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView'):
-		var_type = _types.Type(core.BNNewTypeReference(var.type), platform=view.platform,
+		var_type = _types.Type.create(core.BNNewTypeReference(var.type), platform=view.platform,
 			confidence=var.typeConfidence)
 		return cls(CoreDataVariable(var.address, var_type, var.autoDiscovered), view)
 
 	@property
 	def data_refs_from(self) -> Optional[Generator[int, None, None]]:
 		"""data cross references from this data variable (read-only)"""
-		return self._view.get_data_refs_from(self.address, max(1, len(self)))
+		return self.view.get_data_refs_from(self.address, max(1, len(self)))
 
 	@property
 	def data_refs(self) -> Optional[Generator[int, None, None]]:
 		"""data cross references to this data variable (read-only)"""
-		return self._view.get_data_refs(self.address, max(1, len(self)))
+		return self.view.get_data_refs(self.address, max(1, len(self)))
 
 	@property
 	def code_refs(self) -> Generator['ReferenceSource', None, None]:
 		"""code references to this data variable (read-only)"""
-		return self._view.get_code_refs(self.address, max(1, len(self)))
+		return self.view.get_code_refs(self.address, max(1, len(self)))
 
 	def __len__(self):
-		return len(self._var.type)
+		return len(self.core_data_var.type)
 
 	def __repr__(self):
 		return f"<var {self.address:#x}: {self.type}>"
 
 	@property
 	def address(self) -> int:
-		return self._var.address
+		return self.core_data_var.address
+
+	def _value_helper(self, t:'_types.Type', data:bytes):
+		sdv = StructuredDataValue(t, data, self.view.endianness)
+		if isinstance(t, (_types.VoidType, _types.FunctionType)): #, _types.VarArgsType, _types.ValueType)):
+			return None
+		elif isinstance(t, _types.BoolType):
+			return bool(sdv)
+		elif isinstance(t, (_types.IntegerType, _types.PointerType)):
+			return int(sdv)
+		elif isinstance(t, _types.FloatType):
+			return float(sdv)
+		elif isinstance(t, _types.WideCharType):
+			return data.decode("utf-8")
+		elif isinstance(t, _types.StructureType):
+			result = {}
+			for member in t.members:
+				member_data = data[member.offset: member.offset+member.type.width]
+				result[member.name] = self._value_helper(member.type, member_data)
+			return result
+		elif isinstance(t, _types.EnumerationType):
+			value = int(sdv)
+			for member in t.members:
+				if int(member) == value:
+					return member
+			return value
+		elif isinstance(t, _types.ArrayType):
+			result = []
+			if t.element_type is None:
+				raise ValueError("Can not get value for Array type with no element type")
+			for i in range(t.count):
+				offset = i * t.element_type.width
+				element_data = data[offset: offset + t.element_type.width]
+				result.append(self._value_helper(t.element_type, element_data))
+			return result
+		elif isinstance(t, _types.NamedTypeReference):
+			target = self.view.get_type_by_id(t.id)
+			assert target is not None
+			return self._value_helper(target, data)
+		assert False, f"Unhandled `Type` {type(t)}"
+
+	@property
+	def value(self) -> Any:
+		data = self.view.read(self.address, self.type.width)
+		if len(data) != self.type.width:
+			raise Exception(f"Failed to read bytes at address {self.address} of width {self.type.width}")
+		return self._value_helper(self.type, data)
+
+
+		# elif t.type_class == TypeClass.StructureTypeClass:
+
+		# elif t.type_class == TypeClass.EnumerationTypeClass:
+
+		# elif t.type_class == TypeClass.PointerTypeClass:
+
+		# elif t.type_class == TypeClass.ArrayTypeClass:
+
+		# elif t.type_class == TypeClass.FunctionTypeClass:
+
+		# elif t.type_class == TypeClass.VarArgsTypeClass:
+
+		# elif t.type_class == TypeClass.ValueTypeClass:
+
+		# elif t.type_class == TypeClass.NamedTypeReferenceClass:
+
+		# elif t.type_class == TypeClass.WideCharTypeClass:
+
 
 	@property
 	def type(self) -> '_types.Type':
-		return self._var.type
+		return self.core_data_var.type
 
 	@type.setter
 	def type(self, value:Optional['_types.Type']) -> None:  # type: ignore
-		self._view.define_user_data_var(self.address, value)
+		self.view.define_user_data_var(self.address, value)
 		if value is None:
-			self._var = CoreDataVariable(self.address, _types.Type.void(), False)
+			self.core_data_var = CoreDataVariable(self.address, _types.VoidType.create(), False)
 		else:
-			self._var = CoreDataVariable(self.address, value, False)
+			self.core_data_var = CoreDataVariable(self.address, value, False)
 
 	@property
 	def auto_discovered(self) -> bool:
-		return self._var.auto_discovered
-
-	@property
-	def view(self) -> BinaryView:
-		return self._view
+		return self.core_data_var.auto_discovered
 
 	@view.setter
 	def view(self, value):
@@ -7512,7 +7610,7 @@ class DataVariable:
 
 	@property
 	def symbol(self) -> Optional['_types.Symbol']:
-		return self._view.get_symbol_at(self.address)
+		return self.view.get_symbol_at(self.address)
 
 	@symbol.setter
 	def symbol(self, value:Optional[Union[str, '_types.Symbol']]) -> None:  # type: ignore

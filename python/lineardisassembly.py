@@ -132,7 +132,8 @@ class LinearViewObject:
 		self._parent = parent
 
 	def __del__(self):
-		core.BNFreeLinearViewObject(self.handle)
+		if core is not None:
+			core.BNFreeLinearViewObject(self.handle)
 
 	def __repr__(self):
 		return "<LinearViewObject: " + str(self) + ">"
@@ -337,7 +338,8 @@ class LinearViewCursor:
 			self.handle = core.BNCreateLinearViewCursor(root_object.handle)
 
 	def __del__(self):
-		core.BNFreeLinearViewCursor(self.handle)
+		if core is not None:
+			core.BNFreeLinearViewCursor(self.handle)
 
 	def __repr__(self):
 		return "<LinearViewCursor: " + str(self.current_object) + ">"

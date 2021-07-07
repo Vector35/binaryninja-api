@@ -520,7 +520,7 @@ class BasicBlock(object):
 			color = highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
 
-	def get_instruction_containing_address(addr):
+	def get_instruction_containing_address(self, addr):
 		start = ctypes.c_uint64()
 		ret = core.BNGetBasicBlockInstructionContainingAddress(self.handle, addr, start)
 		return ret, start.value

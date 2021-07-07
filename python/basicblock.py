@@ -168,6 +168,8 @@ class BasicBlock(object):
 
 	def __getitem__(self, i):
 		self._buildStartCache()
+		if isinstance(i, slice):
+			return [self[index] for index in range(*i.indices(len(self._instStarts)))]
 		start = self._instStarts[i]
 		length = self._instLengths[i]
 		data = self._view.read(start, length)

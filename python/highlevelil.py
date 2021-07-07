@@ -977,7 +977,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 	def __getitem__(self, idx):
 		size = self.end - self.start
 		if isinstance(idx, slice):
-			return [self[index] for index in range(*idx.incides(size))]
+			return [self[index] for index in range(*idx.indices(size))]
 		if idx > size or idx < -size:
 			raise IndexError("list index is out of range")
 		if idx >= 0:

@@ -598,7 +598,8 @@ extern "C"
 		IndentHLILBody = 67,
 
 		// Debugging options
-		ShowFlagUsage = 128
+		ShowFlagUsage = 128,
+		ShowStackPointer = 129
 	};
 
 	enum BNTypeClass

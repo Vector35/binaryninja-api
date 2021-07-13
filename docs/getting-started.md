@@ -207,25 +207,29 @@ Current options include:
         - Normal
         - Medium
         - Highlight
-- Graph
+- Graph & Linear Views
     - Show address
-    - Show opcode bytes
-    - Assembly
-    - Lifted IL
-        - Show IL flag usage (if showing Lifted IL)
-    - Low Level IL
-        - Show basic block register state (if showing Low Level IL)
-    - Medium Level IL
-        - Show basic block register state (if showing Medium IL)
-    - High Level IL
-        - Show basic block register state (if showing High IL)
-- Linear
-    - Show address
-    - Show call parameter names
+    - Show call parameter names (MLIL only)
+    - Show function address
     - Show opcode bytes
     - Show register set highlighting
     - Show variable types
         - List default register types
+        - At assignment (MLIL only)
+        - At top of function
+    - Assembly
+    - Low Level IL
+        - Show Stack Pointer Value
+    - Medium Level IL
+    - High Level IL
+    - Advanced IL Forms
+        - Lifted IL
+            - Show IL Flag Usage
+        - Low Level IL (SSA Form)
+        - Medium Level IL (Mapped)
+        - Medium Level IL (Mapped, SSA Form)
+        - Medium Level IL (SSA Form)
+        - High Level IL (SSA Form)
 
 ![hex >](img/hex.png "hex view")
 
@@ -657,7 +661,6 @@ Here's a list of all settings currently available from the UI:
 |triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
 |triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
 |ui|Color Blind|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.colorBlind'>ui.colorBlind</a>|
-|ui|Debug Mode|Enable developer debugging features (Additional views: Lifted IL, and IL SSA forms).|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.debugMode'>ui.debugMode</a>|
 |ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
 |ui|Feature Map Auto-Rotate|Automatically rotate the feature map orientation based on the current layout and dimensions.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.featureMap.autoRotate'>ui.featureMap.autoRotate</a>|
 |ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|

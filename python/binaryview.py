@@ -3067,7 +3067,9 @@ class BinaryView(object):
 
 		"""
 		if plat is None:
-			plat = self.platform
+			if self.platform is None:
+				raise ValueError("Can't create user function with no platform specified.")
+			plat, addr = self.platform.get_associated_platform_by_address(addr)
 		return binaryninja.function.Function(self, core.BNCreateUserFunction(self.handle, plat.handle, addr))
 
 	def remove_user_function(self, func):
@@ -3257,14 +3259,14 @@ class BinaryView(object):
 	def get_functions_by_name(self, name, plat=None, ordered_filter=[SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol]):
 		"""``get_functions_by_name`` returns a list of Function objects
 		function with a Symbol of ``name``.
-​
+
 		:param str name: name of the functions
 		:param Platform plat: (optional) platform
 		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
 		:return: returns a list of Function objects or an empty list
 		:rtype: list(Function)
 		:Example:
-​
+
 			>>> bv.get_function_by_name("main"))
 			<func: x86_64@0x1587>
 			>>>

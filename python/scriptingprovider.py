@@ -831,7 +831,10 @@ class PythonScriptingProvider(ScriptingProvider):
 			if plugin_full_path not in sys.path:
 				sys.path.append(plugin_full_path)
 
-			__import__(module)
+			if plugin.subdir:
+				__import__(module + "." + plugin.subdir.replace("/", "."))
+			else:
+				__import__(module)
 			return True
 		except KeyError:
 			log.log_error(f"Failed to find python plugin: {repo_path}/{module}")

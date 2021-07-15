@@ -5066,6 +5066,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRepoPlugin* BNNewPluginReference(BNRepoPlugin* r);
 	BINARYNINJACOREAPI void BNFreePlugin(BNRepoPlugin* plugin);
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNRepoPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetSubdir(BNRepoPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetDependencies(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNRepoPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsEnabled(BNRepoPlugin* p);

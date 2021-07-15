@@ -5391,6 +5391,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<std::string> GetApis() const;
 		std::vector<std::string> GetInstallPlatforms() const;
 		std::string GetPath() const;
+		std::string GetSubdir() const;
 		std::string GetDependencies() const;
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;

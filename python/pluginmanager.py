@@ -50,6 +50,11 @@ class RepoPlugin(object):
 		return core.BNPluginGetPath(self.handle)
 
 	@property
+	def subdir(self):
+		"""Optional sub-directory the plugin code lives in as a relative path from the plugin root"""
+		return core.BNPluginGetSubdir(self.handle)
+
+	@property
 	def dependencies(self):
 		"""Dependencies required for installing this plugin"""
 		return core.BNPluginGetDependencies(self.handle)

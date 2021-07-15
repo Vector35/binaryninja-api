@@ -20,6 +20,11 @@ string RepoPlugin::GetPath() const
 	RETURN_STRING(BNPluginGetPath(m_object));
 }
 
+string RepoPlugin::GetSubdir() const
+{
+	RETURN_STRING(BNPluginGetSubdir(m_object));
+}
+
 string RepoPlugin::GetDependencies() const
 {
 	RETURN_STRING(BNPluginGetDependencies(m_object));

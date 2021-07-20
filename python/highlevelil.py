@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Vector 35 Inc
+# Copyright (c) 2019-2021 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -20,11 +20,12 @@
 
 import ctypes
 import struct
+from typing import List
 
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import HighLevelILOperation, InstructionTextTokenType
+from binaryninja.enums import HighLevelILOperation, FunctionGraphType
 from binaryninja import function
 from binaryninja import lowlevelil
 from binaryninja import mediumlevelil
@@ -661,6 +662,13 @@ class HighLevelILFunction(object):
 		if self.handle is not None:
 			core.BNFreeHighLevelILFunction(self.handle)
 
+	def __repr__(self):
+		arch = self.source_function.arch
+		if arch:
+			return "<hlil func: %s@%#x>" % (arch.name, self.source_function.start)
+		else:
+			return "<hlil func: %#x>" % self.source_function.start
+
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -914,6 +922,51 @@ class HighLevelILFunction(object):
 	@source_function.setter
 	def source_function(self, value):
 		self._source_function = value
+
+	@property
+	def il_form(self) -> "binaryninja.enums.FunctionGraphType":
+		if len(self.basic_blocks) < 1:
+			return FunctionGraphType.InvalidILViewType
+		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(self.basic_blocks[0].handle))
+
+	@property
+	def vars(self) -> List["binaryninja.function.Variable"]:
+		"""This gets just the HLIL variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		if self.source_function is None:
+			return []
+
+		if self.il_form == FunctionGraphType.HighLevelILFunctionGraph or self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+			count = ctypes.c_ulonglong()
+			core_variables = core.BNGetHighLevelILVariables(self.handle, count)
+			result = []
+			for var_i in range(count.value):
+				result.append(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+			core.BNFreeVariableList(core_variables)
+			return result
+		return []
+
+	@property
+	def ssa_vars(self) -> List["binaryninja.mediumlevelil.SSAVariable"]:
+		"""This gets just the HLIL SSA variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		if self.source_function is None:
+			return []
+
+		if self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+			variable_count = ctypes.c_ulonglong()
+			core_variables = core.BNGetHighLevelILVariables(self.handle, variable_count)
+			result = []
+			for var_i in range(variable_count.value):
+				version_count = ctypes.c_ulonglong()
+				versions = core.BNGetHighLevelILVariableSSAVersions(self.handle, core_variables[var_i], version_count)
+
+				for version_i in range(version_count.value):
+					result.append(mediumlevelil.SSAVariable(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
+				core.BNFreeILInstructionList(versions)
+
+			core.BNFreeVariableList(core_variables)
+			return result
+
+		return []
 
 	@property
 	def medium_level_il(self):

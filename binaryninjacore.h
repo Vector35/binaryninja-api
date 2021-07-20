@@ -970,7 +970,7 @@ extern "C"
 		MLIL_STORE_STRUCT, // Not valid in SSA form (see MLIL_STORE_STRUCT_SSA)
 		MLIL_VAR, // Not valid in SSA form (see MLIL_VAR_SSA)
 		MLIL_VAR_FIELD, // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
-		MLIL_VAR_SPLIT, // Not valid in SSA form (see MLIL_VAR_SSA)
+		MLIL_VAR_SPLIT, // Not valid in SSA form (see MLIL_VAR_SPLIT_SSA)
 		MLIL_ADDRESS_OF,
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
@@ -3453,6 +3453,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI bool BNIsILBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNIsLowLevelILBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNIsMediumLevelILBasicBlock(BNBasicBlock* block);
+	BINARYNINJACOREAPI BNFunctionGraphType BNGetBasicBlockFunctionGraphType(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetBasicBlockLowLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetBasicBlockMediumLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNGetBasicBlockInstructionContainingAddress(BNBasicBlock* block,
@@ -3584,7 +3585,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeVariableNameAndType(BNVariableNameAndType* var);
 
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetFunctionVariables(BNFunction* func, size_t* count);
-	BINARYNINJACOREAPI BNVariable* BNGetFunctionILVariables(BNFunction* func, BNFunctionGraphType ilType, size_t* count);
 	BINARYNINJACOREAPI void BNCreateAutoVariable(BNFunction* func, const BNVariable* var, BNTypeWithConfidence* type,
 		const char* name, bool ignoreDisjointUses);
 	BINARYNINJACOREAPI void BNCreateUserVariable(BNFunction* func, const BNVariable* var, BNTypeWithConfidence* type,
@@ -4207,6 +4207,19 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetLowLevelILPossibleStackContentsAfterInstruction(BNLowLevelILFunction* func,
 		int64_t offset, size_t len, size_t instr, BNDataFlowQueryOption* options, size_t optionCount);
 
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelRegisters(BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelRegisterStacks(BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelFlags(BNLowLevelILFunction* func, size_t* count);
+
+	BINARYNINJACOREAPI size_t* BNGetLowLevelRegisterSSAVersions(BNLowLevelILFunction* func, const uint32_t var, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelRegisterStackSSAVersions(BNLowLevelILFunction* func, const uint32_t var, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetLowLevelFlagSSAVersions(BNLowLevelILFunction* func, const uint32_t var, size_t* count);
+
+	BINARYNINJACOREAPI size_t* BNGetLowLevelMemoryVersions(BNLowLevelILFunction* func, size_t* count);
+
+	BINARYNINJACOREAPI void BNFreeLLILVariablesList(uint32_t* vars);
+	BINARYNINJACOREAPI void BNFreeLLILVariableVersionList(size_t* versions);
+
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMediumLevelILForLowLevelIL(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetMappedMediumLevelIL(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI size_t BNGetMediumLevelILInstructionIndex(BNLowLevelILFunction* func, size_t instr);
@@ -4296,6 +4309,9 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI bool BNIsMediumLevelILSSAVarLive(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t version);
+
+	BINARYNINJACOREAPI BNVariable* BNGetMediumLevelILVariables(BNMediumLevelILFunction* func, size_t * count);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableSSAVersions(BNMediumLevelILFunction* func, const BNVariable* var, size_t * count);
 
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
 		const BNVariable* var, size_t* count);
@@ -4421,6 +4437,9 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI bool BNIsHighLevelILSSAVarLive(BNHighLevelILFunction* func,
 		const BNVariable* var, size_t version);
+
+	BINARYNINJACOREAPI BNVariable* BNGetHighLevelILVariables(BNHighLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetHighLevelILVariableSSAVersions(BNHighLevelILFunction* func, const BNVariable* var, size_t * count);
 
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILVariableDefinitions(BNHighLevelILFunction* func,
 		const BNVariable* var, size_t* count);

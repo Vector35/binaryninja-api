@@ -1107,23 +1107,6 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 }
 
 
-set<Variable> Function::GetILVariables(BNFunctionGraphType ilType)
-{
-	size_t count;
-	auto* vars = BNGetFunctionILVariables(m_object, ilType, &count);
-
-	set<Variable> result;
-	for (size_t i = 0; i < count; i++)
-	{
-		Variable v(vars[i]);
-		result.insert(v);
-	}
-
-	BNFreeVariableList(vars);
-	return result;
-}
-
-
 void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type,
 	const string& name, bool ignoreDisjointUses)
 {
@@ -2183,7 +2166,7 @@ vector<ILReferenceSource> Function::GetMediumLevelILVariableReferences(const Var
 	varData.type = var.type;
 	varData.index = var.index;
 	varData.storage = var.storage;
-	
+
 	BNILReferenceSource* refs = BNGetMediumLevelILVariableReferences(m_object, &varData, &count);
 
 	vector<ILReferenceSource> result;
@@ -2268,7 +2251,7 @@ vector<ILReferenceSource> Function::GetHighLevelILVariableReferences(const Varia
 	varData.type = var.type;
 	varData.index = var.index;
 	varData.storage = var.storage;
-	
+
 	BNILReferenceSource* refs = BNGetHighLevelILVariableReferences(m_object, &varData, &count);
 
 	vector<ILReferenceSource> result;

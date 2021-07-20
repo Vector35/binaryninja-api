@@ -24,8 +24,10 @@ import struct
 # Binary Ninja components
 import binaryninja
 from binaryninja import _binaryninjacore as core
-from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, InstructionTextTokenType
+from binaryninja.enums import LowLevelILOperation, LowLevelILFlagCondition, FunctionGraphType, VariableSourceType
 from binaryninja import basicblock #required for LowLevelILBasicBlock
+
+from typing import List, Union
 
 # 2-3 compatibility
 from binaryninja import range
@@ -40,6 +42,7 @@ class LowLevelILLabel(object):
 			self.handle = handle
 
 
+# TODO : It would be nice to add a `.versions` to IL vars (regs, stack regs, flags) to see all the SSA versions of the given variable.  Would need to associate the source function
 class ILRegister(object):
 	def __init__(self, arch, reg):
 		self._arch = arch
@@ -55,7 +58,7 @@ class ILRegister(object):
 		return self._arch.regs[self._name]
 
 	def __repr__(self):
-		return self._name
+		return f"<reg {self._name}>"
 
 	def __str__(self):
 		return self._name
@@ -123,7 +126,7 @@ class ILRegisterStack(object):
 		return self._arch.reg_stacks[self._name]
 
 	def __repr__(self):
-		return self._name
+		return f"<reg-stack {self._name}>"
 
 	def __str__(self):
 		return self._name
@@ -180,7 +183,7 @@ class ILFlag(object):
 			self._name = self._arch.get_flag_name(self._index)
 
 	def __repr__(self):
-		return self._name
+		return f"<flag {self._name}>"
 
 	def __str__(self):
 		return self._name
@@ -1495,6 +1498,137 @@ class LowLevelILFunction(object):
 	@source_function.setter
 	def source_function(self, value):
 		self._source_function = value
+
+	@property
+	def il_form(self) -> "binaryninja.enums.FunctionGraphType":
+		if len(self.basic_blocks) < 1:
+			return FunctionGraphType.InvalidILViewType
+		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(self.basic_blocks[0].handle))
+
+	@property
+	def registers(self) -> List[ILRegister]:
+		""" List of registers used in this IL """
+		count = ctypes.c_ulonglong()
+		registers = core.BNGetLowLevelRegisters(self.handle, count)
+
+		result = []
+		for var_i in range(count.value):
+			result.append(ILRegister(self.arch, registers[var_i]))
+		core.BNFreeLLILVariablesList(registers)
+		return result
+
+	@property
+	def register_stacks(self) -> List[ILRegisterStack]:
+		""" List of register stacks used in this IL """
+		count = ctypes.c_ulonglong()
+		registerStacks = core.BNGetLowLevelRegisterStacks(self.handle, count)
+
+		result = []
+		for var_i in range(count.value):
+			result.append(ILRegisterStack(self.arch, registerStacks[var_i]))
+		core.BNFreeLLILVariablesList(registerStacks)
+		return result
+
+	@property
+	def flags(self) -> List[ILFlag]:
+		""" List of flags used in this IL """
+		count = ctypes.c_ulonglong()
+		flags = core.BNGetLowLevelFlags(self.handle, count)
+
+		result = []
+		for var_i in range(count.value):
+			result.append(ILFlag(self.arch, flags[var_i]))
+		core.BNFreeLLILVariablesList(flags)
+		return result
+
+	@property
+	def ssa_registers(self) -> List[SSARegister]:
+		""" List of SSA registers used in this IL """
+		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			return []
+
+		register_count = ctypes.c_ulonglong()
+		registers = core.BNGetLowLevelRegisters(self.handle, register_count)
+		result = []
+		for var_i in range(register_count.value):
+			version_count = ctypes.c_ulonglong()
+			versions = core.BNGetLowLevelRegisterSSAVersions(self.handle, registers[var_i], version_count)
+
+			for version_i in range(version_count.value):
+				result.append(SSARegister(ILRegister(self.arch, registers[var_i]), versions[version_i]))
+			core.BNFreeLLILVariableVersionList(versions)
+
+		core.BNFreeLLILVariablesList(registers)
+		return result
+
+	@property
+	def ssa_register_stacks(self) -> List[SSARegisterStack]:
+		""" List of SSA register stacks used in this IL """
+		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			return []
+
+		register_stack_count = ctypes.c_ulonglong()
+		register_stacks = core.BNGetLowLevelRegisterStacks(self.handle, register_stack_count)
+		result = []
+		for var_i in range(register_stack_count.value):
+			version_count = ctypes.c_ulonglong()
+			versions = core.BNGetLowLevelRegisterStackSSAVersions(self.handle, register_stacks[var_i], version_count)
+
+			for version_i in range(version_count.value):
+				result.append(SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), versions[version_i]))
+			core.BNFreeLLILVariableVersionList(versions)
+
+		core.BNFreeLLILVariablesList(register_stacks)
+		return result
+
+	@property
+	def ssa_flags(self) -> List[SSAFlag]:
+		""" List of SSA flags used in this IL """
+		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			return []
+
+		flag_count = ctypes.c_ulonglong()
+		flags = core.BNGetLowLevelFlags(self.handle, flag_count)
+		result = []
+		for var_i in range(flag_count.value):
+			version_count = ctypes.c_ulonglong()
+			versions = core.BNGetLowLevelFlagSSAVersions(self.handle, flags[var_i], version_count)
+
+			for version_i in range(version_count.value):
+				result.append(SSAFlag(ILFlag(self.arch, flags[var_i]), versions[version_i]))
+			core.BNFreeLLILVariableVersionList(versions)
+
+		core.BNFreeLLILVariablesList(flags)
+		return result
+
+	@property
+	def memory_versions(self) -> List[int]:
+		""" List of memory versions used in this IL """
+		count = ctypes.c_ulonglong()
+		memory_versions = core.BNGetLowLevelMemoryVersions(self.handle, count)
+
+		result = []
+		for version_i in range(count.value):
+			result.append(memory_versions[version_i])
+		core.BNFreeLLILVariableVersionList(memory_versions)
+		return result
+
+	@property
+	def vars(self) -> List[Union[ILRegister, ILRegisterStack, ILFlag]]:
+		"""This is the union `LowLevelILFunction.registers`, `LowLevelILFunction.register_stacks`, and `LowLevelILFunction.flags`"""
+		if self._source_function is None:
+			return []
+
+		if self.il_form in [FunctionGraphType.LiftedILFunctionGraph, FunctionGraphType.LowLevelILFunctionGraph, FunctionGraphType.LowLevelILSSAFormFunctionGraph]:
+			return self.registers + self.register_stacks + self.flags
+		return []
+
+	@property
+	def ssa_vars(self) -> List["binaryninja.mediumlevelil.SSAVariable"]:
+		"""This is the union `LowLevelILFunction.ssa_registers`, `LowLevelILFunction.ssa_register_stacks`, and `LowLevelILFunction.ssa_flags`"""
+		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags
+		return []
 
 	def get_instruction_start(self, addr, arch = None):
 		if arch is None:

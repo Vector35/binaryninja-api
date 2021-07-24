@@ -16,6 +16,7 @@
 // RegisterInfo purge
 use binaryninjacore_sys::*;
 
+use std::any::Any;
 use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -28,6 +29,7 @@ use std::slice;
 
 use crate::binaryview::BinaryView;
 use crate::callingconvention::CallingConvention;
+use crate::function::Function;
 use crate::platform::Platform;
 use crate::{BranchType, Endianness};
 
@@ -90,14 +92,30 @@ impl<'a> Iterator for BranchIter<'a> {
 #[repr(C)]
 pub struct InstructionContext(BNInstructionContext);
 impl InstructionContext {
-    pub fn new(binary_view: Ref<BinaryView>) -> Self {
+    pub fn new(binary_view: Ref<BinaryView>, function: Ref<Function>, user_data: Option<Box<dyn Any>>) -> Self {
+        use std::os::raw::c_void;
+
         InstructionContext(BNInstructionContext {
-            binaryView: binary_view.handle
+            binaryView: binary_view.handle,
+            function: function.handle,
+            userData: user_data.map_or(ptr::null_mut(), |user_data| Box::into_raw(user_data) as *mut c_void),
         })
     }
 
     pub fn binary_view(&self) -> Ref<BinaryView> {
         unsafe { BinaryView::from_raw(self.0.binaryView) }
+    }
+
+    pub fn function(&self) -> Ref<Function> {
+        unsafe { Function::from_raw(self.0.function) }
+    }
+
+    pub fn user_data(&self) -> Option<Box<dyn Any>> {
+        if self.0.userData.is_null() {
+            None
+        } else {
+            Some(unsafe { Box::from_raw(self.0.userData) })
+        }
     }
 }
 

@@ -519,6 +519,10 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
+				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
+				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(max_len)
 			ctypes.memmove(buf, data, max_len)
 			# Support both with and without context param (for source backwards compatibility)
@@ -552,6 +556,10 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
+				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
+				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
 			# Support both with and without context param (for source backwards compatibility)
@@ -587,6 +595,10 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
+				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
+				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
 			# Support both with and without context param (for source backwards compatibility)
@@ -2375,6 +2387,12 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), info):
 			return None
 		result = binaryninja.function.InstructionInfo()
@@ -2416,6 +2434,12 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
 		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), tokens, count):
 			return None, 0
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
@@ -2444,6 +2468,12 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), il.handle)
 		return length.value
 

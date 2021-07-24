@@ -145,6 +145,30 @@ vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenLi
 }
 
 
+InstructionContext::InstructionContext()
+{
+	binaryView = nullptr;
+	function = nullptr;
+	userData = nullptr;
+}
+
+
+InstructionContext::InstructionContext(Function* function, void* userData)
+{
+	binaryView = function->GetView();
+	this->function = function;
+	this->userData = userData;
+}
+
+
+InstructionContext::InstructionContext(BinaryView* binaryView, Function* function, void* userData)
+{
+	this->binaryView = binaryView;
+	this->function = function;
+	this->userData = userData;
+}
+
+
 Architecture::Architecture(BNArchitecture* arch)
 {
 	m_object = arch;
@@ -220,6 +244,8 @@ bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, u
 
 	InstructionContext context;
 	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+	context.function = insnCtxt->function ? new Function(insnCtxt->function) : nullptr;
+	context.userData = insnCtxt->userData;
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, context, info);
@@ -235,6 +261,8 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 
 	InstructionContext context;
 	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+	context.function = insnCtxt->function ? new Function(insnCtxt->function) : nullptr;
+	context.userData = insnCtxt->userData;
 
 	vector<InstructionTextToken> tokens;
 	bool ok = arch->GetInstructionText(data, addr, *len, context, tokens);
@@ -271,6 +299,8 @@ bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* d
 
 	InstructionContext context;
 	context.binaryView = insnCtxt->binaryView ? new BinaryView(insnCtxt->binaryView) : nullptr;
+	context.function = insnCtxt->function ? new Function(insnCtxt->function) : nullptr;
+	context.userData = insnCtxt->userData;
 
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetInstructionLowLevelIL(data, addr, *len, context, *func);
@@ -1445,7 +1475,8 @@ bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, si
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = nullptr;
-
+	insnCtxt.function = nullptr;
+	insnCtxt.userData = nullptr;
 	return BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
 }
 
@@ -1454,6 +1485,8 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = nullptr;
+	insnCtxt.function = nullptr;
+	insnCtxt.userData = nullptr;
 
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
@@ -1469,6 +1502,8 @@ bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t ad
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = nullptr;
+	insnCtxt.function = nullptr;
+	insnCtxt.userData = nullptr;
 	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
 }
 
@@ -1477,6 +1512,8 @@ bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, si
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+	insnCtxt.function = context.function ? context.function->m_object : nullptr;
+	insnCtxt.userData = context.userData;
 
 	return BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
 }
@@ -1486,6 +1523,8 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+	insnCtxt.function = context.function ? context.function->m_object : nullptr;
+	insnCtxt.userData = context.userData;
 
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
@@ -1501,6 +1540,8 @@ bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t ad
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
+	insnCtxt.function = context.function ? context.function->m_object : nullptr;
+	insnCtxt.userData = context.userData;
 	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
 }
 

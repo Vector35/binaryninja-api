@@ -2284,7 +2284,13 @@ __attribute__ ((format (printf, 1, 2)))
 
 	struct InstructionContext
 	{
-		Ref<BinaryView> binaryView;
+		BinaryView* binaryView;
+		Function* function;
+		void* userData;
+
+		InstructionContext();
+		InstructionContext(Function* function, void* userData = nullptr);
+		InstructionContext(BinaryView* binaryView, Function* function = nullptr, void* userData = nullptr);
 	};
 
 	class LowLevelILFunction;

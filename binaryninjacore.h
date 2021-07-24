@@ -1485,6 +1485,8 @@ extern "C"
 	struct BNInstructionContext
 	{
 		BNBinaryView* binaryView;
+		BNFunction* function;
+		void* userData;
 	};
 
 	struct BNCustomArchitecture

@@ -4,14 +4,14 @@
 
 > :warning: **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
 
-> :warning: This project requires **Rust Nightly** to build with those fancy linker arguments - most recent tested version: `cargo 1.55.0-nightly (9233aa06c 2021-06-22)`
+> :warning: This project runs on Rust version `stable-2021-06-17`
 
 
 ## Dependencies
 
 Having BinaryNinja installed (and your license registered)
 Clang
-Rust **Nightly**
+Rust
 
 
 ## How to use

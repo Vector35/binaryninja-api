@@ -89,7 +89,7 @@ fn main() {
         }
     }
 
-    let mut bindings = bindgen::builder()
+    bindgen::builder()
         .header("../../binaryninjacore.h")
         .clang_arg("-std=c++17")
         .clang_arg("-x")
@@ -107,32 +107,7 @@ fn main() {
             "pub const BN_MINIMUM_UI_ABI_VERSION: u32 = {};",
             minimum_version
         ))
-        .rustified_enum("BN.*");
-
-    // Difference between global LLVM/Clang install and custom LLVM/Clang install...
-    //  First option is for the build server, second option is being nice to our dev who have `LLVM_INSTALL_DIR` set, default is for people with "normal" setups (and Macs)
-    #[cfg(not(target_os = "macos"))]
-    {
-        // Detect for custom Clang or LLVM installations (BN devs/build server)
-        let llvm_dir = env::var("LIBCLANG_PATH");
-        let llvm_version = env::var("LLVM_VERSION");
-        let llvm_install_dir = env::var("LLVM_INSTALL_DIR");
-        let build_server = env::var("BUILD_SERVER");
-
-        if let (Ok(llvm_dir), Ok(llvm_version), Ok(build_server)) = (llvm_dir, llvm_version, build_server) {
-            if build_server == "ON" {
-                let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
-                bindings = bindings.clang_arg(llvm_include_path);
-            }
-        } else if let Ok(llvm_install_dir) = llvm_install_dir {
-            let llvm_include_path =
-                format!("-I{}/12.0.0/lib/clang/12.0.0/include", llvm_install_dir);
-            env::set_var("LIBCLANG_PATH", format!("{}/12.0.0/lib", llvm_install_dir));
-            bindings = bindings.clang_arg(llvm_include_path);
-        }
-    }
-
-    bindings
+        .rustified_enum("BN.*")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))

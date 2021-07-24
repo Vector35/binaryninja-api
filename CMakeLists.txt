@@ -4,7 +4,7 @@ project(binaryninjaapi)
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
-set(CARGO_API_VERSION nightly-2021-06-27)
+set(CARGO_API_VERSION stable-2021-06-17)
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)

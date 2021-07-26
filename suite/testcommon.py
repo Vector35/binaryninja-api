@@ -970,7 +970,7 @@ class TestBuilder(Builder):
                         results.append("type undefined: {0}".format(name))
 
                     def type_ref_changed(self, view, name, type):
-                        results.append("type reference changed: {0}".format(name))            
+                        results.append("type reference changed: {0}".format(name))
 
                 test = NotifyTest()
                 bv.register_notification(test)
@@ -1308,17 +1308,27 @@ class VerifyBuilder(Builder):
         try:
             with binja.BinaryViewType.get_view_of_file(file_name) as bv:
                 main_func = bv.get_functions_by_name("main")[0]
-
-                mlil_vars = main_func.get_il_vars(FunctionGraphType.MediumLevelILFunctionGraph)
-                mlil_vars = list(map(lambda v: v.name, mlil_vars))
-                mlil_vars.sort()
-
-                hlil_vars = main_func.get_il_vars(FunctionGraphType.HighLevelILFunctionGraph)
-                hlil_vars = list(map(lambda v: v.name, hlil_vars))
-                hlil_vars.sort()
-
-                assert mlil_vars == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
-                assert hlil_vars == ['argc', 'argv', 'envp']
+                assert sorted(list(map(lambda v: str(v), main_func.vars))) == ['__saved_r11', 'arg_0', 'argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_4', 'var_c']
+                assert sorted(list(map(lambda v: str(v), main_func.lifted_il.vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.lifted_il.ssa_vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.llil.vars))) == ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
+                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.vars))) == ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
+                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_registers))) == ['<ssa <reg lr> version 0>', '<ssa <reg lr> version 1>', '<ssa <reg lr> version 2>', '<ssa <reg lr> version 3>', '<ssa <reg r0> version 0>', '<ssa <reg r0> version 1>', '<ssa <reg r0> version 2>', '<ssa <reg r0> version 3>', '<ssa <reg r0> version 4>', '<ssa <reg r0> version 5>', '<ssa <reg r0> version 6>', '<ssa <reg r11> version 0>', '<ssa <reg r11> version 1>', '<ssa <reg r11> version 2>', '<ssa <reg r12> version 1>', '<ssa <reg r12> version 2>', '<ssa <reg r12> version 3>', '<ssa <reg r1> version 0>', '<ssa <reg r1> version 1>', '<ssa <reg r1> version 2>', '<ssa <reg r1> version 3>', '<ssa <reg r2> version 0>', '<ssa <reg r2> version 1>', '<ssa <reg r2> version 2>', '<ssa <reg r2> version 3>', '<ssa <reg r3> version 1>', '<ssa <reg r3> version 2>', '<ssa <reg r3> version 3>', '<ssa <reg r3> version 4>', '<ssa <reg r3> version 5>', '<ssa <reg sp> version 0>', '<ssa <reg sp> version 1>', '<ssa <reg sp> version 2>', '<ssa <reg sp> version 3>', '<ssa <reg sp> version 4>', '<ssa <reg sp> version 5>', '<ssa <reg sp> version 6>', '<ssa <reg temp0> version 1>']
+                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_register_stacks))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_flags))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.vars))) == ['', '', '', '', '', '', '', '', '__saved_r11', 'argc', 'argv', 'envp', 'var_4']
+                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.vars))) == ['', '', '', '', '', '', '', '', '__saved_r11', 'argc', 'argv', 'envp', 'var_4']
+                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.ssa_vars))) == ['<ssa <var char** argv> version 0>', '<ssa <var char** argv> version 1>', '<ssa <var char** argv> version 2>', '<ssa <var char** argv> version 3>', '<ssa <var char** envp> version 0>', '<ssa <var char** envp> version 1>', '<ssa <var char** envp> version 2>', '<ssa <var char** envp> version 3>', '<ssa <var int32_t __saved_r11> version 1>', '<ssa <var int32_t argc> version 0>', '<ssa <var int32_t argc> version 1>', '<ssa <var int32_t argc> version 2>', '<ssa <var int32_t argc> version 3>', '<ssa <var int32_t argc> version 4>', '<ssa <var int32_t argc> version 5>', '<ssa <var int32_t argc> version 6>', '<ssa <var int32_t var_4> version 1>', '<ssa <var unknown-type > version 0>', '<ssa <var unknown-type > version 0>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 1>', '<ssa <var unknown-type > version 2>', '<ssa <var unknown-type > version 2>', '<ssa <var unknown-type > version 2>', '<ssa <var unknown-type > version 2>', '<ssa <var unknown-type > version 2>', '<ssa <var unknown-type > version 3>', '<ssa <var unknown-type > version 3>', '<ssa <var unknown-type > version 3>', '<ssa <var unknown-type > version 3>', '<ssa <var unknown-type > version 4>', '<ssa <var unknown-type > version 4>', '<ssa <var unknown-type > version 5>', '<ssa <var unknown-type > version 5>', '<ssa <var unknown-type > version 6>']
+                assert sorted(list(map(lambda v: str(v), main_func.mlil.vars))) == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
+                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.vars))) == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
+                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.ssa_vars))) == ['<ssa <var char** argv> version 0>', '<ssa <var char** envp> version 0>', '<ssa <var char** var_10> version 1>', '<ssa <var int32_t argc> version 0>', '<ssa <var int32_t r0> version 1>', '<ssa <var int32_t r3> version 1>', '<ssa <var int32_t var_c> version 1>']
+                assert sorted(list(map(lambda v: str(v), main_func.hlil.vars))) == ['argc', 'argv', 'envp']
+                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_vars))) == []
+                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.vars))) == ['argc', 'argv', 'envp']
+                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.ssa_vars))) == ['<ssa <var char** argv> version 0>', '<ssa <var char** envp> version 0>', '<ssa <var int32_t argc> version 0>']
                 return True
         finally:
             self.delete_package("helloworld")
@@ -1910,7 +1920,7 @@ class VerifyBuilder(Builder):
             self.delete_package("old_tags.bndb")
 
         return ret
-    
+
     def test_get_paths(self):
         """Get install directory and bundled plugin directory"""
         core_platform = platform.system()

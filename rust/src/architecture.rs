@@ -457,6 +457,19 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         ctxt: Option<InstructionContext>,
         il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)>;
+    fn block_llil<C: BlockContext>(
+        &self,
+        block: BasicBlock<C>,
+        ctxt: Option<InstructionContext>,
+        il: &mut Lifter<Self>,
+    ) -> Option<bool>;
+    fn function_llil<C: BlockContext>(
+        &self,
+        func: Ref<Function>,
+        block: Vec<BasicBlock<C>>,
+        ctxt: Option<InstructionContext>,
+        il: &mut Lifter<Self>,
+    ) -> Option<bool>;
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
@@ -972,6 +985,21 @@ impl Architecture for CoreArchitecture {
         None
     }
 
+    fn block_llil<C: BlockContext>(
+        &self,
+        _block: BasicBlock<C>,
+        _ctxt: Option<InstructionContext>,
+        _il: &mut Lifter<Self>,
+    ) -> Option<bool> { None }
+
+    fn function_llil<C: BlockContext>(
+        &self,
+        _func: Ref<Function>,
+        _block: Vec<BasicBlock<C>>,
+        _ctxt: Option<InstructionContext>,
+        _il: &mut Lifter<Self>,
+    ) -> Option<bool> { None }
+
     fn flag_write_llil<'a>(
         &self,
         _flag: Self::Flag,
@@ -1473,6 +1501,71 @@ where
         match custom_arch.instruction_llil(data, addr, insn_ctxt, &mut lifter) {
             Some((res_len, res_value)) => {
                 unsafe { *len = res_len };
+                res_value
+            }
+            None => false,
+        }
+    }
+
+    extern "C" fn cb_block_llil<A>(
+        ctxt: *mut c_void,
+        block: *mut BNBasicBlock,
+        insn_ctxt: *mut BNInstructionContext,
+        il: *mut BNLowLevelILFunction,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        use crate::function::NativeBlock;
+
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let custom_arch_handle = CustomArchitectureHandle {
+            handle: ctxt as *mut A,
+        };
+
+        let block = unsafe { BasicBlock::from_raw(block, NativeBlock::new()) };
+        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+
+        match custom_arch.block_llil(block, insn_ctxt, &mut lifter) {
+            Some(res_value) => {
+                res_value
+            }
+            None => false,
+        }
+    }
+
+    extern "C" fn cb_function_llil<A>(
+        ctxt: *mut c_void,
+        func: *mut BNFunction,
+        blocks: *mut *mut BNBasicBlock,
+        block_count: usize,
+        insn_ctxt: *mut BNInstructionContext,
+        il: *mut BNLowLevelILFunction,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        use crate::function::NativeBlock;
+
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let custom_arch_handle = CustomArchitectureHandle {
+            handle: ctxt as *mut A,
+        };
+
+        let func = unsafe { Function::from_raw(func) };
+
+        let blocks = unsafe { slice::from_raw_parts_mut(blocks, block_count) };
+        let blocks = blocks
+            .into_iter()
+            .map(|block: &mut *mut BNBasicBlock| unsafe { BasicBlock::from_raw(*block, NativeBlock::new()) })
+            .collect::<Vec<BasicBlock<_>>>();
+
+        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+
+        match custom_arch.function_llil(func, blocks, insn_ctxt, &mut lifter) {
+            Some(res_value) => {
                 res_value
             }
             None => false,
@@ -2118,6 +2211,8 @@ where
         getInstructionText: Some(cb_get_instruction_text::<A>),
         freeInstructionText: Some(cb_free_instruction_text),
         getInstructionLowLevelIL: Some(cb_instruction_llil::<A>),
+        getBlockLowLevelIL: Some(cb_block_llil::<A>),
+        getFunctionLowLevelIL: Some(cb_function_llil::<A>),
 
         getRegisterName: Some(cb_reg_name::<A>),
         getFlagName: Some(cb_flag_name::<A>),

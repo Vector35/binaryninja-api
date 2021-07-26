@@ -155,6 +155,10 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		self._cb.freeInstructionText = self._cb.freeInstructionText.__class__(self._free_instruction_text)
 		self._cb.getInstructionLowLevelIL = self._cb.getInstructionLowLevelIL.__class__(
 			self._get_instruction_low_level_il)
+		self._cb.getBlockLowLevelIL = self._cb.getBlockLowLevelIL.__class__(
+			self._get_block_low_level_il)
+		self._cb.getFunctionLowLevelIL = self._cb.getFunctionLowLevelIL.__class__(
+			self._get_function_low_level_il)
 		self._cb.getRegisterName = self._cb.getRegisterName.__class__(self._get_register_name)
 		self._cb.getFlagName = self._cb.getFlagName.__class__(self._get_flag_name)
 		self._cb.getFlagWriteTypeName = self._cb.getFlagWriteTypeName.__class__(self._get_flag_write_type_name)
@@ -620,6 +624,61 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if result is None:
 				return False
 			length[0] = result
+			return True
+		except OSError:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def _get_block_low_level_il(self, ctxt, block, insn_ctxt, il):
+		try:
+			context = binaryninja.function.InstructionContext()
+			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
+				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
+			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
+				context.function = binaryninja.function.Function(handle=core.BNNewFunctionReference(insn_ctxt.contents.function))
+			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
+				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
+			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
+				context.user_data = insn_ctxt.userData
+
+			py_block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(block))
+			result = self.get_block_low_level_il(py_block,
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)), context)
+
+			insn_ctxt.userData = context.user_data
+
+			if result is None:
+				return False
+			return True
+		except OSError:
+			log.log_error(traceback.format_exc())
+			return False
+
+	def _get_function_low_level_il(self, ctxt, func, blocks, block_count, insn_ctxt, il):
+		try:
+			context = binaryninja.function.InstructionContext()
+			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
+				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
+			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
+				context.function = binaryninja.function.Function(handle=core.BNNewFunctionReference(insn_ctxt.contents.function))
+			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
+				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
+			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
+				context.user_data = insn_ctxt.userData
+
+			py_func = binaryninja.function.Function(handle=core.BNNewFunctionReference(func))
+			py_blocks = []
+
+			for i in range(block_count):
+				py_blocks.append(binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(blocks[i])))
+
+			result = self.get_function_low_level_il(py_func, py_blocks,
+				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)), context)
+
+			insn_ctxt.userData = context.user_data
+
+			if result is None:
+				return False
 			return True
 		except OSError:
 			log.log_error(traceback.format_exc())
@@ -2504,6 +2563,77 @@ class CoreArchitecture(Architecture):
 		if context is not None:
 			context.user_data = insn_ctxt.userData
 		return length.value
+
+	def get_block_low_level_il(self, block, il, context=None):
+		"""
+		``get_block_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in the given block
+
+		This is used to analyze blocks of arbitrary data. You are most likely to consume this from within an overridden
+		`get_function_low_level_il` function in an Architecture subclass.
+
+		:param BasicBlock block: The basic block with instructions to analyze
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		result = core.BNGetArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
+		return result
+
+	def get_function_low_level_il(self, func, blocks, il, context=None):
+		"""
+		``get_function_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in an entire function.
+		A list of basic blocks in the function is be provided in the ``blocks`` parameter, for assistance with lifting.
+
+		This is used to analyze an entire function. Chances are you will only ever override this function when implementing
+		an Architecture that has special semantics with instructions within functions. Most architectures should be fine
+		just overriding `get_instruction_low_level_il` if possible.
+
+		:param Function func: The function to analyze
+		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		cblocks = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
+		for i in range(len(blocks)):
+			cblocks[i] = blocks[i].handle
+
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		result = core.BNGetArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, ctxt_handle, il.handle)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
+		return result
 
 	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 		"""

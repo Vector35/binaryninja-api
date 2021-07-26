@@ -1649,6 +1649,113 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		self.get_instruction_low_level_il(data, addr, func, context)
 		return func[0]
 
+	def get_block_low_level_il(self, block, il, context=None):
+		"""
+		``get_block_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in the given block
+
+		This is used to analyze one block of arbitrary data. You are most likely to consume this from within an overridden
+		`get_function_low_level_il` function in an Architecture subclass.
+
+		:param BasicBlock block: The basic block with instructions to analyze
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		if context is None:
+			context = binaryninja.function.InstructionContext(bv=block.view, function=block.function, block=block)
+		return self.get_default_block_low_level_il(block, il, context)
+
+	def get_function_low_level_il(self, func, blocks, il, context=None):
+		"""
+		``get_function_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in an entire function.
+		A list of basic blocks in the function is be provided in the ``blocks`` parameter, for assistance with lifting.
+
+		This is used to analyze an entire function. Chances are you will only ever override this function when implementing
+		an Architecture that has special semantics with instructions within functions. Most architectures should be fine
+		just overriding `get_instruction_low_level_il` if possible.
+
+		:param Function func: The function to analyze
+		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		if context is None:
+			context = binaryninja.function.InstructionContext(bv=func.view, function=func)
+		return self.get_default_function_low_level_il(func, blocks, il, context)
+
+	def get_default_block_low_level_il(self, block, il, context=None):
+		"""
+		``get_default_block_low_level_il`` is a default implementation of ``get_block_low_level_il``. Notably, it reads
+		all the instructions in the block in sequential order and populates relocations, noreturn calls, and indirect
+		branches.
+
+		This is used to analyze one block of arbitrary data. You are most likely to consume this from within an overridden
+		`get_function_low_level_il` function in an Architecture subclass.
+
+		:param BasicBlock block: The basic block with instructions to analyze
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		result = core.BNGetDefaultArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
+		return result
+
+	def get_default_function_low_level_il(self, func, blocks, il, context=None):
+		"""
+		``get_default_function_low_level_il`` is a default implementation of ``get_function_low_level_il``. Notably, it
+		calls get_block_low_level_il on all basic blocks in ``blocks``, marks labels at the beginning of all blocks, adds
+		goto statements for fallthrough blocks, and handles noreturn blocks.
+
+		:param Function func: The function to analyze
+		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
+		:param LowLevelILFunction il: An IL function for storing lifted instructions
+		:param InstructionContext context: structure with context information
+		:return: True if successful
+		:rtype: bool
+		"""
+		cblocks = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()
+		for i in range(len(blocks)):
+			cblocks[i] = blocks[i].handle
+
+		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt.binaryView = None
+		if context is not None and context.bv is not None:
+			insn_ctxt.binaryView = context.bv.handle
+		insn_ctxt.function = None
+		if context is not None and context.function is not None:
+			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
+		insn_ctxt.userData = None
+		if context is not None and context.user_data is not None:
+			insn_ctxt.userData = context.user_data
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		result = core.BNGetDefaultArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
+		return result
+
 	def get_reg_name(self, reg):
 		"""
 		``get_reg_name`` gets a register name from a register number.
@@ -2568,7 +2675,7 @@ class CoreArchitecture(Architecture):
 		"""
 		``get_block_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in the given block
 
-		This is used to analyze blocks of arbitrary data. You are most likely to consume this from within an overridden
+		This is used to analyze one block of arbitrary data. You are most likely to consume this from within an overridden
 		`get_function_low_level_il` function in an Architecture subclass.
 
 		:param BasicBlock block: The basic block with instructions to analyze
@@ -2630,7 +2737,7 @@ class CoreArchitecture(Architecture):
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
-		result = core.BNGetArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, ctxt_handle, il.handle)
+		result = core.BNGetArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData
 		return result

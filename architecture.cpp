@@ -1072,7 +1072,7 @@ bool Architecture::GetDefaultBlockLowLevelIL(BasicBlock* block, InstructionConte
 	insnCtxt.function = context.function ? context.function->m_object : nullptr;
 	insnCtxt.block = context.block ? context.block->m_object : nullptr;
 	insnCtxt.userData = context.userData;
-	bool success = BNGetArchitectureDefaultBlockLowLevelIL(m_object, block->m_object, &insnCtxt, il.GetObject());
+	bool success = BNGetDefaultArchitectureBlockLowLevelIL(m_object, block->m_object, &insnCtxt, il.GetObject());
 	context.userData = insnCtxt.userData;
 	return success;
 }
@@ -1092,7 +1092,7 @@ bool Architecture::GetDefaultFunctionLowLevelIL(Function* func, vector<BasicBloc
 		apiBlocks[i] = blocks[i]->m_object;
 	}
 
-	bool success = BNGetArchitectureDefaultFunctionLowLevelIL(m_object, func->m_object, apiBlocks, blocks.size(), &insnCtxt, il.GetObject());
+	bool success = BNGetDefaultArchitectureFunctionLowLevelIL(m_object, func->m_object, apiBlocks, blocks.size(), &insnCtxt, il.GetObject());
 	context.userData = insnCtxt.userData;
 
 	delete[] apiBlocks;

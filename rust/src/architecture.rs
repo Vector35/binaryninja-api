@@ -26,6 +26,7 @@ use std::ops;
 use std::ops::Drop;
 use std::ptr;
 use std::slice;
+use std::sync::Arc;
 
 use crate::basicblock::{BasicBlock, BlockContext};
 use crate::binaryview::BinaryView;
@@ -34,7 +35,10 @@ use crate::function::Function;
 use crate::platform::Platform;
 use crate::{BranchType, Endianness};
 
-use crate::llil::{get_default_flag_cond_llil, get_default_flag_write_llil};
+use crate::llil::{
+    get_default_block_llil, get_default_flag_cond_llil, get_default_flag_write_llil,
+    get_default_function_llil,
+};
 use crate::llil::{FlagWriteOp, LiftedExpr, Lifter};
 
 use crate::rc::*;
@@ -91,16 +95,23 @@ impl<'a> Iterator for BranchIter<'a> {
 }
 
 #[repr(C)]
-pub struct InstructionContext(BNInstructionContext);
+pub struct InstructionContext(pub(crate) BNInstructionContext);
 impl InstructionContext {
-    pub fn new<C: BlockContext>(binary_view: Option<Ref<BinaryView>>, function: Option<Ref<Function>>, block: Option<Ref<BasicBlock<C>>>, user_data: Option<Box<dyn Any>>) -> Self {
+    pub fn new<C: BlockContext>(
+        binary_view: Option<Ref<BinaryView>>,
+        function: Option<Ref<Function>>,
+        block: Option<Ref<BasicBlock<C>>>,
+        user_data: Option<Arc<Box<dyn Any>>>,
+    ) -> Self {
         use std::os::raw::c_void;
 
         InstructionContext(BNInstructionContext {
             binaryView: binary_view.map_or(ptr::null_mut(), |binary_view| binary_view.handle),
             function: function.map_or(ptr::null_mut(), |function| function.handle),
             block: block.map_or(ptr::null_mut(), |block| block.handle),
-            userData: user_data.map_or(ptr::null_mut(), |user_data| Box::into_raw(user_data) as *mut c_void),
+            userData: user_data.map_or(ptr::null_mut(), |user_data| {
+                Arc::into_raw(user_data) as *mut c_void
+            }),
         })
     }
 
@@ -116,11 +127,11 @@ impl InstructionContext {
         unsafe { BasicBlock::<C>::from_raw(self.0.block, context) }.to_owned()
     }
 
-    pub fn user_data(&self) -> Option<Box<dyn Any>> {
+    pub fn user_data(&self) -> Option<Arc<Box<dyn Any>>> {
         if self.0.userData.is_null() {
             None
         } else {
-            Some(unsafe { Box::from_raw(self.0.userData) })
+            Some(unsafe { Arc::from_raw(self.0.userData as *const _) })
         }
     }
 }
@@ -443,7 +454,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture;
 
-    fn instruction_info(&self, data: &[u8], addr: u64, ctxt: Option<InstructionContext>) -> Option<InstructionInfo>;
+    fn instruction_info(
+        &self,
+        data: &[u8],
+        addr: u64,
+        ctxt: Option<InstructionContext>,
+    ) -> Option<InstructionInfo>;
     fn instruction_text(
         &self,
         data: &[u8],
@@ -462,14 +478,18 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         block: BasicBlock<C>,
         ctxt: Option<InstructionContext>,
         il: &mut Lifter<Self>,
-    ) -> Option<bool>;
+    ) -> Option<bool> {
+        Some(get_default_block_llil(self, block, ctxt, il))
+    }
     fn function_llil<C: BlockContext>(
         &self,
         func: Ref<Function>,
         block: Vec<BasicBlock<C>>,
         ctxt: Option<InstructionContext>,
         il: &mut Lifter<Self>,
-    ) -> Option<bool>;
+    ) -> Option<bool> {
+        Some(get_default_function_llil(self, func, block, ctxt, il))
+    }
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
@@ -928,7 +948,12 @@ impl Architecture for CoreArchitecture {
         CoreArchitecture(arch)
     }
 
-    fn instruction_info(&self, data: &[u8], addr: u64, ctxt: Option<InstructionContext>) -> Option<InstructionInfo> {
+    fn instruction_info(
+        &self,
+        data: &[u8],
+        addr: u64,
+        ctxt: Option<InstructionContext>,
+    ) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
         let success = unsafe {
             BNGetInstructionInfo(
@@ -990,7 +1015,9 @@ impl Architecture for CoreArchitecture {
         _block: BasicBlock<C>,
         _ctxt: Option<InstructionContext>,
         _il: &mut Lifter<Self>,
-    ) -> Option<bool> { None }
+    ) -> Option<bool> {
+        None
+    }
 
     fn function_llil<C: BlockContext>(
         &self,
@@ -998,7 +1025,9 @@ impl Architecture for CoreArchitecture {
         _block: Vec<BasicBlock<C>>,
         _ctxt: Option<InstructionContext>,
         _il: &mut Lifter<Self>,
-    ) -> Option<bool> { None }
+    ) -> Option<bool> {
+        None
+    }
 
     fn flag_write_llil<'a>(
         &self,
@@ -1425,7 +1454,11 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
-        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let insn_ctxt = if insn_ctxt.is_null() {
+            None
+        } else {
+            unsafe { Some(InstructionContext(*insn_ctxt)) }
+        };
         let result = unsafe { &mut *(result as *mut InstructionInfo) };
 
         match custom_arch.instruction_info(data, addr, insn_ctxt) {
@@ -1451,7 +1484,11 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let insn_ctxt = if insn_ctxt.is_null() {
+            None
+        } else {
+            unsafe { Some(InstructionContext(*insn_ctxt)) }
+        };
         let result = unsafe { &mut *result };
 
         match custom_arch.instruction_text(data, addr, insn_ctxt) {
@@ -1495,7 +1532,11 @@ where
         };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let insn_ctxt = if insn_ctxt.is_null() {
+            None
+        } else {
+            unsafe { Some(InstructionContext(*insn_ctxt)) }
+        };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
         match custom_arch.instruction_llil(data, addr, insn_ctxt, &mut lifter) {
@@ -1524,13 +1565,15 @@ where
         };
 
         let block = unsafe { BasicBlock::from_raw(block, NativeBlock::new()) };
-        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let insn_ctxt = if insn_ctxt.is_null() {
+            None
+        } else {
+            unsafe { Some(InstructionContext(*insn_ctxt)) }
+        };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
         match custom_arch.block_llil(block, insn_ctxt, &mut lifter) {
-            Some(res_value) => {
-                res_value
-            }
+            Some(res_value) => res_value,
             None => false,
         }
     }
@@ -1558,16 +1601,20 @@ where
         let blocks = unsafe { slice::from_raw_parts_mut(blocks, block_count) };
         let blocks = blocks
             .into_iter()
-            .map(|block: &mut *mut BNBasicBlock| unsafe { BasicBlock::from_raw(*block, NativeBlock::new()) })
+            .map(|block: &mut *mut BNBasicBlock| unsafe {
+                BasicBlock::from_raw(*block, NativeBlock::new())
+            })
             .collect::<Vec<BasicBlock<_>>>();
 
-        let insn_ctxt = if insn_ctxt.is_null() { None } else { unsafe { Some(InstructionContext(*insn_ctxt)) } };
+        let insn_ctxt = if insn_ctxt.is_null() {
+            None
+        } else {
+            unsafe { Some(InstructionContext(*insn_ctxt)) }
+        };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
         match custom_arch.function_llil(func, blocks, insn_ctxt, &mut lifter) {
-            Some(res_value) => {
-                res_value
-            }
+            Some(res_value) => res_value,
             None => false,
         }
     }

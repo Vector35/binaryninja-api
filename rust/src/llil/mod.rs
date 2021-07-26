@@ -34,8 +34,10 @@ pub mod operation;
 pub use self::expression::*;
 pub use self::function::*;
 pub use self::instruction::*;
+pub use self::lifting::get_default_block_llil;
 pub use self::lifting::get_default_flag_cond_llil;
 pub use self::lifting::get_default_flag_write_llil;
+pub use self::lifting::get_default_function_llil;
 pub use self::lifting::{
     ExpressionBuilder, FlagWriteOp, Label, Liftable, LiftableWithSize, RegisterOrConstant,
 };

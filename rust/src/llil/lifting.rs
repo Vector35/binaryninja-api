@@ -13,11 +13,13 @@
 // limitations under the License.
 
 use std::marker::PhantomData;
-use std::mem;
+use std::{mem, ptr};
 
-use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
+use crate::architecture::{Architecture, InstructionContext};
 use crate::architecture::{Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite};
+use crate::basicblock::{BasicBlock, BlockContext};
+use crate::rc::Ref;
 
 use super::*;
 
@@ -413,6 +415,58 @@ where
             expr_idx: expr_idx,
             _ty: PhantomData,
         }
+    }
+}
+
+pub fn get_default_block_llil<A, C: BlockContext>(
+    arch: &A,
+    block: BasicBlock<C>,
+    mut ctxt: Option<InstructionContext>,
+    il: &mut Lifter<A>,
+) -> bool
+where
+    A: Architecture,
+{
+    use binaryninjacore_sys::BNGetDefaultArchitectureBlockLowLevelIL;
+
+    let handle = arch.as_ref();
+    let ctxt_ptr = ctxt
+        .as_mut()
+        .map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
+
+    unsafe { BNGetDefaultArchitectureBlockLowLevelIL(handle.0, block.handle, ctxt_ptr, il.handle) }
+}
+
+pub fn get_default_function_llil<A, C: BlockContext>(
+    arch: &A,
+    func: Ref<crate::function::Function>,
+    blocks: Vec<BasicBlock<C>>,
+    mut ctxt: Option<InstructionContext>,
+    il: &mut Lifter<A>,
+) -> bool
+where
+    A: Architecture,
+{
+    use binaryninjacore_sys::BNGetDefaultArchitectureFunctionLowLevelIL;
+
+    let handle = arch.as_ref();
+    let mut blocks = blocks
+        .into_iter()
+        .map(|block| block.handle)
+        .collect::<Vec<_>>();
+    let ctxt_ptr = ctxt
+        .as_mut()
+        .map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
+
+    unsafe {
+        BNGetDefaultArchitectureFunctionLowLevelIL(
+            handle.0,
+            func.handle,
+            blocks.as_mut_ptr(),
+            blocks.len(),
+            ctxt_ptr,
+            il.handle,
+        )
     }
 }
 

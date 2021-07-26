@@ -4117,6 +4117,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNLowLevelILGetCurrentAddress(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI void BNLowLevelILSetCurrentAddress(BNLowLevelILFunction* func,
 		BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI BNBasicBlock* BNLowLevelILGetCurrentSourceBlock(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI void BNLowLevelILSetCurrentSourceBlock(BNLowLevelILFunction* func, BNBasicBlock* source);
 	BINARYNINJACOREAPI size_t BNLowLevelILGetInstructionStart(BNLowLevelILFunction* func,
 		BNArchitecture* arch, uint64_t addr);

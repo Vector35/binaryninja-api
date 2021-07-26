@@ -3781,6 +3781,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetCurrentAddress(Architecture* arch, uint64_t addr);
 		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
 
+		Ref<BasicBlock> GetCurrentSourceBlock() const;
+		void SetCurrentSourceBlock(BasicBlock* block);
+
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
 

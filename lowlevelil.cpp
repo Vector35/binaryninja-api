@@ -97,6 +97,21 @@ size_t LowLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t addr
 }
 
 
+Ref<BasicBlock> LowLevelILFunction::GetCurrentSourceBlock() const
+{
+	BNBasicBlock* block = BNLowLevelILGetCurrentSourceBlock(m_object);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(BNNewBasicBlockReference(block));
+}
+
+
+void LowLevelILFunction::SetCurrentSourceBlock(BasicBlock* block)
+{
+	BNLowLevelILSetCurrentSourceBlock(m_object, block->m_object);
+}
+
+
 void LowLevelILFunction::ClearIndirectBranches()
 {
 	BNLowLevelILClearIndirectBranches(m_object);

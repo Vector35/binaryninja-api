@@ -1405,6 +1405,16 @@ class LowLevelILFunction(object):
 			arch = self._arch
 		core.BNLowLevelILSetCurrentAddress(self.handle, arch.handle, value)
 
+	@property
+	def current_source_block(self):
+		"""Current IL Basic Block (read/write)"""
+		block_handle = core.BNLowLevelILGetCurrentSourceBlock(self.handle)
+		return binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(block_handle))
+
+	@current_source_block.setter
+	def current_source_block(self, value):
+		core.BNLowLevelILSetCurrentSourceBlock(self.handle, value.handle)
+
 	def set_current_source_block(self, block):
 		core.BNLowLevelILSetCurrentSourceBlock(self.handle, block.handle)
 

@@ -588,7 +588,6 @@ extern "C"
 		ExpandLongOpcode = 2,
 		ShowVariablesAtTopOfGraph = 3,
 		ShowVariableTypesWhenAssigned = 4,
-		ShowDefaultRegisterTypes = 5,
 		ShowCallParameterNames = 6,
 		ShowRegisterHighlight = 7,
 		ShowFunctionAddress = 8,

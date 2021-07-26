@@ -214,7 +214,6 @@ Current options include:
     - Show opcode bytes
     - Show register set highlighting
     - Show variable types
-        - List default register types
         - At assignment (MLIL only)
         - At top of function
     - Assembly

@@ -458,25 +458,25 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
     ) -> Option<InstructionInfo>;
     fn instruction_text(
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
     ) -> Option<(usize, Self::InstructionTextContainer)>;
     fn instruction_llil(
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
         il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)>;
     fn block_llil<C: BlockContext>(
         &self,
         block: BasicBlock<C>,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         Some(get_default_block_llil(self, block, ctxt, il))
@@ -485,7 +485,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         func: Ref<Function>,
         block: Vec<BasicBlock<C>>,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         Some(get_default_function_llil(self, func, block, ctxt, il))
@@ -952,7 +952,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
     ) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
         let success = unsafe {
@@ -961,7 +961,7 @@ impl Architecture for CoreArchitecture {
                 data.as_ptr(),
                 addr,
                 data.len(),
-                ctxt.map_or(ptr::null_mut(), |mut ctxt| &mut ctxt.0 as *mut _),
+                ctxt.map_or(ptr::null_mut(), |ctxt| &mut ctxt.0 as *mut _),
                 &mut (info.0) as *mut _,
             )
         };
@@ -977,7 +977,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<InstructionContext>,
+        ctxt: Option<&mut InstructionContext>,
     ) -> Option<(usize, InstructionTextTokenList)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
@@ -989,7 +989,7 @@ impl Architecture for CoreArchitecture {
                 data.as_ptr(),
                 addr,
                 &mut consumed as *mut _,
-                ctxt.map_or(ptr::null_mut(), |mut ctxt| &mut ctxt.0 as *mut _),
+                ctxt.map_or(ptr::null_mut(), |ctxt| &mut ctxt.0 as *mut _),
                 &mut result as *mut _,
                 &mut count as *mut _,
             ) {
@@ -1004,7 +1004,7 @@ impl Architecture for CoreArchitecture {
         &self,
         _data: &[u8],
         _addr: u64,
-        _ctxt: Option<InstructionContext>,
+        _ctxt: Option<&mut InstructionContext>,
         _il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)> {
         None
@@ -1012,21 +1012,41 @@ impl Architecture for CoreArchitecture {
 
     fn block_llil<C: BlockContext>(
         &self,
-        _block: BasicBlock<C>,
-        _ctxt: Option<InstructionContext>,
-        _il: &mut Lifter<Self>,
+        block: BasicBlock<C>,
+        ctxt: Option<&mut InstructionContext>,
+        il: &mut Lifter<Self>,
     ) -> Option<bool> {
-        None
+        Some(unsafe {
+            BNGetArchitectureBlockLowLevelIL(
+                self.0,
+                block.handle,
+                ctxt.map_or(ptr::null_mut(), |ctxt| &mut ctxt.0 as *mut _),
+                il.handle,
+            )
+        })
     }
 
     fn function_llil<C: BlockContext>(
         &self,
-        _func: Ref<Function>,
-        _block: Vec<BasicBlock<C>>,
-        _ctxt: Option<InstructionContext>,
-        _il: &mut Lifter<Self>,
+        func: Ref<Function>,
+        blocks: Vec<BasicBlock<C>>,
+        ctxt: Option<&mut InstructionContext>,
+        il: &mut Lifter<Self>,
     ) -> Option<bool> {
-        None
+        let mut blocks = blocks
+            .into_iter()
+            .map(|block| block.handle)
+            .collect::<Vec<_>>();
+        Some(unsafe {
+            BNGetArchitectureFunctionLowLevelIL(
+                self.0,
+                func.handle,
+                blocks.as_mut_ptr(),
+                blocks.len(),
+                ctxt.map_or(ptr::null_mut(), |ctxt| &mut ctxt.0 as *mut _),
+                il.handle,
+            )
+        })
     }
 
     fn flag_write_llil<'a>(
@@ -1454,14 +1474,14 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
-        let insn_ctxt = if insn_ctxt.is_null() {
+        let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
             unsafe { Some(InstructionContext(*insn_ctxt)) }
         };
         let result = unsafe { &mut *(result as *mut InstructionInfo) };
 
-        match custom_arch.instruction_info(data, addr, insn_ctxt) {
+        match custom_arch.instruction_info(data, addr, insn_ctxt.as_mut()) {
             Some(info) => {
                 result.0 = info.0;
                 true
@@ -1484,14 +1504,14 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let insn_ctxt = if insn_ctxt.is_null() {
+        let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
             unsafe { Some(InstructionContext(*insn_ctxt)) }
         };
         let result = unsafe { &mut *result };
 
-        match custom_arch.instruction_text(data, addr, insn_ctxt) {
+        match custom_arch.instruction_text(data, addr, insn_ctxt.as_mut()) {
             Some((res_size, res_tokens)) => {
                 unsafe {
                     let mut res_tokens = res_tokens.into();
@@ -1532,14 +1552,14 @@ where
         };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let insn_ctxt = if insn_ctxt.is_null() {
+        let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
             unsafe { Some(InstructionContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        match custom_arch.instruction_llil(data, addr, insn_ctxt, &mut lifter) {
+        match custom_arch.instruction_llil(data, addr, insn_ctxt.as_mut(), &mut lifter) {
             Some((res_len, res_value)) => {
                 unsafe { *len = res_len };
                 res_value
@@ -1565,14 +1585,14 @@ where
         };
 
         let block = unsafe { BasicBlock::from_raw(block, NativeBlock::new()) };
-        let insn_ctxt = if insn_ctxt.is_null() {
+        let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
             unsafe { Some(InstructionContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        match custom_arch.block_llil(block, insn_ctxt, &mut lifter) {
+        match custom_arch.block_llil(block, insn_ctxt.as_mut(), &mut lifter) {
             Some(res_value) => res_value,
             None => false,
         }
@@ -1606,14 +1626,14 @@ where
             })
             .collect::<Vec<BasicBlock<_>>>();
 
-        let insn_ctxt = if insn_ctxt.is_null() {
+        let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
             unsafe { Some(InstructionContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        match custom_arch.function_llil(func, blocks, insn_ctxt, &mut lifter) {
+        match custom_arch.function_llil(func, blocks, insn_ctxt.as_mut(), &mut lifter) {
             Some(res_value) => res_value,
             None => false,
         }

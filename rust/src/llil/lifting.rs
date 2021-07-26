@@ -421,7 +421,7 @@ where
 pub fn get_default_block_llil<A, C: BlockContext>(
     arch: &A,
     block: BasicBlock<C>,
-    mut ctxt: Option<InstructionContext>,
+    ctxt: Option<&mut InstructionContext>,
     il: &mut Lifter<A>,
 ) -> bool
 where
@@ -430,9 +430,7 @@ where
     use binaryninjacore_sys::BNGetDefaultArchitectureBlockLowLevelIL;
 
     let handle = arch.as_ref();
-    let ctxt_ptr = ctxt
-        .as_mut()
-        .map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
+    let ctxt_ptr = ctxt.map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
 
     unsafe { BNGetDefaultArchitectureBlockLowLevelIL(handle.0, block.handle, ctxt_ptr, il.handle) }
 }
@@ -441,7 +439,7 @@ pub fn get_default_function_llil<A, C: BlockContext>(
     arch: &A,
     func: Ref<crate::function::Function>,
     blocks: Vec<BasicBlock<C>>,
-    mut ctxt: Option<InstructionContext>,
+    ctxt: Option<&mut InstructionContext>,
     il: &mut Lifter<A>,
 ) -> bool
 where
@@ -454,9 +452,7 @@ where
         .into_iter()
         .map(|block| block.handle)
         .collect::<Vec<_>>();
-    let ctxt_ptr = ctxt
-        .as_mut()
-        .map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
+    let ctxt_ptr = ctxt.map_or(ptr::null_mut(), |c| &mut c.0 as *mut _);
 
     unsafe {
         BNGetDefaultArchitectureFunctionLowLevelIL(

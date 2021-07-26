@@ -18,13 +18,13 @@ fn main() {
             // TODO : This is intended to be refactored to be more nice to work with soon(TM)
             for addr in basic_block.as_ref() {
                 print!("    {}  ", addr);
-                let ctxt = InstructionContext::new(Some(bv.clone()), Some(func.to_owned()), Some(basic_block.to_owned()), None);
+                let mut ctxt = InstructionContext::new(Some(bv.clone()), Some(func.to_owned()), Some(basic_block.to_owned()), None);
                 match func.arch().instruction_text(
                     bv.read_buffer(addr, func.arch().max_instr_len())
                         .unwrap()
                         .get_data(),
                     addr,
-                    Some(ctxt),
+                    Some(&mut ctxt),
                 ) {
                     Some((_, tokens)) => {
                         tokens

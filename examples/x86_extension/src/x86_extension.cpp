@@ -19,7 +19,7 @@ public:
 	{
 	}
 
-	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il) override
+	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il) override
 	{
 		Instruction instr;
 		if (asmx86::Disassemble32(data, addr, len, &instr))

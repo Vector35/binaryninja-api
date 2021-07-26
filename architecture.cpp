@@ -262,6 +262,7 @@ bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, u
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, context, info);
+	insnCtxt->userData = context.userData;
 	if (context.binaryView)
 		delete context.binaryView;
 	if (context.function)
@@ -287,6 +288,7 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 
 	vector<InstructionTextToken> tokens;
 	bool ok = arch->GetInstructionText(data, addr, *len, context, tokens);
+	insnCtxt->userData = context.userData;
 	if (context.binaryView)
 		delete context.binaryView;
 	if (context.function)
@@ -333,6 +335,7 @@ bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* d
 
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	bool success = arch->GetInstructionLowLevelIL(data, addr, *len, context, *func);
+	insnCtxt->userData = context.userData;
 	if (context.binaryView)
 		delete context.binaryView;
 	if (context.function)
@@ -950,7 +953,7 @@ bool Architecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t
 }
 
 
-bool Architecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+bool Architecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result)
 {
 	return GetInstructionInfo(data, addr, maxLen, result);
 }
@@ -962,7 +965,7 @@ bool Architecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t
 }
 
 
-bool Architecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, std::vector<InstructionTextToken>& result)
+bool Architecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, std::vector<InstructionTextToken>& result)
 {
 	return GetInstructionText(data, addr, len, result);
 }
@@ -975,7 +978,7 @@ bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, L
 }
 
 
-bool Architecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+bool Architecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il)
 {
 	return GetInstructionLowLevelIL(data, addr, len, il);
 }
@@ -1544,7 +1547,7 @@ bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t ad
 }
 
 
-bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result)
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
@@ -1552,11 +1555,13 @@ bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, si
 	insnCtxt.block = context.block ? context.block->m_object : nullptr;
 	insnCtxt.userData = context.userData;
 
-	return BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
+	bool success = BNGetInstructionInfo(m_object, data, addr, maxLen, &insnCtxt, &result);
+	context.userData = insnCtxt.userData;
+	return success;
 }
 
 
-bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, std::vector<InstructionTextToken>& result)
+bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, std::vector<InstructionTextToken>& result)
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
@@ -1566,22 +1571,25 @@ bool CoreArchitecture::GetInstructionText(const uint8_t* data, uint64_t addr, si
 
 	BNInstructionTextToken* tokens = nullptr;
 	size_t count = 0;
-	if (!BNGetInstructionText(m_object, data, addr, &len, &insnCtxt, &tokens, &count))
-		return false;
+	bool success = BNGetInstructionText(m_object, data, addr, &len, &insnCtxt, &tokens, &count);
+	context.userData = insnCtxt.userData;
 
+	if (success)
 	result = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
-	return true;
+	return success;
 }
 
 
-bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il)
 {
 	BNInstructionContext insnCtxt;
 	insnCtxt.binaryView = context.binaryView ? context.binaryView->m_object : nullptr;
 	insnCtxt.function = context.function ? context.function->m_object : nullptr;
 	insnCtxt.block = context.block ? context.block->m_object : nullptr;
 	insnCtxt.userData = context.userData;
-	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
+	bool success = BNGetInstructionLowLevelIL(m_object, data, addr, &len, &insnCtxt, il.GetObject());
+	context.userData = insnCtxt.userData;
+	return success;
 }
 
 
@@ -2088,20 +2096,20 @@ bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64
 }
 
 
-bool ArchitectureExtension::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result)
+bool ArchitectureExtension::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result)
 {
 	return m_base->GetInstructionInfo(data, addr, maxLen, context, result);
 }
 
 
-bool ArchitectureExtension::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+bool ArchitectureExtension::GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context,
 	vector<InstructionTextToken>& result)
 {
 	return m_base->GetInstructionText(data, addr, len, context, result);
 }
 
 
-bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il)
+bool ArchitectureExtension::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il)
 {
 	return m_base->GetInstructionLowLevelIL(data, addr, len, context, il);
 }

@@ -2415,8 +2415,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result);
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,InstructionContext context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result);
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,InstructionContext& context,
 		                                std::vector<InstructionTextToken>& result);
 
 		/*! GetInstructionLowLevelIL
@@ -2427,7 +2427,7 @@ __attribute__ ((format (printf, 1, 2)))
 			\param context structure containing context of instruction eg BinaryView
 			\param il the LowLevelILFunction which
 		*/
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il);
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il);
 
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
@@ -2588,10 +2588,10 @@ __attribute__ ((format (printf, 1, 2)))
 			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context,
 		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -2671,10 +2671,10 @@ __attribute__ ((format (printf, 1, 2)))
 			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext context, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context,
 		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext context, LowLevelILFunction& il) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;

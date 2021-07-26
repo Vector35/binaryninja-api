@@ -614,6 +614,9 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			except TypeError:
 				result = self.get_instruction_low_level_il(buf.raw, addr,
 					lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
+
+			insn_ctxt.userData = context.user_data
+
 			if result is None:
 				return False
 			length[0] = result
@@ -2402,8 +2405,11 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), info):
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctxt_handle, info):
 			return None
+		if context is not None:
+			context.user_data = insn_ctxt.userData
 		result = binaryninja.function.InstructionInfo()
 		result.length = info.length
 		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
@@ -2452,9 +2458,12 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), tokens, count):
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctxt_handle, tokens, count):
 			return None, 0
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
 		core.BNFreeInstructionText(tokens, count.value)
 		return result, length.value
 
@@ -2490,7 +2499,10 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext)), il.handle)
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctxt_handle, il.handle)
+		if context is not None:
+			context.user_data = insn_ctxt.userData
 		return length.value
 
 	def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):

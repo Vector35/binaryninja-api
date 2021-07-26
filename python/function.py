@@ -4198,9 +4198,10 @@ class InstructionBranch(object):
 
 
 class InstructionContext(object):
-	def __init__(self, bv=None, function=None, user_data=None):
+	def __init__(self, bv=None, function=None, block=None, user_data=None):
 		self._bv = bv
 		self._function = function
+		self._block = block
 		self._user_data = user_data
 
 	@property
@@ -4218,6 +4219,14 @@ class InstructionContext(object):
 	@function.setter
 	def function(self, value):
 		self._function = value
+
+	@property
+	def block(self):
+		return self._block
+
+	@block.setter
+	def block(self, value):
+		self._block = value
 
 	@property
 	def user_data(self):

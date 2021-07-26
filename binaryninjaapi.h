@@ -2286,11 +2286,13 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BinaryView* binaryView;
 		Function* function;
+		BasicBlock* block;
 		void* userData;
 
 		InstructionContext();
+		InstructionContext(BasicBlock* block, void* userData = nullptr);
 		InstructionContext(Function* function, void* userData = nullptr);
-		InstructionContext(BinaryView* binaryView, Function* function = nullptr, void* userData = nullptr);
+		InstructionContext(BinaryView* binaryView, void* userData = nullptr);
 	};
 
 	class LowLevelILFunction;

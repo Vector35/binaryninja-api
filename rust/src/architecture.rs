@@ -27,6 +27,7 @@ use std::ops::Drop;
 use std::ptr;
 use std::slice;
 
+use crate::basicblock::{BasicBlock, BlockContext};
 use crate::binaryview::BinaryView;
 use crate::callingconvention::CallingConvention;
 use crate::function::Function;
@@ -92,12 +93,13 @@ impl<'a> Iterator for BranchIter<'a> {
 #[repr(C)]
 pub struct InstructionContext(BNInstructionContext);
 impl InstructionContext {
-    pub fn new(binary_view: Ref<BinaryView>, function: Ref<Function>, user_data: Option<Box<dyn Any>>) -> Self {
+    pub fn new<C: BlockContext>(binary_view: Option<Ref<BinaryView>>, function: Option<Ref<Function>>, block: Option<Ref<BasicBlock<C>>>, user_data: Option<Box<dyn Any>>) -> Self {
         use std::os::raw::c_void;
 
         InstructionContext(BNInstructionContext {
-            binaryView: binary_view.handle,
-            function: function.handle,
+            binaryView: binary_view.map_or(ptr::null_mut(), |binary_view| binary_view.handle),
+            function: function.map_or(ptr::null_mut(), |function| function.handle),
+            block: block.map_or(ptr::null_mut(), |block| block.handle),
             userData: user_data.map_or(ptr::null_mut(), |user_data| Box::into_raw(user_data) as *mut c_void),
         })
     }
@@ -108,6 +110,10 @@ impl InstructionContext {
 
     pub fn function(&self) -> Ref<Function> {
         unsafe { Function::from_raw(self.0.function) }
+    }
+
+    pub fn block<C: BlockContext>(&self, context: C) -> Ref<BasicBlock<C>> {
+        unsafe { BasicBlock::<C>::from_raw(self.0.block, context) }.to_owned()
     }
 
     pub fn user_data(&self) -> Option<Box<dyn Any>> {

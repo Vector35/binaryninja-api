@@ -518,9 +518,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		try:
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
-				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
-				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+				context.function = binaryninja.function.Function(handle=core.BNNewFunctionReference(insn_ctxt.contents.function))
+			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
+				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
 				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(max_len)
@@ -555,9 +557,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		try:
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
-				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
-				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+				context.function = binaryninja.function.Function(handle=core.BNNewFunctionReference(insn_ctxt.contents.function))
+			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
+				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
 				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(length[0])
@@ -594,9 +598,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		try:
 			context = binaryninja.function.InstructionContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
-				context.bv = binaryninja.binaryview.BinaryView(handle=insn_ctxt.contents.binaryView)
+				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
-				context.function = binaryninja.function.Function(handle=insn_ctxt.contents.function)
+				context.function = binaryninja.function.Function(handle=core.BNNewFunctionReference(insn_ctxt.contents.function))
+			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
+				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
 				context.user_data = insn_ctxt.userData
 			buf = ctypes.create_string_buffer(length[0])
@@ -2390,6 +2396,9 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.function = None
 		if context is not None and context.function is not None:
 			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
@@ -2437,6 +2446,9 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.function = None
 		if context is not None and context.function is not None:
 			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
@@ -2457,6 +2469,7 @@ class CoreArchitecture(Architecture):
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
+		:param InstructionContext context: structure with context information
 		:return: the length of the current instruction
 		:rtype: int
 		"""
@@ -2471,6 +2484,9 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.function = None
 		if context is not None and context.function is not None:
 			insn_ctxt.function = context.function.handle
+		insn_ctxt.block = None
+		if context is not None and context.block is not None:
+			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data

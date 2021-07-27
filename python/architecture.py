@@ -528,7 +528,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
 				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
-				context.user_data = insn_ctxt.userData
+				context.user_data = ctypes.cast(insn_ctxt.contents.userData, ctypes.POINTER(ctypes.py_object)).contents.value
 			buf = ctypes.create_string_buffer(max_len)
 			ctypes.memmove(buf, data, max_len)
 			# Support both with and without context param (for source backwards compatibility)
@@ -567,7 +567,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
 				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
-				context.user_data = insn_ctxt.userData
+				context.user_data = ctypes.cast(insn_ctxt.contents.userData, ctypes.POINTER(ctypes.py_object)).contents.value
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
 			# Support both with and without context param (for source backwards compatibility)
@@ -608,7 +608,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
 				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
-				context.user_data = insn_ctxt.userData
+				context.user_data = ctypes.cast(insn_ctxt.contents.userData, ctypes.POINTER(ctypes.py_object)).contents.value
 			buf = ctypes.create_string_buffer(length[0])
 			ctypes.memmove(buf, data, length[0])
 			# Support both with and without context param (for source backwards compatibility)
@@ -639,7 +639,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
 				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
-				context.user_data = insn_ctxt.userData
+				context.user_data = ctypes.cast(insn_ctxt.contents.userData, ctypes.POINTER(ctypes.py_object)).contents.value
 
 			py_block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(block))
 			result = self.get_block_low_level_il(py_block,
@@ -664,7 +664,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			if insn_ctxt.contents.block is not None and insn_ctxt.contents.block:
 				context.block = binaryninja.basicblock.BasicBlock(handle=core.BNNewBasicBlockReference(insn_ctxt.contents.block))
 			if insn_ctxt.contents.userData is not None and insn_ctxt.contents.userData:
-				context.user_data = insn_ctxt.userData
+				context.user_data = ctypes.cast(insn_ctxt.contents.userData, ctypes.POINTER(ctypes.py_object)).contents.value
 
 			py_func = binaryninja.function.Function(handle=core.BNNewFunctionReference(func))
 			py_blocks = []
@@ -1649,6 +1649,25 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		self.get_instruction_low_level_il(data, addr, func, context)
 		return func[0]
 
+	def get_block_low_level_il_instructions(self, block, context=None):
+		"""
+		``get_block_low_level_il_instructions`` generates all the IL instructions for ``block`` and returns a
+		LowLevelILFunction with those instructions. Generally speaking, you should override ``get_block_low_level_il``
+		and not this method.
+
+		:param BasicBlock block: The basic block with instructions to analyze
+		:param LiftingContext context: structure with context information
+		:return: Lifted instructions, or None if lifting failed
+		:rtype: LowLevelILFunction
+		"""
+		if context is None:
+			context = binaryninja.function.LiftingContext(bv=block.view, function=block.function, block=block)
+		il = lowlevelil.LowLevelILFunction(self, source_func=block.function)
+		il.set_current_source_block(block)
+		if not self.get_block_low_level_il(block, il, context):
+			return None
+		return il
+
 	def get_block_low_level_il(self, block, il, context=None):
 		"""
 		``get_block_low_level_il`` appends LowLevelILExpr objects to ``il`` for every instruction in the given block
@@ -1665,6 +1684,25 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		if context is None:
 			context = binaryninja.function.LiftingContext(bv=block.view, function=block.function, block=block)
 		return self.get_default_block_low_level_il(block, il, context)
+
+	def get_function_low_level_il_instructions(self, func, context=None):
+		"""
+		``get_function_low_level_il_instructions`` generates all the IL instructions for ``func`` and returns a
+		LowLevelILFunction with those instructions. Generally speaking, you should override ``get_function_low_level_il``
+		and not this method.
+
+		:param Function func: The function to analyze
+		:param LiftingContext context: structure with context information
+		:return: Lifted instructions, or None if lifting failed
+		:rtype: LowLevelILFunction
+		"""
+		blocks = func.basic_blocks
+		if context is None:
+			context = binaryninja.function.LiftingContext(bv=func.view, function=func)
+		il = lowlevelil.LowLevelILFunction(self, source_func=func)
+		if not self.get_function_low_level_il(func, blocks, il, context):
+			return None
+		return il
 
 	def get_function_low_level_il(self, func, blocks, il, context=None):
 		"""
@@ -1713,7 +1751,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetDefaultArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
 		if context is not None:
@@ -1749,7 +1787,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetDefaultArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
 		if context is not None:
@@ -2570,7 +2608,7 @@ class CoreArchitecture(Architecture):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctxt_handle, info):
 			return None
@@ -2623,7 +2661,7 @@ class CoreArchitecture(Architecture):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctxt_handle, tokens, count):
 			return None, 0
@@ -2664,7 +2702,7 @@ class CoreArchitecture(Architecture):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctxt_handle, il.handle)
 		if context is not None:
@@ -2696,7 +2734,7 @@ class CoreArchitecture(Architecture):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
 		if context is not None:
@@ -2735,7 +2773,7 @@ class CoreArchitecture(Architecture):
 			insn_ctxt.block = context.block.handle
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
-			insn_ctxt.userData = context.user_data
+			insn_ctxt.userData = ctypes.cast(ctypes.pointer(ctypes.py_object(context.user_data)), ctypes.c_void_p)
 		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
 		if context is not None:

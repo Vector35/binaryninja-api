@@ -520,7 +520,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, insn_ctxt, result):
 		try:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
@@ -559,7 +559,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_instruction_text(self, ctxt, data, addr, length, insn_ctxt, result, count):
 		try:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
@@ -600,7 +600,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_instruction_low_level_il(self, ctxt, data, addr, length, insn_ctxt, il):
 		try:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
@@ -631,7 +631,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_block_low_level_il(self, ctxt, block, insn_ctxt, il):
 		try:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
@@ -656,7 +656,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 	def _get_function_low_level_il(self, ctxt, func, blocks, block_count, insn_ctxt, il):
 		try:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 			if insn_ctxt.contents.binaryView is not None and insn_ctxt.contents.binaryView:
 				context.bv = binaryninja.binaryview.BinaryView(handle=core.BNNewViewReference(insn_ctxt.contents.binaryView))
 			if insn_ctxt.contents.function is not None and insn_ctxt.contents.function:
@@ -1329,7 +1329,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:return: a :py:class:`InstructionInfo` object containing the length and branch types for the given instruction
 		:rtype: InstructionInfo
 		"""
@@ -1342,7 +1342,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: bytes to decode
 		:param int addr: virtual address of the byte to be decoded
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:return: a tuple of list(InstructionTextToken) and length of instruction decoded
 		:rtype: tuple(list(InstructionTextToken), int)
 		"""
@@ -1356,7 +1356,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:param str data: bytes to be interpreted as low-level IL instructions
 		:param int addr: virtual address of start of ``data``
 		:param LowLevelILFunction il: LowLevelILFunction object to append LowLevelILExpr objects to
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:rtype: length of bytes read on success, None on failure
 		"""
 		raise NotImplementedError
@@ -1573,12 +1573,12 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:return: the InstructionInfo for the current instruction
 		:rtype: InstructionInfo
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 		return self.perform_get_instruction_info(data, addr, context)
 
 	def get_instruction_text(self, data, addr, context=None):
@@ -1590,19 +1590,19 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:return: a tuple containing the InstructionTextToken list and length of bytes decoded
 		:rtype: tuple(list(InstructionTextToken), int)
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 		return self.perform_get_instruction_text(data, addr, context)
 
 	def get_instruction_low_level_il_instruction(self, bv, addr, context=None):
 		il = lowlevelil.LowLevelILFunction(self)
 		data = bv.read(addr, self.max_instr_length)
 		if context is None:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 		context.binaryView = bv
 		self.get_instruction_low_level_il(data, addr, il, context)
 		return il[0]
@@ -1619,13 +1619,13 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction
 		:rtype: int
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 		return self.perform_get_instruction_low_level_il(data, addr, il, context)
 
 	def get_low_level_il_from_bytes(self, data, addr, context=None):
@@ -1634,7 +1634,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param str data: the bytes of the instruction
 		:param int addr: virtual address of bytes in ``data``
-		:param InstructionContext context: structure containing context information eg the BinaryView
+		:param LiftingContext context: structure containing context information eg the BinaryView
 		:return: the instruction
 		:rtype: LowLevelILInstruction
 		:Example:
@@ -1644,7 +1644,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 			>>>
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext()
+			context = binaryninja.function.LiftingContext()
 		func = lowlevelil.LowLevelILFunction(self)
 		self.get_instruction_low_level_il(data, addr, func, context)
 		return func[0]
@@ -1658,12 +1658,12 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param BasicBlock block: The basic block with instructions to analyze
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext(bv=block.view, function=block.function, block=block)
+			context = binaryninja.function.LiftingContext(bv=block.view, function=block.function, block=block)
 		return self.get_default_block_low_level_il(block, il, context)
 
 	def get_function_low_level_il(self, func, blocks, il, context=None):
@@ -1678,12 +1678,12 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:param Function func: The function to analyze
 		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
 		if context is None:
-			context = binaryninja.function.InstructionContext(bv=func.view, function=func)
+			context = binaryninja.function.LiftingContext(bv=func.view, function=func)
 		return self.get_default_function_low_level_il(func, blocks, il, context)
 
 	def get_default_block_low_level_il(self, block, il, context=None):
@@ -1697,11 +1697,11 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 
 		:param BasicBlock block: The basic block with instructions to analyze
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -1714,7 +1714,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetDefaultArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData
@@ -1729,7 +1729,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		:param Function func: The function to analyze
 		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
@@ -1737,7 +1737,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		for i in range(len(blocks)):
 			cblocks[i] = blocks[i].handle
 
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -1750,7 +1750,7 @@ class Architecture(with_metaclass(_ArchitectureMetaClass, object)):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetDefaultArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData
@@ -2558,7 +2558,7 @@ class CoreArchitecture(Architecture):
 		info = core.BNInstructionInfo()
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -2571,7 +2571,7 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		if not core.BNGetInstructionInfo(self.handle, buf, addr, len(data), ctxt_handle, info):
 			return None
 		if context is not None:
@@ -2596,7 +2596,7 @@ class CoreArchitecture(Architecture):
 
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
@@ -2611,7 +2611,7 @@ class CoreArchitecture(Architecture):
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -2624,7 +2624,7 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		if not core.BNGetInstructionText(self.handle, buf, addr, length, ctxt_handle, tokens, count):
 			return None, 0
 		result = binaryninja.function.InstructionTextToken.get_instruction_lines(tokens, count.value)
@@ -2644,7 +2644,7 @@ class CoreArchitecture(Architecture):
 		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: the length of the current instruction
 		:rtype: int
 		"""
@@ -2652,7 +2652,7 @@ class CoreArchitecture(Architecture):
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -2665,7 +2665,7 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData
@@ -2680,11 +2680,11 @@ class CoreArchitecture(Architecture):
 
 		:param BasicBlock block: The basic block with instructions to analyze
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -2697,7 +2697,7 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetArchitectureBlockLowLevelIL(self.handle, block.handle, ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData
@@ -2715,7 +2715,7 @@ class CoreArchitecture(Architecture):
 		:param Function func: The function to analyze
 		:param list(BasicBlock) blocks: A list of all basic blocks contained within the function
 		:param LowLevelILFunction il: An IL function for storing lifted instructions
-		:param InstructionContext context: structure with context information
+		:param LiftingContext context: structure with context information
 		:return: True if successful
 		:rtype: bool
 		"""
@@ -2723,7 +2723,7 @@ class CoreArchitecture(Architecture):
 		for i in range(len(blocks)):
 			cblocks[i] = blocks[i].handle
 
-		insn_ctxt = core.BNInstructionContext()
+		insn_ctxt = core.BNLiftingContext()
 		insn_ctxt.binaryView = None
 		if context is not None and context.bv is not None:
 			insn_ctxt.binaryView = context.bv.handle
@@ -2736,7 +2736,7 @@ class CoreArchitecture(Architecture):
 		insn_ctxt.userData = None
 		if context is not None and context.user_data is not None:
 			insn_ctxt.userData = context.user_data
-		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNInstructionContext))
+		ctxt_handle = ctypes.cast(ctypes.addressof(insn_ctxt), ctypes.POINTER(core.BNLiftingContext))
 		result = core.BNGetArchitectureFunctionLowLevelIL(self.handle, func.handle, cblocks, len(cblocks), ctxt_handle, il.handle)
 		if context is not None:
 			context.user_data = insn_ctxt.userData

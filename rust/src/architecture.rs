@@ -95,8 +95,8 @@ impl<'a> Iterator for BranchIter<'a> {
 }
 
 #[repr(C)]
-pub struct InstructionContext(pub(crate) BNInstructionContext);
-impl InstructionContext {
+pub struct LiftingContext(pub(crate) BNLiftingContext);
+impl LiftingContext {
     pub fn new<C: BlockContext>(
         binary_view: Option<Ref<BinaryView>>,
         function: Option<Ref<Function>>,
@@ -105,10 +105,48 @@ impl InstructionContext {
     ) -> Self {
         use std::os::raw::c_void;
 
-        InstructionContext(BNInstructionContext {
+        LiftingContext(BNLiftingContext {
             binaryView: binary_view.map_or(ptr::null_mut(), |binary_view| binary_view.handle),
             function: function.map_or(ptr::null_mut(), |function| function.handle),
             block: block.map_or(ptr::null_mut(), |block| block.handle),
+            userData: user_data.map_or(ptr::null_mut(), |user_data| {
+                Arc::into_raw(user_data) as *mut c_void
+            }),
+        })
+    }
+
+    pub fn from_block<C: BlockContext>(
+        block: Ref<BasicBlock<C>>,
+        user_data: Option<Arc<Box<dyn Any>>>,
+    ) -> Self {
+        LiftingContext::new(
+            Some(block.function().view()),
+            Some(block.function()),
+            Some(block),
+            user_data,
+        )
+    }
+
+    pub fn from_function(function: Ref<Function>, user_data: Option<Arc<Box<dyn Any>>>) -> Self {
+        use std::os::raw::c_void;
+
+        LiftingContext(BNLiftingContext {
+            binaryView: function.view().handle,
+            function: function.handle,
+            block: ptr::null_mut(),
+            userData: user_data.map_or(ptr::null_mut(), |user_data| {
+                Arc::into_raw(user_data) as *mut c_void
+            }),
+        })
+    }
+
+    pub fn from_view(view: Ref<BinaryView>, user_data: Option<Arc<Box<dyn Any>>>) -> Self {
+        use std::os::raw::c_void;
+
+        LiftingContext(BNLiftingContext {
+            binaryView: view.handle,
+            function: ptr::null_mut(),
+            block: ptr::null_mut(),
             userData: user_data.map_or(ptr::null_mut(), |user_data| {
                 Arc::into_raw(user_data) as *mut c_void
             }),
@@ -458,25 +496,25 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
     ) -> Option<InstructionInfo>;
     fn instruction_text(
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
     ) -> Option<(usize, Self::InstructionTextContainer)>;
     fn instruction_llil(
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
         il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)>;
     fn block_llil<C: BlockContext>(
         &self,
         block: BasicBlock<C>,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         Some(get_default_block_llil(self, block, ctxt, il))
@@ -485,7 +523,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         func: Ref<Function>,
         block: Vec<BasicBlock<C>>,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         Some(get_default_function_llil(self, func, block, ctxt, il))
@@ -952,7 +990,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
     ) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
         let success = unsafe {
@@ -977,7 +1015,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
     ) -> Option<(usize, InstructionTextTokenList)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
@@ -1004,7 +1042,7 @@ impl Architecture for CoreArchitecture {
         &self,
         _data: &[u8],
         _addr: u64,
-        _ctxt: Option<&mut InstructionContext>,
+        _ctxt: Option<&mut LiftingContext>,
         _il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)> {
         None
@@ -1013,7 +1051,7 @@ impl Architecture for CoreArchitecture {
     fn block_llil<C: BlockContext>(
         &self,
         block: BasicBlock<C>,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         Some(unsafe {
@@ -1030,7 +1068,7 @@ impl Architecture for CoreArchitecture {
         &self,
         func: Ref<Function>,
         blocks: Vec<BasicBlock<C>>,
-        ctxt: Option<&mut InstructionContext>,
+        ctxt: Option<&mut LiftingContext>,
         il: &mut Lifter<Self>,
     ) -> Option<bool> {
         let mut blocks = blocks
@@ -1466,7 +1504,7 @@ where
         data: *const u8,
         addr: u64,
         len: usize,
-        insn_ctxt: *mut BNInstructionContext,
+        insn_ctxt: *mut BNLiftingContext,
         result: *mut BNInstructionInfo,
     ) -> bool
     where
@@ -1477,7 +1515,7 @@ where
         let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
-            unsafe { Some(InstructionContext(*insn_ctxt)) }
+            unsafe { Some(LiftingContext(*insn_ctxt)) }
         };
         let result = unsafe { &mut *(result as *mut InstructionInfo) };
 
@@ -1495,7 +1533,7 @@ where
         data: *const u8,
         addr: u64,
         len: *mut usize,
-        insn_ctxt: *mut BNInstructionContext,
+        insn_ctxt: *mut BNLiftingContext,
         result: *mut *mut BNInstructionTextToken,
         count: *mut usize,
     ) -> bool
@@ -1507,7 +1545,7 @@ where
         let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
-            unsafe { Some(InstructionContext(*insn_ctxt)) }
+            unsafe { Some(LiftingContext(*insn_ctxt)) }
         };
         let result = unsafe { &mut *result };
 
@@ -1540,7 +1578,7 @@ where
         data: *const u8,
         addr: u64,
         len: *mut usize,
-        insn_ctxt: *mut BNInstructionContext,
+        insn_ctxt: *mut BNLiftingContext,
         il: *mut BNLowLevelILFunction,
     ) -> bool
     where
@@ -1555,7 +1593,7 @@ where
         let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
-            unsafe { Some(InstructionContext(*insn_ctxt)) }
+            unsafe { Some(LiftingContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
@@ -1571,7 +1609,7 @@ where
     extern "C" fn cb_block_llil<A>(
         ctxt: *mut c_void,
         block: *mut BNBasicBlock,
-        insn_ctxt: *mut BNInstructionContext,
+        insn_ctxt: *mut BNLiftingContext,
         il: *mut BNLowLevelILFunction,
     ) -> bool
     where
@@ -1588,7 +1626,7 @@ where
         let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
-            unsafe { Some(InstructionContext(*insn_ctxt)) }
+            unsafe { Some(LiftingContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
@@ -1603,7 +1641,7 @@ where
         func: *mut BNFunction,
         blocks: *mut *mut BNBasicBlock,
         block_count: usize,
-        insn_ctxt: *mut BNInstructionContext,
+        insn_ctxt: *mut BNLiftingContext,
         il: *mut BNLowLevelILFunction,
     ) -> bool
     where
@@ -1629,7 +1667,7 @@ where
         let mut insn_ctxt = if insn_ctxt.is_null() {
             None
         } else {
-            unsafe { Some(InstructionContext(*insn_ctxt)) }
+            unsafe { Some(LiftingContext(*insn_ctxt)) }
         };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 

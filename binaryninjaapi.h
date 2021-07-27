@@ -2282,17 +2282,17 @@ __attribute__ ((format (printf, 1, 2)))
 		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
 	};
 
-	struct InstructionContext
+	struct LiftingContext
 	{
 		BinaryView* binaryView;
 		Function* function;
 		BasicBlock* block;
 		void* userData;
 
-		InstructionContext();
-		InstructionContext(BasicBlock* block, void* userData = nullptr);
-		InstructionContext(Function* function, void* userData = nullptr);
-		InstructionContext(BinaryView* binaryView, void* userData = nullptr);
+		LiftingContext();
+		LiftingContext(BasicBlock* block, void* userData = nullptr);
+		LiftingContext(Function* function, void* userData = nullptr);
+		LiftingContext(BinaryView* binaryView, void* userData = nullptr);
 	};
 
 	class LowLevelILFunction;
@@ -2323,16 +2323,16 @@ __attribute__ ((format (printf, 1, 2)))
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t maxLen, BNInstructionContext* insnCtxt, BNInstructionInfo* result);
+		                                       size_t maxLen, BNLiftingContext* liftCtxt, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t* len, BNInstructionContext* insnCtxt, BNInstructionTextToken** result, size_t* count);
+		                                       size_t* len, BNLiftingContext* liftCtxt, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                             size_t* len, BNInstructionContext* insnCtxt, BNLowLevelILFunction* il);
-		static bool GetBlockLowLevelILCallback(void* ctxt, BNBasicBlock* block, BNInstructionContext* insnCtxt,
+		                                             size_t* len, BNLiftingContext* liftCtxt, BNLowLevelILFunction* il);
+		static bool GetBlockLowLevelILCallback(void* ctxt, BNBasicBlock* block, BNLiftingContext* liftCtxt,
 		                                       BNLowLevelILFunction* il);
 		static bool GetFunctionLowLevelILCallback(void* ctxt, BNFunction* func, BNBasicBlock** blocks, size_t blockCount,
-		                                          BNInstructionContext* insnCtxt, BNLowLevelILFunction* il);
+		                                          BNLiftingContext* liftCtxt, BNLowLevelILFunction* il);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -2419,8 +2419,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result);
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,InstructionContext& context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, LiftingContext& context, InstructionInfo& result);
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,LiftingContext& context,
 		                                std::vector<InstructionTextToken>& result);
 
 		/*! GetInstructionLowLevelIL
@@ -2431,7 +2431,7 @@ __attribute__ ((format (printf, 1, 2)))
 			\param context structure containing context of instruction eg BinaryView
 			\param il the LowLevelILFunction which
 		*/
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il);
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LiftingContext& context, LowLevelILFunction& il);
 
 		/*! GetBlockLowLevelIL
 			Translates an entire basic block of instructions and appends them onto the LowLevelILFunction& il.
@@ -2439,7 +2439,7 @@ __attribute__ ((format (printf, 1, 2)))
 			\param context structure containing context of instruction eg BinaryView
 			\param il the LowLevelILFunction which
 		*/
-		virtual bool GetBlockLowLevelIL(BasicBlock* block, InstructionContext& context, LowLevelILFunction& il);
+		virtual bool GetBlockLowLevelIL(BasicBlock* block, LiftingContext& context, LowLevelILFunction& il);
 
 		/*! GetFunctionLowLevelIL
 			Translates an entire function and appends them onto the LowLevelILFunction& il.
@@ -2449,10 +2449,10 @@ __attribute__ ((format (printf, 1, 2)))
 			\param context structure containing context of instruction eg BinaryView
 			\param il the LowLevelILFunction which
 		*/
-		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, InstructionContext& context, LowLevelILFunction& il);
+		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, LiftingContext& context, LowLevelILFunction& il);
 
-		bool GetDefaultBlockLowLevelIL(BasicBlock* block, InstructionContext& context, LowLevelILFunction& il);
-		bool GetDefaultFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, InstructionContext& context, LowLevelILFunction& il);
+		bool GetDefaultBlockLowLevelIL(BasicBlock* block, LiftingContext& context, LowLevelILFunction& il);
+		bool GetDefaultFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, LiftingContext& context, LowLevelILFunction& il);
 
 		virtual std::string GetRegisterName(uint32_t reg);
 		virtual std::string GetFlagName(uint32_t flag);
@@ -2613,12 +2613,12 @@ __attribute__ ((format (printf, 1, 2)))
 			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, LiftingContext& context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, LiftingContext& context,
 		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il) override;
-		virtual bool GetBlockLowLevelIL(BasicBlock* block, InstructionContext& context, LowLevelILFunction& il) override;
-		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, InstructionContext& context, LowLevelILFunction& il) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LiftingContext& context, LowLevelILFunction& il) override;
+		virtual bool GetBlockLowLevelIL(BasicBlock* block, LiftingContext& context, LowLevelILFunction& il) override;
+		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, LiftingContext& context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -2698,12 +2698,12 @@ __attribute__ ((format (printf, 1, 2)))
 			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 	public:
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionContext& context, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context,
+		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, LiftingContext& context, InstructionInfo& result) override;
+		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, LiftingContext& context,
 		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, InstructionContext& context, LowLevelILFunction& il) override;
-		virtual bool GetBlockLowLevelIL(BasicBlock* block, InstructionContext& context, LowLevelILFunction& il) override;
-		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, InstructionContext& context, LowLevelILFunction& il) override;
+		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LiftingContext& context, LowLevelILFunction& il) override;
+		virtual bool GetBlockLowLevelIL(BasicBlock* block, LiftingContext& context, LowLevelILFunction& il) override;
+		virtual bool GetFunctionLowLevelIL(Function* func, std::vector<BasicBlock*> blocks, LiftingContext& context, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;

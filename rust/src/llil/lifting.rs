@@ -16,7 +16,7 @@ use std::marker::PhantomData;
 use std::{mem, ptr};
 
 use crate::architecture::Register as ArchReg;
-use crate::architecture::{Architecture, InstructionContext};
+use crate::architecture::{Architecture, LiftingContext};
 use crate::architecture::{Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite};
 use crate::basicblock::{BasicBlock, BlockContext};
 use crate::rc::Ref;
@@ -421,7 +421,7 @@ where
 pub fn get_default_block_llil<A, C: BlockContext>(
     arch: &A,
     block: BasicBlock<C>,
-    ctxt: Option<&mut InstructionContext>,
+    ctxt: Option<&mut LiftingContext>,
     il: &mut Lifter<A>,
 ) -> bool
 where
@@ -439,7 +439,7 @@ pub fn get_default_function_llil<A, C: BlockContext>(
     arch: &A,
     func: Ref<crate::function::Function>,
     blocks: Vec<BasicBlock<C>>,
-    ctxt: Option<&mut InstructionContext>,
+    ctxt: Option<&mut LiftingContext>,
     il: &mut Lifter<A>,
 ) -> bool
 where

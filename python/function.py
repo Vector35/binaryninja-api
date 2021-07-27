@@ -4197,7 +4197,7 @@ class InstructionBranch(object):
 		self._arch = value
 
 
-class InstructionContext(object):
+class LiftingContext(object):
 	def __init__(self, bv=None, function=None, block=None, user_data=None):
 		self._bv = bv
 		self._function = function

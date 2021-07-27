@@ -54,7 +54,7 @@ int main(int ac, char **av)
 
 	char					*path_bundled_plugins;
 
-	BNInstructionContext    insnCtxt;
+	BNLiftingContext		liftCtxt;
 
 	/* plugin path */
 	path_bundled_plugins = BNGetBundledPluginDirectory();
@@ -91,8 +91,8 @@ int main(int ac, char **av)
 
 	/* actually disassemble now */
 	nBytesDisasm = input_n;
-	insnCtxt.binaryView = NULL;
-	BNGetInstructionText(arch, (const uint8_t *)input, 0, &nBytesDisasm, &insnCtxt,
+	memset(&liftCtxt, 0, sizeof(BNLiftingContext));
+	BNGetInstructionText(arch, (const uint8_t *)input, 0, &nBytesDisasm, &liftCtxt,
 	  &ttResult, &ttCount);
 
 	//printf("%zu text tokens\n", ttCount);

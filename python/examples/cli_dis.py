@@ -59,7 +59,7 @@ data = b''.join(list(map(lambda x: int(x,16).to_bytes(1,'big'), bytesList)))
 
 # disassemble
 arch = binaryninja.Architecture[archName]
-context = binaryninja.function.InstructionContext(bv=None)
+context = binaryninja.function.LiftingContext(bv=None)
 toksAndLen = arch.get_instruction_text(data, 0, context)
 if not toksAndLen or toksAndLen[1]==0:
 	print('disassembly failed')

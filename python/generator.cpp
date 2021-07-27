@@ -33,12 +33,12 @@ public:
 	{
 	}
 
-	virtual bool GetInstructionInfo(const uint8_t*, uint64_t, size_t, InstructionContext&, InstructionInfo&) override
+	virtual bool GetInstructionInfo(const uint8_t*, uint64_t, size_t, LiftingContext&, InstructionInfo&) override
 	{
 		return false;
 	}
 
-	virtual bool GetInstructionText(const uint8_t*, uint64_t, size_t&, InstructionContext&, vector<InstructionTextToken>&) override
+	virtual bool GetInstructionText(const uint8_t*, uint64_t, size_t&, LiftingContext&, vector<InstructionTextToken>&) override
 	{
 		return false;
 	}

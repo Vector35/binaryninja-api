@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from binaryninja.function import DisassemblyTextRenderer, InstructionTextToken, InstructionContext
+from binaryninja.function import DisassemblyTextRenderer, InstructionTextToken, LiftingContext
 from binaryninja.flowgraph import FlowGraph, FlowGraphNode
 from binaryninja.enums import InstructionTextTokenType
 from binaryninjaui import FlowGraphWidget, ViewType
@@ -81,7 +81,7 @@ class DisassemblyAndLowLevelILGraph(FlowGraph):
 				while addr < end:
 					asm_instrs.append(addr)
 					data = func.view.read(addr, min(asm_block.arch.max_instr_length, end - addr))
-					context = InstructionContext(bv=func.view)
+					context = LiftingContext(bv=func.view)
 					info = asm_block.arch.get_instruction_info(data, addr, context)
 					addr += info.length
 					if info.length == 0:

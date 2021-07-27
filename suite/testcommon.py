@@ -603,7 +603,7 @@ class TestBuilder(Builder):
         retinfo.append("Reg return address: " + str(reg.return_address()))
 
         bv.update_analysis_and_wait()
-        context = binja.function.InstructionContext(bv=bv)
+        context = binja.function.LiftingContext(bv=bv)
         for func in bv.functions:
             for bb in func.low_level_il.basic_blocks:
                 for ins in bb:

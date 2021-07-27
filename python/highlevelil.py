@@ -415,6 +415,40 @@ class HighLevelILInstruction(object):
 				result.append(operand)
 		result.append(HighLevelILOperationAndSize(self._operation, self._size))
 		return result
+	
+	@property
+	def vars_written(self):
+		"""List of variables written by instruction"""
+		result = []
+		if self.operation in [binaryninja.HighLevelILOperation.HLIL_ASSIGN,binaryninja.HighLevelILOperation.HLIL_ASSIGN_MEM_SSA, 
+		binaryninja.HighLevelILOperation.HLIL_ASSIGN_UNPACK, binaryninja.HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA,
+		binaryninja.HighLevelILOperation.HLIL_VAR_INIT,  binaryninja.HighLevelILOperation.HLIL_VAR_INIT_SSA, binaryninja.HighLevelILOperation.HLIL_VAR_PHI]:
+			if type(self.dest) == binaryninja.highlevelil.HighLevelILInstruction: result.extend(vars_written(self.dest))
+			elif type(self.dest) == binaryninja.mediumlevelil.SSAVariable: result.append(self.dest)
+			else: result.append(self.dest.var)
+		return result
+
+	@property
+	def vars_read(self):
+		"""List of variables read by instruction"""
+		result = []
+		if self.operation in [binaryninja.HighLevelILOperation.HLIL_VAR, binaryninja.HighLevelILOperation.HLIL_VAR_SSA]: result.append(self.var)
+		elif self.operation in [binaryninja.HighLevelILOperation.HLIL_ASSIGN,binaryninja.HighLevelILOperation.HLIL_ASSIGN_MEM_SSA, 
+		binaryninja.HighLevelILOperation.HLIL_ASSIGN_UNPACK, binaryninja.HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA, binaryninja.HighLevelILOperation.HLIL_RET, 
+		binaryninja.HighLevelILOperation.HLIL_VAR_INIT,  binaryninja.HighLevelILOperation.HLIL_VAR_INIT_SSA, binaryninja.HighLevelILOperation.HLIL_VAR_PHI,
+		binaryninja.HighLevelILOperation.HLIL_DEREF, binaryninja.HighLevelILOperation.HLIL_DEREF_SSA]:
+			if type(self.src) == binaryninja.highlevelil.HighLevelILInstruction: result.extend(vars_read(self.src))
+			elif type(self.src) == binaryninja.mediumlevelil.SSAVariable: result.append(self.src)
+			elif type(self.src) == list:
+				for o in self.src:
+					if type(o) == binaryninja.highlevelil.HighLevelILInstruction: result.extend(vars_read(o))
+					elif type(o) == binaryninja.mediumlevelil.SSAVariable: result.append(o)
+			else: result.append(self.src.var)
+		elif self.operation in [binaryninja.HighLevelILOperation.HLIL_CALL, binaryninja.HighLevelILOperation.HLIL_CALL_SSA]:
+			for v in self.operands[1]: # func args
+				if type(v) == binaryninja.highlevelil.HighLevelILInstruction: result.extend(vars_read(v))
+				elif type(v) == binaryninja.mediumlevelil.SSAVariable: result.append(v)
+		return result
 
 	@property
 	def function(self):

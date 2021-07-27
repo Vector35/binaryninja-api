@@ -1107,6 +1107,42 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 }
 
 
+set<Variable> Function::GetMediumLevelILVariables()
+{
+	auto mlil = this->GetMediumLevelIL();
+	if (!mlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+
+	set<Variable> result;
+	for (size_t i = 0; i < count; i++)
+	        result.insert({vars[i]});
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+set<Variable> Function::GetHighLevelILVariables()
+{
+	auto hlil = this->GetHighLevelIL();
+	if (!hlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+
+	set<Variable> result;
+	for (size_t i = 0; i < count; i++)
+	        result.insert({vars[i]});
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
 void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type,
 	const string& name, bool ignoreDisjointUses)
 {

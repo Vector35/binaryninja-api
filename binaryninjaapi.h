@@ -3381,6 +3381,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
 
 		std::map<Variable, VariableNameAndType> GetVariables();
+		std::set<Variable> GetMediumLevelILVariables();
+		std::set<Variable> GetHighLevelILVariables();
+
 		void CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
 			bool ignoreDisjointUses = false);
 		void CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,

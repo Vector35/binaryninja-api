@@ -41,12 +41,11 @@ class DataBuffer:
 	def __len__(self):
 		return int(core.BNGetDataBufferLength(self.handle))
 
-	def __getitem__(self, i):
+	def __getitem__(self, i) -> bytes:
 		if isinstance(i, tuple):
-			result = ""
-			source = bytes(self)
+			result = bytes()
 			for s in i:
-				result += source[s]
+				result += self.__getitem__(s)
 			return result
 		elif isinstance(i, slice):
 			if i.step is not None:
@@ -54,7 +53,7 @@ class DataBuffer:
 				start = i[0]
 				stop = i[1]
 				if stop <= start:
-					return ""
+					return b""
 				buf = ctypes.create_string_buffer(stop - start)
 				data = core.BNGetDataBufferContentsAt(self.handle, start)
 				assert data is not None, "core.BNGetDataBufferContentsAt returned None"
@@ -64,10 +63,10 @@ class DataBuffer:
 				return bytes(self)[i]
 		elif i < 0:
 			if i >= -len(self):
-				return chr(core.BNGetDataBufferByte(self.handle, int(len(self) + i)))
+				return core.BNGetDataBufferByte(self.handle, int(len(self) + i))
 			raise IndexError("index out of range")
 		elif i < len(self):
-			return chr(core.BNGetDataBufferByte(self.handle, int(i)))
+			return core.BNGetDataBufferByte(self.handle, int(i))
 		else:
 			raise IndexError("index out of range")
 

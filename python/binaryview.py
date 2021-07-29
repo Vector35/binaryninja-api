@@ -1453,7 +1453,7 @@ class BinaryView:
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
-	def __getitem__(self, i):
+	def __getitem__(self, i) -> bytes:
 		if isinstance(i, tuple):
 			result = bytes()
 			for s in i:
@@ -1466,19 +1466,19 @@ class BinaryView:
 			start = i[0]
 			stop = i[1]
 			if stop <= start:
-				return ""
+				return b""
 			return self.read(start, stop - start)
 		elif i < 0:
 			if i >= -len(self):
 				value = self.read(int(len(self) + i), 1)
 				if len(value) == 0:
-					return IndexError("index not readable")
+					raise IndexError("index not readable")
 				return value
 			raise IndexError("index out of range")
 		elif (i >= self.start) and (i < self.end):
 			value = self.read(int(i), 1)
 			if len(value) == 0:
-				return IndexError("index not readable")
+				raise IndexError("index not readable")
 			return value
 		else:
 			raise IndexError("index out of range")
@@ -3985,6 +3985,7 @@ class BinaryView:
 			return []
 		for src_func in funcs:
 			src_arch = src_func.arch if arch is None else arch
+			assert src_arch is not None
 			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
 			count = ctypes.c_ulonglong(0)
 			refs = core.BNGetCallees(self.handle, ref_src, count)

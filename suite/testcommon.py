@@ -687,17 +687,17 @@ class TestBuilder(Builder):
         """Struct produced different result"""
         retinfo = []
         inttype = binja.Type.int(4)
-        struct = binja.Structure()
-        struct.append("", inttype)
-        struct.append("", inttype)
-        struct.replace_member(new_name="", type=inttype, offset=0)
-        struct.clear(index=1)
+        struct = binja.TypeBuilder.structure()
+        struct.insert(0, inttype)
+        struct.append(inttype)
+        struct.replace(0, inttype)
+        struct.remove(1)
         for i in struct.members:
             retinfo.append("Struct member: " + str(i))
         retinfo.append("Struct width: " + str(struct.width))
         struct.width = 16
         retinfo.append("Struct width after adjustment: " + str(struct.width))
-        retinfo.append("Struct alignment: " + str(struct.alignment * 4))  # TODO Remove when regenerating this
+        retinfo.append("Struct alignment: " + str(struct.alignment))
         struct.alignment = 8
         retinfo.append("Struct alignment after adjustment: " + str(struct.alignment))
         retinfo.append("Struct packed: " + str(struct.packed))
@@ -712,7 +712,7 @@ class TestBuilder(Builder):
     def test_Enumeration(self):
         """Enumeration produced different result"""
         retinfo = []
-        enum = binja.Enumeration()
+        enum = binja.TypeBuilder.enumeration()
         enum.append("a", 1)
         enum.append("b", 2)
         enum.replace(0, "a", 2)
@@ -740,7 +740,7 @@ class TestBuilder(Builder):
                 typelist = bv.platform.parse_types_from_source(source)
                 inttype = binja.Type.int(4)
 
-                namedtype = binja.NamedTypeReference(None, None)  # TODO: Change this as it really doesn't do anything
+                namedtype = binja.NamedTypeReference("", "")  # TODO: Change this as it really doesn't do anything
                 tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
                 retinfo = []
                 for i in range(len(typelist.variables)):
@@ -1787,12 +1787,10 @@ class VerifyBuilder(Builder):
         try:
             with binja.open_view(file_name) as bv:
                 # struct A { uint64_t a; uint64_t b; };
-                s = binja.Structure()
-                s.width = 0x10
-                s.append("a", binja.Type.int(8, False))
-                s.append("b", binja.Type.int(8, False))
-                t = binja.Type.structure_type(s)
-                bv.define_user_type("A", t)
+                with binja.Structure.builder(bv, "A") as s:
+                    s.width = 0x10
+                    s.append(binja.Type.int(8, False), "a")
+                    s.append(binja.Type.int(8, False), "b")
 
                 # Find main and the var it sets to malloc(0x10)
                 func = [f for f in bv.functions if f.name == '_main'][0]

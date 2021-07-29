@@ -772,6 +772,7 @@ class SetVar(MediumLevelILInstruction):
 				assert False, "SetVar.src returned object other than, Variable, SSAVariable"
 		return result
 
+
 @dataclass(frozen=True, repr=False)
 class FloatingPoint(MediumLevelILInstruction):
 	pass

@@ -812,8 +812,8 @@ class ParameterVariables:
 
 @dataclass(frozen=True, order=True)
 class AddressRange:
-	start:int
-	end:int
+	start:int #  Inclusive starting address
+	end:int # Exclusive ending address
 
 	def __repr__(self):
 		return f"<{self.start:#x}-{self.end:#x}>"

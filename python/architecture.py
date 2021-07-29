@@ -483,17 +483,6 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
-	# def __setattr__(self, name, value):
-	# 	if ((name == "name") or (name == "endianness") or (name == "address_size") or
-	# 		(name == "default_int_size") or (name == "regs") or (name == "get_max_instruction_length") or
-	# 		(name == "get_instruction_alignment")):
-	# 		raise AttributeError("attribute '%s' is read only" % name)
-	# 	else:
-	# 		try:
-	# 			object.__setattr__(self, name, value)
-	# 		except AttributeError:
-	# 			raise AttributeError("attribute '%s' is read only" % name)
-
 	@classmethod
 	def register(cls) -> None:
 		binaryninja._init_plugins()

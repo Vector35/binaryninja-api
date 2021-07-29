@@ -5615,7 +5615,7 @@ class BinaryView:
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
 
-	def get_type_by_name(self, name):
+	def get_type_by_name(self, name:'types.QualifiedName') -> Optional['types.Type']:
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
@@ -7587,6 +7587,9 @@ class DataVariable:
 
 		# elif t.type_class == TypeClass.WideCharTypeClass:
 
+	@value.setter
+	def value(self, value:bytes) -> None:
+		self.view.write(self.address, value)
 
 	@property
 	def type(self) -> '_types.Type':

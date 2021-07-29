@@ -5606,6 +5606,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<std::pair<Type*, size_t>>& context);
 		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
 			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
+		std::vector<DisassemblyTextLine> RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
+			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
 
 		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);
 		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);

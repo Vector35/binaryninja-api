@@ -143,6 +143,47 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 }
 
 
+vector<DisassemblyTextLine> DataRenderer::RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
+	const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
+{
+	BNInstructionTextToken* prefixes = InstructionTextToken::CreateInstructionTextTokenList(prefix);
+	BNTypeContext* typeCtx = new BNTypeContext[context.size()];
+	for (size_t i = 0; i < context.size(); i++)
+	{
+		typeCtx[i].type = context[i].first->GetObject();
+		typeCtx[i].offset = context[i].second;
+	}
+	size_t count = 0;
+	BNDisassemblyTextLine* lines = BNRenderLinesForData(data->GetObject(), addr, type->GetObject(), prefixes,
+		prefix.size(), width, &count, typeCtx, context.size());
+
+	delete[] typeCtx;
+	for (size_t i = 0; i < prefix.size(); i++)
+	{
+		BNFreeString(prefixes[i].text);
+		for (size_t j = 0; j < prefixes[j].namesCount; j++)
+			BNFreeString(prefixes[i].typeNames[j]);
+		delete[] prefixes[i].typeNames;
+	}
+	delete[] prefixes;
+
+	vector<DisassemblyTextLine> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		DisassemblyTextLine line;
+		line.addr = lines[i].addr;
+		line.instrIndex = lines[i].instrIndex;
+		line.highlight = lines[i].highlight;
+		line.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
+		result.push_back(line);
+	}
+
+	return result;
+}
+
+
 void DataRendererContainer::RegisterGenericDataRenderer(DataRenderer* renderer)
 {
 	BNRegisterGenericDataRenderer(BNGetDataRendererContainer(), renderer->GetObject());

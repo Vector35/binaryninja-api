@@ -5327,6 +5327,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLinesForData(void* ctxt, BNBinaryView* view, uint64_t addr,
 		BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
 		BNTypeContext* typeCtx, size_t ctxCount);
+	BINARYNINJACOREAPI BNDisassemblyTextLine* BNRenderLinesForData(BNBinaryView* data, uint64_t addr, BNType* type,
+		const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCtx,
+		size_t ctxCount);
 	BINARYNINJACOREAPI void BNFreeDataRenderer(BNDataRenderer* renderer);
 	BINARYNINJACOREAPI BNDataRendererContainer* BNGetDataRendererContainer();
 	BINARYNINJACOREAPI void BNRegisterGenericDataRenderer(BNDataRendererContainer* container, BNDataRenderer* renderer);

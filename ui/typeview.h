@@ -239,6 +239,8 @@ public:
 
 	void showContextMenu(Menu* source = nullptr);
 
+	void focusAtTopOfView();
+
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -299,19 +301,37 @@ public:
 };
 
 
+class BINARYNINJAUIAPI TypeFilterEdit: public QLineEdit
+{
+	Q_OBJECT
+
+public:
+	TypeFilterEdit(QWidget* parent);
+
+protected:
+	virtual void keyPressEvent(QKeyEvent* event) override;
+
+Q_SIGNALS:
+	void focusView();
+};
+
+
 class BINARYNINJAUIAPI TypeFilter: public QWidget
 {
 	Q_OBJECT
 
 	TypesContainer* m_container;
 	ClickableIcon* m_showSystemTypes;
-	QLineEdit* m_textFilter;
+	TypeFilterEdit* m_textFilter;
 
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
 	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
 
 Q_SIGNALS:
 	void filterChanged();
+
+private Q_SLOTS:
+	void focusView();
 
 public:
 	TypeFilter(TypesContainer* container = nullptr);

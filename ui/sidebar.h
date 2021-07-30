@@ -176,6 +176,8 @@ public:
 	void updateViewLocation(View* view, const ViewLocation& viewLocation);
 	void viewChanged();
 
+	void toggleSidebar();
+
 Q_SIGNALS:
 	void showContents();
 	void hideContents();
@@ -214,6 +216,8 @@ public:
 
 	void updateTheme();
 	void updateFonts();
+
+	void toggleSidebar();
 
 	static void addSidebarWidgetType(SidebarWidgetType* type);
 	static SidebarWidgetType* typeFromName(const QString& name);

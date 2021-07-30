@@ -49,6 +49,7 @@ public:
 	void toggleLocalDataVars() { m_funcList->toggleLocalDataVars(); }
 
 	virtual QWidget* headerWidget() override { return m_header; }
+	virtual void focus() override;
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;

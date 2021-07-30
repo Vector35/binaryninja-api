@@ -157,9 +157,11 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget: public SidebarWidget
 	Q_OBJECT
 
 	QWidget* m_header;
+	StringsContainer* m_container;
 public:
 	StringsViewSidebarWidget(BinaryViewRef data, ViewFrame* frame);
-	virtual QWidget* headerWidget() { return m_header; }
+	virtual QWidget* headerWidget() override { return m_header; }
+	virtual void focus() override;
 };
 
 

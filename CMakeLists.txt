@@ -43,32 +43,6 @@ else()
         CACHE PATH "Binary Ninja user plugins directory")
 endif()
 
-if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-    find_library(BN_CORE_LIBRARY
-        NAMES binaryninjacore libbinaryninjacore.so.1
-        PATHS ${BN_INSTALL_BIN_DIR})
-
-    if(BN_CORE_LIBRARY)
-        message(STATUS "Binary Ninja Core: ${BN_CORE_LIBRARY}")
-    else()
-        message(FATAL_ERROR "Binary Ninja Core Not Found")
-    endif()
-endif()
-
-if(NOT HEADLESS)
-    if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-        find_library(BN_UI_LIBRARY
-            NAMES binaryninjaui libbinaryninjaui.so.1
-            PATHS ${BN_INSTALL_BIN_DIR})
-
-        if(BN_UI_LIBRARY)
-            message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
-        else()
-            message(FATAL_ERROR "Binary Ninja UI Not Found")
-        endif()
-    endif()
-endif()
-
 file(GLOB BN_API_SOURCES *.cpp *.h json/json.h json/json-forwards.h)
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
@@ -79,19 +53,48 @@ add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
 target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
-if(NOT BN_INTERNAL_BUILD)
-    target_link_libraries(binaryninjaapi ${BN_CORE_LIBRARY})
-else()
-    target_link_libraries(binaryninjaapi binaryninjacore)
-endif()
+# We only need to find the core and UI when we also build the examples
+if(BN_API_BUILD_EXAMPLES)
+    if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
+        find_library(BN_CORE_LIBRARY
+                NAMES binaryninjacore libbinaryninjacore.so.1
+                PATHS ${BN_INSTALL_BIN_DIR})
 
-if(NOT HEADLESS)
-    target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
+        if(BN_CORE_LIBRARY)
+            message(STATUS "Binary Ninja Core: ${BN_CORE_LIBRARY}")
+        else()
+            message(FATAL_ERROR "Binary Ninja Core Not Found")
+        endif()
+    endif()
+
+    if(NOT HEADLESS)
+        if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
+            find_library(BN_UI_LIBRARY
+                    NAMES binaryninjaui libbinaryninjaui.so.1
+                    PATHS ${BN_INSTALL_BIN_DIR})
+
+            if(BN_UI_LIBRARY)
+                message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
+            else()
+                message(FATAL_ERROR "Binary Ninja UI Not Found")
+            endif()
+        endif()
+    endif()
 
     if(NOT BN_INTERNAL_BUILD)
-        target_link_libraries(binaryninjaapi ${BN_UI_LIBRARY})
+        target_link_libraries(binaryninjaapi ${BN_CORE_LIBRARY})
     else()
-        target_link_libraries(binaryninjaapi)
+        target_link_libraries(binaryninjaapi binaryninjacore)
+    endif()
+
+    if(NOT HEADLESS)
+        target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
+
+        if(NOT BN_INTERNAL_BUILD)
+            target_link_libraries(binaryninjaapi ${BN_UI_LIBRARY})
+        else()
+            target_link_libraries(binaryninjaapi)
+        endif()
     endif()
 endif()
 

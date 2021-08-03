@@ -198,6 +198,10 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe { BNBasicBlockCanExit(self.handle) }
     }
 
+    pub fn set_can_exit(&self, can_exit: bool) {
+        unsafe { BNBasicBlockSetCanExit(self.handle, can_exit) }
+    }
+
     pub fn index(&self) -> usize {
         unsafe { BNGetBasicBlockIndex(self.handle) }
     }

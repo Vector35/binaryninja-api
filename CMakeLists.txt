@@ -54,7 +54,7 @@ target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
 # We only need to find the core and UI when we also build the examples
-if(BN_API_BUILD_EXAMPLES)
+if(BN_API_BUILD_EXAMPLES OR BN_INTERNAL_BUILD)
     if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
         find_library(BN_CORE_LIBRARY
                 NAMES binaryninjacore libbinaryninjacore.so.1

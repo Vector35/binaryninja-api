@@ -36,6 +36,16 @@ Platform::Platform(Architecture* arch, const string& name)
 }
 
 
+Platform::Platform(Architecture* arch, const string& name, const string& typeFile, const vector<string>& includeDirs)
+{
+	const char** includeDirList = new const char*[includeDirs.size()];
+	for (size_t i = 0; i < includeDirs.size(); i++)
+		includeDirList[i] = includeDirs[i].c_str();
+	m_object = BNCreatePlatformWithTypes(arch->GetObject(), name.c_str(), typeFile.c_str(), includeDirList, includeDirs.size());
+	delete[] includeDirList;
+}
+
+
 Ref<Architecture> Platform::GetArchitecture() const
 {
 	return new CoreArchitecture(BNGetPlatformArchitecture(m_object));

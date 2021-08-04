@@ -2052,6 +2052,11 @@ __attribute__ ((format (printf, 1, 2)))
 			std::function<void(BinaryView*)> action;
 		};
 
+		struct PlatformRecognizerFunction
+		{
+			std::function<Ref<Platform>(BinaryView*, Metadata*)> action;
+		};
+
 	protected:
 		std::string m_nameForRegister, m_longNameForRegister;
 
@@ -2081,6 +2086,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void RegisterDefaultPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetPlatform(uint32_t id, Architecture* arch);
 
+		void RegisterPlatformRecognizer(uint64_t id, BNEndianness endian, const std::function<Ref<Platform>(BinaryView* view, Metadata*)>& callback);
+		Ref<Platform> RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata);
+
 		std::string GetName();
 		std::string GetLongName();
 
@@ -2095,6 +2103,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void RegisterBinaryViewInitialAnalysisCompletionEvent(const std::function<void(BinaryView* view)>& callback);
 
 		static void BinaryViewEventCallback(void* ctxt, BNBinaryView* view);
+		static BNPlatform* PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata);
 	};
 
 	class CoreBinaryViewType: public BinaryViewType
@@ -5133,6 +5142,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 	protected:
 		Platform(Architecture* arch, const std::string& name);
+		Platform(Architecture* arch, const std::string& name, const std::string& typeFile, const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 	public:
 		Platform(BNPlatform* platform);

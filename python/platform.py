@@ -94,6 +94,8 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 	calling conventions used.
 	"""
 	name = None
+	type_file_path = None # path to platform types file
+	type_include_dirs = [] # list of directories available to #include from type_file_path
 
 	def __init__(self, arch = None, handle = None):
 		if handle is None:
@@ -101,7 +103,13 @@ class Platform(with_metaclass(_PlatformMetaClass, object)):
 				self.handle = None
 				raise ValueError("platform must have an associated architecture")
 			self._arch = arch
-			self.handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+			if self.__class__.type_file_path is None:
+				self.handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+			else:
+				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
+				for (i, dir) in enumerate(self.__class__.type_include_dirs):
+					dir_buf[i] = dir.encode('charmap')
+				self.handle = core.BNCreatePlatformWithTypes(arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf, len(self.__class__.type_include_dirs))
 		else:
 			self.handle = handle
 			self.__dict__["name"] = core.BNGetPlatformName(self.handle)

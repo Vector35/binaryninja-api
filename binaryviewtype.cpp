@@ -197,6 +197,23 @@ Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
 }
 
 
+void BinaryViewType::RegisterPlatformRecognizer(uint64_t id, BNEndianness endian, const std::function<Ref<Platform>(BinaryView* view, Metadata* metadata)>& callback)
+{
+	PlatformRecognizerFunction* ctxt = new PlatformRecognizerFunction;
+	ctxt->action = callback;
+	BNRegisterPlatformRecognizerForViewType(m_object, id, endian, PlatformRecognizerCallback, ctxt);
+}
+
+
+Ref<Platform> BinaryViewType::RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata)
+{
+	BNPlatform* platform = BNRecognizePlatformForViewType(m_object, id, endian, view->GetObject(), metadata->GetObject());
+	if (!platform)
+		return nullptr;
+	return new Platform(platform);
+}
+
+
 string BinaryViewType::GetName()
 {
 	char* contents = BNGetBinaryViewTypeName(m_object);
@@ -241,6 +258,18 @@ void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 	BinaryViewEvent* event = (BinaryViewEvent*)ctxt;
 	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
 	event->action(viewObject);
+}
+
+
+BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata)
+{
+	PlatformRecognizerFunction* callback = (PlatformRecognizerFunction*) ctxt;
+	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<Metadata> metadataObject = new Metadata(BNNewMetadataReference(metadata));
+	Ref<Platform> result = callback->action(viewObject, metadataObject);
+	if (!result)
+		return nullptr;
+	return BNNewPlatformReference(result->GetObject());
 }
 
 

@@ -755,3 +755,9 @@ void ReportCollection::AddGraphReport(Ref<BinaryView> view, const string& title,
 {
 	BNAddGraphReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), graph->GetObject());
 }
+
+
+void ReportCollection::UpdateFlowGraph(size_t i, Ref<FlowGraph> graph)
+{
+	BNUpdateReportFlowGraph(m_object, i, graph->GetObject());
+}

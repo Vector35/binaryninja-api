@@ -984,6 +984,18 @@ class ReportCollection(object):
 		else:
 			raise TypeError("expected report object")
 
+	def update(self, i, report):
+		# if isinstance(report, PlainTextReport):
+		# 	core.BNUpdatePlainTextReportToCollection(self.handle, i, report.contents)
+		# elif isinstance(report, MarkdownReport):
+		# 	core.BNUpdateMarkdownReportToCollection(self.handle, i, report.contents, report.plaintext)
+		# elif isinstance(report, HTMLReport):
+		# 	core.BNUpdateHTMLReportToCollection(self.handle, i, report.contents, report.plaintext)
+		if isinstance(report, FlowGraphReport):
+			core.BNUpdateReportFlowGraph(self.handle, i, report.graph.handle)
+		else:
+			raise TypeError("expected report object")
+
 
 def markdown_to_html(contents):
 	"""

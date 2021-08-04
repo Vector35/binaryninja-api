@@ -386,6 +386,12 @@ void FlowGraph::Show(const string& title)
 }
 
 
+bool FlowGraph::HasUpdates() const
+{
+	return false;
+}
+
+
 Ref<FlowGraph> FlowGraph::Update()
 {
 	return nullptr;
@@ -406,6 +412,15 @@ bool FlowGraph::IsOptionSet(BNFlowGraphOption option)
 
 CoreFlowGraph::CoreFlowGraph(BNFlowGraph* graph): FlowGraph(graph)
 {
+	m_queryMode = BNFlowGraphUpdateQueryMode(GetObject());
+}
+
+
+bool CoreFlowGraph::HasUpdates() const
+{
+	if (m_queryMode)
+		return BNFlowGraphHasUpdates(GetObject());
+	return false;
 }
 
 

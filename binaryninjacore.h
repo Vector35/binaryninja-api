@@ -27,7 +27,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 12
+#define BN_CURRENT_CORE_ABI_VERSION 13
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4052,6 +4052,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI void BNFinishPrepareForLayout(BNFlowGraph* graph);
 
+	BINARYNINJACOREAPI bool BNFlowGraphUpdateQueryMode(BNFlowGraph* graph);
+	BINARYNINJACOREAPI bool BNFlowGraphHasUpdates(BNFlowGraph* graph);
+
 	BINARYNINJACOREAPI BNFlowGraph* BNUpdateFlowGraph(BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI void BNSetFlowGraphOption(BNFlowGraph* graph, BNFlowGraphOption option, bool value);
@@ -5069,6 +5072,7 @@ __attribute__ ((format (printf, 1, 2)))
 		const char* title, const char* contents, const char* plaintext);
 	BINARYNINJACOREAPI void BNAddGraphReportToCollection(BNReportCollection* reports, BNBinaryView* view,
 		const char* title, BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNUpdateReportFlowGraph(BNReportCollection* reports, size_t i, BNFlowGraph* graph);
 
 	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
 	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch, const char* mangledName, BNType** outType,

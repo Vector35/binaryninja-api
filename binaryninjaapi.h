@@ -3621,6 +3621,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static void FreeObjectCallback(void* ctxt);
 
 	protected:
+		bool m_queryMode = false;
+
 		FlowGraph(BNFlowGraph* graph);
 
 		void FinishPrepareForLayout();
@@ -3665,6 +3667,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Show(const std::string& title);
 
+		virtual bool HasUpdates() const;
+
 		virtual Ref<FlowGraph> Update();
 
 		void SetOption(BNFlowGraphOption option, bool value = true);
@@ -3675,6 +3679,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 	public:
 		CoreFlowGraph(BNFlowGraph* graph);
+		virtual bool HasUpdates() const override;
 		virtual Ref<FlowGraph> Update() override;
 	};
 
@@ -5355,6 +5360,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void AddHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
 			const std::string& plainText = "");
 		void AddGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
+
+		void UpdateFlowGraph(size_t i, Ref<FlowGraph> graph);
 	};
 
 	class InteractionHandler

@@ -106,6 +106,12 @@ RegisterValue::RegisterValue(): state(UndeterminedValue), value(0), offset(0)
 }
 
 
+bool RegisterValue::IsConstant() const
+{
+	return (state == ConstantValue) || (state == ConstantPointerValue);
+}
+
+
 BNRegisterValue RegisterValue::ToAPIObject()
 {
 	BNRegisterValue result;

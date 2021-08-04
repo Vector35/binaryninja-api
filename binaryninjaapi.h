@@ -3238,6 +3238,9 @@ __attribute__ ((format (printf, 1, 2)))
 		int64_t offset;
 
 		RegisterValue();
+
+		bool IsConstant() const;
+
 		static RegisterValue FromAPIObject(const BNRegisterValue& value);
 		BNRegisterValue ToAPIObject();
 	};

@@ -3999,6 +3999,7 @@ __attribute__ ((format (printf, 1, 2)))
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
 
 		void Finalize();
+		void GenerateSSAForm();
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
 		bool GetInstructionText(Function* func, Architecture* arch, size_t i,

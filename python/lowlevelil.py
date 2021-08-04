@@ -3031,6 +3031,14 @@ class LowLevelILFunction(object):
 		"""
 		core.BNFinalizeLowLevelILFunction(self.handle)
 
+	def generate_ssa_form(self):
+		"""
+		``generate_ssa_form`` generate SSA form given the current LLIL
+
+		:rtype: None
+		"""
+		core.BNGenerateLowLevelILSSAForm(self.handle)
+
 	def add_label_for_address(self, arch, addr):
 		"""
 		``add_label_for_address`` adds a low-level IL label for the given architecture ``arch`` at the given virtual

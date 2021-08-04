@@ -432,6 +432,12 @@ void LowLevelILFunction::Finalize()
 }
 
 
+void LowLevelILFunction::GenerateSSAForm()
+{
+	BNGenerateLowLevelILSSAForm(m_object);
+}
+
+
 bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens)
 {
 	size_t count;
